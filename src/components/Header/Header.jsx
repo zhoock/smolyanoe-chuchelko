@@ -37,11 +37,11 @@ export default function Header() {
           <Navigation onShow={handleClick} />
         </nav>
       </Popup>
-      {/* <Hamburger
+      <Hamburger
         classes={{ hide: "hide-for-large-up" }}
         isActive={activeIndex}
         onShow={handleClick}
-      /> */}
+      />
     </>
   );
 }
