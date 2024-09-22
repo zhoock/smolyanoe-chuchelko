@@ -1,0 +1,50 @@
+// Colors
+//
+// --------------------------------------------------
+
+$labelColor: rgb(213, 213, 213); // text
+$textBackgroundColor: rgb(33, 32, 29); // main background
+$transport-black: rgb(30, 30, 30); // extra background
+$dark-greenish-yellow: rgb(153, 130, 56); // accent color
+$systemGreyColor: rgb(172, 172, 172); // inactive link
+$unemphasizedSelectedTextBackgroundColor: rgb(54, 54, 54); // buttons background
+$windowBackgroundColor: rgb(55, 54, 51); // line background
+
+// Links
+//
+// --------------------------------------------------
+
+$link-color: $systemGreyColor;
+
+// Font weights
+//
+// --------------------------------------------------
+
+$light: 300;
+$regular: 400;
+$medium: 500;
+$bold: 700;
+
+// Base Font
+//
+// --------------------------------------------------
+$base-font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
+  Roboto, "Helvetica Neue", Arial, sans-serif;
+$base-font-weight: $light;
+$base-font-color: $labelColor;
+
+/* Base values */
+// интервал ритма по вертикали 1.618
+$base-font-size: 18px;
+$base-line-height: calc(18px * 1.618); //18 * 1.618 = 29.124px
+
+// Настройки типографики взяты с:
+// https://www.modularscale.com/?1&em&1.618
+
+$ms_-2: 6.876px; // 0.382rem;
+$ms_-1: 11.125px; // 0.618rem;
+$ms-0: 18px; // 1rem;
+$ms-1: 29.124px; // 1.618rem;
+$ms-2: 47.123px; // 2.618rem;
+$ms-3: 76.244px; // 4.236rem;
+$ms-4: 123.363px; // 6.854rem;

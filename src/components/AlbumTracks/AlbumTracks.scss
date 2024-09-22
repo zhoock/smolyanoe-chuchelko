@@ -1,0 +1,52 @@
+.b-album {
+  ol {
+    li {
+      list-style: auto inside;
+      border-top: 1px solid $windowBackgroundColor;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      cursor: pointer;
+      padding-left: $ms_-1;
+      transition: all 200ms ease;
+      @include adjust-font-size-to($ms-0, 0);
+
+      &:last-child {
+        border-bottom: 1px solid $windowBackgroundColor;
+      }
+
+      &.active,
+      &:hover {
+        color: $labelColor;
+        background: $dark-greenish-yellow;
+        border-top-color: $dark-greenish-yellow;
+        border-radius: $ms_-2;
+
+        & + li {
+          border-top-color: transparent;
+        }
+      }
+
+      @media (hover: none) and (pointer: coarse) {
+        &:hover {
+          /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+          background: inherit;
+          border-top-color: $windowBackgroundColor;
+
+          &:hover + li {
+            border-top-color: $windowBackgroundColor;
+          }
+        }
+      }
+    }
+  }
+
+  pre {
+    display: flex;
+    justify-content: center;
+    text-align: left;
+    font-family: $base-font-family;
+    font-weight: $bold;
+    @include adjust-font-size-to($ms-1);
+  }
+}

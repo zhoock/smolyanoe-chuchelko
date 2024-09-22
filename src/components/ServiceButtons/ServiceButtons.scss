@@ -1,0 +1,44 @@
+.b-service-buttons {
+  ul {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-between;
+
+    li {
+      width: 47.24%; //(256px/542px) * 100
+
+      &:not(:last-child) {
+        margin-bottom: $ms-1;
+      }
+
+      a {
+        font-size: $ms-1;
+        height: 76.244px;
+        line-height: 76.244px;
+        border: none;
+        background: $unemphasizedSelectedTextBackgroundColor;
+        display: inline-block;
+        text-align: center;
+        width: 100%;
+        border-radius: $ms_-2;
+
+        &:hover {
+          background-color: $dark-greenish-yellow;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+          &:hover {
+            /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+            background-color: $unemphasizedSelectedTextBackgroundColor;
+          }
+        }
+
+        span {
+          text-indent: -9999px; // hide the text in the link
+          white-space: nowrap;
+          display: inline-block;
+        }
+      }
+    }
+  }
+}

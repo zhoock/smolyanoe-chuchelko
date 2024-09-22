@@ -1,0 +1,223 @@
+:root {
+  position: relative;
+  min-height: 100%;
+}
+
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0; /* Set the default margin to 0 */
+  padding: 0; /* Set the default padding to 0 */
+}
+
+/* Prevent font size inflation */
+html {
+  -moz-text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+/* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+ul[role="list"],
+ol[role="list"] {
+  list-style: none;
+}
+
+html:focus-within {
+  scroll-behavior: smooth; /* Make the scrolling inside of any scrollable element smooth */
+}
+
+a:not([class]) {
+  text-decoration-skip-ink: auto; /* Makes link undelines look better */
+}
+
+img,
+picture,
+svg,
+video,
+canvas {
+  max-width: 100%; /* Makes it responsive */
+  height: auto; /* Makes it responsive */
+  vertical-align: middle; /* Makes text next to inline images look better */
+  font-style: italic; /* If the images don't load it makes the alt decription look better */
+  background-repeat: no-repeat;
+  /* The background repeat and size are there if you want to load a picture first like a backroung image that is worse quality while the better quality image loads */
+  background-size: cover;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit; /* Makes these elements inherit fonts */
+}
+
+body {
+  min-height: 100vh;
+  line-height: $base-line-height;
+  scroll-behavior: smooth; /* Makes normal scrolling smooth */
+}
+
+html {
+  // font-size: 62.5%; /* 1rem = 10px */
+  font: $base-font-weight $base-font-size $base-font-family;
+}
+
+html,
+button,
+input,
+select,
+textarea {
+  color: $base-font-color;
+}
+
+body {
+  background: black left calc(1.618rem * 2) / contain no-repeat fixed
+    url("images/banner-for-header.jpg");
+  padding-top: 178px;
+
+  @include breakpoint(phones) {
+    background-size: 40em auto;
+    background-position-x: -$ms-3;
+    background-attachment: initial; // должен был зафиксировать фон
+  }
+
+  @include breakpoint(tablet) {
+    padding-top: 17vmax;
+  }
+
+  @include breakpoint(desktops) {
+    padding-top: 19.9vmax;
+  }
+
+  p,
+  img,
+  iframe {
+    margin-bottom: $ms-1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    color: $dark-greenish-yellow;
+    font-family: "Oswald", sans-serif;
+    font-weight: $light;
+    text-transform: uppercase;
+    letter-spacing: 1.618px;
+  }
+
+  // h1 {
+  // 	height: 64.53125vw;
+  // 	font-weight: $bold;
+  // 	text-transform: none;
+  // 	top: 53.53125vw;
+  // 	position: absolute;
+
+  // 	@include breakpoint(tablet) {
+  // 		// +adjust-font-size-to(5.653rem)
+  // 		height: 40.03906vw;
+  // 		top: 31.53125vw;
+  // 	}
+
+  // 	@include breakpoint(desktops) {
+  // 		// +adjust-font-size-to(7.993rem)
+  // 		height: 33.33333vw;
+  // 		top: 24.53125vw;
+  // 	}
+  // }
+
+  h2 {
+    @include adjust-font-size-to($ms-1);
+    font-weight: $regular;
+
+    @include breakpoint(tablet) {
+      @include adjust-font-size-to($ms-2);
+      font-weight: $light;
+    }
+  }
+
+  h3 {
+    @include adjust-font-size-to($ms-0, 0);
+    letter-spacing: 2.5px;
+    font-weight: $regular;
+
+    @include breakpoint(tablet) {
+      @include adjust-font-size-to($ms-1, 0.382);
+      font-weight: $light;
+    }
+  }
+
+  ul,
+  ol {
+    margin-bottom: $ms-1;
+
+    &.dash li:before {
+      content: "— ";
+    }
+    li {
+      list-style: none;
+    }
+  }
+
+  a {
+    text-decoration: none;
+    border-bottom: 1px solid;
+    transition: all 200ms ease;
+
+    @include link-colors($link-color, $labelColor);
+
+    &:hover {
+      border-bottom-color: $labelColor;
+    }
+    &.dashed {
+      border-bottom: 1px dashed $link-color;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover {
+        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+        background-color: inherit;
+      }
+    }
+  }
+
+  .callout {
+    position: relative;
+    margin: 0 0 16px 0;
+    padding: $ms-1;
+  }
+
+  @media only screen {
+    .hide-for-large-up {
+      display: flex !important;
+    }
+    .hide-for-medium-down {
+      display: none !important;
+    }
+  }
+
+  @media only screen and (min-width: 40.0625em) {
+    .hide-for-large-up {
+      display: flex !important;
+    }
+    .hide-for-medium-down {
+      display: none !important;
+    }
+  }
+
+  @media only screen and (min-width: 64.0625em) {
+    .hide-for-large-up {
+      display: none !important;
+    }
+    .hide-for-medium-down {
+      display: flex !important;
+    }
+  }
+}

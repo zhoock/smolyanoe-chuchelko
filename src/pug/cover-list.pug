@@ -1,0 +1,44 @@
+//- cover-list.pug
+
+extends layout.pug
+
+block head
+    - var title = 'Смоляное чучелко';
+    - var description = 'Официальный сайт Смоляное чучелко';
+    - var keywords = 'Гранж, пост-гранж, альтернативный рок, альтернатива, grunge, post-grunge, гранж жив, последний поршневый бомбардировщик, водянистая влага, рулевой мёртв, бром и сталь, падение кита';
+    - var mainMenu = true;
+    
+    include ../includes/_head
+    
+block content
+    section.header
+        h1
+               
+    section#b-about-us.js-section       
+        article
+            .row
+                .small-9.small-centered.column
+                    h2.small-only-text-center Группа
+                    p.
+                        Смоляное чучелко&nbsp;&mdash; русская рок-группа из&nbsp;Москвы. Звучание группы возвращает сиэтлский гранж 90-х вопреки модным и&nbsp;текущим тенденциям в&nbsp;современной рок-музыке. Название группы образовано от&nbsp;американского термина tar-baby, относящегося к&nbsp;проблемной ситуации, которая лишь усугубляется при попытках взаимодействия с&nbsp;ней.
+
+
+            section#b-music.b-music_albums.js-section
+                article
+                    .row
+                        .small-9.small-centered.small-only-text-center.column
+                            h2 Альбомы
+              
+                            .b-wrapper-cover.b-wrapper-cover__list
+                                a(href="/album-23.html").b-wrapper-cover__img
+                                    .b-wrapper-cover__title
+                                        h3 23
+                                    - var pic = 0
+                                    include ../includes/_picture
+                                    
+                                a(href="/album-ep.html").b-wrapper-cover__img
+                                    .b-wrapper-cover__title
+                                        h3 Смоляное чучелко
+                                    - var pic = 1
+                                    include ../includes/_picture
+

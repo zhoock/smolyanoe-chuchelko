@@ -1,0 +1,20 @@
+nav {
+  margin-left: auto;
+
+  ul.b-menu {
+    margin-bottom: 0;
+
+    li {
+      a {
+        padding: 0 16px;
+        text-transform: uppercase;
+
+        &.selected {
+          color: $link-color;
+          pointer-events: none;
+          /* disables click event */
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,147 @@
+@use "sass:math";
+
+// Buttons
+//
+//
+
+@mixin button-variant(
+  $color,
+  $background,
+  $hover-background,
+  $disabled-background: $yellow,
+  $border: transparent
+) {
+  color: $color;
+  background-color: $background;
+  border: 1px solid $border;
+
+  &:hover,
+  &:focus,
+  &:active {
+    color: $color;
+    background-color: $hover-background;
+    @include background-image($hover-background);
+  }
+  &.disabled,
+  &[disabled] {
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: $disabled-background;
+    }
+  }
+}
+
+$phones: "max-width: 40em";
+$tablets: "min-width: 40.0625em";
+$desktops: "min-width: 64.0625em";
+
+@mixin breakpoint($point) {
+  // medium (>640)
+  @if $point == phones {
+    @media ($phones) {
+      @content;
+    }
+  }
+  // medium (641—1024)
+  @if $point == tablet {
+    @media ($tablets) {
+      @content;
+    }
+  }
+  // large (1024—1200)
+  @if $point == desktops {
+    @media ($desktops) {
+      @content;
+    }
+  }
+  // xlarge (1200—1440)
+  @if $point == desktopsxlarge {
+    @media (min-width: 75.0625em) {
+      @content;
+    }
+  }
+  // xxlarge (< 1440)
+  @if $point == desktopsxxlarge {
+    @media (min-width: 90.0625em) {
+      @content;
+    }
+  }
+}
+
+//retina
+//
+//
+
+@mixin retina($url: false, $device-type: $phones) {
+  @media only screen and ($device-type) and (-webkit-min-device-pixel-ratio: 1.5) and (min-resolution: 1.5dppx) and (min-resolution: 144dpi) {
+    background-image: url($url);
+  }
+}
+
+//link
+//
+//
+
+@mixin link-colors(
+  $normal,
+  $hover: false,
+  $active: false,
+  $visited: false,
+  $focus: false
+) {
+  color: $normal;
+  @if $hover {
+    &:hover {
+      color: $hover;
+    }
+  }
+  @if $active {
+    &:active {
+      color: $active;
+    }
+  }
+  @if $visited {
+    &:visited {
+      color: $visited;
+    }
+  }
+  @if $focus {
+    &:focus {
+      color: $focus;
+    }
+  }
+}
+
+//https://designmodo.com/vertical-rhythm/
+
+@mixin adjust-font-size-to(
+  $to-font-size,
+  $scale-value: 1,
+  $base-font-size: 18px,
+  $base-line-height: calc(18px * 1.618)
+) {
+  font-size: math.div($to-font-size, $base-font-size) + rem;
+  line-height: math.div($base-line-height * 1.618, $to-font-size);
+  margin: math.div($base-line-height * $scale-value, $to-font-size) + em 0;
+}
+
+//Hide scrollbar
+//
+//
+
+%hide-scrollbar {
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+%filter {
+  background: rgba($transport-black, 0.8);
+  backdrop-filter: blur(20px);
+}

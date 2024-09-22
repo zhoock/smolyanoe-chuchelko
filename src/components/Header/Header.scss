@@ -1,0 +1,64 @@
+header {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  z-index: 1;
+  background: rgba($textBackgroundColor, 0.8);
+  backdrop-filter: blur(20px) saturate(0.8%);
+  font-family: "Oswald", sans-serif;
+
+  a {
+    border: none;
+
+    &.logo {
+      font-weight: $bold;
+    }
+  }
+
+  .b-header-content {
+    display: flex;
+    align-items: center;
+    height: calc(1.618rem * 2);
+  }
+}
+
+// https://khaledkzy.github.io/pixel-vh-vw-converter/
+
+// .webp .b-header-img {
+//   background: transparent url("./images/header-small_8257.webp") no-repeat;
+//   background-size: cover;
+//   height: 63.59375vw; //407px;
+//   @include retina("./images/header-small@2x_8257.webp");
+
+//   @include breakpoint(tablet) {
+//     background-image: url("./images/header-medium_8260.webp");
+//     height: 40.72265625vw; //417px;
+//     @include retina("./images/header-medium@2x_8260.webp", $tablets);
+//   }
+
+//   @include breakpoint(desktops) {
+//     background-image: url("./images/header-large_8260.webp");
+//     height: 31.5vw; //378px;
+//     @include retina("./images/header-large@2x_8260.webp", $desktops);
+//   }
+// }
+
+// // no support webp
+// .no-webp .b-header-img {
+//   background: transparent url("./images/header-small_8257.jpg") no-repeat;
+//   background-size: cover;
+//   height: 63.59375vw; //407px;
+//   @include retina("./images/header-small@2x_8257.jpg");
+
+//   @include breakpoint(tablet) {
+//     background-image: url("./images/header-medium_8260.jpg");
+//     height: 40.72265625vw; //417px;
+//     @include retina("./images/header-medium@2x_8260.jpg", $tablets);
+//   }
+//   @include breakpoint(desktops) {
+//     background-image: url("images/header-large_8260.jpg");
+//     height: 31.5vw; //378px;
+//     @include retina("./images/header-large@2x_8260.jpg", $desktops);
+//   }
+// }
