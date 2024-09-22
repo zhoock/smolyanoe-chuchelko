@@ -635,7 +635,7 @@ const _23 = [
 ];
 
 //  оператор расширения или распространения (spread-оператор)
-export const ALBUMSDATA = [..._23, ..._23, ...EP];
+export const ALBUMSDATA = [ ..._23, ...EP];
 
 // деструктуризация
 export function release(nameAlbum) {
