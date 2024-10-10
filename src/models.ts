@@ -4,7 +4,7 @@ export type NavigationProps = {
     hide: "hide-for-medium-down" | "hide-for-large-up";
   };
   /**  Открывает/закрывает popup */
-  onShow?: any;
+  onShow?: (e: React.MouseEvent<HTMLElement>) => void;
 };
 
 export type HamburgerProps = NavigationProps & {
@@ -22,7 +22,7 @@ export type AlbumsProps<Size extends number = 896> = {
   fullName?: string;
   showAlbum?: boolean;
   /** Функция берёт название альбома из тега h3 и меняет значение showAlbum на противоположное */
-  handleCoverClick?: any;
+  handleCoverClick?: (e: React.MouseEvent<HTMLElement>) => void;
   children?: React.ReactElement;
   year?: string;
   // Размер изображения по умолчанию.
