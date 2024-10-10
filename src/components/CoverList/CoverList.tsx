@@ -1,26 +1,12 @@
-import { ALBUMSDATA } from "../data.js";
-import AlbumCover from "./AlbumCover.jsx";
+import React from "react";
+import { ALBUMSDATA } from "../data";
+import AlbumCover from "./AlbumCover";
+import Cover from "./Cover";
 
 /**
  * Компонент отображает блок с обложками альбомов.
- * @component
- * @param {function} handleCoverClick — Функция берёт название альбома из заголовка h3
- * и меняет булево значение showAlbum.
  */
-export default function CoverList({ handleCoverClick }) {
-  // alert(JSON.stringify(ALBUMSDATA.length));
-
-  function Cover({ handleCoverClick, nameAlbum, fullName, children, year }) {
-    return (
-      <div className="b-cover__img">
-        {children}
-        <h3 onClick={handleCoverClick}>{nameAlbum}</h3>
-        <div className="b-cover__name-group">{fullName}</div>
-        <div className="b-cover__name-album">{year.slice(0, 4)}</div>
-      </div>
-    );
-  }
-
+export default function CoverList({ handleCoverClick }: { handleCoverClick: any }) {
   return (
     <>
       <div className="row collapse medium-uncollapse">
@@ -41,7 +27,6 @@ export default function CoverList({ handleCoverClick }) {
               >
                 <AlbumCover
                   nameAlbum={album.nameAlbum}
-                  nameCover={album.nameCover}
                 />
               </Cover>
             ))}

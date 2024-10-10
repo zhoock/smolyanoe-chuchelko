@@ -1,40 +1,18 @@
-import { ALBUMSDATA } from "../data.js";
+import React from "react";
+import GetButton from "./GetButton";
+import { buttons } from "../data";
+import { String } from "../../models";
+
+//  alert(JSON.stringify(buttons));
 
 /**
  * Компонент отображает блоки с кнопками-ссылками музыкальных агрегаторов.
- * @component
- * @param {string} nameAlbum - Название альбома.
- * @param {string} section - Название раздела.
  */
-export default function ServiceButtonsPurchase({ nameAlbum, section }) {
-  // деструктуризация
-  const { buttons } = ALBUMSDATA.filter(
-    (element) => element.nameAlbum === nameAlbum,
-  )[0];
-  // alert(JSON.stringify(AlbumButtons[0].buttons));
-
-  /**
-   * Компонент отображает кнопку-ссылку агрегатора.
-   * @param {string} buttonClass
-   * @param {string} buttonUrl
-   * @param {string} buttonText
-   */
-  function GetButton({ buttonClass, buttonUrl, buttonText }) {
-    return (
-      <li>
-        <a className={buttonClass} href={buttonUrl}>
-          <span>{buttonText}</span>
-        </a>
-      </li>
-    );
-  }
-
+export default function ServiceButtonsPurchase({ nameAlbum, section }: String) {
   /**
    * Компонент отображает блок с кнопками-ссылками на агрегаторы.
-   * @component
-   * @param {Object[]} buttons - Объект c ссылками на агрегаторы.
    */
-  function Buttons({
+  function ButtonsBlock({
     itunes,
     bandcamp,
     amazon,
@@ -44,8 +22,8 @@ export default function ServiceButtonsPurchase({ nameAlbum, section }) {
     spotify,
     yandex,
     deezer,
-    tidal,
-  }) {
+    tidal
+  }: String) {
     return (
       <div className="b-service-buttons">
         <h3>{section}</h3>
@@ -111,5 +89,6 @@ export default function ServiceButtonsPurchase({ nameAlbum, section }) {
     );
   }
 
-  return buttons.map((data) => <Buttons {...data} key={data} />);
+  // оператор расширения или распространения (spread-оператор) ...
+  return <ButtonsBlock {...buttons(nameAlbum)} />;
 }

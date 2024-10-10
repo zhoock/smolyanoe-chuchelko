@@ -1,10 +1,10 @@
-import Hamburger from "../Hamburger/Hamburger.jsx";
-import Navigation from "../Navigation/Navigation.jsx";
-import Popup from "../Popup/Popup.jsx";
-import { useState } from "react";
+import React, { useState } from "react";
+import Hamburger from "../Hamburger/Hamburger";
+import Navigation from "../Navigation/Navigation";
+import Popup from "../Popup/Popup";
 
 export default function Header() {
-  const [activeIndex, setActiveIndex] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(false);
 
   function handleClick() {
     setActiveIndex(!activeIndex);

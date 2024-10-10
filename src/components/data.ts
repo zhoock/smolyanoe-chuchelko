@@ -635,27 +635,26 @@ const _23 = [
 ];
 
 //  оператор расширения или распространения (spread-оператор)
-export const ALBUMSDATA = [ ..._23, ...EP];
+export const ALBUMSDATA = [..._23, ...EP];
 
 // деструктуризация
-export function release(nameAlbum) {
-  const { release } = ALBUMSDATA.filter(
-    (element) => element.nameAlbum === nameAlbum,
-  )[0];
+export function buttons(nameAlbum: string) {
+  const { buttons } = ALBUMSDATA.filter((_) => _.nameAlbum === nameAlbum)[0];
+  return buttons[0];
+}
+
+export function release(nameAlbum: string) {
+  const { release } = ALBUMSDATA.filter((_) => _.nameAlbum === nameAlbum)[0];
   return release[0];
 }
 
-export function detales(nameAlbum) {
-  const { detales } = ALBUMSDATA.filter(
-    (element) => element.nameAlbum === nameAlbum,
-  )[0];
+export function detales(nameAlbum: string) {
+  const { detales } = ALBUMSDATA.filter((_) => _.nameAlbum === nameAlbum)[0];
   return detales;
 }
 
-export function tracks(nameAlbum) {
-  const { tracks } = ALBUMSDATA.filter(
-    (element) => element.nameAlbum == nameAlbum,
-  )[0];
+export function tracks(nameAlbum: string) {
+  const { tracks } = ALBUMSDATA.filter((_) => _.nameAlbum == nameAlbum)[0];
   return tracks;
 }
 

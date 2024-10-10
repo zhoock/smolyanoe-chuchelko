@@ -1,12 +1,15 @@
+import React from "react";
+import { HamburgerProps } from "../../models";
+
 /**
  * Компонент отображает гамбургер-меню.
- * @component
- * @param {boolean} isActive - Булево значение.
- * @param {function} onShow - Открывает/закрывает popup.
- * @param {Object} classes - Принимает классы css.
  */
-export default function Hamburger({ isActive, onShow, classes, zIndex }) {
-
+export default function Hamburger({
+  isActive,
+  onShow,
+  classes,
+  zIndex,
+}: HamburgerProps) {
   return (
     <div className={`b-hamburger ${classes?.hide}`}>
       <div

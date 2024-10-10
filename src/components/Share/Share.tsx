@@ -1,9 +1,9 @@
-import { useState } from "react";
+import React, { useState, MouseEvent} from "react";
 
 export default function Share() {
-  const [share, setShare] = useState(null);
+  const [share, setShare] = useState(false);
 
-  function handleClick(e) {
+  function handleClick(e: MouseEvent<HTMLElement>) {
     e.preventDefault();
     setShare(!share);
   }
@@ -18,14 +18,14 @@ export default function Share() {
             title="Поделиться"
           ></a>
         </li>
-        <li className={share ? "show" : null}>
+        <li className={share ? "show" : ""}>
           <a
             className="icon-facebook1"
             href="#"
             title="Поделиться на Facebook"
           ></a>
         </li>
-        <li className={share ? "show" : null}>
+        <li className={share ? "show" : ""}>
           <a
             className="icon-twitter"
             href="#"

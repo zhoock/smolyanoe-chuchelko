@@ -1,4 +1,7 @@
-export default function Navigation({ classes, onShow }) {
+import React from "react";
+import { NavigationProps } from "../../models";
+
+export default function Navigation({ classes, onShow }: NavigationProps) {
   return (
     <ul className={`b-menu ${classes ? classes.hide : null}`}>
       <li>

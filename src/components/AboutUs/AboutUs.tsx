@@ -1,7 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 export default function AboutUs() {
-  const [activeIndex, setActiveIndex] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(false);
 
   function handleClick() {
     setActiveIndex(!activeIndex);
@@ -12,7 +12,7 @@ export default function AboutUs() {
       <div className="row">
         <div className="small-12 column">
           <h2>О группе</h2>
-          <p className={activeIndex ? "active" : null}>
+          <p className={activeIndex ? "active" : ""}>
             Смоляное чучелко&nbsp;&mdash; это музыкальный проект, звучание
             которого возвращает саунд Nirvana вопреки модным и&nbsp;текущим
             тенденциям в&nbsp;современной рок-музыке. Название 'Смоляное

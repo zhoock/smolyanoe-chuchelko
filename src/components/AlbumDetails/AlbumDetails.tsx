@@ -1,13 +1,13 @@
-import AlbumDetailsReleased from "./AlbumDetailsReleased.jsx";
-import AlbumDetailsArtwork from "./AlbumDetailsArtwork.jsx";
-import AlbumDetailsMusic from "./AlbumDetailsMusic.jsx";
+import React from "react";
+import AlbumDetailsReleased from "./AlbumDetailsReleased";
+import AlbumDetailsArtwork from "./AlbumDetailsArtwork";
+import AlbumDetailsMusic from "./AlbumDetailsMusic";
+import { AlbumsProps } from "../../models";
 
 /**
  * Компонент отображает дополнительные данные об альбоме.
- * @component
- * @param {string} nameAlbum - Название альбома.
  */
-export default function AlbumDetails(nameAlbum) {
+export default function AlbumDetails({ nameAlbum }: AlbumsProps) {
   return (
     <section className="b-album-details">
       <div className="row">
@@ -16,19 +16,19 @@ export default function AlbumDetails(nameAlbum) {
             <div className="large-5 large-push-7 column">
               <div className="b-album-details__released">
                 <h2>Релиз</h2>
-                <AlbumDetailsReleased {...nameAlbum} />
+                <AlbumDetailsReleased nameAlbum={nameAlbum} />
                 <hr />
               </div>
               <div className="b-album-details__artwork">
                 <h2>Обложка альбома</h2>
-                <AlbumDetailsArtwork {...nameAlbum} />
+                <AlbumDetailsArtwork nameAlbum={nameAlbum} />
                 <hr />
               </div>
             </div>
             <div className="large-7 large-pull-5 column">
               <div className="b-album-details__music">
                 <h2>Музыка</h2>
-                <AlbumDetailsMusic {...nameAlbum} />
+                <AlbumDetailsMusic nameAlbum={nameAlbum} />
               </div>
             </div>
           </div>

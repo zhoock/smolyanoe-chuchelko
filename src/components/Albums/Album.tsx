@@ -1,17 +1,14 @@
-import AlbumCover from "../CoverList/AlbumCover.jsx";
-import AlbumTracks from "../AlbumTracks/AlbumTracks.jsx";
-import Share from "../Share/Share.jsx";
-import ServiceButtons from "../ServiceButtons/ServiceButtons.jsx";
+import React from "react";
+import AlbumCover from "../CoverList/AlbumCover";
+import AlbumTracks from "../AlbumTracks/AlbumTracks";
+import Share from "../Share/Share";
+import ServiceButtons from "../ServiceButtons/ServiceButtons";
+import { AlbumsProps } from "../../models";
 
 /**
- * Компонент отображает основные сведения об альбоме (обложку, список треков,
- * кнопки(ссылки) на музыкальные агрегаторы.
- * @component
- * @param {string} nameAlbum - Название альбома.
- * @param {function} handleCoverClick — Функция берёт название альбома из тега h3
- * и меняет значение showAlbum на противоположное
+ * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
  */
-export default function Album({ nameAlbum, handleCoverClick }) {
+export default function Album({ nameAlbum, handleCoverClick }: AlbumsProps) {
   window.scrollTo({
     top: 0,
     left: 0,

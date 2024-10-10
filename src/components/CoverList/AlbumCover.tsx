@@ -1,3 +1,6 @@
+import React from "react";
+import { AlbumsProps } from "../../models";
+
 import webp from "../../images/Tar-Baby-Cover-mobiles.webp";
 import webp2x from "../../images/Tar-Baby-Cover-mobiles@2x.webp";
 import jpg from "../../images/Tar-Baby-Cover-mobiles.jpg";
@@ -11,12 +14,9 @@ import jpg2x23 from "../../images/Tar-Baby-Cover-23-mobiles@2x.jpg";
 import img23 from "../../images/Tar-Baby-Cover-23-mobiles.jpg";
 
 /**
- * Компонент отображает обложку альбому.
- * @component
- * @param {string} nameAlbum - Название альбома.
- * @param {string} [size = 896] - Размер изображения по умолчанию.
+ * Компонент отображает обложку альбома.
  */
-export default function AlbumCover({ nameAlbum, size = 896 }) {
+export default function AlbumCover({ nameAlbum, size }: AlbumsProps) {
   if (nameAlbum == "Смоляное чучелко") {
     return (
       <picture>

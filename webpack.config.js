@@ -5,8 +5,11 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin"); // извлек
 
 module.exports = {
   entry: {
-    bundle: path.join(__dirname, "src", "index.js"),
-    modernizr: path.join(__dirname, "src", "js/modernizr-custom.js"),
+    bundle: path.join(__dirname, "src", "index.tsx"),
+  },
+
+  resolve: {
+    extensions: [".tsx", ".ts", ".js"],
   },
 
   output: {
@@ -19,8 +22,10 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(js|jsx)$/,
-        use: "babel-loader",
+        // test: /\.(js|jsx)$/,
+        // use: "babel-loader",
+        test: /\.tsx?$/,
+        use: "ts-loader",
         exclude: /node_modules/,
       },
       {
