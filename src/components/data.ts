@@ -673,13 +673,13 @@ const EP2020Equipment = [
         title: "ПУЛЬТ",
         content: ["Solid State Logic SSL 6000 E (32 channels)"],
         img: "IjivB_qQvRA",
-
       },
       {
         id: 1,
         title: "БАРАБАНЫ",
         subtitle: "Эмбиентный микрофон",
         content: ["Neumann TLM 170"],
+        img: "WXCC_uqimg",
       },
       {
         id: 2,
@@ -724,6 +724,7 @@ const EP2020Equipment = [
         title: "БАC",
         subtitle: "Гитары",
         content: ["Gibson Thunderbird", "Fender Jazz Bass"],
+        img: "jfNUR6uSXDI"
       },
       {
         id: 10,
@@ -749,6 +750,7 @@ const EP2020Equipment = [
           "Fender Jaguar",
           "Акустическая гитара Takamine",
         ],
+        img: "PO_dLuex6I8"
       },
       {
         id: 14,
@@ -798,6 +800,7 @@ const EP2020Equipment = [
         title: "ВОКАЛ",
         subtitle: "Микрофон",
         content: ["Joemeek jm47 Black"],
+        img: "KPtYswTNdD4"
       },
       {
         id: 22,
