@@ -1,4 +1,4 @@
-import React, { useState, MouseEvent} from "react";
+import React, { useState, MouseEvent } from "react";
 
 export default function Share() {
   const [share, setShare] = useState(false);
@@ -37,53 +37,67 @@ export default function Share() {
   );
 }
 
-// // share
-// TARBABY.share = function() {
+// share
 
-//     function shareOnFacebook(e) {
-//         "this" == e && (e = window.location.href);
-//         var t = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(e);
-//         popUpWindow(t, "Share on Facebook", "464", "210", "no", "center");
-//     }
+// function shareOnFacebook(uri: any) {
+//   "this" == uri && (uri = window.location.href);
+//   let base =
+//     "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(uri);
+//   popUpWindow(base, "Share on Facebook", "464", "210", "no", "center");
+// }
 
-//     function shareOnTwitter(e) {
-//         "this" == e && (e = window.location.href);
-//         var t = "https://twitter.com/home?status=" + encodeURIComponent(e);
-//         popUpWindow(t, "Share on Twitter", "464", "210", "no", "center");
-//     }
+// function shareOnTwitter(uri: any) {
+//   "this" == uri && (uri = window.location.href);
+//   let base = "https://twitter.com/home?status=" + encodeURIComponent(uri);
+//   popUpWindow(base, "Share on Twitter", "464", "210", "no", "center");
+// }
 
-//     function popUpWindow(e, t, n, o, a, i) {
-//       "center" == i
-//         ? ((LeftPosition = screen.width ? (screen.width - n) / 2 : 100),
-//           (TopPosition = screen.height ? (screen.height - o) / 2 : 100))
-//         : (("center" != i && "random" != i) || null == i) &&
-//           ((LeftPosition = 0), (TopPosition = 20)),
-//         (settings =
-//           "width=" +
-//           n +
-//           ",height=" +
-//           o +
-//           ",top=" +
-//           TopPosition +
-//           ",left=" +
-//           LeftPosition +
-//           ",scrollbars=" +
-//           a +
-//           ",location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no"),
-//         (win = window.open(e, t, settings));
-//     }
+// function popUpWindow(
+//   mypage: any,
+//   myname: any,
+//   w: any,
+//   h: any,
+//   scroll: any,
+//   pos: any,
+// ) {
+//   let LeftPosition,
+//     TopPosition,
+//     settings,
+//     win = null;
+//   if (pos == "center") {
+//     LeftPosition = screen.width ? (screen.width - w) / 2 : 100;
+//     TopPosition = screen.height ? (screen.height - h) / 2 : 100;
+//   } else if ((pos != "center" && pos != "random") || pos == null) {
+//     LeftPosition = 0;
+//     TopPosition = 20;
+//   }
+//   settings =
+//     "width=" +
+//     w +
+//     ",height=" +
+//     h +
+//     ",top=" +
+//     TopPosition +
+//     ",left=" +
+//     LeftPosition +
+//     ",scrollbars=" +
+//     scroll +
+//     ",location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no";
+//   win = window.open(mypage, myname, settings);
+// }
 
-//     $(".js-share-item li:first-child").on("click", function (t) {
-//         t.preventDefault(),
-//         $(".js-share-item li").toggleClass("show");
-//     });
+// // $(".js-share-item li:first-child").on("click", function (t) {
+// //   t.preventDefault(), $(".js-share-item li").toggleClass("show");
+// // });
 
-//     $(".js-share-item a").on("click", function (t) {
-//         t.preventDefault();
+// const link = document.querySelector(".js-share-item a");
 
-//         $(this).hasClass("icon-facebook1") && shareOnFacebook("this"),
-//         $(this).hasClass("icon-twitter") && shareOnTwitter("this");
-//     });
+// link &&
+//   link.addEventListener("click", function (e) {
+//     e.preventDefault();
 
-//     return this;
-// };
+//     link.classList.contains("icon-facebook1") && shareOnFacebook("this"),
+//       link.classList.contains("icon-twitter") && shareOnTwitter("this");
+//   });
+
+// return link;

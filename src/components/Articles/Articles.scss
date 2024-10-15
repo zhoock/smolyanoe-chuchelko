@@ -2,7 +2,7 @@
 .b-article {
   background: $textBackgroundColor;
 
-    &-list {
+  &-list {
     display: flex;
     flex-flow: row nowrap;
     overflow-x: scroll;
@@ -26,5 +26,6 @@
   }
   &__img {
     min-height: 200px;
+    border-radius: $ms_-1;
   }
 }

@@ -17,6 +17,7 @@ export default function Albums() {
               <h2>Альбомы</h2>
             </div>
           </div>
+
           <div className="b-cover-list">
             {ALBUMSDATA.map((album) => (
               <WrapperCover
@@ -29,6 +30,7 @@ export default function Albums() {
               </WrapperCover>
             ))}
           </div>
+          
         </div>
       </div>
     </section>
