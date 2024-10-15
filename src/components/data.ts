@@ -856,7 +856,8 @@ const CoverStoryEP2020 = [
   {
     articleId: "CoverStoryEP2020",
     nameArticle: "История обложки. Смоляное чучелко — EP (2020)",
-    img: "KT5ZXKnR8OE",
+    // img: "KT5ZXKnR8OE",
+    img: "WqrDr5sFybM",
     date: "2022-02-03",
     detales: [
       {

@@ -27,12 +27,16 @@ const formatDate = (dateRelease: string) => {
   return `${dd}/${mm}/${yy}`;
 };
 
-
 export default function WrapperArticle({ article }: { article: any }) {
   return (
     <div className="b-cover__img">
       <Link to={`/articles/${article.articleId}`}>
-        <img src={getImageUrl(article.img)} alt="" />
+        <div
+          className="b-article__img"
+          style={{
+            background: `no-repeat center/cover url(${getImageUrl(article.img)})`,
+          }}
+        ></div>
         <div className="b-cover__description">{article.nameArticle}</div>
         <time dateTime={article.date}>
           <small>{formatDate(article.date)}</small>
