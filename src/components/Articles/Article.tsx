@@ -52,7 +52,7 @@ export default function Article() {
   return (
     <section className="b-article">
       <div className="row">
-        <div className="small-12 column">
+        <div className="small-12 medium-10 large-8 small-centered column">
           <nav aria-label="Breadcrumb" className="b-breadcrumb">
             <ul>
               <li>
