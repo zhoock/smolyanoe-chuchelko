@@ -1,18 +1,26 @@
 import React from "react";
+import { NavLink } from "react-router-dom";
 import { NavigationProps } from "../../models";
 
 export default function Navigation({ classes, onShow }: NavigationProps) {
   return (
     <ul className={`b-menu ${classes ? classes.hide : null}`}>
       <li>
-        <a href="#" title="Главная" onClick={onShow}>
-          Главная
-        </a>
+        <NavLink
+          to="/aboutus"
+          title="О группе"
+          onClick={onShow}
+          className={({ isActive }) => {
+            return isActive ? "active" : "";
+          }}
+        >
+          О группе
+        </NavLink>
       </li>
       <li>
-        <a href="#" title="Статьи" onClick={onShow}>
+        <NavLink to="/articles" title="Статьи" onClick={onShow}>
           Статьи
-        </a>
+        </NavLink>
       </li>
     </ul>
   );

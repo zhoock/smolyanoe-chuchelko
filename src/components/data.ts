@@ -1,5 +1,6 @@
 const EP = [
   {
+    albumId: "smolyanoechuchelko",
     nameGroup: "Смоляное чучелко",
     nameAlbum: "Смоляное чучелко",
     get fullName() {
@@ -394,6 +395,7 @@ const EP = [
 
 const _23 = [
   {
+    albumId: "23",
     nameGroup: "Смоляное чучелко",
     nameAlbum: "23",
     get fullName() {
@@ -658,4 +660,281 @@ export function tracks(nameAlbum: string) {
   return tracks;
 }
 
+
 // console.log(JSON.stringify(_23));
+
+const EP2020Equipment = [
+  {
+    articleId: "EP2020Equipment",
+    nameArticle: "Смоляное чучелко — EP (2020). Оборудование",
+    detales: [
+      {
+        id: 0,
+        title: "ПУЛЬТ",
+        content: ["Solid State Logic SSL 6000 E (32 channels)"],
+        img: "IjivB_qQvRA",
+
+      },
+      {
+        id: 1,
+        title: "БАРАБАНЫ",
+        subtitle: "Эмбиентный микрофон",
+        content: ["Neumann TLM 170"],
+      },
+      {
+        id: 2,
+        subtitle: "Оверхеды",
+        content: ["COLES 4038"],
+      },
+      {
+        id: 3,
+        subtitle: "Передний микрофон",
+        content: ["AKG C24"],
+      },
+      {
+        id: 4,
+        subtitle: "Райд",
+        content: ["Neumann KM84"],
+      },
+      {
+        id: 5,
+        subtitle: "Бас-барабан",
+        content: [
+          "Neumann TLM 170 black ones (внутри)",
+          "Sennheiser MKH 40 (снаружи)",
+        ],
+      },
+      {
+        id: 6,
+        subtitle: "Малый барабан",
+        content: ["Shure SM57 (верх)", "AKG 414 B-ULS (низ)"],
+      },
+      {
+        id: 7,
+        subtitle: "Том-томы",
+        content: ["AKG 414 B-ULS (верх)", "Shure SM57 (низ)"],
+      },
+      {
+        id: 8,
+        subtitle: "Хай-хэт",
+        content: ["AKG C451"],
+      },
+      {
+        id: 9,
+        title: "БАC",
+        subtitle: "Гитары",
+        content: ["Gibson Thunderbird", "Fender Jazz Bass"],
+      },
+      {
+        id: 10,
+        subtitle: "Педали эффектов",
+        content: ["Rat"],
+      },
+      {
+        id: 11,
+        subtitle: "Усилители",
+        content: ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"],
+      },
+      {
+        id: 12,
+        subtitle: "Микрофоны",
+        content: ["Goodfly C12", "AKG C24 или Shure SM7 (room)"],
+      },
+      {
+        id: 13,
+        title: "ГИТАРА",
+        subtitle: "Гитары",
+        content: [
+          "Fender Mustang",
+          "Fender Jaguar",
+          "Акустическая гитара Takamine",
+        ],
+      },
+      {
+        id: 14,
+        subtitle: "Педали эффектов",
+        content: ["BOSS DS-1", "EHX Polyhorus", "EHX Small Clone"],
+      },
+      {
+        id: 15,
+        subtitle: "Усилители",
+        content: [
+          "Fender Twin Reverb (Black Face)",
+          "Mesa boogie studio preamp .22 & Mesa Boogie fifty/fifty + Marshall 1960 AX 4×12",
+          "(Celestion G12M-25 Greenback)& Marshall 6960 ALE 4x12 (Celestion G12T-75)",
+        ],
+      },
+      {
+        id: 16,
+        subtitle: ["Микрофоны"],
+      },
+      {
+        id: 17,
+        subtitle: "Fender Twin Reverb",
+        content: ["Shure SM57", "Coles 4038", "Neumann U67 (room)"],
+      },
+      {
+        id: 18,
+        subtitle: "Mesa",
+        content: [
+          "Electro-Voice PL20 (Marshall 6960 ALE 4x12)",
+          "Neumann TLM 170 black ones (Marshall 1960 AX 4×12)",
+          "Shure SM57 (room)",
+          "Neumann U67 (room)",
+        ],
+      },
+      {
+        id: 19,
+        subtitle: "Акустическая гитара",
+        content: ["Октава МК-012", "AKG SolidTube"],
+      },
+      {
+        id: 20,
+        subtitle: "Кабели",
+        content: ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"],
+      },
+      {
+        id: 21,
+        title: "ВОКАЛ",
+        subtitle: "Микрофон",
+        content: ["Joemeek jm47 Black"],
+      },
+      {
+        id: 22,
+        subtitle: "Преамп",
+        content: ["Nagra IV"],
+      },
+      {
+        id: 23,
+        subtitle: "Процессор эффектов",
+        content: ["Lexicon 300 Digital Effects System"],
+      },
+    ],
+  },
+];
+
+const EP2020Equipment2 = [
+  {
+    articleId: "EP2020Equipment",
+    nameArticle: "Смоляное чучелко — EP (2020). Оборудование",
+    detales: [
+      {
+        title: "ПУЛЬТ",
+        content: "Solid State Logic SSL 6000 E (32 channels)",
+      },
+      {
+        title: "БАРАБАНЫ",
+        subtitle: "Эмбиентный микрофон",
+        content: "Neumann TLM 170",
+      },
+      {
+        subtitle: "Оверхеды",
+        content: "COLES 4038",
+      },
+      {
+        subtitle: "Передний микрофон",
+        content: "AKG C24",
+      },
+      {
+        subtitle: "Райд",
+        content: "Neumann KM84",
+      },
+      {
+        subtitle: "Бас-барабан",
+        content: [
+          "Neumann TLM 170 black ones (внутри)",
+          "Sennheiser MKH 40 (снаружи)",
+        ],
+      },
+      {
+        subtitle: "Малый барабан",
+        content: ["Shure SM57 (верх)", "AKG 414 B-ULS (низ)"],
+      },
+      {
+        subtitle: "Том-томы",
+        content: ["AKG 414 B-ULS (верх)", "Shure SM57 (низ)"],
+      },
+      {
+        subtitle: "Хай-хэт",
+        content: "AKG C451",
+      },
+      {
+        title: "БАC",
+        subtitle: "Гитары",
+        content: ["Gibson Thunderbird", "Fender Jazz Bass"],
+      },
+      {
+        subtitle: "Педали эффектов",
+        content: "Rat",
+      },
+      {
+        subtitle: "Усилители",
+        content: "Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab",
+      },
+      {
+        subtitle: "Микрофоны",
+        content: ["Goodfly C12", "AKG C24 или Shure SM7 (room)"],
+      },
+      {
+        title: "ГИТАРА",
+        subtitle: "Гитары",
+        content: [
+          "Fender Mustang",
+          "Fender Jaguar",
+          "Акустическая гитара Takamine",
+        ],
+      },
+      {
+        subtitle: "Педали эффектов",
+        content: ["BOSS DS-1", "EHX Polyhorus", "EHX Small Clone"],
+      },
+      {
+        subtitle: "Усилители",
+        content: [
+          "Fender Twin Reverb (Black Face)",
+          "Mesa boogie studio preamp .22 & Mesa Boogie fifty/fifty + Marshall 1960 AX 4×12",
+          "(Celestion G12M-25 Greenback)& Marshall 6960 ALE 4x12 (Celestion G12T-75)",
+        ],
+      },
+      {
+        subtitle: "Микрофоны",
+      },
+      {
+        subtitle: "Fender Twin Reverb",
+        content: ["Shure SM57", "Coles 4038", "Neumann U67 (room)"],
+      },
+      {
+        subtitle: "Mesa",
+        content: [
+          "Electro-Voice PL20 (Marshall 6960 ALE 4x12)",
+          "Neumann TLM 170 black ones (Marshall 1960 AX 4×12)",
+          "Shure SM57 (room)",
+          "Neumann U67 (room)",
+        ],
+      },
+      {
+        subtitle: "Акустическая гитара",
+        content: ["Октава МК-012", "AKG SolidTube"],
+      },
+      {
+        subtitle: "Кабели",
+        content: ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"],
+      },
+      {
+        title: "ВОКАЛ",
+        subtitle: "Микрофон",
+        content: "Joemeek jm47 Black",
+      },
+      {
+        subtitle: "Преамп",
+        content: "Nagra IV",
+      },
+      {
+        subtitle: "Процессор эффектов",
+        content: "Lexicon 300 Digital Effects System",
+      },
+    ],
+  },
+];
+
+export const ARTICLESDATA = [...EP2020Equipment, ...EP2020Equipment2];

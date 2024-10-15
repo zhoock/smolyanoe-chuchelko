@@ -17,13 +17,16 @@ export type PopupProps = HamburgerProps & {
 };
 
 export type AlbumsProps<Size extends number = 896> = {
+  album?: any;
   /** Название альбома */
-  nameAlbum: string;
+  nameAlbum?: any;
+  /** Название группы и название альбома */
   fullName?: string;
   showAlbum?: boolean;
   /** Функция берёт название альбома из тега h3 и меняет значение showAlbum на противоположное */
   handleCoverClick?: (e: React.MouseEvent<HTMLElement>) => void;
   children?: React.ReactElement;
+  /** Год релиза альбома */
   year?: string;
   // Размер изображения по умолчанию.
   size?: Size;
@@ -39,5 +42,6 @@ export type TracksProps = {
   title: string;
   /** Текст песни */
   content: string;
+  /** Общая продолжительность всех треков в альбоме */
   duration: number;
 };

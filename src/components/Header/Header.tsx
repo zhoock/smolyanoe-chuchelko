@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import Hamburger from "../Hamburger/Hamburger";
 import Navigation from "../Navigation/Navigation";
 import Popup from "../Popup/Popup";
@@ -16,9 +17,9 @@ export default function Header() {
         <div className="row">
           <div className="small-12 small-centered column">
             <div className="b-header-content">
-              <a className="logo" href="/">
+              <Link className="logo" to="/">
                 СМОЛЯНОЕ ЧУЧЕЛКО
-              </a>
+              </Link>
               <nav role="navigation">
                 <Navigation classes={{ hide: "hide-for-medium-down" }} />
               </nav>

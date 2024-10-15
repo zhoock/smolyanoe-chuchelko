@@ -74,7 +74,8 @@ module.exports = {
     }),
   ],
   devServer: {
+    historyApiFallback: true,
     watchFiles: path.join(__dirname, "src"),
-    port: 9000,
+    port: 5173,
   },
 };

@@ -9,8 +9,8 @@ nav {
         padding: 0 16px;
         text-transform: uppercase;
 
-        &.selected {
-          color: $link-color;
+        &.active {
+          color: $dark-greenish-yellow;
           pointer-events: none;
           /* disables click event */
         }

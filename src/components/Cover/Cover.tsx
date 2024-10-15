@@ -16,7 +16,7 @@ import img23 from "../../images/Tar-Baby-Cover-23-mobiles.jpg";
 /**
  * Компонент отображает обложку альбома.
  */
-export default function AlbumCover({ nameAlbum, size }: AlbumsProps) {
+export default function Cover({ nameAlbum, size }: AlbumsProps) {
   if (nameAlbum == "Смоляное чучелко") {
     return (
       <picture>

@@ -1,31 +1,55 @@
-import React, { useState, MouseEvent } from "react";
+import React from "react";
+import { Outlet, createBrowserRouter, RouterProvider } from "react-router-dom";
+
 import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
-import AboutUs from "./AboutUs/AboutUs";
 import Albums from "./Albums/Albums";
 
+import AboutUs from "./AboutUs/AboutUs";
+import Articles from "./Articles/Articles";
+import Article from "./Articles/Article";
+import Album from "./Albums/Album";
+import NotFoundPage from "./NotFoundPage";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <NotFoundPage />,
+    children: [
+      {
+        index: true,
+        element: <Albums />,
+      },
+      {
+        path: "/albums/:albumId",
+        element: <Album />,
+      },
+      {
+        path: "/aboutus/",
+        element: <AboutUs />,
+      },
+      {
+        path: "/articles",
+        element: <Articles />,
+      },
+      {
+        path: "/articles/:articleId",
+        element: <Article />,
+      },
+    ],
+  },
+]);
+
 export default function App() {
-  const [nameAlbum, setNameAlbum] = useState("");
-  const [showAlbum, setShowAlbum] = useState(false);
+  return <RouterProvider router={router} fallbackElement={<p>Loading...</p>} />;
+}
 
-  function handleCoverClick(e: MouseEvent<HTMLElement>) {
-    setNameAlbum(e.currentTarget.innerHTML);
-    setShowAlbum(!showAlbum);
-  }
-
+function Layout() {
   return (
     <>
       <Header />
-      {!showAlbum && <AboutUs />}
-
-      <main role="main">
-        <Albums
-          nameAlbum={nameAlbum}
-          showAlbum={showAlbum}
-          handleCoverClick={handleCoverClick}
-        />
-      </main>
-
+      <Outlet />
       <Footer />
     </>
   );

@@ -1,55 +1,67 @@
 import React from "react";
-import AlbumCover from "../CoverList/AlbumCover";
+import { Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
+
+import AlbumDetails from "../AlbumDetails/AlbumDetails";
+import AlbumCover from "../Cover/Cover";
 import AlbumTracks from "../AlbumTracks/AlbumTracks";
 import Share from "../Share/Share";
 import ServiceButtons from "../ServiceButtons/ServiceButtons";
-import { AlbumsProps } from "../../models";
+
+import { ALBUMSDATA } from "../data";
 
 /**
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
  */
-export default function Album({ nameAlbum, handleCoverClick }: AlbumsProps) {
+export default function Album() {
   window.scrollTo({
     top: 0,
     left: 0,
     behavior: "smooth",
   });
 
+  const params = useParams<{ albumId: string }>();
+
+  const album = ALBUMSDATA.filter(
+    (album) => album.albumId === params.albumId,
+  )[0];
+
   return (
     <>
-      <div className="row">
-        <div className="small-12 column">
-          <nav aria-label="Breadcrumb" className="b-breadcrumb">
-            <ul>
-              <li>
-                <a href="#" onClick={handleCoverClick}>
-                  Альбомы
-                </a>
-              </li>
-              <li className="active">{nameAlbum}</li>
-            </ul>
-          </nav>
+      <section className="b-album">
+        <div className="row">
+          <div className="small-12 column">
+            <nav aria-label="Breadcrumb" className="b-breadcrumb">
+              <ul>
+                <li>
+                  <Link to="/">Альбомы</Link>
+                </li>
+                <li className="active">{album.nameAlbum}</li>
+              </ul>
+            </nav>
+          </div>
         </div>
-      </div>
-      <div className="row">
-        <div className="small-12 medium-6 medium-push-6 column">
-          <AlbumCover nameAlbum={nameAlbum} />
+        <div className="row">
+          <div className="small-12 medium-6 medium-push-6 column">
+            <AlbumCover nameAlbum={album.nameAlbum} />
 
-          <Share />
-        </div>
+            <Share />
+          </div>
 
-        <div className="small-12 medium-6 medium-pull-6 column">
-          <AlbumTracks nameAlbum={nameAlbum} />
+          <div className="small-12 medium-6 medium-pull-6 column">
+            <AlbumTracks nameAlbum={album.nameAlbum} />
+          </div>
         </div>
-      </div>
-      <div className="row">
-        <div className="small-12 medium-6 column">
-          <ServiceButtons nameAlbum={nameAlbum} section="Купить" />
+        <div className="row">
+          <div className="small-12 medium-6 column">
+            <ServiceButtons nameAlbum={album.nameAlbum} section="Купить" />
+          </div>
+          <div className="small-12 medium-6 column">
+            <ServiceButtons nameAlbum={album.nameAlbum} section="Слушать" />
+          </div>
         </div>
-        <div className="small-12 medium-6 column">
-          <ServiceButtons nameAlbum={nameAlbum} section="Слушать" />
-        </div>
-      </div>
+        <AlbumDetails nameAlbum={album.nameAlbum} />
+      </section>
     </>
   );
 }
