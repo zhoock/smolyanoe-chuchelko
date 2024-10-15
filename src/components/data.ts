@@ -820,7 +820,7 @@ const EP2020EffectsPedals = [
   {
     articleId: "EP2020EffectsPedals",
     nameArticle: "Смоляное чучелко — EP (2020). Педали эффектов",
-
+    img: "8-t5mrzl4k8",
     detales: [
       {
         title: "BOSS DS-1",
