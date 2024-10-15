@@ -1,6 +1,8 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { ARTICLESDATA } from "../data";
+import WrapperArticle from "../Articles/WrapperArticle";
+
+
 
 export default function Articles() {
   return (
@@ -8,11 +10,13 @@ export default function Articles() {
       <div className="row">
         <div className="small-12 column">
           <h2>Статьи</h2>
-          {ARTICLESDATA.map((album, i) => (
-            <Link key={i} to={`/articles/${album.articleId}`}>
-              {album.nameArticle}
-            </Link>
-          ))}
+          <div className="b-article-list">
+            {ARTICLESDATA.map((article) => (
+              <WrapperArticle key={article.articleId} article={article} />
+            
+             
+            ))}
+          </div>
         </div>
       </div>
     </section>

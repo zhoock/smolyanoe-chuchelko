@@ -724,7 +724,7 @@ const EP2020Equipment = [
         title: "БАC",
         subtitle: "Гитары",
         content: ["Gibson Thunderbird", "Fender Jazz Bass"],
-        img: "jfNUR6uSXDI"
+        img: "jfNUR6uSXDI",
       },
       {
         id: 10,
@@ -750,7 +750,7 @@ const EP2020Equipment = [
           "Fender Jaguar",
           "Акустическая гитара Takamine",
         ],
-        img: "PO_dLuex6I8"
+        img: "PO_dLuex6I8",
       },
       {
         id: 14,
@@ -800,7 +800,7 @@ const EP2020Equipment = [
         title: "ВОКАЛ",
         subtitle: "Микрофон",
         content: ["Joemeek jm47 Black"],
-        img: "KPtYswTNdD4"
+        img: "KPtYswTNdD4",
       },
       {
         id: 22,
@@ -820,6 +820,7 @@ const EP2020Equipment2 = [
   {
     articleId: "EP2020Equipment",
     nameArticle: "Смоляное чучелко — EP (2020). Оборудование",
+    img: "hSe_fQAZaAo",
     detales: [
       {
         title: "ПУЛЬТ",
@@ -940,4 +941,8 @@ const EP2020Equipment2 = [
   },
 ];
 
-export const ARTICLESDATA = [...EP2020Equipment, ...EP2020Equipment2];
+export const ARTICLESDATA = [
+  ...EP2020Equipment,
+  ...EP2020Equipment,
+  ...EP2020Equipment2,
+];

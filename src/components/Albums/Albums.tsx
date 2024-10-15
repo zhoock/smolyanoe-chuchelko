@@ -11,16 +11,16 @@ export default function Albums() {
   return (
     <section className="b-albums">
       <div className="row collapse medium-uncollapse">
-        <div className="small-12 small-centered column">
+        <div className="small-12 column">
           <div className="row medium-collapse">
             <div className="small-12 column">
               <h2>Альбомы</h2>
             </div>
           </div>
           <div className="b-cover-list">
-            {ALBUMSDATA.map((album, i) => (
+            {ALBUMSDATA.map((album) => (
               <WrapperCover
-                key={i}
+                key={album.albumId}
                 fullName={album.fullName}
                 year={album.release[0].date}
                 album={album}

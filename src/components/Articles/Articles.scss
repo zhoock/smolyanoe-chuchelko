@@ -1,4 +1,27 @@
 .b-articles,
 .b-article {
   background: $textBackgroundColor;
+
+    &-list {
+    display: flex;
+    flex-flow: row nowrap;
+    overflow-x: scroll;
+    scroll-snap-type: x mandatory;
+    padding: 0 $ms-1;
+    @extend %hide-scrollbar;
+
+    @include breakpoint(tablet) {
+      display: grid;
+      grid-gap: 1.618em;
+      grid-template-columns: repeat(3, calc(33.33333%));
+      padding: 0;
+
+      &:has(:hover) .b-cover__img:not(:hover) {
+        opacity: 0.5;
+      }
+    }
+    a {
+      border: none;
+    }
+  }
 }

@@ -2,7 +2,7 @@ import React from "react";
 import { AlbumsProps } from "../../models";
 import { Link } from "react-router-dom";
 
-export default function Cover({
+export default function WrapperCover({
   fullName,
   children,
   year,

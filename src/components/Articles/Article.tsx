@@ -3,9 +3,6 @@ import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { ARTICLESDATA } from "../data";
 
-// import IjivB_qQvRA from "../../IjivB_qQvRA.jpg";
-// import WXCC_uqimg from "../../images/WXCC_uqimg.jpg";
-
 function getImageUrl(img: string) {
   return (
     "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/" +
@@ -27,10 +24,10 @@ function Block({
 }) {
   return (
     <>
-      <h3>{title}</h3>
+      {title && <h3>{title}</h3>}
+      {img && <img src={getImageUrl(img)} alt="" />}
       <h4>{subtitle}</h4>
       <ul>{content && content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-      <img src={getImageUrl(img)} alt="" />
     </>
   );
 }
