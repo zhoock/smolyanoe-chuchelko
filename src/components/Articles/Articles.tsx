@@ -2,8 +2,6 @@ import React from "react";
 import { ARTICLESDATA } from "../data";
 import WrapperArticle from "../Articles/WrapperArticle";
 
-
-
 export default function Articles() {
   return (
     <section className="b-articles">
@@ -13,8 +11,6 @@ export default function Articles() {
           <div className="b-article-list">
             {ARTICLESDATA.map((article) => (
               <WrapperArticle key={article.articleId} article={article} />
-            
-             
             ))}
           </div>
         </div>

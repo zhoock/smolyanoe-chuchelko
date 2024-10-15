@@ -14,8 +14,7 @@ export default function WrapperArticle({ article }: { article: any }) {
     <div className="b-cover__img">
       <Link to={`/articles/${article.articleId}`}>
         <img src={getImageUrl(article.img)} alt="" />
-
-        {article.nameArticle}
+        <div className="b-cover__description">{article.nameArticle}</div>
       </Link>
     </div>
   );

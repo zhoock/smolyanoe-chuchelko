@@ -660,13 +660,13 @@ export function tracks(nameAlbum: string) {
   return tracks;
 }
 
-
 // console.log(JSON.stringify(_23));
 
 const EP2020Equipment = [
   {
     articleId: "EP2020Equipment",
     nameArticle: "Смоляное чучелко — EP (2020). Оборудование",
+    img: "hSe_fQAZaAo",
     detales: [
       {
         id: 0,
@@ -816,126 +816,35 @@ const EP2020Equipment = [
   },
 ];
 
-const EP2020Equipment2 = [
+const EP2020EffectsPedals = [
   {
-    articleId: "EP2020Equipment",
-    nameArticle: "Смоляное чучелко — EP (2020). Оборудование",
-    img: "hSe_fQAZaAo",
+    articleId: "EP2020EffectsPedals",
+    nameArticle: "Смоляное чучелко — EP (2020). Педали эффектов",
+
     detales: [
       {
-        title: "ПУЛЬТ",
-        content: "Solid State Logic SSL 6000 E (32 channels)",
+        title: "BOSS DS-1",
+        content:
+          "Серебряный винт, первая версия с длинным тире. Серийный номер 9900. Япония, октябрь 1980 года. Основной дисторшн.",
+        img: "eJk47Wmh7eA",
       },
       {
-        title: "БАРАБАНЫ",
-        subtitle: "Эмбиентный микрофон",
-        content: "Neumann TLM 170",
+        title: "RAT",
+        content:
+          "Small Box RAT '84 Whiteface. На LM308 чипе. The Sound of the Underground. Использовался на басу.",
+        img: "FA4HyrJDkdM",
       },
       {
-        subtitle: "Оверхеды",
-        content: "COLES 4038",
+        title: "Electro-Harmonix Polychorus",
+        content:
+          "Начало 80-х. Куплен в штатах, прошёл диагностику у Ховарда Девиса, инженера ЕHX. Не знаю точно, принимал ли Ховард участие в создании Polychorus, но именно он — автор Deluxe Memory Man. Обе эти педали вышли в 81 году.",
+        img: "zw5WUXDPyh4",
       },
       {
-        subtitle: "Передний микрофон",
-        content: "AKG C24",
-      },
-      {
-        subtitle: "Райд",
-        content: "Neumann KM84",
-      },
-      {
-        subtitle: "Бас-барабан",
-        content: [
-          "Neumann TLM 170 black ones (внутри)",
-          "Sennheiser MKH 40 (снаружи)",
-        ],
-      },
-      {
-        subtitle: "Малый барабан",
-        content: ["Shure SM57 (верх)", "AKG 414 B-ULS (низ)"],
-      },
-      {
-        subtitle: "Том-томы",
-        content: ["AKG 414 B-ULS (верх)", "Shure SM57 (низ)"],
-      },
-      {
-        subtitle: "Хай-хэт",
-        content: "AKG C451",
-      },
-      {
-        title: "БАC",
-        subtitle: "Гитары",
-        content: ["Gibson Thunderbird", "Fender Jazz Bass"],
-      },
-      {
-        subtitle: "Педали эффектов",
-        content: "Rat",
-      },
-      {
-        subtitle: "Усилители",
-        content: "Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab",
-      },
-      {
-        subtitle: "Микрофоны",
-        content: ["Goodfly C12", "AKG C24 или Shure SM7 (room)"],
-      },
-      {
-        title: "ГИТАРА",
-        subtitle: "Гитары",
-        content: [
-          "Fender Mustang",
-          "Fender Jaguar",
-          "Акустическая гитара Takamine",
-        ],
-      },
-      {
-        subtitle: "Педали эффектов",
-        content: ["BOSS DS-1", "EHX Polyhorus", "EHX Small Clone"],
-      },
-      {
-        subtitle: "Усилители",
-        content: [
-          "Fender Twin Reverb (Black Face)",
-          "Mesa boogie studio preamp .22 & Mesa Boogie fifty/fifty + Marshall 1960 AX 4×12",
-          "(Celestion G12M-25 Greenback)& Marshall 6960 ALE 4x12 (Celestion G12T-75)",
-        ],
-      },
-      {
-        subtitle: "Микрофоны",
-      },
-      {
-        subtitle: "Fender Twin Reverb",
-        content: ["Shure SM57", "Coles 4038", "Neumann U67 (room)"],
-      },
-      {
-        subtitle: "Mesa",
-        content: [
-          "Electro-Voice PL20 (Marshall 6960 ALE 4x12)",
-          "Neumann TLM 170 black ones (Marshall 1960 AX 4×12)",
-          "Shure SM57 (room)",
-          "Neumann U67 (room)",
-        ],
-      },
-      {
-        subtitle: "Акустическая гитара",
-        content: ["Октава МК-012", "AKG SolidTube"],
-      },
-      {
-        subtitle: "Кабели",
-        content: ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"],
-      },
-      {
-        title: "ВОКАЛ",
-        subtitle: "Микрофон",
-        content: "Joemeek jm47 Black",
-      },
-      {
-        subtitle: "Преамп",
-        content: "Nagra IV",
-      },
-      {
-        subtitle: "Процессор эффектов",
-        content: "Lexicon 300 Digital Effects System",
+        title: "Electro-Harmonix Small Clone",
+        content: `Идентифицировать педаль можно по дата-коду на потенциометре (имеет пластиковый вал (как фича — педаль не фонит, если прикасаться рукой)), последние 4 цифры (8339) означают, что год 83, 39 неделя.
+У винтажных педалей ясный и меньшего размера (3 мм) светодиод против красного и большого (5 мм) светодиода в переизданиях. Кроме того, в оригиналах нет тире (-), разделяющего слова FULL и CHORUS. EHX c 79 до начала 80-х использовали чипы: MN3007 либо RETICON SAD1024 (самый редкий и востребованный по причине пользования его "сами знаете кем"). Но дело, конечно же, только в том, что переиздание звучит как гавно.`,
+        img: "pjS8D3U2v_0",
       },
     ],
   },
@@ -943,6 +852,6 @@ const EP2020Equipment2 = [
 
 export const ARTICLESDATA = [
   ...EP2020Equipment,
+  ...EP2020EffectsPedals,
   ...EP2020Equipment,
-  ...EP2020Equipment2,
 ];

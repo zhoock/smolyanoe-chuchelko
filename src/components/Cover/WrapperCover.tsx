@@ -12,8 +12,8 @@ export default function WrapperCover({
     <div className="b-cover__img">
       <Link to={`/albums/${album.albumId}`}>
         {children}
-        <div className="b-cover__name-group">{fullName}</div>
-        <div className="b-cover__name-album">{year!.slice(0, 4)}</div>
+        <div className="b-cover__description">{fullName}</div>
+        <div>{year!.slice(0, 4)}</div>
       </Link>
     </div>
   );

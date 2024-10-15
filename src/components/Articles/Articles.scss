@@ -13,7 +13,7 @@
     @include breakpoint(tablet) {
       display: grid;
       grid-gap: 1.618em;
-      grid-template-columns: repeat(3, calc(33.33333%));
+      grid-template-columns: repeat(3, calc(33.33333% - 20px));
       padding: 0;
 
       &:has(:hover) .b-cover__img:not(:hover) {
