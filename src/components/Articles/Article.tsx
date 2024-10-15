@@ -37,6 +37,12 @@ function Block({
 }
 
 export default function Article() {
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: "smooth",
+  });
+
   const params = useParams<{ articleId: string }>();
 
   const article = ARTICLESDATA.filter(
