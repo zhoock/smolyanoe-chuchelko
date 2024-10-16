@@ -1,25 +1,28 @@
-.b-cover {
-  &-list {
-    display: flex;
-    flex-flow: row nowrap;
-    overflow-x: scroll;
-    scroll-snap-type: x mandatory;
-    padding: 0 $ms-1;
-    @extend %hide-scrollbar;
+.b-covers-list {
+  display: flex;
+  flex-flow: row nowrap;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  padding: 0 $ms-1;
+  @extend %hide-scrollbar;
 
-    @include breakpoint(tablet) {
-      display: grid;
-      grid-gap: 1.618em;
-      grid-template-columns: repeat(2, calc(41.66667%));
-      padding: 0;
+  @include breakpoint(tablet) {
+    display: grid;
+    grid-gap: 1.618em;
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0;
 
-      &:has(:hover) .b-cover__img:not(:hover) {
-        opacity: 0.5;
-      }
+    &:has(:hover) .b-cover__img:not(:hover) {
+      opacity: 0.5;
     }
-    a {
-      border: none;
-    }
+  }
+
+  @include breakpoint(desktops) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  a {
+    border: none;
   }
 
   &__img {
@@ -40,12 +43,10 @@
     img {
       margin: 0;
       display: block;
-      // border-radius: $ms_-1;
     }
   }
 
   &__description {
-    color: $labelColor;
     margin-top: $ms_-1;
   }
 }

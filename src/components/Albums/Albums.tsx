@@ -18,7 +18,7 @@ export default function Albums() {
             </div>
           </div>
 
-          <div className="b-cover-list">
+          <div className="b-covers-list">
             {ALBUMSDATA.map((album) => (
               <WrapperCover
                 key={album.albumId}

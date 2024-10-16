@@ -9,10 +9,10 @@ export default function WrapperCover({
   album,
 }: AlbumsProps) {
   return (
-    <div className="b-cover__img">
+    <div className="b-covers-list__img">
       <Link to={`/albums/${album.albumId}`}>
         {children}
-        <div className="b-cover__description">{fullName}</div>
+        <div className="b-covers-list__description">{fullName}</div>
         <div>{year!.slice(0, 4)}</div>
       </Link>
     </div>

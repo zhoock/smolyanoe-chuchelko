@@ -13,13 +13,19 @@
     @include breakpoint(tablet) {
       display: grid;
       grid-gap: 1.618em;
-      grid-template-columns: repeat(3, calc(33.33333% - 20px));
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: 200px;
       padding: 0;
 
       &:has(:hover) .b-cover__img:not(:hover) {
         opacity: 0.5;
       }
     }
+
+    @include breakpoint(desktops) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
     a {
       border: none;
     }
