@@ -29,10 +29,10 @@ const formatDate = (dateRelease: string) => {
 
 export default function WrapperArticle({ article }: { article: any }) {
   return (
-    <div className="b-cover__img">
+    <div className="b-articles-list__img">
       <Link to={`/articles/${article.articleId}`}>
         <div
-          className="b-article__img"
+          className="b-articles-list__img-url"
           style={{
             background: `no-repeat center/cover url(${getImageUrl(article.img)})`,
           }}

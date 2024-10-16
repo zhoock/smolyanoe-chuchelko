@@ -74,9 +74,9 @@ module.exports = {
     }),
   ],
   devServer: {
-    static: {
-      directory: path.join(__dirname, "src/images"),
-    },
+    // static: {
+    //   directory: path.join(__dirname, "src/images"),
+    // },
     historyApiFallback: true,
     watchFiles: path.join(__dirname, "src"),
     port: 5173,

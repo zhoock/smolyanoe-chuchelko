@@ -13,7 +13,7 @@ export default function Articles() {
             </div>
           </div>
 
-          <div className="b-article-list">
+          <div className="b-articles-list">
             {ARTICLESDATA.map((article) => (
               <WrapperArticle key={article.articleId} article={article} />
             ))}
