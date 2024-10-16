@@ -909,11 +909,10 @@ const EP2022RecordingAnAlbumEquipment = [
     articleId: "EP2022RecordingAnAlbumEquipment",
     nameArticle:
       "Смоляное чучелко — 23 EP (2022). Запись альбома. Оборудование.",
-    img: "nxfRtxNAZFk",
-    date: "2022-02-14",
+    img: "2Lw32V8t2ps",
+    date: "2022-02-15",
     detales: [
       {
-        img: "Ki1dsicGpaE",
         content: `Основное отличие этого альбома от предыдущего в том, что он записан полностью вживую (кроме вокала).
        Мы пришли в студию М.А.М.А, разложились, отстроились и прогнали два первых трека по три дубля.
         Попили чайку, после чего добили последний трек, сразу отобрали лучшие дубли и я записал под них гитарные даблы. Вот и всё.`,
@@ -925,9 +924,9 @@ const EP2022RecordingAnAlbumEquipment = [
             Поэтому второй раз я записал голос уже на DTH. И там же бэк-вокал.`,
       },
       {
+        img: "2Lw32V8t2ps",
         subtitle: "Микрофон",
         content: "GoodFly 251",
-        img: "2Lw32V8t2ps",
       },
       {
         title: "ГИТАРА",
@@ -942,6 +941,7 @@ const EP2022RecordingAnAlbumEquipment = [
                Звук гитары снимали вблизи динамика, а также из комнаты с расстояния 2-х метров от динамика.`,
       },
       {
+        img: "z9LOvK4K6aM",
         subtitle: "Гитара",
         content: ["Fender Mustang"],
       },
@@ -969,7 +969,6 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         subtitle: "Кабели",
         content: ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"],
-        img: "z9LOvK4K6aM",
       },
       {
         title: "БАРАБАНЫ",
@@ -982,6 +981,7 @@ const EP2022RecordingAnAlbumEquipment = [
               Но он, итак, в теме. Так что микрофоны на полу лежали (кто в курсе, тот поймёт).`,
       },
       {
+        img: "V4lwe-B1v8M",
         subtitle: "Оверхеды",
         content: ["Стереопара COLES 4038 + моно Goodfly 251"],
       },
@@ -1016,7 +1016,6 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         subtitle: "Комната",
         content: ["AKG C 460 B (2 шт. на полу, расстояние 3—4 метра)"],
-        img: "V4lwe-B1v8M",
       },
       {
         title: "БАС",
@@ -1025,13 +1024,13 @@ const EP2022RecordingAnAlbumEquipment = [
            Но он самоликвидировался.`,
       },
       {
+        img: "Vo-WyugZI8Q",
         subtitle: "Усилители",
         content: ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"],
       },
       {
         subtitle: "Микрофоны",
         content: ["Neumann U87 + линия"],
-        img: "Vo-WyugZI8Q",
       },
       {
         title: "СВЕДЕНИЕ",
@@ -1042,6 +1041,9 @@ const EP2022RecordingAnAlbumEquipment = [
               Уложились в две сессии. Оставили на ночь все настройки на пульте, чтобы не реколить, а наутро добили.
                По мне так немного просрали баланс в двух треках (слишком задрали гитару), но в этом риск аналогового сведения.
                 Мы знали на что шли. В целом получилось неплохо. DIY.`,
+        
+      },
+      {
         img: "qjndcIQiiHQ",
       },
       {
