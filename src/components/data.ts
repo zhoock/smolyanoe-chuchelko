@@ -639,6 +639,8 @@ const _23 = [
 //  оператор расширения или распространения (spread-оператор)
 export const ALBUMSDATA = [..._23, ...EP];
 
+// console.log(JSON.stringify(ALBUMSDATA));
+
 // деструктуризация
 export function buttons(nameAlbum: string) {
   const { buttons } = ALBUMSDATA.filter((_) => _.nameAlbum === nameAlbum)[0];
@@ -660,7 +662,7 @@ export function tracks(nameAlbum: string) {
   return tracks;
 }
 
-// console.log(JSON.stringify(_23));
+
 
 const EP2020Equipment = [
   {

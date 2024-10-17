@@ -74,9 +74,9 @@ module.exports = {
     }),
   ],
   devServer: {
-    // static: {
-    //   directory: path.join(__dirname, "src/images"),
-    // },
+    static: {
+      directory: path.join(__dirname, "src"),
+    },
     historyApiFallback: true, // необходимо при испольтзовании React Router для маршрутизации
     watchFiles: path.join(__dirname, "src"), // указывает на каталог src, за которыми будет вестись наблюдение
     port: 5173, // указывает порт на котором будет работать веб-сервер

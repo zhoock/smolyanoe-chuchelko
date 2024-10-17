@@ -7,8 +7,8 @@ import axios from "axios";
 export default function Articles() {
 
   async function fetchProducts() {
-    const response = axios.get("https://fakestoreapi.com/products?limit=5");
-    console.log(response);
+    const response = axios.get("src/products/products.json");
+    // console.log(response);
   }
   useEffect(() => {
     fetchProducts();
@@ -21,10 +21,6 @@ export default function Articles() {
           <div className="row medium-collapse">
             <div className="small-12 column">
               <h2>Статьи</h2>
-              <img
-                src="src/images/2Lw32V8t2ps.jpg"
-                alt=""
-              />
             </div>
           </div>
 
