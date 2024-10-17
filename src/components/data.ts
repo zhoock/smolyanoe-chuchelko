@@ -104,7 +104,7 @@ const EP = [
     ],
     tracks: [
       {
-        id: 0,
+        id: 1,
         title: "Последний поршневый бомбардировщик",
         content: `
 Выбери шоу
@@ -153,7 +153,7 @@ const EP = [
         duration: 2,
       },
       {
-        id: 1,
+        id: 2,
         title: "Водянистая влага",
         content: `
 Я с твоим лицом
@@ -196,7 +196,7 @@ const EP = [
         duration: 3.2,
       },
       {
-        id: 2,
+        id: 3,
         title: "Рулевой мёртв",
         content: `
 Акрил, зараза и пот
@@ -264,7 +264,7 @@ const EP = [
         duration: 3.2,
       },
       {
-        id: 3,
+        id: 4,
         title: "Бром и сталь",
         content: `
 Стань безопасным
@@ -340,7 +340,7 @@ const EP = [
         duration: 3.32,
       },
       {
-        id: 4,
+        id: 5,
         title: "Падение кита",
         content: `
 Знак твой сон
@@ -478,7 +478,7 @@ const _23 = [
     ],
     tracks: [
       {
-        id: 0,
+        id: 1,
         title: "Фиджийская русалка Барнума",
         content: `
 Фанзины, флаеры
@@ -529,7 +529,7 @@ const _23 = [
       },
 
       {
-        id: 1,
+        id: 2,
         title: "Слипер",
         content: `
 Бутафорный дайс
@@ -573,7 +573,7 @@ const _23 = [
         duration: 3,
       },
       {
-        id: 2,
+        id: 3,
         title: "Швайс",
         content: `
 Знаю, у тебя

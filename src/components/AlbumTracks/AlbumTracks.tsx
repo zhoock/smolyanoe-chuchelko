@@ -18,7 +18,7 @@ export default function AlbumTracks({ nameAlbum }: AlbumsProps) {
   // Приём проектирования «поведение»
   function handleClick(e: MouseEvent<HTMLElement>) {
     if (e.currentTarget instanceof HTMLLIElement) {
-      setActiveTrack(Number(e.currentTarget.dataset.index));
+      setActiveTrack(Number(e.currentTarget.dataset.index) - 1);
       setShowPopup(!showPopup);
     } else {
       setActiveTrack(!!activeTrack);

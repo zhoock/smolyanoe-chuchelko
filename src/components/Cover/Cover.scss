@@ -12,7 +12,7 @@
     grid-template-columns: repeat(2, 1fr);
     padding: 0;
 
-    &:has(:hover) .b-cover__img:not(:hover) {
+    &:has(:hover) .b-covers-list__img:not(:hover) {
       opacity: 0.5;
     }
   }
