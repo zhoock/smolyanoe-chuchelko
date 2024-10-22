@@ -30,7 +30,7 @@ function Block({
       {typeof content == "string" ? (
         <p>{content}</p>
       ) : (
-        <ul>{content.map((item, i) => <li key={i}>{item}</li>)}</ul>
+        <ul>{content && content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
       )}
     </>
   );
