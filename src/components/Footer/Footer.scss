@@ -1,0 +1,45 @@
+footer {
+  background: $transport-black;
+
+  ul {
+    display: flex;
+
+    li {
+      span::after {
+        background: inherit;
+        content: "|";
+        position: relative;
+        top: 0;
+        left: 0;
+        display: inline-block;
+        padding: 0 $ms-_1;
+      }
+    }
+
+    &.b-social-networks {
+      margin-top: $ms-1;
+
+      li {
+        font-size: $ms-2;
+        flex: 0 1 $ms-3;
+
+        a {
+          border: none;
+          color: $unemphasizedSelectedTextBackgroundColor;
+
+          &:hover {
+            color: $dark-greenish-yellow;
+            border-bottom-color: $dark-greenish-yellow;
+          }
+
+          // hide the text in the link
+          span {
+            text-indent: -9999px;
+            white-space: nowrap;
+            display: inline-block;
+          }
+        }
+      }
+    }
+  }
+}

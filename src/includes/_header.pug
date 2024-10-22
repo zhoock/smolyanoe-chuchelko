@@ -1,0 +1,41 @@
+//- includes/_header.pug
+
+
+header(role="banner")    
+    .b-container
+        .row
+            .small-11.small-centered.column
+                .row
+                    .small-9.medium-7.columns
+                        a.logo(href="/") 
+                            span СМОЛЯНОЕ ЧУЧЕЛКО
+
+                    .small-3.medium-5.columns
+
+                        if mainMenu
+
+                            // Menu
+                            nav(role="navigation")
+                                ul.b-menu.hide-for-medium-down
+                                    +nav
+                            // /Menu
+
+                        else
+
+
+                            
+.b-container
+    .row
+        .small-11.small-centered.column
+
+            if mainMenu
+
+                // Menu hamburger
+                .b-menu-hamburger.js-menu-hamburger.hide-for-large-up
+                    .b-menu-hamburger__toggle
+                        .one
+                        .two
+                        .three
+                // /Menu hamburger  
+
+            else                    

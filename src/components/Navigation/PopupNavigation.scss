@@ -1,0 +1,25 @@
+.b-popup {
+  .b-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-family: "Oswald", sans-serif;
+
+    li {
+      a {
+        @include adjust-font-size-to($ms-1, 0);
+        // padding: $ms_-1;
+        display: block;
+        border: none;
+
+        &.selected {
+          color: $link-color;
+          pointer-events: none;
+        }
+      }
+    }
+  }
+}

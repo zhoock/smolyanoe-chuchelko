@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", // Тип кода создаваемого итогового файла.
+    "jsx": "react", // Включать ли поддержку ".tsx" файлов?
+    "moduleResolution": "node", // Определить способ поиска модулей в папках: как в Node.js или классический, как в TypeScript 1.5 и ниже.
+    "allowJs": true, // Разрешать компилировать файлы с JavaScript-кодом?
+    "strict": true, // Включить ли все строгие проверки типов сразу: noImplicitAny, noImplicitThis, alwaysStrict, strictNullChecks, strictFunctionTypes, strictPropertyInitialization?
+    "esModuleInterop": true, // Создать хелперы __importStar и __importDefault для обеспечения совместимости с экосистемой Babel и включить allowSyntheticDefaultImports для совместимости с системой типов.
+    "isolatedModules": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "typeRoots": ["./types", "./node_modules/lib/types"]
+    // "types": ["app-window", "errors", "css-modules", "external-library"]
+  },
+  "include": ["src", "index.d.ts"],
+  "exclude": ["src/no-compile"]
+}

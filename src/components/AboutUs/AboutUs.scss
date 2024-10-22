@@ -1,0 +1,68 @@
+.b-about-us {
+  background: $textBackgroundColor;
+
+  button {
+    background: $unemphasizedSelectedTextBackgroundColor;
+    padding: $ms_-2 $ms_0;
+    border-radius: $ms_2;
+    cursor: pointer;
+    appearance: none;
+    border: 0;
+    transition: all 200ms ease;
+    color: $systemGreyColor;
+    margin-bottom: $ms-1;
+
+    .icon-ctrl {
+      display: inline-block;
+      position: relative;
+      top: 0;
+      left: 2px;
+      transform: rotate(180deg);
+      font: $medium 1.618rem/0 sans-serif;
+    }
+
+    &:hover {
+      background-color: $dark-greenish-yellow;
+      color: $labelColor;
+
+      span {
+        color: $labelColor;
+      }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover {
+        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+        background-color: $unemphasizedSelectedTextBackgroundColor;
+        color: $systemGreyColor;
+        transition: none;
+
+        span {
+          color: $systemGreyColor;
+        }
+      }
+    }
+  }
+
+  &:has(p.active) {
+    button {
+      background-color: $dark-greenish-yellow;
+      color: $labelColor;
+
+      & span {
+        transform: rotate(0);
+        top: 13px;
+        color: $labelColor;
+      }
+    }
+  }
+
+  p {
+    height: 60px;
+    overflow: hidden;
+
+    &.active {
+      height: 100%;
+    }
+  }
+}
