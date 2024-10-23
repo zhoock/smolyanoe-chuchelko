@@ -1,4 +1,4 @@
-# smolyanoe chuchelko
+# Smolyanoe chuchelko
 
 Hi all!
 
