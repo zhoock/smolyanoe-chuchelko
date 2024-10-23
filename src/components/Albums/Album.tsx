@@ -41,7 +41,7 @@ export default function Album() {
         </div>
         <div className="row">
           <div className="small-12 medium-6 medium-push-6 column">
-            <AlbumCover albumId={album?.albumId} />
+            <AlbumCover album={album} />
 
             <Share />
           </div>

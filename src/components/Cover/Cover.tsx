@@ -10,7 +10,7 @@ export default function Cover({ album, size }: any) {
     return (
       <picture>
         <source
-          srcSet={`${getImageUrl(webp, webp)} 1x, ${getImageUrl(webp2x, webp)} 2x`}
+          srcSet={`${getImageUrl(webp, ".webp")} 1x, ${getImageUrl(webp2x, ".webp")} 2x`}
           type="image/webp"
         />
         <source
@@ -28,5 +28,7 @@ export default function Cover({ album, size }: any) {
     );
   }
 
-  return <Block {...album[0]} />;
+  return album?.cover.map((_: any) => <Block {..._} key={_.id} />);
+
+  // return <Block {...album} />;
 }

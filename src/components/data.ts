@@ -1,5 +1,3 @@
-// import {IProduct} from "../models";
-
 const EP = [
   {
     albumId: "smolyanoechuchelko",
@@ -642,9 +640,6 @@ const _23 = [
 export const ALBUMSDATA = [..._23, ...EP];
 
 // console.log(JSON.stringify(ALBUMSDATA));
-
-
-
 
 const EP2020Equipment = [
   {

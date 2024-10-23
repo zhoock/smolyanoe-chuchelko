@@ -1,13 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-
-function getImageUrl(img: string) {
-  return (
-    "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/" +
-    img +
-    ".jpg"
-  );
-}
+import { getImageUrl } from "../../hooks/albums";
 
 /**
  * Функция возвращает дату релиза альбома в формате дд/мм/гг.

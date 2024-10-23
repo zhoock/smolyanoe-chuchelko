@@ -1,6 +1,6 @@
 import React from "react";
 import WrapperCover from "../Cover/WrapperCover";
-import Cover from "../Cover/Cover";
+import AlbumCover from "../Cover/Cover";
 import { useAlbums } from "../../hooks/albums";
 import { Loader } from "../Loader/Loader";
 import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
@@ -33,7 +33,7 @@ export default function Albums() {
                 year={album.release[0].date}
                 albumId={album.albumId}
               >
-                <Cover album={album} />
+                <AlbumCover album={album} />
               </WrapperCover>
             ))}
           </div>
