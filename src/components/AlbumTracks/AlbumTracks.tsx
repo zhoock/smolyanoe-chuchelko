@@ -1,15 +1,19 @@
 import React, { useState, MouseEvent } from "react";
 import Popup from "../Popup/Popup";
 import Hamburger from "../Hamburger/Hamburger";
-import { tracks } from "../data";
-import { AlbumsProps } from "../../models";
 import { TracksProps } from "../../models";
+import { IProduct } from "../../models";
+import "./style.scss";
 
 /**
  * Компонент отображает название альбома и нумерованный список песен.
  * При клике на название трека выводит текст выбранной песни в popup.
  */
-export default function AlbumTracks({ nameAlbum }: AlbumsProps) {
+export default function AlbumTracks({
+  album,
+}: {
+  album: IProduct
+}) {
   const initialState: unknown = null;
   const [activeTrack, setActiveTrack] = useState(initialState);
   const [showPopup, setShowPopup] = useState(false);
@@ -27,13 +31,12 @@ export default function AlbumTracks({ nameAlbum }: AlbumsProps) {
   }
 
   function Tracks({ tracks }: { tracks: TracksProps[] }) {
-
     return (
       <>
-        <h2>{nameAlbum}</h2>
+        <h2>{album?.nameAlbum}</h2>
         <h3>Треки</h3>
         <ol>
-          {tracks.map((track) => (
+          {tracks?.map((track) => (
             <li
               key={track.id}
               className={track.id === activeTrack ? "active" : ""}
@@ -62,5 +65,5 @@ export default function AlbumTracks({ nameAlbum }: AlbumsProps) {
     );
   }
 
-  return <Tracks tracks={tracks(nameAlbum)} />;
+  return <Tracks {...album} />;
 }

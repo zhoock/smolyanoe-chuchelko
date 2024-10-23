@@ -1,3 +1,8 @@
+// Defaults and variables
+@import "../../sass/common/bits.scss";
+// Mixins
+@import "../../sass/common/mixins";
+
 .b-popup {
   position: fixed;
   background: rgba($transport-black, 0);

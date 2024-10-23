@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./style.scss";
 
 export default function AboutUs() {
   const [activeIndex, setActiveIndex] = useState(false);

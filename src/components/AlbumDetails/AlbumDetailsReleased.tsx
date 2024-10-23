@@ -1,14 +1,9 @@
 import React from "react";
-import { release } from "../data";
-import { tracks } from "../data";
-import { AlbumsProps } from "../../models";
-import { String } from "../../models";
-;
-
+import { IProduct } from "../../models";
 /**
  * Функция возвращает дату релиза альбома в формате дд/мм/гг.
  */
-const formatDate = (dateRelease: string) => {
+const formatDate = (dateRelease: any) => {
   const date = new Date(dateRelease);
 
   let dd: number | string = date.getDate();
@@ -38,13 +33,14 @@ const endForMinutes = (n: number) =>
 /**
  * Компонент отображает блок с датой релиза альбома.
  */
-const AlbumDetailsReleased = ({ nameAlbum }: AlbumsProps) => {
-  const duration = tracks(nameAlbum)
-    .map((item) => item.duration)
+export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
+  const duration = album?.tracks
+    .map((item: any) => item.duration)
     .reduce((sum, current) => sum + current);
 
-  // деструктуризация
-  const Block = ({ date, UPC }: String) => {
+  
+
+  function Block({ date, UPC }: any) {
     return (
       <>
         <time dateTime={date}>{formatDate(date)}</time>
@@ -53,16 +49,13 @@ const AlbumDetailsReleased = ({ nameAlbum }: AlbumsProps) => {
         </div>
         <div>
           <small>
-            {tracks(nameAlbum).length} {endForTracks(tracks(nameAlbum).length)},{" "}
+            {album?.tracks.length} {endForTracks(album?.tracks.length)},{" "}
             {Math.ceil(duration)} {endForMinutes(duration)}
           </small>
         </div>
       </>
     );
-  };
+  }
 
-  // оператор расширения или распространения (spread-оператор) ...
-  return <Block {...release(nameAlbum)} />;
-};
-
-export default AlbumDetailsReleased;
+  return album?.release.map((_: any) => <Block {..._} key={_.id} />);
+}

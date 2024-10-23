@@ -1,20 +1,18 @@
 import React from "react";
-import { release } from "../data";
-import { AlbumsProps } from "../../models";
-import { String } from "../../models";
+import { ReleaseProps } from "../../models";
+import { IProduct } from "../../models";
 
 /**
  * Компонент отображает блок с информацией об обложке альбома.
  */
-export default function AlbumDetailsArtwork({ nameAlbum }: AlbumsProps) {
-  // деструктуризация
-  const Block = ({
+export default function AlbumDetailsArtwork({ album }: { album: IProduct }) {
+  function Block({
     photographer,
     photographerURL,
     design,
     designer,
     designerURL,
-  }: String) => {
+  }: ReleaseProps) {
     return (
       <>
         {photographer && (
@@ -29,8 +27,8 @@ export default function AlbumDetailsArtwork({ nameAlbum }: AlbumsProps) {
         <p>{designerURL ? <a href={designerURL}>{designer}</a> : designer}</p>
       </>
     );
-  };
+  }
 
   // оператор расширения (или распространения) | spread-оператор | ...
-  return <Block {...release(nameAlbum)} />;
+  return album?.release.map((_: any) => <Block {..._} key={_.id} />);
 }

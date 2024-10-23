@@ -1,6 +1,7 @@
 import React from "react";
 import { ARTICLESDATA } from "../data";
 import WrapperArticle from "../Articles/WrapperArticle";
+import "./style.scss";
 
 export default function Articles() {
   return (

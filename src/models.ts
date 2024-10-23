@@ -18,6 +18,7 @@ export type PopupProps = HamburgerProps & {
 
 export type AlbumsProps<Size extends number = 896> = {
   album?: any;
+  albumId?: string;
   /** Название альбома */
   nameAlbum?: any;
   /** Название группы и название альбома */
@@ -46,7 +47,9 @@ export type TracksProps = {
   duration: number;
 };
 
-export interface IProduct {
+
+
+export type IProduct = {
   albumId: string;
   nameGroup: string;
   nameAlbum: string;
@@ -64,6 +67,16 @@ export interface IProduct {
   detales: [];
   tracks: [];
 }
+
+export type ReleaseProps = IProduct &  {
+  date?: string;
+  UPC?: string;
+  photographer?: string;
+  photographerURL?: string;
+  design?: string;
+  designer?: string;
+  designerURL?: string;
+};
 
 export interface IArticle {
   articleId: string;

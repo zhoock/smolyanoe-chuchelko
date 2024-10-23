@@ -1,5 +1,6 @@
 import React from "react";
 import { HamburgerProps } from "../../models";
+import "./style.scss";
 
 /**
  * Компонент отображает гамбургер-меню.

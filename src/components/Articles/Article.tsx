@@ -2,14 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { ARTICLESDATA } from "../data";
-
-function getImageUrl(img: string) {
-  return (
-    "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/" +
-    img +
-    ".jpg"
-  );
-}
+import { getImageUrl } from "../../hooks/albums";
 
 function Block({
   title,
@@ -30,7 +23,7 @@ function Block({
       {typeof content == "string" ? (
         <p>{content}</p>
       ) : (
-        <ul>{content && content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+        <ul>{content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
       )}
     </>
   );

@@ -1,18 +1,23 @@
 import React from "react";
 import GetButton from "./GetButton";
-import { buttons } from "../data";
 import { String } from "../../models";
-
-//  alert(JSON.stringify(buttons));
+import { IProduct } from "../../models";
+import "./style.scss";
 
 /**
  * Компонент отображает блоки с кнопками-ссылками музыкальных агрегаторов.
  */
-export default function ServiceButtonsPurchase({ nameAlbum, section }: String) {
+export default function ServiceButtonsPurchase({
+  album,
+  section,
+}: {
+  album: IProduct;
+  section: string;
+}) {
   /**
    * Компонент отображает блок с кнопками-ссылками на агрегаторы.
    */
-  function ButtonsBlock({
+  function Block({
     itunes,
     bandcamp,
     amazon,
@@ -22,7 +27,7 @@ export default function ServiceButtonsPurchase({ nameAlbum, section }: String) {
     spotify,
     yandex,
     deezer,
-    tidal
+    tidal,
   }: String) {
     return (
       <div className="b-service-buttons">
@@ -90,5 +95,5 @@ export default function ServiceButtonsPurchase({ nameAlbum, section }: String) {
   }
 
   // оператор расширения или распространения (spread-оператор) ...
-  return <ButtonsBlock {...buttons(nameAlbum)} />;
+  return album?.buttons.map((_: any) => <Block {..._} key={_.id} />);
 }

@@ -1,4 +1,5 @@
 import React, { useState, MouseEvent } from "react";
+import "./style.scss";
 
 export default function Share() {
   const [share, setShare] = useState(false);

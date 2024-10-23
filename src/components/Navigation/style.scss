@@ -1,3 +1,29 @@
+// Defaults and variables
+@import "../../sass/common/bits.scss";
+// Mixins
+@import "../../sass/common/mixins";
+
+nav {
+  margin-left: auto;
+
+  ul.b-menu {
+    margin-bottom: 0;
+
+    li {
+      a {
+        padding: 0 16px;
+        text-transform: uppercase;
+
+        &.active {
+          color: $dark-greenish-yellow;
+          pointer-events: none;
+          /* disables click event */
+        }
+      }
+    }
+  }
+}
+
 .b-popup {
   .b-menu {
     display: flex;

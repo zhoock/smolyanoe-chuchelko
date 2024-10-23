@@ -1,28 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import WrapperCover from "../Cover/WrapperCover";
 import Cover from "../Cover/Cover";
-import axios from "axios";
-import { IProduct } from "../../models";
+import { useAlbums } from "../../hooks/albums";
+import { Loader } from "../Loader/Loader";
+import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
+import "./style.scss";
 
 /**
  * Компонент отображает список альбомов в виде обложек-ссылок
  */
 export default function Albums() {
-  const [albums, setAlbums] = useState<IProduct[]>([]);
-
-  async function fetchAlbums() {
-    const apiUrl =
-      "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/json/albums.json";
-
-    axios.get<IProduct[]>(apiUrl).then((resp) => {
-      setAlbums(resp.data);
-    });
-  }
-
-  // useEffect будет следить за изменением setAlbums и производить ререндер если это необходимо
-  useEffect(() => {
-    fetchAlbums();
-  }, [setAlbums]);
+  const { albums, loading, error } = useAlbums();
 
   return (
     <section className="b-albums">
@@ -34,15 +22,18 @@ export default function Albums() {
             </div>
           </div>
 
+          {loading && <Loader />}
+          {error && <ErrorMessage error={error} />}
+
           <div className="b-covers-list">
             {albums.map((album) => (
               <WrapperCover
                 key={album.albumId}
                 fullName={album.fullName}
                 year={album.release[0].date}
-                album={album}
+                albumId={album.albumId}
               >
-                <Cover nameAlbum={album.nameAlbum} />
+                <Cover album={album} />
               </WrapperCover>
             ))}
           </div>
