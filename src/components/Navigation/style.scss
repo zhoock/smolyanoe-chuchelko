@@ -19,6 +19,16 @@ nav {
           pointer-events: none;
           /* disables click event */
         }
+        &.pending {
+          color: red !important;
+          pointer-events: none;
+          /* disables click event */
+        }
+        &.transitioning {
+          color: green;
+          pointer-events: none;
+          /* disables click event */
+        }
       }
     }
   }

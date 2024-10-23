@@ -1,13 +1,13 @@
 import React from "react";
-import { AlbumsProps } from "../../models";
 import { Link } from "react-router-dom";
+import { AlbumsProps } from "../../models";
 import "./style.scss";
 
-export default function WrapperCover({
-  fullName,
-  children,
-  year,
+export default function WrapperAlbumCover({
   albumId,
+  children,
+  fullName,
+  year,
 }: AlbumsProps) {
   return (
     <div className="b-covers-list__img">

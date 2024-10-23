@@ -1,5 +1,6 @@
 import React from "react";
 import { IProduct } from "../../models";
+import { ReleaseProps } from "../../models";
 /**
  * Функция возвращает дату релиза альбома в формате дд/мм/гг.
  */
@@ -34,13 +35,11 @@ const endForMinutes = (n: number) =>
  * Компонент отображает блок с датой релиза альбома.
  */
 export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
-  const duration = album?.tracks
+  const duration: number = album?.tracks
     .map((item: any) => item.duration)
     .reduce((sum, current) => sum + current);
 
-  
-
-  function Block({ date, UPC }: any) {
+  function Block({ date, UPC }: ReleaseProps) {
     return (
       <>
         <time dateTime={date}>{formatDate(date)}</time>
@@ -57,5 +56,5 @@ export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
     );
   }
 
-  return album?.release.map((_: any) => <Block {..._} key={_.id} />);
+  return <Block {...album?.release[0]} />;
 }

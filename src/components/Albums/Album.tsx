@@ -2,11 +2,13 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import AlbumDetails from "../AlbumDetails/AlbumDetails";
-import AlbumCover from "../Cover/Cover";
+import AlbumCover from "../Cover/AlbumCover";
 import AlbumTracks from "../AlbumTracks/AlbumTracks";
 import Share from "../Share/Share";
 import ServiceButtons from "../ServiceButtons/ServiceButtons";
 import { useAlbums } from "../../hooks/albums";
+import { Loader } from "../Loader/Loader";
+import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
 
 /**
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
@@ -47,6 +49,8 @@ export default function Album() {
           </div>
 
           <div className="small-12 medium-6 medium-pull-6 column">
+            {loading && <Loader />}
+            {error && <ErrorMessage error={error} />}
             <AlbumTracks album={album} />
           </div>
         </div>

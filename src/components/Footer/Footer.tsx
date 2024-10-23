@@ -4,18 +4,22 @@ import "./style.scss";
 export default function Footer() {
   const socialNetwork = [
     {
+      id: 1,
       name: "youtube",
       href: "https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/",
     },
     {
+      id: 2,
       name: "instagram",
       href: "https://www.instagram.com/smolyanoechuchelko/",
     },
     {
+      id: 3,
       name: "facebook",
       href: "https://www.facebook.com/smolyanoechuchelko/",
     },
     {
+      id: 4,
       name: "vk",
       href: "https://vk.com/smolyanoechuchelko",
     },
@@ -26,8 +30,8 @@ export default function Footer() {
       <div className="row">
         <div className="small-12 column">
           <ul className="b-social-networks">
-            {socialNetwork.map((item, i) => (
-              <li key={i}>
+            {socialNetwork.map((item) => (
+              <li key={item.id}>
                 <a className={`icon-${item.name}`} href={item.href}>
                   <span>{item.name}</span>
                 </a>

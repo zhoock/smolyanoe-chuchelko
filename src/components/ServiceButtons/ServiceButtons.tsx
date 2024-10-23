@@ -95,5 +95,5 @@ export default function ServiceButtonsPurchase({
   }
 
   // оператор расширения или распространения (spread-оператор) ...
-  return album?.buttons.map((_: any) => <Block {..._} key={_.id} />);
+  return album?.buttons.map((_) => <Block {..._} key={_.id} />);
 }

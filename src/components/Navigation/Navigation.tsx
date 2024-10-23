@@ -3,23 +3,38 @@ import { NavLink } from "react-router-dom";
 import { NavigationProps } from "../../models";
 import "./style.scss";
 
-export default function Navigation({ classes, onShow }: NavigationProps) {
+export default function Navigation({ classes, onToggle }: NavigationProps) {
   return (
     <ul className={`b-menu ${classes ? classes.hide : null}`}>
       <li>
         <NavLink
           to="/aboutus"
           title="О группе"
-          onClick={onShow}
-          className={({ isActive }) => {
-            return isActive ? "active" : "";
-          }}
+          onClick={onToggle}
+          className={({ isActive, isPending, isTransitioning }) =>
+            [
+              isPending ? "pending" : "",
+              isActive ? "active" : "",
+              isTransitioning ? "transitioning" : "",
+            ].join(" ")
+          }
         >
           О группе
         </NavLink>
       </li>
       <li>
-        <NavLink to="/articles" title="Статьи" onClick={onShow}>
+        <NavLink
+          to="/articles"
+          title="Статьи"
+          onClick={onToggle}
+          className={({ isActive, isPending, isTransitioning }) =>
+            [
+              isPending ? "pending" : "",
+              isActive ? "active" : "",
+              isTransitioning ? "transitioning" : "",
+            ].join(" ")
+          }
+        >
           Статьи
         </NavLink>
       </li>

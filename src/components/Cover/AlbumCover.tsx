@@ -1,11 +1,16 @@
 import React from "react";
 import { String } from "../../models";
 import { getImageUrl } from "../../hooks/albums";
+import { IProduct } from "../../models";
 
+type AlbumCoverProps<Size extends number = 896> = {
+  album: IProduct;
+  size?: Size;
+};
 /**
  * Компонент отображает обложку альбома.
  */
-export default function Cover({ album, size }: any) {
+export default function AlbumCover({ album, size }: AlbumCoverProps) {
   function Block({ webp, webp2x, jpg, jpg2x, img, albumId }: String) {
     return (
       <picture>
@@ -28,7 +33,5 @@ export default function Cover({ album, size }: any) {
     );
   }
 
-  return album?.cover.map((_: any) => <Block {..._} key={_.id} />);
-
-  // return <Block {...album} />;
+  return album?.cover.map((_) => <Block {..._} key={_.id} />);
 }

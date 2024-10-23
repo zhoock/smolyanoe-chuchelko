@@ -1,5 +1,5 @@
 import React from "react";
-import AlbumDetailsReleased from "./AlbumDetailsReleased";
+import AlbumDetailsRelease from "./AlbumDetailsRelease";
 import AlbumDetailsArtwork from "./AlbumDetailsArtwork";
 import AlbumDetailsMusic from "./AlbumDetailsMusic";
 import { IProduct } from "../../models";
@@ -21,7 +21,7 @@ export default function AlbumDetails({
             <div className="large-5 large-push-7 column">
               <div className="b-album-details__released">
                 <h2>Релиз</h2>
-                <AlbumDetailsReleased album={album} />
+                <AlbumDetailsRelease album={album} />
                 <hr />
               </div>
               <div className="b-album-details__artwork">

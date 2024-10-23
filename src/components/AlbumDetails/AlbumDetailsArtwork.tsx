@@ -30,5 +30,5 @@ export default function AlbumDetailsArtwork({ album }: { album: IProduct }) {
   }
 
   // оператор расширения (или распространения) | spread-оператор | ...
-  return album?.release.map((_: any) => <Block {..._} key={_.id} />);
+  return <Block {...album?.release[0]} />;
 }

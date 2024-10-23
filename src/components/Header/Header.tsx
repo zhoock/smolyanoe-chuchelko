@@ -6,11 +6,7 @@ import Popup from "../Popup/Popup";
 import "./style.scss";
 
 export default function Header() {
-  const [activeIndex, setActiveIndex] = useState(false);
-
-  function handleClick() {
-    setActiveIndex(!activeIndex);
-  }
+  const [popup, setPopup] = useState(false);
 
   return (
     <>
@@ -27,22 +23,18 @@ export default function Header() {
             </div>
           </div>
         </div>
-
-        <div className="b-header-img">
-          <h1></h1>
-        </div>
       </header>
 
       {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
-      <Popup isActive={activeIndex} classes={{ hide: "hide-for-large-up" }}>
+      <Popup isActive={popup} classes={{ hide: "hide-for-large-up" }}>
         <nav role="navigation">
-          <Navigation onShow={handleClick} />
+          <Navigation onToggle={() => setPopup(!popup)} />
         </nav>
       </Popup>
       <Hamburger
         classes={{ hide: "hide-for-large-up" }}
-        isActive={activeIndex}
-        onShow={handleClick}
+        isActive={popup}
+        onToggle={() => setPopup(!popup)}
       />
     </>
   );

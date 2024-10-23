@@ -4,7 +4,7 @@ export type NavigationProps = {
     hide: "hide-for-medium-down" | "hide-for-large-up";
   };
   /**  Открывает/закрывает popup */
-  onShow?: (e: React.MouseEvent<HTMLElement>) => void;
+  onToggle?: (e: React.MouseEvent<HTMLElement>) => void;
 };
 
 export type HamburgerProps = NavigationProps & {
@@ -13,11 +13,11 @@ export type HamburgerProps = NavigationProps & {
 };
 
 export type PopupProps = HamburgerProps & {
-  children: React.ReactElement;
+  children: React.ReactNode;
 };
 
 export type AlbumsProps<Size extends number = 896> = {
-  album?: any;
+  album?: [];
   albumId?: string;
   /** Название альбома */
   nameAlbum?: any;
@@ -47,16 +47,43 @@ export type TracksProps = {
   duration: number;
 };
 
+export type ReleaseProps = {
+  id: number;
+  date: string;
+  UPC: string;
+  design: string;
+  designer: string;
+  designerURL: string;
+  photographer: string;
+  photographerURL: string;
+};
 
+export type DetalesProps = {
+  id: number;
+  title: string;
+  content: string[];
+};
 
 export type IProduct = {
   albumId: string;
   nameGroup: string;
   nameAlbum: string;
   fullName: string;
-  release: [
+  cover: [
     {
       [key: string]: string;
+    },
+  ];
+  release: [
+    {
+      id: number;
+      date: string;
+      UPC: string;
+      design: string;
+      designer: string;
+      designerURL: string;
+      photographer: string;
+      photographerURL: string;
     },
   ];
   buttons: [
@@ -66,16 +93,6 @@ export type IProduct = {
   ];
   detales: [];
   tracks: [];
-}
-
-export type ReleaseProps = IProduct &  {
-  date?: string;
-  UPC?: string;
-  photographer?: string;
-  photographerURL?: string;
-  design?: string;
-  designer?: string;
-  designerURL?: string;
 };
 
 export interface IArticle {
