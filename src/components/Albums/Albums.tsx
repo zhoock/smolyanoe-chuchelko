@@ -31,7 +31,7 @@ export default function Albums() {
               <WrapperCover
                 key={album.albumId}
                 fullName={album.fullName}
-                year={album.release[0].date}
+                year={album.release.date}
                 albumId={album.albumId}
               >
                 <AlbumCover album={album} />

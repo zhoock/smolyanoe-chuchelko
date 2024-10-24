@@ -56,5 +56,5 @@ export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
     );
   }
 
-  return <Block {...album?.release[0]} />;
+  return <Block {...album?.release} />;
 }

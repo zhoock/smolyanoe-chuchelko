@@ -9,7 +9,7 @@ export function useAlbums() {
   const [error, setError] = useState("");
 
   async function fetchAlbums() {
-    const URL = "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/json/albums.json";
+    const URL = "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json";
 
     try {
       setError("");

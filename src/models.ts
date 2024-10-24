@@ -72,23 +72,21 @@ export type IProduct = {
     jpg2x: string;
     img: string;
   };
-  release: [
-    {
-      id: number;
-      date: string;
-      UPC: string;
-      design: string;
-      designer: string;
-      designerURL: string;
-      photographer: string;
-      photographerURL: string;
-    },
-  ];
-  buttons: [
-    {
-      [key: string]: string;
-    },
-  ];
+  release: {
+    id: number;
+    date: string;
+    UPC: string;
+    design: string;
+    designer: string;
+    designerURL: string;
+    photographer: string;
+    photographerURL: string;
+  };
+
+  buttons: {
+    [key: string]: string;
+  };
+
   detales: [];
   tracks: [];
 };

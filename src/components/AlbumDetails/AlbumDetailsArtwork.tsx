@@ -30,5 +30,5 @@ export default function AlbumDetailsArtwork({ album }: { album: IProduct }) {
   }
 
   // оператор расширения (или распространения) | spread-оператор | ...
-  return <Block {...album?.release[0]} />;
+  return <Block {...album?.release} />;
 }
