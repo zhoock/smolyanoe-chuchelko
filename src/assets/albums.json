@@ -4,42 +4,35 @@
     "nameGroup": "Смоляное чучелко",
     "nameAlbum": "23",
     "fullName": "Смоляное чучелко — 23",
-    "cover": [
-      {
-        "id": 1,
-        "webp": "Tar-Baby-Cover-23-mobiles",
-        "webp2x": "Tar-Baby-Cover-23-mobiles@2x",
-        "jpg": "Tar-Baby-Cover-23-mobiles",
-        "jpg2x": "Tar-Baby-Cover-23-mobiles@2x",
-        "img": "Tar-Baby-Cover-23-mobiles"
-      }
-    ],
-    "release": [
-      {
-        "id": 1,
-        "date": "2022-01-23",
-        "UPC": "198003011083/198002899538",
-        "photographer": "Hans Jacob Haarseth",
-        "photographerURL": "https://www.instagram.com/vedonas/",
-        "design": "Дизайн",
-        "designer": "Ярослав Жук"
-      }
-    ],
-    "buttons": [
-      {
-        "id": 1,
-        "itunes": "https://music.apple.com/ru/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
-        "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23",
-        "amazon": "https://music.amazon.com/albums/B09PQ7VV7D?tag=bandlnk-20",
-        "apple": "https://music.apple.com/ru/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=music&Is=1&ls=1",
-        "vk": "https://vk.com/music/album/-2000261714_14261714_fd2045122e6407c160",
-        "youtube": "https://music.youtube.com/playlist?list=OLAK5uy_kyipWPjQMZME10sEGO804LM9X_kfBdT28",
-        "spotify": "https://open.spotify.com/album/64UnYHDHDTSsfNyKSNSHHG",
-        "yandex": "https://music.yandex.ru/album/20403610",
-        "deezer": "https://www.deezer.com/ru/album/285303392",
-        "tidal": "https://listen.tidal.com/album/211242116"
-      }
-    ],
+    "cover": {
+      "webp": "Tar-Baby-Cover-23-mobiles",
+      "webp2x": "Tar-Baby-Cover-23-mobiles@2x",
+      "jpg": "Tar-Baby-Cover-23-mobiles",
+      "jpg2x": "Tar-Baby-Cover-23-mobiles@2x",
+      "img": "Tar-Baby-Cover-23-mobiles"
+    },
+    "release": {
+      "id": 1,
+      "date": "2022-01-23",
+      "UPC": "198003011083/198002899538",
+      "photographer": "Hans Jacob Haarseth",
+      "photographerURL": "https://www.instagram.com/vedonas/",
+      "design": "Дизайн",
+      "designer": "Ярослав Жук"
+    },
+    "buttons": {
+      "id": 1,
+      "itunes": "https://music.apple.com/ru/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
+      "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23",
+      "amazon": "https://music.amazon.com/albums/B09PQ7VV7D?tag=bandlnk-20",
+      "apple": "https://music.apple.com/ru/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=music&Is=1&ls=1",
+      "vk": "https://vk.com/music/album/-2000261714_14261714_fd2045122e6407c160",
+      "youtube": "https://music.youtube.com/playlist?list=OLAK5uy_kyipWPjQMZME10sEGO804LM9X_kfBdT28",
+      "spotify": "https://open.spotify.com/album/64UnYHDHDTSsfNyKSNSHHG",
+      "yandex": "https://music.yandex.ru/album/20403610",
+      "deezer": "https://www.deezer.com/ru/album/285303392",
+      "tidal": "https://listen.tidal.com/album/211242116"
+    },
     "detales": [
       { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
       {
@@ -109,41 +102,34 @@
     "nameGroup": "Смоляное чучелко",
     "nameAlbum": "Смоляное чучелко",
     "fullName": "Смоляное чучелко — Смоляное чучелко",
-    "cover": [
-      {
-        "id": 1,
-        "webp": "Tar-Baby-Cover-mobiles",
-        "webp2x": "Tar-Baby-Cover-mobiles@2x",
-        "jpg": "Tar-Baby-Cover-mobiles",
-        "jpg2x": "Tar-Baby-Cover-mobiles@2x",
-        "img": "Tar-Baby-Cover-mobiles"
-      }
-    ],
-    "buttons": [
-      {
-        "id": 1,
-        "itunes": "https://geo.music.apple.com/us/album/\n\t\t\t\t%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/\n\t\t\t\t1509238927?uo&amp;mt=1&amp;app=itunes&amp;at=1000l9WJ&amp;ct=bq",
-        "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/-",
-        "amazon": "https://music.amazon.com/albums/\n\t\t\t\tB087PL1TBW?ref=dm_sh_456e-3972-dmcp-d2c6-ea06d&amp;\n\t\t\t\tmusicTerritory=US&amp;marketplaceId=ATVPDKIKX0DER",
-        "apple": "https://geo.music.apple.com/us/album/\n\t\t\t\t%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/\n\t\t\t\t1509238927?uo&amp;mt=1&amp;app=music&amp;at=1000l9WJ&amp;ct=bq",
-        "vk": "https://vk.com/music/album/-2000269477_7269477_bba1bfe909be511c07?act=album",
-        "youtube": "https://music.youtube.com/playlist?list=OLAK5uy_luccgS_47OsZN8YlvJPNTsZgTRDdReSOk",
-        "spotify": "https://open.spotify.com/album/6vr5jlUpTMT2rmTlsThZxc",
-        "yandex": "https://music.yandex.ru/album/10541546",
-        "deezer": "https://www.deezer.com/ru/album/143471132",
-        "tidal": "https://listen.tidal.com/album/138320502"
-      }
-    ],
-    "release": [
-      {
-        "id": 1,
-        "date": "2020-04-16",
-        "UPC": "195079279966",
-        "design": "Дизайн",
-        "designer": "Blexbolex",
-        "designerURL": "https://en.wikipedia.org/wiki/Blexbolex"
-      }
-    ],
+    "cover": {
+      "webp": "Tar-Baby-Cover-mobiles",
+      "webp2x": "Tar-Baby-Cover-mobiles@2x",
+      "jpg": "Tar-Baby-Cover-mobiles",
+      "jpg2x": "Tar-Baby-Cover-mobiles@2x",
+      "img": "Tar-Baby-Cover-mobiles"
+    },
+    "buttons": {
+      "id": 1,
+      "itunes": "https://geo.music.apple.com/us/album/\n\t\t\t\t%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/\n\t\t\t\t1509238927?uo&amp;mt=1&amp;app=itunes&amp;at=1000l9WJ&amp;ct=bq",
+      "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/-",
+      "amazon": "https://music.amazon.com/albums/\n\t\t\t\tB087PL1TBW?ref=dm_sh_456e-3972-dmcp-d2c6-ea06d&amp;\n\t\t\t\tmusicTerritory=US&amp;marketplaceId=ATVPDKIKX0DER",
+      "apple": "https://geo.music.apple.com/us/album/\n\t\t\t\t%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/\n\t\t\t\t1509238927?uo&amp;mt=1&amp;app=music&amp;at=1000l9WJ&amp;ct=bq",
+      "vk": "https://vk.com/music/album/-2000269477_7269477_bba1bfe909be511c07?act=album",
+      "youtube": "https://music.youtube.com/playlist?list=OLAK5uy_luccgS_47OsZN8YlvJPNTsZgTRDdReSOk",
+      "spotify": "https://open.spotify.com/album/6vr5jlUpTMT2rmTlsThZxc",
+      "yandex": "https://music.yandex.ru/album/10541546",
+      "deezer": "https://www.deezer.com/ru/album/143471132",
+      "tidal": "https://listen.tidal.com/album/138320502"
+    },
+    "release": {
+      "id": 1,
+      "date": "2020-04-16",
+      "UPC": "195079279966",
+      "design": "Дизайн",
+      "designer": "Blexbolex",
+      "designerURL": "https://en.wikipedia.org/wiki/Blexbolex"
+    },
     "detales": [
       { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
       {

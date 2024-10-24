@@ -11,13 +11,9 @@ export default function Navigation({ classes, onToggle }: NavigationProps) {
           to="/aboutus"
           title="О группе"
           onClick={onToggle}
-          className={({ isActive, isPending, isTransitioning }) =>
-            [
-              isPending ? "pending" : "",
-              isActive ? "active" : "",
-              isTransitioning ? "transitioning" : "",
-            ].join(" ")
-          }
+          className={({ isActive }) => {
+            return isActive ? "active" : "";
+          }}
         >
           О группе
         </NavLink>
@@ -27,13 +23,9 @@ export default function Navigation({ classes, onToggle }: NavigationProps) {
           to="/articles"
           title="Статьи"
           onClick={onToggle}
-          className={({ isActive, isPending, isTransitioning }) =>
-            [
-              isPending ? "pending" : "",
-              isActive ? "active" : "",
-              isTransitioning ? "transitioning" : "",
-            ].join(" ")
-          }
+          className={({ isActive }) => {
+            return isActive ? "active" : "";
+          }}
         >
           Статьи
         </NavLink>

@@ -4,8 +4,8 @@ import { ReleaseProps } from "../../models";
 /**
  * Функция возвращает дату релиза альбома в формате дд/мм/гг.
  */
-const formatDate = (dateRelease: any) => {
-  const date = new Date(dateRelease);
+const formatDate = (dateRelease: string) => {
+  const date: Date = new Date(dateRelease);
 
   let dd: number | string = date.getDate();
   if (dd < 10) dd = "0" + dd;

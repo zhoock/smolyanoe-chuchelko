@@ -1,36 +1,32 @@
 export type NavigationProps = {
-  /** Принимает классы css */
+  /** Принимает классы CSS */
   classes?: {
     hide: "hide-for-medium-down" | "hide-for-large-up";
   };
-  /**  Открывает/закрывает popup */
+  /**  Открывает/закрывает Popup */
   onToggle?: (e: React.MouseEvent<HTMLElement>) => void;
 };
 
 export type HamburgerProps = NavigationProps & {
+  /** Отвечает за состояние Popup (открыт/закрыт) */
   isActive: boolean;
-  zIndex?: number | string;
+  /** CSS свойство */
+  zIndex?: string;
 };
 
 export type PopupProps = HamburgerProps & {
   children: React.ReactNode;
 };
 
-export type AlbumsProps<Size extends number = 896> = {
-  album?: [];
-  albumId?: string;
-  /** Название альбома */
-  nameAlbum?: any;
+export type AlbumsCoverProps = {
+  /** Идентификатор альбома */
+  albumId: string;
   /** Название группы и название альбома */
-  fullName?: string;
-  showAlbum?: boolean;
-  /** Функция берёт название альбома из тега h3 и меняет значение showAlbum на противоположное */
-  handleCoverClick?: (e: React.MouseEvent<HTMLElement>) => void;
-  children?: React.ReactElement;
+  fullName: string;
+  // showAlbum?: boolean;
+  children: React.ReactElement;
   /** Год релиза альбома */
-  year?: string;
-  // Размер изображения по умолчанию.
-  size?: Size;
+  year: string;
 };
 
 export type String = {
@@ -69,11 +65,13 @@ export type IProduct = {
   nameGroup: string;
   nameAlbum: string;
   fullName: string;
-  cover: [
-    {
-      [key: string]: string;
-    },
-  ];
+  cover: {
+    webp: string;
+    webp2x: string;
+    jpg: string;
+    jpg2x: string;
+    img: string;
+  };
   release: [
     {
       id: number;

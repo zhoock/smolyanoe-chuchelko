@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { AlbumsProps } from "../../models";
+import { AlbumsCoverProps } from "../../models";
 import "./style.scss";
 
 export default function WrapperAlbumCover({
@@ -8,13 +8,13 @@ export default function WrapperAlbumCover({
   children,
   fullName,
   year,
-}: AlbumsProps) {
+}: AlbumsCoverProps) {
   return (
     <div className="b-covers-list__img">
       <Link to={`/albums/${albumId}`}>
         {children}
         <div className="b-covers-list__description">{fullName}</div>
-        <div>{year!.slice(0, 4)}</div>
+        <div>{year?.slice(0, 4)}</div>
       </Link>
     </div>
   );

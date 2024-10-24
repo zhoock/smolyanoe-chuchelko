@@ -1,5 +1,5 @@
+const path = require("path"); // модуль nodejs для корректной обработки путей
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const path = require("path");
 const FileManagerPlugin = require("filemanager-webpack-plugin"); // автоматическая очистка каталогов
 const MiniCssExtractPlugin = require("mini-css-extract-plugin"); // извлекаем CSS из файлов .js при сборке
 
@@ -8,15 +8,15 @@ module.exports = {
     bundle: path.join(__dirname, "src", "index.tsx"),
   },
 
-  resolve: {
-    extensions: [".tsx", ".ts", ".js"],
-  },
-
   output: {
     path: path.join(__dirname, "dist"),
     filename: "index[contenthash].js",
     assetModuleFilename: path.join("images", "[name].[contenthash][ext]"),
     clean: true,
+  },
+
+  resolve: {
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
   },
 
   module: {
@@ -73,10 +73,13 @@ module.exports = {
       filename: "[name].[contenthash:6].css",
     }),
   ],
+  performance: {
+    hints: false, // не отображаются предупреждения и ошибоки по производительности
+  },
   devServer: {
-    static: {
-      directory: path.join(__dirname, "src"),
-    },
+    // static: {
+    //   directory: path.resolve(__dirname, "src"),
+    // },
     historyApiFallback: true, // необходимо при испольтзовании React Router для маршрутизации
     watchFiles: path.join(__dirname, "src"), // указывает на каталог src, за которыми будет вестись наблюдение
     port: 5173, // указывает порт на котором будет работать веб-сервер
