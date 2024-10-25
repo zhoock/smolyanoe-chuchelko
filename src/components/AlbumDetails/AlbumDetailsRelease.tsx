@@ -1,23 +1,7 @@
 import React from "react";
 import { IProduct } from "../../models";
-import { ReleaseProps } from "../../models";
-/**
- * Функция возвращает дату релиза альбома в формате дд/мм/гг.
- */
-const formatDate = (dateRelease: string) => {
-  const date: Date = new Date(dateRelease);
-
-  let dd: number | string = date.getDate();
-  if (dd < 10) dd = "0" + dd;
-
-  let mm: number | string = date.getMonth() + 1;
-  if (mm < 10) mm = "0" + mm;
-
-  let yy: number | string = date.getFullYear();
-  if (yy < 10) yy = "0" + yy;
-
-  return `${dd}/${mm}/${yy}`;
-};
+import { String } from "../../models";
+import { formatDate } from "../../hooks/albums";
 
 /**
  * Функция возвращает строку (количество треков) с верным падежным окончанием.
@@ -39,7 +23,7 @@ export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
     .map((item: any) => item.duration)
     .reduce((sum, current) => sum + current);
 
-  function Block({ date, UPC }: ReleaseProps) {
+  function Block({ date, UPC }: String) {
     return (
       <>
         <time dateTime={date}>{formatDate(date)}</time>

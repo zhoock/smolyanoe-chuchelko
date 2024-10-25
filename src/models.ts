@@ -21,48 +21,6 @@ export interface PopupProps extends HamburgerProps {
   children: React.ReactNode;
 }
 
-export type AlbumsCoverProps = {
-  /** Идентификатор альбома */
-  albumId: string;
-  /** Название группы и название альбома */
-  fullName: string;
-  // showAlbum?: boolean;
-  children: React.ReactElement;
-  /** Год релиза альбома */
-  year: string;
-};
-
-export type String = {
-  [key: string]: string;
-};
-
-export type TracksProps = {
-  id: number;
-  /** Название песни */
-  title: string;
-  /** Текст песни */
-  content: string;
-  /** Общая продолжительность всех треков в альбоме */
-  duration: number;
-};
-
-export type ReleaseProps = {
-  id: number;
-  date: string;
-  UPC: string;
-  design: string;
-  designer: string;
-  designerURL: string;
-  photographer: string;
-  photographerURL: string;
-};
-
-export type DetalesProps = {
-  id: number;
-  title: string;
-  content: string[];
-};
-
 export type IProduct = {
   albumId: string;
   nameGroup: string;
@@ -90,10 +48,44 @@ export type IProduct = {
   tracks: [];
 };
 
-export interface IArticle {
-  articleId: string;
-  nameArticle: string;
-  img: string;
+export type AlbumsCoverProps = {
+  /** Идентификатор альбома */
+  albumId: string;
+  /** Название группы и название альбома */
+  fullName: string;
+  // showAlbum?: boolean;
+  children: React.ReactElement;
+  /** Год релиза альбома */
+  year: string;
+};
+
+export type String = {
+  [key: string]: string;
+};
+
+export type TracksProps = {
+  id: number;
+  /** Название песни */
+  title: string;
+  /** Текст песни */
+  content: string;
+  /** Общая продолжительность всех треков в альбоме */
+  duration: number;
+};
+
+export type ReleaseProps = {
   date: string;
-  detales: [img: string, subtitle: string, content: string];
-}
+  UPC: string;
+  design: string;
+  designer: string;
+  designerURL: string;
+  photographer: string;
+  photographerURL: string;
+};
+
+export type DetalesProps = {
+  id: number;
+  title: string;
+  content: string[];
+};
+

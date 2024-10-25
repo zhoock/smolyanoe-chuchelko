@@ -12,12 +12,12 @@
     margin-top: 0;
 
     a {
-      border-bottom-color: $textBackgroundColor;
+      border-bottom-color: $windowBackgroundColor;
 
-      @include link-colors($textBackgroundColor, $windowBackgroundColor);
+      @include link-colors($windowBackgroundColor, $dark-greenish-yellow);
 
       &:hover {
-        border-bottom-color: $windowBackgroundColor;
+        border-bottom-color: $dark-greenish-yellow;
       }
     }
   }
