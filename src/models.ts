@@ -1,22 +1,25 @@
-export type NavigationProps = {
+// Using interfaces with extends can often be more performant for the compiler
+// than type aliases with intersections
+
+export interface NavigationProps {
   /** Принимает классы CSS */
   classes?: {
     hide: "hide-for-medium-down" | "hide-for-large-up";
   };
   /**  Открывает/закрывает Popup */
   onToggle?: (e: React.MouseEvent<HTMLElement>) => void;
-};
+}
 
-export type HamburgerProps = NavigationProps & {
+export interface HamburgerProps extends NavigationProps {
   /** Отвечает за состояние Popup (открыт/закрыт) */
-  isActive: boolean;
+  isActive: true | false;
   /** CSS свойство */
   zIndex?: string;
-};
+}
 
-export type PopupProps = HamburgerProps & {
+export interface PopupProps extends HamburgerProps {
   children: React.ReactNode;
-};
+}
 
 export type AlbumsCoverProps = {
   /** Идентификатор альбома */
@@ -66,11 +69,7 @@ export type IProduct = {
   nameAlbum: string;
   fullName: string;
   cover: {
-    webp: string;
-    webp2x: string;
-    jpg: string;
-    jpg2x: string;
-    img: string;
+    [key: string]: string;
   };
   release: {
     id: number;

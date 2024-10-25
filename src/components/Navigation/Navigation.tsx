@@ -5,7 +5,7 @@ import "./style.scss";
 
 export default function Navigation({ classes, onToggle }: NavigationProps) {
   return (
-    <ul className={`b-menu ${classes ? classes.hide : null}`}>
+    <ul className={`b-menu ${classes ? classes.hide : ""}`}>
       <li>
         <NavLink
           to="/aboutus"
