@@ -30,20 +30,11 @@ export type IProduct = {
     [key: string]: string;
   };
   release: {
-    id: number;
-    date: string;
-    UPC: string;
-    design: string;
-    designer: string;
-    designerURL: string;
-    photographer: string;
-    photographerURL: string;
+    [key: string]: string;
   };
-
   buttons: {
     [key: string]: string;
   };
-
   detales: [];
   tracks: [];
 };
@@ -73,19 +64,18 @@ export type TracksProps = {
   duration: number;
 };
 
-export type ReleaseProps = {
-  date: string;
-  UPC: string;
-  design: string;
-  designer: string;
-  designerURL: string;
-  photographer: string;
-  photographerURL: string;
-};
+// export type ReleaseProps = {
+//   date: string;
+//   UPC: string;
+//   design: string;
+//   designer: string;
+//   designerURL: string;
+//   photographer: string;
+//   photographerURL: string;
+// };
 
 export type DetalesProps = {
   id: number;
   title: string;
   content: string[];
 };
-

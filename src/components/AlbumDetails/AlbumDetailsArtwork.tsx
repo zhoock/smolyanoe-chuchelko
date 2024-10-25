@@ -1,5 +1,5 @@
 import React from "react";
-import { ReleaseProps } from "../../models";
+import { String } from "../../models";
 import { IProduct } from "../../models";
 
 /**
@@ -12,7 +12,7 @@ export default function AlbumDetailsArtwork({ album }: { album: IProduct }) {
     design,
     designer,
     designerURL,
-  }: ReleaseProps) {
+  }: String) {
     return (
       <>
         {photographer && (
