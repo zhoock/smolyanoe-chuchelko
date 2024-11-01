@@ -29,7 +29,7 @@ export default function Footer() {
     <footer role="contentinfo">
       <div className="row">
         <div className="small-12 column">
-          <ul className="b-social-networks">
+          <ul className="social-networks">
             {socialNetwork.map((item) => (
               <li key={item.id}>
                 <a className={`icon-${item.name}`} href={item.href}>
@@ -38,7 +38,7 @@ export default function Footer() {
               </li>
             ))}
           </ul>
-          <ul className="b-copyright">
+          <ul className="copyright">
             <li>
               <small>
                 <span>© 2021—2024 Смоляное чучелко</span>

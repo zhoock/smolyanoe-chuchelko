@@ -3,7 +3,7 @@
 // Mixins
 @import "../../sass/common/mixins";
 
-.b-album-details {
+.album-details {
   background-color: $labelColor;
   color: $windowBackgroundColor;
   text-wrap: balance;
@@ -12,17 +12,17 @@
     margin-top: 0;
 
     a {
-      border-bottom-color: $windowBackgroundColor;
+      border-bottom-color: $textBackgroundColor;
 
-      @include link-colors($windowBackgroundColor, $dark-greenish-yellow);
+      @include link-colors($textBackgroundColor, darken($link-color, 20%));
 
       &:hover {
-        border-bottom-color: $dark-greenish-yellow;
+        border-bottom-color: darken($link-color, 20%);;
       }
     }
   }
 
-  .b-album-details__released {
+  &__released {
     time {
       display: block;
       color: $windowBackgroundColor;
@@ -46,28 +46,3 @@ hr {
   border-bottom: 1px solid $systemGreyColor;
   border-left: 0;
 }
-
-// .b-album-details {
-//   background-color: #332f25;
-//   color: $labelColor;
-
-//   p {
-//     a {
-//       border-bottom-color: #f8b21c;
-
-//       @include link-colors(#f8b21c, #747066);
-
-//       &:hover {
-//         border-bottom-color: #747066;
-//       }
-//     }
-//   }
-
-//   .b-album-details__released time {
-//     color: #747066;
-
-//     hr {
-//       border-bottom: 1px solid #747066;
-//     }
-//   }
-// }

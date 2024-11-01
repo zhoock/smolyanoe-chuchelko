@@ -6,7 +6,7 @@ export default function Popup({ children, isActive, classes }: PopupProps) {
   
   return (
     <div
-      className={`b-popup ${isActive ? "b-popup--open" : null} ${classes?.hide}`}
+      className={`popup ${isActive ? "popup_open" : null} ${classes?.hide}`}
     >
       {children}
     </div>

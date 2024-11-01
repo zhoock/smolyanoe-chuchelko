@@ -10,10 +10,10 @@ export default function AlbumDetailsMusic({ album }: { album: IProduct }) {
     return (
       <>
         <h3>{title}</h3>
-        <ul>{content?.map((_) => <li key={_}>{_}</li>)}</ul>
+        <ul>{content.map((_) => <li key={_}>{_}</li>)}</ul>
       </>
     );
   }
 
-  return album?.detales.map((_: any) => <Block {..._} key={_.id} />);
+  return album?.detales.map((_) => <Block {..._} key={_.id} />);
 }

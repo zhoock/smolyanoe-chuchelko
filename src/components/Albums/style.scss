@@ -1,31 +1,12 @@
 // Defaults and variables
 @import "../../sass/common/bits.scss";
 
-.b-album,
-.b-albums {
+.album,
+.albums {
   color: $systemGreyColor;
   background: $textBackgroundColor;
 
   img {
     border-radius: $ms_-1;
-  }
-}
-
-.b-breadcrumb {
-  ul {
-    display: flex;
-    flex-wrap: wrap;
-    margin-top: $ms-1;
-
-    li {
-      &:not(:last-child)::after {
-        display: inline-block;
-        margin: 0 0.25rem;
-        content: "→";
-      }
-      &.active {
-        color: darken($link-color, 20%);
-      }
-    }
   }
 }

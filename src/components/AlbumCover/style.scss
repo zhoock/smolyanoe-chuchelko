@@ -3,7 +3,7 @@
 // Mixins
 @import "../../sass/common/mixins";
 
-.b-covers-list {
+.albums__list {
   display: flex;
   flex-flow: row nowrap;
   overflow-x: scroll;
@@ -17,7 +17,7 @@
     grid-template-columns: repeat(2, 1fr);
     padding: 0;
 
-    &:has(:hover) .b-covers-list__img:not(:hover) {
+    &:has(:hover) .albums__list-item:not(:hover) {
       opacity: 0.5;
     }
   }
@@ -30,7 +30,7 @@
     border: none;
   }
 
-  &__img {
+  &-item {
     width: 100%;
     position: relative;
     transition: all 200ms ease;
@@ -50,8 +50,12 @@
       display: block;
     }
   }
+}
 
-  &__description {
-    margin-top: $ms_-1;
+.albums__description {
+  margin-top: $ms_-1;
+
+  &-year {
+    color: darken($link-color, 20%);
   }
 }

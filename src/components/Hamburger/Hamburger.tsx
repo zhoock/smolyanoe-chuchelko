@@ -8,9 +8,9 @@ import "./style.scss";
 export default function Hamburger({ isActive, onToggle, classes, zIndex }: HamburgerProps) {
   
   return (
-    <div className={`b-hamburger ${classes?.hide}`}>
+    <div className={`hamburger ${classes?.hide}`}>
       <div
-        className={`b-hamburger__toggle ${isActive ? "active" : null}`}
+        className={`hamburger__toggle ${isActive ? "active" : null}`}
         onClick={onToggle}
         style={{ zIndex: zIndex }}
       >

@@ -1,8 +1,6 @@
 // Defaults and variables
 @import "../../sass/common/bits.scss";
 
-
-
 footer {
   background: $transport-black;
 
@@ -21,7 +19,7 @@ footer {
       }
     }
 
-    &.b-social-networks {
+    &.social-networks {
       margin-top: $ms-1;
 
       li {
@@ -30,7 +28,7 @@ footer {
 
         a {
           border: none;
-          color: $unemphasizedSelectedTextBackgroundColor;
+          color: $windowBackgroundColor;
 
           &:hover {
             color: $dark-greenish-yellow;

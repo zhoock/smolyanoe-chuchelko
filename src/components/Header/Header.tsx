@@ -13,7 +13,7 @@ export default function Header() {
       <header role="banner">
         <div className="row">
           <div className="small-12 small-centered column">
-            <div className="b-header-content">
+            <div className="header-content">
               <Link className="logo" to="/">
                 СМОЛЯНОЕ ЧУЧЕЛКО
               </Link>

@@ -73,7 +73,6 @@ html {
   font: $base-font-weight $base-font-size $base-font-family;
 }
 
-
 html,
 button,
 input,
@@ -190,6 +189,25 @@ body {
       &:hover {
         /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
         background-color: inherit;
+      }
+    }
+  }
+
+  .breadcrumb {
+    ul {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: $ms-1;
+
+      li {
+        &:not(:last-child)::after {
+          display: inline-block;
+          margin: 0 0.25rem;
+          content: "→";
+        }
+        &.active {
+          color: darken($link-color, 20%);
+        }
       }
     }
   }

@@ -1,11 +1,11 @@
 // Defaults and variables
 @import "../../sass/common/bits.scss";
 
-.b-about-us {
+.about-us {
   background: $textBackgroundColor;
 
   button {
-    background: $unemphasizedSelectedTextBackgroundColor;
+    background: $windowBackgroundColor;
     padding: $ms_-2 $ms_0;
     border-radius: $ms_2;
     cursor: pointer;
@@ -36,7 +36,7 @@
     @media (hover: none) and (pointer: coarse) {
       &:hover {
         /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-        background-color: $unemphasizedSelectedTextBackgroundColor;
+        background-color: $windowBackgroundColor;
         color: $systemGreyColor;
         transition: none;
 

@@ -1,10 +1,9 @@
 import React from "react";
 import { useAlbums } from "../../hooks/albums";
-import WrapperCover from "../Cover/WrapperAlbumCover";
-import AlbumCover from "../Cover/AlbumCover";
+import WrapperAlbumCover from "../AlbumCover/WrapperAlbumCover";
+import AlbumCover from "../AlbumCover/AlbumCover";
 import { Loader } from "../Loader/Loader";
 import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
-import json from "../../assets/albums.json";
 import "./style.scss";
 
 /**
@@ -14,7 +13,7 @@ export default function Albums() {
   const { albums, loading, error } = useAlbums();
 
   return (
-    <section className="b-albums">
+    <section className="albums">
       <div className="row collapse medium-uncollapse">
         <div className="small-12 column">
           <div className="row medium-collapse">
@@ -26,16 +25,15 @@ export default function Albums() {
           {loading && <Loader />}
           {error && <ErrorMessage error={error} />}
 
-          <div className="b-covers-list">
+          <div className="albums__list">
             {albums.map((album) => (
-              <WrapperCover
+              <WrapperAlbumCover
                 key={album.albumId}
-                fullName={album.fullName}
-                year={album.release.date}
-                albumId={album.albumId}
+                {...album}
+                date={album.release.date}
               >
-                <AlbumCover album={album} />
-              </WrapperCover>
+                <AlbumCover {...album.cover} albumId={album.albumId} />
+              </WrapperAlbumCover>
             ))}
           </div>
         </div>

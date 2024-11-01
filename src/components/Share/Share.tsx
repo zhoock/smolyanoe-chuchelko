@@ -10,7 +10,7 @@ export default function Share() {
   }
 
   return (
-    <div className="b-share js-share-item">
+    <div className="share js-share-item">
       <ul>
         <li onClick={handleClick}>
           <a

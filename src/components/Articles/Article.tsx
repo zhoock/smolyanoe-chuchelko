@@ -2,33 +2,12 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { ARTICLESDATA } from "../data";
-import { getImageUrl } from "../../hooks/albums";
+import { getImageUrl, alphabeticFormatDate } from "../../hooks/albums";
+import { IArticles, ArticleDetalesProps } from "../../models";
 
-function Block({
-  title,
-  subtitle,
-  content,
-  img,
-}: {
-  title: string;
-  subtitle: string;
-  content: string[];
-  img: string;
-}) {
-  return (
-    <>
-      {title && <h3>{title}</h3>}
-      {img && <img src={getImageUrl(img)} alt="" />}
-      <h4>{subtitle}</h4>
-      {typeof content == "string" ? (
-        <p>{content}</p>
-      ) : (
-        <ul>{content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
-      )}
-    </>
-  );
-}
-
+/**
+ * Компонент отображает блок со статьёй.
+ */
 export default function Article() {
   window.scrollTo({
     top: 0,
@@ -36,17 +15,34 @@ export default function Article() {
     behavior: "smooth",
   });
 
-  const params = useParams<{ articleId: string }>();
+  const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const article = ARTICLESDATA.filter(
+  const article: IArticles = ARTICLESDATA.filter(
     (_) => _.articleId === params.articleId,
   )[0];
 
+  console.log(params);
+
+  function Block({ title, subtitle, content, img }: ArticleDetalesProps) {
+    return (
+      <>
+        {title && <h3>{title}</h3>}
+        {img && <img src={getImageUrl(img)} alt="" />}
+        <h4>{subtitle}</h4>
+        {typeof content == "string" ? (
+          <p>{content}</p>
+        ) : (
+          <ul>{content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+        )}
+      </>
+    );
+  }
+
   return (
-    <section className="b-article">
+    <section className="article">
       <div className="row">
-        <div className="small-12 medium-10 large-8 small-centered column">
-          <nav aria-label="Breadcrumb" className="b-breadcrumb">
+        <div className="small-12 column">
+          <nav aria-label="Breadcrumb" className="breadcrumb">
             <ul>
               <li>
                 <Link to="/articles">Статьи</Link>
@@ -54,9 +50,12 @@ export default function Article() {
               <li className="active">{article.nameArticle}</li>
             </ul>
           </nav>
+          <time dateTime={article.date}>
+            <small>{alphabeticFormatDate(article.date)}</small>
+          </time>
           <h2>{article.nameArticle}</h2>
-          {article.detales.map((detales: any) => (
-            <Block {...detales} key={detales.id} />
+          {article.detales.map((_) => (
+            <Block key={_.id} {..._} />
           ))}
         </div>
       </div>

@@ -1,21 +1,32 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { getImageUrl, formatDate } from "../../hooks/albums";
+import { ArticleProps } from "../../models";
+import { getImageUrl, alphabeticFormatDate } from "../../hooks/albums";
 
-export default function WrapperArticle({ article }: { article: any }) {
+/**
+ * Компонент отображает блок с информацией о статье.
+ */
+export default function WrapperArticle({
+  articleId,
+  img,
+  nameArticle,
+  date,
+}: ArticleProps) {
   return (
-    <div className="b-articles-list__img">
-      <Link to={`/articles/${article.articleId}`}>
+    <div className="articles__list-item">
+      <Link to={`/articles/${articleId}`}>
         <div
-          className="b-articles-list__img-url"
+          className="articles__picture"
           style={{
-            background: `no-repeat center/cover url(${getImageUrl(article.img)})`,
+            background: `no-repeat center/cover url(${getImageUrl(img)})`,
           }}
         ></div>
-        <div className="b-cover__description">{article.nameArticle}</div>
-        <time dateTime={article.date}>
-          <small>{formatDate(article.date)}</small>
-        </time>
+        <div className="articles__description">
+          {nameArticle}
+          <time dateTime={date}>
+            <small>{alphabeticFormatDate(date)}</small>
+          </time>
+        </div>
       </Link>
     </div>
   );

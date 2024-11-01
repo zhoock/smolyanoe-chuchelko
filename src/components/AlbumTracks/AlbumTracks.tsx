@@ -25,7 +25,7 @@ export default function AlbumTracks({ album }: { album: IProduct }) {
     setActiveTrack(0);
   }
 
-  function Tracks({ tracks }: { tracks: TracksProps[] }) {
+  function Block({ tracks }: { tracks: TracksProps[] }) {
     return (
       <>
         <h2>{album?.nameAlbum}</h2>
@@ -62,5 +62,5 @@ export default function AlbumTracks({ album }: { album: IProduct }) {
     );
   }
 
-  return <Tracks {...album} />;
+  return <Block {...album} />;
 }

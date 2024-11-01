@@ -3,9 +3,13 @@
 // Mixins
 @import "../../sass/common/mixins";
 
-.b-album {
+.album {
   ol {
     li {
+      &::marker {
+        color: darken($link-color, 20%);
+      }
+
       list-style: auto inside;
       border-top: 1px solid $windowBackgroundColor;
       text-overflow: ellipsis;
@@ -22,6 +26,9 @@
 
       &.active,
       &:hover {
+        &::marker {
+          color: $dark-greenish-yellow;
+        }
         color: $labelColor;
         background: $dark-greenish-yellow;
         border-top-color: $dark-greenish-yellow;

@@ -4,7 +4,7 @@
 export interface NavigationProps {
   /** Принимает классы CSS */
   classes?: {
-    hide: "hide-for-medium-down" | "hide-for-large-up";
+    hide: "hide-for-medium-down" | "hide-for-large-up"; // union literal type
   };
   /**  Открывает/закрывает Popup */
   onToggle?: (e: React.MouseEvent<HTMLElement>) => void;
@@ -12,7 +12,7 @@ export interface NavigationProps {
 
 export interface HamburgerProps extends NavigationProps {
   /** Отвечает за состояние Popup (открыт/закрыт) */
-  isActive: true | false;
+  isActive: boolean;
   /** CSS свойство */
   zIndex?: string;
 }
@@ -21,40 +21,53 @@ export interface PopupProps extends HamburgerProps {
   children: React.ReactNode;
 }
 
-export type IProduct = {
+/**
+ * Albums
+ */
+
+export interface IProduct {
+  /** Идентификатор альбома */
   albumId: string;
+  /** Название группы */
   nameGroup: string;
+  /** Название альбома */
   nameAlbum: string;
+  /** Название группы и название альбома */
   fullName: string;
-  cover: {
-    [key: string]: string;
-  };
+  /** Обложка альбома */
+  cover: CoverProps;
+  /** Релиз альбома */
   release: {
     [key: string]: string;
   };
+  /** URL музыкальных агрегаторов */
   buttons: {
     [key: string]: string;
   };
-  detales: [];
-  tracks: [];
-};
+  /** Дополнительная информация */
+  detales: DetalesProps[];
+  /** Треки */
+  tracks: TracksProps[];
+}
 
-export type AlbumsCoverProps = {
+export interface WrapperAlbumCoverProps {
   /** Идентификатор альбома */
   albumId: string;
   /** Название группы и название альбома */
   fullName: string;
-  // showAlbum?: boolean;
   children: React.ReactElement;
   /** Год релиза альбома */
-  year: string;
-};
+  date: string;
+}
 
-export type String = {
-  [key: string]: string;
-};
+export interface DetalesProps {
+  id: number;
+  title: string;
+  content: string[];
+}
 
-export type TracksProps = {
+export interface TracksProps {
+  /** Идентификатор песни */
   id: number;
   /** Название песни */
   title: string;
@@ -62,20 +75,45 @@ export type TracksProps = {
   content: string;
   /** Общая продолжительность всех треков в альбоме */
   duration: number;
+}
+
+export interface CoverProps<Size extends number = 896> {
+  webp: string;
+  webp2x: string;
+  jpg: string;
+  jpg2x: string;
+  img: string;
+  albumId: string;
+  size: Size;
+}
+
+export interface String {
+  [key: string]: string;
+}
+
+/**
+ * Articles
+ */
+
+export type IArticles = {
+  articleId: string;
+  nameArticle: string;
+  date: string;
+  img: string;
+  detales: ArticleDetalesProps[];
 };
 
-// export type ReleaseProps = {
-//   date: string;
-//   UPC: string;
-//   design: string;
-//   designer: string;
-//   designerURL: string;
-//   photographer: string;
-//   photographerURL: string;
-// };
-
-export type DetalesProps = {
+export interface ArticleDetalesProps {
   id: number;
-  title: string;
-  content: string[];
-};
+  title?: string;
+  img?: string;
+  subtitle?: string;
+  content?: string | string[]; // union type
+}
+
+export interface ArticleProps {
+  articleId: string;
+  img: string;
+  nameArticle: string;
+  date: string;
+}

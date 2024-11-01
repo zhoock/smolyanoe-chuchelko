@@ -2,14 +2,13 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import AlbumDetails from "../AlbumDetails/AlbumDetails";
-import AlbumCover from "../Cover/AlbumCover";
+import AlbumCover from "../AlbumCover/AlbumCover";
 import AlbumTracks from "../AlbumTracks/AlbumTracks";
 import Share from "../Share/Share";
 import ServiceButtons from "../ServiceButtons/ServiceButtons";
 import { useAlbums } from "../../hooks/albums";
 import { Loader } from "../Loader/Loader";
 import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
-
 
 /**
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
@@ -29,10 +28,10 @@ export default function Album() {
 
   return (
     <>
-      <section className="b-album">
+      <section className="album">
         <div className="row">
           <div className="small-12 column">
-            <nav aria-label="Breadcrumb" className="b-breadcrumb">
+            <nav aria-label="Breadcrumb" className="breadcrumb">
               <ul>
                 <li>
                   <Link to="/">Альбомы</Link>
@@ -44,7 +43,7 @@ export default function Album() {
         </div>
         <div className="row">
           <div className="small-12 medium-6 medium-push-6 column">
-            <AlbumCover album={album} />
+            <AlbumCover {...album?.cover} albumId={album?.albumId} />
 
             <Share />
           </div>

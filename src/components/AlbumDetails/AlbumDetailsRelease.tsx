@@ -6,13 +6,13 @@ import { formatDate } from "../../hooks/albums";
 /**
  * Функция возвращает строку (количество треков) с верным падежным окончанием.
  */
-const endForTracks = (n: number) =>
+const endForTracks = (n: number): "песни" | "песен" | "песня" =>
   n > 2 && n < 4 ? "песни" : n > 4 ? "песен" : "песня";
 
 /**
  * Функция возвращает строку (количество минут) с верным падежным окончанием.
  */
-const endForMinutes = (n: number) =>
+const endForMinutes = (n: number): "минуты" | "минут" | "минута" =>
   n > 2 && n < 4 ? "минуты" : n > 4 ? "минут" : "минута";
 
 /**
@@ -20,12 +20,12 @@ const endForMinutes = (n: number) =>
  */
 export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
   const duration: number = album?.tracks
-    .map((item: any) => item.duration)
+    .map((item) => item.duration)
     .reduce((sum, current) => sum + current);
 
   function Block({ date, UPC }: String) {
     return (
-      <>
+      <>  
         <time dateTime={date}>{formatDate(date)}</time>
         <div>
           <small>UPC: {UPC}</small>

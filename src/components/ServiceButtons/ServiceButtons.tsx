@@ -30,7 +30,7 @@ export default function ServiceButtonsPurchase({
     tidal,
   }: String) {
     return (
-      <div className="b-service-buttons">
+      <div className="service-buttons">
         <h3>{section}</h3>
         {section === "Купить" && (
           <ul>

@@ -1,7 +1,7 @@
 // Defaults and variables
 @import "../../sass/common/bits.scss";
 
-.b-share {
+.share {
   ul {
     margin-top: 0;
 
@@ -18,7 +18,7 @@
       }
 
       a {
-        background: $unemphasizedSelectedTextBackgroundColor;
+        background: $windowBackgroundColor;
         border: none;
         border-radius: 50%;
         padding: $ms_-1;
@@ -31,7 +31,7 @@
         @media (hover: none) and (pointer: coarse) {
           &:hover {
             /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-            background-color: $unemphasizedSelectedTextBackgroundColor;
+            background-color: $windowBackgroundColor;
             color: inherit;
             transition: none;
           }

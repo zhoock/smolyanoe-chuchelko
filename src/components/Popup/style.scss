@@ -3,7 +3,7 @@
 // Mixins
 @import "../../sass/common/mixins";
 
-.b-popup {
+.popup {
   position: fixed;
   background: rgba($transport-black, 0);
   top: 0;
@@ -14,7 +14,7 @@
   overflow: scroll;
   transition: all 0.45s;
 
-  &--open {
+  &_open {
     background: rgba($transport-black, 0.8);
     backdrop-filter: blur(20px);
     height: 100%;
@@ -27,7 +27,7 @@
   }
 }
 
-body:has(div.b-popup--open) {
+body:has(div.popup_open) {
   overflow: hidden;
 
   @include breakpoint(tablet) {

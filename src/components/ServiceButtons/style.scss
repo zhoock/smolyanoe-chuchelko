@@ -1,7 +1,7 @@
 // Defaults and variables
 @import "../../sass/common/bits.scss";
 
-.b-service-buttons {
+.service-buttons {
   ul {
     display: flex;
     flex-flow: row wrap;
@@ -19,7 +19,7 @@
         height: 76.244px;
         line-height: 76.244px;
         border: none;
-        background: $unemphasizedSelectedTextBackgroundColor;
+        background: $windowBackgroundColor;
         display: inline-block;
         text-align: center;
         width: 100%;
@@ -32,7 +32,7 @@
         @media (hover: none) and (pointer: coarse) {
           &:hover {
             /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-            background-color: $unemphasizedSelectedTextBackgroundColor;
+            background-color: $windowBackgroundColor;
           }
         }
 

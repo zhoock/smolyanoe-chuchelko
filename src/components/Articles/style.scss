@@ -3,11 +3,11 @@
 // Mixins
 @import "../../sass/common/mixins";
 
-.b-articles,
-.b-article {
+.articles,
+.article {
   background: $textBackgroundColor;
 
-  &-list {
+  &__list {
     display: flex;
     flex-flow: row nowrap;
     overflow-x: scroll;
@@ -21,7 +21,7 @@
       grid-template-columns: repeat(2, 1fr);
       padding: 0;
 
-      &:has(:hover) .b-articles-list__img:not(:hover) {
+      &:has(:hover) .articles__list-item:not(:hover) {
         opacity: 0.5;
       }
     }
@@ -34,7 +34,7 @@
       border: none;
     }
 
-    &__img {
+    &-item {
       width: 100%;
       position: relative;
       transition: all 200ms ease;
@@ -48,11 +48,20 @@
         flex-direction: column;
         margin-left: 0;
       }
-
-      &-url {
-        min-height: 200px;
-        border-radius: $ms_-1;
-      }
     }
+  }
+
+  &__picture {
+    min-height: 200px;
+    border-radius: $ms_-1;
+  }
+
+  &__description {
+    margin-top: $ms_-1;
+  }
+
+  time {
+    display: block;
+    color: darken($link-color, 20%);
   }
 }
