@@ -2,7 +2,6 @@ import React from "react";
 import { getImageUrl } from "../../hooks/albums";
 import { CoverProps } from "../../models";
 
-
 /**
  * Компонент отображает обложку альбома.
  */

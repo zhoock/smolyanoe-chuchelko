@@ -40,14 +40,8 @@ nav {
     li {
       a {
         @include adjust-font-size-to($ms-1, 0);
-        // padding: $ms_-1;
         display: block;
         border: none;
-
-        &.selected {
-          color: $link-color;
-          pointer-events: none;
-        }
       }
     }
   }

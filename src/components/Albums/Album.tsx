@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import AlbumDetails from "../AlbumDetails/AlbumDetails";
-import AlbumCover from "../AlbumCover/AlbumCover";
+import AlbumCover from "./AlbumCover";
 import AlbumTracks from "../AlbumTracks/AlbumTracks";
 import Share from "../Share/Share";
 import ServiceButtons from "../ServiceButtons/ServiceButtons";

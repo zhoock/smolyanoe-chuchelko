@@ -1,7 +1,7 @@
 import React from "react";
 import { useAlbums } from "../../hooks/albums";
-import WrapperAlbumCover from "../AlbumCover/WrapperAlbumCover";
-import AlbumCover from "../AlbumCover/AlbumCover";
+import WrapperAlbumCover from "./WrapperAlbumCover";
+import AlbumCover from "./AlbumCover";
 import { Loader } from "../Loader/Loader";
 import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
 import "./style.scss";

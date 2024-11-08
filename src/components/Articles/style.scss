@@ -8,46 +8,13 @@
   background: $textBackgroundColor;
 
   &__list {
-    display: flex;
-    flex-flow: row nowrap;
-    overflow-x: scroll;
-    scroll-snap-type: x mandatory;
-    padding: 0 $ms-1;
-    @extend %hide-scrollbar;
+    @include list(".articles");
+  }
 
-    @include breakpoint(tablet) {
-      display: grid;
-      grid-gap: 1.618em;
-      grid-template-columns: repeat(2, 1fr);
-      padding: 0;
-
-      &:has(:hover) .articles__list-item:not(:hover) {
-        opacity: 0.5;
-      }
-    }
-
-    @include breakpoint(desktops) {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    a {
-      border: none;
-    }
-
-    &-item {
-      width: 100%;
-      position: relative;
-      transition: all 200ms ease;
-      margin: 0 0 $ms-1 $ms-_1;
-      flex: none;
-      scroll-snap-align: center;
-      scroll-snap-stop: always;
-
-      @include breakpoint(tablet) {
-        display: flex;
-        flex-direction: column;
-        margin-left: 0;
-      }
+  &__description {
+    @extend %description;
+    &-year {
+      @extend %description-year;
     }
   }
 
@@ -56,12 +23,7 @@
     border-radius: $ms_-1;
   }
 
-  &__description {
-    margin-top: $ms_-1;
-  }
-
   time {
-    display: block;
     color: darken($link-color, 20%);
   }
 }

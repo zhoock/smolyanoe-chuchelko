@@ -16,7 +16,9 @@ export default function WrapperAlbumCover({
         <div className="albums__description">
           {fullName}
           <div className="albums__description-year">
-            {date?.slice(0, 4)}
+            <time dateTime={date}>
+              <small>{date?.slice(0, 4)}</small>
+            </time>
           </div>
         </div>
       </Link>

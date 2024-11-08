@@ -1,12 +1,26 @@
 // Defaults and variables
 @import "../../sass/common/bits.scss";
+// Mixins
+@import "../../sass/common/mixins";
 
-.album,
-.albums {
-  color: $systemGreyColor;
+.albums,
+.album {
   background: $textBackgroundColor;
 
+  &__list {
+    @include list(".albums");
+  }
+
+  &__description {
+    @extend %description;
+    &-year {
+      @extend %description-year;
+    }
+  }
+
   img {
+    margin: 0;
+    display: block;
     border-radius: $ms_-1;
   }
 }

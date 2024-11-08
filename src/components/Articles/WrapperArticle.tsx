@@ -23,9 +23,11 @@ export default function WrapperArticle({
         ></div>
         <div className="articles__description">
           {nameArticle}
-          <time dateTime={date}>
-            <small>{alphabeticFormatDate(date)}</small>
-          </time>
+          <div className="albums__description-year">
+            <time dateTime={date}>
+              <small>{alphabeticFormatDate(date)}</small>
+            </time>
+          </div>
         </div>
       </Link>
     </div>

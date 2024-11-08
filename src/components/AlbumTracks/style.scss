@@ -10,6 +10,7 @@
         color: darken($link-color, 20%);
       }
 
+      color: $link-color;
       list-style: auto inside;
       border-top: 1px solid $windowBackgroundColor;
       text-overflow: ellipsis;
@@ -44,6 +45,10 @@
           /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
           background: inherit;
           border-top-color: $windowBackgroundColor;
+
+          &::marker {
+            color: darken($link-color, 20%);
+          }
 
           &:hover + li {
             border-top-color: $windowBackgroundColor;
