@@ -86,8 +86,8 @@ body {
     url("images/banner-for-header.jpg");
 
   @include breakpoint(phones) {
-    background-size: 20em auto;
-    padding-top: 199px;
+    background-size: auto calc(1.618rem * 4);
+    padding-top: 174px;
     background-attachment: initial; // фиксируем фон
   }
 
