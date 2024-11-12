@@ -1,3 +1,5 @@
+import { IArticles } from "../../models";
+
 // const EP = [
 //   {
 //     albumId: "smolyanoechuchelko",
@@ -905,7 +907,7 @@ const EP2022RecordingAnAlbumEquipment = [
   {
     articleId: "5",
     nameArticle:
-      "Смоляное чучелко — 23 EP (2022). Запись альбома. Оборудование.",
+      "Смоляное чучелко — 23 EP (2022). Запись альбома. Оборудование",
     img: "2Lw32V8t2ps",
     date: "2022-02-15",
     detales: [
@@ -1215,13 +1217,13 @@ const YaroslavZhukAntirulesOfLife = [
   },
 ];
 
-export const ARTICLESDATA = [
-  ...EP2020Equipment,
-  ...EP2020EffectsPedals,
-  ...CoverStoryEP2020,
-  ...CoverStory232022,
-  ...EP2022RecordingAnAlbumEquipment,
+export const ARTICLES: IArticles[] = [
   ...YaroslavZhukAntirulesOfLife,
+  ...EP2022RecordingAnAlbumEquipment,
+  ...CoverStory232022,
+  ...CoverStoryEP2020,
+  ...EP2020EffectsPedals,
+  ...EP2020Equipment,
 ];
 
 // console.log(JSON.stringify(ARTICLESDATA));

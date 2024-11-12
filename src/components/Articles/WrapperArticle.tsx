@@ -4,7 +4,7 @@ import { ArticleProps } from "../../models";
 import { getImageUrl, alphabeticFormatDate } from "../../hooks/albums";
 
 /**
- * Компонент отображает блок с информацией о статье.
+ * Компонент отображает блок с карточкой статьи.
  */
 export default function WrapperArticle({
   articleId,

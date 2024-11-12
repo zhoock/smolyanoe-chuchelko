@@ -1,30 +1,25 @@
 import { useEffect, useState } from "react";
-import { IProduct } from "../models";
+import { IAlbums } from "../models";
 import axios, { AxiosError } from "axios";
 
-export function useAlbums(): {
-  albums: IProduct[];
-  loading: boolean;
-  error: string;
-} {
-  const [albums, setAlbums] = useState<IProduct[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+export function useData() {
+  const [albums, setAlbums] = useState<IAlbums[]>([]);
+  const [loading, setLoading] = useState(false); // state для индикации загрузки
+  const [error, setError] = useState(""); // state для реализации ошибки при загрузке
 
   async function fetchAlbums() {
-    const URL =
-      "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json";
-
     try {
-      setError("");
+      setError(""); // очищаем ошибку при новой загрузке данных
       setLoading(true);
-      const { data } = await axios.get<IProduct[]>(URL);
-      setAlbums(data);
-      setLoading(false);
+      const { data } = await axios.get<IAlbums[]>(
+        "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json",
+      );
+      setAlbums(data); // передаём массив альбомов
+      setLoading(false); // произошла ошибка
     } catch (e) {
       const error = e as AxiosError;
-      setLoading(false);
-      setError(error.message);
+      setLoading(false); // произошла ошибка
+      setError(error.message); // выводим ошибку в сообщении
     }
   }
 
@@ -33,7 +28,7 @@ export function useAlbums(): {
     fetchAlbums();
   }, [setAlbums]);
 
-  return { albums, loading, error };
+  return { albums, loading, error }; // возвращаем данные
 }
 
 /**
@@ -65,6 +60,9 @@ export function formatDate(dateRelease: string): string {
   return `${dd}/${mm}/${yy}`;
 }
 
+/**
+ * Функция возвращает правильное падежное окончание для месяцев.
+ */
 export function alphabeticFormatDate(dateRelease: string): string {
   const date = new Date(dateRelease);
 

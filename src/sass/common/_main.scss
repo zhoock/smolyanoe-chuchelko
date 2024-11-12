@@ -82,23 +82,26 @@ textarea {
 }
 
 body {
-  background: black left calc(1.618rem * 2) / contain no-repeat fixed
+  background: black center calc(1.618rem * 2) / contain no-repeat fixed
     url("images/banner-for-header.jpg");
-  padding-top: 178px;
 
   @include breakpoint(phones) {
-    background-size: 40em auto;
-    background-position-x: -$ms-3;
-    background-attachment: initial; // должен был зафиксировать фон
+    background-size: 20em auto;
+    padding-top: 199px;
+    background-attachment: initial; // фиксируем фон
   }
 
   @include breakpoint(tablet) {
-    padding-top: 17vmax;
+    background-size: auto 23vw;
+    padding-top: 28.5vw;
   }
 
   @include breakpoint(desktops) {
-    padding-top: 19.9vmax;
+    background-size: auto 16.7vw;
+    padding-top: 20vw;
   }
+
+
 
   p,
   img,
@@ -117,26 +120,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 1.618px;
   }
-
-  // h1 {
-  // 	height: 64.53125vw;
-  // 	font-weight: $bold;
-  // 	text-transform: none;
-  // 	top: 53.53125vw;
-  // 	position: absolute;
-
-  // 	@include breakpoint(tablet) {
-  // 		// +adjust-font-size-to(5.653rem)
-  // 		height: 40.03906vw;
-  // 		top: 31.53125vw;
-  // 	}
-
-  // 	@include breakpoint(desktops) {
-  // 		// +adjust-font-size-to(7.993rem)
-  // 		height: 33.33333vw;
-  // 		top: 24.53125vw;
-  // 	}
-  // }
 
   h2 {
     @include adjust-font-size-to($ms-1);

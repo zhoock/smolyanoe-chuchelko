@@ -1,7 +1,7 @@
 import React from "react";
 import GetButton from "./GetButton";
 import { String } from "../../models";
-import { IProduct } from "../../models";
+import { IAlbums } from "../../models";
 import "./style.scss";
 
 /**
@@ -11,7 +11,7 @@ export default function ServiceButtonsPurchase({
   album,
   section,
 }: {
-  album: IProduct;
+  album: IAlbums;
   section: string;
 }) {
   /**

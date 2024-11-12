@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import { ARTICLESDATA } from "../data";
+import { ARTICLES } from "../Data/Data";
 import { getImageUrl, alphabeticFormatDate } from "../../hooks/albums";
 import { IArticles, ArticleDetalesProps } from "../../models";
 
@@ -17,17 +17,19 @@ export default function Article() {
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const article: IArticles = ARTICLESDATA.filter(
+  const article: IArticles = ARTICLES.filter(
     (_) => _.articleId === params.articleId,
   )[0];
-
-  console.log(params);
 
   function Block({ title, subtitle, content, img }: ArticleDetalesProps) {
     return (
       <>
         {title && <h3>{title}</h3>}
-        {img && <img src={getImageUrl(img)} alt="" />}
+        <div className="row small-collapse medium-uncollapse">
+          <div className="small-12 column">
+            {img && <img src={getImageUrl(img)} alt="" />}
+          </div>
+        </div>
         <h4>{subtitle}</h4>
         {typeof content == "string" ? (
           <p>{content}</p>

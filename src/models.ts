@@ -25,9 +25,9 @@ export interface PopupProps extends HamburgerProps {
  * Albums
  */
 
-export interface IProduct {
+export interface IAlbums {
   /** Идентификатор альбома */
-  albumId: string;
+  albumId?: string;
   /** Название группы */
   nameGroup: string;
   /** Название альбома */
@@ -52,7 +52,7 @@ export interface IProduct {
 
 export interface WrapperAlbumCoverProps {
   /** Идентификатор альбома */
-  albumId: string;
+  albumId?: string;
   /** Название группы и название альбома */
   fullName: string;
   children: React.ReactElement;
@@ -83,8 +83,8 @@ export interface CoverProps<Size extends number = 896> {
   jpg: string;
   jpg2x: string;
   img: string;
-  albumId: string;
-  size: Size;
+  albumId?: string;
+  size?: Size;
 }
 
 export interface String {

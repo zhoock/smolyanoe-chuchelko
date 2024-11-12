@@ -6,7 +6,7 @@ import AlbumCover from "./AlbumCover";
 import AlbumTracks from "../AlbumTracks/AlbumTracks";
 import Share from "../Share/Share";
 import ServiceButtons from "../ServiceButtons/ServiceButtons";
-import { useAlbums } from "../../hooks/albums";
+import { useData } from "../../hooks/albums";
 import { Loader } from "../Loader/Loader";
 import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
 
@@ -19,8 +19,7 @@ export default function Album() {
     left: 0,
     behavior: "smooth",
   });
-
-  const { albums, loading, error } = useAlbums();
+  const { albums, loading, error } = useData();
 
   const params = useParams<{ albumId: string }>();
 

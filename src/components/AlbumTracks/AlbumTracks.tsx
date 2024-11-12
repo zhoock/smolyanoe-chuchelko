@@ -2,14 +2,14 @@ import React, { useEffect, useState, MouseEvent } from "react";
 import Popup from "../Popup/Popup";
 import Hamburger from "../Hamburger/Hamburger";
 import { TracksProps } from "../../models";
-import { IProduct } from "../../models";
+import { IAlbums } from "../../models";
 import "./style.scss";
 
 /**
  * Компонент отображает название альбома и нумерованный список песен.
  * При клике на название трека выводит текст выбранной песни в popup.
  */
-export default function AlbumTracks({ album }: { album: IProduct }) {
+export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [activeTrack, setActiveTrack] = useState(0);
   const [popup, setPopup] = useState(false);
 

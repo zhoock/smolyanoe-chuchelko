@@ -1,5 +1,5 @@
 import React from "react";
-import { IProduct } from "../../models";
+import { IAlbums } from "../../models";
 import { String } from "../../models";
 import { formatDate } from "../../hooks/albums";
 
@@ -18,14 +18,14 @@ const endForMinutes = (n: number): "минуты" | "минут" | "минута
 /**
  * Компонент отображает блок с датой релиза альбома.
  */
-export default function AlbumDetailsReleased({ album }: { album: IProduct }) {
+export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
   const duration: number = album?.tracks
     .map((item) => item.duration)
     .reduce((sum, current) => sum + current);
 
   function Block({ date, UPC }: String) {
     return (
-      <>  
+      <>
         <time dateTime={date}>{formatDate(date)}</time>
         <div>
           <small>UPC: {UPC}</small>

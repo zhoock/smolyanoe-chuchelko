@@ -5,6 +5,7 @@ import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
 import Albums from "./Albums/Albums";
 
+import Form from "./Form/Form";
 import AboutUs from "./AboutUs/AboutUs";
 import Articles from "./Articles/Articles";
 import Article from "./Articles/Article";
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
         element: <Album />,
       },
       {
+        path: "/form/",
+        element: <Form />,
+      },
+      {
         path: "/aboutus/",
         element: <AboutUs />,
       },
@@ -42,7 +47,9 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} fallbackElement={<p>Loading...</p>} />;
+  return (
+    <RouterProvider router={router} fallbackElement={<p>Загрузка...</p>} />
+  );
 }
 
 function Layout() {

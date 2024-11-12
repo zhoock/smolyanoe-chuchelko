@@ -2,17 +2,13 @@ import React from "react";
 import AlbumDetailsRelease from "./AlbumDetailsRelease";
 import AlbumDetailsArtwork from "./AlbumDetailsArtwork";
 import AlbumDetailsMusic from "./AlbumDetailsMusic";
-import { IProduct } from "../../models";
+import { IAlbums } from "../../models";
 import "./style.scss";
 
 /**
  * Компонент отображает дополнительные данные об альбоме.
  */
-export default function AlbumDetails({
-  album,
-}: {
-  album: IProduct
-}) {
+export default function AlbumDetails({ album }: { album: IAlbums }) {
   return (
     <section className="album-details">
       <div className="row">

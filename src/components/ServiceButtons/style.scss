@@ -3,17 +3,11 @@
 
 .service-buttons {
   ul {
-    display: flex;
-    flex-flow: row wrap;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 1.618em;
 
     li {
-      width: 47.24%; //(256px/542px) * 100
-
-      &:not(:last-child) {
-        margin-bottom: $ms-1;
-      }
-
       a {
         font-size: $ms-1;
         height: 76.244px;

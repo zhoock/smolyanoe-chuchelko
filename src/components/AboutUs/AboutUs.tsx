@@ -6,7 +6,7 @@ export default function AboutUs() {
   const [activeIndex, setActiveIndex] = useState(false);
 
   function handleClick() {
-    setActiveIndex(!activeIndex);
+    setActiveIndex(activeIndex => !activeIndex);
   }
 
   return (
@@ -21,11 +21,11 @@ export default function AboutUs() {
               Ярослава Жука
             </a>
             . Музыкант выпустил два альбома в&nbsp;жанре гранж:&nbsp;
-            <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link> в 2020
-            году и <Link to="/albums/23">23</Link> в 2022 году. Название
-            "Смоляное чучелко" образовано от&nbsp;американского термина
-            "tar-baby", относящегося к&nbsp;проблемной ситуации, которая лишь
-            усугубляется при попытках взаимодействия с&nbsp;ней.
+            <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>{" "}
+            в&nbsp;2020 году и&nbsp;<Link to="/albums/23">23</Link> в&nbsp;2022
+            году. Название "Смоляное чучелко" образовано от&nbsp;американского
+            термина "tar-baby", относящегося к&nbsp;проблемной ситуации, которая
+            лишь усугубляется при попытках взаимодействия с&nbsp;ней.
           </p>
           <button onClick={handleClick}>
             Показать <span>{activeIndex ? "меньше" : "больше"}</span>
