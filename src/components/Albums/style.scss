@@ -6,6 +6,7 @@
 .albums,
 .album {
   background: $textBackgroundColor;
+  flex: 1;
 
   &__list {
     @include list(".albums");

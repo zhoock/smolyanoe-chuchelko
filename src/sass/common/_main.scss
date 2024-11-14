@@ -73,6 +73,11 @@ html {
   font: $base-font-weight $base-font-size $base-font-family;
 }
 
+body,
+html {
+  height: 100%;
+}
+
 html,
 button,
 input,
@@ -82,7 +87,7 @@ textarea {
 }
 
 body {
-  background: black center calc(1.618rem * 2) / contain no-repeat fixed
+  background: black center calc(1.618rem * 2) no-repeat fixed
     url("images/banner-for-header.jpg");
 
   @include breakpoint(phones) {
@@ -101,7 +106,11 @@ body {
     padding-top: 20vw;
   }
 
-
+  #root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 
   p,
   img,

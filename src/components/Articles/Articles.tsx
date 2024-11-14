@@ -10,7 +10,7 @@ import "./style.scss";
  * Компонент отображает блок cо списком статей.
  */
 export default function Articles() {
-  const { albums, loading, error } = useData();
+  // const { albums, loading, error } = useData();
 
   return (
     <section className="articles">
@@ -23,9 +23,9 @@ export default function Articles() {
           </div>
 
           {/* Элемент показывается только при загрузке данных с сервера */}
-          {loading && <Loader />}
+          {/* {loading && <Loader />} */}
           {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
-          {error && <ErrorMessage error={error} />}
+          {/* {error && <ErrorMessage error={error} />} */}
 
           <div className="articles__list">
             {ARTICLES.map((_) => (

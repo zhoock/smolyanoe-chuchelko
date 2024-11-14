@@ -4,8 +4,6 @@ import { Outlet, createBrowserRouter, RouterProvider } from "react-router-dom";
 import Header from "./Header/Header";
 import Footer from "./Footer/Footer";
 import Albums from "./Albums/Albums";
-
-import Form from "./Form/Form";
 import AboutUs from "./AboutUs/AboutUs";
 import Articles from "./Articles/Articles";
 import Article from "./Articles/Article";
@@ -25,10 +23,6 @@ const router = createBrowserRouter([
       {
         path: "/albums/:albumId",
         element: <Album />,
-      },
-      {
-        path: "/form/",
-        element: <Form />,
       },
       {
         path: "/aboutus/",

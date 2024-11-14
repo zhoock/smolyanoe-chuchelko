@@ -6,6 +6,7 @@
 .articles,
 .article {
   background: $textBackgroundColor;
+  flex: 1;
 
   &__list {
     @include list(".articles");
