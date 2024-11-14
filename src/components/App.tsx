@@ -10,6 +10,10 @@ import Article from "./Articles/Article";
 import Album from "./Albums/Album";
 import NotFoundPage from "./NotFoundPage";
 
+import { randomPhotos } from "../hooks/albums";
+
+randomPhotos();
+
 const router = createBrowserRouter([
   {
     path: "/",

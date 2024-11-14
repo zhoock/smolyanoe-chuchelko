@@ -113,3 +113,23 @@ export function alphabeticFormatDate(dateRelease: string): string {
 
   return `${dd} ${mm} ${yy}`;
 }
+
+export function randomPhotos() {
+  let photos = [
+    "banner-for-header.jpg",
+    "KvArYFCcWLg.jpg",
+    "M2x9Im2_1uM.jpg",
+    "pAZ_AZh5bQU.jpg",
+    "M2x9Im2_1uM.jpg",
+    "6yIUmtdW35U.jpg",
+    "CZaNPYWOmVM.jpg",
+  ];
+
+  let randIndex = Math.floor(Math.random() * 6);
+
+//   let url = url("randIndex");
+
+//   let body: any = document.querySelector("body");
+//   body.style.backgroundImage = url
+//   console.log(photos[randIndex]);
+}

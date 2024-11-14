@@ -42,14 +42,12 @@ footer {
     }
 
     &.copyright {
-      display: grid;
-      grid-template-columns: 261px auto;
-      text-align: left;
+      display: flex;
 
       li {
         span::after {
           background: inherit;
-          // content: "|";
+          content: "|";
           position: relative;
           top: 0;
           left: 0;
