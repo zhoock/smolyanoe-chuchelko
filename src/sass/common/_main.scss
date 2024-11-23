@@ -89,10 +89,8 @@ textarea {
 body {
   background: black right calc(1.618rem * 2) no-repeat fixed
     url("images/banner-for-header.jpg");
-  
 
   @include breakpoint(phones) {
-    
     background-size: auto calc(1.618rem * 4);
     padding-top: 116px;
     background-attachment: initial; // фиксируем фон
@@ -107,13 +105,11 @@ body {
     background-size: auto 16.7vw;
     padding-top: 17.3vw;
   }
-  
 
   #root {
     height: 100%;
     display: flex;
     flex-direction: column;
-    
   }
 
   .overlay {
@@ -122,7 +118,11 @@ body {
     top: calc(1.618rem * 2);
     width: 100%;
     height: 50vh;
-    
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 1) 50%,
+      rgba(255, 255, 255, 0) 56%
+    );
 
     @include breakpoint(tablet) {
       background: linear-gradient(
