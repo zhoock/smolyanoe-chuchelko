@@ -5,5 +5,5 @@ interface ErrorMessageProps {
 }
 
 export function ErrorMessage({ error }: ErrorMessageProps) {
-  return <h3>{error}</h3>;
+  return <h3 className="error">{error}</h3>;
 }

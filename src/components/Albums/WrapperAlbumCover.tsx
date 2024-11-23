@@ -6,7 +6,7 @@ import "./style.scss";
 export default function WrapperAlbumCover({
   albumId,
   date,
-  fullName,
+  nameAlbum,
   children,
 }: WrapperAlbumCoverProps) {
   return (
@@ -14,7 +14,7 @@ export default function WrapperAlbumCover({
       <Link to={`/albums/${albumId}`}>
         {children}
         <div className="albums__description">
-          {fullName}
+          {nameAlbum}
           <div className="albums__description-year">
             <time dateTime={date}>
               <small>{date?.slice(0, 4)}</small>

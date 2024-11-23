@@ -12,10 +12,10 @@ export default function Header() {
     <>
       <header role="banner">
         <div className="row">
-          <div className="small-12 small-centered column">
+          <div className="column">
             <div className="header-content">
               <Link className="logo" to="/">
-                СМОЛЯНОЕ ЧУЧЕЛКО
+                Home
               </Link>
               <nav role="navigation">
                 <Navigation classes={{ hide: "hide-for-medium-down" }} />

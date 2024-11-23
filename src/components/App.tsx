@@ -10,10 +10,6 @@ import Article from "./Articles/Article";
 import Album from "./Albums/Album";
 import NotFoundPage from "./NotFoundPage";
 
-import { randomPhotos } from "../hooks/albums";
-
-randomPhotos();
-
 const router = createBrowserRouter([
   {
     path: "/",
@@ -53,7 +49,11 @@ export default function App() {
 function Layout() {
   return (
     <>
+      <div className="overlay"></div>
       <Header />
+      <div className="column row">
+        <h1>Смоляное Чучелко</h1>
+      </div>
       <Outlet />
       <Footer />
     </>

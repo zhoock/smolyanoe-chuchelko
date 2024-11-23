@@ -54,7 +54,7 @@ export interface WrapperAlbumCoverProps {
   /** Идентификатор альбома */
   albumId?: string;
   /** Название группы и название альбома */
-  fullName: string;
+  nameAlbum: string;
   children: React.ReactElement;
   /** Год релиза альбома */
   date: string;
@@ -83,8 +83,8 @@ export interface CoverProps<Size extends number = 896> {
   jpg: string;
   jpg2x: string;
   img: string;
-  albumId?: string;
-  size?: Size;
+  albumId: string | undefined;
+  size: Size;
 }
 
 export interface String {

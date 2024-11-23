@@ -12,7 +12,7 @@ export default function AlbumDetails({ album }: { album: IAlbums }) {
   return (
     <section className="album-details">
       <div className="row">
-        <div className="small-12 small-centered column">
+        <div className="column">
           <div className="row">
             <div className="large-5 large-push-7 column">
               <div className="album-details__released">

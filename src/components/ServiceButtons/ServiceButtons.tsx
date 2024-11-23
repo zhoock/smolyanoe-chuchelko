@@ -2,6 +2,7 @@ import React from "react";
 import GetButton from "./GetButton";
 import { String } from "../../models";
 import { IAlbums } from "../../models";
+
 import "./style.scss";
 
 /**
@@ -14,6 +15,8 @@ export default function ServiceButtonsPurchase({
   album: IAlbums;
   section: string;
 }) {
+
+  
   /**
    * Компонент отображает блок с кнопками-ссылками на агрегаторы.
    */
@@ -33,6 +36,8 @@ export default function ServiceButtonsPurchase({
       <div className="service-buttons">
         <h3>{section}</h3>
         {section === "Купить" && (
+
+        
           <ul>
             <GetButton
               buttonClass="icon-applemusic"

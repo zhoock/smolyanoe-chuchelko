@@ -14,6 +14,7 @@ export default function AlbumCover({
   albumId,
   size,
 }: CoverProps) {
+
   return (
     <picture>
       <source
@@ -24,6 +25,7 @@ export default function AlbumCover({
         srcSet={`${getImageUrl(jpg)} 1x, ${getImageUrl(jpg2x)} 2x`}
         type="image/jpeg"
       />
+
       <img
         loading="lazy"
         src={getImageUrl(img)}

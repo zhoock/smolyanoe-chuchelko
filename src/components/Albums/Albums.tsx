@@ -1,5 +1,5 @@
 import React from "react";
-import { useData } from "../../hooks/albums";
+import { useData, getRandomPhotos } from "../../hooks/albums";
 import WrapperAlbumCover from "./WrapperAlbumCover";
 import AlbumCover from "./AlbumCover";
 import { Loader } from "../Loader/Loader";
@@ -10,14 +10,15 @@ import "./style.scss";
  * Компонент отображает список альбомов в виде обложек-ссылок
  */
 export default function Albums() {
+  getRandomPhotos();
   const { albums, loading, error } = useData();
 
   return (
     <section className="albums">
       <div className="row collapse medium-uncollapse">
-        <div className="small-12 column">
+        <div className="column">
           <div className="row medium-collapse">
-            <div className="small-12 column">
+            <div className="column">
               <h2>Альбомы</h2>
             </div>
           </div>

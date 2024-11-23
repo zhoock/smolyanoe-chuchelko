@@ -1,32 +1,35 @@
 const path = require("path"); // модуль nodejs для корректной обработки путей
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin"); // Плагин для генерации HTML с правильными путями к скриптам
 const FileManagerPlugin = require("filemanager-webpack-plugin"); // автоматическая очистка каталогов
 const MiniCssExtractPlugin = require("mini-css-extract-plugin"); // извлекаем CSS из файлов .js при сборке
 
 module.exports = {
   entry: {
-    bundle: path.join(__dirname, "src", "index.tsx"),
+    bundle: "./src/index.tsx", // Основной файл для React с TypeScript
+    // modules: "./src/js-modules/smoothly.js", // Дополнительный скрипт на JavaScript
   },
 
   output: {
-    path: path.join(__dirname, "dist"),
-    filename: "index[contenthash].js",
+    filename: "index[contenthash].js", // // Имя итогового бандла, используем contenthash для динамических хешей
+    path: path.join(__dirname, "dist"), // Папка для собранных файлов
     assetModuleFilename: path.join("images", "[name].[contenthash][ext]"),
-    clean: true,
+    clean: true, // Очищать старые файлы при сборке
   },
 
   resolve: {
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".json"], // Поддерживаемые расширения
   },
 
   module: {
     rules: [
       {
-        // test: /\.(js|jsx)$/,
-        // use: "babel-loader",
-        test: /\.tsx?$/,
-        use: "ts-loader",
+        test: /\.tsx?$/, // Обработка TypeScript файлов
+        use: "ts-loader", // Используем ts-loader для компиляции TypeScript
         exclude: /node_modules/,
+      },
+      {
+        test: /\.(js|jsx)$/, // Обработка JS файлов через Babel
+        use: "babel-loader", // Используем babel-loader для JS
       },
       {
         test: /\.pug$/,
@@ -57,10 +60,12 @@ module.exports = {
       },
     ],
   },
+
   plugins: [
     new HtmlWebpackPlugin({
-      template: path.join(__dirname, "src", "index.html"),
-      filename: "index.html",
+      template: "./src/index.html", // Указываем исходный HTML-шаблон
+      inject: "body", // Скрипты будут вставляться перед закрывающим тегом </body>
+      filename: "index.html", // Имя итогового HTML файла
     }),
     new FileManagerPlugin({
       events: {
@@ -77,11 +82,9 @@ module.exports = {
     hints: false, // не отображаются предупреждения и ошибоки по производительности
   },
   devServer: {
-    // static: {
-    //   directory: path.resolve(__dirname, "src"),
-    // },
     historyApiFallback: true, // необходимо при испольтзовании React Router для маршрутизации
     watchFiles: path.join(__dirname, "src"), // указывает на каталог src, за которыми будет вестись наблюдение
-    port: 5173, // указывает порт на котором будет работать веб-сервер
+    port: 8080, // указывает порт на котором будет работать веб-сервер
+    hot: true, // Включаем HMR (горячую замену модулей)
   },
 };

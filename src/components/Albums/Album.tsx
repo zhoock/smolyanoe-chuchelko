@@ -6,7 +6,7 @@ import AlbumCover from "./AlbumCover";
 import AlbumTracks from "../AlbumTracks/AlbumTracks";
 import Share from "../Share/Share";
 import ServiceButtons from "../ServiceButtons/ServiceButtons";
-import { useData } from "../../hooks/albums";
+import { useData, getRandomPhotos } from "../../hooks/albums";
 import { Loader } from "../Loader/Loader";
 import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
 
@@ -14,6 +14,7 @@ import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
  */
 export default function Album() {
+  getRandomPhotos();
   window.scrollTo({
     top: 0,
     left: 0,
@@ -29,7 +30,7 @@ export default function Album() {
     <>
       <section className="album">
         <div className="row">
-          <div className="small-12 column">
+          <div className="column">
             <nav aria-label="Breadcrumb" className="breadcrumb">
               <ul>
                 <li>
@@ -38,29 +39,34 @@ export default function Album() {
                 <li className="active">{album?.nameAlbum}</li>
               </ul>
             </nav>
+
+            {/* Элемент показывается только при загрузке данных с сервера */}
+            {loading && <Loader />}
+            {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
+            {error && <ErrorMessage error={error} />}
           </div>
         </div>
+
         <div className="row">
-          <div className="small-12 medium-6 medium-push-6 column">
+          <div className="medium-6 medium-push-6 column">
             <AlbumCover {...album?.cover} albumId={album?.albumId} />
 
             <Share />
           </div>
 
-          <div className="small-12 medium-6 medium-pull-6 column">
-            {loading && <Loader />}
-            {error && <ErrorMessage error={error} />}
+          <div className="medium-6 medium-pull-6 column">
             <AlbumTracks album={album} />
           </div>
         </div>
         <div className="row">
-          <div className="small-12 medium-6 column">
+          <div className="medium-6 column">
             <ServiceButtons album={album} section="Купить" />
           </div>
-          <div className="small-12 medium-6 column">
+          <div className="medium-6 column">
             <ServiceButtons album={album} section="Слушать" />
           </div>
         </div>
+
         <AlbumDetails album={album} />
       </section>
     </>

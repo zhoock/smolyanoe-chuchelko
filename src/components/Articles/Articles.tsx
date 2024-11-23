@@ -1,5 +1,5 @@
 import React from "react";
-import { useData } from "../../hooks/albums";
+import { useData, getRandomPhotos } from "../../hooks/albums";
 import { ARTICLES } from "../Data/Data";
 import WrapperArticle from "../Articles/WrapperArticle";
 import { Loader } from "../Loader/Loader";
@@ -10,14 +10,15 @@ import "./style.scss";
  * Компонент отображает блок cо списком статей.
  */
 export default function Articles() {
+  getRandomPhotos();
   // const { albums, loading, error } = useData();
 
   return (
     <section className="articles">
       <div className="row collapse medium-uncollapse">
-        <div className="small-12 column">
+        <div className="column">
           <div className="row medium-collapse">
-            <div className="small-12 column">
+            <div className="column">
               <h2>Статьи</h2>
             </div>
           </div>

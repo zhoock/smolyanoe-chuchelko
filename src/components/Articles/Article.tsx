@@ -2,13 +2,18 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { ARTICLES } from "../Data/Data";
-import { getImageUrl, alphabeticFormatDate } from "../../hooks/albums";
+import {
+  getImageUrl,
+  alphabeticFormatDate,
+  getRandomPhotos,
+} from "../../hooks/albums";
 import { IArticles, ArticleDetalesProps } from "../../models";
 
 /**
  * Компонент отображает блок со статьёй.
  */
 export default function Article() {
+  getRandomPhotos();
   window.scrollTo({
     top: 0,
     left: 0,
@@ -26,7 +31,7 @@ export default function Article() {
       <>
         {title && <h3>{title}</h3>}
         <div className="row small-collapse medium-uncollapse">
-          <div className="small-12 column">
+          <div className="column">
             {img && <img src={getImageUrl(img)} alt="" />}
           </div>
         </div>

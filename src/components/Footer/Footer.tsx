@@ -28,7 +28,7 @@ export default function Footer() {
   return (
     <footer role="contentinfo">
       <div className="row">
-        <div className="small-12 column">
+        <div className="column">
           <ul className="social-networks">
             {socialNetwork.map((item) => (
               <li key={item.id}>

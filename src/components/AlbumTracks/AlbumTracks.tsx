@@ -30,6 +30,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
       <>
         <h2>{album?.nameAlbum}</h2>
         <h3>Треки</h3>
+
         <ol>
           {tracks?.map((track) => (
             <li

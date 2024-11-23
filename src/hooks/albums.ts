@@ -31,15 +31,14 @@ export function useData() {
   return { albums, loading, error }; // возвращаем данные
 }
 
+const src =
+  "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/";
+
 /**
  * Функция возвращает полный URL для изображения обложки альбома в нужном формате
  */
 export function getImageUrl(img: string, format: string = ".jpg"): string {
-  return (
-    "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/" +
-    img +
-    format
-  );
+  return src + img + format;
 }
 
 /**
@@ -114,22 +113,32 @@ export function alphabeticFormatDate(dateRelease: string): string {
   return `${dd} ${mm} ${yy}`;
 }
 
-export function randomPhotos() {
-  let photos = [
-    "banner-for-header.jpg",
-    "KvArYFCcWLg.jpg",
-    "M2x9Im2_1uM.jpg",
-    "pAZ_AZh5bQU.jpg",
-    "M2x9Im2_1uM.jpg",
-    "6yIUmtdW35U.jpg",
-    "CZaNPYWOmVM.jpg",
+/**
+ * Функция возвращает случайный background-image для body.
+ */
+export function getRandomPhotos() {
+  let photos: string[] = [
+    `url(${src}banner-for-header.jpg)`,
+    `url(${src}KvArYFCcWLg.jpg)`,
+    `url(${src}CZaNPYWOmVM.jpg)`,
+    `url(${src}wj3MH7eyNhY.jpg`,
+    `url(${src}XpaX73Jq4S8.jpg`,
+    // `url(${src}M2x9Im2_1uM.jpg)`,
+    // `url(${src}pAZ_AZh5bQU.jpg)`,
+    // `url(${src}M2x9Im2_1uM.jpg)`,
+    // `url(${src}6yIUmtdW35U.jpg)`,
+    // `url(${src}F2Z8WN--2kg.jpg`,
+    // `url(${src}IkpCtDzA5WM.jpg`,
   ];
 
-  let randIndex = Math.floor(Math.random() * 6);
+  // smoothly(
+  //   document.body,
+  //   "style.backgroundImage",
+  //   photos[Math.floor(Math.random() * photos.length)],
+  // );
 
-//   let url = url("randIndex");
+  document.body.style.backgroundImage =
+    photos[Math.floor(Math.random() * photos.length)];
 
-//   let body: any = document.querySelector("body");
-//   body.style.backgroundImage = url
-//   console.log(photos[randIndex]);
+    
 }
