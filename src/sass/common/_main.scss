@@ -113,6 +113,7 @@ body {
   }
 
   .overlay {
+    z-index: -1;
     position: absolute;
     left: 0;
     top: calc(1.618rem * 2);
@@ -120,7 +121,7 @@ body {
     height: 50vh;
     background: linear-gradient(
       90deg,
-      rgba(0, 0, 0, 1) 50%,
+      rgba(0, 0, 0, 1) 53%,
       rgba(255, 255, 255, 0) 56%
     );
 
