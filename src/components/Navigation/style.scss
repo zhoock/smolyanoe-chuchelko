@@ -1,13 +1,13 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 nav {
-  margin-left: auto;
-
-  ul.menu {
+  .menu {
+    display: flex;
     margin-bottom: 0;
+    gap: 18px;
 
     li {
       a {
@@ -19,29 +19,30 @@ nav {
           /* disables click event */
         }
       }
-
-      &:first-child {
-        padding: 0 $ms-0;
-      }
     }
   }
 }
 
 .popup {
-  .menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
+  nav {
     height: 100%;
-    font-family: "Oswald", sans-serif;
+    width: 100%;
 
-    li {
-      a {
-        @include adjust-font-size-to($ms-1, 0);
-        display: block;
-        border: none;
+    .menu {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Oswald", sans-serif;
+
+      li {
+        a {
+          @include adjust-font-size-to($ms-1, 0);
+          display: block;
+          text-decoration: none;
+        }
       }
     }
   }

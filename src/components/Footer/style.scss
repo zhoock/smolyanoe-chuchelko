@@ -1,10 +1,10 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 footer {
-  background: $transport-black;
+  background: $deep-black;
 
   ul {
     &.social-networks {
@@ -23,8 +23,8 @@ footer {
         font-size: $ms-2;
 
         a {
-          border: none;
-          color: $windowBackgroundColor;
+          text-decoration: none;
+          color: $graphite-green;
 
           &:hover {
             color: $dark-greenish-yellow;
@@ -34,7 +34,7 @@ footer {
           // hide the text in the link
           span {
             text-indent: -9999px;
-            white-space: nowrap;
+            light-grey-space: nowrap;
             display: inline-block;
           }
         }

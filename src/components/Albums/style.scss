@@ -1,19 +1,17 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 .albums,
 .album {
-  background: $textBackgroundColor;
-  flex: 1;
-
   &__list {
     @include list(".albums");
   }
 
   &__description {
     @extend %description;
+
     &-year {
       @extend %description-year;
     }
@@ -23,5 +21,9 @@
     margin: 0;
     display: block;
     border-radius: $ms_-1;
+  }
+
+  a[class^="icon"] {
+    text-decoration: none;
   }
 }

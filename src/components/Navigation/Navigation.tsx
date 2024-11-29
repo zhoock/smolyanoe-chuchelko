@@ -5,31 +5,33 @@ import "./style.scss";
 
 export default function Navigation({ classes, onToggle }: NavigationProps) {
   return (
-    <ul className={`menu ${classes ? classes.hide : ""}`}>
-      <li>
-        <NavLink
-          to="/aboutus"
-          title="О группе"
-          onClick={onToggle}
-          className={({ isActive }) => {
-            return isActive ? "active" : "";
-          }}
-        >
-          О группе
-        </NavLink>
-      </li>
-      <li>
-        <NavLink
-          to="/articles"
-          title="Статьи"
-          onClick={onToggle}
-          className={({ isActive }) => {
-            return isActive ? "active" : "";
-          }}
-        >
-          Статьи
-        </NavLink>
-      </li>
-    </ul>
+    <nav role="navigation" className={classes ? classes.hide : ""}>
+      <ul className="menu">
+        <li>
+          <NavLink
+            to="/aboutus"
+            title="О группе"
+            onClick={onToggle}
+            className={({ isActive }) => {
+              return isActive ? "active" : "";
+            }}
+          >
+            О группе
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
+            to="/articles"
+            title="Статьи"
+            onClick={onToggle}
+            className={({ isActive }) => {
+              return isActive ? "active" : "";
+            }}
+          >
+            Статьи
+          </NavLink>
+        </li>
+      </ul>
+    </nav>
   );
 }

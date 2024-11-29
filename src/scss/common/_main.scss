@@ -87,7 +87,7 @@ textarea {
 }
 
 body {
-  background: black right calc(1.618rem * 2) no-repeat fixed
+  background: #000 right calc(1.618rem * 2) no-repeat fixed
     url("images/banner-for-header.jpg");
 
   @include breakpoint(phones) {
@@ -110,6 +110,18 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    main {
+      flex: 1;
+
+      .content-section_theme_dark {
+        background: $deep-coal;
+      }
+
+      .content-section_theme_bright {
+        background-color: $light-grey;
+        color: $graphite-green;
+      }
+    }
   }
 
   .overlay {
@@ -157,8 +169,8 @@ body {
     top: -$ms-1;
     font-family: $base-font-family;
     font-weight: 600;
-    text-transform: none;
-    color: $labelColor;
+    text-transform: capitalize;
+    color: $light-grey;
     @include adjust-font-size-to($ms-2, 0);
 
     @include breakpoint(phones) {
@@ -190,7 +202,7 @@ body {
     }
 
     &.error {
-      color: $errorColor;
+      color: $pink-terracotta;
     }
   }
 
@@ -207,14 +219,15 @@ body {
   }
 
   a {
-    text-decoration: none;
-    border-bottom: 1px solid;
+    text-decoration: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 5px;
     transition: all 200ms ease;
 
-    @include link-colors($link-color, $labelColor);
+    @include link-colors($link-color, $light-grey);
 
     &:hover {
-      border-bottom-color: $labelColor;
+      border-bottom-color: $light-grey;
     }
     &.dashed {
       border-bottom: 1px dashed $link-color;
@@ -240,6 +253,7 @@ body {
           margin: 0 0.25rem;
           content: "→";
         }
+
         &.active {
           color: darken($link-color, 20%);
         }
@@ -264,7 +278,7 @@ body {
 
   @media only screen and (min-width: 40.0625em) {
     .hide-for-large-up {
-      display: flex !important;
+      display: block !important;
     }
     .hide-for-medium-down {
       display: none !important;
@@ -276,7 +290,7 @@ body {
       display: none !important;
     }
     .hide-for-medium-down {
-      display: flex !important;
+      display: block !important;
     }
   }
 }

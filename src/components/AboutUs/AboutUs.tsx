@@ -18,6 +18,7 @@ export default function AboutUs() {
       <div className="row">
         <div className="column">
           <h2>О группе</h2>
+
           <div
             className={`about__content ${activeIndex ? "about__content_active" : ""}`}
           >
@@ -27,7 +28,12 @@ export default function AboutUs() {
               вдохновляется эстетикой и звучанием сиэтлского гранжа 1990-х
               годов. Их творчество отличается мрачным звучанием, атмосферными
               аранжировками и глубокими текстами, затрагивающими темы внутренней
-              борьбы, саморазрушения и меланхолии.
+              борьбы, саморазрушения и меланхолии.{" "}
+              <a href="https://www.instagram.com/yaroslav_zhoock/">
+                Ярослав Жук
+              </a>{" "}
+              является вокалистом и автором музыки, определяя стиль и
+              философию коллектива.
             </p>
             <p>
               Группа выпустила несколько альбомов, включая{" "}
@@ -37,14 +43,9 @@ export default function AboutUs() {
               "Смоляное чучелко" образовано от&nbsp;американского термина
               "tar-baby", относящегося к&nbsp;проблемной ситуации, которая лишь
               усугубляется при попытках взаимодействия с&nbsp;ней.{" "}
-              <a href="https://www.instagram.com/yaroslav_zhoock/">
-                Ярослав Жук
-              </a>{" "}
-              является основным вокалистом и автором музыки, определяя стиль и
-              философию коллектива.
             </p>
           </div>
-          <button onClick={handleClick}>
+          <button onClick={handleClick} type="button">
             Показать <span>{activeIndex ? "меньше" : "больше"}</span>
             <span className="icon-ctrl"></span>
           </button>

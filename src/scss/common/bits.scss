@@ -2,21 +2,19 @@
 //
 // --------------------------------------------------
 
-$labelColor: #d5d5d5; // text
-$textBackgroundColor: #21201d; // main background
-$transport-black: #1e1e1e; // extra background
+$deep-coal: #21201d; // main background
+$light-grey: #d5d5d5; // text color
+$deep-black: #1e1e1e; // extra background
 $dark-greenish-yellow: #998238; // accent color
-$systemGreyColor: #acacac; // inactive link
-$windowBackgroundColor: #373633; // line background, buttons background
-
-$errorColor: #CF807D;
-
+$graphite-green: #373633; // line background, buttons background
+$pink-terracotta: #cf807d;
+$grey: #acacac; // inactive link
 
 // Links
 //
 // --------------------------------------------------
 
-$link-color: $systemGreyColor;
+$link-color: $grey;
 
 // Font weights
 //
@@ -33,7 +31,7 @@ $bold: 700;
 $base-font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
   Roboto, "Helvetica Neue", Arial, sans-serif;
 $base-font-weight: $light;
-$base-font-color: $labelColor;
+$base-font-color: $light-grey;
 
 /* Base values */
 // интервал ритма по вертикали 1.618

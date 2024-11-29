@@ -1,9 +1,9 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 
 .about {
-  background: $textBackgroundColor;
-  flex: 1;
+  background: $deep-coal;
+  height: 100%;
 
   &__content {
     height: 60px;
@@ -15,14 +15,14 @@
   }
 
   button {
-    background: $windowBackgroundColor;
+    background: $graphite-green;
     padding: $ms_-2 $ms_0;
     border-radius: $ms_2;
     cursor: pointer;
     appearance: none;
     border: 0;
     transition: all 200ms ease;
-    color: $systemGreyColor;
+    color: $grey;
     margin: $ms-1 0;
 
     .icon-ctrl {
@@ -31,15 +31,15 @@
       top: 0;
       left: 2px;
       transform: rotate(180deg);
-      font: $medium 1.618rem/0   sans-serif;
+      font: $medium 1.618rem/0 sans-serif;
     }
 
     &:hover {
       background-color: $dark-greenish-yellow;
-      color: $labelColor;
+      color: $light-grey;
 
       span {
-        color: $labelColor;
+        color: $light-grey;
       }
     }
 
@@ -50,12 +50,12 @@
     @media (hover: none) and (pointer: coarse) {
       &:hover {
         /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-        background-color: $windowBackgroundColor;
-        color: $systemGreyColor;
+        background-color: $graphite-green;
+        color: $grey;
         transition: none;
 
         span {
-          color: $systemGreyColor;
+          color: $grey;
         }
       }
     }
@@ -64,12 +64,12 @@
   &:has(.about__content_active) {
     button {
       background-color: $dark-greenish-yellow;
-      color: $labelColor;
+      color: $light-grey;
 
       & span {
         transform: rotate(0);
         top: 13px;
-        color: $labelColor;
+        color: $light-grey;
       }
     }
   }

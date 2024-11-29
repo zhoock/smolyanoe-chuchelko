@@ -1,29 +1,24 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 .popup {
   position: fixed;
-  background: rgba($transport-black, 0);
+  background: rgba($deep-black, 0);
   top: 0;
   left: 0;
   width: 100%;
-  height: 0%;
+  height: 0;
   z-index: 99;
   overflow: scroll;
   transition: all 0.45s;
 
   &_open {
-    background: rgba($transport-black, 0.8);
+    background: rgba($deep-black, 0.8);
     backdrop-filter: blur(20px);
     height: 100%;
     z-index: 999;
-  }
-
-  nav {
-    margin: 0;
-    width: 100%;
   }
 }
 

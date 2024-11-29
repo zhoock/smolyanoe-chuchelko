@@ -31,18 +31,18 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         <h2>{album?.nameAlbum}</h2>
         <h3>Треки</h3>
 
-        <ol>
+        <div className="tracks">
           {tracks?.map((track) => (
-            <li
+            <button
               key={track.id}
               className={track.id === activeTrack ? "active" : ""}
               data-index={track.id}
               onClick={handleClick}
             >
-              {track.title}
-            </li>
+              <span className="track-number">{track.id}</span> {track.title}
+            </button>
           ))}
-        </ol>
+        </div>
 
         {popup && (
           <>

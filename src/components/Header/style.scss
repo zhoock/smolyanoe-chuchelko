@@ -1,5 +1,5 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 
 header {
   position: fixed;
@@ -7,17 +7,18 @@ header {
   top: 0;
   width: 100%;
   z-index: 1;
-  background: rgba($textBackgroundColor, 0.8);
+  background: rgba($deep-coal, 0.8);
   backdrop-filter: blur(20px) saturate(0.8%);
   font-family: "Oswald", sans-serif;
 
   .header-content {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     height: calc(1.618rem * 2);
 
     a {
-      border: none;
+      text-decoration: none;
 
       &.logo {
         font-weight: $bold;

@@ -144,7 +144,7 @@ $desktops: "min-width: 64.0625em";
 // Placeholder Selectors
 
 %filter {
-  background: rgba($transport-black, 0.8);
+  background: rgba($deep-black, 0.8);
   backdrop-filter: blur(20px);
 }
 
@@ -187,7 +187,7 @@ $desktops: "min-width: 64.0625em";
     }
 
     a {
-      border: none;
+      text-decoration: none;
     }
   }
 }

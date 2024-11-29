@@ -1,39 +1,45 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 .album {
-  ol {
-    li {
-      &::marker {
-        color: darken($link-color, 20%);
+  .tracks {
+    button {
+      span {
+        color: darken($grey, 20%);
+        padding-right: $ms-_1;
       }
 
-      color: $link-color;
-      list-style: auto inside;
-      border-top: 1px solid $windowBackgroundColor;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
+      border: none;
+      background: none;
+      text-align: inherit;
       cursor: pointer;
+      width: 100%;
+      color: $grey;
+      border-top: 1px solid $graphite-green;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+
       padding-left: $ms_-1;
       transition: all 200ms ease;
       @include adjust-font-size-to($ms-0, 0);
 
       &:last-child {
-        border-bottom: 1px solid $windowBackgroundColor;
+        border-bottom: 1px solid $graphite-green;
       }
 
       &.active,
       &:hover {
-        &::marker {
-          color: $dark-greenish-yellow;
-        }
-        color: $labelColor;
+        color: $light-grey;
         background: $dark-greenish-yellow;
         border-top-color: $dark-greenish-yellow;
         border-radius: $ms_-2;
+
+        span {
+          color: $dark-greenish-yellow;
+        }
 
         & + li {
           border-top-color: transparent;
@@ -44,14 +50,14 @@
         &:hover {
           /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
           background: inherit;
-          border-top-color: $windowBackgroundColor;
+          border-top-color: $graphite-green;
 
-          &::marker {
-            color: darken($link-color, 20%);
+          span {
+            color: darken($grey, 20%);
           }
 
           &:hover + li {
-            border-top-color: $windowBackgroundColor;
+            border-top-color: $graphite-green;
           }
         }
       }

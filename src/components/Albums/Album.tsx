@@ -28,7 +28,7 @@ export default function Album() {
 
   return (
     <>
-      <section className="album">
+      <section className="album content-section_theme_dark">
         <div className="row">
           <div className="column">
             <nav aria-label="Breadcrumb" className="breadcrumb">

@@ -14,7 +14,7 @@ export default function Albums() {
   const { albums, loading, error } = useData();
 
   return (
-    <section className="albums">
+    <section className="albums content-section_theme_dark">
       <div className="row collapse medium-uncollapse">
         <div className="column">
           <div className="row medium-collapse">

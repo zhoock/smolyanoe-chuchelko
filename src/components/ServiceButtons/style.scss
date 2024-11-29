@@ -1,5 +1,5 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 
 .service-buttons {
   ul {
@@ -13,7 +13,7 @@
         height: 76.244px;
         line-height: 76.244px;
         border: none;
-        background: $windowBackgroundColor;
+        background: $graphite-green;
         display: inline-block;
         text-align: center;
         width: 100%;
@@ -26,13 +26,13 @@
         @media (hover: none) and (pointer: coarse) {
           &:hover {
             /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-            background-color: $windowBackgroundColor;
+            background-color: $graphite-green;
           }
         }
 
         span {
           text-indent: -9999px; // hide the text in the link
-          white-space: nowrap;
+          light-grey-space: nowrap;
           display: inline-block;
         }
       }

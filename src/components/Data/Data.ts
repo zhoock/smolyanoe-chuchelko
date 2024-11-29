@@ -682,7 +682,7 @@ const EP2020Equipment = [
         id: 6,
         subtitle: "Бас-барабан",
         content: [
-          "Neumann TLM 170 black ones (внутри)",
+          "Neumann TLM 170 deep-black ones (внутри)",
           "Sennheiser MKH 40 (снаружи)",
         ],
       },
@@ -762,7 +762,7 @@ const EP2020Equipment = [
         subtitle: "Mesa",
         content: [
           "Electro-Voice PL20 (Marshall 6960 ALE 4x12)",
-          "Neumann TLM 170 black ones (Marshall 1960 AX 4×12)",
+          "Neumann TLM 170 deep-black ones (Marshall 1960 AX 4×12)",
           "Shure SM57 (room)",
           "Neumann U67 (room)",
         ],

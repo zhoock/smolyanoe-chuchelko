@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Outlet, createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Header from "./Header/Header";
@@ -9,6 +9,9 @@ import Articles from "./Articles/Articles";
 import Article from "./Articles/Article";
 import Album from "./Albums/Album";
 import NotFoundPage from "./NotFoundPage";
+import Hamburger from "./Hamburger/Hamburger";
+import Navigation from "./Navigation/Navigation";
+import Popup from "./Popup/Popup";
 
 const router = createBrowserRouter([
   {
@@ -47,14 +50,28 @@ export default function App() {
 }
 
 function Layout() {
+  const [popup, setPopup] = useState(false);
   return (
     <>
       <div className="overlay"></div>
       <Header />
-      <div className="column row">
-        <h1>Смоляное Чучелко</h1>
+      <div className="row">
+        <div className="column">
+          <h1>смоляное чучелко</h1>
+        </div>
       </div>
-      <Outlet />
+      <main>
+        {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
+        <Popup isActive={popup} classes={{ hide: "hide-for-large-up" }}>
+          <Navigation onToggle={() => setPopup(!popup)} />
+        </Popup>
+        <Hamburger
+          classes={{ hide: "hide-for-large-up" }}
+          isActive={popup}
+          onToggle={() => setPopup(!popup)}
+        />
+        <Outlet />
+      </main>
       <Footer />
     </>
   );

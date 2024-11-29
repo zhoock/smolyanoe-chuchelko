@@ -1,13 +1,10 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 .articles,
 .article {
-  background: $textBackgroundColor;
-  flex: 1;
-
   &__list {
     @include list(".articles");
   }
@@ -20,8 +17,17 @@
   }
 
   &__picture {
-    min-height: 200px;
+    min-height: 323px;
     border-radius: $ms_-1;
+
+    @include breakpoint(desktops) {
+      min-height: 200px;
+    }
+  }
+
+  .article__header {
+    position: relative;
+    font-family: $base-font-family;
   }
 
   time {

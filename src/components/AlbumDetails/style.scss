@@ -1,31 +1,23 @@
 // Defaults and variables
-@import "../../sass/common/bits.scss";
+@import "../../scss/common/bits.scss";
 // Mixins
-@import "../../sass/common/mixins";
+@import "../../scss/common/mixins";
 
 .album-details {
-  background-color: $labelColor;
-  color: $windowBackgroundColor;
   text-wrap: balance;
 
   p {
     margin-top: 0;
 
     a {
-      border-bottom-color: $textBackgroundColor;
-
-      @include link-colors($textBackgroundColor, darken($link-color, 20%));
-
-      &:hover {
-        border-bottom-color: darken($link-color, 20%);;
-      }
+      @include link-colors($deep-coal, darken($link-color, 20%));
     }
   }
 
   &__released {
     time {
       display: block;
-      color: $windowBackgroundColor;
+      color: $graphite-green;
       font-family: "Oswald", sans-serif;
       @include adjust-font-size-to($ms-2);
 
@@ -43,6 +35,6 @@ hr {
   margin: $ms-1 auto;
   border-top: 0;
   border-right: 0;
-  border-bottom: 1px solid $systemGreyColor;
+  border-bottom: 1px solid $grey;
   border-left: 0;
 }
