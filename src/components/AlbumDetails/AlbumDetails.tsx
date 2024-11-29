@@ -10,7 +10,7 @@ import "./style.scss";
  */
 export default function AlbumDetails({ album }: { album: IAlbums }) {
   return (
-    <section className="album-details content-section_theme_bright">
+    <section className="album-details theme-bright">
       <div className="row">
         <div className="column">
           <div className="row">

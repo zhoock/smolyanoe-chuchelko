@@ -46,23 +46,22 @@ export default function Article() {
   }
 
   return (
-    <section className="article theme_dark">
+    <section className="article theme-dark">
       <div className="row">
         <div className="small-12 column">
-          <header className="article__header">
-            <nav aria-label="Breadcrumb" className="breadcrumb">
-              <ul>
-                <li>
-                  <Link to="/articles">Статьи</Link>
-                </li>
-                <li className="active">{article.nameArticle}</li>
-              </ul>
-            </nav>
-            <time dateTime={article.date}>
-              <small>{alphabeticFormatDate(article.date)}</small>
-            </time>
-            <h2>{article.nameArticle}</h2>
-          </header>
+          <nav aria-label="Breadcrumb" className="breadcrumb">
+            <ul>
+              <li>
+                <Link to="/articles">Статьи</Link>
+              </li>
+              <li className="active">{article.nameArticle}</li>
+            </ul>
+          </nav>
+          <time dateTime={article.date}>
+            <small>{alphabeticFormatDate(article.date)}</small>
+          </time>
+          <h2>{article.nameArticle}</h2>
+
           {article.detales.map((_) => (
             <Block key={_.id} {..._} />
           ))}

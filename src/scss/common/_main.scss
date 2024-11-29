@@ -110,17 +110,22 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+
+    .theme-dark {
+      background: $deep-coal;
+    }
+    
+    .theme-dark_extra {
+      background: $deep-black;
+    }
+
+    .theme-bright {
+      background: $light-grey;
+      color: $graphite-green;
+    }
+
     main {
       flex: 1;
-
-      .content-section_theme_dark {
-        background: $deep-coal;
-      }
-
-      .content-section_theme_bright {
-        background-color: $light-grey;
-        color: $graphite-green;
-      }
     }
   }
 

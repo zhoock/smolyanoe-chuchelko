@@ -28,10 +28,10 @@ export default function Album() {
 
   return (
     <>
-      <section className="album content-section_theme_dark">
+      <section className="album theme-dark">
         <div className="row">
           <div className="column">
-            <nav aria-label="Breadcrumb" className="breadcrumb">
+            <nav className="breadcrumb" aria-label="Breadcrumb">
               <ul>
                 <li>
                   <Link to="/">Альбомы</Link>

@@ -25,12 +25,8 @@
     }
   }
 
-  .article__header {
-    position: relative;
-    font-family: $base-font-family;
-  }
-
   time {
     color: darken($link-color, 20%);
+    white-space: nowrap;
   }
 }

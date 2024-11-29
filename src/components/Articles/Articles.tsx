@@ -14,7 +14,7 @@ export default function Articles() {
   // const { albums, loading, error } = useData();
 
   return (
-    <section className="articles theme_dark">
+    <section className="articles theme-dark">
       <div className="row collapse medium-uncollapse">
         <div className="column">
           <div className="row medium-collapse">

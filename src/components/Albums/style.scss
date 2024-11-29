@@ -5,6 +5,8 @@
 
 .albums,
 .album {
+  height: 100%;
+
   &__list {
     @include list(".albums");
   }

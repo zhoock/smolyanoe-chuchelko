@@ -26,7 +26,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer role="contentinfo">
+    <footer role="contentinfo" className="theme-dark_extra">
       <div className="row">
         <div className="column">
           <ul className="social-networks">
