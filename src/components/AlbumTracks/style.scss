@@ -5,52 +5,29 @@
 
 .album {
   .tracks {
+    margin-bottom: $ms-1;
+
     button {
-      span {
-        color: darken($grey, 20%);
-        padding-right: $ms-_1;
-      }
-
-      border: none;
-      background: none;
-      text-align: inherit;
-      cursor: pointer;
       width: 100%;
-      color: $grey;
+      border: none;
       border-top: 1px solid $graphite-green;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-
       padding-left: $ms_-1;
+      overflow: hidden;
+      color: $grey;
+      text-align: inherit;
+      text-overflow: ellipsis;
+      background: none;
       transition: all 200ms ease;
+      cursor: pointer;
+      white-space: nowrap;
       @include adjust-font-size-to($ms-0, 0);
-
-      &:last-child {
-        border-bottom: 1px solid $graphite-green;
-      }
-
-      &.active,
-      &:hover {
-        color: $light-grey;
-        background: $dark-greenish-yellow;
-        border-top-color: $dark-greenish-yellow;
-        border-radius: $ms_-2;
-
-        span {
-          color: $dark-greenish-yellow;
-        }
-
-        & + li {
-          border-top-color: transparent;
-        }
-      }
 
       @media (hover: none) and (pointer: coarse) {
         &:hover {
           /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-          background: inherit;
+
           border-top-color: $graphite-green;
+          background: inherit;
 
           span {
             color: darken($grey, 20%);
@@ -61,15 +38,40 @@
           }
         }
       }
+
+      span {
+        padding-right: $ms-_1;
+        color: darken($grey, 20%);
+      }
+
+      &:last-child {
+        border-bottom: 1px solid $graphite-green;
+      }
+
+      &.active,
+      &:hover {
+        border-radius: $ms_-2;
+        border-top-color: $dark-greenish-yellow;
+        color: $light-grey;
+        background: $dark-greenish-yellow;
+
+        span {
+          color: $dark-greenish-yellow;
+        }
+
+        & + li {
+          border-top-color: transparent;
+        }
+      }
     }
   }
 
   pre {
     display: flex;
     justify-content: center;
-    text-align: left;
     font-family: $base-font-family;
     font-weight: $bold;
+    text-align: left;
     @include adjust-font-size-to($ms-1);
   }
 }

@@ -13,8 +13,9 @@ export default function WrapperArticle({
   date,
 }: ArticleProps) {
   return (
-    <div className="articles__list-item">
+    <article className="articles__list-item">
       <Link to={`/articles/${articleId}`}>
+        {/* <img className="articles__picture" src={getImageUrl(img)} alt="" /> */}
         <div
           className="articles__picture"
           style={{
@@ -30,6 +31,6 @@ export default function WrapperArticle({
           </div>
         </div>
       </Link>
-    </div>
+    </article>
   );
 }

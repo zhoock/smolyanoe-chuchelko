@@ -39,7 +39,7 @@ export default function AboutUs() {
             <p>
               Группа выпустила несколько альбомов, включая{" "}
               <Link to="/albums/23">23</Link> и{" "}
-              <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>{" "}
+              <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>,{" "}
               которые представлены на стримминговых платформах. Название
               "Смоляное чучелко" образовано от&nbsp;американского термина
               "tar-baby", относящегося к&nbsp;проблемной ситуации, которая лишь

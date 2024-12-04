@@ -9,19 +9,15 @@
 
     li {
       a {
-        font-size: $ms-1;
-        height: 76.244px;
-        line-height: 76.244px;
-        border: none;
-        background: $graphite-green;
         display: inline-block;
-        text-align: center;
         width: 100%;
+        height: 76.244px;
+        border: none;
         border-radius: $ms_-2;
-
-        &:hover {
-          background-color: $dark-greenish-yellow;
-        }
+        font-size: $ms-1;
+        line-height: 76.244px;
+        text-align: center;
+        background: $graphite-green;
 
         @media (hover: none) and (pointer: coarse) {
           &:hover {
@@ -30,10 +26,14 @@
           }
         }
 
+        &:hover {
+          background-color: $dark-greenish-yellow;
+        }
+
         span {
+          display: inline-block;
           text-indent: -9999px; // hide the text in the link
           light-grey-space: nowrap;
-          display: inline-block;
         }
       }
     }

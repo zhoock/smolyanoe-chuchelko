@@ -149,33 +149,32 @@ $desktops: "min-width: 64.0625em";
 }
 
 @mixin list($block) {
-  display: flex;
-  flex-flow: row nowrap;
-  overflow-x: scroll;
-  scroll-snap-type: x mandatory;
-  padding: 0 $ms-1;
   @extend %hide-scrollbar;
-
   @include breakpoint(tablet) {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-gap: 1.618em;
+    gap: 1.618em;
     padding: 0;
 
     &:has(:hover) #{$block}__list-item:not(:hover) {
       opacity: 0.5;
     }
   }
-
   @include breakpoint(desktops) {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  display: flex;
+  flex-flow: row nowrap;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  padding: 0 $ms-1;
 
   &-item {
     width: 100%;
     position: relative;
     transition: all 200ms ease;
-    margin: 0 0 $ms-1 $ms-_1;
+    margin: 0 0 $ms-1 $ms-1;
     flex: none;
     scroll-snap-align: center;
     scroll-snap-stop: always;

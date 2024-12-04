@@ -3,14 +3,14 @@
 
 .hamburger {
   &__toggle {
-    width: 40px;
-    height: 40px;
     position: fixed;
+    z-index: 999;
     top: 7px;
     right: 29px;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
-    z-index: 999;
-    transition: background 0.15s ease;
+    transition: background-color 0.15s ease;
 
     &:hover {
       div {
@@ -33,8 +33,8 @@
     .three {
       width: 100%;
       height: 3px;
-      background: $light-grey;
       margin: 9px auto;
+      background: $light-grey;
       backface-visibility: hidden;
       transition-duration: 0.15s;
     }

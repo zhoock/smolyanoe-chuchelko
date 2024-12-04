@@ -10,31 +10,25 @@ export default function Share() {
   }
 
   return (
-    <div className="share js-share-item">
-      <ul>
-        <li onClick={handleClick}>
-          <a
-            className={`icon-share ${share ? "active" : null}`}
-            href=""
-            title="Поделиться"
-          ></a>
-        </li>
-        <li className={share ? "show" : ""}>
-          <a
-            className="icon-facebook1"
-            href="#"
-            title="Поделиться на Facebook"
-          ></a>
-        </li>
-        <li className={share ? "show" : ""}>
-          <a
-            className="icon-twitter"
-            href="#"
-            title="Поделиться на Twitter"
-          ></a>
-        </li>
-      </ul>
-    </div>
+    <ul className="share js-share-item">
+      <li onClick={handleClick}>
+        <a
+          className={`icon-share ${share ? "active" : null}`}
+          href=""
+          title="Поделиться"
+        ></a>
+      </li>
+      <li className={share ? "show" : ""}>
+        <a
+          className="icon-facebook1"
+          href="#"
+          title="Поделиться на Facebook"
+        ></a>
+      </li>
+      <li className={share ? "show" : ""}>
+        <a className="icon-twitter" href="#" title="Поделиться на Twitter"></a>
+      </li>
+    </ul>
   );
 }
 

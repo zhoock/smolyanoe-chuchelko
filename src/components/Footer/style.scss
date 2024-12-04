@@ -6,16 +6,16 @@
 footer {
   ul {
     &.social-networks {
-      display: grid;
-      grid-gap: 1.618em;
-      grid-template-columns: 50px 50px 50px 50px;
-      justify-content: space-between;
-      text-align: center;
-      margin-top: $ms-1;
-
       @include breakpoint(tablet) {
         justify-content: start;
       }
+
+      display: grid;
+      grid-gap: 1.618em;
+      grid-template-columns: 50px 50px 50px 50px;
+      margin-top: $ms-1;
+      justify-content: space-between;
+      text-align: center;
 
       li {
         font-size: $ms-2;
@@ -25,15 +25,15 @@ footer {
           color: $graphite-green;
 
           &:hover {
-            color: $dark-greenish-yellow;
             border-bottom-color: $dark-greenish-yellow;
+            color: $dark-greenish-yellow;
           }
 
           // hide the text in the link
           span {
+            display: inline-block;
             text-indent: -9999px;
             light-grey-space: nowrap;
-            display: inline-block;
           }
         }
       }
@@ -44,13 +44,8 @@ footer {
 
       li {
         span::after {
-          background: inherit;
-          content: "|";
-          position: relative;
-          top: 0;
-          left: 0;
-          display: inline-block;
           padding: 0 $ms-_1;
+          content: "|";
         }
       }
     }
