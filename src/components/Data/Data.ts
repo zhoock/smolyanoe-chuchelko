@@ -907,7 +907,7 @@ const EP2022RecordingAnAlbumEquipment = [
   {
     articleId: "5",
     nameArticle: "Смоляное чучелко — 23 (2022). Запись альбома. Оборудование",
-    img: "2Lw32V8t2ps",
+    img: "recording_vocals_album_session_23",
     date: "2022-02-15",
     detales: [
       {
@@ -994,7 +994,7 @@ const EP2022RecordingAnAlbumEquipment = [
       },
       {
         id: 13,
-        img: "V4lwe-B1v8Mdrum_recording_album_session_23",
+        img: "drum_recording_album_session_23",
         alt: "запись барабанов, сессия альбома 23",
         subtitle: "Оверхеды",
         content: ["Стереопара COLES 4038 + моно Goodfly 251"],
@@ -1047,7 +1047,7 @@ const EP2022RecordingAnAlbumEquipment = [
       },
       {
         id: 22,
-        img: "Vo-bass_guitar_recording_album_session_23",
+        img: "bass_guitar_recording_album_session_23",
         alt: "запись бас-гитары, сессия альбома 23",
         subtitle: "Усилители",
         content: ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"],
