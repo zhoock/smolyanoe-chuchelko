@@ -1088,7 +1088,7 @@ const YaroslavZhukAntirulesOfLife = [
   {
     articleId: "6",
     nameArticle: "Ярослав Жук. Антиправила жизни",
-    img: "zhoock",
+    img: "yaroslav_zhoock",
     date: "2022-09-08",
     detales: [
       {
@@ -1098,7 +1098,7 @@ const YaroslavZhukAntirulesOfLife = [
       },
       {
         id: 2,
-        img: "s0wrCZqaoxs",
+        img: "yaroslav_zhoock",
         content:
           "Я не люблю людей. Особенно глупых людей. Я смеюсь над ними и унижаю их. Это меня забавляет. Поэтому я пишу музыку, которая похожа на то, как я предпочитаю общаться. Это не самый лучший способ достичь успеха, если ты играешь в рок-группе.",
       },
