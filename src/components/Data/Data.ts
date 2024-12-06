@@ -841,12 +841,13 @@ const CoverStoryEP2020 = [
   {
     articleId: "3",
     nameArticle: "История обложки. Смоляное чучелко — EP (2020)",
-    img: "WqrDr5sFybM",
+    img: "album_cover_smolyanoe_chuchelko_EP-s",
     date: "2022-02-03",
     detales: [
       {
         id: 1,
-        img: "KT5ZXKnR8OE",
+        img: "album_cover_smolyanoe_chuchelko_EP",
+        alt: "обложка альбома смоляное чучелко — смоляное чучелко",
         content: `Обложку для альбома нарисовал французский художник комиксов и иллюстратор — Blexbolex (Бернард Грейнджер).
            Его работы интересны тем, что он совмещает технику рисования от руки с трафаретной печатью.
             В 2009 году он получил приз за «Лучший дизайн книги в мире» за «L'Imagier des gens» (2008)
