@@ -109,6 +109,7 @@ export interface ArticleDetalesProps {
   img?: string;
   subtitle?: string;
   content?: string | string[]; // union type
+  alt?: string;
 }
 
 export interface ArticleProps {
