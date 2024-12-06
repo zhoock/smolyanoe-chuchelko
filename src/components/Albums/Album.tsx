@@ -49,7 +49,7 @@ export default function Album() {
 
         <div className="row">
           <div className="medium-6 medium-push-6 column">
-            <AlbumCover {...album?.cover} albumId={album?.albumId} />
+            <AlbumCover {...album?.cover} fullName={album?.fullName} />
 
             <Share />
           </div>

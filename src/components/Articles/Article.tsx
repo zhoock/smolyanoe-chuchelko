@@ -32,7 +32,7 @@ export default function Article() {
         {title && <h3>{title}</h3>}
         <div className="row small-collapse medium-uncollapse">
           <div className="column">
-            {img && <img src={getImageUrl(img)} alt="" />}
+            {img && <img src={getImageUrl(img)} alt={img} />}
           </div>
         </div>
         {subtitle && <h4>{subtitle}</h4>}

@@ -35,7 +35,7 @@ export default function Albums() {
                 {...album}
                 date={album.release.date}
               >
-                <AlbumCover {...album.cover} albumId={album.albumId} />
+                <AlbumCover {...album.cover} fullName={album.fullName} />
               </WrapperAlbumCover>
             ))}
           </div>

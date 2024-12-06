@@ -83,7 +83,7 @@ export interface CoverProps<Size extends number = 896> {
   jpg: string;
   jpg2x: string;
   img: string;
-  albumId: string | undefined;
+  fullName: string;
   size: Size;
 }
 

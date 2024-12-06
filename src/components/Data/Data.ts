@@ -906,8 +906,7 @@ const CoverStory232022 = [
 const EP2022RecordingAnAlbumEquipment = [
   {
     articleId: "5",
-    nameArticle:
-      "Смоляное чучелко — 23 EP (2022). Запись альбома. Оборудование",
+    nameArticle: "Смоляное чучелко — 23 (2022). Запись альбома. Оборудование",
     img: "2Lw32V8t2ps",
     date: "2022-02-15",
     detales: [
@@ -1089,7 +1088,7 @@ const YaroslavZhukAntirulesOfLife = [
   {
     articleId: "6",
     nameArticle: "Ярослав Жук. Антиправила жизни",
-    img: "gt2WFBAkMSE",
+    img: "zhoock",
     date: "2022-09-08",
     detales: [
       {

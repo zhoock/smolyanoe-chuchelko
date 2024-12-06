@@ -35,7 +35,7 @@ const src =
   "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/";
 
 /**
- * Функция возвращает полный URL для изображения обложки альбома в нужном формате
+ * Функция возвращает полный URL для изображения в нужном формате
  */
 export function getImageUrl(img: string, format: string = ".jpg"): string {
   return src + img + format;
@@ -139,6 +139,4 @@ export function getRandomPhotos() {
 
   document.body.style.backgroundImage =
     photos[Math.floor(Math.random() * photos.length)];
-
-    
 }

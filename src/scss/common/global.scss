@@ -141,7 +141,7 @@ body {
     .theme-dark {
       background: $deep-coal;
     }
-    
+
     .theme-dark_extra {
       background: $deep-black;
     }
@@ -251,7 +251,6 @@ body {
   }
 
   a {
-    text-decoration: underline;
     text-decoration-thickness: from-font;
     text-underline-offset: 5px;
     transition: all 200ms ease;

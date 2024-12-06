@@ -1,4 +1,4 @@
-import React, { useEffect, useState, MouseEvent } from "react";
+import React, { useState, MouseEvent } from "react";
 import Popup from "../Popup/Popup";
 import Hamburger from "../Hamburger/Hamburger";
 import { TracksProps } from "../../models";
@@ -38,6 +38,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
               className={track.id === activeTrack ? "active" : ""}
               data-index={track.id}
               onClick={handleClick}
+              type="button"
             >
               <span className="track-number">{track.id}</span> {track.title}
             </button>

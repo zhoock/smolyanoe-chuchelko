@@ -11,7 +11,7 @@ export default function AlbumCover({
   jpg,
   jpg2x,
   img,
-  albumId,
+  fullName,
   size,
 }: CoverProps) {
   return (
@@ -30,7 +30,7 @@ export default function AlbumCover({
       <img
         loading="lazy"
         src={getImageUrl(img)}
-        alt={albumId}
+        alt={`обложка альбома ${fullName}`}
         width={size}
         height={size}
       />
