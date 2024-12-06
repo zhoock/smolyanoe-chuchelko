@@ -875,12 +875,13 @@ const CoverStory232022 = [
   {
     articleId: "4",
     nameArticle: "История обложки. Смоляное чучелко — 23 (2022)",
-    img: "nxfRtxNAZFk",
+    img: "album_cover_smolyanoe_chuchelko_23-s",
     date: "2022-02-14",
     detales: [
       {
         id: 1,
-        img: "Ki1dsicGpaE",
+        img: "album_cover_smolyanoe_chuchelko_23",
+        alt: "обложка альбома Смоляное чучелко — 23",
         content:
           "Я решил, что в этот раз на обложке должна быть фотография. Я пробовал фотографировать сам, но остался недоволен результатом. Тогда я начал мониторить Instagram и мне понравились работы Hans Jacob Haarseth. Hans живёт в Норвегии. Он графический дизайнер и фотограф. Я сразу понял, что нашёл именно то, что мне нужно. Тут и отсылка к обложке первого альбома, и намёк на бессмысленную работу, увековеченную Сизифом.",
       },
@@ -1048,7 +1049,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 22,
         img: "bass_guitar_recording_album_session_23",
-        alt: "запись бас-гитары, сессия альбома 23",
+        alt: "запись гитарного кабинета, сессия альбома 23",
         subtitle: "Усилители",
         content: ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"],
       },
