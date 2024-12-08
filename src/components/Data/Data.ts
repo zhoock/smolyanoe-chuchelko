@@ -648,20 +648,22 @@ const EP2020Equipment = [
     articleId: "1",
     nameArticle: "Смоляное чучелко — EP (2020). Оборудование",
     date: "2020-07-08",
-    img: "hSe_fQAZaAo",
+    img: "recording_album_EP_equipment",
     detales: [
       {
         id: 1,
         title: "ПУЛЬТ",
         content: ["Solid State Logic SSL 6000 E (32 channels)"],
-        img: "IjivB_qQvRA",
+        img: "mixing_console_Solid_State_Logic_SSL_6000_E",
+        alt: "консоль Solid State Logic SSL 6000 E (32 канала).",
       },
       {
         id: 2,
         title: "БАРАБАНЫ",
         subtitle: "Эмбиентный микрофон",
         content: ["Neumann TLM 170"],
-        img: "WXCC_uqimg",
+        img: "drum_recording_album_session_EP",
+        alt: "запись барабанов, сессия альбома EP.",
       },
       {
         id: 3,
@@ -706,7 +708,8 @@ const EP2020Equipment = [
         title: "БАC",
         subtitle: "Гитары",
         content: ["Gibson Thunderbird", "Fender Jazz Bass"],
-        img: "jfNUR6uSXDI",
+        img: "bass_guitar_recording_album_session_EP",
+        alt: "запись бас-гитары, сессия альбома EP.",
       },
       {
         id: 11,
@@ -732,7 +735,8 @@ const EP2020Equipment = [
           "Fender Jaguar",
           "Акустическая гитара Takamine",
         ],
-        img: "PO_dLuex6I8",
+        img: "guitar_recording_album_session_EP",
+        alt: "запись гитары, сессия альбома EP.",
       },
       {
         id: 15,
@@ -782,7 +786,8 @@ const EP2020Equipment = [
         title: "ВОКАЛ",
         subtitle: "Микрофон",
         content: ["Joemeek jm47 Black"],
-        img: "KPtYswTNdD4",
+        img: "mixing_process_album_session_EP",
+        alt: "процесс сведения, сессия альбома EP.",
       },
       {
         id: 23,
@@ -811,7 +816,7 @@ const EP2020EffectsPedals = [
         content:
           "Серебряный винт, первая версия с длинным тире. Серийный номер 9900. Япония, октябрь 1980 года. Основной дисторшн.",
         img: "effects_pedal_BOSS_DS-1",
-        alt: "педаль эффектов BOSS DS-1",
+        alt: "педаль эффектов BOSS DS-1.",
       },
       {
         id: 2,
@@ -819,7 +824,7 @@ const EP2020EffectsPedals = [
         content:
           "Small Box RAT '84 Whiteface. На LM308 чипе. The Sound of the Underground. Использовался на басу.",
         img: "effects_pedal_RAT",
-        alt: "педаль эффектов RAT",
+        alt: "педаль эффектов RAT.",
       },
       {
         id: 3,
@@ -827,7 +832,7 @@ const EP2020EffectsPedals = [
         content:
           "Начало 80-х. Куплен в штатах, прошёл диагностику у Ховарда Девиса, инженера ЕHX. Не знаю точно, принимал ли Ховард участие в создании Polychorus, но именно он — автор Deluxe Memory Man. Обе эти педали вышли в 81 году.",
         img: "effects_pedal_Electro_Harmonix_Polychorus",
-        alt: "педаль эффектов Electro_Harmonix Polychorus",
+        alt: "педаль эффектов Electro_Harmonix Polychorus.",
       },
       {
         id: 4,
@@ -835,7 +840,7 @@ const EP2020EffectsPedals = [
         content: `Идентифицировать педаль можно по дата-коду на потенциометре (имеет пластиковый вал (как фича — педаль не фонит, если прикасаться рукой)), последние 4 цифры (8339) означают, что год 83, 39 неделя.
 У винтажных педалей ясный и меньшего размера (3 мм) светодиод против красного и большого (5 мм) светодиода в переизданиях. Кроме того, в оригиналах нет тире (-), разделяющего слова FULL и CHORUS. EHX c 79 до начала 80-х использовали чипы: MN3007 либо RETICON SAD1024 (самый редкий и востребованный по причине пользования его "сами знаете кем"). Но дело, конечно же, только в том, что переиздание звучит как гавно.`,
         img: "effects_pedal_Electro-Harmonix_Small_Clone",
-        alt: "педаль эффектов Electro-Harmonix Small Clone",
+        alt: "педаль эффектов Electro-Harmonix Small Clone.",
       },
     ],
   },
