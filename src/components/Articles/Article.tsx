@@ -26,7 +26,14 @@ export default function Article() {
     (_) => _.articleId === params.articleId,
   )[0];
 
-  function Block({ title, subtitle, content, img, alt }: ArticleDetalesProps) {
+  function Block({
+    title,
+    subtitle,
+    strong,
+    content,
+    img,
+    alt,
+  }: ArticleDetalesProps) {
     return (
       <>
         {title && <h3>{title}</h3>}
@@ -37,7 +44,9 @@ export default function Article() {
         </div>
         {subtitle && <h4>{subtitle}</h4>}
         {typeof content == "string" ? (
-          <p>{content}</p>
+          <p>
+            {strong && <strong>{strong}</strong>} {content && content}
+          </p>
         ) : (
           <ul>{content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
         )}

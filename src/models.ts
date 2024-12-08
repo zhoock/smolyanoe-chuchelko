@@ -108,6 +108,7 @@ export interface ArticleDetalesProps {
   title?: string;
   img?: string;
   subtitle?: string;
+  strong?: string;
   content?: string | string[]; // union type
   alt?: string;
 }
