@@ -17,13 +17,11 @@
   }
 
   &__picture {
+    min-height: 323px;
+    border-radius: $ms_-1;
     @include breakpoint(desktops) {
       min-height: 200px;
     }
-
-    min-height: 323px;
-    border-radius: $ms_-1;
-    object-fit: cover;
   }
 
   time {

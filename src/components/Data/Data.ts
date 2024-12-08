@@ -802,7 +802,7 @@ const EP2020EffectsPedals = [
   {
     articleId: "2",
     nameArticle: "Смоляное чучелко — EP (2020). Педали эффектов",
-    img: "8-t5mrzl4k8",
+    img: "smolyanoe_chuchelko_effects_pedals",
     date: "2020-07-22",
     detales: [
       {
@@ -810,28 +810,32 @@ const EP2020EffectsPedals = [
         title: "BOSS DS-1",
         content:
           "Серебряный винт, первая версия с длинным тире. Серийный номер 9900. Япония, октябрь 1980 года. Основной дисторшн.",
-        img: "eJk47Wmh7eA",
+        img: "effects_pedal_BOSS_DS-1.jpg",
+        alt: "педаль эффектов BOSS DS-1",
       },
       {
         id: 2,
         title: "RAT",
         content:
           "Small Box RAT '84 Whiteface. На LM308 чипе. The Sound of the Underground. Использовался на басу.",
-        img: "FA4HyrJDkdM",
+        img: "effects_pedal_RAT.jpg",
+        alt: "педаль эффектов RAT",
       },
       {
         id: 3,
         title: "Electro-Harmonix Polychorus",
         content:
           "Начало 80-х. Куплен в штатах, прошёл диагностику у Ховарда Девиса, инженера ЕHX. Не знаю точно, принимал ли Ховард участие в создании Polychorus, но именно он — автор Deluxe Memory Man. Обе эти педали вышли в 81 году.",
-        img: "zw5WUXDPyh4",
+        img: "effects_pedal_Electro_Harmonix_Polychorus.jpg",
+        alt: "педаль эффектов Electro_Harmonix Polychorus",
       },
       {
         id: 4,
         title: "Electro-Harmonix Small Clone",
         content: `Идентифицировать педаль можно по дата-коду на потенциометре (имеет пластиковый вал (как фича — педаль не фонит, если прикасаться рукой)), последние 4 цифры (8339) означают, что год 83, 39 неделя.
 У винтажных педалей ясный и меньшего размера (3 мм) светодиод против красного и большого (5 мм) светодиода в переизданиях. Кроме того, в оригиналах нет тире (-), разделяющего слова FULL и CHORUS. EHX c 79 до начала 80-х использовали чипы: MN3007 либо RETICON SAD1024 (самый редкий и востребованный по причине пользования его "сами знаете кем"). Но дело, конечно же, только в том, что переиздание звучит как гавно.`,
-        img: "pjS8D3U2v_0",
+        img: "effects_pedal_Electro-Harmonix_Small_Clone",
+        alt: "педаль эффектов Electro-Harmonix Small Clone",
       },
     ],
   },
@@ -847,7 +851,7 @@ const CoverStoryEP2020 = [
       {
         id: 1,
         img: "album_cover_smolyanoe_chuchelko_EP",
-        alt: "обложка альбома смоляное чучелко — смоляное чучелко",
+        alt: "обложка альбома Смоляное чучелко — смоляное чучелко.",
         content: `Обложку для альбома нарисовал французский художник комиксов и иллюстратор — Blexbolex (Бернард Грейнджер).
            Его работы интересны тем, что он совмещает технику рисования от руки с трафаретной печатью.
             В 2009 году он получил приз за «Лучший дизайн книги в мире» за «L'Imagier des gens» (2008)
@@ -882,7 +886,7 @@ const CoverStory232022 = [
       {
         id: 1,
         img: "album_cover_smolyanoe_chuchelko_23",
-        alt: "обложка альбома Смоляное чучелко — 23",
+        alt: "обложка альбома Смоляное чучелко — 23.",
         content:
           "Я решил, что в этот раз на обложке должна быть фотография. Я пробовал фотографировать сам, но остался недоволен результатом. Тогда я начал мониторить Instagram и мне понравились работы Hans Jacob Haarseth. Hans живёт в Норвегии. Он графический дизайнер и фотограф. Я сразу понял, что нашёл именно то, что мне нужно. Тут и отсылка к обложке первого альбома, и намёк на бессмысленную работу, увековеченную Сизифом.",
       },
@@ -928,7 +932,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 3,
         img: "recording_vocals_album_session_23",
-        alt: "запись вокал, сессия альбома 23",
+        alt: "запись вокала, сессия альбома 23.",
         subtitle: "Микрофон",
         content: "GoodFly 251",
       },
@@ -948,7 +952,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 5,
         img: "recording_guitar_cabinet_album_session_23",
-        alt: "запись гитарного кабинета, сессия альбома 23",
+        alt: "запись гитарного кабинета, сессия альбома 23.",
         subtitle: "Гитара",
         content: ["Fender Mustang"],
       },
@@ -997,7 +1001,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 13,
         img: "drum_recording_album_session_23",
-        alt: "запись барабанов, сессия альбома 23",
+        alt: "запись барабанов, сессия альбома 23.",
         subtitle: "Оверхеды",
         content: ["Стереопара COLES 4038 + моно Goodfly 251"],
       },
@@ -1050,7 +1054,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 22,
         img: "bass_guitar_recording_album_session_23",
-        alt: "запись гитарного кабинета, сессия альбома 23",
+        alt: "запись басового кабинета, сессия альбома 23.",
         subtitle: "Усилители",
         content: ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"],
       },
@@ -1073,7 +1077,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 25,
         img: "mixing_process_album_session_23",
-        alt: "процесс сведения, сессия альбома 23",
+        alt: "процесс сведения, сессия альбома 23.",
       },
       {
         id: 26,
@@ -1106,7 +1110,7 @@ const YaroslavZhukAntirulesOfLife = [
       {
         id: 2,
         img: "yaroslav_zhoock",
-        alt: "Ярослав Жук",
+        alt: "Ярослав Жук.",
         content:
           "Я не люблю людей. Особенно глупых людей. Я смеюсь над ними и унижаю их. Это меня забавляет. Поэтому я пишу музыку, которая похожа на то, как я предпочитаю общаться. Это не самый лучший способ достичь успеха, если ты играешь в рок-группе.",
       },

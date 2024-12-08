@@ -15,28 +15,41 @@
   }
 
   button {
-    padding: $ms_-2 $ms_0;
     margin: $ms-1 0;
     border: 0;
-    border-radius: $ms_2;
+    border-radius: $ms_-1;
+    padding: $ms_-2 $ms_0;
+    color: $grey;
     background: $graphite-green;
+    transition: all 200ms ease;
     cursor: pointer;
     appearance: none;
-    transition: all 200ms ease;
-    color: $grey;
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover {
+        color: $grey;
+        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+        background-color: $graphite-green;
+        transition: none;
+
+        span {
+          color: $grey;
+        }
+      }
+    }
 
     .icon-ctrl {
       position: relative;
       top: 0;
       left: 2px;
       display: inline-block;
-      transform: rotate(180deg);
       font: $medium 1.618rem/0 sans-serif;
+      transform: rotate(180deg);
     }
 
     &:hover {
-      background-color: $dark-greenish-yellow;
       color: $light-grey;
+      background-color: $dark-greenish-yellow;
 
       span {
         color: $light-grey;
@@ -46,30 +59,17 @@
     &:active {
       transform: scale(0.98);
     } /* Легкое уменьшение кнопки */
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover {
-        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-        background-color: $graphite-green;
-        color: $grey;
-        transition: none;
-
-        span {
-          color: $grey;
-        }
-      }
-    }
   }
 
   &:has(.about__content_active) {
     button {
-      background-color: $dark-greenish-yellow;
       color: $light-grey;
+      background-color: $dark-greenish-yellow;
 
       & span {
-        transform: rotate(0);
         top: 13px;
         color: $light-grey;
+        transform: rotate(0);
       }
     }
   }
