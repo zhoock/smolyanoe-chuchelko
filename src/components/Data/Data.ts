@@ -810,7 +810,7 @@ const EP2020EffectsPedals = [
         title: "BOSS DS-1",
         content:
           "Серебряный винт, первая версия с длинным тире. Серийный номер 9900. Япония, октябрь 1980 года. Основной дисторшн.",
-        img: "effects_pedal_BOSS_DS-1.jpg",
+        img: "effects_pedal_BOSS_DS-1",
         alt: "педаль эффектов BOSS DS-1",
       },
       {
@@ -818,7 +818,7 @@ const EP2020EffectsPedals = [
         title: "RAT",
         content:
           "Small Box RAT '84 Whiteface. На LM308 чипе. The Sound of the Underground. Использовался на басу.",
-        img: "effects_pedal_RAT.jpg",
+        img: "effects_pedal_RAT",
         alt: "педаль эффектов RAT",
       },
       {
@@ -826,7 +826,7 @@ const EP2020EffectsPedals = [
         title: "Electro-Harmonix Polychorus",
         content:
           "Начало 80-х. Куплен в штатах, прошёл диагностику у Ховарда Девиса, инженера ЕHX. Не знаю точно, принимал ли Ховард участие в создании Polychorus, но именно он — автор Deluxe Memory Man. Обе эти педали вышли в 81 году.",
-        img: "effects_pedal_Electro_Harmonix_Polychorus.jpg",
+        img: "effects_pedal_Electro_Harmonix_Polychorus",
         alt: "педаль эффектов Electro_Harmonix Polychorus",
       },
       {
