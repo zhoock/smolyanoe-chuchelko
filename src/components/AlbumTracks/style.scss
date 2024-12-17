@@ -6,6 +6,7 @@
 .album {
   .tracks {
     margin-bottom: $ms-1;
+    display: grid;
 
     button {
       width: 100%;

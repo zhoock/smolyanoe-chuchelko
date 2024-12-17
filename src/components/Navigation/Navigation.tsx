@@ -9,6 +9,18 @@ export default function Navigation({ classes, onToggle }: NavigationProps) {
       <ul className="menu">
         <li>
           <NavLink
+            to="/albums"
+            title="Альбомы"
+            onClick={onToggle}
+            className={({ isActive }) => {
+              return isActive ? "active" : "";
+            }}
+          >
+            Альбомы
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
             to="/aboutus"
             title="О группе"
             onClick={onToggle}

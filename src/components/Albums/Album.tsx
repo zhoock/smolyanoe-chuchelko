@@ -29,40 +29,35 @@ export default function Album() {
   return (
     <>
       <section className="album theme-dark">
-        <div className="row">
-          <div className="column">
-            <nav className="breadcrumb" aria-label="Breadcrumb">
-              <ul>
-                <li>
-                  <Link to="/">Альбомы</Link>
-                </li>
-                <li className="active">{album?.nameAlbum}</li>
-              </ul>
-            </nav>
+        <div className="wrapper album__wrapper">
+          <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
+            <ul>
+              <li>
+                <Link to="/albums">Альбомы</Link>
+              </li>
+              <li className="active">{album?.nameAlbum}</li>
+            </ul>
+          </nav>
 
-            {/* Элемент показывается только при загрузке данных с сервера */}
-            {loading && <Loader />}
-            {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
-            {error && <ErrorMessage error={error} />}
-          </div>
-        </div>
+          {/* Элемент показывается только при загрузке данных с сервера */}
+          {loading && <Loader />}
+          {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
+          {error && <ErrorMessage error={error} />}
 
-        <div className="row">
-          <div className="medium-6 medium-push-6 column">
+          <div className="item">
             <AlbumCover {...album?.cover} fullName={album?.fullName} />
-
             <Share />
           </div>
 
-          <div className="medium-6 medium-pull-6 column">
+          <div className="item">
             <AlbumTracks album={album} />
           </div>
-        </div>
-        <div className="row">
-          <div className="medium-6 column">
+
+          <div className="item item-type-b">
             <ServiceButtons album={album} section="Купить" />
           </div>
-          <div className="medium-6 column">
+
+          <div className="item">
             <ServiceButtons album={album} section="Слушать" />
           </div>
         </div>

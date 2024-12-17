@@ -2,41 +2,39 @@
 @import "../../scss/common/bits.scss";
 
 .hamburger {
-  &__toggle {
-    position: fixed;
-    z-index: 999;
-    top: 7px;
-    right: 29px;
-    width: 40px;
-    height: 40px;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
+  position: fixed;
+  z-index: 999;
+  top: 7px;
+  right: 29px;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 
-    &:hover {
-      div {
-        background: lighten($link-color, 50%);
-      }
+  &:hover {
+    div {
+      background: lighten($link-color, 50%);
     }
-    &.active {
-      .one {
-        transform: rotate(45deg) translate(7px, 7px);
-      }
-      .two {
-        opacity: 0;
-      }
-      .three {
-        transform: rotate(-45deg) translate(10px, -10px);
-      }
+  }
+  &.active {
+    .one {
+      transform: rotate(45deg) translate(7px, 7px);
     }
-    .one,
-    .two,
+    .two {
+      opacity: 0;
+    }
     .three {
-      width: 100%;
-      height: 3px;
-      margin: 9px auto;
-      background: $light-grey;
-      backface-visibility: hidden;
-      transition-duration: 0.15s;
+      transform: rotate(-45deg) translate(10px, -10px);
     }
+  }
+  .one,
+  .two,
+  .three {
+    width: 100%;
+    height: 3px;
+    margin: 9px auto;
+    background: $light-grey;
+    backface-visibility: hidden;
+    transition-duration: 0.15s;
   }
 }

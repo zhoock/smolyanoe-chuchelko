@@ -4,6 +4,8 @@
 @import "../../scss/common/mixins";
 
 footer {
+  grid-area: footer;
+
   ul {
     &.social-networks {
       @include breakpoint(tablet) {

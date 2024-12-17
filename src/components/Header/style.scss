@@ -2,6 +2,7 @@
 @import "../../scss/common/bits.scss";
 
 header {
+  grid-area: header;
   position: fixed;
   inset: 0 0 auto;
   z-index: 1;
@@ -9,7 +10,7 @@ header {
   backdrop-filter: blur(20px) saturate(0.8%);
   font-family: "Oswald", sans-serif;
 
-  .header-content {
+  .header__wrapper {
     display: flex;
     height: calc(1.618rem * 2);
     align-items: center;

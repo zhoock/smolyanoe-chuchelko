@@ -27,30 +27,28 @@ export default function Footer() {
 
   return (
     <footer role="contentinfo" className="theme-dark_extra">
-      <div className="row">
-        <div className="column">
-          <ul className="social-networks">
-            {socialNetwork.map((item) => (
-              <li key={item.id}>
-                <a className={`icon-${item.name}`} href={item.href}>
-                  <span>{item.name}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <ul className="copyright">
-            <li>
-              <small>
-                <span>© 2021—2024 Смоляное чучелко</span>
-              </small>
+      <div className="wrapper">
+        <ul className="social-networks">
+          {socialNetwork.map((item) => (
+            <li key={item.id}>
+              <a className={`icon-${item.name}`} href={item.href}>
+                <span>{item.name}</span>
+              </a>
             </li>
-            <li>
-              <small>
-                <a href="mailto:feedback@smolyanoechuchelko.ru">Поддержка</a>
-              </small>
-            </li>
-          </ul>
-        </div>
+          ))}
+        </ul>
+        <ul className="copyright">
+          <li>
+            <small>
+              <span>© 2021—2024 Смоляное чучелко</span>
+            </small>
+          </li>
+          <li>
+            <small>
+              <a href="mailto:feedback@smolyanoechuchelko.ru">Поддержка</a>
+            </small>
+          </li>
+        </ul>
       </div>
     </footer>
   );

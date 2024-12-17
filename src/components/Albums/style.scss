@@ -5,8 +5,6 @@
 
 .albums,
 .album {
-  height: 100%;
-
   &__list {
     @include list(".albums");
   }
@@ -20,12 +18,38 @@
   }
 
   img {
-    display: block;
-    margin: 0;
     border-radius: $ms_-1;
   }
 
   a[class^="icon"] {
     text-decoration: none;
+  }
+}
+
+.album__wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 $ms-1;
+
+  h2.album-title {
+    margin-top: 0;
+  }
+
+  .item {
+    grid-column: span 2;
+
+    &-type-a {
+      grid-column: span 2;
+    }
+
+    &-type-b {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @include breakpoint(tablet) {
+      grid-column: span 1;
+    }
   }
 }

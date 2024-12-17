@@ -6,7 +6,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin"); // извлек
 module.exports = {
   entry: {
     bundle: "./src/index.tsx", // Основной файл для React с TypeScript
-    // modules: "./src/js-modules/smoothly.js", // Дополнительный скрипт на JavaScript
+    // modules: "./src/script.js", // Дополнительный скрипт на JavaScript
   },
 
   output: {
@@ -85,6 +85,6 @@ module.exports = {
     historyApiFallback: true, // необходимо при испольтзовании React Router для маршрутизации
     watchFiles: path.join(__dirname, "src"), // указывает на каталог src, за которыми будет вестись наблюдение
     port: 8080, // указывает порт на котором будет работать веб-сервер
-    hot: true, // Включаем HMR (горячую замену модулей)
+    hot: true, // включает горячую перезагрузку
   },
 };

@@ -5,12 +5,29 @@
 
 .articles,
 .article {
+  .articles__wrapper {
+    display: grid;
+  }
+
+  .uncollapse {
+    margin-left: -1.618em;
+    margin-right: -1.618em;
+  }
+
+  @include breakpoint(desktops) {
+    .uncollapse {
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+
   &__list {
     @include list(".articles");
   }
 
   &__description {
     @extend %description;
+
     &-year {
       @extend %description-year;
     }
@@ -19,7 +36,7 @@
   &__picture {
     min-height: 323px;
     border-radius: $ms_-1;
-    @include breakpoint(desktops) {
+    @include breakpoint(tablet) {
       min-height: 200px;
     }
   }

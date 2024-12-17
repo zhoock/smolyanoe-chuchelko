@@ -15,24 +15,18 @@ export default function Articles() {
 
   return (
     <section className="articles theme-dark">
-      <div className="row collapse medium-uncollapse">
-        <div className="column">
-          <div className="row medium-collapse">
-            <div className="column">
-              <h2>Статьи</h2>
-            </div>
-          </div>
+      <div className="wrapper articles__wrapper">
+        <h2>Статьи</h2>
 
-          {/* Элемент показывается только при загрузке данных с сервера */}
-          {/* {loading && <Loader />} */}
-          {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
-          {/* {error && <ErrorMessage error={error} />} */}
+        {/* Элемент показывается только при загрузке данных с сервера */}
+        {/* {loading && <Loader />} */}
+        {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
+        {/* {error && <ErrorMessage error={error} />} */}
 
-          <div className="articles__list">
-            {ARTICLES.map((_) => (
-              <WrapperArticle key={_.articleId} {..._} />
-            ))}
-          </div>
+        <div className="articles__list">
+          {ARTICLES.map((_) => (
+            <WrapperArticle key={_.articleId} {..._} />
+          ))}
         </div>
       </div>
     </section>

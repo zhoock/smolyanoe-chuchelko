@@ -2,7 +2,6 @@
 @import "../../scss/common/bits.scss";
 
 .share {
-  margin-top: $ms-1;
   display: grid;
   grid-template-columns: repeat(3, min-content);
   gap: $ms_-1;

@@ -11,9 +11,9 @@
   $disabled-background: $yellow,
   $border: transparent
 ) {
+  border: 1px solid $border;
   color: $color;
   background-color: $background;
-  border: 1px solid $border;
 
   &:hover,
   &:focus,
@@ -121,9 +121,9 @@ $desktops: "min-width: 64.0625em";
   $base-font-size: 18px,
   $base-line-height: calc(18px * 1.618)
 ) {
+  margin: math.div($base-line-height * $scale-value, $to-font-size) + em 0;
   font-size: math.div($to-font-size, $base-font-size) + rem;
   line-height: math.div($base-line-height * 1.618, $to-font-size);
-  margin: math.div($base-line-height * $scale-value, $to-font-size) + em 0;
 }
 
 //Hide scrollbar
@@ -149,44 +149,50 @@ $desktops: "min-width: 64.0625em";
 }
 
 @mixin list($block) {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: $ms-0;
+  margin: 0 -1.618em $ms-1;
+  padding: 0 $ms-1;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+
   @extend %hide-scrollbar;
   @include breakpoint(tablet) {
+    margin: 0 0 $ms-1 0;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.618em;
+    gap: $ms-1;
     padding: 0;
+    grid-template: minmax(323px, auto) / repeat(auto-fit, minmax(250px, 1fr));
 
     &:has(:hover) #{$block}__list-item:not(:hover) {
       opacity: 0.5;
     }
   }
   @include breakpoint(desktops) {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
 
-  display: flex;
-  flex-flow: row nowrap;
-  overflow-x: scroll;
-  scroll-snap-type: x mandatory;
-  padding: 0 $ms-1;
-
   &-item {
-    width: 100%;
     position: relative;
-    transition: all 200ms ease;
-    margin: 0 0 $ms-1 $ms-1;
     flex: none;
+    width: 100%;
+    transition: all 200ms ease;
     scroll-snap-align: center;
     scroll-snap-stop: always;
 
-    @include breakpoint(tablet) {
-      display: flex;
-      flex-direction: column;
-      margin-left: 0;
-    }
-
     a {
+      display: block;
       text-decoration: none;
+
+      &:focus-visible {
+        // позволит визуально выделить элемент за пределами его границ, даже если он обрезан.
+        outline-offset: -4px; /* Смещение от границы элемента */
+      }
+
+      img {
+        margin-bottom: 0;
+      }
     }
   }
 }

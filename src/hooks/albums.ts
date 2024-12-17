@@ -118,25 +118,23 @@ export function alphabeticFormatDate(dateRelease: string): string {
  */
 export function getRandomPhotos() {
   let photos: string[] = [
-    `url(${src}banner-for-header.jpg)`,
+    // `url(${src}banner-for-header.jpg)`,
     `url(${src}KvArYFCcWLg.jpg)`,
     `url(${src}CZaNPYWOmVM.jpg)`,
     `url(${src}wj3MH7eyNhY.jpg`,
     `url(${src}XpaX73Jq4S8.jpg`,
-    // `url(${src}M2x9Im2_1uM.jpg)`,
-    // `url(${src}pAZ_AZh5bQU.jpg)`,
-    // `url(${src}M2x9Im2_1uM.jpg)`,
+    `url(${src}M2x9Im2_1uM.jpg)`,
+    `url(${src}pAZ_AZh5bQU.jpg)`,
+    `url(${src}M2x9Im2_1uM.jpg)`,
     // `url(${src}6yIUmtdW35U.jpg)`,
     // `url(${src}F2Z8WN--2kg.jpg`,
-    // `url(${src}IkpCtDzA5WM.jpg`,
+    `url(${src}IkpCtDzA5WM.jpg`,
   ];
 
-  // smoothly(
-  //   document.body,
-  //   "style.backgroundImage",
-  //   photos[Math.floor(Math.random() * photos.length)],
-  // );
+  const hero = document.querySelector(".hero") as HTMLElement;
 
-  document.body.style.backgroundImage =
-    photos[Math.floor(Math.random() * photos.length)];
+  if (hero) {
+    hero.style.backgroundImage =
+      photos[Math.floor(Math.random() * photos.length)];
+  }
 }

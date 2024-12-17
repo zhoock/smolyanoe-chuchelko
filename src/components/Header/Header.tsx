@@ -7,16 +7,12 @@ export default function Header() {
   return (
     <>
       <header role="banner">
-        <div className="row">
-          <div className="column">
-            <div className="header-content">
-              <Link className="logo" to="/">
-                Home
-              </Link>
+        <div className="wrapper header__wrapper">
+          <Link className="logo" to="/">
+            Home
+          </Link>
 
-              <Navigation classes={{ hide: "hide-for-medium-down" }} />
-            </div>
-          </div>
+          <Navigation classes={{ hide: "hide-for-medium-down" }} />
         </div>
       </header>
     </>

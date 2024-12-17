@@ -24,6 +24,10 @@ const router = createBrowserRouter([
         element: <Albums />,
       },
       {
+        path: "/albums",
+        element: <Albums />,
+      },
+      {
         path: "/albums/:albumId",
         element: <Album />,
       },
@@ -51,16 +55,15 @@ export default function App() {
 
 function Layout() {
   const [popup, setPopup] = useState(false);
+
   return (
     <>
-      <div className="overlay"></div>
       <Header />
-      <div className="row">
-        <div className="column">
-          <h1>смоляное чучелко</h1>
-        </div>
-      </div>
       <main>
+        <section className="hero">
+          <h1>Cмоляное чучелко</h1>
+        </section>
+
         {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
         <Popup isActive={popup} classes={{ hide: "hide-for-large-up" }}>
           <Navigation onToggle={() => setPopup(!popup)} />

@@ -37,10 +37,8 @@ export default function Article() {
     return (
       <>
         {title && <h3>{title}</h3>}
-        <div className="row small-collapse medium-uncollapse">
-          <div className="column">
-            {img && <img src={getImageUrl(img)} alt={alt} />}
-          </div>
+        <div className="uncollapse">
+          {img && <img src={getImageUrl(img)} alt={alt} />}
         </div>
         {subtitle && <h4>{subtitle}</h4>}
         {typeof content == "string" ? (
@@ -56,25 +54,23 @@ export default function Article() {
 
   return (
     <section className="article theme-dark">
-      <div className="row">
-        <div className="small-12 column">
-          <nav aria-label="Breadcrumb" className="breadcrumb">
-            <ul>
-              <li>
-                <Link to="/articles">Статьи</Link>
-              </li>
-              <li className="active">{article.nameArticle}</li>
-            </ul>
-          </nav>
-          <time dateTime={article.date}>
-            <small>{alphabeticFormatDate(article.date)}</small>
-          </time>
-          <h2>{article.nameArticle}</h2>
+      <div className="wrapper">
+        <nav aria-label="Breadcrumb" className="breadcrumb">
+          <ul>
+            <li>
+              <Link to="/articles">Статьи</Link>
+            </li>
+            <li className="active">{article.nameArticle}</li>
+          </ul>
+        </nav>
+        <time dateTime={article.date}>
+          <small>{alphabeticFormatDate(article.date)}</small>
+        </time>
+        <h2>{article.nameArticle}</h2>
 
-          {article.detales.map((_) => (
-            <Block key={_.id} {..._} />
-          ))}
-        </div>
+        {article.detales.map((_) => (
+          <Block key={_.id} {..._} />
+        ))}
       </div>
     </section>
   );
