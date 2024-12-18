@@ -1,6 +1,6 @@
-import React from "react";
-import { IAlbums } from "../../models";
-import { DetalesProps } from "../../models";
+import React from 'react';
+import { IAlbums } from '../../models';
+import { DetalesProps } from '../../models';
 
 /**
  * Компонент отображает блок с участниками и местами записи альбома.
@@ -11,9 +11,19 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
       <>
         <h3>{title}</h3>
         <ul>
-          {content.map((_) => (
-            <li key={_}>{_}</li>
-          ))}
+          {content.map((item: any) =>
+            typeof item === 'string' ? (
+              <li key={item}>{item}</li>
+            ) : (
+              <li key={item}>
+                {
+                  <a href={item.link} target="_blank">
+                    {item.text}
+                  </a>
+                }
+              </li>
+            ),
+          )}
         </ul>
       </>
     );

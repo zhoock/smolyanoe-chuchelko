@@ -5,14 +5,15 @@
 
 .album {
   .tracks {
-    margin-bottom: $ms-1;
     display: grid;
+    margin-bottom: $ms-1;
+    counter-reset: example 0;
 
     button {
+      position: relative;
       width: 100%;
       border: none;
       border-top: 1px solid $graphite-green;
-      padding-left: $ms_-1;
       overflow: hidden;
       color: $grey;
       text-align: inherit;
@@ -20,17 +21,16 @@
       background: none;
       transition: all 200ms ease;
       cursor: pointer;
+      counter-increment: example 1;
       white-space: nowrap;
       @include adjust-font-size-to($ms-0, 0);
 
       @media (hover: none) and (pointer: coarse) {
         &:hover {
-          /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-
           border-top-color: $graphite-green;
           background: inherit;
 
-          span {
+          &::before {
             color: darken($grey, 20%);
           }
 
@@ -40,8 +40,9 @@
         }
       }
 
-      span {
-        padding-right: $ms-_1;
+      &::before {
+        content: counter(example);
+        padding: 0 $ms-_1;
         color: darken($grey, 20%);
       }
 
@@ -56,7 +57,7 @@
         color: $light-grey;
         background: $dark-greenish-yellow;
 
-        span {
+        &::before {
           color: $dark-greenish-yellow;
         }
 

@@ -64,7 +64,7 @@ export default function Article() {
           </ul>
         </nav>
         <time dateTime={article.date}>
-          <small>{alphabeticFormatDate(article.date)}</small>
+          <small>{alphabeticFormatDate(article.date)} г.</small>
         </time>
         <h2>{article.nameArticle}</h2>
 

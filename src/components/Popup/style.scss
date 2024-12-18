@@ -11,6 +11,7 @@
   background: rgba($deep-black, 0);
   overflow: scroll;
   transition: all 0.45s;
+  @extend %hide-scrollbar;
 
   &_open {
     z-index: 999;
@@ -22,4 +23,5 @@
 
 body:has(.popup_open) {
   overflow: hidden;
+  @extend %hide-scrollbar;
 }

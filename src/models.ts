@@ -4,7 +4,7 @@
 export interface NavigationProps {
   /** Принимает классы CSS */
   classes?: {
-    hide: "hide-for-medium-down" | "hide-for-large-up"; // union literal type
+    hide: 'hide-for-medium-down' | 'hide-for-large-up'; // union literal type
   };
   /**  Открывает/закрывает Popup */
   onToggle?: (e: React.MouseEvent<HTMLElement>) => void;

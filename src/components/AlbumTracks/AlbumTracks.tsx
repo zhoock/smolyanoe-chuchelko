@@ -40,7 +40,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
               onClick={handleClick}
               type="button"
             >
-              <span className="track-number">{track.id}</span> {track.title}
+              {track.title}
             </button>
           ))}
         </div>

@@ -1,7 +1,7 @@
 // Defaults and variables
-@import "../common/bits.scss";
+@import '../common/bits.scss';
 // Mixins
-@import "../common/mixins";
+@import '../common/mixins';
 
 :root {
   position: relative;
@@ -28,8 +28,8 @@ html {
 }
 
 /* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
-ul[role="list"],
-ol[role="list"] {
+ul[role='list'],
+ol[role='list'] {
   list-style: none;
 }
 
@@ -120,9 +120,9 @@ body {
     display: grid;
     height: 100vh;
     grid-template:
-      "header" calc(1.618rem * 2)
-      "main" auto
-      "footer" 165px / 1fr;
+      'header' calc(1.618rem * 2)
+      'main' auto
+      'footer' 165px / 1fr;
 
     .theme-dark {
       background: $deep-coal;
@@ -161,7 +161,7 @@ body {
         display: flex;
         align-items: end;
         background: #000 right calc(1.618rem * 2) no-repeat fixed
-          url("images/XpaX73Jq4S8.jpg");
+          url('images/XpaX73Jq4S8.jpg');
 
         @include breakpoint(phones) {
           background-size: contain;
@@ -177,13 +177,13 @@ body {
         }
 
         &::before {
-          content: ""; /* Псевдоэлемент требует content */
+          content: '';
           position: absolute;
           inset: 0;
 
           @include breakpoint(phones) {
             // background: linear-gradient(0deg, #21201d 0, transparent 50%);
-            background: rgba(32, 32, 29, 0.4);
+            background: rgb(32 32 29 / 0.4);
           }
 
           @include breakpoint(tablet) {
@@ -220,7 +220,7 @@ body {
   h3,
   h4 {
     color: $dark-greenish-yellow;
-    font-family: "Oswald", sans-serif;
+    font-family: 'Oswald', sans-serif;
     font-weight: $light;
     letter-spacing: 1.618px;
     text-transform: uppercase;
@@ -257,7 +257,7 @@ body {
     margin-bottom: $ms-1;
 
     &.dash li:before {
-      content: "— ";
+      content: '— ';
     }
     li {
       list-style: none;
@@ -294,7 +294,7 @@ body {
 
       li {
         &:not(:last-child)::after {
-          content: "→";
+          content: '→';
           display: inline-block;
           margin: 0 0.25rem;
         }
@@ -309,4 +309,8 @@ body {
 
 :focus-visible {
   outline: 4px solid $olive-green;
+}
+
+::selection {
+  background-color: $brown-beige;
 }
