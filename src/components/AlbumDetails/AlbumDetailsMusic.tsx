@@ -11,7 +11,11 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
       <>
         <h3>{title}</h3>
         <ul>
-          {content.map((item: any) =>
+          {content.map((_) => (
+            <li key={_}>{_}</li>
+          ))}
+
+          {/* {content.map((item: any) =>
             typeof item === 'string' ? (
               <li key={item}>{item}</li>
             ) : (
@@ -23,7 +27,7 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
                 }
               </li>
             ),
-          )}
+          )} */}
         </ul>
       </>
     );
