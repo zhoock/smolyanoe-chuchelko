@@ -1,19 +1,20 @@
-import { useEffect, useState } from "react";
-import { IAlbums } from "../models";
-import axios, { AxiosError } from "axios";
+import { useEffect, useState } from 'react';
+import { IAlbums } from '../models';
+import axios, { AxiosError } from 'axios';
 
 export function useData() {
   const [albums, setAlbums] = useState<IAlbums[]>([]);
   const [loading, setLoading] = useState(false); // state для индикации загрузки
-  const [error, setError] = useState(""); // state для реализации ошибки при загрузке
+  const [error, setError] = useState(''); // state для реализации ошибки при загрузке
 
   async function fetchAlbums() {
     try {
-      setError(""); // очищаем ошибку при новой загрузке данных
+      setError(''); // очищаем ошибку при новой загрузке данных
       setLoading(true);
       const { data } = await axios.get<IAlbums[]>(
-        "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json",
+        'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json',
       );
+
       setAlbums(data); // передаём массив альбомов
       setLoading(false); // произошла ошибка
     } catch (e) {
@@ -32,12 +33,12 @@ export function useData() {
 }
 
 const src =
-  "https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/";
+  'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/';
 
 /**
  * Функция возвращает полный URL для изображения в нужном формате
  */
-export function getImageUrl(img: string, format: string = ".jpg"): string {
+export function getImageUrl(img: string, format: string = '.jpg'): string {
   return src + img + format;
 }
 
@@ -48,13 +49,13 @@ export function formatDate(dateRelease: string): string {
   const date = new Date(dateRelease);
 
   let dd: number | string = date.getDate();
-  if (dd < 10) dd = "0" + dd;
+  if (dd < 10) dd = '0' + dd;
 
   let mm: number | string = date.getMonth() + 1;
-  if (mm < 10) mm = "0" + mm;
+  if (mm < 10) mm = '0' + mm;
 
   let yy: number | string = date.getFullYear();
-  if (yy < 10) yy = "0" + yy;
+  if (yy < 10) yy = '0' + yy;
 
   return `${dd}/${mm}/${yy}`;
 }
@@ -70,45 +71,45 @@ export function alphabeticFormatDate(dateRelease: string): string {
   let mm: number | string = date.getMonth() + 1;
   switch (mm) {
     case 1:
-      mm = "января";
+      mm = 'января';
       break;
     case 2:
-      mm = "февраля";
+      mm = 'февраля';
       break;
     case 3:
-      mm = "марта";
+      mm = 'марта';
       break;
     case 4:
-      mm = "апреля";
+      mm = 'апреля';
       break;
     case 5:
-      mm = "мая";
+      mm = 'мая';
       break;
     case 6:
-      mm = "июня";
+      mm = 'июня';
       break;
     case 7:
-      mm = "июля";
+      mm = 'июля';
       break;
     case 8:
-      mm = "августа";
+      mm = 'августа';
       break;
     case 9:
-      mm = "сентября";
+      mm = 'сентября';
       break;
     case 10:
-      mm = "октября";
+      mm = 'октября';
       break;
     case 11:
-      mm = "ноября";
+      mm = 'ноября';
       break;
     case 12:
-      mm = "декабря";
+      mm = 'декабря';
       break;
   }
 
   let yy: number | string = date.getFullYear();
-  if (yy < 10) yy = "0" + yy;
+  if (yy < 10) yy = '0' + yy;
 
   return `${dd} ${mm} ${yy}`;
 }
@@ -131,7 +132,7 @@ export function getRandomPhotos() {
     `url(${src}IkpCtDzA5WM.jpg`,
   ];
 
-  const hero = document.querySelector(".hero") as HTMLElement;
+  const hero = document.querySelector('.hero') as HTMLElement;
 
   if (hero) {
     hero.style.backgroundImage =

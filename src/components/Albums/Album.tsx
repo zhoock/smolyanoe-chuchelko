@@ -1,14 +1,14 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
-import AlbumDetails from "../AlbumDetails/AlbumDetails";
-import AlbumCover from "./AlbumCover";
-import AlbumTracks from "../AlbumTracks/AlbumTracks";
-import Share from "../Share/Share";
-import ServiceButtons from "../ServiceButtons/ServiceButtons";
-import { useData, getRandomPhotos } from "../../hooks/albums";
-import { Loader } from "../Loader/Loader";
-import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import AlbumDetails from '../AlbumDetails/AlbumDetails';
+import AlbumCover from './AlbumCover';
+import AlbumTracks from '../AlbumTracks/AlbumTracks';
+import Share from '../Share/Share';
+import ServiceButtons from '../ServiceButtons/ServiceButtons';
+import { useData, getRandomPhotos } from '../../hooks/albums';
+import { Loader } from '../Loader/Loader';
+import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 
 /**
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
@@ -18,7 +18,7 @@ export default function Album() {
   window.scrollTo({
     top: 0,
     left: 0,
-    behavior: "smooth",
+    behavior: 'smooth',
   });
   const { albums, loading, error } = useData();
 
