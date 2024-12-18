@@ -1,7 +1,7 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 // Mixins
-@import "../../scss/common/mixins";
+@import '../../scss/common/mixins';
 
 .album-details {
   text-wrap: balance;
@@ -14,19 +14,19 @@
     }
   }
 
+  a {
+    @include link-colors($deep-coal, $dark-greenish-yellow);
+  }
+
   p {
     margin-top: 0;
-
-    a {
-      @include link-colors($deep-coal, darken($link-color, 20%));
-    }
   }
 
   &__released {
     time {
       display: block;
       color: $graphite-green;
-      font-family: "Oswald", sans-serif;
+      font-family: 'Oswald', sans-serif;
       @include adjust-font-size-to($ms-2);
 
       @include breakpoint(desktops) {

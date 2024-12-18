@@ -44,7 +44,10 @@
             ],
             "link": "https://studio-mama.ru/"
           },
-          "01/11/2021 (DTH Studios, Москва)."
+          {
+            "text": ["01/11/2021", "(DTH Studios, Москва), Студия A."],
+            "link": "http://dthstudios.com/studios"
+          }
         ]
       },
       {

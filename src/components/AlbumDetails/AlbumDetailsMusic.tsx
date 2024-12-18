@@ -17,7 +17,7 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
               <li key={item}>{item}</li>
             ) : (
               <li key={item}>
-                {item.text[0]}
+                {item.text[0]}{' '}
                 {
                   <a href={item.link} target="_blank">
                     {item.text[1]}
