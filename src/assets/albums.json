@@ -54,14 +54,26 @@
         "id": 3,
         "title": "Сведение",
         "content": [
-          "16/11/2021 и 17/11/2021 (Студия звукозаписи \"Винтаж Рекордс\", Москва)."
+          {
+            "text": [
+              "16/11/2021 и 17/11/2021",
+              "(Студия звукозаписи \"Vintage Records\", Москва)."
+            ],
+            "link": "https://vintage.studio/about/large-equipment-room"
+          }
         ]
       },
       {
         "id": 4,
         "title": "Мастеринг",
         "content": [
-          "30 ноября 2021—04 декабря 2022 (Chicago Mastering Service, Chicago, USA)."
+          {
+            "text": [
+              "30/11/2021—04/12/2022",
+              "(Chicago Mastering Service, Chicago, USA)."
+            ],
+            "link": "https://chicagomasteringservice.com/"
+          }
         ]
       },
       {
