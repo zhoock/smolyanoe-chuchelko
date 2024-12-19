@@ -96,8 +96,14 @@
         "id": 6,
         "title": "Продюсирование",
         "content": [
-          "Ярослав Жук — продюсер.",
-          "Илья Marvel Горохводацкий — запись/сведение.",
+          {
+            "text": ["", "Ярослав Жук", "— продюсер."],
+            "link": "https://www.instagram.com/yaroslav_zhoock/"
+          },
+          {
+            "text": ["", "Илья Marvel Горохводацкий", "— запись/сведение."],
+            "link": "https://www.instagram.com/ilya_marvel/"
+          },
           {
             "text": ["", "Mettew J Barnhart", " — мастеринг."],
             "link": "https://www.matthewbarnhart.com/"
