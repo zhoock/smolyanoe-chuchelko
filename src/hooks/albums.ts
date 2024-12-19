@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IAlbums } from '../models';
 import axios, { AxiosError } from 'axios';
+// import { ALBUMSDATA } from '../components/Data/Data';
 
 export function useData() {
   const [albums, setAlbums] = useState<IAlbums[]>([]);

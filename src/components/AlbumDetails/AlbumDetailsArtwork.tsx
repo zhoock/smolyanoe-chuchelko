@@ -1,6 +1,6 @@
-import React from "react";
-import { String } from "../../models";
-import { IAlbums } from "../../models";
+import React from 'react';
+import { String } from '../../models';
+import { IAlbums } from '../../models';
 
 /**
  * Компонент отображает блок с информацией об обложке альбома.
@@ -19,7 +19,9 @@ export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
           <>
             <h3>Фотография</h3>
             <p>
-              <a href={photographerURL}>{photographer}</a>
+              <a href={photographerURL} target="_blank">
+                {photographer}
+              </a>
             </p>
           </>
         )}
