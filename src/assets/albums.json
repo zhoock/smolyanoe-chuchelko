@@ -40,12 +40,17 @@
           {
             "text": [
               "28 сентября 2021:",
-              "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия, Москва."
+              "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
+              ", Москва."
             ],
             "link": "https://studio-mama.ru/"
           },
           {
-            "text": ["01 ноября 2021:", "DTH Studios, Студия A, Москва."],
+            "text": [
+              "01 ноября 2021:",
+              "DTH Studios, Студия A, Москва",
+              ", Москва."
+            ],
             "link": "http://dthstudios.com/studios"
           }
         ]
@@ -57,7 +62,8 @@
           {
             "text": [
               "16 ноября 2021 и 17 ноября 2021:",
-              "Студия звукозаписи \"Vintage Records\", Москва."
+              "Студия звукозаписи \"Vintage Records\"",
+              ", Москва."
             ],
             "link": "https://vintage.studio/about/large-equipment-room"
           }
@@ -70,7 +76,8 @@
           {
             "text": [
               "30 ноября 2021—04 декабря 2021:",
-              "Chicago Mastering Service, Chicago, USA."
+              "Chicago Mastering Service, Chicago",
+              ", USA."
             ],
             "link": "https://chicagomasteringservice.com/"
           }
