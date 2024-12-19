@@ -1,7 +1,9 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 
 .hamburger {
+  background: none;
+  border: none;
   position: fixed;
   z-index: 999;
   top: 7px;
@@ -30,11 +32,25 @@
   .one,
   .two,
   .three {
+    display: block;
     width: 100%;
     height: 3px;
     margin: 9px auto;
     background: $light-grey;
     backface-visibility: hidden;
     transition-duration: 0.15s;
+  }
+
+  .visually-hidden {
+    position: absolute; /* элемент вырывают из потока */
+    width: 1px; /* делают элемент очень маленьким, но таким, чтобы не пропал совсем */
+    height: 1px;
+    margin: -1px; /* элемент убирают из поля зрения, сдвинув на размер самого себя */
+    padding: 0; /* обнуляют отступы, они есть у некоторых элементов по умолчанию */
+    border: 0; /* убирают границу, она тоже может быть у каких-то элементов */
+    clip: rect(
+      0 0 0 0
+    ); /* это свойство обрезает видимую область до нулевого значения */
+    overflow: hidden; /* на всякий случай скрывают видимое за пределами блока */
   }
 }
