@@ -93,7 +93,7 @@
               "Ярослав Жук",
               " — гитара, вокал, бэк-вокал, слова и музыка."
             ],
-            "link": "https://www.instagram.com/ilya_marvel/"
+            "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           {
             "text": ["", "Никита Минеев", " — бас-гитара."],
@@ -232,7 +232,7 @@
               "Ярослав Жук",
               " — гитара, вокал, бэк-вокал, слова и музыка."
             ],
-            "link": "https://www.instagram.com/ilya_marvel/"
+            "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           "Семён Лепёшкин — бас-гитара."
         ]
@@ -264,7 +264,10 @@
           "Юрий Катешев — звукоинженер (запись виолончели).",
           "Антон Артисюк — звукоинженер (запись акустической гитары).",
           "Александр Колесников — звукоинженер (запись вокала).",
-          "Илья Marvel Горохводацкий — сведение.",
+          {
+            "text": ["", "Илья Marvel Горохводацкий", " — сведение."],
+            "link": "https://www.instagram.com/ilya_marvel/"
+          },
           {
             "text": ["", "Mettew J Barnhart", " — мастеринг."],
             "link": "https://www.matthewbarnhart.com/"
