@@ -1,9 +1,9 @@
-import React from "react";
-import GetButton from "./GetButton";
-import { String } from "../../models";
-import { IAlbums } from "../../models";
+import React from 'react';
+import GetButton from './GetButton';
+import { String } from '../../models';
+import { IAlbums } from '../../models';
 
-import "./style.scss";
+import './style.scss';
 
 /**
  * Компонент отображает блоки с кнопками-ссылками музыкальных агрегаторов.
@@ -15,8 +15,6 @@ export default function ServiceButtonsPurchase({
   album: IAlbums;
   section: string;
 }) {
-
-  
   /**
    * Компонент отображает блок с кнопками-ссылками на агрегаторы.
    */
@@ -35,10 +33,8 @@ export default function ServiceButtonsPurchase({
     return (
       <div className="service-buttons">
         <h3>{section}</h3>
-        {section === "Купить" && (
-
-        
-          <ul>
+        {section === 'Купить' && (
+          <ul aria-label="Блок со ссылками на платные музыкальные агрегаторы">
             <GetButton
               buttonClass="icon-applemusic"
               buttonUrl={itunes}
@@ -56,8 +52,8 @@ export default function ServiceButtonsPurchase({
             />
           </ul>
         )}
-        {section === "Слушать" && (
-          <ul>
+        {section === 'Слушать' && (
+          <ul aria-label="Блок со ссылками на бесплатные музыкальные агрегаторы">
             <GetButton
               buttonClass="icon-apple"
               buttonUrl={apple}

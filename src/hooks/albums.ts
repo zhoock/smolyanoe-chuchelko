@@ -1,36 +1,55 @@
 import { useEffect, useState } from 'react';
-import { IAlbums } from '../models';
 import axios, { AxiosError } from 'axios';
-// import { ALBUMSDATA } from '../components/Data/Data';
+import { IAlbums, IArticles } from '../models';
+
+interface ITemplateData {
+  templateA: IAlbums[]; // Данные для первого шаблона
+  templateB: IArticles[]; // Данные для второго шаблона
+}
 
 export function useData() {
-  const [albums, setAlbums] = useState<IAlbums[]>([]);
-  const [loading, setLoading] = useState(false); // state для индикации загрузки
-  const [error, setError] = useState(''); // state для реализации ошибки при загрузке
+  const [templateData, setTemplateData] = useState<ITemplateData>({
+    templateA: [],
+    templateB: [],
+  }); // Хранение данных для обоих шаблонов
+  const [loading, setLoading] = useState(false); // состояние для индикации загрузки
+  const [error, setError] = useState(''); // состояние для хранения ошибок
 
+  // Асинхронная функция для загрузки данных
   async function fetchAlbums() {
     try {
-      setError(''); // очищаем ошибку при новой загрузке данных
-      setLoading(true);
-      const { data } = await axios.get<IAlbums[]>(
-        'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json',
-      );
+      setError(''); // Сбрасываем ошибку перед загрузкой
+      setLoading(true); // Включаем состояние загрузки
 
-      setAlbums(data); // передаём массив альбомов
-      setLoading(false); // произошла ошибка
+      const [templateAResponse, templateBResponse] = await Promise.all([
+        axios.get(
+          'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json',
+        ),
+        axios.get(
+          'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles.json',
+        ),
+      ]);
+
+      // Установка данных в state
+      setTemplateData({
+        templateA: templateAResponse.data,
+        templateB: templateBResponse.data,
+      });
     } catch (e) {
-      const error = e as AxiosError;
-      setLoading(false); // произошла ошибка
-      setError(error.message); // выводим ошибку в сообщении
+      const error = e as AxiosError; // Преобразуем ошибку
+      setError(error.message || 'Неизвестная ошибка'); // Устанавливаем сообщение об ошибке
+    } finally {
+      setLoading(false); // Выключаем состояние загрузки
     }
   }
 
   // useEffect будет следить за изменением setAlbums и производить ререндер если это необходимо
   useEffect(() => {
     fetchAlbums();
-  }, [setAlbums]);
+  }, []); // Пустой массив зависимостей
 
-  return { albums, loading, error }; // возвращаем данные
+  // Возвращаем данные и состояние
+  return { templateData, loading, error };
 }
 
 const src =

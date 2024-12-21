@@ -15,20 +15,24 @@ import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
  */
 export default function Album() {
   getRandomPhotos();
+
   window.scrollTo({
     top: 0,
     left: 0,
     behavior: 'smooth',
   });
-  const { albums, loading, error } = useData();
+
+  const { templateData, loading, error } = useData();
 
   const params = useParams<{ albumId: string }>();
 
-  const album = albums.filter((album) => album.albumId === params.albumId)[0];
+  const album = templateData.templateA.filter(
+    (album) => album.albumId === params.albumId,
+  )[0];
 
   return (
     <>
-      <section className="album theme-dark">
+      <section className="album theme-dark" aria-label="Блок c альбомом">
         <div className="wrapper album__wrapper">
           <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
             <ul>
@@ -53,7 +57,7 @@ export default function Album() {
             <AlbumTracks album={album} />
           </div>
 
-          <div className="item item-type-b">
+          <div className="item">
             <ServiceButtons album={album} section="Купить" />
           </div>
 

@@ -1,21 +1,21 @@
-import React, { useState } from "react";
-import { Outlet, createBrowserRouter, RouterProvider } from "react-router-dom";
+import React, { useState } from 'react';
+import { Outlet, createBrowserRouter, RouterProvider } from 'react-router-dom';
 
-import Header from "./Header/Header";
-import Footer from "./Footer/Footer";
-import Albums from "./Albums/Albums";
-import AboutUs from "./AboutUs/AboutUs";
-import Articles from "./Articles/Articles";
-import Article from "./Articles/Article";
-import Album from "./Albums/Album";
-import NotFoundPage from "./NotFoundPage";
-import Hamburger from "./Hamburger/Hamburger";
-import Navigation from "./Navigation/Navigation";
-import Popup from "./Popup/Popup";
+import Header from './Header/Header';
+import Footer from './Footer/Footer';
+import Albums from './Albums/Albums';
+import AboutUs from './AboutUs/AboutUs';
+import Articles from './Articles/Articles';
+import Article from './Articles/Article';
+import Album from './Albums/Album';
+import NotFoundPage from './NotFoundPage';
+import Hamburger from './Hamburger/Hamburger';
+import Navigation from './Navigation/Navigation';
+import Popup from './Popup/Popup';
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     element: <Layout />,
     errorElement: <NotFoundPage />,
     children: [
@@ -24,23 +24,23 @@ const router = createBrowserRouter([
         element: <Albums />,
       },
       {
-        path: "/albums",
+        path: '/albums',
         element: <Albums />,
       },
       {
-        path: "/albums/:albumId",
+        path: '/albums/:albumId',
         element: <Album />,
       },
       {
-        path: "/aboutus/",
+        path: '/aboutus/',
         element: <AboutUs />,
       },
       {
-        path: "/articles",
+        path: '/articles',
         element: <Articles />,
       },
       {
-        path: "/articles/:articleId",
+        path: '/articles/:articleId',
         element: <Article />,
       },
     ],
@@ -65,11 +65,11 @@ function Layout() {
         </section>
 
         {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
-        <Popup isActive={popup} classes={{ hide: "hide-for-large-up" }}>
+        <Popup isActive={popup} classes={{ hide: 'hide-for-large-up' }}>
           <Navigation onToggle={() => setPopup(!popup)} />
         </Popup>
         <Hamburger
-          classes={{ hide: "hide-for-large-up" }}
+          classes={{ hide: 'hide-for-large-up' }}
           isActive={popup}
           onToggle={() => setPopup(!popup)}
         />

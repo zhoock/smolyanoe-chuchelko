@@ -1,28 +1,33 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
-import { ARTICLES } from "../Data/Data";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
+  useData,
   getImageUrl,
   alphabeticFormatDate,
   getRandomPhotos,
-} from "../../hooks/albums";
-import { IArticles, ArticleDetalesProps } from "../../models";
+} from '../../hooks/albums';
+import { IArticles, ArticleDetalesProps } from '../../models';
+import { Loader } from '../Loader/Loader';
+import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 
 /**
  * Компонент отображает блок со статьёй.
  */
 export default function Article() {
   getRandomPhotos();
+
   window.scrollTo({
     top: 0,
     left: 0,
-    behavior: "smooth",
+    behavior: 'smooth',
   });
+
+  const { templateData, loading, error } = useData();
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const article: IArticles = ARTICLES.filter(
+  const article: IArticles = templateData.templateB.filter(
     (_) => _.articleId === params.articleId,
   )[0];
 
@@ -41,7 +46,7 @@ export default function Article() {
           {img && <img src={getImageUrl(img)} alt={alt} />}
         </div>
         {subtitle && <h4>{subtitle}</h4>}
-        {typeof content == "string" ? (
+        {typeof content == 'string' ? (
           <p>
             {strong && <strong>{strong}</strong>} {content && content}
           </p>
@@ -53,7 +58,7 @@ export default function Article() {
   }
 
   return (
-    <section className="article theme-dark">
+    <section className="article theme-dark" aria-label="Блок cо статьёй">
       <div className="wrapper">
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
@@ -63,6 +68,12 @@ export default function Article() {
             <li className="active">{article.nameArticle}</li>
           </ul>
         </nav>
+
+        {/* Элемент показывается только при загрузке данных с сервера */}
+        {loading && <Loader />}
+        {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
+        {error && <ErrorMessage error={error} />}
+
         <time dateTime={article.date}>
           <small>{alphabeticFormatDate(article.date)} г.</small>
         </time>

@@ -1,12 +1,12 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 // Mixins
-@import "../../scss/common/mixins";
+@import '../../scss/common/mixins';
 
 .albums,
 .album {
   &__list {
-    @include list(".albums");
+    @include list('.albums');
   }
 
   &__description {
@@ -21,7 +21,7 @@
     border-radius: $ms_-1;
   }
 
-  a[class^="icon"] {
+  a[class^='icon'] {
     text-decoration: none;
   }
 }
@@ -42,11 +42,11 @@
       grid-column: span 2;
     }
 
-    &-type-b {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    // &-type-b {
+    //   white-space: nowrap;
+    //   overflow: hidden;
+    //   text-overflow: ellipsis;
+    // }
 
     @include breakpoint(tablet) {
       grid-column: span 1;

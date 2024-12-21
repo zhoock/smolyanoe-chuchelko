@@ -1145,4 +1145,4 @@ export const ARTICLES: IArticles[] = [
   ...EP2020Equipment,
 ];
 
-// console.log(JSON.stringify(ARTICLESDATA));
+console.log(JSON.stringify(ARTICLES));

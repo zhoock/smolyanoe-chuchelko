@@ -1,9 +1,9 @@
-import React, { useState, MouseEvent } from "react";
-import Popup from "../Popup/Popup";
-import Hamburger from "../Hamburger/Hamburger";
-import { TracksProps } from "../../models";
-import { IAlbums } from "../../models";
-import "./style.scss";
+import React, { useState, MouseEvent } from 'react';
+import Popup from '../Popup/Popup';
+import Hamburger from '../Hamburger/Hamburger';
+import { TracksProps } from '../../models';
+import { IAlbums } from '../../models';
+import './style.scss';
 
 /**
  * Компонент отображает название альбома и нумерованный список песен.
@@ -35,10 +35,12 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           {tracks?.map((track) => (
             <button
               key={track.id}
-              className={track.id === activeTrack ? "active" : ""}
+              className={track.id === activeTrack ? 'active' : ''}
               data-index={track.id}
               onClick={handleClick}
               type="button"
+              aria-label="Кнопка с названием песни"
+              aria-description="Показать текст песни"
             >
               {track.title}
             </button>
@@ -49,14 +51,14 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           <>
             <Popup isActive={popup}>
               <pre>
-                {typeof activeTrack === "number" &&
-                  tracks[activeTrack]?.content.split("\n").join("\n")}
+                {typeof activeTrack === 'number' &&
+                  tracks[activeTrack]?.content.split('\n').join('\n')}
               </pre>
             </Popup>
             <Hamburger
               isActive={popup}
               onToggle={hamburgerClick}
-              zIndex={"1000"}
+              zIndex={'1000'}
             />
           </>
         )}

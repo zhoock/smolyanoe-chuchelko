@@ -1,20 +1,23 @@
-import React from "react";
-import { useData, getRandomPhotos } from "../../hooks/albums";
-import WrapperAlbumCover from "./WrapperAlbumCover";
-import AlbumCover from "./AlbumCover";
-import { Loader } from "../Loader/Loader";
-import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
-import "./style.scss";
+import React from 'react';
+import { useData, getRandomPhotos } from '../../hooks/albums';
+import WrapperAlbumCover from './WrapperAlbumCover';
+import AlbumCover from './AlbumCover';
+import { Loader } from '../Loader/Loader';
+import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import './style.scss';
 
 /**
  * Компонент отображает список альбомов в виде обложек-ссылок
  */
 export default function Albums() {
   getRandomPhotos();
-  const { albums, loading, error } = useData();
+  const { templateData, loading, error } = useData();
 
   return (
-    <section className="albums theme-dark">
+    <section
+      className="albums theme-dark"
+      aria-label="Блок c ссылками на альбомы Смоляное чучелко"
+    >
       <div className="wrapper">
         <h2>Альбомы</h2>
 
@@ -24,7 +27,7 @@ export default function Albums() {
         {error && <ErrorMessage error={error} />}
 
         <div className="albums__list">
-          {albums.map((album) => (
+          {templateData.templateA.map((album) => (
             <WrapperAlbumCover
               key={album.albumId}
               {...album}
