@@ -98,8 +98,8 @@ export interface String {
 export type IArticles = {
   articleId: string;
   nameArticle: string;
-  date: string;
   img: string;
+  date: string;
   detales: ArticleDetalesProps[];
 };
 

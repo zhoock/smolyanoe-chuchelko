@@ -24,7 +24,7 @@ export default function Album() {
 
   const { templateData, loading, error } = useData();
 
-  const params = useParams<{ albumId: string }>();
+  const params = useParams<{ albumId: string }>(); // возвращает все параметры, доступные на этой странице
 
   const album = templateData.templateA.filter(
     (album) => album.albumId === params.albumId,

@@ -7,7 +7,7 @@ import {
   alphabeticFormatDate,
   getRandomPhotos,
 } from '../../hooks/albums';
-import { IArticles, ArticleDetalesProps } from '../../models';
+import { ArticleDetalesProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 
@@ -27,9 +27,11 @@ export default function Article() {
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const article: IArticles = templateData.templateB.filter(
+  const article = templateData.templateB.filter(
     (_) => _.articleId === params.articleId,
   )[0];
+
+  console.log(article);
 
   function Block({
     title,
@@ -65,7 +67,7 @@ export default function Article() {
             <li>
               <Link to="/articles">Статьи</Link>
             </li>
-            <li className="active">{article.nameArticle}</li>
+            <li className="active">{article?.nameArticle}</li>
           </ul>
         </nav>
 
@@ -74,14 +76,12 @@ export default function Article() {
         {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
         {error && <ErrorMessage error={error} />}
 
-        <time dateTime={article.date}>
-          <small>{alphabeticFormatDate(article.date)} г.</small>
+        <time dateTime={article?.date}>
+          <small>{alphabeticFormatDate(article?.date)} г.</small>
         </time>
-        <h2>{article.nameArticle}</h2>
+        <h2>{article?.nameArticle}</h2>
 
-        {article.detales.map((_) => (
-          <Block key={_.id} {..._} />
-        ))}
+        {article?.detales.map((_) => <Block key={_.id} {..._} />)}
       </div>
     </section>
   );
