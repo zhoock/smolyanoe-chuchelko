@@ -67,7 +67,7 @@ module.exports = {
       patterns: [
         {
           from: path.resolve(__dirname, './src/_redirects'), // Путь к файлу _redirects
-          to: path.resolve(__dirname, './dist/_redirects'), // Папка в которую нужно скопировать
+          to: path.resolve(__dirname, './dist/'), // Папка в которую нужно скопировать
         },
       ],
     }),

@@ -1,0 +1,6 @@
+[dev]
+  command = "npm start" # команда для запуска вашего dev-сервера (например, React Dev Server)
+  framework = "create-react-app" # или укажите "custom" для кастомной сборки
+  targetPort = 3000 # порт, на котором работает ваш dev-сервер (обычно React работает на 3000)
+  port = 8888 # порт, на котором Netlify будет проксировать запросы
+
