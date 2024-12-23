@@ -8,7 +8,7 @@ import AboutUs from './AboutUs/AboutUs';
 import Articles from './Articles/Articles';
 import Article from './Articles/Article';
 import Album from './Albums/Album';
-import NotFoundPage from './NotFoundPage/NotFoundPage';
+import NotFoundPage from './NotFoundPage/404';
 import Hamburger from './Hamburger/Hamburger';
 import Navigation from './Navigation/Navigation';
 import Popup from './Popup/Popup';
