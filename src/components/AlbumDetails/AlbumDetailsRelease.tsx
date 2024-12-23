@@ -1,19 +1,19 @@
-import React from "react";
-import { IAlbums } from "../../models";
-import { String } from "../../models";
-import { formatDate } from "../../hooks/albums";
+import React from 'react';
+import { IAlbums } from '../../models';
+import { String } from '../../models';
+import { formatDate } from '../../hooks/data';
 
 /**
  * Функция возвращает строку (количество треков) с верным падежным окончанием.
  */
-const endForTracks = (n: number): "песни" | "песен" | "песня" =>
-  n > 2 && n < 4 ? "песни" : n > 4 ? "песен" : "песня";
+const endForTracks = (n: number): 'песни' | 'песен' | 'песня' =>
+  n > 2 && n < 4 ? 'песни' : n > 4 ? 'песен' : 'песня';
 
 /**
  * Функция возвращает строку (количество минут) с верным падежным окончанием.
  */
-const endForMinutes = (n: number): "минуты" | "минут" | "минута" =>
-  n > 2 && n < 4 ? "минуты" : n > 4 ? "минут" : "минута";
+const endForMinutes = (n: number): 'минуты' | 'минут' | 'минута' =>
+  n > 2 && n < 4 ? 'минуты' : n > 4 ? 'минут' : 'минута';
 
 /**
  * Компонент отображает блок с датой релиза альбома.
@@ -32,7 +32,7 @@ export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
         </div>
         <div>
           <small>
-            {album?.tracks.length} {endForTracks(album?.tracks.length)},{" "}
+            {album?.tracks.length} {endForTracks(album?.tracks.length)},{' '}
             {Math.ceil(duration)} {endForMinutes(duration)}
           </small>
         </div>

@@ -10,7 +10,6 @@ $graphite-green: #373633; // line background, buttons background
 $pink-terracotta: #cf807d;
 $grey: #acacac; // inactive link
 $olive-green: #8f8a44; // outline
-
 $brown-beige: #867650; // selection
 
 // Links
@@ -31,8 +30,8 @@ $bold: 700;
 // Base Font
 //
 // --------------------------------------------------
-$base-font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
-  Roboto, "Helvetica Neue", Arial, sans-serif;
+$base-font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI',
+  Roboto, 'Helvetica Neue', Arial, sans-serif;
 $base-font-weight: $light;
 $base-font-color: $light-grey;
 

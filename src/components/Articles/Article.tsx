@@ -6,7 +6,7 @@ import {
   getImageUrl,
   alphabeticFormatDate,
   getRandomPhotos,
-} from '../../hooks/albums';
+} from '../../hooks/data';
 import { ArticleDetalesProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';

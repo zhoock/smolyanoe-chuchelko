@@ -6,7 +6,7 @@ import AlbumCover from './AlbumCover';
 import AlbumTracks from '../AlbumTracks/AlbumTracks';
 import Share from '../Share/Share';
 import ServiceButtons from '../ServiceButtons/ServiceButtons';
-import { useData, getRandomPhotos } from '../../hooks/albums';
+import { useData, getRandomPhotos } from '../../hooks/data';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 
@@ -31,43 +31,41 @@ export default function Album() {
   )[0];
 
   return (
-    <>
-      <section className="album theme-dark" aria-label="Блок c альбомом">
-        <div className="wrapper album__wrapper">
-          <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
-            <ul>
-              <li>
-                <Link to="/albums">Альбомы</Link>
-              </li>
-              <li className="active">{album?.nameAlbum}</li>
-            </ul>
-          </nav>
+    <section className="album theme-dark" aria-label="Блок c альбомом">
+      <div className="wrapper album__wrapper">
+        <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
+          <ul>
+            <li>
+              <Link to="/albums">Альбомы</Link>
+            </li>
+            <li className="active">{album?.nameAlbum}</li>
+          </ul>
+        </nav>
 
-          {/* Элемент показывается только при загрузке данных с сервера */}
-          {loading && <Loader />}
-          {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
-          {error && <ErrorMessage error={error} />}
+        {/* Элемент показывается только при загрузке данных с сервера */}
+        {loading && <Loader />}
+        {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
+        {error && <ErrorMessage error={error} />}
 
-          <div className="item">
-            <AlbumCover {...album?.cover} fullName={album?.fullName} />
-            <Share />
-          </div>
-
-          <div className="item">
-            <AlbumTracks album={album} />
-          </div>
-
-          <div className="item">
-            <ServiceButtons album={album} section="Купить" />
-          </div>
-
-          <div className="item">
-            <ServiceButtons album={album} section="Слушать" />
-          </div>
+        <div className="item">
+          <AlbumCover {...album?.cover} fullName={album?.fullName} />
+          <Share />
         </div>
 
-        <AlbumDetails album={album} />
-      </section>
-    </>
+        <div className="item">
+          <AlbumTracks album={album} />
+        </div>
+
+        <div className="item">
+          <ServiceButtons album={album} section="Купить" />
+        </div>
+
+        <div className="item">
+          <ServiceButtons album={album} section="Слушать" />
+        </div>
+      </div>
+
+      <AlbumDetails album={album} />
+    </section>
   );
 }

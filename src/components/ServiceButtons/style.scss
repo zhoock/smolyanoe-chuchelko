@@ -1,11 +1,11 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 
 .service-buttons {
   ul {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-gap: 1.618em;
+    gap: $ms-1;
 
     li {
       a {
@@ -28,12 +28,6 @@
 
         &:hover {
           background-color: $dark-greenish-yellow;
-        }
-
-        span {
-          display: inline-block;
-          text-indent: -9999px; // hide the text in the link
-          light-grey-space: nowrap;
         }
       }
     }

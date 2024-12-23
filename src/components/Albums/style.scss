@@ -42,12 +42,6 @@
       grid-column: span 2;
     }
 
-    // &-type-b {
-    //   white-space: nowrap;
-    //   overflow: hidden;
-    //   text-overflow: ellipsis;
-    // }
-
     @include breakpoint(tablet) {
       grid-column: span 1;
     }

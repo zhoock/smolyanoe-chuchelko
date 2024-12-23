@@ -1,5 +1,5 @@
 import React from 'react';
-import { useData, getRandomPhotos } from '../../hooks/albums';
+import { useData, getRandomPhotos } from '../../hooks/data';
 import WrapperArticle from '../Articles/WrapperArticle';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';

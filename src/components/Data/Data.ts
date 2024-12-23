@@ -1,5 +1,3 @@
-import { IArticles } from '../../models';
-
 const EP = [
   {
     albumId: 'smolyanoechuchelko',
@@ -1136,7 +1134,7 @@ const YaroslavZhukAntirulesOfLife = [
   },
 ];
 
-export const ARTICLES: IArticles[] = [
+export const ARTICLES = [
   ...YaroslavZhukAntirulesOfLife,
   ...EP2022RecordingAnAlbumEquipment,
   ...CoverStory232022,
@@ -1145,4 +1143,4 @@ export const ARTICLES: IArticles[] = [
   ...EP2020Equipment,
 ];
 
-console.log(JSON.stringify(ARTICLES));
+// console.log(JSON.stringify(ARTICLES));

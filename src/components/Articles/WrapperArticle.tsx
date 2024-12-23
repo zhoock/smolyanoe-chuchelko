@@ -1,7 +1,7 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { ArticleProps } from "../../models";
-import { getImageUrl, alphabeticFormatDate } from "../../hooks/albums";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { ArticleProps } from '../../models';
+import { getImageUrl, alphabeticFormatDate } from '../../hooks/data';
 
 /**
  * Компонент отображает блок с карточкой статьи.

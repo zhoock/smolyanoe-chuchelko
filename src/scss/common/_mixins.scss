@@ -1,4 +1,4 @@
-@use "sass:math";
+@use 'sass:math';
 
 // Buttons
 //
@@ -7,20 +7,31 @@
 @mixin button-variant(
   $color,
   $background,
+  $hover-color,
   $hover-background,
-  $disabled-background: $yellow,
-  $border: transparent
+  $disabled-background: $grey
 ) {
-  border: 1px solid $border;
+  margin: $ms-1 0;
+  border: 0;
+  border-radius: $ms_-1;
+  padding: $ms_-2 $ms_-1;
   color: $color;
   background-color: $background;
+  transition: background-color 200ms ease;
+  cursor: pointer;
+  appearance: none;
+  user-select: none;
 
   &:hover,
-  &:focus,
+  // &:focus,
   &:active {
-    color: $color;
+    color: $hover-color;
     background-color: $hover-background;
-    @include background-image($hover-background);
+
+    @media (hover: none) and (pointer: coarse) {
+      color: $grey;
+      background-color: $graphite-green;
+    }
   }
   &.disabled,
   &[disabled] {
@@ -32,9 +43,9 @@
   }
 }
 
-$phones: "max-width: 40em";
-$tablets: "min-width: 40.0625em";
-$desktops: "min-width: 64.0625em";
+$phones: 'max-width: 40em';
+$tablets: 'min-width: 40.0625em';
+$desktops: 'min-width: 64.0625em';
 
 @mixin breakpoint($point) {
   // medium (>640)
@@ -159,9 +170,9 @@ $desktops: "min-width: 64.0625em";
 
   @extend %hide-scrollbar;
   @include breakpoint(tablet) {
-    margin: 0 0 $ms-1 0;
     display: grid;
     gap: $ms-1;
+    margin: 0 0 $ms-1 0;
     padding: 0;
     grid-template: minmax(323px, auto) / repeat(auto-fit, minmax(250px, 1fr));
 

@@ -16,7 +16,7 @@ export function useData() {
   const [error, setError] = useState(''); // состояние для хранения ошибок
 
   // Асинхронная функция для загрузки данных
-  async function fetchAlbums() {
+  async function fetchData() {
     try {
       setError(''); // Сбрасываем ошибку перед загрузкой
       setLoading(true); // Включаем состояние загрузки
@@ -43,13 +43,12 @@ export function useData() {
     }
   }
 
-  // useEffect будет следить за изменением setAlbums и производить ререндер если это необходимо
+  // useEffect будет следить за изменением setTemplateData и производить ререндер если это необходимо
   useEffect(() => {
-    fetchAlbums();
+    fetchData();
   }, []); // Пустой массив зависимостей
 
-  // Возвращаем данные и состояние
-  return { templateData, loading, error };
+  return { templateData, loading, error }; // Возвращаем данные для обоих шаблонов
 }
 
 const src =

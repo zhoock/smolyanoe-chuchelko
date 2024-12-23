@@ -15,7 +15,10 @@
   }
 
   a {
-    @include link-colors($deep-coal, $dark-greenish-yellow);
+    @include link-colors(
+      $dark-greenish-yellow,
+      darken($dark-greenish-yellow, 8%)
+    );
   }
 
   p {

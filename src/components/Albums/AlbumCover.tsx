@@ -1,6 +1,6 @@
-import React from "react";
-import { getImageUrl } from "../../hooks/albums";
-import { CoverProps } from "../../models";
+import React from 'react';
+import { getImageUrl } from '../../hooks/data';
+import { CoverProps } from '../../models';
 
 /**
  * Компонент отображает обложку альбома.
@@ -19,7 +19,7 @@ export default function AlbumCover({
 
     <picture>
       <source
-        srcSet={`${getImageUrl(webp, ".webp")} 1x, ${getImageUrl(webp2x, ".webp")} 2x`}
+        srcSet={`${getImageUrl(webp, '.webp')} 1x, ${getImageUrl(webp2x, '.webp')} 2x`}
         type="image/webp"
       />
       <source

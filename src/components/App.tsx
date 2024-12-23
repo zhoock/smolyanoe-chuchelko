@@ -8,10 +8,11 @@ import AboutUs from './AboutUs/AboutUs';
 import Articles from './Articles/Articles';
 import Article from './Articles/Article';
 import Album from './Albums/Album';
-import NotFoundPage from './NotFoundPage';
+import NotFoundPage from './NotFoundPage/NotFoundPage';
 import Hamburger from './Hamburger/Hamburger';
 import Navigation from './Navigation/Navigation';
 import Popup from './Popup/Popup';
+import Form from './Forms/Form';
 
 const router = createBrowserRouter([
   {
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
       {
         path: '/articles/:articleId',
         element: <Article />,
+      },
+      {
+        path: '/forms',
+        element: <Form />,
       },
     ],
   },

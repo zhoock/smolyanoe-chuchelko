@@ -1,7 +1,7 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 // Mixins
-@import "../../scss/common/mixins";
+@import '../../scss/common/mixins';
 
 .about {
   text-wrap: balance;
@@ -20,27 +20,16 @@
   }
 
   button {
+    @include button-variant(
+      $grey,
+      $graphite-green,
+      $light-grey,
+      $dark-greenish-yellow
+    );
     display: inline-flex;
     gap: 4px;
-    margin: $ms-1 0;
-    border: 0;
-    border-radius: $ms_-1;
-    padding: $ms_-2 $ms_0;
-    color: $grey;
-    background: $graphite-green;
-    transition: background-color 200ms ease;
-    cursor: pointer;
-    appearance: none;
 
     &:hover {
-      color: $light-grey;
-      background-color: $dark-greenish-yellow;
-
-      @media (hover: none) and (pointer: coarse) {
-        color: $grey;
-        background-color: $graphite-green;
-      }
-
       span {
         color: $light-grey;
 
@@ -65,8 +54,12 @@
 
   &:has(.about__content_active) {
     button {
-      color: $light-grey;
-      background-color: $dark-greenish-yellow;
+      @include button-variant(
+        $light-grey,
+        $dark-greenish-yellow,
+        $light-grey,
+        $dark-greenish-yellow
+      );
 
       .icon-ctrl {
         transform: rotate(0);
