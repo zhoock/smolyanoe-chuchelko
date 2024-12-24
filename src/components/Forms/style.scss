@@ -12,8 +12,47 @@
     gap: $ms-1;
   }
 
+  fieldset {
+    border: none;
+    display: grid;
+  }
+
+  label {
+    padding-top: $ms_-2;
+
+    span {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: $ms_-2;
+      vertical-align: middle;
+      background: $graphite-green;
+    }
+  }
+
+  input[type='radio'] + span {
+    border-radius: 50%;
+  }
+
+  input[type='radio']:checked + span {
+    border: 3px solid $olive-green;
+  }
+
+  input[type='radio']:focus-visible + span {
+  }
+
+  input[type='checkbox']:checked + span {
+  }
+
+  input[type='checkbox']:focus-visible + span {
+  }
+
   .item {
     grid-column: span 2;
+
+    @include breakpoint(tablet) {
+      grid-column: span 1;
+    }
 
     &-type-a {
       grid-column: span 2;
@@ -22,20 +61,21 @@
         grid-column: 2 / span 1;
       }
     }
-
-    @include breakpoint(tablet) {
-      grid-column: span 1;
-    }
   }
 
   .input {
-    background: $graphite-green;
-    border-radius: $ms_-2;
     border: none;
+    border-radius: $ms_-2;
     padding: $ms_-2 $ms_0;
+    background: $deep-coal;
+    caret-color: $olive-green;
 
     @include breakpoint(phones) {
       margin-bottom: $ms-1;
+    }
+
+    &:invalid {
+      background: $graphite-green;
     }
   }
 

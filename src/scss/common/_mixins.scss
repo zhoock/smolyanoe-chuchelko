@@ -39,6 +39,7 @@
     &:focus,
     &:active {
       background-color: $disabled-background;
+      cursor: default;
     }
   }
 }

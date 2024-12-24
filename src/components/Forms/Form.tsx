@@ -31,7 +31,7 @@ export default function Form() {
             required
           />
           <label className="item" htmlFor="date">
-            Дата выхода
+            Дата выхода аьбома
           </label>
           <input
             className="input item"
@@ -52,6 +52,61 @@ export default function Form() {
             name="date"
             required
           />
+          <fieldset>
+            <label>
+              <input
+                className="visually-hidden"
+                type="radio"
+                name="answer"
+                checked
+              />
+              <span></span>
+              Да
+            </label>
+
+            <label>
+              <input className="visually-hidden" type="radio" name="answer" />
+              <span></span>
+              Нет
+            </label>
+
+            <label>
+              <input className="visually-hidden" type="radio" name="answer" />
+              <span></span>
+              Не знаю
+            </label>
+          </fieldset>
+          <fieldset>
+            <label>
+              <input
+                className="visually-hidden"
+                type="checkbox"
+                name="music-style"
+              />
+              <span></span>
+              Punk
+            </label>
+
+            <label>
+              <input
+                className="visually-hidden"
+                type="checkbox"
+                name="music-style"
+              />
+              <span></span>
+              Grunge
+            </label>
+
+            <label>
+              <input
+                className="visually-hidden"
+                type="checkbox"
+                name="music-style"
+              />
+              <span></span>
+              Alternative rock
+            </label>
+          </fieldset>
           <button className="item-type-a" type="submit">
             Отправить заявку
           </button>
