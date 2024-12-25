@@ -1,0 +1,52 @@
+// Colors
+//
+// --------------------------------------------------
+
+$deep-coal: rgb(32, 32, 29); // main background
+$light-grey: #d5d5d5; // text color
+$deep-black: #1e1e1e; // extra background
+$dark-greenish-yellow: #998238; // accent color
+$graphite-green: #373633; // line background, buttons background
+$pink-terracotta: #cf807d;
+$grey: #acacac; // inactive link
+$olive-green: rgb(143, 138, 68); // outline
+$brown-beige: #867650; // selection
+
+// Links
+//
+// --------------------------------------------------
+
+$link-color: $grey;
+
+// Font weights
+//
+// --------------------------------------------------
+
+$light: 300;
+$regular: 400;
+$medium: 500;
+$bold: 700;
+
+// Base Font
+//
+// --------------------------------------------------
+$base-font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI',
+  Roboto, 'Helvetica Neue', Arial, sans-serif;
+$base-font-weight: $light;
+$base-font-color: $light-grey;
+
+/* Base values */
+// интервал ритма по вертикали 1.618
+$base-font-size: 18px;
+$base-line-height: calc(18px * 1.618); //18 * 1.618 = 29.124px
+
+// Настройки типографики взяты с:
+// https://www.modularscale.com/?1&em&1.618
+
+$ms_-2: 6.876px; // 0.382rem;
+$ms_-1: 11.125px; // 0.618rem;
+$ms-0: 18px; // 1rem;
+$ms-1: 29.124px; // 1.618rem;
+$ms-2: 47.123px; // 2.618rem;
+$ms-3: 76.244px; // 4.236rem;
+$ms-4: 123.363px; // 6.854rem;

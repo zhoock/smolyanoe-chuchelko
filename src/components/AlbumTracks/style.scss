@@ -1,0 +1,79 @@
+// Defaults and variables
+@import "../../scss/common/bits.scss";
+// Mixins
+@import "../../scss/common/mixins";
+
+.album {
+  .tracks {
+    display: grid;
+    margin-bottom: $ms-1;
+    counter-reset: example 0;
+
+    button {
+      position: relative;
+      width: 100%;
+      border: none;
+      border-top: 1px solid $graphite-green;
+      overflow: hidden;
+      color: $grey;
+      text-align: inherit;
+      text-overflow: ellipsis;
+      background: none;
+      transition: all 200ms ease;
+      cursor: pointer;
+      counter-increment: example 1;
+      white-space: nowrap;
+      @include adjust-font-size-to($ms-0, 0);
+
+      @media (hover: none) and (pointer: coarse) {
+        &:hover {
+          border-top-color: $graphite-green;
+          background: inherit;
+
+          &::before {
+            color: darken($grey, 20%);
+          }
+
+          &:hover + li {
+            border-top-color: $graphite-green;
+          }
+        }
+      }
+
+      &::before {
+        content: counter(example);
+        padding: 0 $ms-_1;
+        color: darken($grey, 20%);
+      }
+
+      &:last-child {
+        border-bottom: 1px solid $graphite-green;
+      }
+
+      &.active,
+      &:hover {
+        border-radius: $ms_-2;
+        border-top-color: $dark-greenish-yellow;
+        color: $light-grey;
+        background: $dark-greenish-yellow;
+
+        &::before {
+          color: $dark-greenish-yellow;
+        }
+
+        & + li {
+          border-top-color: transparent;
+        }
+      }
+    }
+  }
+
+  pre {
+    display: flex;
+    justify-content: center;
+    font-family: $base-font-family;
+    font-weight: $bold;
+    text-align: left;
+    @include adjust-font-size-to($ms-1);
+  }
+}

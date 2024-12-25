@@ -1,0 +1,30 @@
+// Defaults and variables
+@import '../../scss/common/bits.scss';
+// Mixins
+@import '../../scss/common/mixins';
+
+.notFound {
+  display: grid;
+  place-content: center;
+  min-height: 100vh;
+  justify-items: center;
+
+  button {
+    @include button-variant(
+      $grey,
+      $graphite-green,
+      $light-grey,
+      $dark-greenish-yellow
+    );
+
+    width: fit-content;
+
+    &:hover a {
+      color: $light-grey;
+    }
+
+    a {
+      text-decoration: none;
+    }
+  }
+}

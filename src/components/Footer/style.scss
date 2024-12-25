@@ -1,0 +1,48 @@
+// Defaults and variables
+@import '../../scss/common/bits.scss';
+// Mixins
+@import '../../scss/common/mixins';
+
+footer {
+  grid-area: footer;
+
+  ul {
+    &.social-networks {
+      @include breakpoint(tablet) {
+        justify-content: start;
+      }
+
+      display: grid;
+      grid-gap: 1.618em;
+      grid-template-columns: repeat(4, 50px);
+      margin-top: $ms-1;
+      justify-content: space-between;
+      text-align: center;
+
+      li {
+        font-size: $ms-2;
+
+        a {
+          text-decoration: none;
+          color: $graphite-green;
+
+          &:hover {
+            border-bottom-color: $dark-greenish-yellow;
+            color: $dark-greenish-yellow;
+          }
+        }
+      }
+    }
+
+    &.copyright {
+      display: flex;
+
+      li {
+        span::after {
+          padding: 0 $ms-_1;
+          content: '|';
+        }
+      }
+    }
+  }
+}

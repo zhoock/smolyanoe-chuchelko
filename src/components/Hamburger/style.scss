@@ -1,0 +1,61 @@
+// Defaults and variables
+@import '../../scss/common/bits.scss';
+// Mixins
+@import '../../scss/common/mixins';
+
+.hamburger {
+  background: none;
+  border: none;
+  position: fixed;
+  z-index: 999;
+  top: 7px;
+  right: 29px;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    span {
+      background: lighten($link-color, 50%);
+    }
+  }
+
+  &.active {
+    .one {
+      transform: rotate(45deg) translate(7px, 7px);
+    }
+    .two {
+      opacity: 0;
+    }
+    .three {
+      transform: rotate(-45deg) translate(10px, -10px);
+    }
+
+    // @include button-variant(
+    //   $grey,
+    //   $graphite-green,
+    //   $light-grey,
+    //   $dark-greenish-yellow
+    // );
+
+    // margin: 0;
+    // padding: 0 $ms_-1 0;
+
+    // @media (hover: none) and (pointer: coarse) {
+    //   color: $graphite-green;
+    // }
+  }
+
+  .one,
+  .two,
+  .three {
+    display: block;
+    width: 100%;
+    height: 3px;
+    margin: 9px auto;
+    background: $light-grey;
+    backface-visibility: hidden;
+    transition-duration: 0.15s;
+  }
+}

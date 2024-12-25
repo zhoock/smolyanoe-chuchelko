@@ -1,0 +1,74 @@
+// Defaults and variables
+@import '../../scss/common/bits.scss';
+// Mixins
+@import '../../scss/common/mixins';
+
+.about {
+  text-wrap: balance;
+
+  &__content {
+    height: 60px;
+    overflow: hidden;
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    &_active {
+      height: 100%;
+    }
+  }
+
+  button {
+    @include button-variant(
+      $grey,
+      $graphite-green,
+      $light-grey,
+      $dark-greenish-yellow
+    );
+    display: inline-flex;
+    gap: 4px;
+
+    &:hover {
+      span {
+        color: $light-grey;
+
+        @media (hover: none) and (pointer: coarse) {
+          color: $grey;
+        }
+      }
+    }
+
+    .icon-ctrl {
+      position: relative;
+      top: 9px;
+      left: 4px;
+      font: $medium 1.618rem/0 sans-serif;
+      transform: rotate(180deg);
+    }
+
+    &:active {
+      transform: scale(0.98); /* Легкое уменьшение кнопки */
+    }
+  }
+
+  &:has(.about__content_active) {
+    button {
+      @include button-variant(
+        $light-grey,
+        $dark-greenish-yellow,
+        $light-grey,
+        $dark-greenish-yellow
+      );
+
+      .icon-ctrl {
+        transform: rotate(0);
+        top: 21px;
+      }
+
+      span {
+        color: $light-grey;
+      }
+    }
+  }
+}

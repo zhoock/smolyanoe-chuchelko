@@ -1,0 +1,27 @@
+// Defaults and variables
+@import "../../scss/common/bits.scss";
+// Mixins
+@import "../../scss/common/mixins";
+
+.popup {
+  position: fixed;
+  z-index: 99;
+  inset: 0 0 auto;
+  height: 0;
+  background: rgba($deep-black, 0);
+  overflow: scroll;
+  transition: all 0.45s;
+  @extend %hide-scrollbar;
+
+  &_open {
+    z-index: 999;
+    height: 100%;
+    background: rgba($deep-black, 0.8);
+    backdrop-filter: blur(20px);
+  }
+}
+
+body:has(.popup_open) {
+  overflow: hidden;
+  @extend %hide-scrollbar;
+}

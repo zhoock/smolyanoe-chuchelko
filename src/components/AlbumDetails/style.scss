@@ -1,0 +1,51 @@
+// Defaults and variables
+@import '../../scss/common/bits.scss';
+// Mixins
+@import '../../scss/common/mixins';
+
+.album-details {
+  text-wrap: balance;
+
+  .item-release {
+    order: -1;
+
+    @include breakpoint(tablet) {
+      order: 0;
+    }
+  }
+
+  a {
+    @include link-colors(
+      $dark-greenish-yellow,
+      darken($dark-greenish-yellow, 8%)
+    );
+  }
+
+  p {
+    margin-top: 0;
+  }
+
+  &__released {
+    time {
+      display: block;
+      color: $graphite-green;
+      font-family: 'Oswald', sans-serif;
+      @include adjust-font-size-to($ms-2);
+
+      @include breakpoint(desktops) {
+        @include adjust-font-size-to($ms-3, 2);
+      }
+    }
+  }
+}
+
+hr {
+  clear: both;
+  max-width: 100%;
+  height: 0;
+  margin: $ms-1 auto;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 1px solid $grey;
+  border-left: 0;
+}
