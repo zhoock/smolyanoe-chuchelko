@@ -1,7 +1,5 @@
 import React from 'react';
-import { IAlbums } from '../../models';
-import { DetalesProps } from '../../models';
-import { ALBUMSDATA } from '../Data/Data';
+import { IAlbums, DetalesProps } from '../../models';
 
 /**
  * Компонент отображает блок с участниками и местами записи альбома.

@@ -1,5 +1,6 @@
-import React, { useState, MouseEvent } from "react";
-import "./style.scss";
+import React, { useState, MouseEvent } from 'react';
+
+import './style.scss';
 
 export default function Share() {
   const [share, setShare] = useState(false);
@@ -13,19 +14,19 @@ export default function Share() {
     <ul className="share js-share-item">
       <li onClick={handleClick}>
         <a
-          className={`icon-share ${share ? "active" : null}`}
+          className={`icon-share ${share ? 'active' : null}`}
           href=""
           title="Поделиться"
         ></a>
       </li>
-      <li className={share ? "show" : ""}>
+      <li className={share ? 'show' : ''}>
         <a
           className="icon-facebook1"
           href="#"
           title="Поделиться на Facebook"
         ></a>
       </li>
-      <li className={share ? "show" : ""}>
+      <li className={share ? 'show' : ''}>
         <a className="icon-twitter" href="#" title="Поделиться на Twitter"></a>
       </li>
     </ul>

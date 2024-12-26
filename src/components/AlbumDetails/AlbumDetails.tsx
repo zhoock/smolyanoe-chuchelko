@@ -1,9 +1,10 @@
-import React from "react";
-import AlbumDetailsRelease from "./AlbumDetailsRelease";
-import AlbumDetailsArtwork from "./AlbumDetailsArtwork";
-import AlbumDetailsMusic from "./AlbumDetailsMusic";
-import { IAlbums } from "../../models";
-import "./style.scss";
+import React from 'react';
+import AlbumDetailsRelease from './AlbumDetailsRelease';
+import AlbumDetailsArtwork from './AlbumDetailsArtwork';
+import AlbumDetailsMusic from './AlbumDetailsMusic';
+import { IAlbums } from '../../models';
+
+import './style.scss';
 
 /**
  * Компонент отображает дополнительные данные об альбоме.

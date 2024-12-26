@@ -1,6 +1,5 @@
 import React from 'react';
-import { String } from '../../models';
-import { IAlbums } from '../../models';
+import { IAlbums, String } from '../../models';
 
 /**
  * Компонент отображает блок с информацией об обложке альбома.

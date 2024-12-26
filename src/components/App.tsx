@@ -13,6 +13,7 @@ import Hamburger from './Hamburger/Hamburger';
 import Navigation from './Navigation/Navigation';
 import Popup from './Popup/Popup';
 import Form from './Forms/Form';
+import Hero from './Hero/Hero';
 
 const router = createBrowserRouter([
   {
@@ -65,9 +66,7 @@ function Layout() {
     <>
       <Header />
       <main>
-        <section className="hero">
-          <h1>Cмоляное чучелко</h1>
-        </section>
+        <Hero />
 
         {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
         <Popup isActive={popup} classes={{ hide: 'hide-for-large-up' }}>

@@ -1,6 +1,5 @@
 import React from 'react';
-import { IAlbums } from '../../models';
-import { String } from '../../models';
+import { IAlbums, String } from '../../models';
 import { formatDate } from '../../hooks/data';
 
 /**

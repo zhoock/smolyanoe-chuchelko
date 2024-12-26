@@ -1,8 +1,8 @@
 import React, { useState, MouseEvent } from 'react';
 import Popup from '../Popup/Popup';
 import Hamburger from '../Hamburger/Hamburger';
-import { TracksProps } from '../../models';
-import { IAlbums } from '../../models';
+import { IAlbums, TracksProps } from '../../models';
+
 import './style.scss';
 
 /**

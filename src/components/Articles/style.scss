@@ -1,7 +1,7 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 // Mixins
-@import "../../scss/common/mixins";
+@import '../../scss/common/mixins.scss';
 
 .articles,
 .article {
@@ -22,7 +22,7 @@
   }
 
   &__list {
-    @include list(".articles");
+    @include list('.articles');
   }
 
   &__description {

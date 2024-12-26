@@ -7,7 +7,7 @@ import './style.scss';
 export default function AboutUs() {
   getRandomPhotos();
 
-  const [activeIndex, setActiveIndex] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<boolean>(false);
 
   function handleClick() {
     setActiveIndex((activeIndex) => !activeIndex);
