@@ -20,7 +20,7 @@ export default function AboutUs() {
         <div
           className={`about__content ${activeIndex ? 'about__content_active' : ''}`}
         >
-          <p>
+          <p className="about__text">
             «Смоляное чучелко» — российский музыкальный коллектив
             из&nbsp;Москвы, играющий в&nbsp;жанре гранж и&nbsp;альтернативного
             рока. Группа активно вдохновляется эстетикой и&nbsp;звучанием
@@ -32,7 +32,7 @@ export default function AboutUs() {
             является вокалистом и автором музыки, определяя стиль и философию
             коллектива.
           </p>
-          <p>
+          <p className="about__text">
             Группа выпустила несколько альбомов, включая{' '}
             <Link to="/albums/23">23</Link> и{' '}
             <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>,
@@ -42,7 +42,11 @@ export default function AboutUs() {
             при попытках взаимодействия с&nbsp;ней.{' '}
           </p>
         </div>
-        <button onClick={handleClick} type="button">
+        <button
+          className="about__look-more"
+          onClick={handleClick}
+          type="button"
+        >
           Показать <span>{activeIndex ? 'меньше' : 'больше'}</span>
           <span className="icon-ctrl"></span>
         </button>

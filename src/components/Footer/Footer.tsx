@@ -27,19 +27,22 @@ export default function Footer() {
   ];
 
   return (
-    <footer role="contentinfo" className="theme-dark_extra">
+    <footer role="contentinfo" className="footer theme-dark_extra">
       <div className="wrapper">
-        <ul className="social-networks">
+        <ul className="social-networks-list">
           {socialNetwork.map((item) => (
-            <li key={item.id}>
-              <a className={`icon-${item.name}`} href={item.href}>
+            <li className="social-networks-list__item" key={item.id}>
+              <a
+                className={`social-networks__link icon-${item.name}`}
+                href={item.href}
+              >
                 <span className="visually-hidden">{item.name}</span>
               </a>
             </li>
           ))}
         </ul>
-        <ul className="copyright">
-          <li>
+        <ul className="copyright-list">
+          <li className="copyright-list__item">
             <small>
               <span>© 2021—2024 Смоляное чучелко</span>
             </small>

@@ -10,16 +10,16 @@
     height: 60px;
     overflow: hidden;
 
-    p:last-child {
-      margin-bottom: 0;
-    }
-
     &_active {
       height: 100%;
     }
   }
 
-  button {
+  &__text:last-child {
+    margin-bottom: 0;
+  }
+
+  &__look-more {
     @include button-variant(
       $grey,
       $graphite-green,
@@ -53,7 +53,7 @@
   }
 
   &:has(.about__content_active) {
-    button {
+    .about__look-more {
       @include button-variant(
         $light-grey,
         $dark-greenish-yellow,

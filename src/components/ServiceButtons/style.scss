@@ -2,33 +2,27 @@
 @import '../../scss/common/bits.scss';
 
 .service-buttons {
-  ul {
+  &__list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: $ms-1;
+  }
 
-    li {
-      a {
-        display: inline-block;
-        width: 100%;
-        height: 76.244px;
-        border: none;
-        border-radius: $ms_-2;
-        font-size: $ms-1;
-        line-height: 76.244px;
-        text-align: center;
-        background: $graphite-green;
+  &__link {
+    display: grid;
+    place-items: center;
+    min-height: $ms-3;
+    border: none;
+    border-radius: $ms_-2;
+    font-size: $ms-1;
+    background: $graphite-green;
 
-        @media (hover: none) and (pointer: coarse) {
-          &:hover {
-            /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-            background-color: $graphite-green;
-          }
-        }
+    &:hover {
+      background-color: $dark-greenish-yellow;
 
-        &:hover {
-          background-color: $dark-greenish-yellow;
-        }
+      @media (hover: none) and (pointer: coarse) {
+        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+        background-color: $graphite-green;
       }
     }
   }

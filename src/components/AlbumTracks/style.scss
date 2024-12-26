@@ -4,12 +4,16 @@
 @import '../../scss/common/mixins.scss';
 
 .album {
+  .album-title {
+    margin-top: 0;
+  }
+
   .tracks {
     display: grid;
     margin-bottom: $ms-1;
     counter-reset: example 0;
 
-    button {
+    &__btn {
       position: relative;
       width: 100%;
       border: none;

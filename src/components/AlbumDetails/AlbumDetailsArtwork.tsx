@@ -17,15 +17,27 @@ export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
         {photographer && (
           <>
             <h3>Фотография</h3>
-            <p>
-              <a href={photographerURL} target="_blank">
+            <div className="album-details__artwork-photographer">
+              <a
+                className="album-details__link"
+                href={photographerURL}
+                target="_blank"
+              >
                 {photographer}
               </a>
-            </p>
+            </div>
           </>
         )}
         <h3>{design}</h3>
-        <p>{designerURL ? <a href={designerURL}>{designer}</a> : designer}</p>
+        <div className="album-details__artwork-designer">
+          {designerURL ? (
+            <a className="album-details__link" href={designerURL}>
+              {designer}
+            </a>
+          ) : (
+            designer
+          )}
+        </div>
       </>
     );
   }

@@ -10,18 +10,22 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
       <>
         <h3>{title}</h3>
         <ul>
-          {content.map((item: any) =>
-            typeof item === 'string' ? (
-              <li key={item}>{item}</li>
+          {content.map((_: any) =>
+            typeof _ === 'string' ? (
+              <li key={_}>{_}</li>
             ) : (
-              <li key={item}>
-                {item.text[0]}{' '}
+              <li key={_}>
+                {_.text[0]}{' '}
                 {
-                  <a href={item.link} target="_blank">
-                    {item.text[1]}
+                  <a
+                    className="album-details__link"
+                    href={_.link}
+                    target="_blank"
+                  >
+                    {_.text[1]}
                   </a>
                 }
-                {item.text[2]}
+                {_.text[2]}
               </li>
             ),
           )}

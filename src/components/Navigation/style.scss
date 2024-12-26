@@ -3,15 +3,16 @@
 // Mixins
 @import '../../scss/common/mixins.scss';
 
-nav {
-  .menu {
+.header {
+  &__links-list {
     display: flex;
     margin-bottom: 0;
     gap: 18px;
 
-    li {
+    &-item {
       a {
         text-transform: uppercase;
+        text-decoration: none;
 
         &.active {
           color: $dark-greenish-yellow;
@@ -24,11 +25,13 @@ nav {
 }
 
 .popup {
-  nav {
-    width: 100%;
-    height: 100%;
+  .header {
+    &__menu {
+      width: 100%;
+      height: 100%;
+    }
 
-    .menu {
+    &__links-list {
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -37,7 +40,7 @@ nav {
       height: 100%;
       font-family: 'Oswald', sans-serif;
 
-      li {
+      &-item {
         a {
           @include adjust-font-size-to($ms-1, 0);
           display: block;

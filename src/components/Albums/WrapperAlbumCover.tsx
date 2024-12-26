@@ -11,16 +11,15 @@ export default function WrapperAlbumCover({
   children,
 }: WrapperAlbumCoverProps) {
   return (
-    <div className="albums__list-item">
+    <div className="albums__card">
       <Link to={`/albums/${albumId}`}>
         {children}
         <div className="albums__description">
           {nameAlbum}
-          <div className="albums__description-year">
-            <time dateTime={date}>
-              <small>{date?.slice(0, 4)}</small>
-            </time>
-          </div>
+
+          <time dateTime={date}>
+            <small>{date?.slice(0, 4)}</small>
+          </time>
         </div>
       </Link>
     </div>

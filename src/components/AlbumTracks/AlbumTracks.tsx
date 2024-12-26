@@ -35,7 +35,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           {tracks?.map((track) => (
             <button
               key={track.id}
-              className={track.id === activeTrack ? 'active' : ''}
+              className={`tracks__btn ${track.id === activeTrack ? 'active' : ''}`}
               data-index={track.id}
               onClick={handleClick}
               type="button"

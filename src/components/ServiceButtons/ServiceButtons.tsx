@@ -34,7 +34,10 @@ export default function ServiceButtonsPurchase({
       <div className="service-buttons">
         <h3>{section}</h3>
         {section === 'Купить' && (
-          <ul aria-label="Блок со ссылками на платные музыкальные агрегаторы">
+          <ul
+            className="service-buttons__list"
+            aria-label="Блок со ссылками на платные музыкальные агрегаторы"
+          >
             <GetButton
               buttonClass="icon-applemusic"
               buttonUrl={itunes}
@@ -53,7 +56,10 @@ export default function ServiceButtonsPurchase({
           </ul>
         )}
         {section === 'Слушать' && (
-          <ul aria-label="Блок со ссылками на бесплатные музыкальные агрегаторы">
+          <ul
+            className="service-buttons__list"
+            aria-label="Блок со ссылками на бесплатные музыкальные агрегаторы"
+          >
             <GetButton
               buttonClass="icon-apple"
               buttonUrl={apple}

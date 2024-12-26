@@ -10,8 +10,8 @@ export default function GetButton({
   buttonText,
 }: String) {
   return (
-    <li>
-      <a className={buttonClass} href={buttonUrl}>
+    <li className="service-buttons__list-item">
+      <a className={`service-buttons__link ${buttonClass}`} href={buttonUrl}>
         <span className="visually-hidden">{buttonText}</span>
       </a>
     </li>

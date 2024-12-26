@@ -9,20 +9,16 @@
     @include list('.albums');
   }
 
+  &__card {
+    @extend %card;
+  }
+
   &__description {
     @extend %description;
-
-    &-year {
-      @extend %description-year;
-    }
   }
 
-  img {
+  &-cover__image {
     border-radius: $ms_-1;
-  }
-
-  a[class^='icon'] {
-    text-decoration: none;
   }
 }
 
@@ -30,10 +26,6 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0 $ms-1;
-
-  h2.album-title {
-    margin-top: 0;
-  }
 
   .item {
     grid-column: span 2;

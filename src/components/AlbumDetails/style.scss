@@ -14,19 +14,20 @@
     }
   }
 
-  a {
+  &__link {
     @include link-colors(
       $dark-greenish-yellow,
       darken($dark-greenish-yellow, 8%)
     );
   }
 
-  p {
-    margin-top: 0;
+  &__artwork-photographer,
+  &__artwork-designer {
+    margin-bottom: $ms-1;
   }
 
   &__released {
-    time {
+    &-time {
       display: block;
       color: $graphite-green;
       font-family: 'Oswald', sans-serif;

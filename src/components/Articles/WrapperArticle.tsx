@@ -13,7 +13,7 @@ export default function WrapperArticle({
   date,
 }: ArticleProps) {
   return (
-    <article className="articles__list-item">
+    <article className="articles__card">
       <Link to={`/articles/${articleId}`}>
         <div
           className="articles__picture"
@@ -23,11 +23,10 @@ export default function WrapperArticle({
         ></div>
         <div className="articles__description">
           {nameArticle}
-          <div className="albums__description-year">
-            <time dateTime={date}>
-              <small>{alphabeticFormatDate(date)}</small>
-            </time>
-          </div>
+
+          <time dateTime={date}>
+            <small>{alphabeticFormatDate(date)}</small>
+          </time>
         </div>
       </Link>
     </article>

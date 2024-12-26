@@ -235,6 +235,10 @@ body {
     }
   }
 
+  a[class*=' icon-'] {
+    text-decoration: none;
+  }
+
   .breadcrumb {
     ul {
       display: flex;

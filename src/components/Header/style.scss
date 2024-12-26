@@ -1,27 +1,24 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 
-header {
+.header {
   grid-area: header;
   position: fixed;
   inset: 0 0 auto;
   z-index: 1;
   background: rgba($deep-coal, 0.8);
   backdrop-filter: blur(20px) saturate(0.8%);
-  font-family: "Oswald", sans-serif;
+  font-family: 'Oswald', sans-serif;
 
-  .header__wrapper {
+  &__wrapper {
     display: flex;
     height: calc(1.618rem * 2);
     align-items: center;
     justify-content: space-between;
 
-    a {
+    .logo {
       text-decoration: none;
-
-      &.logo {
-        font-weight: $bold;
-      }
+      font-weight: $bold;
     }
   }
 }

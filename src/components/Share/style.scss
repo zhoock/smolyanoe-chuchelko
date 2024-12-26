@@ -1,43 +1,39 @@
 // Defaults and variables
-@import "../../scss/common/bits.scss";
+@import '../../scss/common/bits.scss';
 
-.share {
+.share-list {
   display: grid;
   grid-template-columns: repeat(3, min-content);
   gap: $ms_-1;
 
-  li {
+  &__item {
     display: none;
 
     &:first-child,
     &.show {
       display: block;
     }
+  }
 
-    a {
-      border: none;
-      border-radius: 50%;
-      padding: $ms_-1;
-      background: $graphite-green;
+  &__link {
+    border-radius: 50%;
+    padding: $ms_-1;
+    background: $graphite-green;
+
+    &:hover {
+      color: lighten($link-color, 50%);
+      background-color: $dark-greenish-yellow;
 
       @media (hover: none) and (pointer: coarse) {
-        &:hover {
-          color: inherit;
-          /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
-          background-color: $graphite-green;
-          transition: none;
-        }
+        color: inherit;
+        background-color: $graphite-green;
+        transition: none;
       }
+    }
 
-      &:hover {
-        color: lighten($link-color, 50%);
-        background-color: $dark-greenish-yellow;
-      }
-
-      &.active {
-        color: lighten($link-color, 50%);
-        background-color: $dark-greenish-yellow !important;
-      }
+    &.active {
+      color: lighten($link-color, 50%);
+      background-color: $dark-greenish-yellow;
     }
   }
 }

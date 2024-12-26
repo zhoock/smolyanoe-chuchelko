@@ -25,7 +25,9 @@ export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
   function Block({ date, UPC }: String) {
     return (
       <>
-        <time dateTime={date}>{formatDate(date)}</time>
+        <time className="album-details__released-time" dateTime={date}>
+          {formatDate(date)}
+        </time>
         <div>
           <small>UPC: {UPC}</small>
         </div>

@@ -25,12 +25,12 @@
     @include list('.articles');
   }
 
+  &__card {
+    @extend %card;
+  }
+
   &__description {
     @extend %description;
-
-    &-year {
-      @extend %description-year;
-    }
   }
 
   &__picture {

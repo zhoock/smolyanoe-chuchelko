@@ -4,6 +4,7 @@ import WrapperAlbumCover from './WrapperAlbumCover';
 import AlbumCover from './AlbumCover';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+
 import './style.scss';
 
 /**

@@ -21,7 +21,7 @@
   }
 }
 
-body:has(.popup_open) {
+.page:has(.popup_open) {
   overflow: hidden;
   @extend %hide-scrollbar;
 }

@@ -3,11 +3,11 @@
 // Mixins
 @import '../../scss/common/mixins.scss';
 
-footer {
+.footer {
   grid-area: footer;
 
-  ul {
-    &.social-networks {
+  .social-networks {
+    &-list {
       @include breakpoint(tablet) {
         justify-content: start;
       }
@@ -19,29 +19,27 @@ footer {
       justify-content: space-between;
       text-align: center;
 
-      li {
+      &__item {
         font-size: $ms-2;
-
-        a {
-          text-decoration: none;
-          color: $graphite-green;
-
-          &:hover {
-            border-bottom-color: $dark-greenish-yellow;
-            color: $dark-greenish-yellow;
-          }
-        }
       }
     }
 
-    &.copyright {
-      display: flex;
+    &__link {
+      color: $graphite-green;
 
-      li {
-        span::after {
-          padding: 0 $ms-_1;
-          content: '|';
-        }
+      &:hover {
+        color: $dark-greenish-yellow;
+      }
+    }
+  }
+
+  .copyright-list {
+    display: flex;
+
+    &__item {
+      span::after {
+        padding: 0 $ms-_1;
+        content: '|';
       }
     }
   }

@@ -138,27 +138,9 @@ $desktops: 'min-width: 64.0625em';
   line-height: math.div($base-line-height * 1.618, $to-font-size);
 }
 
-//Hide scrollbar
+// List
 //
 //
-
-%hide-scrollbar {
-  /* Hide scrollbar for IE, Edge and Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-// Placeholder Selectors
-
-%filter {
-  background: rgba($deep-black, 0.8);
-  backdrop-filter: blur(20px);
-}
 
 @mixin list($block) {
   display: flex;
@@ -177,34 +159,53 @@ $desktops: 'min-width: 64.0625em';
     padding: 0;
     grid-template: minmax(323px, auto) / repeat(auto-fit, minmax(250px, 1fr));
 
-    &:has(:hover) #{$block}__list-item:not(:hover) {
+    &:has(:hover) #{$block}__card:not(:hover) {
       opacity: 0.5;
     }
   }
   @include breakpoint(desktops) {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
+}
 
-  &-item {
-    // position: relative;
-    flex: none;
-    width: 100%;
-    transition: all 200ms ease;
-    scroll-snap-align: center;
-    scroll-snap-stop: always;
+// Hide scrollbar
+//
+//
 
-    a {
-      display: block;
-      text-decoration: none;
+%hide-scrollbar {
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 
-      &:focus-visible {
-        // позволит визуально выделить элемент за пределами его границ, даже если он обрезан.
-        outline-offset: -4px; /* Смещение от границы элемента */
-      }
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 
-      img {
-        margin-bottom: 0;
-      }
+%filter {
+  background: rgba($deep-black, 0.8);
+  backdrop-filter: blur(20px);
+}
+
+%card {
+  flex: none;
+  width: 100%;
+  transition: all 200ms ease;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+
+  a {
+    display: block;
+    text-decoration: none;
+
+    &:focus-visible {
+      // позволит визуально выделить элемент за пределами его границ, даже если он обрезан.
+      outline-offset: -4px; /* Смещение от границы элемента */
+    }
+
+    img {
+      margin-bottom: 0;
     }
   }
 }
@@ -212,10 +213,8 @@ $desktops: 'min-width: 64.0625em';
 %description {
   margin-top: $ms_-1;
 
-  &-year {
-    time {
-      display: block;
-      color: darken($link-color, 20%);
-    }
+  time {
+    display: block;
+    color: darken($link-color, 20%);
   }
 }
