@@ -1,7 +1,10 @@
+@use 'sass:color';
+
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .album-details {
   text-wrap: balance;
@@ -17,7 +20,7 @@
   &__link {
     @include link-colors(
       $dark-greenish-yellow,
-      darken($dark-greenish-yellow, 8%)
+      color.scale($dark-greenish-yellow, $lightness: -23%)
     );
   }
 
@@ -30,7 +33,8 @@
     &-time {
       display: block;
       color: $graphite-green;
-      font-family: 'Oswald', sans-serif;
+      font-family: Oswald, sans-serif;
+
       @include adjust-font-size-to($ms-2);
 
       @include breakpoint(desktops) {

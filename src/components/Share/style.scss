@@ -1,10 +1,12 @@
+@use 'sass:color';
+
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
 
 .share-list {
   display: grid;
   grid-template-columns: repeat(3, min-content);
-  gap: $ms_-1;
+  gap: $ms--1;
 
   &__item {
     display: none;
@@ -17,11 +19,11 @@
 
   &__link {
     border-radius: 50%;
-    padding: $ms_-1;
+    padding: $ms--1;
     background: $graphite-green;
 
     &:hover {
-      color: lighten($link-color, 50%);
+      color: color.scale($link-color, $lightness: 100%);
       background-color: $dark-greenish-yellow;
 
       @media (hover: none) and (pointer: coarse) {
@@ -32,7 +34,7 @@
     }
 
     &.active {
-      color: lighten($link-color, 50%);
+      color: color.scale($link-color, $lightness: 100%);
       background-color: $dark-greenish-yellow;
     }
   }

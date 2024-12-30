@@ -1,7 +1,10 @@
+@use 'sass:color';
+
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .album {
   .album-title {
@@ -27,6 +30,7 @@
       cursor: pointer;
       counter-increment: example 1;
       white-space: nowrap;
+
       @include adjust-font-size-to($ms-0, 0);
 
       @media (hover: none) and (pointer: coarse) {
@@ -35,7 +39,7 @@
           background: inherit;
 
           &::before {
-            color: darken($grey, 20%);
+            color: color.scale($grey, $lightness: -30%);
           }
 
           &:hover + li {
@@ -47,7 +51,7 @@
       &::before {
         content: counter(example);
         padding: 0 $ms-_1;
-        color: darken($grey, 20%);
+        color: color.scale($grey, $lightness: -30%);
       }
 
       &:last-child {
@@ -56,9 +60,9 @@
 
       &.active,
       &:hover {
-        border-radius: $ms_-2;
+        border-radius: $ms--2;
         border-top-color: $dark-greenish-yellow;
-        color: $light-grey;
+        color: color.scale($link-color, $lightness: 100%);
         background: $dark-greenish-yellow;
 
         &::before {
@@ -78,6 +82,7 @@
     font-family: $base-font-family;
     font-weight: $bold;
     text-align: left;
+
     @include adjust-font-size-to($ms-1);
   }
 }

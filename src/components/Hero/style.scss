@@ -1,7 +1,8 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .hero {
   position: relative;
@@ -12,6 +13,7 @@
 
   @include breakpoint(phones) {
     background-size: contain;
+
     // background-attachment: initial; // фиксируем фон
   }
 
@@ -30,7 +32,8 @@
 
     @include breakpoint(phones) {
       // background: linear-gradient(0deg, #21201d 0, transparent 50%);
-      background: rgb(32 32 29 / 0.4);
+
+      background: rgb(32 32 29 / 40%);
     }
 
     @include breakpoint(tablet) {
@@ -38,7 +41,7 @@
     }
   }
 
-  .hero__title {
+  &__title {
     position: relative;
     top: -2vw;
     width: 100%;

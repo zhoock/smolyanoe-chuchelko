@@ -1,5 +1,5 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
 
 .header {
   grid-area: header;
@@ -8,7 +8,7 @@
   z-index: 1;
   background: rgba($deep-coal, 0.8);
   backdrop-filter: blur(20px) saturate(0.8%);
-  font-family: 'Oswald', sans-serif;
+  font-family: Oswald, sans-serif;
 
   &__wrapper {
     display: flex;

@@ -1,7 +1,8 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .form__wrapper {
   display: grid;
@@ -18,13 +19,13 @@
   }
 
   label {
-    padding-top: $ms_-2;
+    padding-top: $ms--2;
 
     span {
       display: inline-block;
       width: 20px;
       height: 20px;
-      margin-right: $ms_-2;
+      margin-right: $ms--2;
       vertical-align: middle;
       background: $graphite-green;
     }
@@ -54,8 +55,8 @@
       content: '\ea50';
       position: absolute;
       top: 0;
-      right: $ms_-1;
-      font-family: 'icomoon' !important;
+      right: $ms--1;
+      font-family: icomoon, sans-serif !important;
       font-size: $ms-1;
       transform: rotate(180deg);
     }
@@ -64,8 +65,8 @@
   select {
     width: 100%;
     border: none;
-    border-radius: $ms_-2;
-    padding: $ms_-2 $ms_0;
+    border-radius: $ms--2;
+    padding: $ms--2 $ms_0;
     background: $graphite-green;
     appearance: none;
   }
@@ -81,7 +82,7 @@
     height: 26px;
     margin-top: -8px;
     border: 1px solid #000;
-    border-radius: $ms_-2;
+    border-radius: $ms--2;
     background: $dark-greenish-yellow;
     cursor: pointer;
     appearance: none;
@@ -91,24 +92,25 @@
     width: 16px;
     height: 26px;
     border: 1px solid #000;
-    border-radius: $ms_-2;
+    border-radius: $ms--2;
     background: $dark-greenish-yellow;
     cursor: pointer;
   }
 
   input[type='range']::-webkit-slider-runnable-track {
     width: 100%;
-    height: $ms_-1;
+    height: $ms--1;
     border: none;
-    border-radius: $ms_-2;
+    border-radius: $ms--2;
     background: #000;
     cursor: pointer;
   }
+
   input[type='range']::-moz-range-track {
     width: 100%;
-    height: $ms_-1;
+    height: $ms--1;
     border: none;
-    border-radius: $ms_-2;
+    border-radius: $ms--2;
     background: #000;
     cursor: pointer;
   }
@@ -131,8 +133,8 @@
 
   .input {
     border: none;
-    border-radius: $ms_-2;
-    padding: $ms_-2 $ms_0;
+    border-radius: $ms--2;
+    padding: $ms--2 $ms_0;
     background: $deep-coal;
     caret-color: $olive-green;
 

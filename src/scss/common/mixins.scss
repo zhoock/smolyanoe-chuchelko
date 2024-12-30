@@ -1,8 +1,7 @@
 @use 'sass:math';
+@use 'sass:color';
 
 // Buttons
-//
-//
 
 @mixin button-variant(
   $color,
@@ -13,8 +12,8 @@
 ) {
   margin: $ms-1 0;
   border: 0;
-  border-radius: $ms_-1;
-  padding: $ms_-1 $ms-0;
+  border-radius: $ms--1;
+  padding: $ms--1 $ms-0;
   color: $color;
   background-color: $background;
   transition: background-color 200ms ease;
@@ -33,6 +32,7 @@
       background-color: $graphite-green;
     }
   }
+
   &.disabled,
   &[disabled] {
     &:hover,
@@ -50,50 +50,47 @@ $desktops: 'min-width: 64.0625em';
 
 @mixin breakpoint($point) {
   // medium (>640)
+
   @if $point == phones {
     @media ($phones) {
       @content;
     }
   }
+
   // medium (641—1024)
+
   @if $point == tablet {
     @media ($tablets) {
       @content;
     }
   }
+
   // large (1024—1200)
+
   @if $point == desktops {
     @media ($desktops) {
       @content;
     }
   }
+
   // xlarge (1200—1440)
+
   @if $point == desktopsxlarge {
-    @media (min-width: 75.0625em) {
+    @media (width >= 75.0625em) {
       @content;
     }
   }
+
   // xxlarge (< 1440)
+
   @if $point == desktopsxxlarge {
-    @media (min-width: 90.0625em) {
+    @media (width >= 90.0625em) {
       @content;
     }
   }
 }
 
-//retina
-//
-//
-
-@mixin retina($url: false, $device-type: $phones) {
-  @media only screen and ($device-type) and (-webkit-min-device-pixel-ratio: 1.5) and (min-resolution: 1.5dppx) and (min-resolution: 144dpi) {
-    background-image: url($url);
-  }
-}
-
-//link
-//
-//
+// link
 
 @mixin link-colors(
   $normal,
@@ -103,21 +100,25 @@ $desktops: 'min-width: 64.0625em';
   $focus: false
 ) {
   color: $normal;
+
   @if $hover {
     &:hover {
       color: $hover;
     }
   }
+
   @if $active {
     &:active {
       color: $active;
     }
   }
+
   @if $visited {
     &:visited {
       color: $visited;
     }
   }
+
   @if $focus {
     &:focus {
       color: $focus;
@@ -125,7 +126,7 @@ $desktops: 'min-width: 64.0625em';
   }
 }
 
-//https://designmodo.com/vertical-rhythm/
+// https://designmodo.com/vertical-rhythm/
 
 @mixin adjust-font-size-to(
   $to-font-size,
@@ -139,8 +140,6 @@ $desktops: 'min-width: 64.0625em';
 }
 
 // List
-//
-//
 
 @mixin list($block) {
   display: flex;
@@ -152,10 +151,11 @@ $desktops: 'min-width: 64.0625em';
   scroll-snap-type: x mandatory;
 
   @extend %hide-scrollbar;
+
   @include breakpoint(tablet) {
     display: grid;
     gap: $ms-1;
-    margin: 0 0 $ms-1 0;
+    margin: 0 0 $ms-1;
     padding: 0;
     grid-template: minmax(323px, auto) / repeat(auto-fit, minmax(250px, 1fr));
 
@@ -163,14 +163,13 @@ $desktops: 'min-width: 64.0625em';
       opacity: 0.5;
     }
   }
+
   @include breakpoint(desktops) {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
 }
 
 // Hide scrollbar
-//
-//
 
 %hide-scrollbar {
   /* Hide scrollbar for IE, Edge and Firefox */
@@ -211,10 +210,10 @@ $desktops: 'min-width: 64.0625em';
 }
 
 %description {
-  margin-top: $ms_-1;
+  margin-top: $ms--1;
 
   time {
     display: block;
-    color: darken($link-color, 20%);
+    color: color.scale($link-color, $lightness: -30%);
   }
 }

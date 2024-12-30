@@ -1,5 +1,8 @@
+@use 'sass:color';
+
 // Defaults and variables
-@import '../common/bits.scss';
+@import '../common/bits';
+
 // Mixins
 @import '../common/mixins';
 
@@ -22,9 +25,10 @@
 
 /* Prevent font size inflation */
 html {
-  -moz-text-size-adjust: none;
-  -webkit-text-size-adjust: none;
   text-size-adjust: none;
+  font: $base-font-weight $base-font-size $base-font-family;
+  height: 100%;
+  color: $base-font-color;
 }
 
 /* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
@@ -37,8 +41,23 @@ html:focus-within {
   scroll-behavior: smooth; /* Make the scrolling inside of any scrollable element smooth */
 }
 
-a:not([class]) {
-  text-decoration-skip-ink: auto; /* Makes link undelines look better */
+a {
+  text-decoration-thickness: from-font;
+  text-underline-offset: 5px;
+  transition: all 200ms ease;
+
+  @include link-colors($link-color, $light-grey);
+
+  @media (hover: none) and (pointer: coarse) {
+    &:hover {
+      /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов */
+      background-color: inherit;
+    }
+  }
+
+  &.dashed {
+    border-bottom: 1px dashed $link-color;
+  }
 }
 
 img,
@@ -50,8 +69,7 @@ canvas {
   height: auto; /* Makes it responsive */
   vertical-align: middle; /* Makes text next to inline images look better */
   font-style: italic; /* If the images don't load it makes the alt decription look better */
-  background-repeat: no-repeat;
-  /* The background repeat and size are there if you want to load a picture first like a backroung image that is worse quality while the better quality image loads */
+  background-repeat: no-repeat; /* The background repeat and size are there if you want to load a picture first like a backroung image that is worse quality while the better quality image loads */
   background-size: cover;
 }
 
@@ -66,33 +84,14 @@ body {
   min-height: 100vh;
   line-height: $base-line-height;
   scroll-behavior: smooth; /* Makes normal scrolling smooth */
-}
-
-html {
-  // font-size: 62.5%; /* 1rem = 10px */
-  font: $base-font-weight $base-font-size $base-font-family;
-}
-
-body,
-html {
   height: 100%;
-}
-
-html,
-button,
-input,
-select,
-textarea {
-  color: $base-font-color;
-}
-
-body {
   background: black;
 
   @media only screen {
     .hide-for-large-up {
       display: block;
     }
+
     .hide-for-medium-down {
       display: none;
     }
@@ -102,6 +101,7 @@ body {
     .hide-for-large-up {
       display: block;
     }
+
     .hide-for-medium-down {
       display: none;
     }
@@ -111,6 +111,7 @@ body {
     .hide-for-large-up {
       display: none;
     }
+
     .hide-for-medium-down {
       display: block;
     }
@@ -169,7 +170,7 @@ body {
   h3,
   h4 {
     color: $dark-greenish-yellow;
-    font-family: 'Oswald', sans-serif;
+    font-family: Oswald, sans-serif;
     font-weight: $light;
     letter-spacing: 1.618px;
     text-transform: uppercase;
@@ -178,10 +179,12 @@ body {
 
   h2 {
     font-weight: $regular;
+
     @include adjust-font-size-to($ms-1);
 
     @include breakpoint(tablet) {
       font-weight: $light;
+
       @include adjust-font-size-to($ms-2);
     }
   }
@@ -189,10 +192,12 @@ body {
   h3 {
     font-weight: $regular;
     letter-spacing: 2.5px;
+
     @include adjust-font-size-to($ms-0, 0);
 
     @include breakpoint(tablet) {
       font-weight: $light;
+
       @include adjust-font-size-to($ms-1, 0.382);
     }
 
@@ -205,9 +210,10 @@ body {
   ol {
     margin-bottom: $ms-1;
 
-    &.dash li:before {
+    &.dash li::before {
       content: '— ';
     }
+
     li {
       list-style: none;
     }
@@ -222,21 +228,26 @@ body {
 
     @media (hover: none) and (pointer: coarse) {
       &:hover {
-        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов.*/
+        /* Пользователи сенсорных устройств оценят отсутствие нежелательных эффектов */
         background-color: inherit;
       }
+    }
+
+    &.dashed {
+      border-bottom: 1px dashed $link-color;
     }
 
     &:hover {
       border-bottom-color: $light-grey;
     }
-    &.dashed {
-      border-bottom: 1px dashed $link-color;
-    }
-  }
 
-  a[class*=' icon-'] {
-    text-decoration: none;
+    &[class*=' icon-'] {
+      text-decoration: none;
+    }
+
+    &:not([class]) {
+      text-decoration-skip-ink: auto; /* Makes link undelines look better */
+    }
   }
 
   .breadcrumb {
@@ -253,7 +264,7 @@ body {
         }
 
         &.active {
-          color: darken($link-color, 20%);
+          color: color.scale($link-color, $lightness: -30%);
         }
       }
     }
@@ -273,10 +284,10 @@ body {
   width: 1px; /* делают элемент очень маленьким, но таким, чтобы не пропал совсем */
   height: 1px;
   margin: -1px; /* элемент убирают из поля зрения, сдвинув на размер самого себя */
-  padding: 0; /* обнуляют отступы, они есть у некоторых элементов по умолчанию */
   border: 0; /* убирают границу, она тоже может быть у каких-то элементов */
+  padding: 0; /* обнуляют отступы, они есть у некоторых элементов по умолчанию */
+  overflow: hidden; /* на всякий случай скрывают видимое за пределами блока */
   clip: rect(
     0 0 0 0
   ); /* это свойство обрезает видимую область до нулевого значения */
-  overflow: hidden; /* на всякий случай скрывают видимое за пределами блока */
 }

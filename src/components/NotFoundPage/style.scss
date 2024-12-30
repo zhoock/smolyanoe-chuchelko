@@ -1,9 +1,10 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
-// Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/bits';
 
-.notFound {
+// Mixins
+@import '../../scss/common/mixins';
+
+.not-found {
   display: grid;
   place-content: center;
   min-height: 100vh;
@@ -19,12 +20,12 @@
 
     width: fit-content;
 
-    &:hover a {
-      color: $light-grey;
-    }
-
     a {
       text-decoration: none;
+    }
+
+    &:hover a {
+      color: $light-grey;
     }
   }
 }

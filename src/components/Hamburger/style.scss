@@ -1,7 +1,10 @@
+@use 'sass:color';
+
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .hamburger {
   background: none;
@@ -17,34 +20,8 @@
 
   &:hover {
     span {
-      background: lighten($link-color, 50%);
+      background: color.scale($link-color, $lightness: 100%);
     }
-  }
-
-  &.active {
-    .one {
-      transform: rotate(45deg) translate(7px, 7px);
-    }
-    .two {
-      opacity: 0;
-    }
-    .three {
-      transform: rotate(-45deg) translate(10px, -10px);
-    }
-
-    // @include button-variant(
-    //   $grey,
-    //   $graphite-green,
-    //   $light-grey,
-    //   $dark-greenish-yellow
-    // );
-
-    // margin: 0;
-    // padding: 0 $ms_-1 0;
-
-    // @media (hover: none) and (pointer: coarse) {
-    //   color: $graphite-green;
-    // }
   }
 
   .one,
@@ -57,5 +34,19 @@
     background: $light-grey;
     backface-visibility: hidden;
     transition-duration: 0.15s;
+  }
+
+  &.active {
+    .one {
+      transform: rotate(45deg) translate(7px, 7px);
+    }
+
+    .two {
+      opacity: 0;
+    }
+
+    .three {
+      transform: rotate(-45deg) translate(10px, -10px);
+    }
   }
 }

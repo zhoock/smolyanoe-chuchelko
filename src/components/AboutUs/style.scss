@@ -1,7 +1,8 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .about {
   text-wrap: balance;
@@ -20,14 +21,15 @@
   }
 
   &__look-more {
+    display: inline-flex;
+    gap: 4px;
+
     @include button-variant(
       $grey,
       $graphite-green,
       $light-grey,
       $dark-greenish-yellow
     );
-    display: inline-flex;
-    gap: 4px;
 
     &:hover {
       span {
@@ -62,8 +64,8 @@
       );
 
       .icon-ctrl {
-        transform: rotate(0);
         top: 21px;
+        transform: rotate(0);
       }
 
       span {

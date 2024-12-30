@@ -1,7 +1,8 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .albums,
 .album {
@@ -18,7 +19,7 @@
   }
 
   &-cover__image {
-    border-radius: $ms_-1;
+    border-radius: $ms--1;
   }
 }
 

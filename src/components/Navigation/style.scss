@@ -1,23 +1,24 @@
 // Defaults and variables
-@import '../../scss/common/bits.scss';
+@import '../../scss/common/bits';
+
 // Mixins
-@import '../../scss/common/mixins.scss';
+@import '../../scss/common/mixins';
 
 .header {
   &__links-list {
     display: flex;
-    margin-bottom: 0;
     gap: 18px;
+    margin-bottom: 0;
 
     &-item {
       a {
-        text-transform: uppercase;
         text-decoration: none;
+        text-transform: uppercase;
 
         &.active {
           color: $dark-greenish-yellow;
-          // pointer-events: none;
-          /* disables click event */
+
+          // pointer-events: none; /* disables click event */
         }
       }
     }
@@ -33,18 +34,19 @@
 
     &__links-list {
       flex-direction: column;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       gap: 0;
       width: 100%;
       height: 100%;
-      font-family: 'Oswald', sans-serif;
+      font-family: Oswald, sans-serif;
 
       &-item {
         a {
-          @include adjust-font-size-to($ms-1, 0);
           display: block;
           text-decoration: none;
+
+          @include adjust-font-size-to($ms-1, 0);
         }
       }
     }
