@@ -44,7 +44,7 @@ export default function Footer() {
         <ul className="copyright-list">
           <li className="copyright-list__item">
             <small>
-              <span>© 2021—2024 Смоляное чучелко</span>
+              <span>© 2021—2025 Смоляное чучелко</span>
             </small>
           </li>
           <li>

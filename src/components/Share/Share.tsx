@@ -10,12 +10,55 @@ export default function Share() {
     setShare(!share);
   }
 
+  function handleShareClick(platform: 'facebook' | 'twitter', uri: string) {
+    if (uri === 'this') {
+      uri = window.location.href;
+    }
+
+    if (platform === 'facebook') {
+      const base =
+        'https://www.facebook.com/sharer/sharer.php?u=' +
+        encodeURIComponent(uri);
+      popUpWindow(base, 'Share on Facebook', 464, 210, 'no', 'center');
+    } else if (platform === 'twitter') {
+      const base =
+        'https://twitter.com/intent/tweet?text=' + encodeURIComponent(uri);
+      popUpWindow(base, 'Share on Twitter', 464, 210, 'no', 'center');
+    }
+  }
+
+  function popUpWindow(
+    mypage: string,
+    myname: string,
+    w: number,
+    h: number,
+    scroll: string,
+    pos: string,
+  ) {
+    let LeftPosition = 0;
+    let TopPosition = 0;
+
+    if (pos === 'center') {
+      LeftPosition = screen.width ? (screen.width - w) / 2 : 100;
+      TopPosition = screen.height ? (screen.height - h) / 2 : 100;
+    } else if (pos !== 'center' && pos !== 'random') {
+      LeftPosition = 0;
+      TopPosition = 20;
+    }
+
+    const settings =
+      `width=${w},height=${h},top=${TopPosition},left=${LeftPosition},scrollbars=${scroll},` +
+      `location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no`;
+
+    window.open(mypage, myname, settings);
+  }
+
   return (
     <ul className="share-list js-share-item">
       <li className="share-list__item" onClick={handleClick}>
         <a
-          className={`share-list__link icon-share ${share ? 'active' : null}`}
-          href=""
+          className={`share-list__link icon-share ${share ? 'active' : ''}`}
+          href="#"
           title="Поделиться"
         ></a>
       </li>
@@ -24,6 +67,7 @@ export default function Share() {
           className="share-list__link icon-facebook1"
           href="#"
           title="Поделиться на Facebook"
+          onClick={() => handleShareClick('facebook', 'this')}
         ></a>
       </li>
       <li className={`share-list__item ${share ? 'show' : ''}`}>
@@ -31,73 +75,9 @@ export default function Share() {
           className="share-list__link icon-twitter"
           href="#"
           title="Поделиться на Twitter"
+          onClick={() => handleShareClick('twitter', 'this')}
         ></a>
       </li>
     </ul>
   );
 }
-
-// share
-
-// function shareOnFacebook(uri: any) {
-//   "this" == uri && (uri = window.location.href);
-//   let base =
-//     "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(uri);
-//   popUpWindow(base, "Share on Facebook", "464", "210", "no", "center");
-// }
-
-// function shareOnTwitter(uri: any) {
-//   "this" == uri && (uri = window.location.href);
-//   let base = "https://twitter.com/home?status=" + encodeURIComponent(uri);
-//   popUpWindow(base, "Share on Twitter", "464", "210", "no", "center");
-// }
-
-// function popUpWindow(
-//   mypage: any,
-//   myname: any,
-//   w: any,
-//   h: any,
-//   scroll: any,
-//   pos: any,
-// ) {
-//   let LeftPosition,
-//     TopPosition,
-//     settings,
-//     win = null;
-//   if (pos == "center") {
-//     LeftPosition = screen.width ? (screen.width - w) / 2 : 100;
-//     TopPosition = screen.height ? (screen.height - h) / 2 : 100;
-//   } else if ((pos != "center" && pos != "random") || pos == null) {
-//     LeftPosition = 0;
-//     TopPosition = 20;
-//   }
-//   settings =
-//     "width=" +
-//     w +
-//     ",height=" +
-//     h +
-//     ",top=" +
-//     TopPosition +
-//     ",left=" +
-//     LeftPosition +
-//     ",scrollbars=" +
-//     scroll +
-//     ",location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no";
-//   win = window.open(mypage, myname, settings);
-// }
-
-// // $(".js-share-item li:first-child").on("click", function (t) {
-// //   t.preventDefault(), $(".js-share-item li").toggleClass("show");
-// // });
-
-// const link = document.querySelector(".js-share-item a");
-
-// link &&
-//   link.addEventListener("click", function (e) {
-//     e.preventDefault();
-
-//     link.classList.contains("icon-facebook1") && shareOnFacebook("this"),
-//       link.classList.contains("icon-twitter") && shareOnTwitter("this");
-//   });
-
-// return link;

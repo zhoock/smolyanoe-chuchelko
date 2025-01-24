@@ -15,6 +15,7 @@ module.exports = {
     path: path.join(__dirname, 'dist'), // Папка для собранных файлов
     assetModuleFilename: path.join('images', '[name].[contenthash][ext]'),
     clean: true, // Очищать старые файлы при сборке
+    publicPath: '/', // Важно для работы historyApiFallback
   },
 
   resolve: {

@@ -12,6 +12,7 @@ import './style.scss';
  */
 export default function Albums() {
   getRandomPhotos();
+
   const { templateData, loading, error } = useData();
 
   return (

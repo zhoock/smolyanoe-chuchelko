@@ -63,7 +63,7 @@ export interface WrapperAlbumCoverProps {
 export interface DetalesProps {
   id: number;
   title: string;
-  content: string[];
+  content: Array<string | { text: string[]; link: string }>;
 }
 
 export interface TracksProps {

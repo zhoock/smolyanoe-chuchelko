@@ -8,11 +8,15 @@
   text-wrap: balance;
 
   &__content {
-    height: 60px;
+    display: -webkit-box;
     overflow: hidden;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
 
     &_active {
-      height: 100%;
+      -webkit-line-clamp: none;
+      line-clamp: none;
     }
   }
 
@@ -31,14 +35,13 @@
       $dark-greenish-yellow
     );
 
-    &:hover {
-      span {
-        color: $light-grey;
+    @media (hover: none) and (pointer: coarse) {
+      color: $grey;
+      background: $graphite-green;
+    }
 
-        @media (hover: none) and (pointer: coarse) {
-          color: $grey;
-        }
-      }
+    &:active {
+      transform: scale(0.98);
     }
 
     .icon-ctrl {
@@ -47,10 +50,7 @@
       left: 4px;
       font: $medium 1.618rem/0 sans-serif;
       transform: rotate(180deg);
-    }
-
-    &:active {
-      transform: scale(0.98); /* Легкое уменьшение кнопки */
+      color: currentcolor;
     }
   }
 
@@ -65,11 +65,8 @@
 
       .icon-ctrl {
         top: 21px;
-        transform: rotate(0);
-      }
-
-      span {
         color: $light-grey;
+        transform: rotate(0);
       }
     }
   }

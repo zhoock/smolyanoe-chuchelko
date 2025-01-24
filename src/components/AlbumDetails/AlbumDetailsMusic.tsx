@@ -10,22 +10,23 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
       <>
         <h3>{title}</h3>
         <ul>
-          {content.map((_: any) =>
-            typeof _ === 'string' ? (
-              <li key={_}>{_}</li>
+          {content.map((item, i) =>
+            typeof item === 'string' ? (
+              <li key={i}>{item}</li>
             ) : (
-              <li key={_}>
-                {_.text[0]}{' '}
+              <li key={i}>
+                {item.text[0]}{' '}
                 {
                   <a
                     className="album-details__link"
-                    href={_.link}
+                    href={item.link}
                     target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    {_.text[1]}
+                    {item.text[1]}
                   </a>
                 }
-                {_.text[2]}
+                {item.text[2]}
               </li>
             ),
           )}
@@ -34,5 +35,5 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
     );
   }
 
-  return album?.detales.map((_) => <Block {..._} key={_.id} />);
+  return album?.detales.map((detail) => <Block {...detail} key={detail.id} />);
 }

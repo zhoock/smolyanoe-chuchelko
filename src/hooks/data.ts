@@ -36,8 +36,13 @@ export function useData() {
         templateB: templateBResponse.data,
       });
     } catch (e) {
-      const error = e as AxiosError; // Преобразуем ошибку
-      setError(error.message || 'Неизвестная ошибка'); // Устанавливаем сообщение об ошибке
+      if (axios.isAxiosError(e)) {
+        console.error('Axios error:', e);
+        setError(e.message || 'Ошибка при загрузке данных');
+      } else {
+        console.error('Unknown error:', e);
+        setError('Неизвестная ошибка');
+      }
     } finally {
       setLoading(false); // Выключаем состояние загрузки
     }
@@ -58,7 +63,7 @@ const src =
  * Функция возвращает полный URL для изображения в нужном формате
  */
 export function getImageUrl(img: string, format: string = '.jpg'): string {
-  return src + img + format;
+  return `${src}${img}${format}`;
 }
 
 /**
@@ -66,15 +71,9 @@ export function getImageUrl(img: string, format: string = '.jpg'): string {
  */
 export function formatDate(dateRelease: string): string {
   const date = new Date(dateRelease);
-
-  let dd: number | string = date.getDate();
-  if (dd < 10) dd = '0' + dd;
-
-  let mm: number | string = date.getMonth() + 1;
-  if (mm < 10) mm = '0' + mm;
-
-  let yy: number | string = date.getFullYear();
-  if (yy < 10) yy = '0' + yy;
+  const dd = date.getDate().toString().padStart(2, '0');
+  const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+  const yy = date.getFullYear();
 
   return `${dd}/${mm}/${yy}`;
 }
@@ -83,52 +82,25 @@ export function formatDate(dateRelease: string): string {
  * Функция возвращает правильное падежное окончание для месяцев.
  */
 export function alphabeticFormatDate(dateRelease: string): string {
+  const months = [
+    'января',
+    'февраля',
+    'марта',
+    'апреля',
+    'мая',
+    'июня',
+    'июля',
+    'августа',
+    'сентября',
+    'октября',
+    'ноября',
+    'декабря',
+  ];
+
   const date = new Date(dateRelease);
-
-  let dd: number | string = date.getDate();
-
-  let mm: number | string = date.getMonth() + 1;
-  switch (mm) {
-    case 1:
-      mm = 'января';
-      break;
-    case 2:
-      mm = 'февраля';
-      break;
-    case 3:
-      mm = 'марта';
-      break;
-    case 4:
-      mm = 'апреля';
-      break;
-    case 5:
-      mm = 'мая';
-      break;
-    case 6:
-      mm = 'июня';
-      break;
-    case 7:
-      mm = 'июля';
-      break;
-    case 8:
-      mm = 'августа';
-      break;
-    case 9:
-      mm = 'сентября';
-      break;
-    case 10:
-      mm = 'октября';
-      break;
-    case 11:
-      mm = 'ноября';
-      break;
-    case 12:
-      mm = 'декабря';
-      break;
-  }
-
-  let yy: number | string = date.getFullYear();
-  if (yy < 10) yy = '0' + yy;
+  const dd = date.getDate();
+  const mm = months[date.getMonth()];
+  const yy = date.getFullYear();
 
   return `${dd} ${mm} ${yy}`;
 }
@@ -138,23 +110,31 @@ export function alphabeticFormatDate(dateRelease: string): string {
  */
 export function getRandomPhotos() {
   let photos: string[] = [
-    // `url(${src}banner-for-header.jpg)`,
     `url(${src}KvArYFCcWLg.jpg)`,
     `url(${src}CZaNPYWOmVM.jpg)`,
-    `url(${src}wj3MH7eyNhY.jpg`,
-    `url(${src}XpaX73Jq4S8.jpg`,
+    `url(${src}wj3MH7eyNhY.jpg)`,
+    `url(${src}XpaX73Jq4S8.jpg)`,
     `url(${src}M2x9Im2_1uM.jpg)`,
     `url(${src}pAZ_AZh5bQU.jpg)`,
     `url(${src}M2x9Im2_1uM.jpg)`,
+    `url(${src}IkpCtDzA5WM.jpg)`,
     // `url(${src}6yIUmtdW35U.jpg)`,
     // `url(${src}F2Z8WN--2kg.jpg`,
-    `url(${src}IkpCtDzA5WM.jpg`,
+    // `url(${src}banner-for-header.jpg)`,
   ];
 
-  const hero = document.querySelector('.hero') as HTMLElement;
-
-  if (hero) {
-    hero.style.backgroundImage =
-      photos[Math.floor(Math.random() * photos.length)];
+  if (photos.length === 0) {
+    console.warn('Массив photos пуст');
+    return;
   }
+
+  const hero = document.querySelector('.hero') as HTMLElement | null;
+
+  if (!hero) {
+    console.warn('Элемент .hero не найден');
+    return;
+  }
+
+  hero.style.backgroundImage =
+    photos[Math.floor(Math.random() * photos.length)];
 }
