@@ -35,6 +35,7 @@ export default function Footer() {
               <a
                 className={`social-networks__link icon-${item.name}`}
                 href={item.href}
+                target="_blank"
               >
                 <span className="visually-hidden">{item.name}</span>
               </a>

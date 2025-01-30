@@ -31,8 +31,6 @@ export default function Article() {
     (_) => _.articleId === params.articleId,
   )[0];
 
-  console.log(article);
-
   function Block({
     title,
     subtitle,

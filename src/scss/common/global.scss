@@ -146,7 +146,7 @@ body {
 
     main {
       display: grid;
-      grid-template-rows: 240px auto;
+      grid-template-rows: 205px auto;
       grid-area: main;
 
       @include breakpoint(tablet) {

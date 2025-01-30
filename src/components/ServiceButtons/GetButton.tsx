@@ -11,7 +11,11 @@ export default function GetButton({
 }: String) {
   return (
     <li className="service-buttons__list-item">
-      <a className={`service-buttons__link ${buttonClass}`} href={buttonUrl}>
+      <a
+        className={`service-buttons__link ${buttonClass}`}
+        href={buttonUrl}
+        target="_blank"
+      >
         <span className="visually-hidden">{buttonText}</span>
       </a>
     </li>

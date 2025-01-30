@@ -8,8 +8,8 @@
   position: relative;
   display: flex;
   align-items: end;
-  background: #000 right calc(1.618rem * 2) no-repeat fixed
-    url('../../images/XpaX73Jq4S8.jpg');
+  background: #000 url('../../images/XpaX73Jq4S8.jpg') right calc(1.618rem * 2)
+    no-repeat fixed;
 
   @include breakpoint(phones) {
     background-size: contain;

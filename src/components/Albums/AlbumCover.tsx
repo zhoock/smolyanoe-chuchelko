@@ -17,7 +17,7 @@ export default function AlbumCover({
   return (
     // TODO: заменить изображения на более крупные, когда они придут из дизайна
 
-    <picture className="album-cover">
+    <picture className="album-cover" role="img">
       <source
         className="album-cover__source"
         srcSet={`${getImageUrl(webp, '.webp')} 1x, ${getImageUrl(webp2x, '.webp')} 2x`}

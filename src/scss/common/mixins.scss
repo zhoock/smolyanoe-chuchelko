@@ -44,12 +44,12 @@
   }
 }
 
-$phones: 'max-width: 40em';
-$tablets: 'min-width: 40.0625em';
-$desktops: 'min-width: 64.0625em';
+$phones: 'max-width: 767px';
+$tablets: 'min-width: 768px';
+$desktops: 'min-width: 1200px';
 
 @mixin breakpoint($point) {
-  // medium (>640)
+  // Мобильные устройства – до 768px. Смартфоны (iPhone SE → iPhone 15 Pro Max, Galaxy S22 → S24)
 
   @if $point == phones {
     @media ($phones) {
@@ -57,7 +57,7 @@ $desktops: 'min-width: 64.0625em';
     }
   }
 
-  // medium (641—1024)
+  // Планшеты и небольшие ноутбуки – 768px–1199px. iPad, Galaxy Tab, MacBook Air 13", небольшие экраны
 
   @if $point == tablet {
     @media ($tablets) {
@@ -65,26 +65,10 @@ $desktops: 'min-width: 64.0625em';
     }
   }
 
-  // large (1024—1200)
+  // Десктопы и большие экраны – от 1200px и выше. Стандартные и широкоформатные мониторы
 
   @if $point == desktops {
     @media ($desktops) {
-      @content;
-    }
-  }
-
-  // xlarge (1200—1440)
-
-  @if $point == desktopsxlarge {
-    @media (width >= 75.0625em) {
-      @content;
-    }
-  }
-
-  // xxlarge (< 1440)
-
-  @if $point == desktopsxxlarge {
-    @media (width >= 90.0625em) {
       @content;
     }
   }
