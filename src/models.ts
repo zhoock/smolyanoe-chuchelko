@@ -77,14 +77,14 @@ export interface TracksProps {
   duration: number;
 }
 
-export interface CoverProps<Size extends number = 896> {
+export interface CoverProps {
   webp: string;
   webp2x: string;
   jpg: string;
   jpg2x: string;
   img: string;
   fullName: string;
-  size: Size;
+  size?: number;
 }
 
 export interface String {

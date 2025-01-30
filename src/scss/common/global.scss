@@ -146,8 +146,15 @@ body {
 
     main {
       display: grid;
-      grid-template-rows: 205px auto;
       grid-area: main;
+
+      @include breakpoint(old-phones) {
+        grid-template-rows: 190px auto;
+      }
+
+      @include breakpoint(phones) {
+        grid-template-rows: 59vw auto;
+      }
 
       @include breakpoint(tablet) {
         grid-template-rows: 22vw auto;

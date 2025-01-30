@@ -12,7 +12,7 @@ export default function AlbumCover({
   jpg2x,
   img,
   fullName,
-  size,
+  size = 896,
 }: CoverProps) {
   return (
     // TODO: заменить изображения на более крупные, когда они придут из дизайна

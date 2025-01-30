@@ -11,10 +11,12 @@
   background: #000 url('../../images/XpaX73Jq4S8.jpg') right calc(1.618rem * 2)
     no-repeat fixed;
 
+  @include breakpoint(old-phones) {
+    background-size: contain;
+  }
+
   @include breakpoint(phones) {
     background-size: contain;
-
-    // background-attachment: initial; // фиксируем фон
   }
 
   @include breakpoint(tablet) {
@@ -30,14 +32,17 @@
     position: absolute;
     inset: 0;
 
-    @include breakpoint(phones) {
-      // background: linear-gradient(0deg, #21201d 0, transparent 50%);
+    @include breakpoint(old-phones) {
+      background: rgb(32 32 29 / 40%);
+    }
 
+    @include breakpoint(phones) {
       background: rgb(32 32 29 / 40%);
     }
 
     @include breakpoint(tablet) {
-      background: linear-gradient(90deg, black 60%, transparent 100%);
+      background: linear-gradient(90deg, black 60%, transparent 100%),
+        rgb(32 32 29 / 40%);
     }
   }
 
