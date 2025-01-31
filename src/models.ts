@@ -119,3 +119,10 @@ export interface ArticleProps {
   nameArticle: string;
   date: string;
 }
+
+export interface Track {
+  title: string;
+  artist: string;
+  src: string;
+  cover: string;
+}

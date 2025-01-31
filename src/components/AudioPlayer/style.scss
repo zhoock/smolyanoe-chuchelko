@@ -1,0 +1,34 @@
+.player {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  width: 300px;
+  text-align: center;
+}
+
+.album-art img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.track-info {
+  margin: 10px 0;
+}
+
+.controls button {
+  font-size: 20px;
+  margin: 0 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  color: #007aff;
+}
+
+.progress-bar input,
+.volume-control input {
+  width: 100%;
+  margin: 10px 0;
+}
