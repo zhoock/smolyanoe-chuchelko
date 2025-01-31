@@ -48,7 +48,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           ))}
         </div>
 
-        <AudioPlayer />
+        {/* <AudioPlayer /> */}
 
         {popup && (
           <>
