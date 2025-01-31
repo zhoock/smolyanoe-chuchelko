@@ -70,6 +70,10 @@ module.exports = {
           from: path.resolve(__dirname, './src/_redirects'), // Путь к файлу _redirects
           to: path.resolve(__dirname, './dist/'), // Папка в которую нужно скопировать
         },
+        {
+          from: path.resolve(__dirname, './src/audio'), // Путь к аудиофайлам в src
+          to: path.resolve(__dirname, './dist/audio'), // Папка назначения в dist
+        },
       ],
     }),
     new HtmlWebpackPlugin({

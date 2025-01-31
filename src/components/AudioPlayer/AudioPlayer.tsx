@@ -5,20 +5,20 @@ import './style.scss';
 
 const tracks: Track[] = [
   {
-    title: 'Track 1',
-    artist: 'Artist 1',
+    title: 'Фиджийская русалка Барнума',
+    artist: 'Смоляное чучелко',
     src: '/audio/Barnums-Fijian-Mermaid.wav',
     cover: 'album-cover.jpg',
   },
   {
-    title: 'Track 2',
-    artist: 'Artist 2',
+    title: 'Слипер',
+    artist: 'Смоляное чучелко',
     src: '/audio/Sleeper.wav',
     cover: 'album-cover.jpg',
   },
   {
-    title: 'Track 2',
-    artist: 'Artist 2',
+    title: 'Швайс',
+    artist: 'Смоляное чучелко',
     src: '/audio/Schweiz.wav',
     cover: 'album-cover.jpg',
   },
@@ -40,9 +40,8 @@ const AudioPlayer: React.FC = () => {
 
   const loadTrack = (index: number) => {
     if (audioRef.current) {
-      audioRef.current.src = tracks[index].src;
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.src = tracks[index].src; // Устанавливаем новый источник
+      audioRef.current.load(); // Загружаем новый трек
     }
   };
 
@@ -51,7 +50,9 @@ const AudioPlayer: React.FC = () => {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        audioRef.current.play().catch((error) => {
+          console.error('Error playing the audio:', error);
+        });
       }
       setIsPlaying(!isPlaying);
     }
@@ -61,12 +62,30 @@ const AudioPlayer: React.FC = () => {
     const newIndex = (currentTrackIndex + 1) % tracks.length;
     setCurrentTrackIndex(newIndex);
     loadTrack(newIndex);
+
+    // Даем браузеру время обработать загрузку и затем воспроизводим
+    setTimeout(() => {
+      if (isPlaying && audioRef.current) {
+        audioRef.current.play().catch((error) => {
+          console.error('Error playing the audio:', error);
+        });
+      }
+    }, 100); // Задержка для разрешения на воспроизведение
   };
 
   const prevTrack = () => {
     const newIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
     setCurrentTrackIndex(newIndex);
     loadTrack(newIndex);
+
+    // Даем браузеру время обработать загрузку и затем воспроизводим
+    setTimeout(() => {
+      if (isPlaying && audioRef.current) {
+        audioRef.current.play().catch((error) => {
+          console.error('Error playing the audio:', error);
+        });
+      }
+    }, 100); // Задержка для разрешения на воспроизведение
   };
 
   const handleProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,6 +100,10 @@ const AudioPlayer: React.FC = () => {
   const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setVolume(Number(event.target.value));
   };
+
+  useEffect(() => {
+    loadTrack(currentTrackIndex);
+  }, [currentTrackIndex]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -132,7 +155,7 @@ const AudioPlayer: React.FC = () => {
           onChange={handleVolumeChange}
         />
       </div>
-      <audio ref={audioRef} src={tracks[currentTrackIndex].src} />
+      <audio ref={audioRef} />
     </div>
   );
 };

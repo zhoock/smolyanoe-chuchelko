@@ -7,8 +7,10 @@
     "cover": {
       "webp": "Tar-Baby-Cover-23-mobiles",
       "webp2x": "Tar-Baby-Cover-23-mobiles@2x",
+      "webp3x": "Tar-Baby-Cover-23-mobiles@3x",
       "jpg": "Tar-Baby-Cover-23-mobiles",
       "jpg2x": "Tar-Baby-Cover-23-mobiles@2x",
+      "jpg3x": "Tar-Baby-Cover-23-mobiles@3x",
       "img": "Tar-Baby-Cover-23-mobiles"
     },
     "release": {
@@ -148,8 +150,10 @@
     "cover": {
       "webp": "Tar-Baby-Cover-mobiles",
       "webp2x": "Tar-Baby-Cover-mobiles@2x",
+      "webp3x": "Tar-Baby-Cover-mobiles@3x",
       "jpg": "Tar-Baby-Cover-mobiles",
       "jpg2x": "Tar-Baby-Cover-mobiles@2x",
+      "jpg3x": "Tar-Baby-Cover-mobiles@3x",
       "img": "Tar-Baby-Cover-mobiles"
     },
     "buttons": {

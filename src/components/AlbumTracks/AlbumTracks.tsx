@@ -1,7 +1,7 @@
 import React, { useState, MouseEvent } from 'react';
 import Popup from '../Popup/Popup';
 import Hamburger from '../Hamburger/Hamburger';
-import AudiopPlayer from '../AudioPlayer/AudioPlayer';
+import AudioPlayer from '../AudioPlayer/AudioPlayer';
 import { IAlbums, TracksProps } from '../../models';
 
 import './style.scss';
@@ -48,7 +48,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           ))}
         </div>
 
-        {/* <AudiopPlayer /> */}
+        <AudioPlayer />
 
         {popup && (
           <>

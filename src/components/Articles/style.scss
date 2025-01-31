@@ -8,13 +8,6 @@
 
 .articles,
 .article {
-  @include breakpoint(desktops) {
-    .uncollapse {
-      margin-right: 0;
-      margin-left: 0;
-    }
-  }
-
   .articles__wrapper {
     display: grid;
   }
@@ -22,6 +15,11 @@
   .uncollapse {
     margin-right: -1.618em;
     margin-left: -1.618em;
+
+    @include breakpoint(tablet) {
+      margin-right: 0;
+      margin-left: 0;
+    }
   }
 
   &__list {
