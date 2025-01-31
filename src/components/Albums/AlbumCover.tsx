@@ -20,7 +20,7 @@ export default function AlbumCover({
       {/* AVIF – самое эффективное сжатие, загружается первым, если поддерживается */}
       {/* <source
         className="album-cover__source"
-        srcSet={`${getImageUrl(avif, '-446.avif')} 1x, ${getImageUrl(avif2x, '-892.avif')} 2x, ${getImageUrl(avif3x, '-1344.avif')} 3x`}
+        srcSet={`${getImageUrl(avif, '-448.avif')} 1x, ${getImageUrl(avif2x, '-896.avif')} 2x, ${getImageUrl(avif3x, '-1344.avif')} 3x`}
         type="image/avif"
       /> */}
 
@@ -43,7 +43,7 @@ export default function AlbumCover({
       <img
         className="album-cover__image"
         loading="lazy"
-        src={getImageUrl(jpg, '-448.jpg')}
+        src={getImageUrl(jpg, '-600.jpg')}
         alt={`обложка альбома ${fullName}`}
         width={size}
         height={size}
