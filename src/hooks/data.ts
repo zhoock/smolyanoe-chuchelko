@@ -56,14 +56,11 @@ export function useData() {
   return { templateData, loading, error }; // Возвращаем данные для обоих шаблонов
 }
 
-const src =
-  'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/images/';
-
 /**
  * Функция возвращает полный URL для изображения в нужном формате
  */
 export function getImageUrl(img: string, format: string = '.jpg'): string {
-  return `${src}${img}${format}`;
+  return `/images/${img}${format}`;
 }
 
 /**

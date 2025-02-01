@@ -5,12 +5,7 @@
     "nameAlbum": "23",
     "fullName": "Смоляное чучелко — 23",
     "cover": {
-      "webp": "Tar-Baby-Cover-23",
-      "webp2x": "Tar-Baby-Cover-23@2x",
-      "webp3x": "Tar-Baby-Cover-23@3x",
-      "jpg": "Tar-Baby-Cover-23",
-      "jpg2x": "Tar-Baby-Cover-23@2x",
-      "jpg3x": "Tar-Baby-Cover-23@3x"
+      "img": "Tar-Baby-Cover"
     },
     "release": {
       "date": "2022-01-23",
