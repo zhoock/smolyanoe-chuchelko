@@ -1,12 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
-import {
-  useData,
-  getImageUrl,
-  alphabeticFormatDate,
-  getRandomPhotos,
-} from '../../hooks/data';
+import { useData, getImageUrl, alphabeticFormatDate } from '../../hooks/data';
 import { ArticleDetalesProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
@@ -15,8 +10,6 @@ import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
  * Компонент отображает блок со статьёй.
  */
 export default function Article() {
-  getRandomPhotos();
-
   window.scrollTo({
     top: 0,
     left: 0,

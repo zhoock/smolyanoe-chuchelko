@@ -1,5 +1,5 @@
 import React from 'react';
-import { useData, getRandomPhotos } from '../../hooks/data';
+import { useData } from '../../hooks/data';
 import WrapperAlbumCover from './WrapperAlbumCover';
 import AlbumCover from './AlbumCover';
 import { Loader } from '../Loader/Loader';
@@ -11,8 +11,6 @@ import './style.scss';
  * Компонент отображает список альбомов в виде обложек-ссылок
  */
 export default function Albums() {
-  getRandomPhotos();
-
   const { templateData, loading, error } = useData();
 
   return (

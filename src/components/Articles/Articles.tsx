@@ -1,16 +1,14 @@
 import React from 'react';
-import { useData, getRandomPhotos } from '../../hooks/data';
+import { useData } from '../../hooks/data';
 import WrapperArticle from '../Articles/WrapperArticle';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
-
 import './style.scss';
 
 /**
  * Компонент отображает блок cо списком статей.
  */
 export default function Articles() {
-  getRandomPhotos();
   const { templateData, loading, error } = useData();
 
   return (

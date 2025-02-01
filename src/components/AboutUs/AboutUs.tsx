@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getRandomPhotos } from '../../hooks/data';
-
 import './style.scss';
 
 export default function AboutUs() {
-  getRandomPhotos();
-
   const [activeIndex, setActiveIndex] = useState<boolean>(false);
 
   function handleClick() {

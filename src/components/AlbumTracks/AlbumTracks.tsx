@@ -3,7 +3,6 @@ import Popup from '../Popup/Popup';
 import Hamburger from '../Hamburger/Hamburger';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
 import { IAlbums, TracksProps } from '../../models';
-
 import './style.scss';
 
 /**

@@ -5,13 +5,12 @@
     "nameAlbum": "23",
     "fullName": "Смоляное чучелко — 23",
     "cover": {
-      "webp": "Tar-Baby-Cover-23-mobiles",
-      "webp2x": "Tar-Baby-Cover-23-mobiles@2x",
-      "webp3x": "Tar-Baby-Cover-23-mobiles@3x",
-      "jpg": "Tar-Baby-Cover-23-mobiles",
-      "jpg2x": "Tar-Baby-Cover-23-mobiles@2x",
-      "jpg3x": "Tar-Baby-Cover-23-mobiles@3x",
-      "img": "Tar-Baby-Cover-23-mobiles"
+      "webp": "Tar-Baby-Cover-23",
+      "webp2x": "Tar-Baby-Cover-23@2x",
+      "webp3x": "Tar-Baby-Cover-23@3x",
+      "jpg": "Tar-Baby-Cover-23",
+      "jpg2x": "Tar-Baby-Cover-23@2x",
+      "jpg3x": "Tar-Baby-Cover-23@3x"
     },
     "release": {
       "date": "2022-01-23",
@@ -148,13 +147,7 @@
     "nameAlbum": "Смоляное чучелко",
     "fullName": "Смоляное чучелко — Смоляное чучелко",
     "cover": {
-      "webp": "Tar-Baby-Cover-mobiles",
-      "webp2x": "Tar-Baby-Cover-mobiles@2x",
-      "webp3x": "Tar-Baby-Cover-mobiles@3x",
-      "jpg": "Tar-Baby-Cover-mobiles",
-      "jpg2x": "Tar-Baby-Cover-mobiles@2x",
-      "jpg3x": "Tar-Baby-Cover-mobiles@3x",
-      "img": "Tar-Baby-Cover-mobiles"
+      "img": "Tar-Baby-Cover"
     },
     "buttons": {
       "itunes": "https://geo.music.apple.com/us/album/\n\t\t\t\t%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/\n\t\t\t\t1509238927?uo&amp;mt=1&amp;app=itunes&amp;at=1000l9WJ&amp;ct=bq",

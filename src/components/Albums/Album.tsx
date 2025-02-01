@@ -6,7 +6,7 @@ import AlbumCover from './AlbumCover';
 import AlbumTracks from '../AlbumTracks/AlbumTracks';
 import Share from '../Share/Share';
 import ServiceButtons from '../ServiceButtons/ServiceButtons';
-import { useData, getRandomPhotos } from '../../hooks/data';
+import { useData } from '../../hooks/data';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 
@@ -14,8 +14,6 @@ import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
  */
 export default function Album() {
-  getRandomPhotos();
-
   window.scrollTo({
     top: 0,
     left: 0,

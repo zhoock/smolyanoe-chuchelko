@@ -8,8 +8,10 @@
   position: relative;
   display: flex;
   align-items: end;
-  background: #000 url('../../images/XpaX73Jq4S8.jpg') right calc(1.618rem * 2)
-    no-repeat fixed;
+  background-color: #000;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: right calc(1.618rem * 2);
 
   @include breakpoint(old-phones) {
     background-size: contain;

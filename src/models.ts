@@ -78,11 +78,6 @@ export interface TracksProps {
 }
 
 export interface CoverProps {
-  webp: string;
-  webp2x: string;
-  webp3x: string;
-  jpg: string;
-  jpg2x: string;
   img: string;
   fullName: string;
   size?: number;

@@ -74,6 +74,10 @@ module.exports = {
           from: path.resolve(__dirname, './src/audio'), // Путь к аудиофайлам в src
           to: path.resolve(__dirname, './dist/audio'), // Папка назначения в dist
         },
+        {
+          from: path.resolve(__dirname, './src/images'), // Путь к аудиофайлам в src
+          to: path.resolve(__dirname, './dist/images'), // Папка назначения в dist
+        },
       ],
     }),
     new HtmlWebpackPlugin({
