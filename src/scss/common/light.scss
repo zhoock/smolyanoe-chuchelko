@@ -1,0 +1,49 @@
+/* Основные переменные для светлой темы */
+
+html.theme-light {
+  --main-background-color: var(--white);
+  --extra-background-color: var(--moon-ash);
+  --nested-background-color: var(--white);
+  --nested-background-text-color: #454545;
+  --heading-color: #454545;
+  --text-color: #454545;
+  --fucking-color: #828282;
+  --link-color: #272727;
+  --link-color-hover: #272727;
+  --button-background-color: var(--icy-mist);
+  --social-networks-background-color: #272727;
+  --accent-color: #fae59b;
+  --error-color: var(--pink-terracotta);
+  --outline-color: #f3d69f;
+  --selection-color: #fbeac4;
+  --header-links-list-item: #f2bb4b;
+  --album-details-link: #f2bb4b;
+  --hr-color: var(--icy-mist);
+}
+
+@media (prefers-color-scheme: light) {
+  /* Дублируем переменные светлой темы */
+  html {
+    --main-background-color: var(--white);
+    --extra-background-color: var(--moon-ash);
+    --nested-background-color: var(--white);
+    --nested-background-text-color: #454545;
+    --heading-color: #454545;
+    --text-color: #454545;
+    --fucking-color: #828282;
+    --link-color: #272727;
+    --link-color-hover: #272727;
+    --button-background-color: var(--icy-mist);
+    --social-networks-background-color: #272727;
+    --accent-color: #fae59b;
+    --error-color: var(--pink-terracotta);
+    --outline-color: #f3d69f;
+    --selection-color: #fbeac4;
+    --header-links-list-item: #f2bb4b;
+    --album-details-link: #f2bb4b;
+    --hr-color: var(--icy-mist);
+  }
+}
+
+// .theme-light {
+// }

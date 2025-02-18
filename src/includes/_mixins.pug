@@ -1,0 +1,10 @@
+//- includes/_mixins.pug
+
+
+mixin link(href, name, accesskey)
+	li
+		a(href=href, title=name, accesskey=accesskey)&attributes(attributes)= name
+
+mixin nav
+	each val, index in {"b-about-us":"Группа", "b-music":"Альбомы"}
+		+link("#" + index, val)

@@ -1,0 +1,64 @@
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.about {
+  &__content {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+
+    &_active {
+      -webkit-line-clamp: unset;
+      line-clamp: unset;
+    }
+  }
+
+  &__text:last-of-type {
+    margin-block-end: 0;
+  }
+
+  &__look-more {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    @include button-variant(
+      --link-color,
+      --button-background-color,
+      --link-color-hover,
+      --accent-color
+    );
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    .icon-ctrl {
+      font: var(--medium, 500) 1.618rem/1 sans-serif;
+      transform: rotate(180deg);
+      color: currentcolor;
+      position: relative;
+      top: -5px;
+    }
+  }
+
+  &:has(.about__content_active) {
+    .about__look-more {
+      @include button-variant(
+        --link-color-hover,
+        --accent-color,
+        --link-color-hover,
+        --accent-color
+      );
+
+      .icon-ctrl {
+        inset-block-start: 8px;
+        position: relative;
+        color: var(--link-color-hover, #fff);
+        transform: rotate(0);
+      }
+    }
+  }
+}

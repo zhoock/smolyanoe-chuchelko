@@ -1,0 +1,105 @@
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.header {
+  grid-area: header;
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1;
+  background: rgba(var(--extra-background-color), 0.8);
+  backdrop-filter: blur(20px) saturate(0.8%);
+  font-family: Oswald, sans-serif;
+
+  &__wrapper {
+    display: grid;
+    grid-template-columns: min-content min-content;
+    place-items: center end;
+    gap: var(--ms-1);
+    block-size: calc(var(--ms-1) * 2);
+
+    @include breakpoint(desktops) {
+      grid-template-columns: min-content 1fr min-content;
+    }
+
+    .logo {
+      text-decoration: none;
+      font-weight: var(--bold, 700);
+    }
+
+    .theme-toggler {
+      display: grid;
+      place-items: center;
+    }
+  }
+}
+
+.theme-toggler__label {
+  cursor: pointer;
+
+  .theme-toggler__control {
+    display: none;
+
+    & + div {
+      border-radius: 50%;
+      inline-size: var(--ms-1);
+      block-size: var(--ms-1);
+      position: relative;
+      box-shadow: inset 13px -13px 0 0 var(--heading-color, #998238);
+      transform: scale(1) rotate(-2deg);
+      transition:
+        box-shadow 0.5s ease 0s,
+        transform 0.4s ease 0.1s;
+
+      &::before {
+        content: '';
+        inline-size: inherit;
+        block-size: inherit;
+        border-radius: inherit;
+        position: absolute;
+        inset-inline-start: 0;
+        inset-block-start: 0;
+        transition: background 0.3s ease;
+      }
+
+      &::after {
+        content: '';
+        inline-size: 8px;
+        block-size: 8px;
+        border-radius: 50%;
+        margin: -4px 0 0 -4px;
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        box-shadow:
+          0 -20px 0 var(--heading-color, #998238),
+          0 20px 0 var(--heading-color, #998238),
+          20px 0 0 var(--heading-color, #998238),
+          -20px 0 0 var(--heading-color, #998238),
+          13px 13px 0 var(--heading-color, #998238),
+          -13px 13px 0 var(--heading-color, #998238),
+          13px -13px 0 var(--heading-color, #998238),
+          -13px -13px 0 var(--heading-color, #998238);
+        transform: scale(0);
+        transition: all 0.3s ease;
+      }
+    }
+
+    &:checked + div {
+      box-shadow: inset 32px -32px 0 0 var(--heading-color, #998238);
+      transform: scale(0.5) rotate(0deg);
+      transition:
+        transform 0.3s ease 0.1s,
+        box-shadow 0.2s ease 0s;
+
+      &::before {
+        background: var(--heading-color, #998238);
+        transition: background 0.3s ease 0.1s;
+      }
+
+      &::after {
+        transform: scale(1.5);
+        transition: transform 0.5s ease 0.13s;
+      }
+    }
+  }
+}

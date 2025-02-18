@@ -1,0 +1,23 @@
+//- picture.pug
+
+//- использовано только одно изображение= 448px и его версия для ретины= 896px, так как при максимальной ширине row= 1280px ширина слота, занимаемого изображением, всего 368px, поэтому вполне достаточно изображения= 448px. Здесь мы используем идентификатор плотности экрана, который выбирает изображение в зависимости от плотности пикселей. Так же мы указываем фактичексую ширину изображения для проверки валидатором.
+
+
+
+case pic
+	when 0: picture
+		source(srcset=require("../images/Tar-Baby-Cover-23-mobiles.webp 1x, ../images/Tar-Baby-Cover-23-mobiles@2x.webp 2x") type="image/webp")
+
+		source(srcset=require("../images/Tar-Baby-Cover-23-mobiles.jpg 1x, ../images/Tar-Baby-Cover-23-mobiles@2x.jpg 2x") type="image/jpeg")
+
+		//- для остальных браузеров
+		img(src=require("../images/Tar-Baby-Cover-23-mobiles.jpg") width="896" height="896" alt="Обложка альбома Смоляное чучелко")
+
+	when 1: picture
+		source(srcset="../images/Tar-Baby-Cover-mobiles.webp 1x, ../images/Tar-Baby-Cover-mobiles@2x.webp 2x" type="image/webp")
+
+		source(srcset="../images/Tar-Baby-Cover-mobiles.jpg 1x, ../images/Tar-Baby-Cover-mobiles@2x.jpg 2x" type="image/jpeg")
+
+		//- для остальных браузеров
+		img(src="../images/Tar-Baby-Cover-mobiles.jpg" width="896" height="896" alt="Обложка альбома Смоляное чучелко")
+	

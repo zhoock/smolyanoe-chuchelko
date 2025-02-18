@@ -1,0 +1,100 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.album {
+  .album-title {
+    margin-block-start: 0;
+  }
+
+  .album-play {
+    @include button-variant(
+      --link-color,
+      --button-background-color,
+      --link-color-hover,
+      --accent-color
+    );
+  }
+
+  .tracks {
+    display: grid;
+    margin-block-end: var(--ms-1);
+    counter-reset: n 0;
+
+    &__btn {
+      position: relative;
+      border: none;
+      border-block-start: 1px solid var(--hr-color, #3d3c3a);
+      overflow: hidden;
+      color: var(--link-color);
+      text-align: inherit;
+      text-overflow: ellipsis;
+      background: none;
+      transition: all 200ms ease;
+      cursor: pointer;
+      counter-increment: n;
+      white-space: nowrap;
+
+      @include adjust-font-size-to($ms-0, 0);
+
+      @media (hover: none) and (pointer: coarse) {
+        &:hover {
+          border-top-color: var(--button-background-color);
+          background: inherit;
+
+          &::before {
+            filter: brightness(100%);
+          }
+
+          &:hover + li {
+            border-top-color: var(--button-background-color);
+          }
+        }
+      }
+
+      &::before {
+        content: counter(n);
+        padding: 0 var(--ms-01);
+        filter: brightness(70%);
+      }
+
+      &:last-child {
+        border-bottom: 1px solid var(--hr-color, #3d3c3a);
+      }
+
+      &.active,
+      &:hover {
+        border-radius: var(--ms-02);
+        border-top-color: var(--accent-color);
+        border-bottom-color: var(--accent-color);
+        color: var(--link-color-hover);
+        background: var(--accent-color);
+
+        &::before {
+          color: var(--accent-color);
+          filter: brightness(100%);
+        }
+
+        & + button {
+          border-top-color: transparent;
+        }
+      }
+    }
+  }
+
+  pre {
+    display: flex;
+    justify-content: center;
+    font-family: var(--base-font-family, arial, sans-serif);
+    font-weight: var(--bold, 700);
+    text-align: start;
+
+    @include adjust-font-size-to($ms-1);
+
+    @include breakpoint(old-phones) {
+      font-size: var(--base-font-size, 18px);
+      line-height: var(--base-line-height, calc(18px * 1.618));
+    }
+  }
+}

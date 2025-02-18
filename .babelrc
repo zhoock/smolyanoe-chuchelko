@@ -1,0 +1,10 @@
+{
+  "presets": [
+    "@babel/preset-env", // Для транспиляции современного JS в совместимый
+    "@babel/preset-react", // Для работы с React JSX
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    "@babel/plugin-transform-runtime" // Плагин для уменьшения размера кода (опционально)
+  ]
+}

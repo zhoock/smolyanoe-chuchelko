@@ -1,0 +1,44 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.articles,
+.article {
+  .articles__wrapper {
+    display: grid;
+  }
+
+  .uncollapse {
+    position: relative;
+    inline-size: calc(100% + var(--ms-1) * 2);
+    inset-inline-start: calc(var(--ms-1) * -1);
+
+    @include breakpoint(tablet) {
+      inline-size: 100%;
+      inset-inline-start: 0;
+    }
+  }
+
+  &__list {
+    @include list('.articles');
+  }
+
+  &__card {
+    @extend %card;
+  }
+
+  &__description {
+    @extend %description;
+  }
+
+  &__picture {
+    aspect-ratio: 3 / 2;
+    border-radius: var(--ms-01);
+  }
+
+  time {
+    color: var(--fucking-color, #ababab);
+    white-space: nowrap;
+  }
+}

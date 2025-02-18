@@ -1,0 +1,24 @@
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.not-found {
+  display: grid;
+  justify-items: center;
+  place-content: center;
+  min-block-size: 100vh;
+
+  button {
+    inline-size: fit-content;
+
+    @include button-variant(
+      --link-color,
+      --button-background-color,
+      --link-color-hover,
+      --accent-color
+    );
+
+    a {
+      text-decoration: none;
+    }
+  }
+}

@@ -1,0 +1,44 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.album-details {
+  text-wrap: balance;
+
+  .item-release {
+    order: -1;
+
+    @include breakpoint(tablet) {
+      order: 0;
+    }
+  }
+
+  &__link {
+    @include link-colors(--album-details-link, --album-details-link);
+  }
+
+  &__artwork-photographer,
+  &__artwork-designer {
+    margin-block-end: var(--ms-1);
+  }
+
+  &__released {
+    &-time {
+      display: block;
+      font-family: var(--base-accent-font, sans-serif);
+
+      @include adjust-font-size-to($ms-2);
+
+      @include breakpoint(desktops) {
+        @include adjust-font-size-to($ms-3, 2);
+      }
+    }
+  }
+}
+
+hr {
+  margin: var(--ms-1) auto;
+  border: 0;
+  border-block-end: 1px solid var(--hr-color, #3d3c3a);
+}

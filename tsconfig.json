@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", // Тип кода создаваемого итогового файла
+    "jsx": "react", // Поддержка JSX
+    "moduleResolution": "node", // Разрешение модулей в стиле Node.js
+    "allowJs": true, // Разрешать компилировать файлы с JavaScript-кодом?
+    "strict": true, // Включение строгих типов
+    "esModuleInterop": true, // Для работы с CommonJS модулями
+    "isolatedModules": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "typeRoots": ["./types", "./node_modules/lib/types"]
+  },
+  "include": ["src", "index.d.ts"],
+  "exclude": ["src/no-compile"]
+}

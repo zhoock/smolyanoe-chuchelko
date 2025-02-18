@@ -1,0 +1,55 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.hamburger {
+  background: none;
+  border: none;
+  position: fixed;
+  z-index: 999;
+  inset-block-start: 7px;
+  inset-inline-end: 29px;
+  inline-size: 40px;
+  block-size: 40px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    span {
+      background: var(--link-color-hover, #fff);
+    }
+  }
+
+  .one,
+  .two,
+  .three {
+    display: block;
+    inline-size: 100%;
+    block-size: 3px;
+    margin: 9px auto;
+    background: var(--link-color, #ddd);
+    backface-visibility: hidden;
+    transition-duration: 0.15s;
+  }
+
+  &.active {
+    .one {
+      transform: rotate(45deg) translate(7px, 7px);
+    }
+
+    .two {
+      opacity: 0;
+    }
+
+    .three {
+      transform: rotate(-45deg) translate(10px, -10px);
+    }
+  }
+}
+
+.hero ~ .hamburger {
+  @include breakpoint(desktops) {
+    display: none;
+  }
+}

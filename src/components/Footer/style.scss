@@ -1,0 +1,44 @@
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.footer {
+  grid-area: footer;
+
+  .social-networks {
+    &-list {
+      @include breakpoint(tablet) {
+        justify-content: start;
+      }
+
+      display: grid;
+      grid-gap: 1.618em;
+      grid-template-columns: repeat(4, 50px);
+      margin-block-start: var(--ms-1);
+      justify-content: space-between;
+      text-align: center;
+
+      &__item {
+        font-size: var(--ms-2);
+      }
+    }
+
+    &__link {
+      color: var(--social-networks-background-color, #373633);
+
+      &:hover {
+        color: var(--album-details-link, #f2bb4b);
+      }
+    }
+  }
+
+  .copyright-list {
+    display: flex;
+
+    &__item {
+      span::after {
+        padding: 0 var(--ms-01);
+        content: '|';
+      }
+    }
+  }
+}

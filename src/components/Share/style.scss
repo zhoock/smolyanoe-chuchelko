@@ -1,0 +1,41 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.share-list {
+  display: grid;
+  grid-template-columns: repeat(3, min-content);
+  gap: var(--ms-01);
+
+  &__item {
+    display: none;
+
+    &:first-child,
+    &.show {
+      display: block;
+    }
+  }
+
+  &__link {
+    border-radius: 50%;
+    padding: var(--ms-01);
+    background: var(--button-background-color, #373633);
+
+    &:hover {
+      color: var(--link-color-hover, #fff);
+      background-color: var(--accent-color, #998238);
+
+      @media (hover: none) and (pointer: coarse) {
+        color: inherit;
+        background-color: var(--button-background-color, #373633);
+        transition: none;
+      }
+    }
+
+    &.active {
+      color: var(--link-color-hover, #fff);
+      background-color: var(--accent-color, #998238);
+    }
+  }
+}

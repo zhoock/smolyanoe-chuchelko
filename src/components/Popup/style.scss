@@ -1,0 +1,33 @@
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.popup {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 99;
+  height: 0;
+  overflow: scroll;
+  background: rgba(var(--extra-background-color), 0);
+  transition: all 0.45s;
+
+  @extend %hide-scrollbar;
+
+  &_open {
+    z-index: 999;
+    height: 100%;
+    background: rgba(var(--extra-background-color), 0.8);
+    backdrop-filter: blur(20px);
+  }
+}
+
+.page:has(.popup_open) {
+  overflow: hidden;
+
+  @extend %hide-scrollbar;
+}
+
+.hero + .popup {
+  @include breakpoint(desktops) {
+    display: none;
+  }
+}

@@ -1,0 +1,29 @@
+// Font
+
+:root {
+  --base-font-family: -apple-system, system-ui, blinkmacsystemfont, 'Segoe UI',
+    roboto, 'Helvetica Neue', arial, sans-serif;
+  --base-accent-font: 'Oswald', sans-serif;
+
+  // Font weights
+  --light: 300;
+  --regular: 400;
+  --medium: 500;
+  --semibold: 600;
+  --bold: 700;
+
+  // Font values
+  // интервал ритма по вертикали 1.618
+  --base-font-size: 18px;
+  --base-line-height: calc(18px * 1.618); // 18 * 1.618 = 29.124px
+
+  // Настройки типографики взяты с
+  // https://www.modularscale.com/?1&em&1.618
+  --ms-02: 6.876px; // 0.382rem;
+  --ms-01: 11.125px; // 0.618rem;
+  --ms-0: 18px; // 1rem;
+  --ms-1: 29.124px; // 1.618rem;
+  --ms-2: 47.123px; // 2.618rem;
+  --ms-3: 76.244px; // 4.236rem;
+  --ms-4: 123.363px; // 6.854rem;
+}

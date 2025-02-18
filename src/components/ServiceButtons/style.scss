@@ -1,0 +1,32 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.service-buttons {
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--ms-1);
+  }
+
+  &__link {
+    display: grid;
+    place-items: center;
+    min-block-size: var(--ms-3);
+    border: none;
+    border-radius: var(--ms-02);
+    background: var(--button-background-color, #373633);
+
+    @include adjust-font-size-to($ms-1, 0);
+
+    &:hover {
+      background-color: var(--accent-color, #998238);
+      color: var(--link-color-hover, #fff);
+
+      @media (hover: none) and (pointer: coarse) {
+        background-color: var(--button-background-color, #373633);
+      }
+    }
+  }
+}

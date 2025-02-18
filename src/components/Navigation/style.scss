@@ -1,0 +1,60 @@
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
+.header {
+  &__menu {
+    display: none;
+
+    @include breakpoint(desktops) {
+      display: block;
+    }
+  }
+
+  &__links-list {
+    display: flex;
+    gap: var(--ms-0);
+    margin-block-end: 0;
+
+    &-item {
+      a {
+        text-decoration: none;
+        text-transform: uppercase;
+
+        &.active {
+          color: var(--header-links-list-item, #998238);
+
+          // pointer-events: none; /* disables click event */
+        }
+      }
+    }
+  }
+}
+
+.popup {
+  .header {
+    &__menu {
+      inline-size: 100%;
+      block-size: 100%;
+      display: block;
+    }
+
+    &__links-list {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      font-family: Oswald, sans-serif;
+
+      &-item {
+        a {
+          display: block;
+          text-decoration: none;
+
+          @include adjust-font-size-to($ms-1, 0);
+        }
+      }
+    }
+  }
+}
