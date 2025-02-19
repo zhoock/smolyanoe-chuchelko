@@ -60,7 +60,9 @@ export function useData() {
  * Функция возвращает полный URL для изображения в нужном формате
  */
 export function getImageUrl(img: string, format: string = '.jpg'): string {
-  return `/images/${img}${format}`;
+  const url = `/images/${img}${format}`;
+  console.log(`Generated image URL:`, url);
+  return url;
 }
 
 /**

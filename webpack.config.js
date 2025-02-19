@@ -75,7 +75,7 @@ module.exports = {
           to: path.resolve(__dirname, './dist/audio'), // Папка назначения в dist
         },
         {
-          from: path.resolve(__dirname, './src/images'), // Путь к аудиофайлам в src
+          from: path.resolve(__dirname, './src/images'), // Путь к фотографиям в src
           to: path.resolve(__dirname, './dist/images'), // Папка назначения в dist
         },
       ],
@@ -102,7 +102,7 @@ module.exports = {
   devServer: {
     historyApiFallback: true, // необходимо при испольтзовании React Router для маршрутизации
     watchFiles: path.join(__dirname, 'src'), // указывает на каталог src, за которыми будет вестись наблюдение
-    port: 8080, // указывает порт на котором будет работать веб-сервер
+    port: 3000, // указывает порт на котором будет работать веб-сервер
     hot: true, // включает горячую перезагрузку
   },
 };
