@@ -3,9 +3,15 @@ import AlbumCover from '../Albums/AlbumCover';
 import { IAlbums } from '../../models';
 import './style.scss';
 
-export default function AudioPlayer({ album }: { album: IAlbums }) {
+export default function AudioPlayer({
+  album,
+  autoPlay = false,
+}: {
+  album: IAlbums;
+  autoPlay?: boolean;
+}) {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0); // индекс текущего трека (начинается с 0)
-  const [isPlaying, setIsPlaying] = useState(false); // флаг, указывающий, играет ли трек (изначально false)
+  const [isPlaying, setIsPlaying] = useState(autoPlay); // флаг, указывающий, играет ли трек (изначально false)
   const [progress, setProgress] = useState(0); // прогресс трека в процентах (0-100)
   const [volume, setVolume] = useState(50); // уровень громкости (по умолчанию 50%)
   const [isSeeking, setIsSeeking] = useState(false); // указывает, выполняет ли пользователь перемотку
@@ -32,7 +38,7 @@ export default function AudioPlayer({ album }: { album: IAlbums }) {
         audioRef.current.play().catch(console.error);
       }
     }
-  }, [currentTrackIndex, album]);
+  }, [currentTrackIndex, album, isPlaying]);
 
   // Эффект для обновления времени и прогресса
   useEffect(() => {

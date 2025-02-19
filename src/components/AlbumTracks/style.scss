@@ -18,7 +18,15 @@
     grid-template-columns: 1fr 1fr;
 
     .album-play {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
       grid-column: 1 / 3;
+
+      .icon-controller-play {
+        font-size: 25px;
+      }
 
       @include breakpoint(tablet) {
         grid-column: 1 / 2;

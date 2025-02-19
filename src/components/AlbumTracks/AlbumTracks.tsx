@@ -43,7 +43,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
             aria-label="Кнопка play"
             aria-description="Открывает плеер"
           >
-            Открыть плеер
+            <span className="icon-controller-play"></span>Воспроизвести
           </button>
         </div>
 
@@ -78,7 +78,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
 
         {popupPlayer && (
           <Popup isActive={popupPlayer}>
-            <AudioPlayer album={album} />
+            <AudioPlayer album={album} autoPlay />
             <Hamburger
               isActive={popupPlayer}
               onToggle={hamburgerClick}
