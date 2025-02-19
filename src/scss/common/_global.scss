@@ -88,7 +88,7 @@ body {
     .wrapper {
       margin-inline: auto;
       margin-block: 0;
-      padding-inline: $ms-1;
+      padding-inline: var(--ms-1);
       padding-block: 0;
       inline-size: min(100vi, 1000px);
     }

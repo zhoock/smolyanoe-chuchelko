@@ -1,33 +1,98 @@
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@import '../../scss/common/mixins';
+
 .player {
-  padding: 20px;
+  inline-size: min(100vi, 1000px);
+  padding: var(--ms-3) var(--ms-1);
   text-align: center;
-  max-inline-size: 1000px;
+  block-size: 100dvh;
   margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto var(--ms-3) min-content;
+  gap: var(--ms-1);
+
+  h2 {
+    text-transform: initial;
+    color: var(--link-color, #ddd);
+    font-size: clamp(1.125rem, 0.8578rem + 1.6383vw, 1.8202rem);
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+  }
+
+  img {
+    inline-size: min(100vi, 425px);
+    margin: 0;
+  }
+
+  &__controls {
+    display: flex;
+    justify-content: space-around;
+
+    button {
+      font-size: var(--ms-2);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+  }
+
+  &__volume-control {
+    display: flex;
+    gap: var(--ms-0);
+    align-items: center;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    &__volume-control {
+      display: none;
+    }
+  }
 }
 
-.album-art img {
+input[type='range'] {
   inline-size: 100%;
-  border-radius: 10px;
+  height: 8px;
+  appearance: none;
+  border-radius: var(--ms-02);
 }
 
-.track-info {
-  margin: 10px 0;
+.player__progress-bar input {
+  --progress-width: 0%;
+
+  background: linear-gradient(
+    to right,
+    var(--accent-color) var(--progress-width),
+    #dddddd4d var(--progress-width)
+  );
 }
 
-.controls button {
-  font-size: 20px;
-  margin: 0 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
+.player__volume-control input {
+  --volume-progress-width: 50%;
+
+  background: linear-gradient(
+    to right,
+    var(--accent-color) var(--volume-progress-width),
+    #dddddd4d var(--volume-progress-width)
+  );
 }
 
-.controls button:hover {
-  color: #007aff;
+.player__progress-container {
+  display: grid;
+  grid-template-rows: min-content min-content;
 }
 
-.progress-bar input,
-.volume-control input {
-  inline-size: 100%;
-  margin: 10px 0;
+.player__time-container {
+  display: flex;
+  justify-content: space-between;
+
+  .player__time {
+    color: var(--link-color, #ddd);
+    opacity: 0.3;
+  }
 }

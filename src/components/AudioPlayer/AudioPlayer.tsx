@@ -1,105 +1,223 @@
 import React, { useState, useRef, useEffect } from 'react';
+import AlbumCover from '../Albums/AlbumCover';
 import { IAlbums } from '../../models';
 import './style.scss';
 
 export default function AudioPlayer({ album }: { album: IAlbums }) {
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [volume, setVolume] = useState(50);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0); // индекс текущего трека (начинается с 0)
+  const [isPlaying, setIsPlaying] = useState(false); // флаг, указывающий, играет ли трек (изначально false)
+  const [progress, setProgress] = useState(0); // прогресс трека в процентах (0-100)
+  const [volume, setVolume] = useState(50); // уровень громкости (по умолчанию 50%)
+  const [isSeeking, setIsSeeking] = useState(false); // указывает, выполняет ли пользователь перемотку
+  const [time, setTime] = useState({ current: 0, duration: NaN }); // объект с текущим временем и общей длительностью трека
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null); // ссылка на элемент <audio>, чтобы управлять его состоянием (играет, ставится на паузу и т. д.)
+  const latestTimeRef = useRef({ current: 0, duration: 1 }); // используется для хранения времени воспроизведения без вызова перерисовки компонента
 
-  const loadTrack = (index: number) => {
-    if (audioRef.current) {
-      audioRef.current.src = album.tracks[index]?.src || '';
-      audioRef.current.load();
-      audioRef.current.play().catch(console.error); // Упростил обработку ошибок
-      setIsPlaying(true); // Сразу обновляем состояние кнопки
-    }
-  };
-
+  // Эффект для установки громкости
   useEffect(() => {
     if (audioRef.current) {
+      console.log('Устанавливаем громкость:', volume);
       audioRef.current.volume = volume / 100;
     }
   }, [volume]);
 
+  // Эффект для смены трека
   useEffect(() => {
-    loadTrack(currentTrackIndex); // Загружаем трек сразу при изменении индекса
+    if (audioRef.current) {
+      console.log('Меняем трек:', album.tracks[currentTrackIndex]?.src);
+      audioRef.current.src = album.tracks[currentTrackIndex]?.src || '';
+      audioRef.current.load();
+      if (isPlaying) {
+        audioRef.current.play().catch(console.error);
+      }
+    }
+  }, [currentTrackIndex, album]);
 
+  // Эффект для обновления времени и прогресса
+  useEffect(() => {
+    // обновляет текущее время трека и прогресс в процентах.
     const updateProgress = () => {
+      if (!audioRef.current || isSeeking) return;
+
+      const current = audioRef.current.currentTime;
+      let duration = audioRef.current.duration;
+
+      if (isNaN(duration) || duration === 0) {
+        console.log('⏳ Пропускаем updateProgress: длительность не загружена');
+        return;
+      }
+
+      // 🔥 Обновляем всё ЧЕРЕЗ useRef, а потом одним сеттером
+      latestTimeRef.current = { current, duration };
+
+      setTime({
+        current: latestTimeRef.current.current,
+        duration: latestTimeRef.current.duration,
+      });
+
+      const newProgress = (current / duration) * 100;
+      setProgress(newProgress);
+
+      // 🔥 ОБНОВЛЯЕМ ПРОГРЕСС-БАР СРАЗУ
+      const progressBar = document.querySelector(
+        '.player__progress-bar input',
+      ) as HTMLInputElement | null;
+
+      if (progressBar) {
+        progressBar.style.setProperty('--progress-width', `${newProgress}%`);
+      }
+
+      console.log('✅ Обновляем прогресс:', { current, duration, newProgress });
+    };
+
+    const onMetadataLoaded = () => {
+      // устанавливает длительность трека после его загрузки
       if (audioRef.current) {
-        const newProgress =
-          (audioRef.current.currentTime / audioRef.current.duration) * 100 || 0;
-        setProgress(newProgress);
+        console.log(
+          'Метаданные загружены, длительность:',
+          audioRef.current.duration,
+        );
+        setTime({ current: 0, duration: audioRef.current.duration });
       }
     };
 
+    // Добавляются слушатели событий timeupdate и loadedmetadata.
     if (audioRef.current) {
+      console.log('Добавляем слушатель timeupdate');
       audioRef.current.addEventListener('timeupdate', updateProgress);
-      return () =>
-        audioRef.current?.removeEventListener('timeupdate', updateProgress);
-    }
-  }, [currentTrackIndex, album, volume]); // Следим за изменениями всех этих зависимостей
+      audioRef.current.addEventListener('loadedmetadata', onMetadataLoaded);
 
+      // При размонтировании компонента удаляются слушатели
+      return () => {
+        console.log('Удаляем слушатель timeupdate');
+        audioRef.current?.removeEventListener('timeupdate', updateProgress);
+        audioRef.current?.removeEventListener(
+          'loadedmetadata',
+          onMetadataLoaded,
+        );
+      };
+    }
+  }, [isSeeking, time.duration]);
+
+  // Функция форматирования времени. Форматирует время 123 → "2:03".
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return '--:--';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  // ФУНКЦИИ УПРАВЛЕНИЯ
+
+  // переключает воспроизведение/паузу
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
+        console.log('Пауза');
         audioRef.current.pause();
       } else {
+        console.log('Воспроизведение');
         audioRef.current.play().catch(console.error);
       }
       setIsPlaying(!isPlaying);
     }
   };
 
+  // переключает на следующий трек
   const nextTrack = () => {
     setCurrentTrackIndex((currentTrackIndex + 1) % album.tracks.length);
   };
 
+  // переключает на предыдущий
   const prevTrack = () => {
     setCurrentTrackIndex(
       (currentTrackIndex - 1 + album.tracks.length) % album.tracks.length,
     );
   };
 
+  // Ползунок прогресса. Позволяет перематывать трек.
   const handleProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (audioRef.current) {
-      audioRef.current.currentTime =
-        (Number(event.target.value) / 100) * audioRef.current.duration;
+      setIsSeeking(true);
+      const newTime = (Number(event.target.value) / 100) * time.duration;
+      audioRef.current.currentTime = newTime;
+      setTime((prev) => ({ ...prev, current: newTime }));
       setProgress(Number(event.target.value));
+
+      event.target.style.setProperty(
+        '--progress-width',
+        `${event.target.value}%`,
+      );
+    }
+  };
+
+  const handleSeekEnd = () => {
+    setIsSeeking(false);
+    if (isPlaying && audioRef.current) {
+      audioRef.current.play().catch(console.error);
     }
   };
 
   const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setVolume(Number(event.target.value));
+    const newVolume = Number(event.target.value);
+    setVolume(newVolume);
+
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume / 100;
+    }
+
+    event.target.style.setProperty('--volume-progress-width', `${newVolume}%`);
   };
 
+  // Отображение
   return (
     <div className="player">
-      <div className="album-art">
-        <img src={album.cover.img || ''} alt="Album Cover" />
-      </div>
-      <div className="track-info">
+      <AlbumCover {...album.cover} fullName={album.fullName} />
+
+      <div className="player__track-info">
         <h2>{album.tracks[currentTrackIndex]?.title || 'Unknown Track'}</h2>
-        <p>{album.nameGroup || 'Unknown Artist'}</p>
+        <h3>{album.nameGroup || 'Unknown Artist'}</h3>
       </div>
-      <div className="controls">
-        <button onClick={prevTrack}>⏮️</button>
-        <button onClick={togglePlayPause}>{isPlaying ? '⏸️' : '▶️'}</button>
-        <button onClick={nextTrack}>⏭️</button>
+
+      <div className="player__progress-container">
+        <div className="player__progress-bar">
+          <input
+            type="range"
+            value={progress}
+            min="0"
+            max="100"
+            onChange={handleProgressChange}
+            onMouseUp={handleSeekEnd}
+            onTouchEnd={handleSeekEnd}
+          />
+        </div>
+        <div className="player__time-container">
+          <span className="player__time">{formatTime(time.current)}</span>
+          <span className="player__time">
+            -{formatTime(time.duration - time.current)}
+          </span>
+        </div>
       </div>
-      <div className="progress-bar">
-        <input
-          type="range"
-          value={progress}
-          min="0"
-          max="100"
-          onChange={handleProgressChange}
-        />
+
+      <div className="player__controls">
+        <button onClick={prevTrack}>
+          <span className="icon-controller-fast-backward"></span>
+        </button>
+        <button onClick={togglePlayPause}>
+          {isPlaying ? (
+            <span className="icon-controller-pause"></span>
+          ) : (
+            <span className="icon-controller-play"></span>
+          )}
+        </button>
+        <button onClick={nextTrack}>
+          <span className="icon-controller-fast-forward"></span>
+        </button>
       </div>
-      <div className="volume-control">
+
+      <div className="player__volume-control">
+        <span className="icon-volume-mute"></span>
         <input
           type="range"
           value={volume}
@@ -107,6 +225,7 @@ export default function AudioPlayer({ album }: { album: IAlbums }) {
           max="100"
           onChange={handleVolumeChange}
         />
+        <span className="icon-volume-hight"></span>
       </div>
       <audio ref={audioRef} />
     </div>

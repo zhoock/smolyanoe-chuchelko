@@ -34,16 +34,18 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
     return (
       <>
         <h2 className="album-title">{album?.nameAlbum}</h2>
-        <h3>Треки</h3>
-        {/* <button
-          className="album-play"
-          onClick={openPlayerPopup}
-          type="button"
-          aria-label="Кнопка play"
-          aria-description="Открывает плеер"
-        >
-          Воспроизвести
-        </button> */}
+        {/* <h3>Треки</h3> */}
+        <div className="wrapper-album-play">
+          <button
+            className="album-play"
+            onClick={openPlayerPopup}
+            type="button"
+            aria-label="Кнопка play"
+            aria-description="Открывает плеер"
+          >
+            Открыть плеер
+          </button>
+        </div>
 
         <div className="tracks">
           {tracks?.map((track) => (

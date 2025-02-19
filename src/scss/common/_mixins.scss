@@ -133,8 +133,8 @@ $desktops: 'width >= 1024px';
 @mixin adjust-font-size-to(
   $to-font-size,
   $scale-value: 1,
-  $base-font-size: 18px,
-  $base-line-height: calc(18px * 1.618)
+  $base-line-height: calc(18px * 1.618),
+  $base-font-size: 18px
 ) {
   margin: math.div($base-line-height * $scale-value, $to-font-size) + em 0;
   font-size: math.div($to-font-size, $base-font-size) + rem;

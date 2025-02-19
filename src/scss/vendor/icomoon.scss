@@ -1,13 +1,16 @@
 // Icomoon https://icomoon.io/
 
 @font-face {
-  src:
-    url('./fonts/icomoon.woff?1610634108') format('woff'),
-    url('./fonts/icomoon.woff2?1612268906') format('woff2'),
-    url('./fonts/icomoon.ttf?1610634108') format('truetype'),
-    url('./fonts/icomoon.svg?1610634108') format('svg');
   font-family: icomoon;
-  font-display: swap;
+  src: url('./fonts/icomoon.eot');
+  src:
+    url('./fonts/icomoon.eot') format('embedded-opentype'),
+    url('./fonts/icomoon.ttf') format('truetype'),
+    url('./fonts/icomoon.woff') format('woff'),
+    url('./fonts/icomoon.svg') format('svg');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
 }
 
 [class^='icon-'],
@@ -20,7 +23,7 @@
   font-variant: normal;
   text-transform: none;
   line-height: 1;
-  color: var(--link-color);
+  color: var(--link-color, #ddd);
 
   /* Better Font Rendering =========== */
   -webkit-font-smoothing: antialiased;
@@ -98,4 +101,32 @@
 
 .icon-ctrl::before {
   content: '\ea50';
+}
+
+.icon-volume-hight::before {
+  content: '\ea26';
+}
+
+.icon-volume-mute::before {
+  content: '\ea29';
+}
+
+.icon-controller-fast-backward::before {
+  content: '\e90e';
+}
+
+.icon-controller-fast-forward::before {
+  content: '\e90f';
+}
+
+.icon-controller-pause::before {
+  content: '\e910';
+}
+
+.icon-controller-play::before {
+  content: '\e911';
+}
+
+.icon-controller-stop::before {
+  content: '\e912';
 }

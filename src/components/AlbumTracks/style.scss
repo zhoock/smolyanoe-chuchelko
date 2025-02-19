@@ -6,15 +6,31 @@
 .album {
   .album-title {
     margin-block-start: 0;
+    text-align: center;
+
+    @include breakpoint(tablet) {
+      text-align: left;
+    }
   }
 
-  .album-play {
-    @include button-variant(
-      --link-color,
-      --button-background-color,
-      --link-color-hover,
-      --accent-color
-    );
+  .wrapper-album-play {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    .album-play {
+      grid-column: 1 / 3;
+
+      @include breakpoint(tablet) {
+        grid-column: 1 / 2;
+      }
+
+      @include button-variant(
+        --link-color,
+        --button-background-color,
+        --link-color-hover,
+        --accent-color
+      );
+    }
   }
 
   .tracks {
