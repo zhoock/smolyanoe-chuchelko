@@ -17,15 +17,15 @@
     },
     "buttons": {
       "itunes": "https://music.apple.com/ru/album/23-remastered-single/1796173891",
-      "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23",
+      "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23-remastered",
       "amazon": "https://music.amazon.com/albums/B0DWMZJJ27",
       "apple": "https://music.apple.com/ru/album/23-remastered-single/1796173891",
       "vk": "https://vk.com/music/album/-2000234662_23234662_c5116b1aacf6691de0",
-      "youtube": "https://music.youtube.com/playlist?list=OLAK5uy_kyipWPjQMZME10sEGO804LM9X_kfBdT28",
-      "spotify": "https://open.spotify.com/album/64UnYHDHDTSsfNyKSNSHHG",
+      "youtube": "https://music.youtube.com/channel/UCHYsBnMXDBe1LlJuh4VTO_Q",
+      "spotify": "https://open.spotify.com/artist/1rTMRPfG2Dg7ZAKPEYtL6r",
       "yandex": "https://music.yandex.ru/album/35351911",
       "deezer": "https://www.deezer.com/ru/album/710642121",
-      "tidal": "https://listen.tidal.com/album/211242116"
+      "tidal": "https://listen.tidal.com/artist/19213146"
     },
     "detales": [
       { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
