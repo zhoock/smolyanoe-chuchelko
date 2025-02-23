@@ -33,12 +33,13 @@ export default function AudioPlayer({
     if (audioRef.current) {
       console.log('Меняем трек:', album.tracks[currentTrackIndex]?.src);
       audioRef.current.src = album.tracks[currentTrackIndex]?.src || '';
-      audioRef.current.load();
-      if (isPlaying) {
+      audioRef.current.load(); // загружаем новый трек ТОЛЬКО при смене трека
+
+      if (autoPlay || isPlaying) {
         audioRef.current.play().catch(console.error);
       }
     }
-  }, [currentTrackIndex, album, isPlaying]);
+  }, [currentTrackIndex, album]);
 
   // Эффект для обновления времени и прогресса
   useEffect(() => {

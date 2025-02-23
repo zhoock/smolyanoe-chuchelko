@@ -31,13 +31,10 @@
       --accent-color
     );
 
-    &:active {
-      transform: scale(0.98);
-    }
-
     .icon-ctrl {
       font: var(--medium, 500) 1.618rem/1 sans-serif;
-      transform: rotate(180deg);
+      rotate: 0.5turn;
+      transition: rotate 0.3s ease-in-out;
       color: currentcolor;
       position: relative;
       top: -5px;
@@ -57,7 +54,7 @@
         inset-block-start: 8px;
         position: relative;
         color: var(--link-color-hover, #fff);
-        transform: rotate(0);
+        rotate: 0turn;
       }
     }
   }

@@ -17,7 +17,7 @@ $ms-4: 123.363px; // 6.854rem;
   $background,
   $hover-color,
   $hover-background,
-  $disabled-background: var(--link-color)
+  $disabled-background: var(--link-color, #ddd)
 ) {
   margin: var(--ms-1) 0;
   border: 0;
@@ -31,15 +31,18 @@ $ms-4: 123.363px; // 6.854rem;
   user-select: none;
 
   &:hover,
-  // &:focus,
   &:active {
     color: var(#{$hover-color});
     background-color: var(#{$hover-background});
 
     @media (hover: none) and (pointer: coarse) {
-      color: var(--link-color);
+      color: var(--link-color, #ddd);
       background-color: var(#{$background});
     }
+  }
+
+  &:active {
+    scale: 0.98;
   }
 
   &.disabled,
