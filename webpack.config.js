@@ -7,7 +7,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: {
     bundle: './src/index.tsx', // Основной файл для React с TypeScript
-    // modules: "./src/script.js", // Дополнительный скрипт на JavaScript
+    // modules: './src/script.js', // Дополнительный скрипт на JavaScript
   },
 
   output: {

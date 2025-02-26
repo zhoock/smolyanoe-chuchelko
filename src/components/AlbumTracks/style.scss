@@ -91,13 +91,13 @@
       &.active,
       &:hover {
         border-radius: var(--ms-02);
-        border-top-color: var(--accent-color);
-        border-bottom-color: var(--accent-color);
+        border-top-color: var(--accent-color, #ddd);
+        border-bottom-color: var(--accent-color, #998238);
         color: var(--link-color-hover);
-        background: var(--accent-color);
+        background: var(--accent-color, #998238);
 
         &::before {
-          color: var(--accent-color);
+          color: var(--accent-color, #998238);
           filter: brightness(100%);
         }
 

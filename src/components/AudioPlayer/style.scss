@@ -15,7 +15,7 @@
 
   h2 {
     text-transform: initial;
-    color: var(--link-color, #ddd);
+    color: var(--white, #fff);
     font-size: clamp(1.125rem, 0.8578rem + 1.6383vw, 1.8202rem);
     line-height: 1.2;
     margin: 0;
@@ -23,11 +23,16 @@
 
   h3 {
     font-size: 18px;
+    color: var(--white, #fff);
+    font-weight: var(--semibold, 600);
   }
 
   img {
     inline-size: min(100vi, 425px);
     margin: 0;
+    box-shadow:
+      rgb(0 0 0 / 25%) 0 30px 60px -12px,
+      rgb(0 0 0 / 30%) 0 18px 36px -18px;
   }
 
   &__controls {
@@ -39,6 +44,10 @@
       background: none;
       border: none;
       cursor: pointer;
+
+      span {
+        color: var(--white, #fff);
+      }
     }
   }
 
@@ -46,6 +55,11 @@
     display: flex;
     gap: var(--ms-0);
     align-items: center;
+
+    .icon-volume-mute,
+    .icon-volume-hight {
+      color: var(--white, #fff);
+    }
   }
 
   @media (hover: none) and (pointer: coarse) {
@@ -67,8 +81,8 @@ input[type='range'] {
 
   background: linear-gradient(
     to right,
-    var(--accent-color) var(--progress-width),
-    #dddddd4d var(--progress-width)
+    var(--white, #fff) var(--progress-width),
+    #dddddd80 var(--progress-width)
   );
 }
 
@@ -77,8 +91,8 @@ input[type='range'] {
 
   background: linear-gradient(
     to right,
-    var(--accent-color) var(--volume-progress-width),
-    #dddddd4d var(--volume-progress-width)
+    var(--white, #fff) var(--volume-progress-width),
+    #dddddd80 var(--volume-progress-width)
   );
 }
 
@@ -92,7 +106,15 @@ input[type='range'] {
   justify-content: space-between;
 
   .player__time {
-    color: var(--link-color, #ddd);
-    opacity: 0.3;
+    color: var(--light-grey, #ddd);
+    opacity: 0.5;
+  }
+}
+
+.hamburger {
+  .one,
+  .two,
+  .three {
+    background-color: #fff;
   }
 }

@@ -11,6 +11,7 @@ export interface HamburgerProps extends NavigationProps {
   isActive: boolean;
   /** CSS свойство */
   zIndex?: string;
+  bgColor?: string;
 }
 
 export interface PopupProps extends HamburgerProps {

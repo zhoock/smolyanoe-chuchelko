@@ -6,9 +6,11 @@ import './style.scss';
 export default function AudioPlayer({
   album,
   autoPlay = false,
+  setBgColor,
 }: {
   album: IAlbums;
   autoPlay?: boolean;
+  setBgColor: (color: string) => void;
 }) {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0); // индекс текущего трека (начинается с 0)
   const [isPlaying, setIsPlaying] = useState(autoPlay); // флаг, указывающий, играет ли трек (изначально false)
@@ -180,7 +182,15 @@ export default function AudioPlayer({
   // Отображение
   return (
     <div className="player">
-      <AlbumCover {...album.cover} fullName={album.fullName} />
+      <AlbumCover
+        {...album.cover}
+        fullName={album.fullName}
+        onColorsExtracted={({ dominant, secondary }) => {
+          setBgColor(
+            `linear-gradient(to top, ${dominant}, ${secondary || dominant})`,
+          );
+        }}
+      />
 
       <div className="player__track-info">
         <h2>{album.tracks[currentTrackIndex]?.title || 'Unknown Track'}</h2>

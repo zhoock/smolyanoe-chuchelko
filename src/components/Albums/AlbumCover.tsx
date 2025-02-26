@@ -1,6 +1,7 @@
 import React from 'react';
 import { getImageUrl } from '../../hooks/data';
 import { CoverProps } from '../../models';
+import { useImageColor } from '../СolorThief/ColorThief';
 
 /**
  * Компонент отображает обложку альбома.
@@ -8,8 +9,16 @@ import { CoverProps } from '../../models';
 export default function AlbumCover({
   img,
   fullName,
-  size = 448, // default size for images
-}: CoverProps) {
+  size = 448,
+  onColorsExtracted, // 👈 Теперь этот коллбек принимает оба цвета
+}: CoverProps & {
+  onColorsExtracted?: (colors: {
+    dominant: string;
+    secondary?: string;
+  }) => void;
+}) {
+  const imgRef = useImageColor(img, onColorsExtracted); // 👈 Передаём, если есть
+
   return (
     <picture className="album-cover" role="img">
       <source
@@ -25,9 +34,10 @@ export default function AlbumCover({
       />
 
       <img
+        ref={imgRef} // 👈 Теперь `useImageColor` точно получит изображение
         className="album-cover__image"
         loading="lazy"
-        src={getImageUrl(img)} // fallback для старых браузеров
+        src={getImageUrl(img)}
         alt={`Обложка альбома ${fullName}`}
       />
     </picture>
