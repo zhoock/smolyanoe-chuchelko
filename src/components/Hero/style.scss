@@ -31,13 +31,13 @@
     inset: 0;
 
     @include breakpoint(old-phones) {
-      // background: var(--main-background-color, #20201d);
-      // opacity: 0.4;
+      background: var(--deep-coal, #20201d);
+      opacity: 0.4;
     }
 
     @include breakpoint(phones) {
-      // background: var(--main-background-color, #20201d);
-      // opacity: 0.4;
+      background: var(--deep-coal, #20201d);
+      opacity: 0.4;
     }
 
     @include breakpoint(tablet) {
