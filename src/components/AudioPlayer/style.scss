@@ -10,7 +10,7 @@
   block-size: 100dvh;
   margin: 0 auto;
   display: grid;
-  grid-template-rows: auto var(--ms-3) min-content;
+  grid-template-rows: 425px var(--ms-3) min-content;
   gap: var(--ms-1);
 
   h2 {
@@ -115,6 +115,6 @@ input[type='range'] {
   .one,
   .two,
   .three {
-    background-color: #fff;
+    // background-color: #fff;
   }
 }
