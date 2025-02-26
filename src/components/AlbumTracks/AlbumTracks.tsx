@@ -13,7 +13,9 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [activeTrack, setActiveTrack] = useState(0);
   const [popupText, setPopupText] = useState(false);
   const [popupPlayer, setPopupPlayer] = useState(false);
-  const [bgColor, setBgColor] = useState('rgba(0, 0, 0, 0.8)'); // <-- Фон для popup
+  const [bgColor, setBgColor] = useState(
+    'rgba(var(--extra-background-color), 0.8)',
+  ); // <-- Фон для popup
 
   function handleClick(e: MouseEvent<HTMLElement>) {
     setActiveTrack(Number(e.currentTarget.dataset.index) - 1);
