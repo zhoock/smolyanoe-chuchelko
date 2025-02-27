@@ -204,9 +204,9 @@ export default function AudioPlayer({
       <AlbumCover
         {...album.cover}
         fullName={album.fullName}
-        onColorsExtracted={({ dominant, secondary }) => {
+        onColorsExtracted={({ dominant, palette }) => {
           setBgColor(
-            `linear-gradient(to top, ${dominant}, ${secondary || dominant})`,
+            `linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`,
           );
         }}
       />

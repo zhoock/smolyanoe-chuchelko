@@ -1,6 +1,27 @@
 // Импортируем общий файл с зависимостями
 @import '../../scss/common/mixins';
 
+:root {
+  --card-height: 65vh;
+}
+
+/* декларация @property --rotate */
+@property --rotate {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes spin {
+  0% {
+    --rotate: 0deg;
+  }
+
+  100% {
+    --rotate: 360deg;
+  }
+}
+
 .popup {
   position: fixed;
   inset: 0 0 auto;
@@ -9,6 +30,17 @@
   overflow: scroll;
   background: rgba(var(--extra-background-color), 0);
   transition: all 0.45s;
+  animation: spin 11.125s linear infinite;
+
+  &__gradient {
+    position: absolute;
+    z-index: -1;
+    inline-size: 100%;
+    block-size: 100%;
+    filter: blur(calc(var(--card-height) / 6));
+    transform: scale(0.7);
+    inset-block-start: calc(var(--card-height) / 6);
+  }
 
   @extend %hide-scrollbar;
 

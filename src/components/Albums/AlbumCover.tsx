@@ -12,10 +12,7 @@ export default function AlbumCover({
   size = 448,
   onColorsExtracted, // 👈 Теперь этот коллбек принимает оба цвета
 }: CoverProps & {
-  onColorsExtracted?: (colors: {
-    dominant: string;
-    secondary?: string;
-  }) => void;
+  onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void;
 }) {
   const imgRef = useImageColor(img, onColorsExtracted); // 👈 Передаём, если есть
 

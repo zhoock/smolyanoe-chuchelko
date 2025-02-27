@@ -8,6 +8,7 @@ export default function Popup({ children, isActive, bgColor }: PopupProps) {
       className={`popup ${isActive ? 'popup_open' : ''} `}
       style={{ background: bgColor }}
     >
+      <div className="popup__gradient" style={{ background: bgColor }}></div>
       {children}
     </div>
   );

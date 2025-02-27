@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
 
+// Задача: нужно передать цвет от AlbumCover (внутри AudioPlayer) в Popup (в AlbumTracks).
+// Это задача подъёма состояния (lifting state up).
+// Решение: передаём setBgColor из AlbumTracks в AudioPlayer, а затем в AlbumCover.
+
 declare global {
   interface Window {
     ColorThief: any;
@@ -8,10 +12,7 @@ declare global {
 
 export function useImageColor(
   imgSrc: string,
-  onColorsExtracted?: (colors: {
-    dominant: string;
-    secondary?: string;
-  }) => void,
+  onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void,
 ) {
   const imgRef = useRef<HTMLImageElement | null>(null);
 
@@ -43,14 +44,13 @@ export function useImageColor(
       const getColors = () => {
         try {
           const dominantColor = colorThief.getColor(img);
-          const palette = colorThief.getPalette(img, 5);
-          const secondaryColor = palette?.[2]; // Берём второй цвет, если есть
+          const palette = colorThief.getPalette(img, 10);
 
           onColorsExtracted?.({
             dominant: `rgb(${dominantColor.join(',')})`,
-            secondary: secondaryColor
-              ? `rgb(${secondaryColor.join(',')})`
-              : undefined,
+            palette: palette.map(
+              (color: number[]) => `rgb(${color.join(',')})`,
+            ), // Преобразуем в строковый формат
           });
         } catch (error) {
           console.error('Ошибка при извлечении цветов:', error);
