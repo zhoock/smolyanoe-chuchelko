@@ -43,6 +43,25 @@ export default function AudioPlayer({
     }
   }, [currentTrackIndex, album]);
 
+  // Эффект для перехода к следующему треку после завершения текущего
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTrackEnd = () => {
+      console.log('🎵 Трек завершён, переключаем на следующий');
+      setCurrentTrackIndex(
+        (prevIndex) => (prevIndex + 1) % album.tracks.length,
+      );
+    };
+
+    audio.addEventListener('ended', handleTrackEnd);
+
+    return () => {
+      audio.removeEventListener('ended', handleTrackEnd);
+    };
+  }, [album.tracks.length]);
+
   // Эффект для обновления времени и прогресса
   useEffect(() => {
     // обновляет текущее время трека и прогресс в процентах.

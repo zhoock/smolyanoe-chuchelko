@@ -10,10 +10,11 @@
   block-size: 100dvh;
   margin: 0 auto;
   display: grid;
-  grid-template-rows: 425px var(--ms-3) min-content;
+  grid-template-rows: auto var(--ms-3) auto;
   gap: var(--ms-1);
 
   h2 {
+    font-family: var(--base-font-family, arial, sans-serif);
     text-transform: initial;
     color: var(--white, #fff);
     font-size: clamp(1.125rem, 0.8578rem + 1.6383vw, 1.8202rem);
@@ -22,9 +23,8 @@
   }
 
   h3 {
-    font-size: 18px;
+    font-size: var(--ms-0);
     color: var(--white, #fff);
-    font-weight: var(--semibold, 600);
   }
 
   img {
@@ -108,13 +108,5 @@ input[type='range'] {
   .player__time {
     color: var(--light-grey, #ddd);
     opacity: 0.5;
-  }
-}
-
-.hamburger {
-  .one,
-  .two,
-  .three {
-    // background-color: #fff;
   }
 }
