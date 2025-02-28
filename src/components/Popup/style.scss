@@ -40,7 +40,6 @@
   overflow: scroll;
   background: rgba(var(--extra-background-color), 0);
   transition: transform 0.45s;
-  animation: spin 11.125s linear infinite;
 
   &__gradient {
     position: absolute;
@@ -56,9 +55,12 @@
 
   &_open {
     z-index: 999;
+    // height: 100%;
     background: rgba(var(--extra-background-color), 0.8);
     backdrop-filter: blur(20px);
-    animation: popup-open 0.4s ease-out;
+    animation:
+      popup-open 0.4s ease-out,
+      spin 11.125s linear infinite;
   }
 }
 
