@@ -69,9 +69,12 @@ function Layout() {
         <Hero />
 
         {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
-        <Popup isActive={popup}>
-          <Navigation onToggle={() => setPopup(!popup)} />
-        </Popup>
+        {popup && (
+          <Popup isActive={popup}>
+            <Navigation onToggle={() => setPopup(!popup)} />
+          </Popup>
+        )}
+
         <Hamburger isActive={popup} onToggle={() => setPopup(!popup)} />
         <Outlet />
       </main>

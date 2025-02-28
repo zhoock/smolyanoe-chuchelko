@@ -49,7 +49,6 @@
         rgb(0 0 0 / 0%) 100%
       );
       opacity: 1;
-      background-blend-mode: multiply;
     }
 
     @include breakpoint(desktops) {

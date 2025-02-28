@@ -22,14 +22,24 @@
   }
 }
 
+@keyframes popup-open {
+  0% {
+    transform: translateY(100%);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
 .popup {
   position: fixed;
   inset: 0 0 auto;
   z-index: 99;
-  height: 0;
+  height: 100%;
   overflow: scroll;
   background: rgba(var(--extra-background-color), 0);
-  transition: all 0.45s;
+  transition: transform 0.45s;
   animation: spin 11.125s linear infinite;
 
   &__gradient {
@@ -46,9 +56,9 @@
 
   &_open {
     z-index: 999;
-    height: 100%;
     background: rgba(var(--extra-background-color), 0.8);
     backdrop-filter: blur(20px);
+    animation: popup-open 0.4s ease-out;
   }
 }
 

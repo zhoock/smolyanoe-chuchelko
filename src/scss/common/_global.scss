@@ -54,7 +54,7 @@ select {
 }
 
 body {
-  background: var(--main-background-color);
+  background: var(--black, #000);
   scroll-behavior: smooth; /* Makes normal scrolling smooth */
   block-size: 100vb;
 
@@ -119,7 +119,7 @@ body {
   img,
   iframe {
     margin-block-end: $ms-1;
-    text-wrap: balance;
+    // text-wrap: balance;
   }
 
   h1,
