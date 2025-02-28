@@ -39,6 +39,9 @@ export default function AudioPlayer({
 
       if (autoPlay || isPlaying) {
         audioRef.current.play().catch(console.error);
+        setIsPlaying(true); // УБЕЖДАЕМСЯ, ЧТО КНОПКА Play/Pause ОБНОВИТСЯ
+      } else {
+        setIsPlaying(false); // Если не автоиграет, кнопка должна показывать Play
       }
     }
   }, [currentTrackIndex, album]);

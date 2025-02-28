@@ -43,10 +43,13 @@
     @include breakpoint(tablet) {
       background: linear-gradient(
         90deg,
-        rgb(0 0 0 / 100%) 62%,
+        rgb(0 0 0 / 100%) 60%,
+        rgb(0 0 0 / 70%) 70%,
+        rgb(0 0 0 / 30%) 85%,
         rgb(0 0 0 / 0%) 100%
       );
       opacity: 1;
+      background-blend-mode: multiply;
     }
 
     @include breakpoint(desktops) {

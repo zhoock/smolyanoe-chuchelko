@@ -6,9 +6,12 @@ export default function Popup({ children, isActive, bgColor }: PopupProps) {
   return (
     <div
       className={`popup ${isActive ? 'popup_open' : ''} `}
-      style={{ background: bgColor }}
+      style={{ backgroundImage: bgColor }}
     >
-      <div className="popup__gradient" style={{ background: bgColor }}></div>
+      <div
+        className="popup__gradient"
+        style={{ backgroundImage: bgColor }}
+      ></div>
       {children}
     </div>
   );
