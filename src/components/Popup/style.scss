@@ -22,45 +22,32 @@
   }
 }
 
-@keyframes popup-open {
-  0% {
-    transform: translateY(100%);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-
 .popup {
   position: fixed;
-  inset: 0 0 auto;
+  inset: 0;
   z-index: 99;
-  height: 100%;
+  display: none;
   overflow: scroll;
   background: rgba(var(--extra-background-color), 0);
-  transition: transform 0.45s;
+
+  @extend %hide-scrollbar;
 
   &__gradient {
     position: absolute;
     z-index: -1;
-    inline-size: 100%;
-    block-size: 100%;
     filter: blur(calc(var(--card-height) / 6));
     transform: scale(0.7);
+    inline-size: 100%;
+    block-size: 100%;
     inset-block-start: calc(var(--card-height) / 6);
   }
 
-  @extend %hide-scrollbar;
-
   &_open {
     z-index: 999;
-    // height: 100%;
+    display: block;
     background: rgba(var(--extra-background-color), 0.8);
     backdrop-filter: blur(20px);
-    animation:
-      popup-open 0.4s ease-out,
-      spin 11.125s linear infinite;
+    animation: spin 11.125s linear infinite;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import AlbumCover from '../Albums/AlbumCover';
 import { IAlbums } from '../../models';
 import './style.scss';
@@ -198,17 +198,22 @@ export default function AudioPlayer({
     event.target.style.setProperty('--volume-progress-width', `${newVolume}%`);
   };
 
+  const handleColorsExtracted = useCallback(
+    ({ dominant, palette }: { dominant: string; palette: string[] }) => {
+      setBgColor(
+        `linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`,
+      );
+    },
+    [setBgColor],
+  );
+
   // Отображение
   return (
     <div className="player">
       <AlbumCover
         {...album.cover}
         fullName={album.fullName}
-        onColorsExtracted={({ dominant, palette }) => {
-          setBgColor(
-            `linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`,
-          );
-        }}
+        onColorsExtracted={handleColorsExtracted}
       />
 
       <div className="player__track-info">

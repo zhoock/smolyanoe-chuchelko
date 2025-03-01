@@ -10,29 +10,36 @@ import './style.scss';
  * При клике на название трека выводит текст выбранной песни в popup.
  */
 export default function AlbumTracks({ album }: { album: IAlbums }) {
-  const [activeTrack, setActiveTrack] = useState(0);
-  const [popupText, setPopupText] = useState(false);
-  const [popupPlayer, setPopupPlayer] = useState(false);
+  const [activeTrack, setActiveTrack] = useState(0); // activeTrack — индекс активного трека (по умолчанию 0).
+  const [popupText, setPopupText] = useState(false); // popupText — отвечает за показ попапа с текстом трека.
+  const [popupPlayer, setPopupPlayer] = useState(false); // popupPlayer — отвечает за показ попапа с аудиоплеером.
   const [bgColor, setBgColor] = useState(
     'rgba(var(--extra-background-color), 0.8)',
-  ); // <-- Фон для popup
+  ); // bgColor — цвет фона для попапа с плеером (обновляется через AudioPlayer).
 
+  // Извлекает индекс трека из data-index и открывает текстовый попап.
+  // -1 нужен, потому что индексация треков начинается с 1, а в массиве — с 0.
   function handleClick(e: MouseEvent<HTMLElement>) {
     setActiveTrack(Number(e.currentTarget.dataset.index) - 1);
     setPopupText(true);
   }
 
+  // Открывает попап с плеером.
+  // e.stopPropagation() предотвращает открытие текстового попапа.
   function openPlayerPopup(e: MouseEvent<HTMLElement>) {
-    e.stopPropagation(); // Чтобы не срабатывал handleClick
+    e.stopPropagation();
     setPopupPlayer(true);
   }
 
+  // Закрывает оба попапа.
+  // Сбрасывает активный трек.
   function hamburgerClick() {
     setPopupText(false);
     setPopupPlayer(false);
     setActiveTrack(0);
   }
 
+  // Основной контент — отображение названия альбома, кнопки "Воспроизвести" и списка треков.
   function Block({ tracks }: { tracks: TracksProps[] }) {
     return (
       <>
@@ -50,6 +57,8 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           </button>
         </div>
 
+        {/* Рендерится кнопка на каждый трек. */}
+        {/* Активный трек подсвечивается классом 'active'. */}
         <div className="tracks">
           {tracks?.map((track) => (
             <button
@@ -66,29 +75,31 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           ))}
         </div>
 
-        {popupText && (
-          <Popup isActive={popupText}>
-            <pre>
-              {typeof activeTrack === 'number' && tracks[activeTrack]?.content}
-            </pre>
-            <Hamburger
-              isActive={popupText}
-              onToggle={hamburgerClick}
-              zIndex="1000"
-            />
-          </Popup>
-        )}
+        {/* Попап с текстом трека
+        Используется <pre> — текст отображается с сохранением форматирования.
+        Кнопка "гамбургер" для закрытия попапа. */}
+        <Popup isActive={popupText}>
+          <pre>{tracks?.[activeTrack]?.content}</pre>
+          <Hamburger
+            isActive={popupText}
+            onToggle={hamburgerClick}
+            zIndex="1000"
+          />
+        </Popup>
 
-        {popupPlayer && (
-          <Popup isActive={popupPlayer} bgColor={bgColor}>
+        {/* Попап с аудиоплеером
+        AudioPlayer передаётся setBgColor, чтобы менять цвет фона попапа. 
+        Hamburger для закрытия попапа. */}
+        <Popup isActive={popupPlayer} bgColor={bgColor}>
+          {album && (
             <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />
-            <Hamburger
-              isActive={popupPlayer}
-              onToggle={hamburgerClick}
-              zIndex="1000"
-            />
-          </Popup>
-        )}
+          )}
+          <Hamburger
+            isActive={popupPlayer}
+            onToggle={hamburgerClick}
+            zIndex="1000"
+          />
+        </Popup>
       </>
     );
   }
