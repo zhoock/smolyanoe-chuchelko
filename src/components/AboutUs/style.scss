@@ -34,7 +34,7 @@
     .icon-ctrl {
       font: var(--medium, 500) 1.618rem/1 sans-serif;
       rotate: 0.5turn;
-      transition: rotate 0.3s ease-in-out;
+      transition: scale 0.3s ease-in-out;
       color: currentcolor;
       position: relative;
       top: -5px;
@@ -54,7 +54,8 @@
         inset-block-start: 8px;
         position: relative;
         color: var(--link-color-hover, #fff);
-        rotate: 0turn;
+        scale: -100%;
+        // rotate: 0turn;
       }
     }
   }

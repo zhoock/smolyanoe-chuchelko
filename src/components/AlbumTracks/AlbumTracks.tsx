@@ -80,15 +80,11 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         Кнопка "гамбургер" для закрытия попапа. */}
         <Popup isActive={popupText} onClose={closePopups}>
           <pre>{tracks?.[activeTrack]?.content}</pre>
-          <Hamburger
-            isActive={popupText}
-            onToggle={closePopups}
-            zIndex="1000"
-          />
+          <Hamburger isActive={popupText} onToggle={closePopups} />
         </Popup>
 
         {/* Попап с аудиоплеером
-        AudioPlayer передаётся setBgColor, чтобы менять цвет фона попапа. 
+        В AudioPlayer передаётся setBgColor, чтобы менять цвет фона попапа. 
         Hamburger для закрытия попапа. */}
 
         {popupPlayer && (
@@ -96,11 +92,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
             {album && (
               <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />
             )}
-            <Hamburger
-              isActive={popupPlayer}
-              onToggle={closePopups}
-              zIndex="1000"
-            />
+            <Hamburger isActive={popupPlayer} onToggle={closePopups} />
           </Popup>
         )}
       </>

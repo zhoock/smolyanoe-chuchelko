@@ -15,6 +15,7 @@ export default function Popup({
 
     if (isActive && dialog && !dialog.open) {
       dialog.showModal();
+      // dialog.focus(); // Устанавливаем фокус на сам диалог
     } else if (!isActive && dialog?.open) {
       dialog.close();
     }
@@ -24,6 +25,11 @@ export default function Popup({
     };
 
     dialog?.addEventListener('close', handleClose);
+
+    // Снимаем фокус со всех элементов на мобильных устройствах.
+    // setTimeout(() => {
+    //   (document.activeElement as HTMLElement)?.blur();
+    // }, 0);
 
     return () => {
       dialog?.removeEventListener('close', handleClose);
