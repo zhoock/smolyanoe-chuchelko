@@ -78,7 +78,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         {/* Попап с текстом трека
         Используется <pre> — текст отображается с сохранением форматирования.
         Кнопка "гамбургер" для закрытия попапа. */}
-        <Popup isActive={popupText}>
+        <Popup isActive={popupText} onClose={() => setPopupText(false)}>
           <pre>{tracks?.[activeTrack]?.content}</pre>
           <Hamburger
             isActive={popupText}
@@ -90,16 +90,23 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         {/* Попап с аудиоплеером
         AudioPlayer передаётся setBgColor, чтобы менять цвет фона попапа. 
         Hamburger для закрытия попапа. */}
-        <Popup isActive={popupPlayer} bgColor={bgColor}>
-          {album && (
-            <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />
-          )}
-          <Hamburger
+
+        {popupPlayer && (
+          <Popup
             isActive={popupPlayer}
-            onToggle={hamburgerClick}
-            zIndex="1000"
-          />
-        </Popup>
+            bgColor={bgColor}
+            onClose={() => setPopupPlayer(false)}
+          >
+            {album && (
+              <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />
+            )}
+            <Hamburger
+              isActive={popupPlayer}
+              onToggle={hamburgerClick}
+              zIndex="1000"
+            />
+          </Popup>
+        )}
       </>
     );
   }

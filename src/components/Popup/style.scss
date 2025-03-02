@@ -22,17 +22,21 @@
   }
 }
 
-.popup {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-  display: none;
+dialog:modal {
+  max-width: unset;
+  max-height: unset;
+  inline-size: 100vw;
+  block-size: 100dvh;
+  border: none;
   overflow: scroll;
-  background: rgba(var(--extra-background-color), 0);
+  background: rgba(var(--extra-background-color), 0.8);
+  backdrop-filter: blur(20px);
+  animation: spin 11.125s linear infinite;
+  color: var(--text-color, #ddd);
 
   @extend %hide-scrollbar;
 
-  &__gradient {
+  .popup__gradient {
     position: absolute;
     z-index: -1;
     filter: blur(calc(var(--card-height) / 6));
@@ -41,23 +45,15 @@
     block-size: 100%;
     inset-block-start: calc(var(--card-height) / 6);
   }
-
-  &_open {
-    z-index: 999;
-    display: block;
-    background: rgba(var(--extra-background-color), 0.8);
-    backdrop-filter: blur(20px);
-    animation: spin 11.125s linear infinite;
-  }
 }
 
-.page:has(.popup_open) {
+.page:has(dialog[open]) {
   overflow: hidden;
 
   @extend %hide-scrollbar;
 }
 
-.hero + .popup {
+.hero + dialog[open] {
   @include breakpoint(desktops) {
     display: none;
   }

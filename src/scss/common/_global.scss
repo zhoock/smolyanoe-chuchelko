@@ -221,6 +221,10 @@ body {
   }
 }
 
+// :focus {
+//   outline: none;
+// }
+
 :focus-visible {
   outline: 4px solid var(--outline-color);
 }
