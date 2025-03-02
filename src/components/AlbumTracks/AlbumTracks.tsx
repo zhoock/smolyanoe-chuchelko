@@ -33,7 +33,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
 
   // Закрывает оба попапа.
   // Сбрасывает активный трек.
-  function hamburgerClick() {
+  function closePopups() {
     setPopupText(false);
     setPopupPlayer(false);
     setActiveTrack(0);
@@ -78,11 +78,11 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         {/* Попап с текстом трека
         Используется <pre> — текст отображается с сохранением форматирования.
         Кнопка "гамбургер" для закрытия попапа. */}
-        <Popup isActive={popupText} onClose={() => setPopupText(false)}>
+        <Popup isActive={popupText} onClose={closePopups}>
           <pre>{tracks?.[activeTrack]?.content}</pre>
           <Hamburger
             isActive={popupText}
-            onToggle={hamburgerClick}
+            onToggle={closePopups}
             zIndex="1000"
           />
         </Popup>
@@ -92,17 +92,13 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         Hamburger для закрытия попапа. */}
 
         {popupPlayer && (
-          <Popup
-            isActive={popupPlayer}
-            bgColor={bgColor}
-            onClose={() => setPopupPlayer(false)}
-          >
+          <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
             {album && (
               <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />
             )}
             <Hamburger
               isActive={popupPlayer}
-              onToggle={hamburgerClick}
+              onToggle={closePopups}
               zIndex="1000"
             />
           </Popup>

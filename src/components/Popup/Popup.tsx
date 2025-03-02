@@ -20,7 +20,7 @@ export default function Popup({
     }
 
     const handleClose = () => {
-      if (onClose) onClose();
+      onClose?.();
     };
 
     dialog?.addEventListener('close', handleClose);
@@ -31,7 +31,7 @@ export default function Popup({
   }, [isActive, onClose]);
 
   return (
-    <dialog ref={dialogRef} tabIndex={0} style={{ background: bgColor }}>
+    <dialog ref={dialogRef} style={{ background: bgColor }}>
       <div className="popup__gradient" style={{ background: bgColor }}></div>
       {children}
     </dialog>
