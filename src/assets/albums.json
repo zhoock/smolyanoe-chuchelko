@@ -17,6 +17,8 @@
       "designer": "Yaroslav Zhuk"
     },
     "buttons": {
+      "purchase": "Purchase",
+      "stream": "Stream",
       "itunes": "https://music.apple.com/us/album/23-remastered-single/1796173891?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23-remastered",
       "amazon": "https://music.amazon.com/albums/B0DWMZJJ27",
