@@ -26,11 +26,6 @@ export default function Popup({
 
     dialog?.addEventListener('close', handleClose);
 
-    // Снимаем фокус со всех элементов на мобильных устройствах.
-    // setTimeout(() => {
-    //   (document.activeElement as HTMLElement)?.blur();
-    // }, 0);
-
     return () => {
       dialog?.removeEventListener('close', handleClose);
     };

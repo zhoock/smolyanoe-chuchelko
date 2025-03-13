@@ -53,7 +53,8 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
             aria-label="Кнопка play"
             aria-description="Открывает плеер"
           >
-            <span className="icon-controller-play"></span>Воспроизвести
+            <span className="icon-controller-play"></span>
+            {album?.buttons.playButton}
           </button>
         </div>
 

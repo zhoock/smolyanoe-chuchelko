@@ -7,6 +7,7 @@
     "cover": {
       "img": "Tar-Baby-Cover-23-remastered"
     },
+
     "release": {
       "date": "2025-02-20",
       "UPC": "5016122320228/199199051297",
@@ -17,6 +18,7 @@
       "designer": "Yaroslav Zhuk"
     },
     "buttons": {
+      "playButton": "Play",
       "purchase": "Purchase",
       "stream": "Stream",
       "itunes": "https://music.apple.com/us/album/23-remastered-single/1796173891?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
