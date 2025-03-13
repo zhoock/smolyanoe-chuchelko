@@ -12,8 +12,8 @@
       "UPC": "5016122320228/199199051297",
       "photographer": "Hans Jacob Haarseth",
       "photographerURL": "https://www.instagram.com/vedonas/",
-      "design": "Design",
-      "designer": "Yaroslav Zhuk"
+      "design": "Дизайн",
+      "designer": "Ярослав Жук"
     },
     "buttons": {
       "itunes": "https://music.apple.com/us/album/23-remastered-single/1796173891?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
@@ -28,34 +28,34 @@
       "tidal": "https://listen.tidal.com/artist/19213146"
     },
     "detales": [
-      { "id": 1, "title": "Genre", "content": ["Grunge, alternative rock."] },
+      { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
       {
         "id": 2,
-        "title": "Recorded At",
+        "title": "Запись",
         "content": [
           {
             "text": [
-              "SEP.28, 2021:",
-              "Igor Matvienko's recording studio M.A.M.A, Big studio",
-              ", Moscow."
+              "28 сентября 2021:",
+              "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
+              ", Москва."
             ],
             "link": "https://studio-mama.ru/"
           },
           {
-            "text": ["NOV.01, 2021:", "DTH Studios, Studio A", ", Moscow."],
+            "text": ["01 ноября 2021:", "DTH Studios, Студия A", ", Москва."],
             "link": "http://dthstudios.com/studios"
           }
         ]
       },
       {
         "id": 3,
-        "title": "Mixed At",
+        "title": "Сведение",
         "content": [
           {
             "text": [
-              "JAN.14, 2024—SEP.22, 2024:",
-              "DTH Studios, Studio A",
-              ", Moscow."
+              "24 января 2024—22 сентября 2024:",
+              "DTH Studios, Студия A",
+              ", Москва."
             ],
             "link": "http://dthstudios.com/studios"
           }
@@ -63,11 +63,11 @@
       },
       {
         "id": 4,
-        "title": "Mastered By",
+        "title": "Мастеринг",
         "content": [
           {
             "text": [
-              "JAN.14, 2025—FEB.7, 2025:",
+              "14 января 2025—07 февраля 2025:",
               "Chicago Mastering Service, Chicago",
               ", USA."
             ],
@@ -77,39 +77,39 @@
       },
       {
         "id": 5,
-        "title": "Band members",
+        "title": "Исполнители",
         "content": [
           {
             "text": [
               "",
-              "Yaroslav Zhuk",
-              " — lead vocals, lead vocals, backing vocals, words and music."
+              "Ярослав Жук",
+              " — гитара, вокал, бэк-вокал, слова и музыка."
             ],
             "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           {
-            "text": ["", "Nikita Mineev", " — bass."],
+            "text": ["", "Никита Минеев", " — бас-гитара."],
             "link": "https://www.instagram.com/chinkaychi/"
           },
 
           "",
           {
-            "text": ["", "Oleg Ingiozov", " — drums."],
+            "text": ["", "Олег Ингиозов", " — барабаны."],
             "link": "https://www.instagram.com/ingiozov/"
           }
         ]
       },
       {
         "id": 6,
-        "title": "Producing",
+        "title": "Продюсирование",
         "content": [
-          "Yaroslav Zhuk — producer.",
+          "Ярослав Жук — продюсер.",
           {
-            "text": ["", "Ilya Marvel Gorokhvodatsky", " — recording/mixing."],
+            "text": ["", "Илья Marvel Горохводацкий", " — запись/сведение."],
             "link": "https://www.instagram.com/ilya_marvel/"
           },
           {
-            "text": ["", "Mettew J Barnhart", " — mastering."],
+            "text": ["", "Mettew J Barnhart", " — мастеринг."],
             "link": "https://www.matthewbarnhart.com/"
           }
         ]
