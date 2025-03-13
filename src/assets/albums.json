@@ -321,6 +321,7 @@
     "buttons": {
       "playButton": "Play",
       "purchase": "Purchase",
+      "stream": "Stream",
       "itunes": "https://music.apple.com/ru/album/%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/1509238927?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/-",
       "amazon": "https://music.amazon.com/albums/B087PNS8WH",
@@ -354,13 +355,13 @@
       },
       {
         "id": 3,
-        "title": "Сведение",
+        "title": "Mixed At",
         "content": [
           {
             "text": [
-              "15 декабря 2019—2 марта 2020:",
-              "DTH Studios, Студия A, Студия B",
-              ", Москва."
+              "DEC.15,  2019—MAR.2, 2020:",
+              "DTH Studios, Studio A, Studio B",
+              ", Moscow."
             ],
             "link": "http://dthstudios.com/studios"
           }
@@ -368,11 +369,11 @@
       },
       {
         "id": 4,
-        "title": "Мастеринг",
+        "title": "Mastered By",
         "content": [
           {
             "text": [
-              "31 марта 2020—10 апреля 2020:",
+              "MAR.31, 2020—APR.10, 2020:",
               "Chicago Mastering Service, Chicago",
               ", USA."
             ],
@@ -382,32 +383,32 @@
       },
       {
         "id": 5,
-        "title": "Исполнители",
+        "title": "Band members",
         "content": [
           {
             "text": [
               "",
-              "Ярослав Жук",
-              " — гитара, вокал, бэк-вокал, слова и музыка."
+              "Yaroslav Zhuk",
+              " — lead vocals, lead vocals, backing vocals, words and music."
             ],
             "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
-          "Семён Лепёшкин — бас-гитара."
+          "Semyon Lepeshkin — bass."
         ]
       },
       {
         "id": 6,
-        "title": "Сессионные музыканты",
+        "title": "Session musicians",
         "content": [
           {
-            "text": ["", "Алексей Еживич", " — ударные."],
+            "text": ["", "Alexey Yezhivich", " — drums."],
             "link": "https://www.instagram.com/alexezhivich/"
           },
           {
             "text": [
               "",
-              "Наталья Хмелёвская",
-              " — виолончель («Водянистая влага»)."
+              "Natalia Khmelevskaya",
+              " — cello («Водянистая влага»)."
             ],
             "link": "https://www.instagram.com/nkhmelevskaya/"
           }
@@ -415,28 +416,28 @@
       },
       {
         "id": 7,
-        "title": "Продюсирование",
+        "title": "Producing",
         "content": [
-          "Ярослав Жук — продюсер.",
-          "Илья Лукашев — звукоинженер.",
-          "Юрий Катешев — звукоинженер (запись виолончели).",
-          "Антон Артисюк — звукоинженер (запись акустической гитары).",
-          "Александр Колесников — звукоинженер (запись вокала).",
+          "Yaroslav Zhuk — producer.",
+          "Ilya Lukashev — sound engineer.",
+          "Yuri Kateshev — sound engineer (cello recording).",
+          "Anton Artisyuk — sound engineer (acoustic guitar recording).",
+          "Alexander Kolesnikov — sound engineer (vocals recording).",
           {
-            "text": ["", "Илья Marvel Горохводацкий", " — сведение."],
+            "text": ["", "Ilya Marvel Gorokhvodatsky", " - mixing."],
             "link": "https://www.instagram.com/ilya_marvel/"
           },
           {
-            "text": ["", "Mettew J Barnhart", " — мастеринг."],
+            "text": ["", "Mettew J Barnhart", " — mastering."],
             "link": "https://www.matthewbarnhart.com/"
           }
         ]
       },
       {
         "id": 8,
-        "title": "Эта запись была бы невозможна без:",
+        "title": "This post would not have been possible without:",
         "content": [
-          "Галина Жук, Аркадий Жук, Кристина Шпак, Сергей Рябов, Илья Быков, Антон Сапфиров, Стив Альбини, Курт Кобейн."
+          "Galina Zhuk, Arkady Zhuk, Kristina Shpak, Sergey Ryabov, Ilya Bykov, Anton Sapfirov, Steve Albini, Kurt Cobain."
         ]
       }
     ],
