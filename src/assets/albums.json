@@ -173,6 +173,7 @@
     "buttons": {
       "playButton": "Play",
       "purchase": "Purchase",
+      "stream": "Stream",
       "itunes": "https://music.apple.com/us/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23",
       "amazon": "https://music.amazon.com/albums/B09PQ7VV7D?tag=bandlnk-20",
@@ -304,7 +305,22 @@
     "cover": {
       "img": "Tar-Baby-Cover"
     },
+    "headlines": {
+      "music": "Music",
+      "release": "Release",
+      "albumCover": "Album cover"
+    },
+    "release": {
+      "date": "2020-04-16",
+      "UPC": "195079279966",
+      "photo": "Photo",
+      "design": "Design",
+      "designer": "Blexbolex",
+      "designerURL": "https://en.wikipedia.org/wiki/Blexbolex"
+    },
     "buttons": {
+      "playButton": "Play",
+      "purchase": "Purchase",
       "itunes": "https://music.apple.com/ru/album/%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/1509238927?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/-",
       "amazon": "https://music.amazon.com/albums/B087PNS8WH",
@@ -316,30 +332,24 @@
       "deezer": "https://www.deezer.com/ru/album/143471132",
       "tidal": "https://listen.tidal.com/album/138320502"
     },
-    "release": {
-      "date": "2020-04-16",
-      "UPC": "195079279966",
-      "design": "Дизайн",
-      "designer": "Blexbolex",
-      "designerURL": "https://en.wikipedia.org/wiki/Blexbolex"
-    },
+
     "detales": [
-      { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
+      { "id": 1, "title": "Genre", "content": ["Grunge, alternative rock."] },
       {
         "id": 2,
-        "title": "Запись",
+        "title": "Recorded At",
         "content": [
           {
             "text": [
-              "16 октября 2018—28 декабря 2018:",
-              "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
-              ", Москва."
+              "OCT.16, 2018—DEC.28, 2018:",
+              "Igor Matvienko's recording studio M.A.M.A, Big studio",
+              ", Moscow."
             ],
             "link": "https://studio-mama.ru/"
           },
-          "2 ноября 2018 (Продюсерский центр Алексея Мускатина, Москва).",
-          "4 октября 2019 (Студия Космос, Москва).",
-          "9 октября 2019—14 декабря 2019 (495 Studio Records, Москва)."
+          "NOV.02, 2018 (Alexey Muskatin's Production Center, Moscow).",
+          "OCT.4, 2019 (Studio Cosmos, Moscow).",
+          "OCT.9, 2019—DEC.14, 2019 (495 Studio Records, Moscow)."
         ]
       },
       {
