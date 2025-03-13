@@ -11,7 +11,7 @@
     "headlines": {
       "music": "Music",
       "release": "Release",
-      "AlbumCover": "Album cover"
+      "albumCover": "Album cover"
     },
 
     "release": {

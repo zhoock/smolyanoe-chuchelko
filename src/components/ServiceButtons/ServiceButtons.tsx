@@ -1,7 +1,6 @@
 import React from 'react';
 import GetButton from './GetButton';
-import { String } from '../../models';
-import { IAlbums } from '../../models';
+import { String, IAlbums } from '../../models';
 
 import './style.scss';
 
