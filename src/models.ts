@@ -34,6 +34,10 @@ export interface IAlbums {
   fullName: string;
   /** Обложка альбома */
   cover: CoverProps;
+  /** Заголовки секций */
+  headlines: {
+    [key: string]: string;
+  };
   /** Релиз альбома */
   release: {
     [key: string]: string;

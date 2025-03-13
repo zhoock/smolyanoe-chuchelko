@@ -8,6 +8,12 @@
       "img": "Tar-Baby-Cover-23-remastered"
     },
 
+    "headlines": {
+      "music": "Music",
+      "release": "Release",
+      "AlbumCover": "Album cover"
+    },
+
     "release": {
       "date": "2025-02-20",
       "UPC": "5016122320228/199199051297",

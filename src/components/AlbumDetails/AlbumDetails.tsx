@@ -16,7 +16,7 @@ export default function AlbumDetails({ album }: { album: IAlbums }) {
       <div className="wrapper album__wrapper">
         <div className="item">
           <div className="album-details__music">
-            <h2>Music</h2>
+            <h2>{album?.headlines?.music}</h2>
             <AlbumDetailsMusic album={album} />
           </div>
         </div>
