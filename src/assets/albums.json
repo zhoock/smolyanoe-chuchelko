@@ -7,13 +7,11 @@
     "cover": {
       "img": "Tar-Baby-Cover-23-remastered"
     },
-
     "headlines": {
       "music": "Music",
       "release": "Release",
       "albumCover": "Album cover"
     },
-
     "release": {
       "date": "2025-02-20",
       "UPC": "5016122320228/199199051297",
@@ -158,15 +156,23 @@
     "cover": {
       "img": "Tar-Baby-Cover-23"
     },
+    "headlines": {
+      "music": "Music",
+      "release": "Release",
+      "albumCover": "Album cover"
+    },
     "release": {
       "date": "2022-01-23",
       "UPC": "198003011083/198002899538",
+      "photo": "Photo",
       "photographer": "Hans Jacob Haarseth",
       "photographerURL": "https://www.instagram.com/vedonas/",
-      "design": "Дизайн",
-      "designer": "Ярослав Жук"
+      "design": "Design",
+      "designer": "Yaroslav Zhuk"
     },
     "buttons": {
+      "playButton": "Play",
+      "purchase": "Purchase",
       "itunes": "https://music.apple.com/us/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23",
       "amazon": "https://music.amazon.com/albums/B09PQ7VV7D?tag=bandlnk-20",
@@ -179,34 +185,34 @@
       "tidal": "https://listen.tidal.com/album/211242116"
     },
     "detales": [
-      { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
+      { "id": 1, "title": "Genre", "content": ["Grunge, alternative rock."] },
       {
         "id": 2,
-        "title": "Запись",
+        "title": "Recorded At",
         "content": [
           {
             "text": [
-              "28 сентября 2021:",
-              "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
-              ", Москва."
+              "SEP.28, 2021:",
+              "Igor Matvienko's recording studio M.A.M.A, Big studio",
+              ", Moscow."
             ],
             "link": "https://studio-mama.ru/"
           },
           {
-            "text": ["01 ноября 2021:", "DTH Studios, Студия A", ", Москва."],
+            "text": ["NOV.01, 2021:", "DTH Studios, Studio A", ", Moscow."],
             "link": "http://dthstudios.com/studios"
           }
         ]
       },
       {
         "id": 3,
-        "title": "Сведение",
+        "title": "Mixed At",
         "content": [
           {
             "text": [
-              "16 ноября 2021—17 ноября 2021:",
-              "Студия звукозаписи \"Vintage Records\"",
-              ", Москва."
+              "NOV.16, 2021—NOV.17 2021:",
+              "Recording studio \"Vintage Records\"",
+              ", Moscow."
             ],
             "link": "https://vintage.studio/about/large-equipment-room"
           }
@@ -214,11 +220,11 @@
       },
       {
         "id": 4,
-        "title": "Мастеринг",
+        "title": "Mastered By",
         "content": [
           {
             "text": [
-              "30 ноября 2021—04 декабря 2021:",
+              "NOV.30 2021—DEC.04, 2021:",
               "Chicago Mastering Service, Chicago",
               ", USA."
             ],
@@ -228,39 +234,39 @@
       },
       {
         "id": 5,
-        "title": "Исполнители",
+        "title": "Band members",
         "content": [
           {
             "text": [
               "",
-              "Ярослав Жук",
-              " — гитара, вокал, бэк-вокал, слова и музыка."
+              "Yaroslav Zhuk",
+              " — lead vocals, lead vocals, backing vocals, words and music."
             ],
             "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           {
-            "text": ["", "Никита Минеев", " — бас-гитара."],
+            "text": ["", "Nikita Mineev", " — bass."],
             "link": "https://www.instagram.com/chinkaychi/"
           },
 
           "",
           {
-            "text": ["", "Олег Ингиозов", " — барабаны."],
+            "text": ["", "Oleg Ingiozov", " — drums."],
             "link": "https://www.instagram.com/ingiozov/"
           }
         ]
       },
       {
         "id": 6,
-        "title": "Продюсирование",
+        "title": "Producing",
         "content": [
-          "Ярослав Жук — продюсер.",
+          "Yaroslav Zhuk — producer.",
           {
-            "text": ["", "Илья Marvel Горохводацкий", " — запись/сведение."],
+            "text": ["", "Ilya Marvel Gorokhvodatsky", " — recording/mixing."],
             "link": "https://www.instagram.com/ilya_marvel/"
           },
           {
-            "text": ["", "Mettew J Barnhart", " — мастеринг."],
+            "text": ["", "Mettew J Barnhart", " — mastering."],
             "link": "https://www.matthewbarnhart.com/"
           }
         ]
