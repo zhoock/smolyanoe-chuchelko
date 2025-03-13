@@ -7,6 +7,7 @@ import { IAlbums, String } from '../../models';
 export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
   function Block({
     photographer,
+    photo,
     photographerURL,
     design,
     designer,
@@ -16,7 +17,7 @@ export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
       <>
         {photographer && (
           <>
-            <h3>Фотография</h3>
+            <h3>{photo}</h3>
             <div className="album-details__artwork-photographer">
               <a
                 className="album-details__link"
