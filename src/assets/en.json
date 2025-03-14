@@ -2,7 +2,7 @@
   {
     "menu": {
       "albums": "Albums",
-      "aboutUs": "About Us",
+      "theBand": "The band",
       "article": "Article"
     },
     "buttons": {
@@ -12,6 +12,7 @@
     },
     "titles": {
       "albums": "Albums",
+      "theBand": "The band",
       "music": "Music",
       "release": "Release",
       "albumCover": "Album cover",

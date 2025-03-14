@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useData } from '../../hooks/data';
+
 import './style.scss';
 
 export default function AboutUs() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { templateData } = useData();
 
   return (
     <section className="about main-background">
       <div className="wrapper">
-        <h2>О группе</h2>
+        <h2>{templateData.templateC[0]?.titles.theBand}</h2>
         <div
           className={`about__content ${isExpanded ? 'about__content_active' : ''}`}
         >
