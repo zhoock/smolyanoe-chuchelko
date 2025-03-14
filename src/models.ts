@@ -114,6 +114,9 @@ export interface ArticleProps {
 }
 
 export interface IInterface {
+  menu: {
+    [key: string]: string;
+  };
   buttons: {
     [key: string]: string;
   };

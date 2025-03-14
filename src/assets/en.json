@@ -1,5 +1,10 @@
 [
   {
+    "menu": {
+      "albums": "Albums",
+      "aboutUs": "About Us",
+      "article": "Article"
+    },
     "buttons": {
       "playButton": "Play",
       "purchase": "Purchase",
