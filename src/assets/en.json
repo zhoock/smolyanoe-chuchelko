@@ -11,7 +11,8 @@
       "release": "Release",
       "albumCover": "Album cover",
       "photo": "Photo",
-      "design": "Design"
+      "design": "Design",
+      "support": "Support"
     }
   }
 ]

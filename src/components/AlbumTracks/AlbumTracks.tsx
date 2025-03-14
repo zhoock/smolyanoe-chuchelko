@@ -3,6 +3,7 @@ import Popup from '../Popup/Popup';
 import Hamburger from '../Hamburger/Hamburger';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
 import { IAlbums, TracksProps } from '../../models';
+import { useData } from '../../hooks/data';
 import './style.scss';
 
 /**
@@ -16,6 +17,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [bgColor, setBgColor] = useState(
     'rgba(var(--extra-background-color), 0.8)',
   ); // bgColor — цвет фона для попапа с плеером (обновляется через AudioPlayer).
+  const { templateData } = useData();
 
   // Извлекает индекс трека из data-index и открывает текстовый попап.
   // -1 нужен, потому что индексация треков начинается с 1, а в массиве — с 0.
@@ -54,7 +56,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
             aria-description="Открывает плеер"
           >
             <span className="icon-controller-play"></span>
-            {album?.buttons.playButton}
+            {templateData.templateC[0]?.buttons.playButton}
           </button>
         </div>
 

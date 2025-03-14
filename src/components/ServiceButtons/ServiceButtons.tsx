@@ -1,6 +1,7 @@
 import React from 'react';
 import GetButton from './GetButton';
 import { String, IAlbums } from '../../models';
+import { useData } from '../../hooks/data';
 
 import './style.scss';
 
@@ -31,11 +32,13 @@ export default function ServiceButtonsPurchase({
     deezer,
     tidal,
   }: String) {
+    const { templateData } = useData();
+
     return (
       <div className="service-buttons">
         {section === 'Купить' && (
           <>
-            <h3>{purchase}</h3>
+            <h3>{templateData.templateC[0]?.buttons.purchase}</h3>
             <ul
               className="service-buttons__list"
               aria-label="Блок со ссылками на платные музыкальные агрегаторы"
@@ -60,7 +63,7 @@ export default function ServiceButtonsPurchase({
         )}
         {section === 'Слушать' && (
           <>
-            <h3>{stream}</h3>
+            <h3>{templateData.templateC[0]?.buttons.stream}</h3>
             <ul
               className="service-buttons__list"
               aria-label="Блок со ссылками на бесплатные музыкальные агрегаторы"

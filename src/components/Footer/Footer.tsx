@@ -1,4 +1,5 @@
 import React from 'react';
+import { useData } from '../../hooks/data';
 
 import './style.scss';
 
@@ -26,6 +27,8 @@ export default function Footer() {
     },
   ];
 
+  const { templateData } = useData();
+
   return (
     <footer role="contentinfo" className="footer extra-background">
       <div className="wrapper">
@@ -50,7 +53,9 @@ export default function Footer() {
           </li>
           <li>
             <small>
-              <a href="mailto:feedback@smolyanoechuchelko.ru">Поддержка</a>
+              <a href="mailto:feedback@smolyanoechuchelko.ru">
+                {templateData.templateC[0]?.titles.support}
+              </a>
             </small>
           </li>
         </ul>

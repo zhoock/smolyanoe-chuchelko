@@ -19,7 +19,7 @@ export default function Albums() {
       aria-label="Блок c ссылками на альбомы Смоляное чучелко"
     >
       <div className="wrapper">
-        <h2>Альбомы</h2>
+        <h2>{templateData.templateC[0]?.titles.albums}</h2>
 
         {/* Элемент показывается только при загрузке данных с сервера */}
         {loading && <Loader />}
