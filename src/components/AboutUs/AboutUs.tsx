@@ -31,7 +31,7 @@ export default function AboutUs() {
                     >
                       {item.text[1]}
                     </a>
-                  }
+                  }{' '}
                   {item.text[2]}
                 </p>
               ),
