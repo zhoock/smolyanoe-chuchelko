@@ -145,7 +145,7 @@ body {
   h3 {
     letter-spacing: 2.5px;
 
-    @include adjust-font-size-to($ms-0, 0);
+    @include adjust-font-size-to($ms-0, 0.382, 18px);
 
     @include breakpoint(tablet) {
       @include adjust-font-size-to($ms-1, 0.382);

@@ -139,7 +139,7 @@ $desktops: 'width >= 1024px';
   $base-line-height: calc(18px * 1.618),
   $base-font-size: 18px
 ) {
-  margin: math.div($base-line-height * $scale-value, $to-font-size) + em 0;
+  margin-block: math.div($base-line-height * $scale-value, $to-font-size) + em;
   font-size: math.div($to-font-size, $base-font-size) + rem;
   line-height: math.div($base-line-height * 1.618, $to-font-size);
 }
