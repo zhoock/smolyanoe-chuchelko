@@ -8,6 +8,7 @@
       "img": "Tar-Baby-Cover-23-remastered"
     },
     "headlines": {
+      "albums": "Albums",
       "music": "Music",
       "release": "Release",
       "albumCover": "Album cover"
@@ -157,6 +158,7 @@
       "img": "Tar-Baby-Cover-23"
     },
     "headlines": {
+      "albums": "Albums",
       "music": "Music",
       "release": "Release",
       "albumCover": "Album cover"
@@ -306,6 +308,7 @@
       "img": "Tar-Baby-Cover"
     },
     "headlines": {
+      "albums": "Albums",
       "music": "Music",
       "release": "Release",
       "albumCover": "Album cover"
