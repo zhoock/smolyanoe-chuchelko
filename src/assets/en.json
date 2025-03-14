@@ -1,24 +1,25 @@
 [
   {
     "menu": {
-      "albums": "Albums",
-      "theBand": "The band",
-      "article": "Article"
+      "albums": "albums",
+      "theBand": "the band",
+      "article": "article"
     },
     "buttons": {
-      "playButton": "Play",
-      "purchase": "Purchase",
-      "stream": "Stream"
+      "playButton": "play",
+      "purchase": "purchase",
+      "stream": "stream",
+      "show": "show"
     },
     "titles": {
-      "albums": "Albums",
-      "theBand": "The band",
-      "music": "Music",
-      "release": "Release",
-      "albumCover": "Album cover",
-      "photo": "Photo",
-      "design": "Design",
-      "support": "Support"
+      "albums": "albums",
+      "theBand": "the band",
+      "music": "music",
+      "release": "release",
+      "albumCover": "album cover",
+      "photo": "photo",
+      "design": "design",
+      "support": "support"
     }
   }
 ]

@@ -43,7 +43,9 @@ export default function AboutUs() {
           type="button"
           aria-expanded={isExpanded}
         >
-          Показать <span>{isExpanded ? 'меньше' : 'больше'}</span>
+          {templateData.templateC[0]?.buttons.show}
+          {/* <span>{isExpanded ? 'меньше' : 'больше'}</span> */}
+          <span>{isExpanded ? 'less' : 'more'}</span>
           <span className="icon-ctrl" aria-hidden="true"></span>
         </button>
       </div>
