@@ -16,25 +16,25 @@ export default function AboutUs() {
           className={`about__content ${isExpanded ? 'about__content_active' : ''}`}
         >
           <p className="about__text">
-            «Смоляное чучелко» — российский музыкальный коллектив
-            из&nbsp;Москвы, играющий в&nbsp;жанре гранж и&nbsp;альтернативного
-            рока. Группа активно вдохновляется эстетикой и&nbsp;звучанием
-            сиэтлского гранжа 1990-х годов. Их&nbsp;творчество отличается
-            мрачным звучанием, атмосферными аранжировками и&nbsp;глубокими
-            текстами, затрагивающими темы внутренней борьбы, саморазрушения
-            и&nbsp;меланхолии.{' '}
-            <a href="https://www.instagram.com/yaroslav_zhoock/">Ярослав Жук</a>{' '}
-            является вокалистом и автором музыки, определяя стиль и философию
-            коллектива.
+            "Смоляное чучелко" is a Russian musical group from Moscow, playing
+            in the genres of grunge and alternative rock. The group is actively
+            inspired by the aesthetics and sound of Seattle grunge of the 1990s.
+            Their work is distinguished by a dark sound, atmospheric
+            arrangements and deep lyrics touching on themes of internal
+            struggle, self-destruction and melancholy.{' '}
+            <a href="https://www.instagram.com/yaroslav_zhoock/">
+              Yaroslav Zhuk
+            </a>{' '}
+            is the vocalist and author of the music, defining the style and
+            philosophy of the group.
           </p>
           <p className="about__text">
-            Группа выпустила несколько альбомов, включая{' '}
+            The group released several albums, including{' '}
             <Link to="/albums/23">23</Link> и{' '}
-            <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>,
-            которые представлены на стриминговых платформах. Название "Смоляное
-            чучелко" образовано от&nbsp;американского термина "tar-baby",
-            относящегося к&nbsp;проблемной ситуации, которая лишь усугубляется
-            при попытках взаимодействия с&nbsp;ней.
+            <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>, which
+            are presented on streaming platforms. The name "Tar Baby" is derived
+            from the American term "tar-baby", referring to a problematic
+            situation that only gets worse when you try to interact with it.
           </p>
         </div>
         <button

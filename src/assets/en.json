@@ -20,6 +20,14 @@
       "photo": "photo",
       "design": "design",
       "support": "support"
+    },
+    "theBand": {
+      "text": [
+        "SEP. 28, 2021:",
+        "Igor Matvienko's recording studio M.A.M.A, Big studio",
+        ", Moscow."
+      ],
+      "link": "https://studio-mama.ru/"
     }
   }
 ]
