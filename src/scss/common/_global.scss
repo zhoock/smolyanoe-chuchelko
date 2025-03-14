@@ -206,6 +206,8 @@ body {
       margin-block-start: var(--ms-1);
 
       li {
+        text-transform: capitalize;
+
         &:not(:last-child)::after {
           content: '→';
           display: inline-flex;

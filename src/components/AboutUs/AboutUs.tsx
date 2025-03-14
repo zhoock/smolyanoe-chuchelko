@@ -16,6 +16,26 @@ export default function AboutUs() {
           className={`about__content ${isExpanded ? 'about__content_active' : ''}`}
         >
           <p className="about__text">
+            {templateData.templateC[0]?.theBand.map((item, i) =>
+              typeof item === 'string' ? (
+                <p key={i}>{item}</p>
+              ) : (
+                <p key={i}>
+                  {item.text[0]}{' '}
+                  {
+                    <a
+                      className="album-details__link"
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {item.text[1]}
+                    </a>
+                  }
+                  {item.text[2]}
+                </p>
+              ),
+            )}
             "Смоляное чучелко" is a Russian musical group from Moscow, playing
             in the genres of grunge and alternative rock. The group is actively
             inspired by the aesthetics and sound of Seattle grunge of the 1990s.
