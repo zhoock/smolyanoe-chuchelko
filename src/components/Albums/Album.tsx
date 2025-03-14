@@ -34,7 +34,7 @@ export default function Album() {
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
             <li>
-              <Link to="/albums">{album?.headlines?.albums}</Link>
+              <Link to="/albums">Альбомы</Link>
             </li>
             <li className="active">{album?.nameAlbum}</li>
           </ul>

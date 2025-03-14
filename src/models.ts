@@ -34,10 +34,7 @@ export interface IAlbums {
   fullName: string;
   /** Обложка альбома */
   cover: CoverProps;
-  /** Заголовки секций */
-  headlines: {
-    [key: string]: string;
-  };
+
   /** Релиз альбома */
   release: {
     [key: string]: string;
@@ -91,10 +88,6 @@ export interface String {
   [key: string]: string;
 }
 
-/**
- * Articles
- */
-
 export type IArticles = {
   articleId: string;
   nameArticle: string;
@@ -118,6 +111,15 @@ export interface ArticleProps {
   img: string;
   nameArticle: string;
   date: string;
+}
+
+export interface IInterface {
+  buttons: {
+    [key: string]: string;
+  };
+  titles: {
+    [key: string]: string;
+  };
 }
 
 export interface Tracks {

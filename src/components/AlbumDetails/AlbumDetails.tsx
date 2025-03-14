@@ -3,6 +3,7 @@ import AlbumDetailsRelease from './AlbumDetailsRelease';
 import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import { String, IAlbums } from '../../models';
+import { useData } from '../../hooks/data';
 
 import './style.scss';
 
@@ -10,6 +11,8 @@ import './style.scss';
  * Компонент отображает дополнительные данные об альбоме.
  */
 export default function AlbumDetails({ album }: { album: IAlbums }) {
+  const { templateData } = useData();
+
   function Block({ music, release, albumCover }: String) {
     return (
       <section className="album-details nested-background">
@@ -39,5 +42,5 @@ export default function AlbumDetails({ album }: { album: IAlbums }) {
   }
 
   // оператор расширения или распространения (spread-оператор) ...
-  return <Block {...album?.headlines} />;
+  return <Block {...templateData.templateC[0]?.titles} />;
 }

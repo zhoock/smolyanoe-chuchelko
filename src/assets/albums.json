@@ -7,25 +7,14 @@
     "cover": {
       "img": "Tar-Baby-Cover-23-remastered"
     },
-    "headlines": {
-      "albums": "Albums",
-      "music": "Music",
-      "release": "Release",
-      "albumCover": "Album cover"
-    },
     "release": {
       "date": "2025-02-20",
       "UPC": "5016122320228/199199051297",
-      "photo": "Photo",
       "photographer": "Hans Jacob Haarseth",
       "photographerURL": "https://www.instagram.com/vedonas/",
-      "design": "Design",
       "designer": "Yaroslav Zhuk"
     },
     "buttons": {
-      "playButton": "Play",
-      "purchase": "Purchase",
-      "stream": "Stream",
       "itunes": "https://music.apple.com/us/album/23-remastered-single/1796173891?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23-remastered",
       "amazon": "https://music.amazon.com/albums/B0DWMZJJ27",
@@ -157,25 +146,14 @@
     "cover": {
       "img": "Tar-Baby-Cover-23"
     },
-    "headlines": {
-      "albums": "Albums",
-      "music": "Music",
-      "release": "Release",
-      "albumCover": "Album cover"
-    },
     "release": {
       "date": "2022-01-23",
       "UPC": "198003011083/198002899538",
-      "photo": "Photo",
       "photographer": "Hans Jacob Haarseth",
       "photographerURL": "https://www.instagram.com/vedonas/",
-      "design": "Design",
       "designer": "Yaroslav Zhuk"
     },
     "buttons": {
-      "playButton": "Play",
-      "purchase": "Purchase",
-      "stream": "Stream",
       "itunes": "https://music.apple.com/us/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/23",
       "amazon": "https://music.amazon.com/albums/B09PQ7VV7D?tag=bandlnk-20",
@@ -307,24 +285,13 @@
     "cover": {
       "img": "Tar-Baby-Cover"
     },
-    "headlines": {
-      "albums": "Albums",
-      "music": "Music",
-      "release": "Release",
-      "albumCover": "Album cover"
-    },
     "release": {
       "date": "2020-04-16",
       "UPC": "195079279966",
-      "photo": "Photo",
-      "design": "Design",
       "designer": "Blexbolex",
       "designerURL": "https://en.wikipedia.org/wiki/Blexbolex"
     },
     "buttons": {
-      "playButton": "Play",
-      "purchase": "Purchase",
-      "stream": "Stream",
       "itunes": "https://music.apple.com/ru/album/%D1%81%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D0%BE%D0%B5-%D1%87%D1%83%D1%87%D0%B5%D0%BB%D0%BA%D0%BE-ep/1509238927?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
       "bandcamp": "https://smolyanoechuchelko.bandcamp.com/album/-",
       "amazon": "https://music.amazon.com/albums/B087PNS8WH",

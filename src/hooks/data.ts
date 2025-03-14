@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { IAlbums, IArticles } from '../models';
+import { IAlbums, IArticles, IInterface } from '../models';
 
 interface ITemplateData {
-  templateA: IAlbums[]; // Данные для первого шаблона
-  templateB: IArticles[]; // Данные для второго шаблона
+  templateA: IAlbums[]; // Данные для первого шаблона c альбомами
+  templateB: IArticles[]; // Данные для второго шаблона со статьями
+  templateC: IInterface[]; // Данные для третьего шаблона с интерфейсом
 }
 
 export function useData() {
   const [templateData, setTemplateData] = useState<ITemplateData>({
     templateA: [],
     templateB: [],
-  }); // Хранение данных для обоих шаблонов
+    templateC: [],
+  }); // Хранение данных для  шаблонов
   const [loading, setLoading] = useState(false); // состояние для индикации загрузки
   const [error, setError] = useState(''); // состояние для хранения ошибок
 
@@ -21,19 +23,25 @@ export function useData() {
       setError(''); // Сбрасываем ошибку перед загрузкой
       setLoading(true); // Включаем состояние загрузки
 
-      const [templateAResponse, templateBResponse] = await Promise.all([
-        axios.get(
-          'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json',
-        ),
-        axios.get(
-          'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles.json',
-        ),
-      ]);
+      const [templateAResponse, templateBResponse, templateCResponse] =
+        await Promise.all([
+          axios.get(
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json',
+          ),
+          axios.get(
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles.json',
+          ),
+
+          axios.get(
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/en.json',
+          ),
+        ]);
 
       // Установка данных в state
       setTemplateData({
         templateA: templateAResponse.data,
         templateB: templateBResponse.data,
+        templateC: templateCResponse.data,
       });
     } catch (e) {
       if (axios.isAxiosError(e)) {

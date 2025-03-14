@@ -1,0 +1,17 @@
+[
+  {
+    "buttons": {
+      "playButton": "Play",
+      "purchase": "Purchase",
+      "stream": "Stream"
+    },
+    "titles": {
+      "albums": "Albums",
+      "music": "Music",
+      "release": "Release",
+      "albumCover": "Album cover",
+      "photo": "Photo",
+      "design": "Design"
+    }
+  }
+]
