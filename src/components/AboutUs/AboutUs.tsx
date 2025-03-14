@@ -36,17 +36,6 @@ export default function AboutUs() {
                 </p>
               ),
             )}
-            "Смоляное чучелко" is a Russian musical group from Moscow, playing
-            in the genres of grunge and alternative rock. The group is actively
-            inspired by the aesthetics and sound of Seattle grunge of the 1990s.
-            Their work is distinguished by a dark sound, atmospheric
-            arrangements and deep lyrics touching on themes of internal
-            struggle, self-destruction and melancholy.{' '}
-            <a href="https://www.instagram.com/yaroslav_zhoock/">
-              Yaroslav Zhuk
-            </a>{' '}
-            is the vocalist and author of the music, defining the style and
-            philosophy of the group.
           </p>
           <p className="about__text">
             The group released several albums, including{' '}
