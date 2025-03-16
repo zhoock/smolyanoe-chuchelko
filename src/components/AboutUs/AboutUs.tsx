@@ -35,17 +35,6 @@ export default function AboutUs() {
                     </a>
                   }{' '}
                   {item.text[2]}
-                  {
-                    <a
-                      className="album-details__link"
-                      href={item.link2}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {item.text[3]}
-                    </a>
-                  }{' '}
-                  {item.text[4]}
                 </p>
               </>
             ),
