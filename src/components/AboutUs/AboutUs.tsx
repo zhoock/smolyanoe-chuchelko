@@ -15,12 +15,14 @@ export default function AboutUs() {
         <div
           className={`about__content ${isExpanded ? 'about__content_active' : ''}`}
         >
-          <p className="about__text">
-            {templateData.templateC[0]?.theBand.map((item, i) =>
-              typeof item === 'string' ? (
-                <p key={i}>{item}</p>
-              ) : (
-                <p key={i}>
+          {templateData.templateC[0]?.theBand.map((item, i) =>
+            typeof item === 'string' ? (
+              <p key={i} className="about__text">
+                {item}
+              </p>
+            ) : (
+              <>
+                <p key={i} className="about__text">
                   {item.text[0]}{' '}
                   {
                     <a
@@ -34,9 +36,24 @@ export default function AboutUs() {
                   }{' '}
                   {item.text[2]}
                 </p>
-              ),
-            )}
-          </p>
+                <p key={i} className="about__text">
+                  {item.text[0]}{' '}
+                  {
+                    <a
+                      className="album-details__link"
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {item.text[1]}
+                    </a>
+                  }{' '}
+                  {item.text[2]}
+                </p>
+              </>
+            ),
+          )}
+
           <p className="about__text">
             The group released several albums, including{' '}
             <Link to="/albums/23">23</Link> и{' '}
