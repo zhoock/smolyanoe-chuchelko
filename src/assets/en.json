@@ -32,8 +32,15 @@
       },
 
       {
-        "text": ["The group released several albums, including", "23", "и"],
-        "link": "https://www.instagram.com/yaroslav_zhoock/"
+        "text": [
+          "The group released several albums, including",
+          "23",
+          "и",
+          "Смоляное чучелко",
+          "which are presented on streaming platforms. The name \"Tar Baby\" is derived from the American term "tar-baby", referring to a problematic situation that only gets worse when you try to interact with it."
+        ],
+        "link": "/albums/23",
+        "link2": "/albums/smolyanoechuchelko"
       }
     ]
   }
