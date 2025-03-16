@@ -123,7 +123,7 @@ export interface IInterface {
   titles: {
     [key: string]: string;
   };
-  theBand: Array<string | { text: string[]; link: string }>;
+  theBand: Array<string | { text: string[]; link: string; link2: string }>;
 }
 
 export interface Tracks {
