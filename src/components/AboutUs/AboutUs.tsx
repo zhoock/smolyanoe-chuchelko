@@ -36,20 +36,6 @@ export default function AboutUs() {
                   }{' '}
                   {item.text[2]}
                 </p>
-                <p key={i} className="about__text">
-                  {item.text[0]}{' '}
-                  {
-                    <a
-                      className="album-details__link"
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {item.text[1]}
-                    </a>
-                  }{' '}
-                  {item.text[2]}
-                </p>
               </>
             ),
           )}
