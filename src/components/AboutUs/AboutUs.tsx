@@ -21,32 +21,39 @@ export default function AboutUs() {
                 {item}
               </p>
             ) : (
-              <>
-                <p key={i} className="about__text">
-                  {item.text[0]}{' '}
-                  {
-                    <a
-                      className="album-details__link"
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {item.text[1]}
-                    </a>
-                  }{' '}
-                  {item.text[2]}
-                </p>
-              </>
+              <p key={i} className="about__text">
+                {item.text[0]}{' '}
+                {
+                  <a
+                    className="album-details__link"
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.text[1]}
+                  </a>
+                }{' '}
+                {item.text[2]}
+              </p>
             ),
           )}
 
           <p className="about__text">
             The group released several albums, including{' '}
-            <Link to="/albums/23">23</Link> и{' '}
-            <Link to="/albums/smolyanoechuchelko">Смоляное чучелко</Link>, which
-            are presented on streaming platforms. The name "Tar Baby" is derived
-            from the American term "tar-baby", referring to a problematic
-            situation that only gets worse when you try to interact with it.
+            <Link to="/albums/23" className="album-details__link">
+              23
+            </Link>{' '}
+            и{' '}
+            <Link
+              to="/albums/smolyanoechuchelko"
+              className="album-details__link"
+            >
+              Смоляное чучелко
+            </Link>
+            , which are presented on streaming platforms. The name "Tar Baby" is
+            derived from the American term "tar-baby", referring to a
+            problematic situation that only gets worse when you try to interact
+            with it.
           </p>
         </div>
         <button
