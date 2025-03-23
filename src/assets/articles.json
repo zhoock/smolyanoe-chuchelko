@@ -1,130 +1,109 @@
 [
   {
     "articleId": "6",
-    "nameArticle": "Ярослав Жук. Антиправила жизни",
+    "nameArticle": "Yaroslav Zhuk. Anti-Rules of Life",
     "img": "yaroslav_zhoock-s",
     "date": "2022-09-08",
     "detales": [
       {
-        "id": 1,
-        "content": "Музыкант. Вокалист, гитарист и лидер группы Смоляное чучелко. 43 года. Москва."
-      },
-      {
-        "id": 2,
-        "img": "yaroslav_zhoock",
-        "alt": "Ярослав Жук.",
-        "strong": "Я не люблю людей.",
-        "content": "Особенно глупых людей. Я смеюсь над ними и унижаю их. Это меня забавляет. Поэтому я пишу музыку, которая похожа на то, как я предпочитаю общаться. Это не самый лучший способ достичь успеха, если ты играешь в рок-группе."
-      },
-      {
-        "id": 3,
-        "strong": "Гранж — это удар по морде.",
-        "content": "Не философия боевых искусств. Гранж — это как если подойти к кому-то и просто дать в морду."
-      },
-      {
-        "id": 4,
-        "strong": "Петь гранж — это как трахаться с порванным членом.",
-        "content": "Тебе больно и приятно одновременно."
-      },
-      {
         "id": 5,
-        "strong": "Мы все должны знать, что мы когда-нибудь умрём.",
-        "content": "Всё наше существование не имеет смысла. Каждый сам должен создать этот смысл для себя. Как Сизиф знает, что камень, поднятый на гору, всё равно опять скатится вниз. Сизиф знает это, но продолжает свою работу, потому что в этом он находит путь для себя. Бунт против абсурда. Через бунт мы создаём ценное, творим, становимся свободными. Только в этом проявляется подлинный смысл существования. Заранее зная, что потерпишь поражение, продолжать двигаться вперёд. Как безоружный, военный барабанщик. Безумство храбрых."
+        "strong": "We all must know that one day we will die.",
+        "content": "Our entire existence is meaningless. Each person must create this meaning for themselves. Like Sisyphus knows that the stone he lifts to the top of the mountain will inevitably roll back down. Sisyphus knows this but continues his work because in it he finds his own path. A rebellion against the absurd. Through rebellion, we create value, we create, we become free. Only in this does the true meaning of existence manifest. Knowing in advance that you will fail, yet continuing to move forward. Like an unarmed military drummer. The madness of the brave."
       },
       {
         "id": 6,
-        "strong": "Психолог сказал — моя проблема, что я слишком зацикливаюсь на том, что я делаю.",
-        "content": "Я думаю, что если бы каждый был зациклен на том, что он делает, хорошо делал это и не совал нос в чужие дела — люди бы получили, наконец, свою Божью благодать."
+        "strong": "The psychologist said—my problem is that I get too fixated on what I do.",
+        "content": "I think that if everyone was fixated on what they do, did it well, and didn’t poke their noses into other people’s business—people would finally receive their divine grace."
       },
       {
         "id": 7,
-        "strong": "Те, кто всё ещё пытаются найти смысл в моих песнях,",
-        "content": "жопу то свою с трудом смогут найти, чтобы подтереться."
+        "strong": "Those who are still trying to find meaning in my songs,",
+        "content": "can barely find their own ass to wipe it."
       },
       {
         "id": 8,
-        "strong": "Я никогда не говорю серьёзно и я никогда не шучу.",
-        "content": "Я как пауэр-аккорд — не мажорный и не минорный. Всё, что я говорю — не имеет окраски, поэтому каждый сам волен трактовать услышанное по своему разумению."
+        "strong": "I never speak seriously, and I never joke.",
+        "content": "I'm like a power chord—not major and not minor. Everything I say has no coloration, so everyone is free to interpret what they hear as they see fit."
       },
       {
         "id": 9,
-        "strong": "Андеграунд в России есть.",
-        "content": "Настоящий андеграунд. Нищий и невостребованный."
+        "strong": "The underground in Russia exists.",
+        "content": "A real underground. Poor and unclaimed."
       },
       {
         "id": 10,
-        "strong": "Суть современной звукозаписи в том,",
-        "content": "что работа начинается только на этапе сведения материала. Если вы хотите получить действительно живой звук, то сведение должно быть лишь расстановкой баланса. Настоящая работа происходит тогда, когда группа пишется в студии и заканчивается, когда звукоинженер выключает пульт."
+        "strong": "The essence of modern sound recording is that,",
+        "content": "work only begins at the mixing stage. If you want to get a truly live sound, then mixing should only be about balancing. The real work happens when the band is recording in the studio and ends when the sound engineer turns off the console."
       },
       {
         "id": 11,
-        "strong": "Весь русский рок",
-        "content": "— это большая, вонючая куча свинячьего говна."
+        "strong": "All of Russian rock",
+        "content": "is one big, stinking pile of pig shit."
       },
       {
         "id": 12,
-        "strong": "Я люблю спрашивать, что является главным в музыке?",
-        "content": "Люди отвечают: «Новаторство, стиль…» Пока никто ещё не сказал, что главным в музыке является мелодия. Возможно в этом кроется проблема современной поп-культуры."
+        "strong": "I love asking what is the most important thing in music?",
+        "content": "People answer: 'Innovation, style…' No one has yet said that the most important thing in music is melody. Perhaps this is the problem of modern pop culture."
       },
       {
         "id": 13,
-        "strong": "У людей, проживающих в России,",
-        "content": "на лицо все виды депрессивного расстройства. Говоря проще — все они психически больны."
+        "strong": "People living in Russia,",
+        "content": "display all types of depressive disorders. Simply put—they are all mentally ill."
       },
       {
         "id": 14,
-        "strong": "Раньше я думал о том, как бы потрахаться,",
-        "content": "сейчас я думаю о том, что придётся умирать. Кажется, я пропустил промежуточный этап, когда думают о чём-то другом. На самом деле все думают о смерти, просто люди заводят собак или детей, чтобы чем-то отвлечь свой мозг."
+        "strong": "I used to think about how to get laid,",
+        "content": "now I think about having to die. Seems like I missed the intermediate stage where people think about something else. In reality, everyone thinks about death; they just get dogs or kids to distract their brains with something."
       },
       {
         "id": 15,
-        "strong": "Это было в младшей школе.",
-        "content": "Нужно было написать изложение по картинкам из учебника. Мальчик ловит рыбу. Мальчик кладёт рыбу на грудь и загорает. Мальчик с силуэтом рыбы на груди, довольный, идёт домой. Я помню, как учитель по русскому языку пыталась добиться ответа от двух моих одноклассниц. Это были сёстры-близняшки: страшненькие и косоглазые. Почему в их изложениях не фигурировала средняя картинка? Там было написано что-то вроде: мальчик поймал рыбу, мальчик очень рад, мальчик идёт домой… Столько лет прошло, а я до сих пор помню этот случай. Каждый день я вижу, как люди смотрят на что-то и не понимают, что они видят. Не понимают смысла того, что происходит. Не понимают, чего от них хотят. Не понимают вообще ничего."
+        "strong": "It was in elementary school.",
+        "content": "We had to write a composition based on pictures from a textbook. A boy catches a fish. The boy lays the fish on his chest and sunbathes. The boy, with a fish silhouette on his chest, happily walks home. I remember how the Russian language teacher was trying to get an answer from two of my classmates. They were twin sisters: ugly and cross-eyed. Why was the middle picture missing from their compositions? They had written something like: the boy caught a fish, the boy is very happy, the boy walks home… So many years have passed, but I still remember this case. Every day I see people looking at something and not understanding what they are seeing. Not understanding the meaning of what is happening. Not understanding what is expected of them. Not understanding anything at all."
       },
       {
         "id": 16,
-        "strong": "Я заикаюсь с детства.",
-        "content": "Я думал, что в этом корень моих проблем. Как-то я натолкнулся на портал, посвящённый заиканию. Типа группы поддержки. Все эти плаксивые истории, как кто-то вынужден ехать до конечной остановки маршрутного такси, потому что стесняется или не может выговорить свою остановку. В итоге свои же товарищи по несчастью выкинули меня с этого сайта за неуважение, брань и некорректное поведение. Во всяком случае я понял, что это больше не моя проблема. Я думаю, что моё заикание — это божий промысел, шанс не услышать людям то, что я мог бы им сказать."
+        "strong": "I've stuttered since childhood.",
+        "content": "I thought that was the root of my problems. One day, I stumbled upon a portal dedicated to stuttering. Like a support group. All these tearful stories of people forced to ride public transport to the last stop because they were too shy or unable to say their stop out loud. In the end, my fellow sufferers kicked me out of that site for disrespect, profanity, and inappropriate behavior. At the very least, I realized that this was no longer my problem. I think my stuttering is divine providence—a chance for people not to hear what I might have said to them."
       },
       {
         "id": 17,
-        "strong": "Я играл на скрипке по ресторанам два года.",
-        "content": "Кельтскую музыку. Никто не врубался в кельтскую музыку, мне пришлось поменять 9 или 10 кабаков. Под конец я научился играть пьяным, с сигаретой в зубах, и моя скрипка пропахла дымом. Последней нашей работой был банкет ко дню милиции. Сначала мы играли для прокуроров и судей. Потом мы спустились в подвал и отыграли для среднего звена (кому-то там вручили орден, а нам подарили бутылку водки). После чего мы играли в баре уже для рядового состава. После этого я решил, что с меня хватит."
+        "strong": "I played the violin in restaurants for two years.",
+        "content": "Celtic music. No one got Celtic music, so I had to change 9 or 10 bars. By the end, I had learned to play drunk, with a cigarette in my teeth, and my violin reeked of smoke. Our last gig was a banquet for Police Day. First, we played for prosecutors and judges. Then we went down to the basement and played for the middle ranks (someone was awarded a medal there, and we were given a bottle of vodka as a gift). After that, we played in the bar for the regular officers. After that, I decided I’d had enough."
       },
       {
         "id": 18,
-        "strong": "Широко-порно-полосный интернет доказал то,",
-        "content": "о чём раньше можно было лишь только догадываться — большинству людей абсолютно нечего сказать, даже когда они говорят."
+        "strong": "High-speed porn-broadband internet has proven what",
+        "content": "was once only suspected—most people have absolutely nothing to say, even when they speak."
       },
       {
         "id": 19,
-        "strong": "Я не верю в понятия таланта или одарённости.",
-        "content": "Если кто-то талантливый решит прыгнуть на лыжах с самого высокого трамплина без подготовки, то он либо переломается, либо погибнет. Мои первые песни были ужасны: музыка была ужасной, тексты были ещё ужаснее. Я придумал сотни мелодий, прежде, чем они стали звучать более или менее сносно."
+        "strong": "I don’t believe in talent or giftedness.",
+        "content": "If a talented person decides to ski jump from the highest ramp without preparation, they will either break their bones or die. My first songs were terrible: the music was awful, and the lyrics were even worse. I came up with hundreds of melodies before they started sounding at least somewhat decent."
       },
       {
         "id": 20,
-        "strong": "Станция по борьбе с болезнями животных.",
-        "content": "Моя первая креативная работа. Курилка обклеена фотографиями с корпоративов, там же стоит скелет собаки, в зубах у собаки сигарета. Там же можно было услышать что-то вроде: «пойдёмте смотреть, как топят щенков!» Я старался влиться в коллектив: подстригся, начал носить костюм и галстук. На очередном корпоративе, когда я смеялся чужим шуткам, старый сторож сверлил меня глазами. Когда мы остались вдвоём, он со словами: «Ты всё врёшь!» начал меня душить. Я выбрался из под его туши, доковылял до общего зала и пока все с выпученными глазами смотрели на меня, а я хрипел, что сторожа надо уволить, сторож, с пистолетом наголо, ворвался, стрелял, но промазал. Я, конечно, был раздосадован, что чуть не заглох два раза подряд в течение пяти минут, но хуже было понимание того, что мне не светит влиться в коллектив. Ни в этот, ни в любой другой. И даже если никто не будет стрелять в меня и душить меня, кто я такой на самом деле, каждому будет ясно, как небо в самый солнечный летний день."
+        "strong": "Station for the Control of Animal Diseases.",
+        "content": "My first creative job. The smoking room was covered with photos from corporate parties, and there was a dog skeleton standing there with a cigarette in its teeth. You could also hear things like: 'Let’s go watch them drown puppies!' I tried to blend into the team: got a haircut, started wearing a suit and tie. At one corporate party, when I was laughing at other people’s jokes, an old security guard was staring at me. When we were alone, he said, 'You’re lying!' and started choking me. I got out from under his bulk, staggered into the main hall, and while everyone stared at me with bulging eyes as I rasped that the guard should be fired, he burst in, gun in hand, fired, but missed. Of course, I was upset that I nearly died twice in five minutes, but worse was realizing that I’d never fit into any team. Not this one, nor any other. And even if no one shoots at me or strangles me, who I really am will be as obvious as the sky on the sunniest summer day."
       },
       {
         "id": 21,
-        "strong": "Человеческая жизнь — это игра с набором правил,",
-        "content": "неукоснительно следуя которым, человек получает шанс одержать победу в этой игре. Как в любой игре, здесь присутствует элемент случайности. В чём природа случайности — объяснить не может никто. Почему кому-то падает кирпич на голову, а кому-то нет? В этом кроются истоки религии. Религия категорична, в её основе — наказание. Но сам дьявол не страдает. Он не испытывает ни раскаяния, ни угрызений совести, ему нельзя причинить зло, ведь он сам есть зло. В этом смысле я не вижу никакой разницы между чёрным и белым. Рисунок на белой бумаге делается угольным карандашом. Для того чтобы сделать рисунок на грифельной доске — мы берём белый мел."
+        "strong": "Human life is a game with a set of rules,",
+        "content": "by strictly following which, a person gets a chance to win this game. As in any game, there is an element of randomness. No one can explain the nature of randomness. Why does a brick fall on someone’s head and not on someone else’s? This is where the roots of religion lie. Religion is categorical; at its core is punishment. But the devil himself does not suffer. He feels neither remorse nor guilt; he cannot be harmed because he is evil itself. In this sense, I see no difference between black and white. A drawing on white paper is made with charcoal. To make a drawing on a slate board, we use white chalk."
       },
       {
         "id": 22,
-        "strong": "Всё зависит исключительно от того, как ты выглядишь.",
-        "content": "Я как-то был обрит наголо из-за шрамов на голове и был одет во всё чёрное. Зрелище было грустное. Скинхед, который ехал со мною в маршрутном такси, принял меня за своего и мы пол ночи пили и болтали с ним о всяком. Если твой интеллект выше среднего, ты легко сможешь поддержать любой разговор. Главное чтобы ты выглядел так же, как твой оппонент."
+        "strong": "Everything depends entirely on how you look.",
+        "content": "Once, I was completely shaved due to scars on my head and dressed all in black. A sad sight. A skinhead riding with me in a minibus mistook me for one of his own, and we spent half the night drinking and chatting. If your intelligence is above average, you can easily support any conversation. The main thing is that you look like your opponent."
       },
       {
         "id": 23,
-        "strong": "Я ходил в тренажёрные залы начиная с подвалов,",
-        "content": "где вместо окон были дырки в стенах, а вместо душа — шланг с холодной водой, и заканчивая местами, где тебе бесплатно выдают чистое, белое полотенце. И нигде больше я не встречал такого сосредоточения закомплексованных мужчин на квадратный метр. Зато когда у меня была юридическая практика и я пришел на свою первую оперативку в убойный отдел милиции к 7 часам утра, и увидел всех этих парней, которые недавно вернулись из Чечни… я присел на стул и моё эго сказало: «Всем спасибо. Мы закончили»."
+        "strong": "I went to gyms starting from basements,",
+        "content": "where instead of windows there were holes in the walls, and instead of a shower—a hose with cold water, and ending with places where you are given a clean, white towel for free. Nowhere else have I seen such a concentration of insecure men per square meter. But when I had my legal practice and attended my first operational meeting at the homicide division of the police at 7 AM, and saw all these guys who had recently returned from Chechnya… I sat down on a chair, and my ego said: 'Thank you all. We’re done here.'"
       },
       {
         "id": 24,
-        "strong": "Мне было лет 18,",
-        "content": "я как-то писал ночью трек на студии и мне нужна была партия баса. На полу студии, в коридоре, спал пьяный мужик, мне сказали, что он хороший басист. Я растолкал его и уговорил записать мне бас. А потом мы сидели на улице ранним летним утром, потягивали пиво, и он спросил меня: «Чего ты хочешь?» Я ответил: «Прославиться». И тогда он сказал: «Прославиться очень просто — развешиваешь на всех фонарных столбах и автобусных остановках фотографии себя с голой жопой и наутро ты знаменит». Так что я пока придерживаю этот вариант про запас."
+        "strong": "I was about 18 years old,",
+        "content": "once I was recording a track at a studio at night and needed a bass part. A drunk man was sleeping on the studio floor, in the hallway—I was told he was a good bassist. I woke him up and convinced him to record the bass for me. Then we sat outside in the early summer morning, sipping beer, and he asked me: 'What do you want?' I answered: 'To become famous.' And then he said: 'Becoming famous is very simple—just put up pictures of yourself with a bare ass on every lamppost and bus stop, and by morning, you’ll be famous.' So I’m keeping that option in reserve for now."
       }
     ]
   },
