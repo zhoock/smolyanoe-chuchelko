@@ -130,145 +130,147 @@
   },
   {
     "articleId": "5",
-    "nameArticle": "Смоляное чучелко — 23 (2022). Запись альбома. Оборудование",
+    "nameArticle": "Смоляное чучелко — 23 (2022). Album Recording. Equipment",
     "img": "recording_vocals_album_session_23",
     "date": "2022-02-15",
     "detales": [
       {
         "id": 1,
-        "content": "Основное отличие этого альбома от предыдущего в том, что он записан полностью вживую (кроме вокала).\n       Мы пришли в студию М.А.М.А, разложились, отстроились и прогнали два первых трека по три дубля.\n        Попили чайку, после чего добили последний трек, сразу отобрали лучшие дубли и я записал под них гитарные даблы. Вот и всё."
+        "content": "The main difference between this album and the previous one is that it was recorded entirely live (except for the vocals). We arrived at the M.A.M.A studio, set up, tuned everything, and ran through the first two tracks three times each. We had some tea, then finished the last track, immediately picked the best takes, and I recorded guitar doubles over them. That’s it."
       },
       {
         "id": 2,
-        "title": "ВОКАЛ",
-        "content": "Позже я записывал голос в той же студии, но как-то не пошло, то ли из-за пульта (который там старый),\n           то ли из-за микрофона (который там слишком дорогой), то ли я плохо спел.\n            Поэтому второй раз я записал голос уже на DTH. И там же бэк-вокал."
+        "title": "vocals",
+        "content": "Later, I recorded the vocals in the same studio, but it didn’t quite work out—maybe because of the mixing console (which is pretty old there), Maybe because of the microphone (which is too expensive there), or maybe I just sang poorly. So the second time, I recorded the vocals at DTH. I also recorded the backing vocals there."
       },
       {
         "id": 3,
         "img": "recording_vocals_album_session_23",
-        "alt": "запись вокала, сессия альбома 23.",
-        "subtitle": "Микрофон",
+        "alt": "vocal recording, album session 23.",
+        "subtitle": "microphone",
         "content": "GoodFly 251"
       },
       {
         "id": 4,
-        "title": "ГИТАРА",
-        "content": "Бекстек на записи был почти такой же, как и на первом альбоме, с той лишь разницей,\n         что в этот раз Илья припёр для меня с DTH гитарный кабинет Marshall с динамиками Vintage 30.\n         После этого у меня получился концертный стафф Курта Кобейна 93—94 гг.\n         Я давно к этому шёл, но когда всё, наконец, свершилось – стало даже как-то западло...\n         Но в любом случае — звучало круто. Дело не в том, что это «самый плотный» или «самый яростный» звук,\n         которого можно достичь. Скорее это звук, как если бы живую свинью подвесили за крюк и начали резать.\n         В принципе гитара не должна издавать такой звук, потому что это не очень то похоже на гитарный звук.\n         Но если кому-то не нравится, они всегда могут послушать что-то другое.\n         Звук гитары снимали вблизи динамика, а также из комнаты с расстояния 2-х метров от динамика."
+        "title": "guitar",
+        "content": "The backline on the recording was almost the same as on the first album, with the only difference being that this time, Ilya brought me a Marshall guitar cabinet with Vintage 30 speakers from DTH. After that, I ended up with Kurt Cobain’s live rig from ‘93–‘94. I had been working towards this for a long time, but when it finally happened, it almost felt wrong… But in any case, it sounded awesome. It’s not about being the “heaviest” or the “most aggressive” sound you can achieve. It’s more like the sound of a live pig being hung on a hook and slowly cut open.         Technically, a guitar isn’t supposed to make that kind of sound, because it doesn’t really resemble a typical guitar tone. But if someone doesn’t like it, they can always listen to something else. The guitar sound was captured both close to the speaker and from a distance of two meters in the room."
       },
       {
         "id": 5,
         "img": "recording_guitar_cabinet_album_session_23",
-        "alt": "запись гитарного кабинета, сессия альбома 23.",
-        "subtitle": "Гитара",
+        "alt": "Guitar Cabinet Recording, Album Session 23.",
+        "subtitle": "guitar",
         "content": ["Fender Mustang"]
       },
       {
         "id": 6,
-        "subtitle": "Педали эффектов",
+        "subtitle": "effect pedals",
         "content": ["BOSS DS-1", "EHX Polyhorus"]
       },
       {
         "id": 7,
-        "subtitle": "Усилители",
+        "subtitle": "amplifiers",
         "content": [
           "Mesa boogie studio preamp .22 & Crest Audio 4801 + Marshall 1960 Vintage AV 4×12 (Vintage 30)"
         ]
       },
-      { "id": 8, "subtitle": "Микрофоны" },
+      { "id": 8, "subtitle": "microphones" },
       {
         "id": 9,
-        "subtitle": "Ближние",
+        "subtitle": "close mics",
         "content": ["Neumann U67", "Sennheiser MD 421", "Beyerdynamic M160"]
       },
       {
         "id": 10,
-        "subtitle": "Дальние",
-        "content": ["Винтажный ленточный RCA (2 шт.)"]
+        "subtitle": "room mics",
+        "content": ["Vintage Ribbon RCA (2 pcs.)"]
       },
       {
         "id": 11,
-        "subtitle": "Кабели",
+        "subtitle": "cables",
         "content": ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"]
       },
       {
         "id": 12,
-        "title": "БАРАБАНЫ",
-        "content": "Барабаны мы собрали опять из той же кучи на студии, которая всегда лежит там в углу.\n          Это похоже на то, как в детстве мы на уроке физкультуры собирали себе лыжи на складе:\n          один ботинок от одной пары, второй ботинок от другой пары, палки от разных комплектов, лыжи тоже.\n          На альбоме барабаны звучат так же, как они и выглядели. То есть круто, конечно же... как иначе.\n          Никто там потом ничего не правил, не вытаскивал, ничего никуда не подкладывал.\n          Я фанат звука барабанов Альбини, поэтому я Илье всю плешь проел по этому поводу.\n          Но он, итак, в теме. Так что микрофоны на полу лежали (кто в курсе, тот поймёт)."
+        "title": "drums",
+        "content": "We put the drum kit together once again from the same pile that’s always lying in the corner of the studio. It’s kind of like how we used to put together our ski gear in gym class as kids—one boot from one pair, the other from another, mismatched poles, and completely different skis. On the album, the drums sound exactly like they looked. Which is to say—awesome, of course… how else? No one fixed anything, moved anything around, or added anything later. I’m a huge fan of Albini’s drum sound, so I absolutely wore Ilya out talking about it. But he’s already on the same page. So the mics were lying on the floor (if you know, you know)."
       },
       {
         "id": 13,
         "img": "drum_recording_album_session_23",
-        "alt": "запись барабанов, сессия альбома 23.",
-        "subtitle": "Оверхеды",
-        "content": ["Стереопара COLES 4038 + моно Goodfly 251"]
+        "alt": "drum recording, album session 23",
+        "subtitle": "overheads",
+        "content": ["Stereo Pair: COLES 4038 + Mono: Goodfly 251"]
       },
       {
         "id": 14,
-        "subtitle": "Передний микрофон",
+        "subtitle": "Front Microphone",
         "content": [
-          "Ленточный стереомикрофон в конфигурации Blumlein AEA R88 MK2"
+          "Ribbon Stereo Microphone in Blumlein Configuration: AEA R88 MK2"
         ]
       },
-      { "id": 15, "subtitle": "Райд", "content": ["Neumann KM84"] },
+      { "id": 15, "subtitle": "Ride Mic", "content": ["Neumann KM84"] },
       {
         "id": 16,
-        "subtitle": "Neumann TLM 170 (снаружи)",
-        "content": [
-          "AKG D112 (внутри) + вмонтированный динамический микрофон (внутри)"
-        ]
+        "subtitle": "Neumann TLM 170 (outside)",
+        "content": ["AKG D112 (inside) + Built-in Dynamic Microphone (inside)"]
       },
       {
         "id": 17,
-        "subtitle": "Малый барабан",
-        "content": ["Shure SM57 (верх и низ)"]
+        "subtitle": "Snare Drum",
+        "content": ["Shure SM57 (top & bottom)"]
       },
       {
         "id": 18,
-        "subtitle": "Том-томы",
-        "content": ["Sennheiser MD 421 (верх)", "AKG 414 B-ULS (низ)"]
+        "subtitle": "Tom-Toms",
+        "content": ["Sennheiser MD 421 (top), AKG 414 B-ULS (bottom)"]
       },
       {
         "id": 19,
-        "subtitle": "Хай-хэт",
-        "content": ["Гиперкардиоидный леточный микрофон Beyerdynamic M160"]
+        "subtitle": "Hi-Hat",
+        "content": ["Hypercardioid Ribbon Microphone: Beyerdynamic M160"]
       },
       {
         "id": 20,
-        "subtitle": "Комната",
-        "content": ["AKG C 460 B (2 шт. на полу, расстояние 3—4 метра)"]
+        "subtitle": "Room Mics",
+        "content": ["AKG C 460 B (2 pcs. on the floor, 3–4 meters away)"]
       },
       {
         "id": 21,
-        "title": "БАС",
-        "content": "Про бас мало что могу сказать. Я дал басисту RAT, но он мне его потом вернул.\n           Что у него было под ногами — понятия не имею. Был басист. Мы этого не отрицаем.\n           Но он самоликвидировался."
+        "title": "bass",
+        "content": "I don’t have much to say about the bass. I gave the bassist a RAT, but he gave it back later. What he had under his feet—I have no idea. There was a bassist. We don’t deny that. But he self-destructed."
       },
       {
         "id": 22,
         "img": "bass_guitar_recording_album_session_23",
-        "alt": "запись басового кабинета, сессия альбома 23.",
-        "subtitle": "Усилители",
+        "alt": "Bass Cabinet Recording, Album Session 23.",
+        "subtitle": "amplifiers",
         "content": ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"]
       },
-      { "id": 23, "subtitle": "Микрофоны", "content": ["Neumann U87 + линия"] },
+      {
+        "id": 23,
+        "subtitle": "microphones",
+        "content": ["Neumann U87 + линия"]
+      },
       {
         "id": 24,
-        "title": "СВЕДЕНИЕ",
-        "content": "Сводили альбом на Винтаж Рекордс. Я давно хотел попробовать там свести, потому что это единственная студия,\n         которую я знаю,где находится полностью аналоговое оборудование. То есть мы сводили альбом на аналоге.\n         Никакой цифры. Пульт, который должен нагреться, странные шумы в колонках от всего этого старого железа и т. д.\n         Мы все зашли туда впервые, включая Илью, поэтому было немного стремновато, но я считаю, что мы справились.\n         Уложились в две сессии. Оставили на ночь все настройки на пульте, чтобы не реколить, а наутро добили.\n         По мне так немного просрали баланс в двух треках (слишком задрали гитару), но в этом риск аналогового сведения.\n         Мы знали на что шли. В целом получилось неплохо. DIY."
+        "title": "mixing",
+        "content": "We mixed the album at Vintage Records. I had wanted to try mixing there for a while because it’s the only studio I know that has fully analog equipment. So we mixed the album on analog gear—no digital at all. A console that needs to warm up, weird noises in the speakers from all that old hardware, and so on. It was the first time any of us had been there, including Ilya, so it was a bit nerve-wracking, but I think we handled it well. We wrapped it up in two sessions. We left all the settings on the console overnight to avoid recalling everything, and in the morning, we finished it up. In my opinion, we kind of messed up the balance on two tracks (pushed the guitar too high), but that’s the risk of analog mixing. We knew what we were getting into. Overall, it turned out pretty good. DIY."
       },
       {
         "id": 25,
         "img": "mixing_process_album_session_23",
-        "alt": "процесс сведения, сессия альбома 23."
+        "alt": "Mixing Process, Album Session 23"
       },
       {
         "id": 26,
-        "title": "МАСТЕРИНГ",
-        "content": "Мастеринг делали снова в Chicago Mastering Service в Чикаго, у того же парня, Matthew J Barnhart.\n         Там ничего никому не нужно объяснять, они там сами всё всем объяснят. Этот этап без вопросов."
+        "title": "mastering",
+        "content": "The mastering was done again at Chicago Mastering Service in Chicago, with the same guy, Matthew J Barnhart. There’s nothing to explain there—they’ll explain everything to you themselves. No questions about this stage."
       },
       {
         "id": 27,
-        "title": "ДИСТРИБУЦИЯ",
-        "content": "По-прежнему CD Baby. Две версии альбома.\n         Для всех стриминговых сервисов — CD-качество (16-битные файлы 44,1 кГц), для Apple Music и iTunes — Apple Digital Masters (24-битные аудиофайлы)."
+        "title": "distribution",
+        "content": "Still CD Baby. Two versions of the album: For all streaming services—CD quality (16-bit, 44.1 kHz files). For Apple Music and iTunes—Apple Digital Masters (24-bit audio files)."
       }
     ]
   },
