@@ -6,6 +6,27 @@
     "date": "2022-09-08",
     "detales": [
       {
+        "id": 1,
+        "content": "Musician. Vocalist, guitarist, and leader of the band Смоляное Чучелко. 43 years old. Moscow."
+      },
+      {
+        "id": 2,
+        "img": "yaroslav_zhoock",
+        "alt": "Yaroslav Zhuk.",
+        "strong": "I don't like people.",
+        "content": "Especially stupid people. I laugh at them and humiliate them. It amuses me. That's why I write music that reflects the way I prefer to communicate. It's not the best way to achieve success if you're in a rock band."
+      },
+      {
+        "id": 3,
+        "strong": "Grunge is a punch to the face.",
+        "content": "Not a martial arts philosophy. Grunge is like walking up to someone and just punching them in the face."
+      },
+      {
+        "id": 4,
+        "strong": "Singing grunge is like having sex with a torn-up dick.",
+        "content": "It hurts, and it feels good at the same time."
+      },
+      {
         "id": 5,
         "strong": "We all must know that one day we will die.",
         "content": "Our entire existence is meaningless. Each person must create this meaning for themselves. Like Sisyphus knows that the stone he lifts to the top of the mountain will inevitably roll back down. Sisyphus knows this but continues his work because in it he finds his own path. A rebellion against the absurd. Through rebellion, we create value, we create, we become free. Only in this does the true meaning of existence manifest. Knowing in advance that you will fail, yet continuing to move forward. Like an unarmed military drummer. The madness of the brave."
