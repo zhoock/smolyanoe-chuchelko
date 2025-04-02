@@ -1,28 +1,14 @@
 import React from 'react';
 import { IAlbums, String } from '../../models';
 import { formatDate } from '../../hooks/data';
-
-/**
- * Функция возвращает строку (количество треков) с верным падежным окончанием.
- */
-// const endForTracks = (n: number): 'песни' | 'песен' | 'песня' =>
-//   n > 2 && n < 4 ? 'песни' : n > 4 ? 'песен' : 'песня';
-
-// const endForTracks = (n: number): string => (n === 1 ? 'track' : 'tracks');
-
-/**
- * Функция возвращает строку (количество минут) с верным падежным окончанием.
- */
-// const endForMinutes = (n: number): 'минуты' | 'минут' | 'минута' =>
-//   n > 2 && n < 4 ? 'минуты' : n > 4 ? 'минут' : 'минута';
-
-const endForMinutes = (n: number): string => (n === 1 ? 'minute' : 'minutes');
+import { functionsMap } from './Functions'; // Импортируем функции
 
 /**
  * Компонент отображает блок с датой релиза альбома.
  */
 export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
-  let endForTracks = new Function(album?.release.fn);
+  // Подгружаем функции для выбранного языка
+  const { endForTracks, endForMinutes } = functionsMap.en;
 
   const duration: number = album?.tracks
     .map((item) => item.duration)

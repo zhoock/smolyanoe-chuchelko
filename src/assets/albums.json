@@ -12,8 +12,7 @@
       "UPC": "5016122320228/199199051297",
       "photographer": "Hans Jacob Haarseth",
       "photographerURL": "https://www.instagram.com/vedonas/",
-      "designer": "Yaroslav Zhuk",
-      "fn": "(n: number): string => (n === 1 ? 'track' : 'tracks')"
+      "designer": "Yaroslav Zhuk"
     },
     "buttons": {
       "itunes": "https://music.apple.com/us/album/23-remastered-single/1796173891?at=1000lqjf&ct=bq&uo=4&app=itunes&Is=1&ls=1",
