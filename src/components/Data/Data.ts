@@ -1,11 +1,11 @@
 const EP = [
   {
     albumId: 'smolyanoechuchelko',
-    nameGroup: 'Смоляное чучелко',
-    nameAlbum: 'Смоляное чучелко',
+    artist: 'Смоляное чучелко',
+    album: 'Смоляное чучелко',
     get fullName() {
       // геттер
-      return `${this.nameGroup} — ${this.nameAlbum}`;
+      return `${this.artist} — ${this.album}`;
     },
     buttons: [
       {
@@ -396,8 +396,8 @@ const EP = [
 const _23 = [
   {
     albumId: '23',
-    nameGroup: 'Смоляное чучелко',
-    nameAlbum: '23',
+    artist: 'Смоляное чучелко',
+    album: '23',
     fullName: 'Смоляное чучелко — 23',
     cover: {
       webp: 'Tar-Baby-Cover-23-mobiles',

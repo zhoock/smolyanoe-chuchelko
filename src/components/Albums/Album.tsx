@@ -38,7 +38,7 @@ export default function Album() {
                 {templateData.templateC[0]?.titles.albums}
               </Link>
             </li>
-            <li className="active">{album?.nameAlbum}</li>
+            <li className="active">{album?.album}</li>
           </ul>
         </nav>
 

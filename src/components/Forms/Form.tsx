@@ -8,26 +8,26 @@ export default function Form() {
       <div className="wrapper">
         <h2>Заявка</h2>
         <form id="new-album" className="form__wrapper" action="" method="POST">
-          <label className="item" htmlFor="nameGroup">
+          <label className="item" htmlFor="artist">
             Название группы
           </label>
           <input
             className="input item"
-            id="nameGroup"
+            id="artist"
             type="text"
-            name="nameGroup"
+            name="artist"
             placeholder="Название группы"
             required
             autoFocus
           />
-          <label className="item" htmlFor="nameAlbum">
+          <label className="item" htmlFor="album">
             Название альбома
           </label>
           <input
             className="input item"
-            id="nameAlbum"
+            id="album"
             type="text"
-            name="nameAlbum"
+            name="album"
             placeholder="Название альбома"
             required
           />

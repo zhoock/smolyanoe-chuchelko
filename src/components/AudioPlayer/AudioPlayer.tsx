@@ -218,7 +218,7 @@ export default function AudioPlayer({
 
       <div className="player__track-info">
         <h2>{album.tracks[currentTrackIndex]?.title || 'Unknown Track'}</h2>
-        <h3>{album.nameGroup || 'Unknown Artist'}</h3>
+        <h3>{album.artist || 'Unknown Artist'}</h3>
       </div>
 
       <div className="player__progress-container">

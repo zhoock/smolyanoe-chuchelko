@@ -1,8 +1,8 @@
 [
   {
     "albumId": "23-remastered",
-    "nameGroup": "Смоляное чучелко",
-    "nameAlbum": "23 (Remastered)",
+    "artist": "Смоляное чучелко",
+    "album": "23 (Remastered)",
     "fullName": "Смоляное чучелко — 23 (Remastered)",
     "cover": {
       "img": "Tar-Baby-Cover-23-remastered"
@@ -141,8 +141,8 @@
   },
   {
     "albumId": "23",
-    "nameGroup": "Смоляное чучелко",
-    "nameAlbum": "23",
+    "artist": "Смоляное чучелко",
+    "album": "23",
     "fullName": "Смоляное чучелко — 23",
     "cover": {
       "img": "Tar-Baby-Cover-23"
@@ -281,8 +281,8 @@
   },
   {
     "albumId": "smolyanoechuchelko",
-    "nameGroup": "Смоляное чучелко",
-    "nameAlbum": "Смоляное чучелко",
+    "artist": "Смоляное чучелко",
+    "album": "Смоляное чучелко",
     "fullName": "Смоляное чучелко — Смоляное чучелко",
     "cover": {
       "img": "Tar-Baby-Cover"

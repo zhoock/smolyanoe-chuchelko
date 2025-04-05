@@ -45,7 +45,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   function Block({ tracks }: { tracks: TracksProps[] }) {
     return (
       <>
-        <h2 className="album-title">{album?.nameAlbum}</h2>
+        <h2 className="album-title">{album?.album}</h2>
         {/* <h3>Треки</h3> */}
         <div className="wrapper-album-play">
           <button

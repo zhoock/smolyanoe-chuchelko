@@ -27,9 +27,9 @@ export interface IAlbums {
   /** Идентификатор альбома */
   albumId?: string;
   /** Название группы */
-  nameGroup: string;
+  artist: string;
   /** Название альбома */
-  nameAlbum: string;
+  album: string;
   /** Название группы и название альбома */
   fullName: string;
   /** Обложка альбома */
@@ -53,7 +53,7 @@ export interface WrapperAlbumCoverProps {
   /** Идентификатор альбома */
   albumId?: string;
   /** Название группы и название альбома */
-  nameAlbum: string;
+  album: string;
   children: React.ReactElement;
   /** Год релиза альбома */
   date: string;
