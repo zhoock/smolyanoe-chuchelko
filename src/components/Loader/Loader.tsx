@@ -1,5 +1,5 @@
-import React from "react";
+import React from 'react';
 
 export function Loader() {
-  return <h3>Загрузка...</h3>;
+  return <h3>Loading...</h3>;
 }
