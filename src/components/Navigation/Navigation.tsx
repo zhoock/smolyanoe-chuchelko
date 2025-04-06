@@ -37,13 +37,13 @@ export default function Navigation({ onToggle }: NavigationProps) {
         <li className="header__links-list-item">
           <NavLink
             to="/articles"
-            title={templateData.templateC[0]?.menu.article}
+            title={templateData.templateC[0]?.menu.articles}
             onClick={onToggle}
             className={({ isActive }) => {
               return isActive ? 'active' : '';
             }}
           >
-            {templateData.templateC[0]?.menu.article}
+            {templateData.templateC[0]?.menu.articles}
           </NavLink>
         </li>
       </ul>
