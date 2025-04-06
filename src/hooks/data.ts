@@ -69,7 +69,7 @@ export function useData() {
  */
 export function getImageUrl(img: string, format: string = '.jpg'): string {
   const url = `/images/${img}${format}`;
-  console.log(`Generated image URL:`, url);
+  // console.log(`Generated image URL:`, url);
   return url;
 }
 
