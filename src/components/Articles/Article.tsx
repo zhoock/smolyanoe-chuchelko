@@ -56,7 +56,9 @@ export default function Article() {
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
             <li>
-              <Link to="/articles">Статьи</Link>
+              <Link to="/articles">
+                {templateData.templateC[0]?.titles.articles}
+              </Link>
             </li>
             <li className="active">{article?.nameArticle}</li>
           </ul>
