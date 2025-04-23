@@ -29,14 +29,14 @@ export function useData() {
       const [templateAResponse, templateBResponse, templateCResponse] =
         await Promise.all([
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums-${lang}.json',
+            `https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums-${lang}.json`,
           ),
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles-${lang}.json',
+            `https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles-${lang}.json`,
           ),
 
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/${lang}.json',
+            `https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/${lang}.json`,
           ),
         ]);
 
