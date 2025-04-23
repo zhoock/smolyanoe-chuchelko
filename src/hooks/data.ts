@@ -26,10 +26,10 @@ export function useData() {
       const [templateAResponse, templateBResponse, templateCResponse] =
         await Promise.all([
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums.json',
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums-en.json',
           ),
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles.json',
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles-en.json',
           ),
 
           axios.get(
