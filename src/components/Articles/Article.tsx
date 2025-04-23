@@ -1,28 +1,33 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
-import { useData, getImageUrl, alphabeticFormatDate } from '../../hooks/data';
+import { useData, getImageUrl } from '../../hooks/data';
 import { ArticleDetalesProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { formatDateInWords } from './Function'; // Импортируем функции
 
 /**
  * Компонент отображает блок со статьёй.
  */
 export default function Article() {
-  window.scrollTo({
-    top: 0,
-    left: 0,
-    behavior: 'smooth',
-  });
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth',
+    });
+  }, []);
+  // Подгружаем функции для выбранного языка
+  const { formatDate } = formatDateInWords.en;
 
   const { templateData, loading, error } = useData();
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const article = templateData.templateB.filter(
+  const article = templateData.templateB.find(
     (_) => _.articleId === params.articleId,
-  )[0];
+  );
 
   function Block({
     title,
@@ -69,12 +74,18 @@ export default function Article() {
         {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
         {error && <ErrorMessage error={error} />}
 
-        <time dateTime={article?.date}>
-          <small>{alphabeticFormatDate(article?.date)} г.</small>
-        </time>
-        <h2>{article?.nameArticle}</h2>
+        {article && (
+          <>
+            <time dateTime={article.date}>
+              <small>{formatDate(article.date)} г.</small>
+            </time>
+            <h2>{article.nameArticle}</h2>
 
-        {article?.detales.map((_) => <Block key={_.id} {..._} />)}
+            {article.detales.map((_) => (
+              <Block key={_.id} {..._} />
+            ))}
+          </>
+        )}
       </div>
     </section>
   );

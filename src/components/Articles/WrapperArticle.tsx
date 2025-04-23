@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArticleProps } from '../../models';
-import { getImageUrl, alphabeticFormatDate } from '../../hooks/data';
+import { getImageUrl } from '../../hooks/data';
+import { formatDateInWords } from './Function'; // Импортируем функции
 
 /**
  * Компонент отображает блок с карточкой статьи.
@@ -12,6 +13,9 @@ export default function WrapperArticle({
   nameArticle,
   date,
 }: ArticleProps) {
+  // Подгружаем функции для выбранного языка
+  const { formatDate } = formatDateInWords.en;
+
   return (
     <article className="articles__card">
       <Link to={`/articles/${articleId}`}>
@@ -25,7 +29,7 @@ export default function WrapperArticle({
           {nameArticle}
 
           <time dateTime={date}>
-            <small>{alphabeticFormatDate(date)}</small>
+            <small>{formatDate(date)}</small>
           </time>
         </div>
       </Link>

@@ -11,6 +11,16 @@ import './style.scss';
 export default function Articles() {
   const { templateData, loading, error } = useData();
 
+  /* Элемент показывается только при загрузке данных с сервера */
+  {
+    loading && <Loader />;
+  }
+
+  /* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */
+  {
+    error && <ErrorMessage error={error} />;
+  }
+
   return (
     <section
       className="articles main-background"
@@ -18,11 +28,6 @@ export default function Articles() {
     >
       <div className="wrapper articles__wrapper">
         <h2>{templateData.templateC[0]?.titles.articles}</h2>
-
-        {/* Элемент показывается только при загрузке данных с сервера */}
-        {loading && <Loader />}
-        {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
-        {error && <ErrorMessage error={error} />}
 
         <div className="articles__list">
           {templateData.templateB.map((_) => (

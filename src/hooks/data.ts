@@ -84,30 +84,3 @@ export function formatDate(dateRelease: string): string {
 
   return `${dd}/${mm}/${yy}`;
 }
-
-/**
- * Функция возвращает правильное падежное окончание для месяцев.
- */
-export function alphabeticFormatDate(dateRelease: string): string {
-  const months = [
-    'января',
-    'февраля',
-    'марта',
-    'апреля',
-    'мая',
-    'июня',
-    'июля',
-    'августа',
-    'сентября',
-    'октября',
-    'ноября',
-    'декабря',
-  ];
-
-  const date = new Date(dateRelease);
-  const dd = date.getDate();
-  const mm = months[date.getMonth()];
-  const yy = date.getFullYear();
-
-  return `${dd} ${mm} ${yy}`;
-}
