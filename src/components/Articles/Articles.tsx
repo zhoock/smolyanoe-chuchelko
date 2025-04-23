@@ -3,13 +3,15 @@ import { useData } from '../../hooks/data';
 import WrapperArticle from '../Articles/WrapperArticle';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { useLang } from '../../hooks/useLang';
 import './style.scss';
 
 /**
  * Компонент отображает блок cо списком статей.
  */
 export default function Articles() {
-  const { templateData, loading, error } = useData();
+  const { lang } = useLang();
+  const { templateData, loading, error } = useData(lang);
 
   /* Элемент показывается только при загрузке данных с сервера */
   {

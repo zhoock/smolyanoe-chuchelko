@@ -6,6 +6,7 @@ import { ArticleDetalesProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 import { formatDateInWords } from './Function'; // Импортируем функции
+import { useLang } from '../../hooks/useLang';
 
 /**
  * Компонент отображает блок со статьёй.
@@ -20,8 +21,8 @@ export default function Article() {
   }, []);
   // Подгружаем функции для выбранного языка
   const { formatDate } = formatDateInWords.en;
-
-  const { templateData, loading, error } = useData();
+  const { lang } = useLang();
+  const { templateData, loading, error } = useData(lang);
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 

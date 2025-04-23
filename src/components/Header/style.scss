@@ -12,13 +12,13 @@
 
   &__wrapper {
     display: grid;
-    grid-template-columns: min-content min-content;
+    grid-template-columns: min-content min-content min-content;
     place-items: center end;
     gap: var(--ms-1);
     block-size: calc(var(--ms-1) * 2);
 
     @include breakpoint(desktops) {
-      grid-template-columns: min-content 1fr min-content;
+      grid-template-columns: min-content min-content 1fr min-content;
     }
 
     .logo {
@@ -99,6 +99,46 @@
       &::after {
         transform: scale(1.5);
         transition: transform 0.5s ease 0.13s;
+      }
+    }
+  }
+}
+
+.controls {
+  display: flex;
+}
+
+.lang-menu {
+  position: relative;
+  margin-left: 1rem;
+
+  .lang-current {
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0.5rem;
+  }
+
+  .lang-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: rgba(var(--extra-background-color), 0.8);
+    // border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    list-style: none;
+    padding: 0;
+    margin: 0.25rem 0 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+
+    li {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--hover-bg);
       }
     }
   }

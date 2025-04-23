@@ -4,14 +4,15 @@ import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import { String, IAlbums } from '../../models';
 import { useData } from '../../hooks/data';
-
+import { useLang } from '../../hooks/useLang';
 import './style.scss';
 
 /**
  * Компонент отображает дополнительные данные об альбоме.
  */
 export default function AlbumDetails({ album }: { album: IAlbums }) {
-  const { templateData } = useData();
+  const { lang } = useLang();
+  const { templateData } = useData(lang);
 
   function Block({ music, release, albumCover }: String) {
     return (

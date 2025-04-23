@@ -11,7 +11,7 @@ interface ITemplateData {
 
 const lang = getLang();
 
-export function useData() {
+export function useData(lang: string) {
   const [templateData, setTemplateData] = useState<ITemplateData>({
     templateA: [],
     templateB: [],

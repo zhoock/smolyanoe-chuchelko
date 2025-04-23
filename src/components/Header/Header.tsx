@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Navigation from '../Navigation/Navigation';
-import { setLang } from '../../utils/language';
+import { setLang, getLang } from '../../utils/language';
 import './style.scss';
 
 export default function Header() {
-  const getInitialTheme = () => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) return savedTheme; // Если в localStorage есть сохранённая тема, используем её
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
-  };
-
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [theme, setTheme] = useState(
+    () =>
+      localStorage.getItem('theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'),
+  );
+  const [lang, setLangState] = useState(getLang());
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('theme-dark', theme === 'dark');
@@ -21,27 +22,52 @@ export default function Header() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  function switchLang(lang: string) {
-    setLang(lang);
-    window.location.reload(); // принудительно перезагружаем страницу, чтобы подгрузился другой язык
-  }
+  const changeLang = (newLang: string) => {
+    if (newLang !== lang) {
+      setLang(newLang);
+      setLangState(newLang);
+      window.location.reload(); // Или убираем это, если хотим без перезагрузки
+    }
+    setLangOpen(false);
+  };
 
   return (
-    <header className="header" role="banner">
+    <header className="header">
       <div className="wrapper header__wrapper">
+        <div className="lang-menu" ref={langRef}>
+          <button
+            className="lang-current"
+            onClick={() => setLangOpen(!langOpen)}
+          >
+            {lang.toUpperCase()}
+          </button>
+          {langOpen && (
+            <ul className="lang-list">
+              <li onClick={() => changeLang('en')}>EN</li>
+              <li onClick={() => changeLang('ru')}>RU</li>
+            </ul>
+          )}
+        </div>
+
         <Link className="logo" to="/">
           Home
         </Link>
 
         <Navigation />
-
-        <button onClick={() => switchLang('en')}>EN</button>
-        <button onClick={() => switchLang('ru')}>RU</button>
-
         <div className="theme-toggler">
           <label className="theme-toggler__label">
             <input

@@ -9,7 +9,9 @@
       "playButton": "play",
       "purchase": "purchase",
       "stream": "stream",
-      "show": "show"
+      "show": "show",
+      "less": "less",
+      "more": "more"
     },
     "titles": {
       "albums": "albums",

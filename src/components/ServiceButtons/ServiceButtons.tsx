@@ -2,7 +2,7 @@ import React from 'react';
 import GetButton from './GetButton';
 import { String, IAlbums } from '../../models';
 import { useData } from '../../hooks/data';
-
+import { useLang } from '../../hooks/useLang';
 import './style.scss';
 
 /**
@@ -32,7 +32,8 @@ export default function ServiceButtonsPurchase({
     deezer,
     tidal,
   }: String) {
-    const { templateData } = useData();
+    const { lang } = useLang();
+    const { templateData } = useData(lang);
 
     return (
       <div className="service-buttons">

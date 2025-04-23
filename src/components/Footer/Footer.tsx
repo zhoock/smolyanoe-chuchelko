@@ -1,5 +1,6 @@
 import React from 'react';
 import { useData } from '../../hooks/data';
+import { useLang } from '../../hooks/useLang';
 
 import './style.scss';
 
@@ -26,8 +27,8 @@ export default function Footer() {
       href: 'https://vk.com/smolyanoechuchelko',
     },
   ];
-
-  const { templateData } = useData();
+  const { lang } = useLang();
+  const { templateData } = useData(lang);
 
   return (
     <footer role="contentinfo" className="footer extra-background">

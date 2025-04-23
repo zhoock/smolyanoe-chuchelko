@@ -1,13 +1,9 @@
-// language.ts
+const LANG_KEY = 'lang';
 
-import { useState } from 'react';
-
-let currentLang = 'en';
-
-export function getLang() {
-  return currentLang;
+export function getLang(): string {
+  return localStorage.getItem(LANG_KEY) || 'en';
 }
 
-export function setLang(lang: string) {
-  currentLang = lang;
+export function setLang(lang: string): void {
+  localStorage.setItem(LANG_KEY, lang);
 }

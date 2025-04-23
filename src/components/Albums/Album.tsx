@@ -9,6 +9,7 @@ import ServiceButtons from '../ServiceButtons/ServiceButtons';
 import { useData } from '../../hooks/data';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { useLang } from '../../hooks/useLang';
 
 /**
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.
@@ -20,7 +21,8 @@ export default function Album() {
     behavior: 'smooth',
   });
 
-  const { templateData, loading, error } = useData();
+  const { lang } = useLang();
+  const { templateData, loading, error } = useData(lang);
 
   const params = useParams<{ albumId: string }>(); // возвращает все параметры, доступные на этой странице
 

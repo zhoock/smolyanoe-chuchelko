@@ -2,10 +2,12 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { NavigationProps } from '../../models';
 import { useData } from '../../hooks/data';
+import { useLang } from '../../hooks/useLang';
 import './style.scss';
 
 export default function Navigation({ onToggle }: NavigationProps) {
-  const { templateData } = useData();
+  const { lang } = useLang();
+  const { templateData } = useData(lang);
 
   return (
     <nav role="navigation" className={`header__menu`}>

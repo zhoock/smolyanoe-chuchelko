@@ -1,6 +1,7 @@
 import React from 'react';
 import { IAlbums, String } from '../../models';
 import { useData } from '../../hooks/data';
+import { useLang } from '../../hooks/useLang';
 
 /**
  * Компонент отображает блок с информацией об обложке альбома.
@@ -12,7 +13,8 @@ export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
     designerURL,
     designer,
   }: String) {
-    const { templateData } = useData();
+    const { lang } = useLang();
+    const { templateData } = useData(lang);
 
     return (
       <>

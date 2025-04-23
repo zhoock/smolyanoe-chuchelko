@@ -4,6 +4,7 @@ import WrapperAlbumCover from './WrapperAlbumCover';
 import AlbumCover from './AlbumCover';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { useLang } from '../../hooks/useLang';
 
 import './style.scss';
 
@@ -11,7 +12,8 @@ import './style.scss';
  * Компонент отображает список альбомов в виде обложек-ссылок
  */
 export default function Albums() {
-  const { templateData, loading, error } = useData();
+  const { lang } = useLang();
+  const { templateData, loading, error } = useData(lang);
 
   return (
     <section

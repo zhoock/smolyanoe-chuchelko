@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../../hooks/data';
+import { useLang } from '../../hooks/useLang';
 
 import './style.scss';
 
 export default function AboutUs() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { templateData } = useData();
+  const { lang } = useLang();
+  const { templateData } = useData(lang);
 
   return (
     <section className="about main-background">
@@ -64,7 +66,11 @@ export default function AboutUs() {
         >
           {templateData.templateC[0]?.buttons.show}
           {/* <span>{isExpanded ? 'меньше' : 'больше'}</span> */}
-          <span>{isExpanded ? 'less' : 'more'}</span>
+          <span>
+            {isExpanded
+              ? templateData.templateC[0]?.buttons.less
+              : templateData.templateC[0]?.buttons.more}
+          </span>
           <span className="icon-ctrl" aria-hidden="true"></span>
         </button>
       </div>
