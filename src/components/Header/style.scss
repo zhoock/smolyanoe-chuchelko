@@ -110,14 +110,13 @@
 
 .lang-menu {
   position: relative;
-  margin-left: 1rem;
 
   .lang-current {
     background: none;
     border: none;
     font-weight: bold;
     cursor: pointer;
-    padding: 0.5rem;
+    color: var(--link-color, #ababab);
   }
 
   .lang-list {
@@ -125,12 +124,10 @@
     top: 100%;
     left: 0;
     background: rgba(var(--extra-background-color), 0.8);
-    // border: 1px solid var(--border);
-    border-radius: 0.25rem;
+    border-radius: var(--ms-01, 0.125rem);
     list-style: none;
     padding: 0;
-    margin: 0.25rem 0 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin: 14px 0 0;
     z-index: 100;
 
     li {
