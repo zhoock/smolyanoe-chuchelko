@@ -5,7 +5,8 @@
  */
 export const functionsMap = {
   ru: {
-    endForTracks: (n: number): string => (n === 1 ? 'треки' : 'треков'),
+    endForTracks: (n: number): string =>
+      n === 1 ? 'трек' : n > 1 && n < 5 ? 'трека' : 'треков',
     endForMinutes: (n: number): 'минута' | 'минуты' | 'минут' =>
       n === 1 ? 'минута' : n > 1 && n < 5 ? 'минуты' : 'минут',
   },
