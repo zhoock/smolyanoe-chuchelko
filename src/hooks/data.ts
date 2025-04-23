@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { IAlbums, IArticles, IInterface } from '../models';
+import { getLang } from '../utils/language';
 
 interface ITemplateData {
   templateA: IAlbums[]; // Данные для первого шаблона c альбомами
   templateB: IArticles[]; // Данные для второго шаблона со статьями
   templateC: IInterface[]; // Данные для третьего шаблона с интерфейсом
 }
+
+const lang = getLang();
 
 export function useData() {
   const [templateData, setTemplateData] = useState<ITemplateData>({
@@ -26,14 +29,14 @@ export function useData() {
       const [templateAResponse, templateBResponse, templateCResponse] =
         await Promise.all([
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums-en.json',
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums-${lang}.json',
           ),
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles-en.json',
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles-${lang}.json',
           ),
 
           axios.get(
-            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/en.json',
+            'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/${lang}.json',
           ),
         ]);
 

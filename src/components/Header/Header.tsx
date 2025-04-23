@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navigation from '../Navigation/Navigation';
+import { setLang } from '../../utils/language';
 import './style.scss';
 
 export default function Header() {
@@ -24,6 +25,11 @@ export default function Header() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  function switchLang(lang: string) {
+    setLang(lang);
+    window.location.reload(); // принудительно перезагружаем страницу, чтобы подгрузился другой язык
+  }
+
   return (
     <header className="header" role="banner">
       <div className="wrapper header__wrapper">
@@ -32,6 +38,9 @@ export default function Header() {
         </Link>
 
         <Navigation />
+
+        <button onClick={() => switchLang('en')}>EN</button>
+        <button onClick={() => switchLang('ru')}>RU</button>
 
         <div className="theme-toggler">
           <label className="theme-toggler__label">
