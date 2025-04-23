@@ -2,13 +2,15 @@ import React from 'react';
 import { IAlbums, String } from '../../models';
 import { formatDate } from '../../hooks/data';
 import { functionsMap } from './Functions'; // Импортируем функции
+import { useLang } from '../../hooks/useLang';
 
 /**
  * Компонент отображает блок с датой релиза альбома.
  */
 export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
+  const { lang } = useLang() as { lang: keyof typeof functionsMap };
   // Подгружаем функции для выбранного языка
-  const { endForTracks, endForMinutes } = functionsMap.en;
+  const { endForTracks, endForMinutes } = functionsMap[lang];
 
   const duration: number = album?.tracks
     .map((item) => item.duration)

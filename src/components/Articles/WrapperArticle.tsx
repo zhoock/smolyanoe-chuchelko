@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArticleProps } from '../../models';
 import { getImageUrl } from '../../hooks/data';
 import { formatDateInWords } from './Function'; // Импортируем функции
+import { useLang } from '../../hooks/useLang';
 
 /**
  * Компонент отображает блок с карточкой статьи.
@@ -13,8 +14,9 @@ export default function WrapperArticle({
   nameArticle,
   date,
 }: ArticleProps) {
+  const { lang } = useLang() as { lang: keyof typeof formatDateInWords };
   // Подгружаем функции для выбранного языка
-  const { formatDate } = formatDateInWords.en;
+  const { formatDate } = formatDateInWords[lang];
 
   return (
     <article className="articles__card">

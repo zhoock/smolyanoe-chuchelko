@@ -19,9 +19,10 @@ export default function Article() {
       behavior: 'smooth',
     });
   }, []);
+
+  const { lang } = useLang() as { lang: keyof typeof formatDateInWords };
   // Подгружаем функции для выбранного языка
-  const { formatDate } = formatDateInWords.en;
-  const { lang } = useLang();
+  const { formatDate } = formatDateInWords[lang];
   const { templateData, loading, error } = useData(lang);
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
