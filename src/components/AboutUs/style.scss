@@ -24,6 +24,10 @@
     align-items: center;
     gap: 4px;
 
+    .first-word {
+      text-transform: capitalize;
+    }
+
     @include button-variant(
       --link-color,
       --button-background-color,

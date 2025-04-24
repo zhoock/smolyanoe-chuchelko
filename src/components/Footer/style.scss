@@ -33,6 +33,7 @@
 
   .copyright-list {
     display: flex;
+    text-transform: capitalize;
 
     &__item {
       span::after {

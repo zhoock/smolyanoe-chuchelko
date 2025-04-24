@@ -64,8 +64,9 @@ export default function AboutUs() {
           type="button"
           aria-expanded={isExpanded}
         >
-          {templateData.templateC[0]?.buttons.show}
-          {/* <span>{isExpanded ? 'меньше' : 'больше'}</span> */}
+          <span className="first-word">
+            {templateData.templateC[0]?.buttons.show}
+          </span>
           <span>
             {isExpanded
               ? templateData.templateC[0]?.buttons.less
