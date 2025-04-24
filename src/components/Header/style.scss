@@ -116,26 +116,33 @@
     border: none;
     font-weight: bold;
     cursor: pointer;
-    color: var(--link-color, #ababab);
+    color: var(--header-links-list-item, #998238);
   }
 
   .lang-list {
     position: absolute;
     top: 100%;
-    left: 0;
+    left: -17px;
     background: rgba(var(--extra-background-color), 0.8);
-    border-radius: var(--ms-01, 0.125rem);
+    border-radius: var(--ms-01);
     list-style: none;
     padding: 0;
-    margin: 14px 0 0;
+    margin-top: var(--ms-0);
     z-index: 100;
 
     li {
-      padding: 0.5rem 1rem;
-      cursor: pointer;
+      padding: var(--ms-01) var(--ms-0);
 
-      &:hover {
-        color: var(--hover-bg);
+      .lang-option {
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+        border: none;
+        color: var(--link-color);
+
+        &:hover {
+          color: var(--link-color-hover);
+        }
       }
     }
   }
