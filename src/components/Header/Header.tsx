@@ -66,7 +66,7 @@ export default function Header() {
               {['en', 'ru'].map((l) => (
                 <li key={l}>
                   <button
-                    className="lang-option"
+                    className={`lang-option${lang === l ? ' active' : ''}`}
                     onClick={() => changeLang(l)}
                     role="option"
                     aria-selected={lang === l}
