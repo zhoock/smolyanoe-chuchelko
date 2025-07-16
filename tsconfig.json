@@ -13,5 +13,10 @@
     "typeRoots": ["./types", "./node_modules/lib/types"]
   },
   "include": ["src", "index.d.ts"],
-  "exclude": ["src/no-compile"]
+  "exclude": [
+    "src/no-compile",
+    "eslint.config.mjs", // исключаем конфигурационные файлы ESLint
+    "postcss.config.js",
+    "webpack.config.js"
+  ]
 }

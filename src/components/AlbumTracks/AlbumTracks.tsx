@@ -82,7 +82,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
 
         {/* Попап с текстом трека
         Используется <pre> — текст отображается с сохранением форматирования.
-        Кнопка "гамбургер" для закрытия попапа. */}
+        Hamburger для закрытия попапа. */}
         <Popup isActive={popupText} onClose={closePopups}>
           <pre>{tracks?.[activeTrack]?.content}</pre>
           <Hamburger isActive={popupText} onToggle={closePopups} />
