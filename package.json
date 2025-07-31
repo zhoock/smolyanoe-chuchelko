@@ -10,10 +10,12 @@
     "stylelint:fix": "stylelint \"src/**/*.{css,scss}\" --fix",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --fix",
-    "format": "prettier --write .",
-    "check": "npm run stylelint && npm run lint",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "check": "npm run stylelint && npm run lint && npm run format",
+    "fix": "npm run stylelint:fix && npm run lint:fix && npm run format:fix",
     "prepare": "husky",
-    "commit": "npm run check && cz"
+    "commit": "cz"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -28,11 +30,18 @@
       "prettier --write"
     ]
   },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.4",
     "@babel/preset-react": "^7.24.7",
     "@babel/preset-typescript": "^7.24.7",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.27.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.1",
