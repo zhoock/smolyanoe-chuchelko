@@ -74,31 +74,19 @@ export default function Form() {
           </fieldset>
           <fieldset>
             <label>
-              <input
-                className="visually-hidden"
-                type="checkbox"
-                name="music-style"
-              />
+              <input className="visually-hidden" type="checkbox" name="music-style" />
               <span></span>
               Punk
             </label>
 
             <label>
-              <input
-                className="visually-hidden"
-                type="checkbox"
-                name="music-style"
-              />
+              <input className="visually-hidden" type="checkbox" name="music-style" />
               <span></span>
               Grunge
             </label>
 
             <label>
-              <input
-                className="visually-hidden"
-                type="checkbox"
-                name="music-style"
-              />
+              <input className="visually-hidden" type="checkbox" name="music-style" />
               <span></span>
               Alternative rock
             </label>

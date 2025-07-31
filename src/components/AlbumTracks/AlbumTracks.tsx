@@ -15,9 +15,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [activeTrack, setActiveTrack] = useState(0); // activeTrack — индекс активного трека (по умолчанию 0).
   const [popupText, setPopupText] = useState(false); // popupText — отвечает за показ попапа с текстом трека.
   const [popupPlayer, setPopupPlayer] = useState(false); // popupPlayer — отвечает за показ попапа с аудиоплеером.
-  const [bgColor, setBgColor] = useState(
-    'rgba(var(--extra-background-color), 0.8)',
-  ); // bgColor — цвет фона для попапа с плеером (обновляется через AudioPlayer).
+  const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color), 0.8)'); // bgColor — цвет фона для попапа с плеером (обновляется через AudioPlayer).
   const { lang } = useLang();
   const { templateData } = useData(lang);
 
@@ -94,9 +92,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
 
         {popupPlayer && (
           <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
-            {album && (
-              <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />
-            )}
+            {album && <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />}
             <Hamburger isActive={popupPlayer} onToggle={closePopups} />
           </Popup>
         )}

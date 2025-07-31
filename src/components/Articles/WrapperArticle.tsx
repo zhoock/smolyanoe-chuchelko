@@ -8,12 +8,7 @@ import { useLang } from '../../hooks/useLang';
 /**
  * Компонент отображает блок с карточкой статьи.
  */
-export default function WrapperArticle({
-  articleId,
-  img,
-  nameArticle,
-  date,
-}: ArticleProps) {
+export default function WrapperArticle({ articleId, img, nameArticle, date }: ArticleProps) {
   const { lang } = useLang() as { lang: keyof typeof formatDateInWords };
   // Подгружаем функции для выбранного языка
   const { formatDate } = formatDateInWords[lang];

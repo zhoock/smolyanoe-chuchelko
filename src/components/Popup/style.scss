@@ -23,16 +23,16 @@
 }
 
 dialog {
+  color: var(--text-color, #dddddd);
+  background: rgba(var(--extra-background-color), 0.8);
+  border: none;
   max-inline-size: 100%;
   max-block-size: 100%;
   inline-size: 100vw;
   block-size: 100dvb;
-  border: none;
   overflow: scroll;
-  background: rgba(var(--extra-background-color), 0.8);
   backdrop-filter: blur(20px);
   animation: spin 11.125s linear infinite;
-  color: var(--text-color, #ddd);
 
   @extend %hide-scrollbar;
 

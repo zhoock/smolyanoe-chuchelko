@@ -50,9 +50,7 @@ export default function AudioPlayer({
 
     const handleTrackEnd = () => {
       console.log('🎵 Трек завершён, переключаем на следующий');
-      setCurrentTrackIndex(
-        (prevIndex) => (prevIndex + 1) % album.tracks.length,
-      );
+      setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % album.tracks.length);
     };
 
     audio.addEventListener('ended', handleTrackEnd);
@@ -89,7 +87,7 @@ export default function AudioPlayer({
 
       // 🔥 ОБНОВЛЯЕМ ПРОГРЕСС-БАР СРАЗУ
       const progressBar = document.querySelector(
-        '.player__progress-bar input',
+        '.player__progress-bar input'
       ) as HTMLInputElement | null;
 
       if (progressBar) {
@@ -102,10 +100,7 @@ export default function AudioPlayer({
     const onMetadataLoaded = () => {
       // устанавливает длительность трека после его загрузки
       if (audioRef.current) {
-        console.log(
-          'Метаданные загружены, длительность:',
-          audioRef.current.duration,
-        );
+        console.log('Метаданные загружены, длительность:', audioRef.current.duration);
         setTime({ current: 0, duration: audioRef.current.duration });
       }
     };
@@ -120,10 +115,7 @@ export default function AudioPlayer({
       return () => {
         console.log('Удаляем слушатель timeupdate');
         audioRef.current?.removeEventListener('timeupdate', updateProgress);
-        audioRef.current?.removeEventListener(
-          'loadedmetadata',
-          onMetadataLoaded,
-        );
+        audioRef.current?.removeEventListener('loadedmetadata', onMetadataLoaded);
       };
     }
   }, [isSeeking, time.duration]);
@@ -159,9 +151,7 @@ export default function AudioPlayer({
 
   // переключает на предыдущий
   const prevTrack = () => {
-    setCurrentTrackIndex(
-      (currentTrackIndex - 1 + album.tracks.length) % album.tracks.length,
-    );
+    setCurrentTrackIndex((currentTrackIndex - 1 + album.tracks.length) % album.tracks.length);
   };
 
   // Ползунок прогресса. Позволяет перематывать трек.
@@ -173,10 +163,7 @@ export default function AudioPlayer({
       setTime((prev) => ({ ...prev, current: newTime }));
       setProgress(Number(event.target.value));
 
-      event.target.style.setProperty(
-        '--progress-width',
-        `${event.target.value}%`,
-      );
+      event.target.style.setProperty('--progress-width', `${event.target.value}%`);
     }
   };
 
@@ -200,11 +187,9 @@ export default function AudioPlayer({
 
   const handleColorsExtracted = useCallback(
     ({ dominant, palette }: { dominant: string; palette: string[] }) => {
-      setBgColor(
-        `linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`,
-      );
+      setBgColor(`linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`);
     },
-    [setBgColor],
+    [setBgColor]
   );
 
   // Отображение
@@ -235,9 +220,7 @@ export default function AudioPlayer({
         </div>
         <div className="player__time-container">
           <span className="player__time">{formatTime(time.current)}</span>
-          <span className="player__time">
-            -{formatTime(time.duration - time.current)}
-          </span>
+          <span className="player__time">-{formatTime(time.duration - time.current)}</span>
         </div>
       </div>
 
@@ -259,13 +242,7 @@ export default function AudioPlayer({
 
       <div className="player__volume-control">
         <span className="icon-volume-mute"></span>
-        <input
-          type="range"
-          value={volume}
-          min="0"
-          max="100"
-          onChange={handleVolumeChange}
-        />
+        <input type="range" value={volume} min="0" max="100" onChange={handleVolumeChange} />
         <span className="icon-volume-hight"></span>
       </div>
       <audio ref={audioRef} />

@@ -21,7 +21,7 @@ export function useImageColor(
   // Путь к изображению.
   imgSrc: string,
   // Колбэк-функция, которая вызывается при успешном извлечении цветов.
-  onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void,
+  onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void
 ) {
   // Создание ref для изображения. Используется для хранения ссылки на изображение, с которого будет браться цвет.
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -37,8 +37,7 @@ export function useImageColor(
     const loadScript = () => {
       if (!document.querySelector('script[src*="color-thief"]')) {
         const script = document.createElement('script');
-        script.src =
-          'https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js';
         script.onload = extractColors;
         document.body.appendChild(script);
       } else if (window.ColorThief) {
@@ -73,9 +72,7 @@ export function useImageColor(
           // Вызывает onColorsExtracted.
           onColorsExtracted?.({
             dominant: `rgb(${dominantColor.join(',')})`,
-            palette: palette.map(
-              (color: number[]) => `rgb(${color.join(',')})`,
-            ),
+            palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
           });
         } catch (error) {
           console.error('Ошибка при извлечении цветов:', error);

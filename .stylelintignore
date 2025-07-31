@@ -1,0 +1,7 @@
+  //.stylelintignore
+    
+    **/normalize.css
+    **/normalize.min.css
+    **/fonts/
+    **/images/
+    **/img/

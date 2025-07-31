@@ -52,11 +52,7 @@
     }
 
     @include breakpoint(desktops) {
-      background: linear-gradient(
-        90deg,
-        rgb(0 0 0 / 100%) 74%,
-        rgb(0 0 0 / 0%) 100%
-      );
+      background: linear-gradient(90deg, rgb(0 0 0 / 100%) 74%, rgb(0 0 0 / 0%) 100%);
     }
   }
 

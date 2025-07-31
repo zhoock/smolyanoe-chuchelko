@@ -4,12 +4,12 @@
 @import '../../scss/common/mixins';
 
 .player {
-  inline-size: min(100vi, 1000px);
+  display: grid;
+  margin: 0 auto;
   padding: var(--ms-3) var(--ms-1);
   text-align: center;
+  inline-size: min(100vi, 1000px);
   block-size: 100dvh;
-  margin: 0 auto;
-  display: grid;
   grid-template-rows: repeat(4, auto);
   gap: var(--ms-0);
   align-items: center;
@@ -19,18 +19,18 @@
   }
 
   h2 {
-    font-family: var(--base-font-family, arial, sans-serif);
-    text-transform: initial;
-    color: var(--white, #fff);
+    margin: 0;
+    color: var(--white, #ffffff);
     font-size: clamp(1rem, 0.6859rem + 1.5866vw, 1.618rem);
     line-height: 1.2;
+    font-family: var(--base-font-family, arial, sans-serif);
+    text-transform: initial;
     letter-spacing: initial;
-    margin: 0;
   }
 
   h3 {
+    color: var(--white, #ffffff);
     font-size: clamp(1rem, 0.6859rem + 1.5866vw, 1.618rem);
-    color: var(--white, #fff);
   }
 
   img {
@@ -52,7 +52,7 @@
       cursor: pointer;
 
       span {
-        color: var(--white, #fff);
+        color: var(--white, #ffffff);
       }
     }
   }
@@ -68,7 +68,7 @@
 
     .icon-volume-mute,
     .icon-volume-hight {
-      color: var(--white, #fff);
+      color: var(--white, #ffffff);
       line-height: 0;
     }
   }
@@ -86,7 +86,7 @@ input[type='range'] {
 
   background: linear-gradient(
     to right,
-    var(--white, #fff) var(--progress-width),
+    var(--white, #ffffff) var(--progress-width),
     #dddddd80 var(--progress-width)
   );
 }
@@ -96,7 +96,7 @@ input[type='range'] {
 
   background: linear-gradient(
     to right,
-    var(--white, #fff) var(--volume-progress-width),
+    var(--white, #ffffff) var(--volume-progress-width),
     #dddddd80 var(--volume-progress-width)
   );
 }
@@ -117,8 +117,7 @@ input[type='range'] {
   justify-content: space-between;
 
   .player__time {
+    color: var(--light-grey, #dddddd);
     font-size: var(--ms-01);
-    color: var(--light-grey, #ddd);
-    // opacity: 0.5;
   }
 }

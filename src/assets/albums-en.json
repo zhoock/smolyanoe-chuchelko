@@ -51,11 +51,7 @@
         "title": "Mixed At",
         "content": [
           {
-            "text": [
-              "JAN. 14, 2024—SEP. 22, 2024:",
-              "DTH Studios, Studio A",
-              ", Moscow."
-            ],
+            "text": ["JAN. 14, 2024—SEP. 22, 2024:", "DTH Studios, Studio A", ", Moscow."],
             "link": "http://dthstudios.com/studios"
           }
         ]
@@ -65,11 +61,7 @@
         "title": "Mastered By",
         "content": [
           {
-            "text": [
-              "JAN. 14, 2025—FEB. 7, 2025:",
-              "Chicago Mastering Service, Chicago",
-              ", USA."
-            ],
+            "text": ["JAN. 14, 2025—FEB. 7, 2025:", "Chicago Mastering Service, Chicago", ", USA."],
             "link": "https://chicagomasteringservice.com/"
           }
         ]
@@ -79,11 +71,7 @@
         "title": "Band members",
         "content": [
           {
-            "text": [
-              "",
-              "Yaroslav Zhuk",
-              " — lead vocals, backing vocals, words and music."
-            ],
+            "text": ["", "Yaroslav Zhuk", " — lead vocals, backing vocals, words and music."],
             "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           {
@@ -204,11 +192,7 @@
         "title": "Mastered By",
         "content": [
           {
-            "text": [
-              "NOV. 30 2021—DEC. 4, 2021:",
-              "Chicago Mastering Service, Chicago",
-              ", USA."
-            ],
+            "text": ["NOV. 30 2021—DEC. 4, 2021:", "Chicago Mastering Service, Chicago", ", USA."],
             "link": "https://chicagomasteringservice.com/"
           }
         ]
@@ -218,11 +202,7 @@
         "title": "Band members",
         "content": [
           {
-            "text": [
-              "",
-              "Yaroslav Zhuk",
-              " — lead vocals, backing vocals, words and music."
-            ],
+            "text": ["", "Yaroslav Zhuk", " — lead vocals, backing vocals, words and music."],
             "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           {
@@ -356,11 +336,7 @@
         "title": "Band members",
         "content": [
           {
-            "text": [
-              "",
-              "Yaroslav Zhuk",
-              " — lead vocals, backing vocals, words and music."
-            ],
+            "text": ["", "Yaroslav Zhuk", " — lead vocals, backing vocals, words and music."],
             "link": "https://www.instagram.com/yaroslav_zhoock/"
           },
           "Semyon Lepeshkin — bass."
@@ -375,11 +351,7 @@
             "link": "https://www.instagram.com/alexezhivich/"
           },
           {
-            "text": [
-              "",
-              "Natalia Khmelevskaya",
-              " — cello («Водянистая влага»)."
-            ],
+            "text": ["", "Natalia Khmelevskaya", " — cello («Водянистая влага»)."],
             "link": "https://www.instagram.com/nkhmelevskaya/"
           }
         ]

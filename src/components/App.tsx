@@ -54,9 +54,7 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return (
-    <RouterProvider router={router} fallbackElement={<p>Загрузка...</p>} />
-  );
+  return <RouterProvider router={router} fallbackElement={<p>Загрузка...</p>} />;
 }
 
 function Layout() {
@@ -74,11 +72,7 @@ function Layout() {
           <Navigation onToggle={() => setPopup(!popup)} />
         </Popup>
 
-        <Hamburger
-          isActive={popup}
-          onToggle={() => setPopup(!popup)}
-          zIndex="1000"
-        />
+        <Hamburger isActive={popup} onToggle={() => setPopup(!popup)} zIndex="1000" />
         <Outlet />
       </main>
       <Footer />

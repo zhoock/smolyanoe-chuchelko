@@ -20,12 +20,12 @@ $ms-4: 123.363px; // 6.854rem;
   $disabled-background: var(--link-color, #ddd)
 ) {
   margin: var(--ms-1) 0;
-  border: 0;
-  border-radius: var(--ms-01);
   padding: var(--ms-01) var(--ms-0);
   color: var(#{$color});
-  background-color: var(#{$background});
+  border: 0;
+  border-radius: var(--ms-01);
   transition: background-color 200ms ease;
+  background-color: var(#{$background});
   cursor: pointer;
   appearance: none;
   user-select: none;
@@ -36,7 +36,7 @@ $ms-4: 123.363px; // 6.854rem;
     background-color: var(#{$hover-background});
 
     @media (hover: none) and (pointer: coarse) {
-      color: var(--link-color, #ddd);
+      color: var(--link-color, #dddddd);
       background-color: var(#{$background});
     }
   }
@@ -97,13 +97,7 @@ $desktops: 'width >= 1024px';
 
 // link
 
-@mixin link-colors(
-  $normal,
-  $hover: false,
-  $active: false,
-  $visited: false,
-  $focus: false
-) {
+@mixin link-colors($normal, $hover: false, $active: false, $visited: false, $focus: false) {
   color: var(#{$normal});
 
   @if $hover {
@@ -162,10 +156,7 @@ $desktops: 'width >= 1024px';
     gap: $ms-1;
     margin: 0 0 var(--ms-1);
     padding: 0;
-    grid-template: minmax(323px, auto) / repeat(
-        auto-fit,
-        minmax(calc(1 / 4 * 1000px), 1fr)
-      );
+    grid-template: minmax(323px, auto) / repeat(auto-fit, minmax(calc(1 / 4 * 1000px), 1fr));
 
     &:has(:hover) #{$block}__card:not(:hover) {
       opacity: 0.5;

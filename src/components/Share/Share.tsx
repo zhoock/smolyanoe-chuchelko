@@ -16,13 +16,10 @@ export default function Share() {
     }
 
     if (platform === 'facebook') {
-      const base =
-        'https://www.facebook.com/sharer/sharer.php?u=' +
-        encodeURIComponent(uri);
+      const base = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(uri);
       popUpWindow(base, 'Share on Facebook', 464, 210, 'no', 'center');
     } else if (platform === 'twitter') {
-      const base =
-        'https://twitter.com/intent/tweet?text=' + encodeURIComponent(uri);
+      const base = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(uri);
       popUpWindow(base, 'Share on Twitter', 464, 210, 'no', 'center');
     }
   }
@@ -33,7 +30,7 @@ export default function Share() {
     w: number,
     h: number,
     scroll: string,
-    pos: string,
+    pos: string
   ) {
     let LeftPosition = 0;
     let TopPosition = 0;
@@ -48,7 +45,7 @@ export default function Share() {
 
     const settings =
       `width=${w},height=${h},top=${TopPosition},left=${LeftPosition},scrollbars=${scroll},` +
-      `location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no`;
+      'location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no';
 
     window.open(mypage, myname, settings);
   }

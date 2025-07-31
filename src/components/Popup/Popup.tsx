@@ -2,12 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { PopupProps } from '../../models';
 import './style.scss';
 
-export default function Popup({
-  children,
-  isActive,
-  bgColor,
-  onClose,
-}: PopupProps) {
+export default function Popup({ children, isActive, bgColor, onClose }: PopupProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {

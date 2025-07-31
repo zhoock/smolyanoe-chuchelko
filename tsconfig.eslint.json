@@ -1,0 +1,6 @@
+// tsconfig.eslint.json
+
+{
+  "extends": "./tsconfig.json",
+  "include": ["src", "webpack/**/*.js", "postcss.config.js", "eslint.config.mjs"]
+}

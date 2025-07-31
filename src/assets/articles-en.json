@@ -205,9 +205,7 @@
       {
         "id": 14,
         "subtitle": "Front Microphone",
-        "content": [
-          "Ribbon Stereo Microphone in Blumlein Configuration: AEA R88 MK2"
-        ]
+        "content": ["Ribbon Stereo Microphone in Blumlein Configuration: AEA R88 MK2"]
       },
       { "id": 15, "subtitle": "Ride Mic", "content": ["Neumann KM84"] },
       {
@@ -385,10 +383,7 @@
       {
         "id": 6,
         "subtitle": "Kick drum",
-        "content": [
-          "Neumann TLM 170 deep-black ones (inside)",
-          "Sennheiser MKH 40 (outside)"
-        ]
+        "content": ["Neumann TLM 170 deep-black ones (inside)", "Sennheiser MKH 40 (outside)"]
       },
       {
         "id": 7,
@@ -424,11 +419,7 @@
         "id": 14,
         "title": "Guitar",
         "subtitle": "Guitars",
-        "content": [
-          "Fender Mustang",
-          "Fender Jaguar",
-          "Takamine acoustic guitar"
-        ],
+        "content": ["Fender Mustang", "Fender Jaguar", "Takamine acoustic guitar"],
         "img": "guitar_recording_album_session_EP",
         "alt": "guitar recording, EP album session."
       },

@@ -4,19 +4,19 @@
 @import '../../scss/common/mixins';
 
 .hamburger {
+  position: fixed;
   background: none;
   border: none;
-  position: fixed;
+  transition: background-color 0.15s ease;
   inset-block-start: 7px;
   inset-inline-end: 29px;
   inline-size: 40px;
   block-size: 40px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
 
   &:hover {
     span {
-      background: var(--link-color-hover, #fff);
+      background: var(--link-color-hover, #ffffff);
     }
   }
 
@@ -27,7 +27,7 @@
     inline-size: 100%;
     block-size: 3px;
     margin: 9px auto;
-    background: var(--link-color, #ddd);
+    background: var(--link-color, #dddddd);
     backface-visibility: hidden;
     transition-duration: 0.15s;
   }

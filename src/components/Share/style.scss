@@ -18,12 +18,12 @@
   }
 
   &__link {
-    border-radius: 50%;
     padding: var(--ms-01);
     background: var(--button-background-color, #373633);
+    border-radius: 50%;
 
     &:hover {
-      color: var(--link-color-hover, #fff);
+      color: var(--link-color-hover, #ffffff);
       background-color: var(--accent-color, #998238);
 
       @media (hover: none) and (pointer: coarse) {
@@ -34,7 +34,7 @@
     }
 
     &.active {
-      color: var(--link-color-hover, #fff);
+      color: var(--link-color-hover, #ffffff);
       background-color: var(--accent-color, #998238);
     }
   }

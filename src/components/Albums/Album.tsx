@@ -26,9 +26,7 @@ export default function Album() {
 
   const params = useParams<{ albumId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const album = templateData.templateA.filter(
-    (album) => album.albumId === params.albumId,
-  )[0];
+  const album = templateData.templateA.filter((album) => album.albumId === params.albumId)[0];
 
   return (
     <section className="album main-background" aria-label="Блок c альбомом">
@@ -36,9 +34,7 @@ export default function Album() {
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
             <li>
-              <Link to="/albums">
-                {templateData.templateC[0]?.titles.albums}
-              </Link>
+              <Link to="/albums">{templateData.templateC[0]?.titles.albums}</Link>
             </li>
             <li className="active">{album?.album}</li>
           </ul>

@@ -12,17 +12,17 @@
 
   &__link {
     display: grid;
-    place-items: center;
-    min-block-size: var(--ms-3);
+    background: var(--button-background-color, #373633);
     border: none;
     border-radius: var(--ms-01);
-    background: var(--button-background-color, #373633);
+    place-items: center;
+    min-block-size: var(--ms-3);
 
     @include adjust-font-size-to($ms-1, 0);
 
     &:hover {
       background-color: var(--accent-color, #998238);
-      color: var(--link-color-hover, #fff);
+      color: var(--link-color-hover, #ffffff);
 
       @media (hover: none) and (pointer: coarse) {
         background-color: var(--button-background-color, #373633);

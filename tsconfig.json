@@ -1,22 +1,26 @@
 {
   "compilerOptions": {
-    "target": "ESNext", // Тип кода создаваемого итогового файла
-    "jsx": "react", // Поддержка JSX
+    "target": "ESNext", // Целевая версия ECMAScript — максимально современная
+    "module": "ESNext", // Модульная система — пусть Webpack работает с ES-модулями
     "moduleResolution": "node", // Разрешение модулей в стиле Node.js
-    "allowJs": true, // Разрешать компилировать файлы с JavaScript-кодом?
+    "lib": ["DOM", "ESNext"], // Библиотеки, которые будут доступны в проекте
+    "jsx": "react-jsx", // JSX-компиляция в стиле React 17+
     "strict": true, // Включение строгих типов
     "esModuleInterop": true, // Для работы с CommonJS модулями
-    "isolatedModules": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "resolveJsonModule": true,
-    "typeRoots": ["./types", "./node_modules/lib/types"]
+    "allowSyntheticDefaultImports": true, // Разрешить синтетические импорты (используется вместе с esModuleInterop)
+    "allowJs": true, // Разрешать компилировать файлы с JavaScript-кодом
+    "resolveJsonModule": true, // Позволяет импортировать JSON-файлы как модули
+    "isolatedModules": true, // Обрабатывает каждый файл как модуль (важно для Webpack и Babel)
+    "skipLibCheck": true, // Пропускать типизацию `.d.ts` файлов из node_modules — ускоряет сборку
+    "forceConsistentCasingInFileNames": true // Запрещает использовать один и тот же файл с разным регистром в импортах
+    // "experimentalDecorators": true, // Позволяет использовать декораторы (например, `@Component`, `@Injectable`)
+    // "emitDecoratorMetadata": true // Включить генерацию метаданных для декораторов (например, для NestJS)
   },
-  "include": ["src", "index.d.ts"],
+  "include": ["src", "index.d.ts"], // Папки и файлы, которые нужно включить в компиляцию
   "exclude": [
-    "src/no-compile",
-    "eslint.config.mjs", // исключаем конфигурационные файлы ESLint
-    "postcss.config.js",
-    "webpack.config.js"
+    "node_modules", // всегда нужно
+    "webpack/webpack.common.js", // необязательно, но можно
+    "postcss.config.js", // необязательно, но можно
+    "eslint.config.mjs" // необязательно, но можно
   ]
 }

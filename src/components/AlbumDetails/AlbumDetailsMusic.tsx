@@ -28,7 +28,7 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
                 }
                 {item.text[2]}
               </li>
-            ),
+            )
           )}
         </ul>
       </>

@@ -27,31 +27,24 @@ export default function Article() {
 
   const params = useParams<{ articleId: string }>(); // возвращает все параметры, доступные на этой странице
 
-  const article = templateData.templateB.find(
-    (_) => _.articleId === params.articleId,
-  );
+  const article = templateData.templateB.find((_) => _.articleId === params.articleId);
 
-  function Block({
-    title,
-    subtitle,
-    strong,
-    content,
-    img,
-    alt,
-  }: ArticleDetalesProps) {
+  function Block({ title, subtitle, strong, content, img, alt }: ArticleDetalesProps) {
     return (
       <>
         {title && <h3>{title}</h3>}
-        <div className="uncollapse">
-          {img && <img src={getImageUrl(img)} alt={alt} />}
-        </div>
+        <div className="uncollapse">{img && <img src={getImageUrl(img)} alt={alt} />}</div>
         {subtitle && <h4>{subtitle}</h4>}
         {typeof content == 'string' ? (
           <p>
             {strong && <strong>{strong}</strong>} {content && content}
           </p>
         ) : (
-          <ul>{content?.map((item, i) => <li key={i}>{item}</li>)}</ul>
+          <ul>
+            {content?.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         )}
       </>
     );
@@ -63,9 +56,7 @@ export default function Article() {
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
             <li>
-              <Link to="/articles">
-                {templateData.templateC[0]?.titles.articles}
-              </Link>
+              <Link to="/articles">{templateData.templateC[0]?.titles.articles}</Link>
             </li>
             <li className="active">{article?.nameArticle}</li>
           </ul>

@@ -7,12 +7,7 @@ import { useLang } from '../../hooks/useLang';
  * Компонент отображает блок с информацией об обложке альбома.
  */
 export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
-  function Block({
-    photographer,
-    photographerURL,
-    designerURL,
-    designer,
-  }: String) {
+  function Block({ photographer, photographerURL, designerURL, designer }: String) {
     const { lang } = useLang();
     const { templateData } = useData(lang);
 
@@ -22,11 +17,7 @@ export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
           <>
             <h3>{templateData.templateC[0]?.titles.photo}</h3>
             <div className="album-details__artwork-photographer">
-              <a
-                className="album-details__link"
-                href={photographerURL}
-                target="_blank"
-              >
+              <a className="album-details__link" href={photographerURL} target="_blank">
                 {photographer}
               </a>
             </div>

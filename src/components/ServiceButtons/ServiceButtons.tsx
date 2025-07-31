@@ -44,21 +44,9 @@ export default function ServiceButtonsPurchase({
               className="service-buttons__list"
               aria-label="Блок со ссылками на платные музыкальные агрегаторы"
             >
-              <GetButton
-                buttonClass="icon-applemusic"
-                buttonUrl={itunes}
-                buttonText="iTunes"
-              />
-              <GetButton
-                buttonClass="icon-bandcamp"
-                buttonUrl={bandcamp}
-                buttonText="Bandcamp"
-              />
-              <GetButton
-                buttonClass="icon-amazon"
-                buttonUrl={amazon}
-                buttonText="Amazon"
-              />
+              <GetButton buttonClass="icon-applemusic" buttonUrl={itunes} buttonText="iTunes" />
+              <GetButton buttonClass="icon-bandcamp" buttonUrl={bandcamp} buttonText="Bandcamp" />
+              <GetButton buttonClass="icon-amazon" buttonUrl={amazon} buttonText="Amazon" />
             </ul>
           </>
         )}
@@ -69,41 +57,17 @@ export default function ServiceButtonsPurchase({
               className="service-buttons__list"
               aria-label="Блок со ссылками на бесплатные музыкальные агрегаторы"
             >
-              <GetButton
-                buttonClass="icon-apple"
-                buttonUrl={apple}
-                buttonText="Apple music"
-              />
-              <GetButton
-                buttonClass="icon-vk"
-                buttonUrl={vk}
-                buttonText="ВКонтакте"
-              />
-              <GetButton
-                buttonClass="icon-youtube1"
-                buttonUrl={youtube}
-                buttonText="YouTube"
-              />
+              <GetButton buttonClass="icon-apple" buttonUrl={apple} buttonText="Apple music" />
+              <GetButton buttonClass="icon-vk" buttonUrl={vk} buttonText="ВКонтакте" />
+              <GetButton buttonClass="icon-youtube1" buttonUrl={youtube} buttonText="YouTube" />
               <GetButton
                 buttonClass="icon-spotify"
                 buttonUrl={spotify}
                 buttonText="YoSpotifyuTube"
               />
-              <GetButton
-                buttonClass="icon-yandex"
-                buttonUrl={yandex}
-                buttonText="Yandex"
-              />
-              <GetButton
-                buttonClass="icon-deezer"
-                buttonUrl={deezer}
-                buttonText="Deezer"
-              />
-              <GetButton
-                buttonClass="icon-tidal"
-                buttonUrl={tidal}
-                buttonText="Tidal"
-              />
+              <GetButton buttonClass="icon-yandex" buttonUrl={yandex} buttonText="Yandex" />
+              <GetButton buttonClass="icon-deezer" buttonUrl={deezer} buttonText="Deezer" />
+              <GetButton buttonClass="icon-tidal" buttonUrl={tidal} buttonText="Tidal" />
             </ul>
           </>
         )}

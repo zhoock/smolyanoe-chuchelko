@@ -1,7 +1,13 @@
+const autoprefixer = require('autoprefixer');
+const cssnano = require('cssnano');
+const postcssPresetEnv = require('postcss-preset-env');
+
 module.exports = {
-  plugins: {
-    'postcss-preset-env': {
-      overrideBrowserslist: 'last 2 versions' // Указываем последние две версии браузеров
-    }
-  }
-}
+  plugins: [
+    autoprefixer(),
+    cssnano({ preset: 'default' }),
+    postcssPresetEnv({
+      browsers: 'last 2 versions',
+    }),
+  ],
+};

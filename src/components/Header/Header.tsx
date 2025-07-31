@@ -8,9 +8,7 @@ export default function Header() {
   const [theme, setTheme] = useState(
     () =>
       localStorage.getItem('theme') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'),
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   );
 
   const [lang, setLangState] = useState(getLang());

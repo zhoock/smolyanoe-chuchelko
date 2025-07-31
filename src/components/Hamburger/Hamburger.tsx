@@ -5,11 +5,7 @@ import './style.scss';
 /**
  * Компонент отображает гамбургер-меню.
  */
-export default function Hamburger({
-  isActive,
-  onToggle,
-  zIndex,
-}: HamburgerProps) {
+export default function Hamburger({ isActive, onToggle, zIndex }: HamburgerProps) {
   return (
     <button
       className={`hamburger ${isActive ? 'active' : ''}`}
@@ -20,9 +16,7 @@ export default function Hamburger({
       <span className="one"></span>
       <span className="two"></span>
       <span className="three"></span>
-      <span className="visually-hidden">
-        {!isActive ? 'Открыть меню' : 'Скрыть меню'}
-      </span>
+      <span className="visually-hidden">{!isActive ? 'Открыть меню' : 'Скрыть меню'}</span>
     </button>
   );
 }

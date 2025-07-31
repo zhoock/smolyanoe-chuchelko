@@ -30,11 +30,7 @@ export default function Albums() {
 
         <div className="albums__list">
           {templateData.templateA.map((album) => (
-            <WrapperAlbumCover
-              key={album.albumId}
-              {...album}
-              date={album.release.date}
-            >
+            <WrapperAlbumCover key={album.albumId} {...album} date={album.release.date}>
               <AlbumCover {...album.cover} fullName={album.fullName} />
             </WrapperAlbumCover>
           ))}

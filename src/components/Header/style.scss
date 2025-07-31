@@ -8,7 +8,7 @@
   z-index: 1;
   background: rgba(var(--extra-background-color), 0.8);
   backdrop-filter: blur(20px) saturate(0.8%);
-  font-family: Oswald, sans-serif;
+  font-family: 'Oswald', sans-serif;
 
   &__wrapper {
     display: grid;
@@ -40,36 +40,31 @@
     display: none;
 
     & + div {
-      border-radius: 50%;
-      inline-size: var(--ms-1);
-      block-size: var(--ms-1);
       position: relative;
+      border-radius: 50%;
       box-shadow: inset 13px -13px 0 0 var(--heading-color, #998238);
-      transform: scale(1) rotate(-2deg);
       transition:
         box-shadow 0.5s ease 0s,
         transform 0.4s ease 0.1s;
+      transform: scale(1) rotate(-2deg);
+      inline-size: var(--ms-1);
+      block-size: var(--ms-1);
 
       &::before {
+        position: absolute;
+        border-radius: inherit;
+        transition: background 0.3s ease;
         content: '';
         inline-size: inherit;
         block-size: inherit;
-        border-radius: inherit;
-        position: absolute;
         inset-inline-start: 0;
         inset-block-start: 0;
-        transition: background 0.3s ease;
       }
 
       &::after {
-        content: '';
-        inline-size: 8px;
-        block-size: 8px;
-        border-radius: 50%;
-        margin: -4px 0 0 -4px;
         position: absolute;
-        inset-block-start: 50%;
-        inset-inline-start: 50%;
+        margin: -4px 0 0 -4px;
+        border-radius: 50%;
         box-shadow:
           0 -20px 0 var(--heading-color, #998238),
           0 20px 0 var(--heading-color, #998238),
@@ -79,17 +74,22 @@
           -13px 13px 0 var(--heading-color, #998238),
           13px -13px 0 var(--heading-color, #998238),
           -13px -13px 0 var(--heading-color, #998238);
-        transform: scale(0);
         transition: all 0.3s ease;
+        transform: scale(0);
+        content: '';
+        inline-size: 8px;
+        block-size: 8px;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
       }
     }
 
     &:checked + div {
       box-shadow: inset 32px -32px 0 0 var(--heading-color, #998238);
-      transform: scale(0.5) rotate(0deg);
       transition:
         transform 0.3s ease 0.1s,
         box-shadow 0.2s ease 0s;
+      transform: scale(0.5) rotate(0deg);
 
       &::before {
         background: var(--heading-color, #998238);
@@ -97,8 +97,8 @@
       }
 
       &::after {
-        transform: scale(1.5);
         transition: transform 0.5s ease 0.13s;
+        transform: scale(1.5);
       }
     }
   }
@@ -112,33 +112,33 @@
   position: relative;
 
   .lang-current {
+    color: var(--header-links-list-item, #998238);
     background: none;
     border: none;
     font-weight: bold;
     cursor: pointer;
-    color: var(--header-links-list-item, #998238);
   }
 
   .lang-list {
     position: absolute;
     top: 100%;
     left: -17px;
+    z-index: 100;
+    padding: 0;
     background: rgba(var(--extra-background-color), 0.8);
     border-radius: var(--ms-01);
     list-style: none;
-    padding: 0;
     margin-top: var(--ms-0);
-    z-index: 100;
 
     li {
       padding: var(--ms-01) var(--ms-0);
 
       .lang-option {
-        appearance: none;
-        background: transparent;
-        cursor: pointer;
-        border: none;
         color: var(--link-color);
+        background: transparent;
+        border: none;
+        appearance: none;
+        cursor: pointer;
 
         &.active {
           color: var(--header-links-list-item, #998238);

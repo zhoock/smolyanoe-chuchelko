@@ -61,9 +61,7 @@ const EP = [
       {
         id: 3,
         title: 'Мастеринг',
-        content: [
-          '31 марта 2020—10 апреля 2020 (Chicago Mastering Service, Chicago, USA).',
-        ],
+        content: ['31 марта 2020—10 апреля 2020 (Chicago Mastering Service, Chicago, USA).'],
       },
       {
         id: 4,
@@ -422,8 +420,7 @@ const _23 = [
       apple:
         'https://music.apple.com/ru/album/23-single/1604100999?at=1000lqjf&ct=bq&uo=4&app=music&Is=1&ls=1',
       vk: 'https://vk.com/music/album/-2000261714_14261714_fd2045122e6407c160',
-      youtube:
-        'https://music.youtube.com/playlist?list=OLAK5uy_kyipWPjQMZME10sEGO804LM9X_kfBdT28',
+      youtube: 'https://music.youtube.com/playlist?list=OLAK5uy_kyipWPjQMZME10sEGO804LM9X_kfBdT28',
       spotify: 'https://open.spotify.com/album/64UnYHDHDTSsfNyKSNSHHG',
       yandex: 'https://music.yandex.ru/album/20403610',
       deezer: 'https://www.deezer.com/ru/album/285303392',
@@ -466,10 +463,7 @@ const _23 = [
         title: 'Мастеринг',
         content: [
           {
-            text: [
-              '30 ноября 2021—04 декабря 2021',
-              '(Chicago Mastering Service, Chicago, USA).',
-            ],
+            text: ['30 ноября 2021—04 декабря 2021', '(Chicago Mastering Service, Chicago, USA).'],
             link: 'https://chicagomasteringservice.com/',
           },
         ],
@@ -564,10 +558,7 @@ const EP2020Equipment = [
       {
         id: 6,
         subtitle: 'Бас-барабан',
-        content: [
-          'Neumann TLM 170 deep-black ones (внутри)',
-          'Sennheiser MKH 40 (снаружи)',
-        ],
+        content: ['Neumann TLM 170 deep-black ones (внутри)', 'Sennheiser MKH 40 (снаружи)'],
       },
       {
         id: 7,
@@ -611,11 +602,7 @@ const EP2020Equipment = [
         id: 14,
         title: 'ГИТАРА',
         subtitle: 'Гитары',
-        content: [
-          'Fender Mustang',
-          'Fender Jaguar',
-          'Акустическая гитара Takamine',
-        ],
+        content: ['Fender Mustang', 'Fender Jaguar', 'Акустическая гитара Takamine'],
         img: 'guitar_recording_album_session_EP',
         alt: 'запись гитары, сессия альбома EP.',
       },
@@ -894,9 +881,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 14,
         subtitle: 'Передний микрофон',
-        content: [
-          'Ленточный стереомикрофон в конфигурации Blumlein AEA R88 MK2',
-        ],
+        content: ['Ленточный стереомикрофон в конфигурации Blumlein AEA R88 MK2'],
       },
       {
         id: 15,
@@ -906,9 +891,7 @@ const EP2022RecordingAnAlbumEquipment = [
       {
         id: 16,
         subtitle: 'Neumann TLM 170 (снаружи)',
-        content: [
-          'AKG D112 (внутри) + вмонтированный динамический микрофон (внутри)',
-        ],
+        content: ['AKG D112 (внутри) + вмонтированный динамический микрофон (внутри)'],
       },
       {
         id: 17,
@@ -990,8 +973,7 @@ const YaroslavZhukAntirulesOfLife = [
     detales: [
       {
         id: 1,
-        content:
-          'Музыкант. Вокалист, гитарист и лидер группы Смоляное чучелко. 43 года. Москва.',
+        content: 'Музыкант. Вокалист, гитарист и лидер группы Смоляное чучелко. 43 года. Москва.',
       },
       {
         id: 2,
@@ -1020,8 +1002,7 @@ const YaroslavZhukAntirulesOfLife = [
       },
       {
         id: 6,
-        strong:
-          'Психолог сказал — моя проблема, что я слишком зацикливаюсь на том, что я делаю.',
+        strong: 'Психолог сказал — моя проблема, что я слишком зацикливаюсь на том, что я делаю.',
         content:
           'Я думаю, что если бы каждый был зациклен на том, что он делает, хорошо делал это и не совал нос в чужие дела — люди бы получили, наконец, свою Божью благодать.',
       },

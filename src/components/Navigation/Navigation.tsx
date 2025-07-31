@@ -10,7 +10,7 @@ export default function Navigation({ onToggle }: NavigationProps) {
   const { templateData } = useData(lang);
 
   return (
-    <nav role="navigation" className={`header__menu`}>
+    <nav role="navigation" className={'header__menu'}>
       <ul className="header__links-list">
         <li className="header__links-list-item">
           <NavLink

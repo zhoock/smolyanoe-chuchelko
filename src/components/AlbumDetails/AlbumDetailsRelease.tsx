@@ -27,8 +27,8 @@ export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
         </div>
         <div>
           <small>
-            {album?.tracks.length} {endForTracks(album?.tracks.length)},{' '}
-            {Math.ceil(duration)} {endForMinutes(duration)}
+            {album?.tracks.length} {endForTracks(album?.tracks.length)}, {Math.ceil(duration)}{' '}
+            {endForMinutes(duration)}
           </small>
         </div>
       </>
