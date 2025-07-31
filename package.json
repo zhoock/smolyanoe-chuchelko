@@ -1,6 +1,6 @@
 {
   "name": "my-project",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Смоляное чучелко",
   "type": "module",
   "main": "index.js",
