@@ -72,7 +72,20 @@ export default [
   },
 
   {
-    ignores: ['node_modules/**', 'dist/**', 'build/**', '**/*.d.ts', 'storybook-static/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      'storybook-static/**',
+      'coverage/**',
+      '*.d.ts',
+      'commitlint.config.js',
+      'webpack.config.js',
+      'webpack/**/*.js',
+      'postcss.config.js',
+      'babel.config.js',
+      'jest.config.js',
+    ],
   },
 ];
 // eslint.config.mjs
