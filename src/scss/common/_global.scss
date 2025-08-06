@@ -1,5 +1,8 @@
 @use 'sass:color';
 
+// Импортируем общий файл с зависимостями
+@use './mixins' as *;
+
 :root {
   position: relative;
   min-block-size: 100%;

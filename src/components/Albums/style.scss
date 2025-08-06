@@ -1,5 +1,5 @@
 // Импортируем общий файл с зависимостями
-@import '../../scss/common/mixins';
+@use '../../scss/common/mixins' as *;
 
 .albums,
 .album {

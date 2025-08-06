@@ -1,5 +1,7 @@
 // Icomoon https://icomoon.io/
 
+@use '../common/mixins' as *; // даёт доступ к $ms-2 и др. переменным/миксинам
+
 @font-face {
   font-family: 'icomoon';
   src: url('./fonts/icomoon.eot');

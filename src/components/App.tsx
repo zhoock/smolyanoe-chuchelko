@@ -54,7 +54,13 @@ const router = createBrowserRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} fallbackElement={<p>Загрузка...</p>} />;
+  return (
+    <RouterProvider
+      router={router}
+      future={{ v7_startTransition: true }}
+      fallbackElement={<p>Загрузка...</p>}
+    />
+  );
 }
 
 function Layout() {

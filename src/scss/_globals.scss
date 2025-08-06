@@ -1,7 +1,7 @@
-@import './common/pallete';
-@import './common/light';
-@import './common/dark';
-@import './common/typography';
-@import './common/mixins';
-@import './common/global';
-@import './vendor/icomoon';
+@use './common/pallete' as *;
+@use './common/light' as *;
+@use './common/dark' as *;
+@use './common/typography' as *;
+@use './common/mixins' as *;
+@use './common/global' as *;
+@use './vendor/icomoon' as *;

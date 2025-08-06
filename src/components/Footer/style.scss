@@ -1,21 +1,21 @@
 // Импортируем общий файл с зависимостями
-@import '../../scss/common/mixins';
+@use '../../scss/common/mixins' as *;
 
 .footer {
   grid-area: footer;
 
   .social-networks {
     &-list {
-      @include breakpoint(tablet) {
-        justify-content: start;
-      }
-
       display: grid;
       grid-gap: 1.618em;
       grid-template-columns: repeat(4, 50px);
       margin-block-start: var(--ms-1);
       justify-content: space-between;
       text-align: center;
+
+      @include breakpoint(tablet) {
+        justify-content: start;
+      }
 
       &__item {
         font-size: var(--ms-2);

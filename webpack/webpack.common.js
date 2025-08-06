@@ -70,13 +70,21 @@ module.exports = {
                 namedExport: false,
               },
               importLoaders: 2, //Значение 2 говорит о том, что некоторые трансформации PostCSS нужно применить до css-loader.
+              sourceMap: !production,
             },
           },
-          'postcss-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              sourceMap: !production,
+            },
+          },
           {
             loader: 'sass-loader',
             options: {
-              sourceMap: true,
+              // КЛЮЧЕВОЕ: используем новую embedded-реализацию → нет legacy JS API
+              implementation: require('sass-embedded'),
+              sourceMap: !production,
             },
           },
         ],

@@ -1,7 +1,7 @@
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@import '../../scss/common/mixins';
+@use '../../scss/common/mixins' as *;
 
 .articles,
 .article {
