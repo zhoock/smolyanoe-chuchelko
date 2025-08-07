@@ -10,8 +10,6 @@ export default function AboutUs() {
   const { lang } = useLang();
   const { templateData } = useData(lang);
 
-  console.log('CSS module:', s);
-
   const renderParagraph = (item: string | { text: string[]; link: string }, i: number) => {
     if (typeof item === 'string') {
       // Обработка встраиваемых ссылок по маркерам

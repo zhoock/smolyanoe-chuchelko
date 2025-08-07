@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 import Navigation from '../Navigation/Navigation';
 import { setLang, getLang } from '../../utils/language';
 import './style.scss';
@@ -59,22 +60,20 @@ export default function Header() {
           >
             {lang.toUpperCase()}
           </button>
-          {langOpen && (
-            <ul className="lang-list" role="listbox">
-              {['en', 'ru'].map((l) => (
-                <li key={l}>
-                  <button
-                    className={`lang-option${lang === l ? ' active' : ''}`}
-                    onClick={() => changeLang(l)}
-                    role="option"
-                    aria-selected={lang === l}
-                  >
-                    {l.toUpperCase()}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul className={clsx('lang-list', { 'is-hidden': !langOpen })} role="listbox">
+            {['en', 'ru'].map((l) => (
+              <li key={l}>
+                <button
+                  className={clsx('lang-option', { active: lang === l })}
+                  onClick={() => changeLang(l)}
+                  role="option"
+                  aria-selected={lang === l}
+                >
+                  {l.toUpperCase()}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Лого и навигация */}

@@ -15,16 +15,19 @@
     gap: var(--ms-0);
     margin-block-end: 0;
 
-    &-item {
-      a {
-        text-decoration: none;
-        text-transform: uppercase;
+    .header__link {
+      text-decoration: none;
+      text-transform: uppercase;
 
-        &.active {
-          color: var(--header-links-list-item, #998238);
+      &.active {
+        color: var(--header-links-list-item, #998238);
 
-          // pointer-events: none; /* disables click event */
-        }
+        // pointer-events: none; /* disables click event */
+      }
+
+      &.pending {
+        opacity: 0.5;
+        pointer-events: none; // чтобы не кликали повторно
       }
     }
   }
@@ -47,13 +50,11 @@ dialog {
       block-size: 100%;
       font-family: 'Oswald', sans-serif;
 
-      &-item {
-        a {
-          display: block;
-          text-decoration: none;
+      .header__link {
+        display: block;
+        text-decoration: none;
 
-          @include adjust-font-size-to($ms-1, 0);
-        }
+        @include adjust-font-size-to($ms-1, 0);
       }
     }
   }

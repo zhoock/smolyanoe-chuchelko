@@ -1,4 +1,5 @@
 import React, { useState, MouseEvent } from 'react';
+import clsx from 'clsx';
 import Popup from '../Popup/Popup';
 import Hamburger from '../Hamburger/Hamburger';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
@@ -66,7 +67,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           {tracks?.map((track) => (
             <button
               key={track.id}
-              className={`tracks__btn ${track.id === activeTrack ? 'active' : ''}`}
+              className={clsx('tracks__btn', { active: track.id === activeTrack })}
               data-index={track.id}
               onClick={handleClick}
               type="button"

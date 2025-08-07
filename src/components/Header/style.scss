@@ -130,6 +130,10 @@
     list-style: none;
     margin-top: var(--ms-0);
 
+    &.is-hidden {
+      display: none;
+    }
+
     li {
       padding: var(--ms-01) var(--ms-0);
 

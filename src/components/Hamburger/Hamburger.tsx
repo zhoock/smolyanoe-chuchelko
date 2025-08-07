@@ -1,4 +1,5 @@
 import React from 'react';
+import clsx from 'clsx';
 import { HamburgerProps } from '../../models';
 import './style.scss';
 
@@ -8,7 +9,10 @@ import './style.scss';
 export default function Hamburger({ isActive, onToggle, zIndex }: HamburgerProps) {
   return (
     <button
-      className={`hamburger ${isActive ? 'active' : ''}`}
+      className={clsx(
+        'hamburger', // базовый класс
+        isActive && 'active' // добавляется, если isActive === true
+      )}
       onClick={onToggle}
       style={{ zIndex }}
       type="button"
