@@ -110,6 +110,7 @@ module.exports = {
     new CopyWebpackPlugin({
       // Плагин для копирования файлов и папок в папку dist
       patterns: [
+        { from: path.resolve(__dirname, '../robots.txt'), to: 'robots.txt' },
         {
           from: path.resolve(__dirname, '../sitemap.xml'), // Путь к файлу sitemap.xml
           to: path.resolve(__dirname, '../dist/'), // Папка в которую нужно скопировать
