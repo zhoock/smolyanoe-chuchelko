@@ -1,3 +1,6 @@
+[build]
+  publish = "dist"   # <— ВАЖНО: откуда Netlify берёт файлы для прод-раздачи
+
 [dev]
   command = "npm start" # команда для запуска вашего dev-сервера (например, React Dev Server)
   framework = "create-react-app" # или укажите "custom" для кастомной сборки
