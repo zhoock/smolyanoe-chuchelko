@@ -1,4 +1,7 @@
+// src/AlbumTracks.tsx
+
 import React, { useState, MouseEvent } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import Popup from '../Popup/Popup';
 import Hamburger from '../Hamburger/Hamburger';
@@ -13,19 +16,14 @@ import './style.scss';
  * При клике на название трека выводит текст выбранной песни в popup.
  */
 export default function AlbumTracks({ album }: { album: IAlbums }) {
-  const [activeTrack, setActiveTrack] = useState(0); // activeTrack — индекс активного трека (по умолчанию 0).
-  const [popupText, setPopupText] = useState(false); // popupText — отвечает за показ попапа с текстом трека.
   const [popupPlayer, setPopupPlayer] = useState(false); // popupPlayer — отвечает за показ попапа с аудиоплеером.
   const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color), 0.8)'); // bgColor — цвет фона для попапа с плеером (обновляется через AudioPlayer).
+
   const { lang } = useLang();
   const { templateData } = useData(lang);
 
-  // Извлекает индекс трека из data-index и открывает текстовый попап.
-  // -1 нужен, потому что индексация треков начинается с 1, а в массиве — с 0.
-  function handleClick(e: MouseEvent<HTMLElement>) {
-    setActiveTrack(Number(e.currentTarget.dataset.index) - 1);
-    setPopupText(true);
-  }
+  const location = useLocation();
+  const { trackId } = useParams<{ trackId?: string }>();
 
   // Открывает попап с плеером.
   // e.stopPropagation() предотвращает открытие текстового попапа.
@@ -37,9 +35,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   // Закрывает оба попапа.
   // Сбрасывает активный трек.
   function closePopups() {
-    setPopupText(false);
     setPopupPlayer(false);
-    setActiveTrack(0);
   }
 
   // Основной контент — отображение названия альбома, кнопки "Воспроизвести" и списка треков.
@@ -65,32 +61,22 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         {/* Активный трек подсвечивается классом 'active'. */}
         <div className="tracks">
           {tracks?.map((track) => (
-            <button
+            <Link
               key={track.id}
-              className={clsx('tracks__btn', { active: track.id === activeTrack })}
-              data-index={track.id}
-              onClick={handleClick}
-              type="button"
+              to={`track/${track.id}`} // → /albums/:albumId/track/:trackId
+              state={{ background: location }} // важное: запоминаем фон
+              className={clsx('tracks__btn', { active: String(track.id) === trackId })} // подсветка активного
               aria-label="Кнопка с названием песни"
-              aria-description="Показать текст песни"
+              aria-description={`Показать текст: ${track.title}`}
             >
               {track.title}
-            </button>
+            </Link>
           ))}
         </div>
-
-        {/* Попап с текстом трека
-        Используется <pre> — текст отображается с сохранением форматирования.
-        Hamburger для закрытия попапа. */}
-        <Popup isActive={popupText} onClose={closePopups}>
-          <pre>{tracks?.[activeTrack]?.content}</pre>
-          <Hamburger isActive={popupText} onToggle={closePopups} />
-        </Popup>
 
         {/* Попап с аудиоплеером
         В AudioPlayer передаётся setBgColor, чтобы менять цвет фона попапа. 
         Hamburger для закрытия попапа. */}
-
         {popupPlayer && (
           <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
             {album && <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />}

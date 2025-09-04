@@ -9,7 +9,7 @@ export default function NotFoundPage() {
   return (
     <section className="not-found main-background">
       <h2>Страница не найдена</h2>
-      <button onClick={() => navigate('/')}>Вернуться на главную</button>
+      <button onClick={() => navigate('/', { replace: true })}>Вернуться на главную</button>
     </section>
   );
 }

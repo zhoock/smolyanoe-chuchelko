@@ -61,6 +61,7 @@
       cursor: pointer;
       counter-increment: n;
       white-space: nowrap;
+      text-decoration: none;
 
       @include adjust-font-size-to($ms-0, 0);
 
@@ -108,19 +109,24 @@
       }
     }
   }
+}
 
-  pre {
-    display: flex;
-    justify-content: center;
-    font-family: var(--base-font-family, arial, sans-serif);
-    font-weight: var(--bold, 700);
-    text-align: start;
+pre {
+  display: flex;
+  justify-content: center;
+  font-family: var(--base-font-family, arial, sans-serif);
+  font-weight: var(--bold, 700);
+  text-align: start;
 
-    @include adjust-font-size-to($ms-1);
+  @include adjust-font-size-to($ms-1);
 
-    @include breakpoint(old-phones) {
-      font-size: var(--base-font-size, 18px);
-      line-height: var(--base-line-height, calc(18px * 1.618));
-    }
+  @include breakpoint(old-phones) {
+    font-size: var(--base-font-size, 18px);
+    line-height: var(--base-line-height, calc(18px * 1.618));
   }
+}
+
+.track-lyrics {
+  margin-block-end: 0;
+  text-align: center;
 }

@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Outlet, createBrowserRouter, RouterProvider } from 'react-router-dom';
+import {
+  Outlet,
+  createBrowserRouter,
+  RouterProvider,
+  useLocation,
+  Routes,
+  Route,
+} from 'react-router-dom';
 
 import Header from './Header/Header';
 import Footer from './Footer/Footer';
@@ -14,39 +21,42 @@ import Navigation from './Navigation/Navigation';
 import Popup from './Popup/Popup';
 import Form from './Forms/Form';
 import Hero from './Hero/Hero';
+import TrackLyrics from './AlbumTracks/TrackLyrics';
+import ModalRoute from './ModalRoute';
 
 const router = createBrowserRouter([
   {
-    path: '/',
+    path: '/', // корневой маршрут с Layout
     element: <Layout />,
-    errorElement: <NotFoundPage />,
+    errorElement: <NotFoundPage />, // ок для 404 и ошибок
     children: [
       {
         index: true,
+        element: <Albums />, // главная
+      },
+      {
+        path: 'albums',
         element: <Albums />,
       },
       {
-        path: '/albums',
-        element: <Albums />,
-      },
-      {
-        path: '/albums/:albumId',
+        path: 'albums/:albumId',
         element: <Album />,
       },
+      { path: 'albums/:albumId/track/:trackId', element: <TrackLyrics /> }, // новый маршрут для текста трека
       {
-        path: '/aboutus/',
+        path: 'aboutus/',
         element: <AboutUs />,
       },
       {
-        path: '/articles',
+        path: 'articles',
         element: <Articles />,
       },
       {
-        path: '/articles/:articleId',
+        path: 'articles/:articleId',
         element: <Article />,
       },
       {
-        path: '/forms',
+        path: 'forms',
         element: <Form />,
       },
     ],
@@ -66,6 +76,10 @@ export default function App() {
 function Layout() {
   const [popup, setPopup] = useState(false);
 
+  // === background location для модалки трека ===
+  const location = useLocation();
+  const background = location.state?.background;
+
   return (
     <>
       <Header />
@@ -79,7 +93,31 @@ function Layout() {
         </Popup>
 
         <Hamburger isActive={popup} onToggle={() => setPopup(!popup)} zIndex="1000" />
-        <Outlet />
+
+        {/* Если НЕТ background — рендерим обычное дерево через Outlet */}
+        {!background && <Outlet />}
+
+        {/* Если ЕСТЬ background — рендерим фон ПО background-локации */}
+        {background && (
+          <Routes location={background}>
+            {/* Минимальный набор страниц, которые могут быть фоном под модалкой */}
+            <Route path="/albums/:albumId" element={<Album />} />
+          </Routes>
+        )}
+
+        {/* Модалка поверх: слушает реальный URL */}
+        {background && (
+          <Routes>
+            <Route
+              path="/albums/:albumId/track/:trackId"
+              element={
+                <ModalRoute>
+                  <TrackLyrics />
+                </ModalRoute>
+              }
+            />
+          </Routes>
+        )}
       </main>
       <Footer />
     </>
