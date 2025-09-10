@@ -5,7 +5,7 @@ import Navigation from '../Navigation/Navigation';
 import { setLang, getLang } from '../../utils/language';
 import './style.scss';
 
-export default function Header() {
+export const Header = () => {
   const [theme, setTheme] = useState(
     () =>
       localStorage.getItem('theme') ||
@@ -97,4 +97,4 @@ export default function Header() {
       </div>
     </header>
   );
-}
+};

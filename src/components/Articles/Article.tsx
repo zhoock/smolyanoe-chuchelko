@@ -11,7 +11,7 @@ import { useLang } from '../../hooks/useLang';
 /**
  * Компонент отображает блок со статьёй.
  */
-export default function Article() {
+export const Article = () => {
   useEffect(() => {
     window.scrollTo({
       top: 0,
@@ -82,4 +82,4 @@ export default function Article() {
       </div>
     </section>
   );
-}
+};

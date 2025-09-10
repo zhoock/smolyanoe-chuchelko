@@ -1,12 +1,12 @@
 import React from 'react';
 import { useData } from '../../hooks/data';
-import WrapperAlbumCover from './WrapperAlbumCover';
-import AlbumCover from './AlbumCover';
-import { Loader } from '../Loader/Loader';
-import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import WrapperAlbumCover from '../../components/Album/WrapperAlbumCover';
+import AlbumCover from '../../components/Album/AlbumCover';
+import { Loader } from '../../components/Loader/Loader';
+import { ErrorMessage } from '../../components/ErrorMessage/ErrorMessage';
 import { useLang } from '../../hooks/useLang';
 
-import './style.scss';
+import '../../components/Album/style.scss';
 
 /**
  * Компонент отображает список альбомов в виде обложек-ссылок

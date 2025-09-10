@@ -5,7 +5,7 @@ import { useLang } from '../../hooks/useLang';
 
 import s from './style.module.scss';
 
-export default function AboutUs() {
+export const AboutUs = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { lang } = useLang();
   const { templateData } = useData(lang);
@@ -77,4 +77,4 @@ export default function AboutUs() {
       </div>
     </section>
   );
-}
+};

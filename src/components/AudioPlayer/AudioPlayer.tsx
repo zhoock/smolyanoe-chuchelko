@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import AlbumCover from '../Albums/AlbumCover';
+import AlbumCover from '../Album/AlbumCover';
 import { IAlbums } from '../../models';
 import './style.scss';
 

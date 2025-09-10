@@ -4,7 +4,7 @@ import { useLang } from '../../hooks/useLang';
 
 import './style.scss';
 
-export default function Footer() {
+export const Footer = () => {
   const socialNetwork = [
     {
       id: 1,
@@ -63,4 +63,4 @@ export default function Footer() {
       </div>
     </footer>
   );
-}
+};

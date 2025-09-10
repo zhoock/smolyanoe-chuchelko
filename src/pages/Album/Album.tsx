@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
-import AlbumDetails from '../AlbumDetails/AlbumDetails';
-import AlbumCover from './AlbumCover';
-import AlbumTracks from '../AlbumTracks/AlbumTracks';
-import Share from '../Share/Share';
-import ServiceButtons from '../ServiceButtons/ServiceButtons';
+import AlbumDetails from '../../components/AlbumDetails/AlbumDetails';
+import AlbumCover from '../../components/Album/AlbumCover';
+import AlbumTracks from '../../components/AlbumTracks/AlbumTracks';
+import Share from '../../components/Share/Share';
+import ServiceButtons from '../../components/ServiceButtons/ServiceButtons';
 import { useData } from '../../hooks/data';
-import { Loader } from '../Loader/Loader';
-import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { Loader } from '../../components/Loader/Loader';
+import { ErrorMessage } from '../../components/ErrorMessage/ErrorMessage';
 import { useLang } from '../../hooks/useLang';
 
 /**

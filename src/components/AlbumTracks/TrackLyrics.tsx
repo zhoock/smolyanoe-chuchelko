@@ -14,23 +14,16 @@ export default function TrackLyrics() {
 
   // ищем альбом
   const album = templateData.templateA.find((a) => a.albumId === albumId);
-  if (!album) return <p>Альбом не найден</p>;
 
   // ищем трек внутри альбома
-  const track = album.tracks.find((t) => String(t.id) === trackId);
-  if (!track) return <p>Трек не найден</p>;
+  const track = album?.tracks.find((t) => String(t.id) === trackId);
 
   return (
-    // <div className="track-lyrics">
-    //   <h2>{track.title}</h2>
-    //   <pre style={{ whiteSpace: 'pre-wrap' }}>{track.content}</pre>
-    // </div>
-
     <>
       <pre>
-        <h2 className="track-lyrics">{track.title}</h2>
+        <h2 className="track-lyrics">{track?.title}</h2>
       </pre>
-      <pre>{track.content}</pre>
+      <pre>{track?.content}</pre>
     </>
   );
 }

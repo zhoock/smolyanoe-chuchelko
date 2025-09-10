@@ -26,6 +26,10 @@ module.exports = {
 
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'], // Указываем файлы, с которыми будет работать webpack
+    alias: {
+      // Псевдонимы для путей
+      '@components': path.resolve(__dirname, '../src/components'),
+    },
   },
 
   module: {

@@ -8,21 +8,17 @@ import {
   Route,
 } from 'react-router-dom';
 
-import Header from './Header/Header';
-import Footer from './Footer/Footer';
-import Albums from './Albums/Albums';
-import AboutUs from './AboutUs/AboutUs';
-import Articles from './Articles/Articles';
-import Article from './Articles/Article';
-import Album from './Albums/Album';
-import NotFoundPage from './NotFoundPage/404';
-import Hamburger from './Hamburger/Hamburger';
-import Navigation from './Navigation/Navigation';
-import Popup from './Popup/Popup';
-import Form from './Forms/Form';
-import Hero from './Hero/Hero';
-import TrackLyrics from './AlbumTracks/TrackLyrics';
-import ModalRoute from './ModalRoute';
+import { Header, Footer, AboutUs, Articles, Article } from '@components';
+import Albums from '../pages/Albums/Albums';
+import Album from '../pages/Album/Album';
+import NotFoundPage from '../components/NotFoundPage/404';
+import Hamburger from '../components/Hamburger/Hamburger';
+import Navigation from '../components/Navigation/Navigation';
+import Popup from '../components/Popup/Popup';
+import Form from '../components/Forms/Form';
+import Hero from '../components/Hero/Hero';
+import TrackLyrics from '../components/AlbumTracks/TrackLyrics';
+import ModalRoute from '../components/ModalRoute';
 
 const router = createBrowserRouter([
   {
@@ -75,10 +71,9 @@ export default function App() {
 
 function Layout() {
   const [popup, setPopup] = useState(false);
-
-  // === background location для модалки трека ===
-  const location = useLocation();
-  const background = location.state?.background;
+  const location = useLocation(); // background location для модалки трека
+  const state = location.state as { background?: Location } | undefined;
+  const background = state?.background;
 
   return (
     <>
@@ -94,16 +89,19 @@ function Layout() {
 
         <Hamburger isActive={popup} onToggle={() => setPopup(!popup)} zIndex="1000" />
 
-        {/* Если НЕТ background — рендерим обычное дерево через Outlet */}
-        {!background && <Outlet />}
-
-        {/* Если ЕСТЬ background — рендерим фон ПО background-локации */}
-        {background && (
-          <Routes location={background}>
-            {/* Минимальный набор страниц, которые могут быть фоном под модалкой */}
-            <Route path="/albums/:albumId" element={<Album />} />
-          </Routes>
-        )}
+        {/* ВСЕГДА один и тот же Routes.
+           Если есть background, используем его как "виртуальную" локацию,
+           иначе — текущую. Дерево остаётся тем же, нет размонтирования. */}
+        <Routes location={background ?? location}>
+          <Route path="/" element={<Albums />} />
+          <Route path="/albums" element={<Albums />} />
+          <Route path="/albums/:albumId" element={<Album />} />
+          <Route path="/aboutus" element={<AboutUs />} />
+          <Route path="/articles" element={<Articles />} />
+          <Route path="/articles/:articleId" element={<Article />} />
+          <Route path="/forms" element={<Form />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
 
         {/* Модалка поверх: слушает реальный URL */}
         {background && (

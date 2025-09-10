@@ -9,7 +9,7 @@ import './style.scss';
 /**
  * Компонент отображает блок cо списком статей.
  */
-export default function Articles() {
+export const Articles = () => {
   const { lang } = useLang();
   const { templateData, loading, error } = useData(lang);
 
@@ -39,4 +39,4 @@ export default function Articles() {
       </div>
     </section>
   );
-}
+};

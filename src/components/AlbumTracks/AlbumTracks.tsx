@@ -43,7 +43,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
     return (
       <>
         <h2 className="album-title">{album?.album}</h2>
-        {/* <h3>Треки</h3> */}
+
         <div className="wrapper-album-play">
           <button
             className="album-play"
@@ -57,6 +57,8 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           </button>
         </div>
 
+        <h3>{album?.tracks}</h3>
+
         {/* Рендерится кнопка на каждый трек. */}
         {/* Активный трек подсвечивается классом 'active'. */}
         <div className="tracks">
@@ -65,7 +67,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
               key={track.id}
               to={`track/${track.id}`} // → /albums/:albumId/track/:trackId
               state={{ background: location }} // важное: запоминаем фон
-              className={clsx('tracks__btn', { active: String(track.id) === trackId })} // подсветка активного
+              className={clsx('tracks__btn', { active: String(track.id) === trackId })} // подсветка активного трека
               aria-label="Кнопка с названием песни"
               aria-description={`Показать текст: ${track.title}`}
             >
