@@ -1,11 +1,13 @@
+// webpack/webpack.common.js
 // Webpack конфигурация для сборки проекта на React с TypeScript и Sass
 
 const path = require('path'); /// для того чтобы превратить относительный путь в абсолютный, мы будем использовать пакет path
 const HtmlWebpackPlugin = require('html-webpack-plugin'); // Плагин для генерации HTML с правильными путями к скриптам
 const MiniCssExtractPlugin = require('mini-css-extract-plugin'); // извлекаем CSS из файлов .js при сборке
 const CopyWebpackPlugin = require('copy-webpack-plugin'); // Копируем файлы и папки в папку dist
-const CssMinimizerPlugin = require('css-minimizer-webpack-plugin'); // Минимизация CSS
+// const CssMinimizerPlugin = require('css-minimizer-webpack-plugin'); // Минимизация CSS
 const webpack = require('webpack'); //подключаем webpack для использования встроенного плагина EnvironmentPlugin
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin'); // Плагин для проверки типов TypeScript в отдельном процессе
 
 // В  зависимости от того, какой скрипт мы запустили
 // переменная production получит либо false, либо true
@@ -19,7 +21,7 @@ module.exports = {
       ? 'scripts/[name].[contenthash].js' // Имя итогового бандла, добавляем contenthash к имени файла, если запускаем в режиме production
       : 'scripts/[name].js',
 
-    assetModuleFilename: 'images/[name].[contenthash][ext]', // Относительный путь для изображений
+    assetModuleFilename: 'images/[name].[contenthash:8][ext]', // Относительный путь для изображений
     publicPath: '/', // Важно для работы historyApiFallback
     clean: true, // Очищать `dist` перед каждой сборкой
   },
@@ -40,6 +42,12 @@ module.exports = {
         use: [
           {
             loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+              getCustomTransformers: () => ({
+                before: [require('react-refresh-typescript')()],
+              }),
+            },
           },
         ], // Используем ts-loader для компиляции TypeScript
         exclude: /node_modules/, // Исключает папку node_modules
@@ -97,20 +105,21 @@ module.exports = {
         test: /\.(png|jpe?g|webp|gif)$/i,
         type: 'asset/resource',
         generator: {
-          filename: 'images/[hash][ext][query]',
+          filename: 'images/[name].[contenthash:8][ext][query]',
         },
       },
       {
         test: /\.svg$/,
         type: 'asset/resource',
         generator: {
-          filename: 'icons/[name].[contenthash][ext]',
+          filename: 'icons/[name].[contenthash:8][ext]',
         },
       },
     ],
   },
 
   plugins: [
+    new ForkTsCheckerWebpackPlugin(),
     new CopyWebpackPlugin({
       // Плагин для копирования файлов и папок в папку dist
       patterns: [
@@ -138,7 +147,7 @@ module.exports = {
       ],
     }),
     new HtmlWebpackPlugin({
-      template: './src/index.html', // Указываем исходный HTML-шаблон
+      template: require('path').resolve(__dirname, '../src/index.html'), // Указываем исходный HTML-шаблон
       inject: 'body', // Скрипты будут вставляться перед закрывающим тегом </body>
       filename: 'index.html', // Имя итогового HTML файла
     }),
@@ -153,12 +162,12 @@ module.exports = {
     }),
   ],
 
-  optimization: {
-    minimize: true,
-    minimizer: [
-      new CssMinimizerPlugin(), // Минимизация CSS с помощью CssMinimizerPlugin
-    ],
-  },
+  // optimization: {
+  //   minimize: true,
+  //   minimizer: [
+  //     new CssMinimizerPlugin(), // Минимизация CSS с помощью CssMinimizerPlugin
+  //   ],
+  // },
 
   performance: {
     hints: false, // не отображаются предупреждения и ошибоки по производительности

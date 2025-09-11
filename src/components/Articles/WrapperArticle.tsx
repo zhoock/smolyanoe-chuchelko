@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArticleProps } from '../../models';
 import { getImageUrl } from '../../hooks/data';
 import { formatDateInWords } from './Function'; // Импортируем функции
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 /**
  * Компонент отображает блок с карточкой статьи.

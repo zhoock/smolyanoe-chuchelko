@@ -1,12 +1,6 @@
-import React, { useState } from 'react';
-import {
-  Outlet,
-  createBrowserRouter,
-  RouterProvider,
-  useLocation,
-  Routes,
-  Route,
-} from 'react-router-dom';
+import { useState } from 'react';
+import { createBrowserRouter, RouterProvider, useLocation, Routes, Route } from 'react-router-dom';
+import { albumsLoader } from '../routes/loaders/albumsLoader';
 
 import { Header, Footer, AboutUs, Articles, Article } from '@components';
 import Albums from '../pages/Albums/Albums';
@@ -20,42 +14,13 @@ import Hero from '../components/Hero/Hero';
 import TrackLyrics from '../components/AlbumTracks/TrackLyrics';
 import ModalRoute from '../components/ModalRoute';
 
+// Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
   {
-    path: '/', // корневой маршрут с Layout
+    path: '/*',
     element: <Layout />,
-    errorElement: <NotFoundPage />, // ок для 404 и ошибок
-    children: [
-      {
-        index: true,
-        element: <Albums />, // главная
-      },
-      {
-        path: 'albums',
-        element: <Albums />,
-      },
-      {
-        path: 'albums/:albumId',
-        element: <Album />,
-      },
-      { path: 'albums/:albumId/track/:trackId', element: <TrackLyrics /> }, // новый маршрут для текста трека
-      {
-        path: 'aboutus/',
-        element: <AboutUs />,
-      },
-      {
-        path: 'articles',
-        element: <Articles />,
-      },
-      {
-        path: 'articles/:articleId',
-        element: <Article />,
-      },
-      {
-        path: 'forms',
-        element: <Form />,
-      },
-    ],
+    loader: albumsLoader, // загружаем данные для альбомов, статей и UI-словарик
+    errorElement: <NotFoundPage />,
   },
 ]);
 
@@ -96,6 +61,7 @@ function Layout() {
           <Route path="/" element={<Albums />} />
           <Route path="/albums" element={<Albums />} />
           <Route path="/albums/:albumId" element={<Album />} />
+          <Route path="/albums/:albumId/track/:trackId" element={<TrackLyrics />} />
           <Route path="/aboutus" element={<AboutUs />} />
           <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:articleId" element={<Article />} />

@@ -9,7 +9,7 @@ import ServiceButtons from '../../components/ServiceButtons/ServiceButtons';
 import { useData } from '../../hooks/data';
 import { Loader } from '../../components/Loader/Loader';
 import { ErrorMessage } from '../../components/ErrorMessage/ErrorMessage';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 /**
  * Компонент отображает основные сведения об альбоме (обложку, список треков, кнопки(ссылки) на музыкальные агрегаторы.

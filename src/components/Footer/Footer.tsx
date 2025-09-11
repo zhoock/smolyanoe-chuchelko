@@ -1,6 +1,6 @@
 import React from 'react';
 import { useData } from '../../hooks/data';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 import './style.scss';
 

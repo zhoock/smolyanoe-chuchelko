@@ -1,13 +1,10 @@
-const autoprefixer = require('autoprefixer');
+// postcss.config.js
 const cssnano = require('cssnano');
 const postcssPresetEnv = require('postcss-preset-env');
 
 module.exports = {
   plugins: [
-    autoprefixer(),
-    cssnano({ preset: 'default' }),
-    postcssPresetEnv({
-      browsers: 'last 2 versions',
-    }),
+    postcssPresetEnv({ stage: 3 }), // читает цели из "browserslist"
+    cssnano({ preset: 'default' }), // минификация в проде (можно обернуть проверкой NODE_ENV)
   ],
 };

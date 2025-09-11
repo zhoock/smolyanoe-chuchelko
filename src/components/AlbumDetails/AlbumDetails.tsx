@@ -4,7 +4,7 @@ import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import { String, IAlbums } from '../../models';
 import { useData } from '../../hooks/data';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 import './style.scss';
 
 /**

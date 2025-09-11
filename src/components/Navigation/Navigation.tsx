@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { NavigationProps } from '../../models';
 import { useData } from '../../hooks/data';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 import './style.scss';
 
 export default function Navigation({ onToggle }: NavigationProps) {

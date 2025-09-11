@@ -1,4 +1,4 @@
-//webpack.config.js
+// webpack/webpack.config.cjs
 
 const { merge } = require('webpack-merge');
 const commonConfig = require('./webpack.common.js');

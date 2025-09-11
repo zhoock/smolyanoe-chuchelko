@@ -3,7 +3,7 @@ import { useData } from '../../hooks/data';
 import WrapperArticle from '../Articles/WrapperArticle';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 import './style.scss';
 
 /**

@@ -1,7 +1,7 @@
 import React from 'react';
 import { IAlbums, String } from '../../models';
 import { useData } from '../../hooks/data';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 /**
  * Компонент отображает блок с информацией об обложке альбома.

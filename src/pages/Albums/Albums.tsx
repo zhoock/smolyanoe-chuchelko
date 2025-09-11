@@ -1,10 +1,11 @@
-import React from 'react';
+// src/pages/Albums/Albums.tsx
+
 import { useData } from '../../hooks/data';
 import WrapperAlbumCover from '../../components/Album/WrapperAlbumCover';
 import AlbumCover from '../../components/Album/AlbumCover';
 import { Loader } from '../../components/Loader/Loader';
 import { ErrorMessage } from '../../components/ErrorMessage/ErrorMessage';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 import '../../components/Album/style.scss';
 
@@ -21,7 +22,7 @@ export default function Albums() {
       aria-label="Блок c ссылками на альбомы Смоляное чучелко"
     >
       <div className="wrapper">
-        <h2>{templateData.templateC[0]?.titles.albums}</h2>
+        <h2>{templateData.templateC?.[0]?.titles?.albums}</h2>
 
         {/* Элемент показывается только при загрузке данных с сервера */}
         {loading && <Loader />}

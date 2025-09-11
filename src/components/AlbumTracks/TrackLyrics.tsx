@@ -3,7 +3,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useData } from '../../hooks/data';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 export default function TrackLyrics() {
   const { lang } = useLang();

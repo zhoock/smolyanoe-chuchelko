@@ -1,3 +1,6 @@
+// tsconfig.json
+// Этот файл конфигурации TypeScript настроен для работы с React, Webpack и современными возможностями JavaScript.
+
 {
   "compilerOptions": {
     "target": "ESNext", // Целевая версия ECMAScript — максимально современная
@@ -15,7 +18,8 @@
     "forceConsistentCasingInFileNames": true, // Запрещает использовать один и тот же файл с разным регистром в импортах
     "baseUrl": "./src", // Базовая директория для разрешения неотносительных модулей
     "paths": {
-      "@components": ["components"]
+      "@components": ["components/index"],
+      "@components/*": ["components/*"]
     }
     // "experimentalDecorators": true, // Позволяет использовать декораторы (например, `@Component`, `@Injectable`)
     // "emitDecoratorMetadata": true // Включить генерацию метаданных для декораторов (например, для NestJS)

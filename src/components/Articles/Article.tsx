@@ -6,7 +6,7 @@ import { ArticleDetalesProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 import { formatDateInWords } from './Function'; // Импортируем функции
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 
 /**
  * Компонент отображает блок со статьёй.

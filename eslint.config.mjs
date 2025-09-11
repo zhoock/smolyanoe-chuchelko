@@ -1,3 +1,5 @@
+// eslint.config.mjs
+
 import js from '@eslint/js';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
@@ -41,7 +43,13 @@ export default [
       'jsx-a11y': jsxA11yPlugin,
       'eslint-comments': eslintCommentsPlugin,
     },
-    settings: { react: { version: 'detect' } },
+    settings: {
+      react: { version: 'detect' },
+      'import/resolver': {
+        typescript: { project: './tsconfig.json' },
+        node: { extensions: ['.js', '.jsx', '.ts', '.tsx'] },
+      },
+    },
     rules: {
       quotes: ['error', 'single', { avoidEscape: true }],
       semi: ['error', 'always'],
@@ -68,6 +76,8 @@ export default [
     rules: {
       'no-undef': 'off',
       '@typescript-eslint/no-require-imports': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
 
@@ -81,11 +91,10 @@ export default [
       '*.d.ts',
       'commitlint.config.js',
       'webpack.config.js',
-      'webpack/**/*.js',
+      // 'webpack/**/*.js',
       'postcss.config.js',
       'babel.config.js',
       'jest.config.js',
     ],
   },
 ];
-// eslint.config.mjs

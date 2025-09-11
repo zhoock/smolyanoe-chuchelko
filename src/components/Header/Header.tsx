@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+// src/components/Header/Header.tsx
+
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import Navigation from '../Navigation/Navigation';
-import { setLang, getLang } from '../../utils/language';
+import { useLang } from '../../contexts/lang'; // берём из контекста
 import './style.scss';
 
 export const Header = () => {
@@ -12,7 +14,7 @@ export const Header = () => {
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   );
 
-  const [lang, setLangState] = useState(getLang());
+  const { lang, setLang } = useLang(); // язык из контекста
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -39,11 +41,7 @@ export const Header = () => {
   };
 
   const changeLang = (newLang: string) => {
-    if (newLang !== lang) {
-      setLang(newLang);
-      setLangState(newLang);
-      window.location.reload(); // Или убираем это, если хотим без перезагрузки
-    }
+    if (newLang !== lang) setLang(newLang); // ← НИКАКИХ reload
     setLangOpen(false);
   };
 

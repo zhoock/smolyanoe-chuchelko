@@ -1,88 +1,112 @@
-import { useEffect, useState } from 'react';
+// src/hooks/data.ts
+
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { IAlbums, IArticles, IInterface } from '../models';
-import { getLang } from '../utils/language';
 
+const BASE =
+  'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets';
+
+// useData(lang) — это кастомный React-хук, который:
+// по lang (например, "ru"/"en") грузит три JSON-файла с GitHub (альбомы, статьи, UI-словарик),
+// кладёт результат в локальный стейт,
+// отдаёт наружу { templateData, loading, error, refetch },
+// автоматически перезагружает данные при смене lang,
+// безопасно отменяет «устаревший» запрос, если язык сменился до завершения загрузки.
 interface ITemplateData {
-  templateA: IAlbums[]; // Данные для первого шаблона c альбомами
-  templateB: IArticles[]; // Данные для второго шаблона со статьями
-  templateC: IInterface[]; // Данные для третьего шаблона с интерфейсом
+  templateA: IAlbums[]; // данные для альбомов
+  templateB: IArticles[]; // данные для статей
+  templateC: IInterface[]; // данные для интерфейса/словаря
 }
-
-const lang = getLang();
 
 export function useData(lang: string) {
   const [templateData, setTemplateData] = useState<ITemplateData>({
     templateA: [],
     templateB: [],
     templateC: [],
-  }); // Хранение данных для  шаблонов
-  const [loading, setLoading] = useState(false); // состояние для индикации загрузки
-  const [error, setError] = useState(''); // состояние для хранения ошибок
+  }); // три массива данных (типизированы)
+  const [loading, setLoading] = useState(false); // состояние загрузки
+  const [error, setError] = useState(''); // текст ошибки (пустая строка, если всё ок)
 
-  // Асинхронная функция для загрузки данных
-  async function fetchData() {
-    try {
-      setError(''); // Сбрасываем ошибку перед загрузкой
-      setLoading(true); // Включаем состояние загрузки
+  // Функция загрузки fetchData
+  // Оборачиваем в useCallback, чтобы ссылка на функцию была стабильной между рендерами и менялась только когда меняется lang.
+  // Необязательный signal — для отмены запроса через AbortController.
+  const fetchData = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        setError(''); // сбрасываем ошибку
+        setLoading(true); // включаем индикатор загрузки
 
-      const [templateAResponse, templateBResponse, templateCResponse] = await Promise.all([
-        axios.get(
-          `https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/albums-${lang}.json`
-        ),
-        axios.get(
-          `https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/articles-${lang}.json`
-        ),
+        // Параллельно грузим три файла с GitHub
+        // (axios умеет принимать signal для отмены запроса)
+        // Благодаря дженерикам <IAlbums[]> и т.п. редактор знает точные поля в r.data.
 
-        axios.get(
-          `https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets/${lang}.json`
-        ),
-      ]);
+        const [albums, articles, ui] = await Promise.all([
+          axios.get<IAlbums[]>(`${BASE}/albums-${lang}.json`, { signal }).then((r) => r.data),
+          axios.get<IArticles[]>(`${BASE}/articles-${lang}.json`, { signal }).then((r) => r.data),
+          axios.get<IInterface[]>(`${BASE}/${lang}.json`, { signal }).then((r) => r.data),
+        ]);
 
-      // Установка данных в state
-      setTemplateData({
-        templateA: templateAResponse.data,
-        templateB: templateBResponse.data,
-        templateC: templateCResponse.data,
-      });
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        console.error('Axios error:', e);
-        setError(e.message || 'Ошибка при загрузке данных');
-      } else {
-        console.error('Unknown error:', e);
-        setError('Неизвестная ошибка');
+        // Если к этому моменту signal уже пометили aborted, выходим, не трогая стейт:
+        if (signal?.aborted) return;
+
+        // Иначе кладём данные в стейт
+        setTemplateData({
+          templateA: albums,
+          templateB: articles,
+          templateC: ui,
+        });
+      } catch (e) {
+        // Тихо выходим при отмене
+        if (axios.isCancel(e) || (axios.isAxiosError(e) && e.code === 'ERR_CANCELED')) {
+          return;
+        }
+
+        if (axios.isAxiosError(e)) {
+          console.error('Axios error:', e);
+          setError(e.message || 'Ошибка при загрузке данных');
+        } else {
+          console.error('Unknown error:', e);
+          setError('Неизвестная ошибка');
+        }
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-    } finally {
-      setLoading(false); // Выключаем состояние загрузки
-    }
-  }
+    },
+    [lang]
+  );
 
-  // useEffect будет следить за изменением setTemplateData и производить ререндер если это необходимо
+  // Автозагрузка + перезагрузка при смене lang
+  // Эффект вызывается при первом рендере и каждый раз, когда меняется fetchData,
+  // а она зависит от lang. Значит, сменили язык → эффект перезапустился.
   useEffect(() => {
-    fetchData();
-  }, []); // Пустой массив зависимостей
+    const ac = new AbortController();
+    fetchData(ac.signal);
+    return () => ac.abort();
+  }, [fetchData]);
 
-  return { templateData, loading, error }; // Возвращаем данные для обоих шаблонов
+  // Ручная перезагрузка по требованию
+  const refetch = useCallback(() => fetchData(), [fetchData]);
+
+  return { templateData, loading, error, refetch };
 }
 
 /**
- * Функция возвращает полный URL для изображения в нужном формате
+ * Возвращает полный URL для изображения в нужном формате.
  */
 export function getImageUrl(img: string, format: string = '.jpg'): string {
-  const url = `/images/${img}${format}`;
-  // console.log(`Generated image URL:`, url);
-  return url;
+  return `/images/${img}${format}`;
 }
 
 /**
- * Функция возвращает дату релиза альбома в формате дд/мм/гг.
+ * Возвращает дату релиза альбома в формате дд/мм/гггг.
  */
 export function formatDate(dateRelease: string): string {
   const date = new Date(dateRelease);
   const dd = date.getDate().toString().padStart(2, '0');
   const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-  const yy = date.getFullYear();
-
-  return `${dd}/${mm}/${yy}`;
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }

@@ -8,7 +8,7 @@ import Hamburger from '../Hamburger/Hamburger';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
 import { IAlbums, TracksProps } from '../../models';
 import { useData } from '../../hooks/data';
-import { useLang } from '../../hooks/useLang';
+import { useLang } from '../../contexts/lang';
 import './style.scss';
 
 /**
@@ -57,7 +57,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           </button>
         </div>
 
-        <h3>{album?.tracks}</h3>
+        <h3>{templateData.templateC[0]?.titles.tracks}</h3>
 
         {/* Рендерится кнопка на каждый трек. */}
         {/* Активный трек подсвечивается классом 'active'. */}
