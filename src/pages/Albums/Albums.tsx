@@ -6,7 +6,6 @@ import AlbumCover from '../../components/Album/AlbumCover';
 import { Loader } from '../../components/Loader/Loader';
 import { ErrorMessage } from '../../components/ErrorMessage/ErrorMessage';
 import { useLang } from '../../contexts/lang';
-
 import '../../components/Album/style.scss';
 
 /**
