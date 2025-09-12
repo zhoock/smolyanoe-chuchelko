@@ -1,26 +1,21 @@
-import React from 'react';
+// src/components/ServiceButtons/ServiceButtonsPurchase.tsx
+
 import GetButton from './GetButton';
-import { String, IAlbums } from '../../models';
-import { useData } from '../../hooks/data';
+import { String, IAlbums } from '../../models'; // ← используем твои типы
+import { useAlbumsData } from '../../hooks/data';
 import { useLang } from '../../contexts/lang';
+import { DataAwait } from '../../shared/DataAwait';
 import './style.scss';
 
-/**
- * Компонент отображает блоки с кнопками-ссылками музыкальных агрегаторов.
- */
 export default function ServiceButtonsPurchase({
   album,
-  section,
+  section, // 'Купить' | 'Слушать'
 }: {
   album: IAlbums;
   section: string;
 }) {
-  /**
-   * Компонент отображает блок с кнопками-ссылками на агрегаторы.
-   */
+  // Компонент-кусок, который рендерит сами кнопки.
   function Block({
-    purchase,
-    stream,
     itunes,
     bandcamp,
     amazon,
@@ -32,14 +27,21 @@ export default function ServiceButtonsPurchase({
     deezer,
     tidal,
   }: String) {
+    // ← твой тип String
     const { lang } = useLang();
-    const { templateData } = useData(lang);
+    const data = useAlbumsData(lang);
 
-    return (
+    const Fallback = ({
+      purchaseLabel,
+      streamLabel,
+    }: {
+      purchaseLabel: string;
+      streamLabel: string;
+    }) => (
       <div className="service-buttons">
         {section === 'Купить' && (
           <>
-            <h3>{templateData.templateC[0]?.buttons.purchase}</h3>
+            <h3>{purchaseLabel}</h3>
             <ul
               className="service-buttons__list"
               aria-label="Блок со ссылками на платные музыкальные агрегаторы"
@@ -50,21 +52,18 @@ export default function ServiceButtonsPurchase({
             </ul>
           </>
         )}
+
         {section === 'Слушать' && (
           <>
-            <h3>{templateData.templateC[0]?.buttons.stream}</h3>
+            <h3>{streamLabel}</h3>
             <ul
               className="service-buttons__list"
               aria-label="Блок со ссылками на бесплатные музыкальные агрегаторы"
             >
-              <GetButton buttonClass="icon-apple" buttonUrl={apple} buttonText="Apple music" />
+              <GetButton buttonClass="icon-apple" buttonUrl={apple} buttonText="Apple Music" />
               <GetButton buttonClass="icon-vk" buttonUrl={vk} buttonText="ВКонтакте" />
               <GetButton buttonClass="icon-youtube1" buttonUrl={youtube} buttonText="YouTube" />
-              <GetButton
-                buttonClass="icon-spotify"
-                buttonUrl={spotify}
-                buttonText="YoSpotifyuTube"
-              />
+              <GetButton buttonClass="icon-spotify" buttonUrl={spotify} buttonText="Spotify" />
               <GetButton buttonClass="icon-yandex" buttonUrl={yandex} buttonText="Yandex" />
               <GetButton buttonClass="icon-deezer" buttonUrl={deezer} buttonText="Deezer" />
               <GetButton buttonClass="icon-tidal" buttonUrl={tidal} buttonText="Tidal" />
@@ -73,8 +72,28 @@ export default function ServiceButtonsPurchase({
         )}
       </div>
     );
+
+    if (!data) return <Fallback purchaseLabel="Купить" streamLabel="Слушать" />;
+
+    return (
+      <DataAwait
+        value={data.templateC}
+        fallback={<Fallback purchaseLabel="Купить" streamLabel="Слушать" />}
+        error={null}
+      >
+        {(ui) => {
+          const buttons = ui?.[0]?.buttons ?? {};
+          return (
+            <Fallback
+              purchaseLabel={buttons.purchase ?? 'Купить'}
+              streamLabel={buttons.stream ?? 'Слушать'}
+            />
+          );
+        }}
+      </DataAwait>
+    );
   }
 
-  // оператор расширения или распространения (spread-оператор) ...
-  return <Block {...album?.buttons} />;
+  // spread как и раньше; если у album.buttons опционален — закастим к твоему типу
+  return <Block {...(album?.buttons as String)} />;
 }

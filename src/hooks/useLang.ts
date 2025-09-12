@@ -16,7 +16,7 @@ export function useLang() {
     if (storedLang !== lang) {
       setLangState(storedLang);
     }
-  }, []);
+  }, [lang]);
 
   return { lang, changeLang };
 }

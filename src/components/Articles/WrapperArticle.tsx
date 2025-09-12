@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/Articles/WrapperArticle.tsx
 import { Link } from 'react-router-dom';
 import { ArticleProps } from '../../models';
 import { getImageUrl } from '../../hooks/data';

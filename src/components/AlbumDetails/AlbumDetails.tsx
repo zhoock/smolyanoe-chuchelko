@@ -1,10 +1,13 @@
+// src/components/AlbumDetails/AlbumDetails.tsx
+
 import React from 'react';
 import AlbumDetailsRelease from './AlbumDetailsRelease';
 import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import { String, IAlbums } from '../../models';
-import { useData } from '../../hooks/data';
+import { useAlbumsData } from '../../hooks/data';
 import { useLang } from '../../contexts/lang';
+import { DataAwait } from '../../shared/DataAwait';
 import './style.scss';
 
 /**
@@ -12,7 +15,7 @@ import './style.scss';
  */
 export default function AlbumDetails({ album }: { album: IAlbums }) {
   const { lang } = useLang();
-  const { templateData } = useData(lang);
+  const data = useAlbumsData(lang); // берём промисы из лоадера
 
   function Block({ music, release, albumCover }: String) {
     return (
@@ -42,6 +45,28 @@ export default function AlbumDetails({ album }: { album: IAlbums }) {
     );
   }
 
-  // оператор расширения или распространения (spread-оператор) ...
-  return <Block {...templateData.templateC[0]?.titles} />;
+  if (!data) {
+    // теоретический фоллбек — когда лоадер не вернул данных
+    return null;
+  }
+
+  return (
+    <DataAwait
+      value={data.templateC}
+      // лёгкий скелет, пока словарь не загрузился
+      fallback={
+        <section className="album-details nested-background">
+          <hr />
+          <div className="wrapper album__wrapper" />
+        </section>
+      }
+      error={null}
+    >
+      {(ui) => {
+        const titles = ui?.[0]?.titles as String | undefined;
+        if (!titles) return null;
+        return <Block {...titles} />;
+      }}
+    </DataAwait>
+  );
 }

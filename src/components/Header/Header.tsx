@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import Navigation from '../Navigation/Navigation';
+import { Navigation } from '@components';
 import { useLang } from '../../contexts/lang'; // берём из контекста
 import './style.scss';
 

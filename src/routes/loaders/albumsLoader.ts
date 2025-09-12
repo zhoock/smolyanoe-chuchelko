@@ -1,32 +1,37 @@
 // src/routes/loaders/albumsLoader.ts
-
-import { defer, type LoaderFunctionArgs } from 'react-router-dom';
-import { getJSON } from '../../utils/getJSON';
+import type { LoaderFunctionArgs } from 'react-router';
 import type { IAlbums, IArticles, IInterface } from '../../models';
-
-const BASE =
-  'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/refs/heads/main/src/assets';
-
-export async function albumsLoader({ request }: LoaderFunctionArgs) {
-  const url = new URL(request.url);
-  const lang = url.searchParams.get('lang') ?? 'ru';
-  const { signal } = request; // ← Router сам прерывает при навигации
-
-  const albumsP = getJSON<IAlbums[]>(`${BASE}/albums-${lang}.json`, signal);
-  const articlesP = getJSON<IArticles[]>(`${BASE}/articles-${lang}.json`, signal);
-  const uiP = getJSON<IInterface[]>(`${BASE}/${lang}.json`, signal);
-
-  return defer({
-    templateA: albumsP,
-    templateB: articlesP,
-    templateC: uiP,
-    lang,
-  });
-}
+import { currentLang } from '../../state/langStore';
+import { getJSON } from '../../utils/http';
 
 export type AlbumsDeferred = {
-  templateA: Promise<IAlbums[]>;
-  templateB: Promise<IArticles[]>;
-  templateC: Promise<IInterface[]>;
+  templateA: Promise<IAlbums[]>; // альбомы
+  templateB: Promise<IArticles[]>; // статьи
+  templateC: Promise<IInterface[]>; // UI-словарь – грузим ВСЕГДА
   lang: string;
 };
+
+export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<AlbumsDeferred> {
+  const { signal, url } = request;
+  const { pathname } = new URL(url);
+  const lang = currentLang;
+
+  // СЛОВАРЬ НУЖЕН ВЕЗДЕ: шапка, меню, футер, aboutus и т.д.
+  const templateC = getJSON<IInterface[]>(`${lang}.json`, signal);
+
+  // По умолчанию — пустые промисы, чтобы типы были стабильными
+  let templateA: Promise<IAlbums[]> = Promise.resolve([]);
+  let templateB: Promise<IArticles[]> = Promise.resolve([]);
+
+  // Альбомы нужны на "/" и "/albums*"
+  if (pathname === '/' || pathname.startsWith('/albums')) {
+    templateA = getJSON<IAlbums[]>(`albums-${lang}.json`, signal);
+  }
+
+  // Статьи нужны на "/articles*"
+  if (pathname.startsWith('/articles')) {
+    templateB = getJSON<IArticles[]>(`articles-${lang}.json`, signal);
+  }
+
+  return { templateA, templateB, templateC, lang };
+}

@@ -1,10 +1,11 @@
 // src/pages/Albums/Albums.tsx
 
-import { useData } from '../../hooks/data';
+import { useAlbumsData } from '../../hooks/data';
+import { DataAwait } from '../../shared/DataAwait';
 import WrapperAlbumCover from '../../components/Album/WrapperAlbumCover';
 import AlbumCover from '../../components/Album/AlbumCover';
 import { Loader } from '../../components/Loader/Loader';
-import { ErrorMessage } from '../../components/ErrorMessage/ErrorMessage';
+import ErrorI18n from '../../components/ErrorMessage/ErrorI18n';
 import { useLang } from '../../contexts/lang';
 import '../../components/Album/style.scss';
 
@@ -13,7 +14,7 @@ import '../../components/Album/style.scss';
  */
 export default function Albums() {
   const { lang } = useLang();
-  const { templateData, loading, error } = useData(lang);
+  const data = useAlbumsData(lang);
 
   return (
     <section
@@ -21,20 +22,35 @@ export default function Albums() {
       aria-label="Блок c ссылками на альбомы Смоляное чучелко"
     >
       <div className="wrapper">
-        <h2>{templateData.templateC?.[0]?.titles?.albums}</h2>
+        <h2>
+          {data ? (
+            <DataAwait value={data.templateC} fallback={<span>…</span>}>
+              {(ui) => ui?.[0]?.titles?.albums}
+            </DataAwait>
+          ) : (
+            <span>…</span>
+          )}
+        </h2>
 
-        {/* Элемент показывается только при загрузке данных с сервера */}
-        {loading && <Loader />}
-        {/* Элемент показывается текст ошибки при ошибке загрузке данных с сервера */}
-        {error && <ErrorMessage error={error} />}
-
-        <div className="albums__list">
-          {templateData.templateA.map((album) => (
-            <WrapperAlbumCover key={album.albumId} {...album} date={album.release.date}>
-              <AlbumCover {...album.cover} fullName={album.fullName} />
-            </WrapperAlbumCover>
-          ))}
-        </div>
+        {data ? (
+          <DataAwait
+            value={data.templateA}
+            fallback={<Loader />}
+            error={<ErrorI18n code="albumsLoadFailed" />}
+          >
+            {(albums) => (
+              <div className="albums__list">
+                {albums.map((album) => (
+                  <WrapperAlbumCover key={album.albumId} {...album} date={album.release.date}>
+                    <AlbumCover {...album.cover} fullName={album.fullName} />
+                  </WrapperAlbumCover>
+                ))}
+              </div>
+            )}
+          </DataAwait>
+        ) : (
+          <Loader />
+        )}
       </div>
     </section>
   );

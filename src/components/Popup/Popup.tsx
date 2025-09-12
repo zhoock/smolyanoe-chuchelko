@@ -1,10 +1,10 @@
-// Popup.tsx
+// src/components/Popup/Popup.tsx
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { PopupProps } from '../../models';
 import './style.scss';
 
-export default function Popup({ children, isActive, bgColor, onClose }: PopupProps) {
+export const Popup = ({ children, isActive, bgColor, onClose }: PopupProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -34,4 +34,4 @@ export default function Popup({ children, isActive, bgColor, onClose }: PopupPro
       {children}
     </dialog>
   );
-}
+};

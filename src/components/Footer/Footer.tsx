@@ -1,34 +1,26 @@
+// src/components/Footer/Footer.tsx
+
 import React from 'react';
-import { useData } from '../../hooks/data';
+import { useAlbumsData } from '../../hooks/data';
+import { DataAwait } from '../../shared/DataAwait';
 import { useLang } from '../../contexts/lang';
 
 import './style.scss';
 
 export const Footer = () => {
-  const socialNetwork = [
-    {
-      id: 1,
-      name: 'youtube',
-      href: 'https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/',
-    },
-    {
-      id: 2,
-      name: 'instagram',
-      href: 'https://www.instagram.com/smolyanoechuchelko/',
-    },
-    {
-      id: 3,
-      name: 'facebook',
-      href: 'https://www.facebook.com/smolyanoechuchelko/',
-    },
-    {
-      id: 4,
-      name: 'vk',
-      href: 'https://vk.com/smolyanoechuchelko',
-    },
-  ];
   const { lang } = useLang();
-  const { templateData } = useData(lang);
+  const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
+
+  const socialNetwork = [
+    { id: 1, name: 'youtube', href: 'https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/' },
+    { id: 2, name: 'instagram', href: 'https://www.instagram.com/smolyanoechuchelko/' },
+    { id: 3, name: 'facebook', href: 'https://www.facebook.com/smolyanoechuchelko/' },
+    { id: 4, name: 'vk', href: 'https://vk.com/smolyanoechuchelko' },
+  ];
+
+  const supportLink = (label: string) => (
+    <a href="mailto:feedback@smolyanoechuchelko.ru">{label}</a>
+  );
 
   return (
     <footer role="contentinfo" className="footer extra-background">
@@ -40,12 +32,14 @@ export const Footer = () => {
                 className={`social-networks__link icon-${item.name}`}
                 href={item.href}
                 target="_blank"
+                rel="noopener noreferrer"
               >
                 <span className="visually-hidden">{item.name}</span>
               </a>
             </li>
           ))}
         </ul>
+
         <ul className="copyright-list">
           <li className="copyright-list__item">
             <small>
@@ -54,9 +48,13 @@ export const Footer = () => {
           </li>
           <li>
             <small>
-              <a href="mailto:feedback@smolyanoechuchelko.ru">
-                {templateData.templateC[0]?.titles.support}
-              </a>
+              {data ? (
+                <DataAwait value={data.templateC} fallback={supportLink('Поддержка')} error={null}>
+                  {(ui) => supportLink(ui?.[0]?.titles?.support ?? 'Поддержка')}
+                </DataAwait>
+              ) : (
+                supportLink('Поддержка')
+              )}
             </small>
           </li>
         </ul>

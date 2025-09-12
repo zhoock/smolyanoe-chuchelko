@@ -28,6 +28,7 @@ const browserGlobals = {
 export default [
   js.configs.recommended,
 
+  // --- приложение (src) ---
   {
     files: ['src/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
@@ -54,19 +55,23 @@ export default [
       quotes: ['error', 'single', { avoidEscape: true }],
       semi: ['error', 'always'],
 
-      // 🔥 убираем предупреждения
+      // типскриптовые и общие послабления
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-require-imports': 'off',
       'react/prop-types': 'off',
       'react/jsx-uses-react': 'off',
       'react/react-in-jsx-scope': 'off',
       'no-undef': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
+
+      // реактовые хуки — ТУТ (где плагин подключён)
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
 
+  // --- конфиги/скрипты ноды (webpack, postcss) ---
   {
     files: ['webpack/**/*.js', 'postcss.config.js'],
     languageOptions: {
@@ -74,13 +79,13 @@ export default [
       globals: { require: 'readonly', module: 'readonly', __dirname: 'readonly' },
     },
     rules: {
+      // без react-hooks здесь — он не нужен для конфигов
       'no-undef': 'off',
       '@typescript-eslint/no-require-imports': 'off',
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
     },
   },
 
+  // --- игноры ---
   {
     ignores: [
       'node_modules/**',
@@ -91,7 +96,7 @@ export default [
       '*.d.ts',
       'commitlint.config.js',
       'webpack.config.js',
-      // 'webpack/**/*.js',
+      // 'webpack/**/*.js', // уже описано выше в файлах
       'postcss.config.js',
       'babel.config.js',
       'jest.config.js',

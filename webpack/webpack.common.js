@@ -8,6 +8,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin'); // Копируем ф
 // const CssMinimizerPlugin = require('css-minimizer-webpack-plugin'); // Минимизация CSS
 const webpack = require('webpack'); //подключаем webpack для использования встроенного плагина EnvironmentPlugin
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin'); // Плагин для проверки типов TypeScript в отдельном процессе
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin'); // Плагин для поддержки путей из tsconfig.json
 
 // В  зависимости от того, какой скрипт мы запустили
 // переменная production получит либо false, либо true
@@ -28,6 +29,7 @@ module.exports = {
 
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'], // Указываем файлы, с которыми будет работать webpack
+    plugins: [new TsconfigPathsPlugin()], // Поддержка путей из tsconfig.json
     alias: {
       // Псевдонимы для путей
       '@components': path.resolve(__dirname, '../src/components'),
@@ -44,9 +46,9 @@ module.exports = {
             loader: 'ts-loader',
             options: {
               transpileOnly: true,
-              getCustomTransformers: () => ({
-                before: [require('react-refresh-typescript')()],
-              }),
+              // getCustomTransformers: () => ({
+              //   before: [require('react-refresh-typescript')()],
+              // }),
             },
           },
         ], // Используем ts-loader для компиляции TypeScript

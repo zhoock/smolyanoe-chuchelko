@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/AlbumDetails/AlbumDetailsMusic.tsx
 import { IAlbums, DetalesProps } from '../../models';
 
 /**

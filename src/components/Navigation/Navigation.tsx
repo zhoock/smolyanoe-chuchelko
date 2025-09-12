@@ -1,34 +1,33 @@
-import React from 'react';
+// src/components/Navigation/Navigation.tsx
+
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { NavigationProps } from '../../models';
-import { useData } from '../../hooks/data';
+import { useAlbumsData } from '../../hooks/data';
+import { DataAwait } from '../../shared/DataAwait';
 import { useLang } from '../../contexts/lang';
 import './style.scss';
 
-export default function Navigation({ onToggle }: NavigationProps) {
+export const Navigation = ({ onToggle }: NavigationProps) => {
   const { lang } = useLang();
-  const { templateData } = useData(lang);
+  const data = useAlbumsData(lang);
 
-  const items = [
-    { to: '/albums', label: templateData.templateC[0]?.menu.albums },
-    { to: '/aboutus', label: templateData.templateC[0]?.menu.theBand },
-    { to: '/articles', label: templateData.templateC[0]?.menu.articles },
-  ];
-
-  return (
+  const renderMenu = (labels: { albums: string; theBand: string; articles: string }) => (
     <nav className="header__menu">
       <ul className="header__links-list">
-        {items.map(({ to, label }) => (
+        {[
+          { to: '/albums', label: labels.albums },
+          { to: '/aboutus', label: labels.theBand },
+          { to: '/articles', label: labels.articles },
+        ].map(({ to, label }) => (
           <li key={to}>
             <NavLink
               to={to}
-              title={label}
+              title={label ?? undefined}
               onClick={onToggle}
               className={({ isActive, isPending }) =>
                 clsx('header__link', { active: isActive, pending: isPending })
               }
-              // aria-current выставит сам NavLink при isActive
             >
               {label}
             </NavLink>
@@ -37,4 +36,22 @@ export default function Navigation({ onToggle }: NavigationProps) {
       </ul>
     </nav>
   );
-}
+
+  // Фоллбэки на случай отсутствия данных
+  const fallbackLabels = { albums: 'Альбомы', theBand: 'О группе', articles: 'Статьи' };
+
+  if (!data) return renderMenu(fallbackLabels);
+
+  return (
+    <DataAwait value={data.templateC} fallback={renderMenu(fallbackLabels)} error={null}>
+      {(ui) => {
+        const menu = ui?.[0]?.menu ?? fallbackLabels;
+        return renderMenu({
+          albums: menu.albums ?? fallbackLabels.albums,
+          theBand: menu.theBand ?? fallbackLabels.theBand,
+          articles: menu.articles ?? fallbackLabels.articles,
+        });
+      }}
+    </DataAwait>
+  );
+};

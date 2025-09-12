@@ -37,11 +37,19 @@ export default function AudioPlayer({
       audioRef.current.src = album.tracks[currentTrackIndex]?.src || '';
       audioRef.current.load(); // загружаем новый трек ТОЛЬКО при смене трека
 
-      if (autoPlay || isPlaying) {
-        audioRef.current.play().catch(console.error);
-      }
+      // if (autoPlay || isPlaying) {
+      //   audioRef.current.play().catch(console.error);
+      // }
     }
   }, [currentTrackIndex, album]);
+
+  // Эффект для управления воспроизведением (играет/пауза)
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (isPlaying) el.play().catch(console.error);
+    else el.pause();
+  }, [isPlaying, currentTrackIndex]);
 
   // Эффект для перехода к следующему треку после завершения текущего
   useEffect(() => {
@@ -62,62 +70,38 @@ export default function AudioPlayer({
 
   // Эффект для обновления времени и прогресса
   useEffect(() => {
-    // обновляет текущее время трека и прогресс в процентах.
+    const el = audioRef.current; // зафиксировали ссылку
+    if (!el) return;
+
     const updateProgress = () => {
-      if (!audioRef.current || isSeeking) return;
+      if (isSeeking) return;
+      const current = el.currentTime;
+      const duration = el.duration;
+      if (isNaN(duration) || duration === 0) return;
 
-      const current = audioRef.current.currentTime;
-      let duration = audioRef.current.duration;
-
-      if (isNaN(duration) || duration === 0) {
-        console.log('⏳ Пропускаем updateProgress: длительность не загружена');
-        return;
-      }
-
-      // 🔥 Обновляем всё ЧЕРЕЗ useRef, а потом одним сеттером
       latestTimeRef.current = { current, duration };
-
-      setTime({
-        current: latestTimeRef.current.current,
-        duration: latestTimeRef.current.duration,
-      });
+      setTime({ current: latestTimeRef.current.current, duration: latestTimeRef.current.duration });
 
       const newProgress = (current / duration) * 100;
       setProgress(newProgress);
 
-      // 🔥 ОБНОВЛЯЕМ ПРОГРЕСС-БАР СРАЗУ
       const progressBar = document.querySelector(
         '.player__progress-bar input'
       ) as HTMLInputElement | null;
-
-      if (progressBar) {
-        progressBar.style.setProperty('--progress-width', `${newProgress}%`);
-      }
-
-      console.log('✅ Обновляем прогресс:', { current, duration, newProgress });
+      if (progressBar) progressBar.style.setProperty('--progress-width', `${newProgress}%`);
     };
 
     const onMetadataLoaded = () => {
-      // устанавливает длительность трека после его загрузки
-      if (audioRef.current) {
-        console.log('Метаданные загружены, длительность:', audioRef.current.duration);
-        setTime({ current: 0, duration: audioRef.current.duration });
-      }
+      setTime({ current: 0, duration: el.duration });
     };
 
-    // Добавляются слушатели событий timeupdate и loadedmetadata.
-    if (audioRef.current) {
-      console.log('Добавляем слушатель timeupdate');
-      audioRef.current.addEventListener('timeupdate', updateProgress);
-      audioRef.current.addEventListener('loadedmetadata', onMetadataLoaded);
+    el.addEventListener('timeupdate', updateProgress);
+    el.addEventListener('loadedmetadata', onMetadataLoaded);
 
-      // При размонтировании компонента удаляются слушатели
-      return () => {
-        console.log('Удаляем слушатель timeupdate');
-        audioRef.current?.removeEventListener('timeupdate', updateProgress);
-        audioRef.current?.removeEventListener('loadedmetadata', onMetadataLoaded);
-      };
-    }
+    return () => {
+      el.removeEventListener('timeupdate', updateProgress);
+      el.removeEventListener('loadedmetadata', onMetadataLoaded);
+    };
   }, [isSeeking, time.duration]);
 
   // Функция форматирования времени. Форматирует время 123 → "2:03".

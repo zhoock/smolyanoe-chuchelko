@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/Hamburger/Hamburger.tsx
 import clsx from 'clsx';
 import { HamburgerProps } from '../../models';
 import './style.scss';
@@ -6,7 +6,7 @@ import './style.scss';
 /**
  * Компонент отображает гамбургер-меню.
  */
-export default function Hamburger({ isActive, onToggle, zIndex }: HamburgerProps) {
+export const Hamburger = ({ isActive, onToggle, zIndex }: HamburgerProps) => {
   return (
     <button
       className={clsx(
@@ -23,4 +23,4 @@ export default function Hamburger({ isActive, onToggle, zIndex }: HamburgerProps
       <span className="visually-hidden">{!isActive ? 'Открыть меню' : 'Скрыть меню'}</span>
     </button>
   );
-}
+};

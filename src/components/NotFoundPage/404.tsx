@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/NotFoundPage/404.tsx
 import { useNavigate } from 'react-router-dom';
 
 import './style.scss';
