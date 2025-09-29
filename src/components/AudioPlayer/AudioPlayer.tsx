@@ -1,3 +1,4 @@
+// src/components/AudioPlayer/AudioPlayer.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import AlbumCover from '../Album/AlbumCover';
 import { IAlbums } from '../../models';

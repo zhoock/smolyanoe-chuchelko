@@ -6,31 +6,48 @@
     "target": "ESNext", // Целевая версия ECMAScript — максимально современная
     "module": "ESNext", // Модульная система — пусть Webpack работает с ES-модулями
     "moduleResolution": "node", // Разрешение модулей в стиле Node.js
-    "lib": ["DOM", "ESNext"], // Библиотеки, которые будут доступны в проекте
+    "lib": ["DOM", "ESNext"], // Доступные библиотеки
     "jsx": "react-jsx", // JSX-компиляция в стиле React 17+
-    "strict": true, // Включение строгих типов
-    "esModuleInterop": true, // Для работы с CommonJS модулями
-    "allowSyntheticDefaultImports": true, // Разрешить синтетические импорты (используется вместе с esModuleInterop)
-    "allowJs": true, // Разрешать компилировать файлы с JavaScript-кодом
-    "resolveJsonModule": true, // Позволяет импортировать JSON-файлы как модули
-    "isolatedModules": true, // Обрабатывает каждый файл как модуль (важно для Webpack и Babel)
-    "skipLibCheck": true, // Пропускать типизацию `.d.ts` файлов из node_modules — ускоряет сборку
-    "forceConsistentCasingInFileNames": true, // Запрещает использовать один и тот же файл с разным регистром в импортах
-    "baseUrl": "./src", // Базовая директория для разрешения неотносительных модулей
+    "strict": true, // Строгие типы
+    "esModuleInterop": true, // Совместимость с CommonJS
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true, // Разрешить .js
+    "resolveJsonModule": true, // Импорт JSON
+    "isolatedModules": true, // Каждый файл — модуль
+    "skipLibCheck": true, // Пропускать проверку d.ts в node_modules
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "./src", // База для неотносительных путей
     "paths": {
       "@components": ["components/index"],
       "@components/*": ["components/*"],
       "@pages/*": ["pages/*"],
       "@utils/*": ["utils/*"]
-    }
-    // "experimentalDecorators": true, // Позволяет использовать декораторы (например, `@Component`, `@Injectable`)
-    // "emitDecoratorMetadata": true // Включить генерацию метаданных для декораторов (например, для NestJS)
+    },
+
+    // 🔽 ДОБАВЛЕНО: типы для глобального API Jest и Node
+    "types": ["jest", "node"]
+    // "experimentalDecorators": true,
+    // "emitDecoratorMetadata": true
   },
-  "include": ["src", "index.d.ts"], // Папки и файлы, которые нужно включить в компиляцию
+
+  // 🔽 ДОБАВЛЕНО: чтобы тесты и setup точно попали в проект TS
+  "include": [
+    "src",
+    "index.d.ts",
+    "jest.setup.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "__tests__/**/*.ts",
+    "__tests__/**/*.tsx"
+  ],
+
   "exclude": [
-    "node_modules", // всегда нужно
-    "webpack/webpack.common.js", // необязательно, но можно
-    "postcss.config.js", // необязательно, но можно
-    "eslint.config.mjs" // необязательно, но можно
+    "node_modules",
+    "webpack/webpack.common.js",
+    "postcss.config.js",
+    "eslint.config.mjs",
+    "coverage"
   ]
 }

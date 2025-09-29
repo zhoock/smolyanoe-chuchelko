@@ -9,6 +9,7 @@ export function useAlbumsData(_lang: string) {
 export function getImageUrl(img: string, format: string = '.jpg'): string {
   return `/images/${img}${format}`;
 }
+
 export function formatDate(dateRelease: string): string {
   const date = new Date(dateRelease);
   const dd = date.getDate().toString().padStart(2, '0');

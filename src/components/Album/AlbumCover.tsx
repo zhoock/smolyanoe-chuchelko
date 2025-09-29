@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { getImageUrl } from '../../hooks/data';
 import { CoverProps } from '../../models';
 import { useImageColor } from '../UseImageColor/UseImageColor';

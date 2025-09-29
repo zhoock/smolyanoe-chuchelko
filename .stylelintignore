@@ -5,3 +5,18 @@
 **/fonts/**
 **/images/**
 **/img/**
+
+# артефакты и сгенерённые файлы — не линтим
+coverage/**
+**/lcov-report/**
+node_modules/**
+dist/**
+build/**
+.out/**
+.next/**
+.storybook-out/**
+storybook-static/**
+public/**
+tmp/**
+.cache/**
+**/*.css.map
