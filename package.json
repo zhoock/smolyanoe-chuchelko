@@ -20,11 +20,13 @@
     "test": "jest --verbose"
   },
   "lint-staged": {
-    "src/**/*.{js,jsx,ts,tsx}": [
-      "eslint --fix"
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
     ],
-    "src/**/*.{css,scss}": [
-      "stylelint --fix"
+    "*.{css,scss}": [
+      "stylelint --fix",
+      "prettier --write"
     ],
     "*.{json,md}": [
       "prettier --write"
@@ -84,9 +86,7 @@
     "mini-css-extract-plugin": "^2.9.0",
     "postcss-loader": "^8.1.1",
     "postcss-preset-env": "^9.5.10",
-    "prerender-spa-plugin": "^3.4.0",
     "prettier": "^3.6.2",
-    "puppeteer": "^24.22.3",
     "react-refresh": "^0.17.0",
     "react-refresh-typescript": "^2.0.10",
     "sass": "^1.76.0",
@@ -116,7 +116,6 @@
     "i18next-browser-languagedetector": "^8.0.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-helmet-async": "^2.0.5",
     "react-i18next": "^15.2.0",
     "react-router-dom": "^6.26.2"
   }
