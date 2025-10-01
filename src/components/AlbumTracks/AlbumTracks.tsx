@@ -12,6 +12,7 @@ import type { IAlbums, TracksProps } from '../../models';
 import { useAlbumsData } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
 import { useLang } from '../../contexts/lang';
+import { gaEvent } from '../../utils/ga';
 
 import './style.scss';
 
@@ -71,11 +72,28 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         <h2 className="album-title">{album?.album}</h2>
 
         <div className="wrapper-album-play">
+          {/* <Link
+            className="album-play"
+            to={{ hash: '#player' }}
+            aria-label="Кнопка play"
+            aria-description="Открывает плеер"
+          >
+            <span className="icon-controller-play"></span>
+            {playText}
+          </Link> */}
+
           <Link
             className="album-play"
             to={{ hash: '#player' }}
             aria-label="Кнопка play"
             aria-description="Открывает плеер"
+            onClick={() => {
+              gaEvent('player_open', {
+                album_id: album?.albumId,
+                album_title: album?.album,
+                lang,
+              });
+            }}
           >
             <span className="icon-controller-play"></span>
             {playText}
@@ -89,11 +107,20 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           {tracks?.map((track) => (
             <Link
               key={track.id}
-              to={`track/${track.id}`} // → /albums/:albumId/track/:trackId
-              state={{ background: location }} // сохраняем фон для модалки
+              to={`track/${track.id}`}
+              state={{ background: location }}
               className={clsx('tracks__btn', { active: String(track.id) === trackId })}
               aria-label="Кнопка с названием песни"
               aria-description={`Показать текст: ${track.title}`}
+              onClick={() => {
+                gaEvent('track_select', {
+                  album_id: album?.albumId,
+                  album_title: album?.album,
+                  track_id: track.id,
+                  track_title: track.title,
+                  lang,
+                });
+              }}
             >
               {track.title}
             </Link>

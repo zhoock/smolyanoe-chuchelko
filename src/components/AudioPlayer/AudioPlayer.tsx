@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import AlbumCover from '../Album/AlbumCover';
 import { IAlbums } from '../../models';
+import { gaEvent } from '../../utils/ga';
 import './style.scss';
 
 export default function AudioPlayer({
@@ -19,6 +20,9 @@ export default function AudioPlayer({
   const [volume, setVolume] = useState(50); // уровень громкости (по умолчанию 50%)
   const [isSeeking, setIsSeeking] = useState(false); // указывает, выполняет ли пользователь перемотку
   const [time, setTime] = useState({ current: 0, duration: NaN }); // объект с текущим временем и общей длительностью трека
+  const getAlbumId = (a: IAlbums) =>
+    a.albumId ?? `${a.artist}-${a.album}`.toLowerCase().replace(/\s+/g, '-'); // уникальный ID альбома
+  const startedKeyRef = useRef<string | null>(null); // хранит ключ события "started", чтобы не отправлять его несколько раз
 
   const audioRef = useRef<HTMLAudioElement | null>(null); // ссылка на элемент <audio>, чтобы управлять его состоянием (играет, ставится на паузу и т. д.)
   const latestTimeRef = useRef({ current: 0, duration: 1 }); // используется для хранения времени воспроизведения без вызова перерисовки компонента
@@ -38,9 +42,7 @@ export default function AudioPlayer({
       audioRef.current.src = album.tracks[currentTrackIndex]?.src || '';
       audioRef.current.load(); // загружаем новый трек ТОЛЬКО при смене трека
 
-      // if (autoPlay || isPlaying) {
-      //   audioRef.current.play().catch(console.error);
-      // }
+      startedKeyRef.current = null; // чтобы сбросить ключ события "started" при смене трека
     }
   }, [currentTrackIndex, album]);
 
@@ -104,6 +106,54 @@ export default function AudioPlayer({
       el.removeEventListener('loadedmetadata', onMetadataLoaded);
     };
   }, [isSeeking, time.duration]);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    const albumId = getAlbumId(album);
+
+    const onPlaying = () => {
+      // ключ для "один раз на трек"
+      const key = `${albumId}:${currentTrackIndex}`;
+      if (startedKeyRef.current === key) return; // уже слали для этого трека
+
+      const t = album.tracks[currentTrackIndex];
+      gaEvent('audio_start', {
+        album_id: albumId,
+        album_title: album.album,
+        track_id: t?.id ?? String(currentTrackIndex),
+        track_title: t?.title ?? 'Unknown Track',
+        position_seconds: Math.floor(el.currentTime), // обычно 0 в старт
+      });
+
+      startedKeyRef.current = key;
+    };
+
+    el.addEventListener('playing', onPlaying);
+    return () => el.removeEventListener('playing', onPlaying);
+  }, [album, currentTrackIndex]);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    const albumId = getAlbumId(album);
+
+    const onPause = () => {
+      const t = album.tracks[currentTrackIndex];
+      gaEvent('audio_pause', {
+        album_id: albumId,
+        album_title: album.album,
+        track_id: t?.id ?? String(currentTrackIndex),
+        track_title: t?.title ?? 'Unknown Track',
+        position_seconds: Math.floor(el.currentTime),
+      });
+    };
+
+    el.addEventListener('pause', onPause);
+    return () => el.removeEventListener('pause', onPause);
+  }, [album, currentTrackIndex]);
 
   // Функция форматирования времени. Форматирует время 123 → "2:03".
   const formatTime = (time: number) => {
