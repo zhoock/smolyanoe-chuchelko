@@ -5,27 +5,24 @@ declare global {
   }
 }
 
-/** Универсальная отправка события в GA4 (работает и с gtag, и с GTM) */
+const DEBUG_GA =
+  (typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('debugGa') === '1') ||
+  (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production'); // логай и в деве
+
 export function gaEvent(name: string, params: Record<string, any> = {}) {
+  // ЛОГ — СРАЗУ, ДО return
+  if (DEBUG_GA) {
+    console.log('[GA4]', name, params);
+    // можно ещё: console.table({ event: name, ...params });
+  }
+
   if (window.gtag) {
-    window.gtag('event', name, params); // пустой объект — норм
+    window.gtag('event', name, params);
     return;
   }
   if (window.dataLayer) {
-    window.dataLayer.push({ event: name, ...params }); // всегда объект
+    window.dataLayer.push({ event: name, ...params });
     return;
-  }
-  if (process.env.NODE_ENV !== 'production') {
-    console.debug('[GA4]', name, params);
-  }
-
-  // ЛОГ ДЛЯ ТЕБЯ
-  // Webpack/CRA: process.env.NODE_ENV === 'production' на проде.
-  // Vite: можно использовать import.meta.env.MODE !== 'production'.
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-    // компактная строка
-    console.debug('[GA4]', name, params);
-    // удобно просматривать параметры:
-    // console.table({ event: name, ...params });
   }
 }
