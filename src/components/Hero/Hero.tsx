@@ -51,7 +51,7 @@ const photos = [
   )`,
 ];
 
-export default function Hero() {
+export const Hero = () => {
   const [backgroundImage, setBackgroundImage] = useState('');
   const location = useLocation(); // Хук для отслеживания изменений URL
 
@@ -66,4 +66,4 @@ export default function Hero() {
       <h1 className="hero__title">Cмоляное чучелко</h1>
     </section>
   );
-}
+};

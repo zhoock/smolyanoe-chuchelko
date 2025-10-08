@@ -1,7 +1,6 @@
-// src/components/Article/Article.tsx
-
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
@@ -21,12 +20,8 @@ export const Article = () => {
   }, []);
 
   const { lang } = useLang() as { lang: keyof typeof formatDateInWords };
-  const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
-
-  // локализация даты
+  const data = useAlbumsData(lang);
   const { formatDate } = formatDateInWords[lang];
-
-  // параметры URL
   const { articleId = '' } = useParams<{ articleId: string }>();
 
   // рендер одного блока контента статьи
@@ -52,12 +47,12 @@ export const Article = () => {
     );
   }
 
-  // если лоадер не вернул данных (теоретически) — лёгкий скелетон
+  // фоллбек, если данных нет
   if (!data) {
     return (
-      <section className="article main-background" aria-label="Блок cо статьёй">
+      <section className="article main-background" aria-label="Блок со статьёй">
         <div className="wrapper">
-          <h2>Статья</h2>
+          <h2>{lang === 'en' ? 'Article' : 'Статья'}</h2>
           <Loader />
         </div>
       </section>
@@ -65,18 +60,21 @@ export const Article = () => {
   }
 
   return (
-    <section className="article main-background" aria-label="Блок cо статьёй">
+    <section className="article main-background" aria-label="Блок со статьёй">
       <div className="wrapper">
-        {/* Хлебные крошки: заголовок "Статьи" берём из словаря */}
+        {/* хлебные крошки */}
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
             <li>
               <DataAwait value={data.templateC} fallback={<span>…</span>} error={null}>
-                {(ui) => <Link to="/articles">{ui?.[0]?.titles?.articles ?? 'Статьи'}</Link>}
+                {(ui) => (
+                  <Link to="/articles">
+                    {ui?.[0]?.titles?.articles ?? (lang === 'en' ? 'Articles' : 'Статьи')}
+                  </Link>
+                )}
               </DataAwait>
             </li>
             <li className="active">
-              {/* Имя статьи подтянем ниже, когда загрузятся статьи */}
               <DataAwait value={data.templateB} fallback={<span>…</span>} error={null}>
                 {(articles) => articles.find((a) => a.articleId === articleId)?.nameArticle ?? '…'}
               </DataAwait>
@@ -84,22 +82,52 @@ export const Article = () => {
           </ul>
         </nav>
 
-        {/* Сама статья: ждём список статей и ищем нужную */}
+        {/* сама статья */}
         <DataAwait
           value={data.templateB}
           fallback={<Loader />}
-          error={<ErrorMessage error="Не удалось загрузить статью" />}
+          error={
+            <ErrorMessage
+              error={lang === 'en' ? 'Failed to load article' : 'Не удалось загрузить статью'}
+            />
+          }
         >
           {(articles) => {
             const article = articles.find((a) => a.articleId === articleId);
             if (!article) {
-              return <ErrorMessage error="Статья не найдена" />;
+              return (
+                <ErrorMessage error={lang === 'en' ? 'Article not found' : 'Статья не найдена'} />
+              );
             }
+
+            // 🧠 SEO на основе данных статьи
+            const seoTitle = `${article.nameArticle} — ${lang === 'en' ? 'Smolyanoe Chuchelko' : 'Смоляное Чучелко'}`;
+            const seoDesc =
+              article.description ??
+              (lang === 'en'
+                ? 'Read this article about Smolyanoe Chuchelko: creative insights, philosophy and music.'
+                : 'Читайте статью о Смоляном Чучелке: философия, творчество и внутренняя тематика.');
+
+            const canonical =
+              lang === 'en'
+                ? `https://smolyanoechuchelko.ru/en/articles/${article.articleId}`
+                : `https://smolyanoechuchelko.ru/articles/${article.articleId}`;
 
             return (
               <>
+                <Helmet>
+                  <title>{seoTitle}</title>
+                  <meta name="description" content={seoDesc} />
+                  <meta property="og:title" content={seoTitle} />
+                  <meta property="og:description" content={seoDesc} />
+                  <meta property="og:type" content="article" />
+                  <link rel="canonical" href={canonical} />
+                </Helmet>
+
                 <time dateTime={article.date}>
-                  <small>{formatDate(article.date)} г.</small>
+                  <small>
+                    {formatDate(article.date)} {lang === 'en' ? '' : 'г.'}
+                  </small>
                 </time>
                 <h2>{article.nameArticle}</h2>
 

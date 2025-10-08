@@ -8,6 +8,10 @@ export * from './Navigation';
 export * from './Hamburger';
 export * from './ModalRoute';
 export * from './Popup';
+export * from './NotFoundPage';
+export * from './Forms';
+export * from './Hero';
+export * from './TracksLyrics';
 
 // export * from './Album';
 // export * from './AlbumTracks';
@@ -15,11 +19,6 @@ export * from './Popup';
 // export * from './ServiceButtons';
 // export * from './Loader/Loader';
 // export * from './ErrorMessage/ErrorMessage';
-
-// export * from './NotFoundPage/404';
 // export * from './Hamburger/Hamburger';
 // export * from './Popup/Popup';
-// export * from './Forms/Form';
-// export * from './Hero/Hero';
-// export * from './AlbumTracks/TrackLyrics';
 // export * from './ModalRoute';

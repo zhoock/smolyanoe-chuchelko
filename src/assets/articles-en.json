@@ -2,6 +2,7 @@
   {
     "articleId": "6",
     "nameArticle": "Yaroslav Zhuk. Anti-Rules of Life",
+    "description": "An interview with Yaroslav Zhuk, musician, vocalist, guitarist, and leader of the band Smolyanoe Chuchelko. Anti-rules of life.",
     "img": "yaroslav_zhoock-s",
     "date": "2022-09-08",
     "detales": [
@@ -131,6 +132,7 @@
   {
     "articleId": "5",
     "nameArticle": "Смоляное чучелко — 23 (2022). Album Recording. Equipment",
+    "description": "Details on the recording of the band's 2022 album, Smolyanoe Chuchelko - 23. Equipment, microphones, amplifiers, effects pedals, the recording process, mixing, and mastering.",
     "img": "recording_vocals_album_session_23",
     "date": "2022-02-15",
     "detales": [
@@ -275,6 +277,7 @@
   {
     "articleId": "4",
     "nameArticle": "Cover Story. Смоляное чучелко — 23 (2022)",
+    "description": "The story behind the cover of the second album by the band Smolyanoe Chuchelko — 23 (2022). Photo by Hans Jacob Haarseth.",
     "img": "album_cover_smolyanoe_chuchelko_23-s",
     "date": "2022-02-14",
     "detales": [
@@ -301,6 +304,7 @@
   {
     "articleId": "3",
     "nameArticle": "Cover Story. Смоляное чучелко — EP (2020)",
+    "description": "The story behind the cover of the first album by the band Smolyanoe Chuchelko — Smolyanoe Chuchelko (2020). Artwork by Blexbolex.",
     "img": "album_cover_smolyanoe_chuchelko_EP-s",
     "date": "2022-02-03",
     "detales": [
@@ -323,6 +327,7 @@
   {
     "articleId": "2",
     "nameArticle": "Смоляное чучелко — EP (2020). Effects Pedals",
+    "description": "Details about the effects pedals used in the recording of the EP by the band Smolyanoe Chuchelko - Smolyanoe Chuchelko (2020).",
     "img": "smolyanoe_chuchelko_effects_pedals",
     "date": "2020-07-22",
     "detales": [
@@ -359,6 +364,7 @@
   {
     "articleId": "1",
     "nameArticle": "Смоляное чучелко — EP (2020). Equipment",
+    "description": "The equipment used to record the first album by the band Smolyanoe Chuchelko — Smolyanoe Chuchelko (2020).",
     "date": "2020-07-08",
     "img": "recording_album_EP_equipment",
     "detales": [

@@ -2,7 +2,7 @@
 
 import './style.scss';
 
-export default function Form() {
+export const Form = () => {
   return (
     <section className="form main-background" aria-label="Блок c формой">
       <div className="wrapper">
@@ -120,4 +120,4 @@ export default function Form() {
       </div>
     </section>
   );
-}
+};

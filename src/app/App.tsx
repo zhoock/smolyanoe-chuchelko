@@ -8,6 +8,7 @@ import {
   Route,
   useRevalidator,
 } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '../routes/loaders/albumsLoader';
 import { useLang } from '../contexts/lang';
 import { currentLang, setCurrentLang } from '../state/langStore';
@@ -22,13 +23,13 @@ import {
   Hamburger,
   ModalRoute,
   Popup,
+  NotFoundPage,
+  Form,
+  Hero,
+  TrackLyrics,
 } from '@components';
 import Albums from '../pages/Albums/Albums';
 import Album from '../pages/Album/Album';
-import NotFoundPage from '../components/NotFoundPage/404';
-import Form from '../components/Forms/Form';
-import Hero from '../components/Hero/Hero';
-import TrackLyrics from '../components/AlbumTracks/TrackLyrics';
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -57,8 +58,9 @@ function Layout() {
   const state = location.state as { background?: Location } | undefined;
   const background = state?.background;
 
-  const { lang } = useLang();
+  const { lang } = useLang() as { lang: 'ru' | 'en' };
   const { revalidate } = useRevalidator();
+
   useEffect(() => {
     if (currentLang !== lang) {
       // ← дергаем только когда язык реально сменился+
@@ -67,8 +69,52 @@ function Layout() {
     }
   }, [lang, revalidate]);
 
+  const seo = {
+    ru: {
+      title: 'Смоляное Чучелко — официальный сайт',
+      desc: 'Московская гранж и альтернативная рок-группа. Альбомы, тексты, статьи и философия проекта.',
+      url: 'https://smolyanoechuchelko.ru/',
+      ogImage: 'https://smolyanoechuchelko.ru/og/default.jpg',
+    },
+    en: {
+      title: 'Smolyanoe Chuchelko — official website',
+      desc: 'Moscow grunge and alternative rock band. Albums, lyrics, articles and project philosophy.',
+      url: 'https://smolyanoechuchelko.ru/en',
+      ogImage: 'https://smolyanoechuchelko.ru/og/default_en.jpg',
+    },
+  };
+
+  // меняем <html lang="...">
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   return (
     <>
+      {/* БАЗОВЫЙ Helmet для всех страниц без собственного */}
+      <Helmet>
+        {/* динамический заголовок и описание */}
+        <title>{seo[lang].title}</title>
+        <meta name="description" content={seo[lang].desc} />
+        <meta name="color-scheme" content="dark light" />
+        <link rel="canonical" href={seo[lang].url} />
+
+        {/* hreflang для Google */}
+        <link rel="alternate" href="https://smolyanoechuchelko.ru/" hrefLang="ru" />
+        <link rel="alternate" href="https://smolyanoechuchelko.ru/en" hrefLang="en" />
+        <link rel="alternate" href="https://smolyanoechuchelko.ru/" hrefLang="x-default" />
+
+        {/* Open Graph / Twitter */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={seo[lang].title} />
+        <meta property="og:description" content={seo[lang].desc} />
+        <meta property="og:url" content={seo[lang].url} />
+        <meta property="og:image" content={seo[lang].ogImage} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seo[lang].title} />
+        <meta name="twitter:description" content={seo[lang].desc} />
+        <meta name="twitter:image" content={seo[lang].ogImage} />
+      </Helmet>
       <Header />
       <main>
         <Hero />

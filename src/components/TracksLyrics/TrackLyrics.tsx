@@ -1,6 +1,5 @@
 // src/components/AlbumTracks/TrackLyrics.tsx
 
-import React from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useAlbumsData } from '../../hooks/data';
@@ -9,7 +8,7 @@ import { useLang } from '../../contexts/lang';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 
-export default function TrackLyrics() {
+export const TrackLyrics = () => {
   const { lang } = useLang();
   const data = useAlbumsData(lang);
 
@@ -60,4 +59,4 @@ export default function TrackLyrics() {
       }}
     </DataAwait>
   );
-}
+};

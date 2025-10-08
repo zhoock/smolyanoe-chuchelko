@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import './style.scss';
 
-export default function NotFoundPage() {
+export const NotFoundPage = () => {
   const navigate = useNavigate();
 
   return (
@@ -12,4 +12,4 @@ export default function NotFoundPage() {
       <button onClick={() => navigate('/', { replace: true })}>Вернуться на главную</button>
     </section>
   );
-}
+};
