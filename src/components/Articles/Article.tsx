@@ -103,10 +103,10 @@ export const Article = () => {
             // 🧠 SEO на основе данных статьи
             const seoTitle = `${article.nameArticle} — ${lang === 'en' ? 'Smolyanoe Chuchelko' : 'Смоляное Чучелко'}`;
             const seoDesc =
-              article.description ??
-              (lang === 'en'
+              // article.description ??
+              lang === 'en'
                 ? 'Read this article about Smolyanoe Chuchelko: creative insights, philosophy and music.'
-                : 'Читайте статью о Смоляном Чучелке: философия, творчество и внутренняя тематика.');
+                : 'Читайте статью о Смоляном Чучелке: философия, творчество и внутренняя тематика.';
 
             const canonical =
               lang === 'en'
