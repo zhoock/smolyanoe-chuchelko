@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // ✅ добавили
 
 import AlbumDetails from '../../components/AlbumDetails/AlbumDetails';
 import AlbumCover from '../../components/Album/AlbumCover';
@@ -69,8 +70,27 @@ export default function Album() {
             );
           }
 
+          // SEO (RU/EN) для конкретного альбома
+          const seoTitle = album.fullName;
+          const seoDesc = album.description;
+
+          const canonical =
+            lang === 'en'
+              ? `https://smolyanoechuchelko.ru/en/albums/${album.albumId}`
+              : `https://smolyanoechuchelko.ru/albums/${album.albumId}`;
+
           return (
             <>
+              <Helmet>
+                <title>{seoTitle}</title>
+                <meta name="description" content={seoDesc} />
+                <meta property="og:type" content="music.album" />
+                <meta property="og:title" content={seoTitle} />
+                <meta property="og:description" content={seoDesc} />
+                <meta property="og:url" content={canonical} />
+                <link rel="canonical" href={canonical} />
+              </Helmet>
+
               <div className="wrapper album__wrapper">
                 <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
                   <ul>

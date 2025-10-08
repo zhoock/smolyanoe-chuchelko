@@ -32,6 +32,8 @@ export interface IAlbums {
   album: string;
   /** Название группы и название альбома */
   fullName: string;
+  /** Описание альбома */
+  description: string;
   /** Обложка альбома */
   cover: CoverProps;
 
