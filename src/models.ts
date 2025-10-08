@@ -94,6 +94,7 @@ export type IArticles = {
   img: string;
   date: string;
   detales: ArticleDetalesProps[];
+  description: string;
 };
 
 export interface ArticleDetalesProps {
