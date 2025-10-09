@@ -50,16 +50,12 @@
     counter-reset: n 0;
 
     &__btn {
-      position: relative;
       color: var(--link-color);
       text-align: inherit;
-      background: none;
-      border: none;
       transition: all 200ms ease;
       border-block-start: 1px solid var(--hr-color, #3d3c3a);
-      overflow: hidden;
       text-overflow: ellipsis;
-      cursor: pointer;
+      overflow: hidden;
       counter-increment: n;
       white-space: nowrap;
       text-decoration: none;
@@ -104,7 +100,7 @@
           filter: brightness(100%);
         }
 
-        & + button {
+        & + a {
           border-top-color: transparent;
         }
       }
