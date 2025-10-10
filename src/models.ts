@@ -46,7 +46,7 @@ export interface IAlbums {
     [key: string]: string;
   };
   /** Дополнительная информация */
-  detales: DetalesProps[];
+  details: detailsProps[];
   /** Треки */
   tracks: TracksProps[];
 }
@@ -61,7 +61,7 @@ export interface WrapperAlbumCoverProps {
   date: string;
 }
 
-export interface DetalesProps {
+export interface detailsProps {
   id: number;
   title: string;
   content: Array<string | { text: string[]; link: string }>;
@@ -95,11 +95,11 @@ export type IArticles = {
   nameArticle: string;
   img: string;
   date: string;
-  detales: ArticleDetalesProps[];
+  details: ArticledetailsProps[];
   description: string;
 };
 
-export interface ArticleDetalesProps {
+export interface ArticledetailsProps {
   id: number;
   title?: string;
   img?: string;

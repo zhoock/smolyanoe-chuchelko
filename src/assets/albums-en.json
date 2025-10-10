@@ -27,7 +27,7 @@
       "deezer": "https://www.deezer.com/ru/album/710642121",
       "tidal": "https://listen.tidal.com/artist/19213146"
     },
-    "detales": [
+    "details": [
       { "id": 1, "title": "Genre", "content": ["Grunge, alternative rock."] },
       {
         "id": 2,
@@ -155,7 +155,7 @@
       "deezer": "https://www.deezer.com/ru/album/285303392",
       "tidal": "https://listen.tidal.com/album/211242116"
     },
-    "detales": [
+    "details": [
       { "id": 1, "title": "Genre", "content": ["Grunge, alternative rock."] },
       {
         "id": 2,
@@ -287,7 +287,7 @@
       "tidal": "https://listen.tidal.com/album/138320502"
     },
 
-    "detales": [
+    "details": [
       { "id": 1, "title": "Genre", "content": ["Grunge, alternative rock."] },
       {
         "id": 2,

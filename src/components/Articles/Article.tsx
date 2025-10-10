@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
-import type { ArticleDetalesProps } from '../../models';
+import type { ArticledetailsProps } from '../../models';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 import { formatDateInWords } from './Function';
@@ -25,7 +25,7 @@ export const Article = () => {
   const { articleId = '' } = useParams<{ articleId: string }>();
 
   // рендер одного блока контента статьи
-  function Block({ title, subtitle, strong, content, img, alt }: ArticleDetalesProps) {
+  function Block({ title, subtitle, strong, content, img, alt }: ArticledetailsProps) {
     return (
       <>
         {title && <h3>{title}</h3>}
@@ -126,7 +126,7 @@ export const Article = () => {
                 </time>
                 <h2>{article.nameArticle}</h2>
 
-                {article.detales.map((d) => (
+                {article.details.map((d) => (
                   <Block key={d.id} {...d} />
                 ))}
               </>

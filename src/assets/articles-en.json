@@ -5,7 +5,7 @@
     "description": "An interview with Yaroslav Zhuk, musician, vocalist, guitarist, and leader of the band Smolyanoe Chuchelko. Anti-rules of life.",
     "img": "yaroslav_zhoock-s",
     "date": "2022-09-08",
-    "detales": [
+    "details": [
       {
         "id": 1,
         "content": "Musician. Vocalist, guitarist, and leader of the band Смоляное Чучелко. 43 years old. Moscow."
@@ -135,7 +135,7 @@
     "description": "Details on the recording of the band's 2022 album, Smolyanoe Chuchelko - 23. Equipment, microphones, amplifiers, effects pedals, the recording process, mixing, and mastering.",
     "img": "recording_vocals_album_session_23",
     "date": "2022-02-15",
-    "detales": [
+    "details": [
       {
         "id": 1,
         "content": "The main difference between this album and the previous one is that it was recorded entirely live (except for the vocals). We arrived at the M.A.M.A studio, set up, tuned everything, and ran through the first two tracks three times each. We had some tea, then finished the last track, immediately picked the best takes, and I recorded guitar doubles over them. That’s it."
@@ -280,7 +280,7 @@
     "description": "The story behind the cover of the second album by the band Smolyanoe Chuchelko — 23 (2022). Photo by Hans Jacob Haarseth.",
     "img": "album_cover_smolyanoe_chuchelko_23-s",
     "date": "2022-02-14",
-    "detales": [
+    "details": [
       {
         "id": 1,
         "img": "album_cover_smolyanoe_chuchelko_23",
@@ -307,7 +307,7 @@
     "description": "The story behind the cover of the first album by the band Smolyanoe Chuchelko — Smolyanoe Chuchelko (2020). Artwork by Blexbolex.",
     "img": "album_cover_smolyanoe_chuchelko_EP-s",
     "date": "2022-02-03",
-    "detales": [
+    "details": [
       {
         "id": 1,
         "img": "album_cover_smolyanoe_chuchelko_EP",
@@ -330,7 +330,7 @@
     "description": "Details about the effects pedals used in the recording of the EP by the band Smolyanoe Chuchelko - Smolyanoe Chuchelko (2020).",
     "img": "smolyanoe_chuchelko_effects_pedals",
     "date": "2020-07-22",
-    "detales": [
+    "details": [
       {
         "id": 1,
         "title": "BOSS DS-1",
@@ -367,7 +367,7 @@
     "description": "The equipment used to record the first album by the band Smolyanoe Chuchelko — Smolyanoe Chuchelko (2020).",
     "date": "2020-07-08",
     "img": "recording_album_EP_equipment",
-    "detales": [
+    "details": [
       {
         "id": 1,
         "title": "Mixing console",

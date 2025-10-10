@@ -37,7 +37,7 @@ const EP = [
         designerURL: 'https://en.wikipedia.org/wiki/Blexbolex',
       },
     ],
-    detales: [
+    details: [
       {
         id: 0,
         title: 'Жанр',
@@ -426,7 +426,7 @@ const _23 = [
       deezer: 'https://www.deezer.com/ru/album/285303392',
       tidal: 'https://listen.tidal.com/album/211242116',
     },
-    detales: [
+    details: [
       { id: 1, title: 'Жанр', content: ['Гранж, альтернативный рок.'] },
       {
         id: 2,
@@ -524,7 +524,7 @@ const EP2020Equipment = [
     nameArticle: 'Смоляное чучелко — EP (2020). Оборудование',
     date: '2020-07-08',
     img: 'recording_album_EP_equipment',
-    detales: [
+    details: [
       {
         id: 1,
         title: 'ПУЛЬТ',
@@ -677,7 +677,7 @@ const EP2020EffectsPedals = [
     nameArticle: 'Смоляное чучелко — EP (2020). Педали эффектов',
     img: 'smolyanoe_chuchelko_effects_pedals',
     date: '2020-07-22',
-    detales: [
+    details: [
       {
         id: 1,
         title: 'BOSS DS-1',
@@ -720,7 +720,7 @@ const CoverStoryEP2020 = [
     nameArticle: 'История обложки. Смоляное чучелко — EP (2020)',
     img: 'album_cover_smolyanoe_chuchelko_EP-s',
     date: '2022-02-03',
-    detales: [
+    details: [
       {
         id: 1,
         img: 'album_cover_smolyanoe_chuchelko_EP',
@@ -755,7 +755,7 @@ const CoverStory232022 = [
     nameArticle: 'История обложки. Смоляное чучелко — 23 (2022)',
     img: 'album_cover_smolyanoe_chuchelko_23-s',
     date: '2022-02-14',
-    detales: [
+    details: [
       {
         id: 1,
         img: 'album_cover_smolyanoe_chuchelko_23',
@@ -788,7 +788,7 @@ const EP2022RecordingAnAlbumEquipment = [
     nameArticle: 'Смоляное чучелко — 23 (2022). Запись альбома. Оборудование',
     img: 'recording_vocals_album_session_23',
     date: '2022-02-15',
-    detales: [
+    details: [
       {
         id: 1,
         content: `Основное отличие этого альбома от предыдущего в том, что он записан полностью вживую (кроме вокала).
@@ -970,7 +970,7 @@ const YaroslavZhukAntirulesOfLife = [
     nameArticle: 'Ярослав Жук. Антиправила жизни',
     img: 'yaroslav_zhoock-s',
     date: '2022-09-08',
-    detales: [
+    details: [
       {
         id: 1,
         content: 'Музыкант. Вокалист, гитарист и лидер группы Смоляное чучелко. 43 года. Москва.',

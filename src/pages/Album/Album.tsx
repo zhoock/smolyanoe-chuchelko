@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // ✅ добавили
+import { Helmet } from 'react-helmet-async';
 
 import AlbumDetails from '../../components/AlbumDetails/AlbumDetails';
 import AlbumCover from '../../components/Album/AlbumCover';
