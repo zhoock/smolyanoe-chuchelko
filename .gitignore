@@ -46,12 +46,16 @@ bower_components
 *.scss.map
 
 # Assets
-psd
-thumb
-sketch
+# НЕ игнорируем images — нам нужны src/images/** в гите
+# Игнорим только тяжёлые исходники и мусорные директории
+**/*.psd
+**/*.ai
+**/*.sketch
+**/*.xcf
+**/thumb/**
+
+# Fonts (если нужно трекать шрифты — убери строку ниже)
 **/fonts/**
-**/images/**
-**/img/**
 
 # Coverage / reports
 coverage/
