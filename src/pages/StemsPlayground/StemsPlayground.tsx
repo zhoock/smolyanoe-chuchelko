@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Waveform } from '../../components/Waveform';
 import { useLang } from '../../contexts/lang';
 import { useAlbumsData } from '../../hooks/data';
+import { getImageUrl } from '../../hooks/data';
 import './style.scss';
 
 type StemKind = 'drums' | 'bass' | 'guitar' | 'vocal';
@@ -25,10 +26,10 @@ const SONGS: Song[] = [
       vocal: '/audio/song-1/vocal.mp3',
     },
     portraits: {
-      drums: '/images/stems/drummer.png',
-      bass: '/images/stems/bassist.png',
-      guitar: '/images/stems/guitarist.png',
-      vocal: '/images/stems/vocalist.png',
+      drums: getImageUrl('stems/drummer', '.png'),
+      bass: getImageUrl('stems/bassist', '.png'),
+      guitar: getImageUrl('stems/guitarist', '.png'),
+      vocal: getImageUrl('stems/vocalist', '.png'),
     },
   },
 ];
@@ -227,12 +228,12 @@ export default function StemsPlayground() {
   const waveformSrc = currentSong?.stems.vocal ?? currentSong?.stems.drums;
 
   return (
-    <section className="stems-page main-background">
+    <section className="stems-page main-background" aria-label="Блок c миксером">
       <div className="wrapper stems__wrapper">
-        <h2>Миксер дорожек</h2>
+        <h2 className="item-type-a">Миксер</h2>
 
         {/* выбор песни + транспорт */}
-        <div className="stems__songs">
+        <div className="item">
           <select
             id="song-select"
             value={selectedId}
@@ -246,18 +247,18 @@ export default function StemsPlayground() {
               </option>
             ))}
           </select>
+        </div>
 
-          <div className="stems__transport">
-            <button className="btn" onClick={togglePlay}>
-              {isPlaying ? labels.pause : labels.play}
-            </button>
-          </div>
+        <div className="item">
+          <button className="btn" onClick={togglePlay}>
+            {isPlaying ? labels.pause : labels.play}
+          </button>
         </div>
 
         {/* ВОЛНА + hit-зона для скраббинга + маркер прогресса */}
         <div
           ref={waveWrapRef}
-          className="stems__wave-wrap"
+          className="stems__wave-wrap item-type-a"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -268,7 +269,7 @@ export default function StemsPlayground() {
         </div>
 
         {/* портреты-мутизаторы */}
-        <div className="stems__grid">
+        <div className="stems__grid item-type-a">
           <StemCard
             title={labels.drums}
             img={currentSong?.portraits?.drums}

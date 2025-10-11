@@ -3,25 +3,24 @@
 .stems-page {
   .stems__wrapper {
     display: grid;
-    gap: var(--ms-1);
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 var(--ms-1);
   }
 
-  .stems__songs {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--ms-0);
-    align-items: center;
+  .item {
+    grid-column: span 2;
 
-    .item {
+    @include breakpoint(tablet) {
+      grid-column: initial;
+    }
+
+    &-type-a {
       grid-column: span 2;
-
-      @include breakpoint(tablet) {
-        grid-column: initial;
-      }
     }
 
     select {
       width: 100%;
+      margin: var(--ms-1) 0;
       padding: var(--ms-01);
       min-width: 260px;
       color: var(--link-color);
@@ -42,10 +41,10 @@
 
   .stems__grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--ms-1);
 
-    @include breakpoint(tablet) {
+    @include breakpoint(desktops) {
       grid-template-columns: repeat(4, 1fr);
     }
   }
