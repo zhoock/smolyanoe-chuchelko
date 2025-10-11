@@ -1,6 +1,4 @@
 // src/components/Footer/Footer.tsx
-
-import React from 'react';
 import { useAlbumsData } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
 import { useLang } from '../../contexts/lang';

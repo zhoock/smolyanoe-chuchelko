@@ -1,10 +1,10 @@
 // src/components/Header/Header.tsx
-
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useRevalidator } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@components';
 import { useLang } from '../../contexts/lang'; // берём из контекста
+import { setCurrentLang } from '../../state/langStore'; // для синхронизации с глобальным стором
 import './style.scss';
 
 export const Header = () => {
@@ -18,12 +18,20 @@ export const Header = () => {
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
+  // revalidate для перезагрузки данных из лоадеров (react-router)
+  const { revalidate } = useRevalidator();
+
   // Применяем тему
   useEffect(() => {
     document.documentElement.classList.toggle('theme-dark', theme === 'dark');
     document.documentElement.classList.toggle('theme-light', theme === 'light');
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Проставляем <html lang="..."> под текущий язык
+  useEffect(() => {
+    document.documentElement.setAttribute('lang', lang);
+  }, [lang]);
 
   // Закрываем меню при клике вне
   useEffect(() => {
@@ -40,8 +48,13 @@ export const Header = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  // Смена языка: контекст → стор для лоадера → revalidate()
   const changeLang = (newLang: string) => {
-    if (newLang !== lang) setLang(newLang); // ← НИКАКИХ reload
+    if (newLang !== lang) {
+      setLang(newLang); // UI-строки
+      setCurrentLang(newLang); // для albumsLoader
+      revalidate(); // перезагрузить данные на новом языке
+    }
     setLangOpen(false);
   };
 

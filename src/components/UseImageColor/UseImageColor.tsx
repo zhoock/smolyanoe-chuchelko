@@ -1,3 +1,4 @@
+// src/components/UseImageColor/UseImageColor.tsx
 import { useEffect, useRef } from 'react';
 
 // Задача: нужно передать цвет от AlbumCover (внутри AudioPlayer) в Popup (в AlbumTracks).

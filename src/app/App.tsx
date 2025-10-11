@@ -26,10 +26,11 @@ import {
   NotFoundPage,
   Form,
   Hero,
-  TrackLyrics,
+  TracksLyrics,
 } from '@components';
 import Albums from '../pages/Albums/Albums';
 import Album from '../pages/Album/Album';
+import StemsPlayground from '../pages/StemsPlayground/StemsPlayground';
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -134,12 +135,13 @@ function Layout() {
           <Route path="/" element={<Albums />} />
           <Route path="/albums" element={<Albums />} />
           <Route path="/albums/:albumId" element={<Album />} />
-          <Route path="/albums/:albumId/track/:trackId" element={<TrackLyrics />} />
+          <Route path="/albums/:albumId/track/:trackId" element={<TracksLyrics />} />
           <Route path="/aboutus" element={<AboutUs />} />
           <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:articleId" element={<Article />} />
           <Route path="/forms" element={<Form />} />
           <Route path="*" element={<NotFoundPage />} />
+          <Route path="/stems" element={<StemsPlayground />} />
         </Routes>
 
         {/* Модалка поверх: слушает реальный URL */}
@@ -149,7 +151,7 @@ function Layout() {
               path="/albums/:albumId/track/:trackId"
               element={
                 <ModalRoute>
-                  <TrackLyrics />
+                  <TracksLyrics />
                 </ModalRoute>
               }
             />

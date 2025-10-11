@@ -10,11 +10,11 @@ export default function AlbumCover({
   img,
   fullName,
   size = 448,
-  onColorsExtracted, // 👈 Теперь этот коллбек принимает оба цвета
+  onColorsExtracted, // Теперь этот коллбек принимает оба цвета
 }: CoverProps & {
   onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void;
 }) {
-  const imgRef = useImageColor(img, onColorsExtracted); // 👈 Передаём, если есть
+  const imgRef = useImageColor(img, onColorsExtracted); // Передаём, если есть
   const [isLoaded, setIsLoaded] = useState(false);
 
   return (
@@ -33,7 +33,7 @@ export default function AlbumCover({
         />
 
         <img
-          ref={imgRef} // 👈 Теперь `useImageColor` точно получит изображение
+          ref={imgRef} // Теперь `useImageColor` точно получит изображение
           className="album-cover__image"
           loading="lazy"
           src={getImageUrl(img)}

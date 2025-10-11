@@ -1,3 +1,4 @@
+// src/components/Articles/Articles.tsx
 import { Helmet } from 'react-helmet-async';
 import { useAlbumsData } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';

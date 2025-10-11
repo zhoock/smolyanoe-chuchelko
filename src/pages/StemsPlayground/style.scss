@@ -1,0 +1,137 @@
+@use '../../scss/common/mixins' as *;
+
+.stems-page {
+  .stems__wrapper {
+    display: grid;
+    gap: var(--ms-1);
+  }
+
+  .stems__songs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--ms-0);
+    align-items: center;
+
+    .item {
+      grid-column: span 2;
+
+      @include breakpoint(tablet) {
+        grid-column: initial;
+      }
+    }
+
+    select {
+      width: 100%;
+      padding: var(--ms-01);
+      min-width: 260px;
+      color: var(--link-color);
+      background: var(--button-background-color);
+      border: 1px solid var(--hr-color);
+      border-radius: var(--ms-01);
+    }
+
+    .btn {
+      @include button-variant(
+        --link-color,
+        --button-background-color,
+        --link-color-hover,
+        --accent-color
+      );
+    }
+  }
+
+  .stems__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: var(--ms-1);
+
+    @include breakpoint(tablet) {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .stem-card {
+    position: relative;
+    display: grid;
+    gap: var(--ms-01);
+    padding: var(--ms-01);
+    background: rgba(var(--extra-background-color), 0.8);
+    border: 1px solid var(--hr-color);
+    border-radius: var(--ms-01);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+
+    &.muted {
+      filter: grayscale(100%) brightness(80%);
+
+      .stem-card__label .dot {
+        background: transparent;
+        border: 2px solid var(--error-color);
+      }
+    }
+
+    &__img {
+      aspect-ratio: 1 / 1;
+      background: center / cover no-repeat;
+      border-radius: var(--ms-01);
+      min-height: 160px;
+    }
+
+    &__label {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+      justify-content: center;
+      font-weight: var(--medium);
+
+      /* stylelint-disable-next-line no-descending-specificity */
+      .dot {
+        width: 10px;
+        height: 10px;
+        background: var(--accent-color);
+        border-radius: 50%;
+      }
+    }
+  }
+}
+
+.stems__wave-wrap {
+  position: relative;
+  margin: var(--ms-1) 0;
+  cursor: pointer;
+  touch-action: none;
+  background: var(--wave-bg);
+  border-radius: var(--ms-01);
+  overflow: hidden;
+}
+
+.stems__wave-progress {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  z-index: 2;
+  background: var(--wave-progress-fill);
+  transform: scaleX(0);
+  pointer-events: none;
+}
+
+.stems__wave-cursor {
+  position: absolute;
+  inset-block: 0;
+  left: 0%;
+  z-index: 3;
+  inline-size: 2px;
+  background: var(--wave-cursor-color);
+  transform: translateX(-1px);
+  pointer-events: none;
+}
+
+/* убедимся, что канвас волны под оверлеями */
+.stems__wave-wrap canvas {
+  position: relative;
+  z-index: 1;
+}

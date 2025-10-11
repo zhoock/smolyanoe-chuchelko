@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/ErrorMessage/ErrorI18n.tsx
 import { DataAwait } from '../../shared/DataAwait';
 import { useAlbumsData } from '../../hooks/data';
 import { useLang } from '../../contexts/lang';

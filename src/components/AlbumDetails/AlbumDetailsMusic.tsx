@@ -6,11 +6,12 @@ import { IAlbums, detailsProps } from '../../models';
  */
 export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
   function Block({ title, content }: detailsProps) {
+    const items = Array.isArray(content) ? content : []; // Проверяем, что content - массив
     return (
       <>
         <h3>{title}</h3>
         <ul>
-          {content.map((item, i) =>
+          {items.map((item, i) =>
             typeof item === 'string' ? (
               <li key={i}>{item}</li>
             ) : (
@@ -35,5 +36,7 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
     );
   }
 
-  return album?.details.map((detail) => <Block {...detail} key={detail.id} />);
+  return Array.isArray(album?.details)
+    ? album.details.map((d) => <Block {...d} key={d.id} />)
+    : null;
 }

@@ -1,6 +1,4 @@
 // src/components/AlbumDetails/AlbumDetails.tsx
-
-import React from 'react';
 import AlbumDetailsRelease from './AlbumDetailsRelease';
 import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';

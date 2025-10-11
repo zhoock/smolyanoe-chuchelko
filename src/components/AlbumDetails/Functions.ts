@@ -1,4 +1,4 @@
-// functions.ts
+// src/components/AlbumDetails/Functions.ts
 
 /**
  * Функция возвращает строку (количество минут) с верным падежным окончанием.

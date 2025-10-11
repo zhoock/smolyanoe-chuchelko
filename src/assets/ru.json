@@ -3,7 +3,8 @@
     "menu": {
       "albums": "альбомы",
       "theBand": "группа",
-      "articles": "статьи"
+      "articles": "статьи",
+      "stems": "миксер"
     },
     "buttons": {
       "playButton": "воспроизвести",
@@ -11,7 +12,12 @@
       "stream": "слушать",
       "show": "показать",
       "less": "меньше",
-      "more": "больше"
+      "more": "больше",
+      "pause": "пауза",
+      "drums": "барабаны",
+      "bass": "бас",
+      "guitar": "гитара",
+      "vocals": "вокал"
     },
     "titles": {
       "albums": "альбомы",

@@ -1,3 +1,7 @@
+// src/scss/_globals.scss
+// Главный файл со всеми глобальными стилями и переменными
+// Импортируем файлы с переменными и миксинами
+
 @use './common/pallete' as *;
 @use './common/light' as *;
 @use './common/dark' as *;

@@ -3,7 +3,8 @@
     "menu": {
       "albums": "albums",
       "theBand": "the band",
-      "articles": "articles"
+      "articles": "articles",
+      "stems": "mixer"
     },
     "buttons": {
       "playButton": "play",
@@ -11,7 +12,12 @@
       "stream": "stream",
       "show": "show",
       "less": "less",
-      "more": "more"
+      "more": "more",
+      "pause": "pause",
+      "drums": "drums",
+      "bass": "bass",
+      "guitar": "guitar",
+      "vocals": "vocals"
     },
     "titles": {
       "albums": "albums",

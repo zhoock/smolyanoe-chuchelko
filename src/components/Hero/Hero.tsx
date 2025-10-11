@@ -1,3 +1,4 @@
+// src/components/Hero/Hero.tsx
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 

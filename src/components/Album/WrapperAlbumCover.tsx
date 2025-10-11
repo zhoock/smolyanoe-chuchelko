@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/Album/WrapperAlbumCover.tsx
 import { Link } from 'react-router-dom';
 import { WrapperAlbumCoverProps } from '../../models';
 

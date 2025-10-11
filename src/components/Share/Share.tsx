@@ -1,4 +1,5 @@
-import React, { useState, MouseEvent } from 'react';
+// src/components/Share/Share.tsx
+import { useState, MouseEvent } from 'react';
 
 import './style.scss';
 

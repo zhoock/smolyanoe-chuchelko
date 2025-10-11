@@ -1,4 +1,5 @@
-/* Основные переменные для светлой темы */
+// src/scss/common/light.scss
+// Файл с цветовой темой для светлого режима
 
 html.theme-light {
   --main-background-color: var(--white);
@@ -19,6 +20,11 @@ html.theme-light {
   --header-links-list-item: #cf8b00;
   --album-details-link: #f2bb4b;
   --hr-color: var(--icy-mist);
+  --wave-bg: rgb(231 231 230 / 70%);
+  --wave-progress-fill: rgb(250 229 155 / 16%);
+  --wave-cursor-color: rgb(250 229 155 / 90%);
+  --wave-bars: rgb(39 39 39 / 42%);
+  --wave-bars-active: rgb(250 229 155 / 78%);
 }
 
 @media (prefers-color-scheme: light) {
@@ -42,5 +48,10 @@ html.theme-light {
     --header-links-list-item: #cf8b00;
     --album-details-link: #f2bb4b;
     --hr-color: var(--icy-mist);
+    --wave-bg: rgb(231 231 230 / 70%);
+    --wave-progress-fill: rgb(250 229 155 / 16%);
+    --wave-cursor-color: rgb(250 229 155 / 90%);
+    --wave-bars: rgb(39 39 39 / 42%);
+    --wave-bars-active: rgb(250 229 155 / 78%);
   }
 }

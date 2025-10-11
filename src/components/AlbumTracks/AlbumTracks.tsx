@@ -1,5 +1,4 @@
 // src/components/AlbumTracks/AlbumTracks.tsx
-
 import { useEffect } from 'react';
 import { useState, MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -72,16 +71,6 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         <h2 className="album-title">{album?.album}</h2>
 
         <div className="wrapper-album-play">
-          {/* <Link
-            className="album-play"
-            to={{ hash: '#player' }}
-            aria-label="Кнопка play"
-            aria-description="Открывает плеер"
-          >
-            <span className="icon-controller-play"></span>
-            {playText}
-          </Link> */}
-
           <Link
             className="album-play"
             to={{ hash: '#player' }}

@@ -167,7 +167,7 @@
       {
         "id": 6,
         "subtitle": "Педали эффектов",
-        "content": ["BOSS DS-1", "EHX Polyhorus"]
+        "content": ["BOSS DS-1", "EHX Polychorus"]
       },
       {
         "id": 7,
@@ -202,7 +202,7 @@
         "img": "drum_recording_album_session_23",
         "alt": "запись барабанов, сессия альбома 23.",
         "subtitle": "Оверхеды",
-        "content": ["Стереопара COLES 4038 + моно Goodfly 251"]
+        "content": ["Стереопара COLES 4038 + моно GoodFly 251"]
       },
       {
         "id": 14,
@@ -245,7 +245,7 @@
         "img": "bass_guitar_recording_album_session_23",
         "alt": "запись басового кабинета, сессия альбома 23.",
         "subtitle": "Усилители",
-        "content": ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"]
+        "content": ["Ampeg SVT Classic head + Ampeg SVT Classic 8×10 cab"]
       },
       { "id": 23, "subtitle": "Микрофоны", "content": ["Neumann U87 + линия"] },
       {
@@ -410,12 +410,12 @@
       {
         "id": 12,
         "subtitle": "Усилители",
-        "content": ["Ampeq SVT Classic head + Ampeq SVT Classic 8×10 cab"]
+        "content": ["Ampeg SVT Classic head + Ampeg SVT Classic 8×10 cab"]
       },
       {
         "id": 13,
         "subtitle": "Микрофоны",
-        "content": ["Goodfly C12", "AKG C24 или Shure SM7 (room)"]
+        "content": ["GoodFly C12", "AKG C24 или Shure SM7 (room)"]
       },
       {
         "id": 14,
@@ -428,7 +428,7 @@
       {
         "id": 15,
         "subtitle": "Педали эффектов",
-        "content": ["BOSS DS-1", "EHX Polyhorus", "EHX Small Clone"]
+        "content": ["BOSS DS-1", "EHX Polychorus", "EHX Small Clone"]
       },
       {
         "id": 16,

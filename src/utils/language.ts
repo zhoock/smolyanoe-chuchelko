@@ -1,5 +1,4 @@
 // utils/language.ts
-
 const LANG_KEY = 'lang';
 
 export function getLang(): string {

@@ -1,3 +1,4 @@
+// src/utils/ga.ts
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;

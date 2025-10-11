@@ -1,5 +1,4 @@
 // src/components/Navigation/Navigation.tsx
-
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { NavigationProps } from '../../models';
@@ -12,13 +11,19 @@ export const Navigation = ({ onToggle }: NavigationProps) => {
   const { lang } = useLang();
   const data = useAlbumsData(lang);
 
-  const renderMenu = (labels: { albums: string; theBand: string; articles: string }) => (
+  const renderMenu = (labels: {
+    albums: string;
+    theBand: string;
+    articles: string;
+    stems: string;
+  }) => (
     <nav className="header__menu">
       <ul className="header__links-list">
         {[
           { to: '/albums', label: labels.albums },
           { to: '/aboutus', label: labels.theBand },
           { to: '/articles', label: labels.articles },
+          { to: '/stems', label: labels.stems ?? (lang === 'en' ? 'mixer' : 'миксер') },
         ].map(({ to, label }) => (
           <li key={to}>
             <NavLink
@@ -38,7 +43,12 @@ export const Navigation = ({ onToggle }: NavigationProps) => {
   );
 
   // Фоллбэки на случай отсутствия данных
-  const fallbackLabels = { albums: 'Альбомы', theBand: 'О группе', articles: 'Статьи' };
+  const fallbackLabels = {
+    albums: lang === 'en' ? 'albums' : 'альбомы',
+    theBand: lang === 'en' ? 'the band' : 'группа',
+    articles: lang === 'en' ? 'articles' : 'статьи',
+    stems: lang === 'en' ? 'mixer' : 'миксер',
+  };
 
   if (!data) return renderMenu(fallbackLabels);
 
@@ -50,6 +60,7 @@ export const Navigation = ({ onToggle }: NavigationProps) => {
           albums: menu.albums ?? fallbackLabels.albums,
           theBand: menu.theBand ?? fallbackLabels.theBand,
           articles: menu.articles ?? fallbackLabels.articles,
+          stems: menu.stems ?? fallbackLabels.stems,
         });
       }}
     </DataAwait>

@@ -1,5 +1,4 @@
 // src/components/Popup/Popup.tsx
-
 import { useEffect, useRef } from 'react';
 import { PopupProps } from '../../models';
 import './style.scss';

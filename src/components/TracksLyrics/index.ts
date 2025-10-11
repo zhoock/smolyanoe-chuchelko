@@ -1,3 +1,2 @@
-// src/components/TrackLyrics/index.ts
-
-export { TrackLyrics } from './TrackLyrics';
+// src/components/TracksLyrics/index.ts
+export { TracksLyrics } from './TracksLyrics';

@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/AlbumDetails/AlbumDetailsRelease.tsx
 import { IAlbums, String } from '../../models';
 import { formatDate } from '../../hooks/data';
 import { functionsMap } from './Functions'; // Импортируем функции
