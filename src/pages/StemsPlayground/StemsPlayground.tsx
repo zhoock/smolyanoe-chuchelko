@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '../../components/Waveform';
 import { useLang } from '../../contexts/lang';
-import { useAlbumsData } from '../../hooks/data';
-import { getImageUrl } from '../../hooks/data';
+import { useAlbumsData, getImageUrl } from '../../hooks/data';
+import { DataAwait } from '../../shared/DataAwait';
 import './style.scss';
 
 type StemKind = 'drums' | 'bass' | 'guitar' | 'vocal';
@@ -34,16 +34,6 @@ const SONGS: Song[] = [
   },
 ];
 
-// Фоллбэки на случай, если словарь не загрузился
-const FALLBACK = {
-  play: 'Воспроизвести',
-  pause: 'Пауза',
-  drums: 'Барабаны',
-  bass: 'Бас',
-  guitar: 'Гитара',
-  vocals: 'Вокал',
-};
-
 export default function StemsPlayground() {
   const [selectedId, setSelectedId] = useState<string>(SONGS[0]?.id ?? '');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -54,37 +44,10 @@ export default function StemsPlayground() {
     vocal: false,
   });
 
-  // ——— Локализация ———
   const { lang } = useLang();
   const data = useAlbumsData(lang);
-  const [labels, setLabels] = useState(FALLBACK);
 
-  useEffect(() => {
-    let canceled = false;
-    if (!data) {
-      setLabels(FALLBACK);
-      return;
-    }
-    data.templateC
-      .then((ui) => {
-        if (canceled) return;
-        const b = ui?.[0]?.buttons ?? {};
-        setLabels({
-          play: b.playButton ?? FALLBACK.play,
-          pause: b.pause ?? FALLBACK.pause,
-          drums: b.drums ?? FALLBACK.drums,
-          bass: b.bass ?? FALLBACK.bass,
-          guitar: b.guitar ?? FALLBACK.guitar,
-          vocals: b.vocals ?? FALLBACK.vocals,
-        });
-      })
-      .catch(() => setLabels(FALLBACK));
-    return () => {
-      canceled = true;
-    };
-  }, [data]);
-
-  // refs на 4 аудио-тега
+  // refs на 4 аудиотега
   const drumsRef = useRef<HTMLAudioElement | null>(null);
   const bassRef = useRef<HTMLAudioElement | null>(null);
   const guitarRef = useRef<HTMLAudioElement | null>(null);
@@ -174,8 +137,8 @@ export default function StemsPlayground() {
       els.forEach((el) => {
         try {
           if (Math.abs(el.currentTime - t0) > 0.1) el.currentTime = t0;
-        } catch (e) {
-          // Safari/Chromium могут бросать исключение при быстрых seek’ах — безопасно игнорируем
+        } catch {
+          /* ignore */
         }
       });
       await Promise.allSettled(els.map((el) => el.play()));
@@ -188,7 +151,7 @@ export default function StemsPlayground() {
 
   const toggleMute = (stem: StemKind) => setMuted((m) => ({ ...m, [stem]: !m[stem] }));
 
-  // скраббинг по клику/перетаскиванию поверх волны
+  // скраббинг
   const seekToClientX = (clientX: number) => {
     const wrap = waveWrapRef.current;
     const master = drumsRef.current;
@@ -201,8 +164,8 @@ export default function StemsPlayground() {
     getEls().forEach((el) => {
       try {
         el.currentTime = newTime;
-      } catch (e) {
-        // См. примечание выше: игнорируем редкие ошибки при установке currentTime
+      } catch {
+        /* ignore */
       }
     });
     setTime((t) => ({ ...t, current: newTime }));
@@ -227,104 +190,131 @@ export default function StemsPlayground() {
   const progress = time.duration > 0 ? time.current / time.duration : 0;
   const waveformSrc = currentSong?.stems.vocal ?? currentSong?.stems.drums;
 
+  // Если лоадер ещё не отдал промисы — просто ничего не рендерим (без фолбеков)
+  if (!data) return null;
+
   return (
-    <section className="stems-page main-background" aria-label="Блок c миксером">
-      <div className="wrapper stems__wrapper">
-        <h2 className="item-type-a">Миксер</h2>
+    <DataAwait value={data.templateC}>
+      {(ui) => {
+        const b = ui?.[0]?.buttons ?? {};
+        const t = ui?.[0]?.titles ?? {};
+        const labels = {
+          play: b.playButton as string,
+          pause: b.pause as string,
+          drums: b.drums as string,
+          bass: b.bass as string,
+          guitar: b.guitar as string,
+          vocals: b.vocals as string,
+          pageTitle: (t.stems as string) || '—', // заголовок страницы из titles.stems
+        };
 
-        {/* выбор песни + транспорт */}
-        <div className="item">
-          <select
-            id="song-select"
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            aria-label="Выбор песни"
-            disabled={isPlaying}
-          >
-            {SONGS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </div>
+        return (
+          <section className="stems-page main-background" aria-label="Блок c миксером">
+            <div className="wrapper stems__wrapper">
+              <h2 className="item-type-a">{labels.pageTitle}</h2>
 
-        <div className="item">
-          <button className="btn" onClick={togglePlay}>
-            {isPlaying ? labels.pause : labels.play}
-          </button>
-        </div>
+              {/* выбор песни */}
+              <div className="item">
+                <select
+                  id="song-select"
+                  value={selectedId}
+                  onChange={(e) => setSelectedId(e.target.value)}
+                  aria-label="Выбор песни"
+                  disabled={isPlaying}
+                >
+                  {SONGS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {/* ВОЛНА + hit-зона для скраббинга + маркер прогресса */}
-        <div
-          ref={waveWrapRef}
-          className="stems__wave-wrap item-type-a"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-        >
-          <Waveform src={waveformSrc} clockEl={drumsRef.current} height={64} />
-          <div className="stems__wave-progress" style={{ transform: `scaleX(${progress})` }} />
-          <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
-        </div>
+              {/* транспорт */}
+              <div className="item">
+                <div className="wrapper-transport-controls">
+                  <button className="btn" onClick={togglePlay}>
+                    {isPlaying ? labels.pause : labels.play}
+                  </button>
+                </div>
+              </div>
 
-        {/* портреты-мутизаторы */}
-        <div className="stems__grid item-type-a">
-          <StemCard
-            title={labels.drums}
-            img={currentSong?.portraits?.drums}
-            active={!muted.drums}
-            onClick={() => toggleMute('drums')}
-          />
-          <StemCard
-            title={labels.bass}
-            img={currentSong?.portraits?.bass}
-            active={!muted.bass}
-            onClick={() => toggleMute('bass')}
-          />
-          <StemCard
-            title={labels.guitar}
-            img={currentSong?.portraits?.guitar}
-            active={!muted.guitar}
-            onClick={() => toggleMute('guitar')}
-          />
-          <StemCard
-            title={labels.vocals}
-            img={currentSong?.portraits?.vocal}
-            active={!muted.vocal}
-            onClick={() => toggleMute('vocal')}
-          />
-        </div>
+              {/* ВОЛНА + hit-зона для скраббинга + маркеры */}
+              <div
+                ref={waveWrapRef}
+                className="stems__wave-wrap item-type-a"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+              >
+                <Waveform src={waveformSrc} clockEl={drumsRef.current} height={64} />
+                <div
+                  className="stems__wave-progress"
+                  style={{ transform: `scaleX(${progress})` }}
+                />
+                <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
+              </div>
 
-        {/* аудио (скрытые) */}
-        <div className="visually-hidden" aria-hidden>
-          <audio
-            ref={drumsRef}
-            src={currentSong?.stems.drums}
-            preload="auto"
-            crossOrigin="anonymous"
-          />
-          <audio
-            ref={bassRef}
-            src={currentSong?.stems.bass}
-            preload="auto"
-            crossOrigin="anonymous"
-          />
-          <audio
-            ref={guitarRef}
-            src={currentSong?.stems.guitar}
-            preload="auto"
-            crossOrigin="anonymous"
-          />
-          <audio
-            ref={vocalRef}
-            src={currentSong?.stems.vocal}
-            preload="auto"
-            crossOrigin="anonymous"
-          />
-        </div>
-      </div>
-    </section>
+              {/* портреты-мутизаторы */}
+              <div className="stems__grid item-type-a">
+                <StemCard
+                  title={labels.drums}
+                  img={currentSong?.portraits?.drums}
+                  active={!muted.drums}
+                  onClick={() => toggleMute('drums')}
+                />
+                <StemCard
+                  title={labels.bass}
+                  img={currentSong?.portraits?.bass}
+                  active={!muted.bass}
+                  onClick={() => toggleMute('bass')}
+                />
+                <StemCard
+                  title={labels.guitar}
+                  img={currentSong?.portraits?.guitar}
+                  active={!muted.guitar}
+                  onClick={() => toggleMute('guitar')}
+                />
+                <StemCard
+                  title={labels.vocals}
+                  img={currentSong?.portraits?.vocal}
+                  active={!muted.vocal}
+                  onClick={() => toggleMute('vocal')}
+                />
+              </div>
+
+              {/* аудио (скрытые) */}
+              <div className="visually-hidden" aria-hidden>
+                <audio
+                  ref={drumsRef}
+                  src={currentSong?.stems.drums}
+                  preload="auto"
+                  crossOrigin="anonymous"
+                />
+                <audio
+                  ref={bassRef}
+                  src={currentSong?.stems.bass}
+                  preload="auto"
+                  crossOrigin="anonymous"
+                />
+                <audio
+                  ref={guitarRef}
+                  src={currentSong?.stems.guitar}
+                  preload="auto"
+                  crossOrigin="anonymous"
+                />
+                <audio
+                  ref={vocalRef}
+                  src={currentSong?.stems.vocal}
+                  preload="auto"
+                  crossOrigin="anonymous"
+                />
+              </div>
+            </div>
+          </section>
+        );
+      }}
+    </DataAwait>
   );
 }
 
@@ -354,7 +344,7 @@ function StemCard({
       />
       <div className="stem-card__label">
         <span className="dot" />
-        {title} {active ? '' : '(mute)'}
+        {title}
       </div>
     </button>
   );

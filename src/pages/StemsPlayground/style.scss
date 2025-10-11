@@ -1,3 +1,4 @@
+// Импортируем общий файл с зависимостями
 @use '../../scss/common/mixins' as *;
 
 .stems-page {
@@ -29,13 +30,29 @@
       border-radius: var(--ms-01);
     }
 
+    .wrapper-transport-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
     .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      grid-column: 1 / 3;
+      text-transform: capitalize;
+
       @include button-variant(
         --link-color,
         --button-background-color,
         --link-color-hover,
         --accent-color
       );
+
+      @include breakpoint(tablet) {
+        grid-column: 1 / 2;
+      }
     }
   }
 
@@ -51,6 +68,7 @@
 
   .stem-card {
     position: relative;
+    margin-block-end: $ms-1;
     display: grid;
     gap: var(--ms-01);
     padding: var(--ms-01);
@@ -65,14 +83,21 @@
     }
 
     &.muted {
-      filter: grayscale(100%) brightness(80%);
+      .stem-card__img {
+        filter: grayscale(100%) brightness(80%);
+      }
 
-      .stem-card__label .dot {
-        background: transparent;
-        border: 2px solid var(--error-color);
+      .stem-card__label {
+        opacity: 0.85;
+
+        .dot {
+          background: transparent;
+          border: 2px solid var(--error-color);
+        }
       }
     }
 
+    /* stylelint-disable-next-line no-descending-specificity */
     &__img {
       aspect-ratio: 1 / 1;
       background: center / cover no-repeat;
@@ -80,12 +105,14 @@
       min-height: 160px;
     }
 
+    /* stylelint-disable-next-line no-descending-specificity */
     &__label {
       display: flex;
       align-items: center;
       gap: var(--ms-01);
       justify-content: center;
       font-weight: var(--medium);
+      color: var(--text-color);
 
       /* stylelint-disable-next-line no-descending-specificity */
       .dot {
@@ -100,7 +127,7 @@
 
 .stems__wave-wrap {
   position: relative;
-  margin: var(--ms-1) 0;
+  margin: var(--ms-1) 0 var(--ms-2);
   cursor: pointer;
   touch-action: none;
   background: var(--wave-bg);
