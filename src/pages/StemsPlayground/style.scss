@@ -21,23 +21,6 @@
     gap: var(--ms-1);
   }
 
-  .select-control {
-    position: relative;
-
-    &::after {
-      content: '';
-      position: absolute;
-      right: var(--ms-1);
-      top: 50%;
-      width: 0;
-      height: 0;
-      margin-top: -3px;
-      border: 6px solid transparent;
-      border-top-color: var(--link-color); /* маленький «треугольник» */
-      pointer-events: none;
-    }
-  }
-
   .item {
     grid-column: span 2;
 
@@ -47,6 +30,27 @@
 
     &-type-a {
       grid-column: span 2;
+    }
+
+    .select-control {
+      position: relative;
+
+      &:has(select:disabled) {
+        opacity: 0.6; /* общий приглушённый вид */
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        right: var(--ms-1);
+        top: 50%;
+        width: 0;
+        height: 0;
+        margin-top: -3px;
+        border: 6px solid transparent;
+        border-top-color: var(--link-color); /* маленький «треугольник» */
+        pointer-events: none;
+      }
     }
 
     select {
@@ -64,6 +68,12 @@
       border: 1px solid var(--hr-color);
       border-radius: var(--ms-01);
       appearance: none;
+      cursor: pointer;
+
+      &:disabled {
+        cursor: not-allowed;
+        border-color: var(--hr-color);
+      }
     }
 
     .btn {
@@ -93,20 +103,20 @@
 
       /* когда ИДЁТ воспроизведение — красим кнопку, используя :has на родителе */
       &:has(.btn[aria-pressed='true']) .btn {
-        background: var(--accent-color);
+        background: var(--error-color);
         color: var(--link-color-hover);
       }
 
       /* на тач-устройствах запрещаем ховер-переопределения */
       @media (hover: none) and (pointer: coarse) {
         .wrapper-transport-controls:has(.btn[aria-pressed='true']) .btn:hover {
-          background: var(--accent-color);
+          background: var(--error-color);
           color: var(--link-color-hover);
         }
       }
 
       &:has(.btn[aria-pressed='false']) .btn {
-        background: var(--button-background-color);
+        background: var(--accent-color);
         color: var(--link-color);
       }
     }

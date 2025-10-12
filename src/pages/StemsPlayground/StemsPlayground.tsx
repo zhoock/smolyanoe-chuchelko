@@ -182,6 +182,8 @@ export default function StemsPlayground() {
   // Если лоадер ещё не отдал промисы — ничего не рендерим (страница получит словарь чуть позже)
   if (!data) return null;
 
+  const selectDisabled = isPlaying || loading; // нельзя менять песню во время проигрывания или загрузки
+
   return (
     <DataAwait value={data.templateC}>
       {(ui) => {
@@ -226,13 +228,16 @@ export default function StemsPlayground() {
 
                 {/* выбор песни */}
                 <div className="item">
-                  <div className="select-control">
+                  <div
+                    className={clsx('select-control', { 'is-disabled': selectDisabled })}
+                    aria-disabled={selectDisabled}
+                  >
                     <select
                       id="song-select"
                       value={selectedId}
                       onChange={(e) => setSelectedId(e.target.value)}
                       aria-label="Выбор песни"
-                      disabled={isPlaying || loading}
+                      disabled={selectDisabled}
                     >
                       {SONGS.map((s) => (
                         <option key={s.id} value={s.id}>
