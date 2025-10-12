@@ -5,6 +5,8 @@ import Waveform from '../../components/Waveform/Waveform';
 import { useLang } from '../../contexts/lang';
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
+import { Loader } from '../../components/Loader/Loader';
+import ErrorI18n from '../../components/ErrorMessage/ErrorI18n';
 import { StemEngine, StemKind } from '../../audio/stemsEngine';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
@@ -48,7 +50,7 @@ export default function StemsPlayground() {
 
   const { pathname } = useLocation();
   const origin =
-    (typeof window !== 'undefined' && window.location.origin) || 'https://smolyanoechuchelko.ru'; // как у остальных страниц
+    (typeof window !== 'undefined' && window.location.origin) || 'https://smolyanoechuchelko.ru';
   const canonical = `${origin}${pathname}`;
 
   const { lang } = useLang();
@@ -74,7 +76,6 @@ export default function StemsPlayground() {
     setLoading(true);
     setLoadProgress(0);
 
-    // прибираем старый
     engineRef.current?.dispose();
 
     const engine = new StemEngine({
@@ -89,7 +90,6 @@ export default function StemsPlayground() {
       await engine.loadAll((p) => setLoadProgress(p));
       setLoading(false);
       if (isPlaying) engine.play();
-      // применим текущие mute-состояния
       (Object.keys(muted) as StemKind[]).forEach((k) => engine.setMuted(k, muted[k]));
     })();
 
@@ -108,7 +108,6 @@ export default function StemsPlayground() {
       const e = engineRef.current;
       if (e) {
         setTime({ current: e.getCurrentTime(), duration: e.getDuration() });
-        // если дошли до конца — сбросим кнопку
         if (e.getDuration() > 0 && e.getCurrentTime() + 0.02 >= e.getDuration() && e.isPlaying) {
           setIsPlaying(false);
         }
@@ -179,49 +178,66 @@ export default function StemsPlayground() {
     if (wasPlayingRef.current && !isPlaying) return;
   };
 
-  // Если лоадер ещё не отдал промисы — ничего не рендерим (страница получит словарь чуть позже)
-  if (!data) return null;
+  // Пока route-лоадер не отдал данные — общий Loader
+  if (!data) {
+    return (
+      <section className="stems-page main-background" aria-label="Блок c миксером">
+        <div className="wrapper stems__wrapper">
+          <Loader />
+        </div>
+      </section>
+    );
+  }
 
-  const selectDisabled = isPlaying || loading; // нельзя менять песню во время проигрывания или загрузки
+  const selectDisabled = isPlaying || loading;
 
   return (
-    <DataAwait value={data.templateC}>
-      {(ui) => {
-        const b = ui?.[0]?.buttons ?? {};
-        const t = ui?.[0]?.titles ?? {};
-        const pageTitle = ui?.[0]?.stems?.pageTitle as string;
-        const pageText = (ui?.[0]?.stems?.text as string) || '';
+    <section className="stems-page main-background" aria-label="Блок c миксером">
+      <DataAwait
+        value={data.templateC}
+        fallback={
+          <div className="wrapper stems__wrapper">
+            <Loader />
+          </div>
+        }
+        error={
+          <div className="wrapper stems__wrapper">
+            <ErrorI18n code="albumsLoadFailed" />
+          </div>
+        }
+      >
+        {(ui) => {
+          const b = ui?.[0]?.buttons ?? {};
+          const t = ui?.[0]?.titles ?? {};
+          const pageTitle = ui?.[0]?.stems?.pageTitle as string;
+          const pageText = (ui?.[0]?.stems?.text as string) || '';
 
-        const labels = {
-          play: b.playButton as string,
-          pause: b.pause as string,
-          drums: b.drums as string,
-          bass: b.bass as string,
-          guitar: b.guitar as string,
-          vocals: b.vocals as string,
-          pageTitle,
-          pageText,
-        };
+          const labels = {
+            play: b.playButton as string,
+            pause: b.pause as string,
+            drums: b.drums as string,
+            bass: b.bass as string,
+            guitar: b.guitar as string,
+            vocals: b.vocals as string,
+            pageTitle,
+            pageText,
+          };
 
-        return (
-          <>
-            <Helmet>
-              <title>{labels.pageTitle}</title>
-              <meta name="description" content={labels.pageText} />
-              <link rel="canonical" href={canonical} />
+          return (
+            <>
+              <Helmet>
+                <title>{labels.pageTitle}</title>
+                <meta name="description" content={labels.pageText} />
+                <link rel="canonical" href={canonical} />
+                <meta property="og:type" content="website" />
+                <meta property="og:title" content={labels.pageTitle} />
+                <meta property="og:description" content={labels.pageText} />
+                <meta property="og:url" content={canonical} />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={labels.pageTitle} />
+                <meta name="twitter:description" content={labels.pageText} />
+              </Helmet>
 
-              {/* Open Graph */}
-              <meta property="og:type" content="website" />
-              <meta property="og:title" content={labels.pageTitle} />
-              <meta property="og:description" content={labels.pageText} />
-              <meta property="og:url" content={canonical} />
-
-              {/* Twitter */}
-              <meta name="twitter:card" content="summary_large_image" />
-              <meta name="twitter:title" content={labels.pageTitle} />
-              <meta name="twitter:description" content={labels.pageText} />
-            </Helmet>
-            <section className="stems-page main-background" aria-label="Блок c миксером">
               <div className="wrapper stems__wrapper">
                 <h2 className="item-type-a">{labels.pageTitle}</h2>
                 <p className="item-type-a">{labels.pageText}</p>
@@ -279,7 +295,6 @@ export default function StemsPlayground() {
                           style={{ transform: `scaleX(${loadProgress})` }}
                         />
                       </div>
-                      {/* <small>{Math.round(loadProgress * 100)}%</small> */}
                     </div>
                   ) : (
                     <>
@@ -317,11 +332,11 @@ export default function StemsPlayground() {
                   />
                 </div>
               </div>
-            </section>
-          </>
-        );
-      }}
-    </DataAwait>
+            </>
+          );
+        }}
+      </DataAwait>
+    </section>
   );
 }
 
