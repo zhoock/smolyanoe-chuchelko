@@ -18,7 +18,7 @@
   .stems__wrapper {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0 var(--ms-1);
+    gap: var(--ms-1);
   }
 
   .select-control {
