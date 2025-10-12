@@ -6,6 +6,8 @@ import { useLang } from '../../contexts/lang';
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
 import { StemEngine, StemKind } from '../../audio/stemsEngine';
+import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 import './style.scss';
 
 type Song = {
@@ -43,6 +45,11 @@ export default function StemsPlayground() {
     guitar: false,
     vocal: false,
   });
+
+  const { pathname } = useLocation();
+  const origin =
+    (typeof window !== 'undefined' && window.location.origin) || 'https://smolyanoechuchelko.ru'; // как у остальных страниц
+  const canonical = `${origin}${pathname}`;
 
   const { lang } = useLang();
   const data = useAlbumsData(lang);
@@ -152,6 +159,7 @@ export default function StemsPlayground() {
     e.seek(newTime);
     setTime((t) => ({ ...t, current: newTime }));
   };
+
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (evt) => {
     if (loading) return;
     draggingRef.current = true;
@@ -159,10 +167,12 @@ export default function StemsPlayground() {
     evt.currentTarget.setPointerCapture(evt.pointerId);
     seekToClientX(evt.clientX);
   };
+
   const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (evt) => {
     if (!draggingRef.current || loading) return;
     seekToClientX(evt.clientX);
   };
+
   const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (evt) => {
     draggingRef.current = false;
     evt.currentTarget.releasePointerCapture(evt.pointerId);
@@ -177,6 +187,9 @@ export default function StemsPlayground() {
       {(ui) => {
         const b = ui?.[0]?.buttons ?? {};
         const t = ui?.[0]?.titles ?? {};
+        const pageTitle = ui?.[0]?.stems?.pageTitle as string;
+        const pageText = (ui?.[0]?.stems?.text as string) || '';
+
         const labels = {
           play: b.playButton as string,
           pause: b.pause as string,
@@ -184,97 +197,117 @@ export default function StemsPlayground() {
           bass: b.bass as string,
           guitar: b.guitar as string,
           vocals: b.vocals as string,
-          pageTitle: (t.stems as string) || '—',
+          pageTitle,
+          pageText,
         };
 
         return (
-          <section className="stems-page main-background" aria-label="Блок c миксером">
-            <div className="wrapper stems__wrapper">
-              <h2 className="item-type-a">{labels.pageTitle}</h2>
+          <>
+            <Helmet>
+              <title>{labels.pageTitle}</title>
+              <meta name="description" content={labels.pageText} />
+              <link rel="canonical" href={canonical} />
 
-              {/* выбор песни */}
-              <div className="item">
-                <div className="select-control">
-                  <select
-                    id="song-select"
-                    value={selectedId}
-                    onChange={(e) => setSelectedId(e.target.value)}
-                    aria-label="Выбор песни"
-                    disabled={isPlaying || loading}
-                  >
-                    {SONGS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {/* Open Graph */}
+              <meta property="og:type" content="website" />
+              <meta property="og:title" content={labels.pageTitle} />
+              <meta property="og:description" content={labels.pageText} />
+              <meta property="og:url" content={canonical} />
 
-              {/* транспорт */}
-              <div className="item">
-                <div className="wrapper-transport-controls">
-                  <button className="btn" onClick={togglePlay} disabled={loading}>
-                    {isPlaying ? labels.pause : labels.play}
-                  </button>
-                </div>
-              </div>
+              {/* Twitter */}
+              <meta name="twitter:card" content="summary_large_image" />
+              <meta name="twitter:title" content={labels.pageTitle} />
+              <meta name="twitter:description" content={labels.pageText} />
+            </Helmet>
+            <section className="stems-page main-background" aria-label="Блок c миксером">
+              <div className="wrapper stems__wrapper">
+                <h2 className="item-type-a">{labels.pageTitle}</h2>
+                <p className="item-type-a">{labels.pageText}</p>
 
-              {/* ВОЛНА или ЛОАДЕР */}
-              <div
-                ref={waveWrapRef}
-                className={clsx('stems__wave-wrap', 'item-type-a', { 'is-loading': loading })}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-              >
-                {loading ? (
-                  <div className="stems__loader in-wave" aria-live="polite" aria-busy="true">
-                    <div className="stems__loader-bar">
-                      <div
-                        className="stems__loader-fill"
-                        style={{ transform: `scaleX(${loadProgress})` }}
-                      />
-                    </div>
-                    {/* <small>{Math.round(loadProgress * 100)}%</small> */}
+                {/* выбор песни */}
+                <div className="item">
+                  <div className="select-control">
+                    <select
+                      id="song-select"
+                      value={selectedId}
+                      onChange={(e) => setSelectedId(e.target.value)}
+                      aria-label="Выбор песни"
+                      disabled={isPlaying || loading}
+                    >
+                      {SONGS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                ) : (
-                  <>
-                    <Waveform src={waveformSrc} progress={progress} height={64} />
-                    <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
-                  </>
-                )}
-              </div>
+                </div>
 
-              {/* портреты-мутизаторы */}
-              <div className="stems__grid item-type-a">
-                <StemCard
-                  title={labels.drums}
-                  img={currentSong?.portraits?.drums}
-                  active={!muted.drums}
-                  onClick={() => toggleMute('drums')}
-                />
-                <StemCard
-                  title={labels.bass}
-                  img={currentSong?.portraits?.bass}
-                  active={!muted.bass}
-                  onClick={() => toggleMute('bass')}
-                />
-                <StemCard
-                  title={labels.guitar}
-                  img={currentSong?.portraits?.guitar}
-                  active={!muted.guitar}
-                  onClick={() => toggleMute('guitar')}
-                />
-                <StemCard
-                  title={labels.vocals}
-                  img={currentSong?.portraits?.vocal}
-                  active={!muted.vocal}
-                  onClick={() => toggleMute('vocal')}
-                />
+                {/* транспорт */}
+                <div className="item">
+                  <div className="wrapper-transport-controls">
+                    <button className="btn" onClick={togglePlay} disabled={loading}>
+                      {isPlaying ? labels.pause : labels.play}
+                    </button>
+                  </div>
+                </div>
+
+                {/* ВОЛНА или ЛОАДЕР */}
+                <div
+                  ref={waveWrapRef}
+                  className={clsx('stems__wave-wrap', 'item-type-a', { 'is-loading': loading })}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                >
+                  {loading ? (
+                    <div className="stems__loader in-wave" aria-live="polite" aria-busy="true">
+                      <div className="stems__loader-bar">
+                        <div
+                          className="stems__loader-fill"
+                          style={{ transform: `scaleX(${loadProgress})` }}
+                        />
+                      </div>
+                      {/* <small>{Math.round(loadProgress * 100)}%</small> */}
+                    </div>
+                  ) : (
+                    <>
+                      <Waveform src={waveformSrc} progress={progress} height={64} />
+                      <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
+                    </>
+                  )}
+                </div>
+
+                {/* портреты-мутизаторы */}
+                <div className="stems__grid item-type-a">
+                  <StemCard
+                    title={labels.drums}
+                    img={currentSong?.portraits?.drums}
+                    active={!muted.drums}
+                    onClick={() => toggleMute('drums')}
+                  />
+                  <StemCard
+                    title={labels.bass}
+                    img={currentSong?.portraits?.bass}
+                    active={!muted.bass}
+                    onClick={() => toggleMute('bass')}
+                  />
+                  <StemCard
+                    title={labels.guitar}
+                    img={currentSong?.portraits?.guitar}
+                    active={!muted.guitar}
+                    onClick={() => toggleMute('guitar')}
+                  />
+                  <StemCard
+                    title={labels.vocals}
+                    img={currentSong?.portraits?.vocal}
+                    active={!muted.vocal}
+                    onClick={() => toggleMute('vocal')}
+                  />
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </>
         );
       }}
     </DataAwait>

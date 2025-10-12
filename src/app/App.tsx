@@ -78,7 +78,7 @@ function Layout() {
       ogImage: 'https://smolyanoechuchelko.ru/og/default.jpg',
     },
     en: {
-      title: 'Smolyanoe Chuchelko — official website',
+      title: 'Смоляное Чучелко — official website',
       desc: 'Moscow grunge and alternative rock band. Albums, lyrics, articles and project philosophy.',
       url: 'https://smolyanoechuchelko.ru/en',
       ogImage: 'https://smolyanoechuchelko.ru/og/default_en.jpg',

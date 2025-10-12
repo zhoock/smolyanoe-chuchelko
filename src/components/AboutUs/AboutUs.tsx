@@ -76,8 +76,8 @@ export const AboutUs = () => {
       canonical: 'https://smolyanoechuchelko.ru/aboutus',
     },
     en: {
-      title: 'Smolyanoe Chuchelko — about the band, albums “23” and “Smolyanoe Chuchelko”',
-      desc: 'Moscow grunge/alt-rock band with dark sound and atmospheric arrangements. Albums “23” and “Smolyanoe Chuchelko”, lyrics about inner struggle and melancholy.',
+      title: 'Смоляное Чучелко — about the band, albums “23” and “Смоляное Чучелко”',
+      desc: 'Moscow grunge/alt-rock band with dark sound and atmospheric arrangements. Albums “23” and “Смоляное Чучелко”, lyrics about inner struggle and melancholy.',
       canonical: 'https://smolyanoechuchelko.ru/en/aboutus',
     },
   };

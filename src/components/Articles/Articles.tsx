@@ -23,8 +23,8 @@ export const Articles = () => {
       canonical: 'https://smolyanoechuchelko.ru/articles',
     },
     en: {
-      title: 'Smolyanoe Chuchelko — articles and publications about the band',
-      desc: 'Read articles about Smolyanoe Chuchelko: history, philosophy, albums, inspirations and creative path of the Moscow grunge band.',
+      title: 'Смоляное Чучелко — articles and publications about the band',
+      desc: 'Read articles about Смоляное Чучелко: history, philosophy, albums, inspirations and creative path of the Moscow grunge band.',
       canonical: 'https://smolyanoechuchelko.ru/en/articles',
     },
   };
@@ -36,8 +36,8 @@ export const Articles = () => {
         className="articles main-background"
         aria-label={
           lang === 'en'
-            ? 'Block with links to Smolyanoe Chuchelko articles'
-            : 'Блок c ссылками на статьи Смоляное чучелко'
+            ? 'Block with links to Смоляное Чучелко articles'
+            : 'Блок c ссылками на статьи Смоляное Чучелко'
         }
       >
         <Helmet>
