@@ -1,10 +1,10 @@
-// src/pages/StemsPlayground/StemsPlayground.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '../../components/Waveform';
 import { useLang } from '../../contexts/lang';
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
+import { createStemsEngine, type StemsEngine } from '../../audio/stemsEngine';
 import './style.scss';
 
 type StemKind = 'drums' | 'bass' | 'guitar' | 'vocal';
@@ -47,133 +47,84 @@ export default function StemsPlayground() {
   const { lang } = useLang();
   const data = useAlbumsData(lang);
 
-  // refs на 4 аудиотега
-  const drumsRef = useRef<HTMLAudioElement | null>(null);
-  const bassRef = useRef<HTMLAudioElement | null>(null);
-  const guitarRef = useRef<HTMLAudioElement | null>(null);
-  const vocalRef = useRef<HTMLAudioElement | null>(null);
+  // WebAudio-движок (создаем один раз)
+  const engineRef = useRef<StemsEngine | null>(null);
+  if (!engineRef.current) engineRef.current = createStemsEngine();
+  const engine = engineRef.current;
 
-  // для скраббинга
   const waveWrapRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
   const wasPlayingRef = useRef(false);
 
-  const currentSong = useMemo(() => SONGS.find((s) => s.id === selectedId), [selectedId]);
+  const currentSong = useMemo(() => SONGS.find((s) => s.id === selectedId)!, [selectedId]);
 
-  const getEls = () =>
-    [drumsRef.current, bassRef.current, guitarRef.current, vocalRef.current].filter(
-      Boolean
-    ) as HTMLAudioElement[];
-
-  // текущее время/длительность с «мастера» (барабаны)
-  const [time, setTime] = useState({ current: 0, duration: 0 });
-
+  // Загружаем трек в движок при смене
   useEffect(() => {
-    const master = drumsRef.current;
-    if (!master) return;
-
-    const onTime = () => {
-      setTime((t) => ({
-        current: master.currentTime || 0,
-        duration: Number.isFinite(master.duration) ? master.duration : t.duration,
-      }));
-    };
-    const onMeta = () => {
-      setTime((t) => ({
-        ...t,
-        duration: Number.isFinite(master.duration) ? master.duration : t.duration,
-      }));
-    };
-
-    master.addEventListener('timeupdate', onTime);
-    master.addEventListener('loadedmetadata', onMeta);
+    let cancelled = false;
+    (async () => {
+      await engine.load(currentSong);
+      if (cancelled) return;
+      // применяем текущие mute-состояния
+      (Object.keys(muted) as StemKind[]).forEach((k) => engine.setMuted(k, muted[k]));
+      // если до этого играли — продолжаем играть с начала
+      if (isPlaying) {
+        await engine.play();
+        setIsPlaying(true);
+      } else {
+        setIsPlaying(false);
+      }
+    })();
     return () => {
-      master.removeEventListener('timeupdate', onTime);
-      master.removeEventListener('loadedmetadata', onMeta);
+      cancelled = true;
     };
-  }, [selectedId]);
-
-  // смена трека
-  useEffect(() => {
-    const els = getEls();
-    els.forEach((el) => {
-      el.pause();
-      el.currentTime = 0;
-      el.load();
-    });
-    if (isPlaying) {
-      setTimeout(() => {
-        els.forEach((el) => el.play().catch(() => {}));
-      }, 50);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // mute
+  // Применяем mute к движку при кликах
   useEffect(() => {
-    if (drumsRef.current) drumsRef.current.muted = muted.drums;
-    if (bassRef.current) bassRef.current.muted = muted.bass;
-    if (guitarRef.current) guitarRef.current.muted = muted.guitar;
-    if (vocalRef.current) vocalRef.current.muted = muted.vocal;
-  }, [muted]);
+    (Object.keys(muted) as StemKind[]).forEach((k) => engine.setMuted(k, muted[k]));
+  }, [muted, engine]);
 
-  // когда стем закончился — вернуть «Воспроизвести»
+  // «тикаем» прогресс (перерисовка курсора/заливки)
+  const [, forceTick] = useState(0);
   useEffect(() => {
-    const handleEnded = () => {
-      getEls().forEach((el) => el.pause());
-      setIsPlaying(false);
+    let raf = 0;
+    const tick = () => {
+      forceTick((n) => n + 1);
+      raf = requestAnimationFrame(tick);
     };
-    const els = getEls();
-    els.forEach((el) => el.addEventListener('ended', handleEnded));
-    return () => els.forEach((el) => el.removeEventListener('ended', handleEnded));
-  }, [selectedId]);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
-  // play/pause
   const togglePlay = async () => {
-    const els = getEls();
     if (!isPlaying) {
-      const t0 =
-        Math.min(...els.map((el) => (Number.isFinite(el.currentTime) ? el.currentTime : 0))) || 0;
-      els.forEach((el) => {
-        try {
-          if (Math.abs(el.currentTime - t0) > 0.1) el.currentTime = t0;
-        } catch {
-          /* ignore */
-        }
-      });
-      await Promise.allSettled(els.map((el) => el.play()));
+      await engine.play();
       setIsPlaying(true);
     } else {
-      els.forEach((el) => el.pause());
+      engine.pause();
       setIsPlaying(false);
     }
   };
 
   const toggleMute = (stem: StemKind) => setMuted((m) => ({ ...m, [stem]: !m[stem] }));
 
-  // скраббинг
-  const seekToClientX = (clientX: number) => {
+  // Скраббинг в движке
+  const seekToClientX = async (clientX: number) => {
     const wrap = waveWrapRef.current;
-    const master = drumsRef.current;
-    if (!wrap || !master || !Number.isFinite(master.duration)) return;
+    if (!wrap) return;
 
     const rect = wrap.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    const newTime = ratio * master.duration;
+    const newTime = ratio * (engine.duration || 0);
 
-    getEls().forEach((el) => {
-      try {
-        el.currentTime = newTime;
-      } catch {
-        /* ignore */
-      }
-    });
-    setTime((t) => ({ ...t, current: newTime }));
+    await engine.seek(newTime, wasPlayingRef.current);
+    setIsPlaying(wasPlayingRef.current);
   };
 
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     draggingRef.current = true;
-    wasPlayingRef.current = isPlaying;
+    wasPlayingRef.current = engine.isPlaying;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     seekToClientX(e.clientX);
   };
@@ -184,13 +135,11 @@ export default function StemsPlayground() {
   const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
     draggingRef.current = false;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    if (wasPlayingRef.current && !isPlaying) return;
   };
 
-  const progress = time.duration > 0 ? time.current / time.duration : 0;
-  const waveformSrc = currentSong?.stems.vocal ?? currentSong?.stems.drums;
+  const progress = engine.duration > 0 ? engine.currentTime / engine.duration : 0;
 
-  // Если лоадер ещё не отдал промисы — просто ничего не рендерим (без фолбеков)
+  // если лоадер ещё не готов — не рендерим
   if (!data) return null;
 
   return (
@@ -205,7 +154,7 @@ export default function StemsPlayground() {
           bass: b.bass as string,
           guitar: b.guitar as string,
           vocals: b.vocals as string,
-          pageTitle: (t.stems as string) || '—', // заголовок страницы из titles.stems
+          pageTitle: (t.stems as string) || '—',
         };
 
         return (
@@ -213,7 +162,6 @@ export default function StemsPlayground() {
             <div className="wrapper stems__wrapper">
               <h2 className="item-type-a">{labels.pageTitle}</h2>
 
-              {/* выбор песни */}
               <div className="item">
                 <select
                   id="song-select"
@@ -230,7 +178,6 @@ export default function StemsPlayground() {
                 </select>
               </div>
 
-              {/* транспорт */}
               <div className="item">
                 <div className="wrapper-transport-controls">
                   <button className="btn" onClick={togglePlay}>
@@ -239,7 +186,7 @@ export default function StemsPlayground() {
                 </div>
               </div>
 
-              {/* ВОЛНА + hit-зона для скраббинга + маркеры */}
+              {/* Волна: теперь даём ей current/duration */}
               <div
                 ref={waveWrapRef}
                 className="stems__wave-wrap item-type-a"
@@ -247,7 +194,12 @@ export default function StemsPlayground() {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
               >
-                <Waveform src={waveformSrc} clockEl={drumsRef.current} height={64} />
+                <Waveform
+                  src={currentSong.stems.vocal ?? currentSong.stems.drums}
+                  height={64}
+                  current={engine.currentTime}
+                  duration={engine.duration}
+                />
                 <div
                   className="stems__wave-progress"
                   style={{ transform: `scaleX(${progress})` }}
@@ -255,7 +207,6 @@ export default function StemsPlayground() {
                 <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
               </div>
 
-              {/* портреты-мутизаторы */}
               <div className="stems__grid item-type-a">
                 <StemCard
                   title={labels.drums}
@@ -280,34 +231,6 @@ export default function StemsPlayground() {
                   img={currentSong?.portraits?.vocal}
                   active={!muted.vocal}
                   onClick={() => toggleMute('vocal')}
-                />
-              </div>
-
-              {/* аудио (скрытые) */}
-              <div className="visually-hidden" aria-hidden>
-                <audio
-                  ref={drumsRef}
-                  src={currentSong?.stems.drums}
-                  preload="auto"
-                  crossOrigin="anonymous"
-                />
-                <audio
-                  ref={bassRef}
-                  src={currentSong?.stems.bass}
-                  preload="auto"
-                  crossOrigin="anonymous"
-                />
-                <audio
-                  ref={guitarRef}
-                  src={currentSong?.stems.guitar}
-                  preload="auto"
-                  crossOrigin="anonymous"
-                />
-                <audio
-                  ref={vocalRef}
-                  src={currentSong?.stems.vocal}
-                  preload="auto"
-                  crossOrigin="anonymous"
                 />
               </div>
             </div>
