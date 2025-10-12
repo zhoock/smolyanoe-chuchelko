@@ -5,7 +5,7 @@ import { Waveform } from '../../components/Waveform';
 import { useLang } from '../../contexts/lang';
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
-import { StemEngine, StemKind } from '../../audio/stemsEngine'; // <-- добавь этот импорт
+import { StemEngine, StemKind } from '../../audio/stemsEngine';
 import './style.scss';
 
 type Song = {
@@ -46,126 +46,106 @@ export default function StemsPlayground() {
 
   const { lang } = useLang();
   const data = useAlbumsData(lang);
-  const engineRef = useRef<StemEngine | null>(null);
 
+  const engineRef = useRef<StemEngine | null>(null);
   const waveWrapRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
-  const wasPlayingRef = useRef(false);
 
   const currentSong = useMemo(() => SONGS.find((s) => s.id === selectedId), [selectedId]);
 
-  // Создание/пересоздание движка при смене трека
+  // создать/пересоздать движок при смене трека
   useEffect(() => {
-    let cancelled = false;
+    const song = currentSong;
+    if (!song) return;
+
+    engineRef.current?.dispose();
+    const engine = new StemEngine({
+      drums: song.stems.drums,
+      bass: song.stems.bass,
+      guitar: song.stems.guitar,
+      vocal: song.stems.vocal,
+    });
+    engineRef.current = engine;
 
     (async () => {
-      // dispose предыдущего
-      engineRef.current?.dispose();
-
-      // создаём новый движок
-      const stems = currentSong?.stems ?? ({} as Record<StemKind, string>);
-      const engine = new StemEngine(stems);
-      engineRef.current = engine;
-
-      // предзагрузка
       await engine.loadAll();
-      if (cancelled) return;
-
-      // применим текущие mute-состояния к узлам
-      (Object.keys(muted) as StemKind[]).forEach((k) => {
-        engine.setMuted(k, muted[k]);
-      });
-
-      // если до смены песня играла — аккуратно продолжаем
-      if (isPlaying) {
-        await engine.play(0); // начинаем с 0 (или можешь хранить смещение, если нужно)
-        setIsPlaying(true);
-      }
+      // восстановить mute-состояния
+      Object.entries(muted).forEach(([k, v]) => engine.setMuted(k as StemKind, v));
+      if (isPlaying) await engine.play();
     })();
 
     return () => {
-      cancelled = true;
-      // на всякий случай — не убиваем тут, т.к. выше уже dispose при создании нового
+      engine.dispose();
+      engineRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // Глобальный тикер: следим за окончанием и обновляем кнопку
+  // RAF: снимать время/длительность из движка
+  const [time, setTime] = useState({ current: 0, duration: 0 });
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const eng = engineRef.current;
-      if (eng) {
-        if (eng.isPlaying && eng.currentTime + 0.02 >= eng.duration) {
-          // дошли до конца — останавливаем
-          eng.stop();
-          setIsPlaying(false);
-        }
-      }
+      const e = engineRef.current;
+      if (e) setTime({ current: e.getCurrentTime(), duration: e.getDuration() });
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Переключение Play/Pause
-  const togglePlay = async () => {
-    const eng = engineRef.current;
-    if (!eng) return;
+  const progress = time.duration > 0 ? time.current / time.duration : 0;
 
-    if (!eng.isPlaying) {
-      await eng.play();
+  // play/pause
+  const togglePlay = async () => {
+    const e = engineRef.current;
+    if (!e) return;
+    if (!isPlaying) {
+      await e.play();
       setIsPlaying(true);
     } else {
-      await eng.pause();
+      await e.pause();
       setIsPlaying(false);
     }
   };
 
-  // Mute / Unmute
+  // mute
   const toggleMute = (stem: StemKind) => {
-    const eng = engineRef.current;
+    const e = engineRef.current;
+    if (!e) return;
     setMuted((m) => {
       const next = { ...m, [stem]: !m[stem] };
-      if (eng) eng.setMuted(stem, next[stem]);
+      e.setMuted(stem, next[stem]);
       return next;
     });
   };
 
-  // Скраббинг
-  const seekByClientX = (clientX: number) => {
-    const eng = engineRef.current;
+  // скраббинг
+  const seekToClientX = (clientX: number) => {
     const wrap = waveWrapRef.current;
-    if (!eng || !wrap || eng.duration <= 0) return;
-
+    const e = engineRef.current;
+    if (!wrap || !e || !Number.isFinite(e.getDuration())) return;
     const rect = wrap.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    const newTime = ratio * eng.duration;
-
-    eng.seek(newTime);
+    const newTime = ratio * e.getDuration();
+    e.seek(newTime);
+    setTime((t) => ({ ...t, current: newTime }));
   };
 
-  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (ev) => {
     draggingRef.current = true;
-    wasPlayingRef.current = engineRef.current?.isPlaying ?? false;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    seekByClientX(e.clientX);
+    (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    seekToClientX(ev.clientX);
   };
-
-  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (ev) => {
     if (!draggingRef.current) return;
-    seekByClientX(e.clientX);
+    seekToClientX(ev.clientX);
   };
-
-  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
+  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (ev) => {
     draggingRef.current = false;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    // если играл — продолжит, если был на паузе — останется на паузе
+    (ev.currentTarget as HTMLElement).releasePointerCapture(ev.pointerId);
   };
 
-  const waveformSrc = currentSong?.stems.vocal ?? currentSong?.stems.drums;
-
-  // ждём UI-словарь (без фолбеков — ты просил)
   if (!data) return null;
 
   return (
@@ -183,30 +163,18 @@ export default function StemsPlayground() {
           pageTitle: (t.stems as string) || '—',
         };
 
-        // часы для волны — от движка
-        const clock = {
-          currentTime: () => engineRef.current?.currentTime ?? 0,
-          duration: () => engineRef.current?.duration ?? 0,
-        };
-
-        const progress =
-          (engineRef.current?.duration ?? 0) > 0
-            ? (engineRef.current?.currentTime ?? 0) / (engineRef.current?.duration ?? 1)
-            : 0;
-
         return (
           <section className="stems-page main-background" aria-label="Блок c миксером">
             <div className="wrapper stems__wrapper">
               <h2 className="item-type-a">{labels.pageTitle}</h2>
 
-              {/* выбор песни */}
               <div className="item">
                 <select
                   id="song-select"
                   value={selectedId}
                   onChange={(e) => setSelectedId(e.target.value)}
                   aria-label="Выбор песни"
-                  disabled={isPlaying} // во время воспроизведения — блокируем выбор
+                  disabled={isPlaying}
                 >
                   {SONGS.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -216,7 +184,6 @@ export default function StemsPlayground() {
                 </select>
               </div>
 
-              {/* транспорт */}
               <div className="item">
                 <div className="wrapper-transport-controls">
                   <button className="btn" onClick={togglePlay}>
@@ -225,7 +192,7 @@ export default function StemsPlayground() {
                 </div>
               </div>
 
-              {/* ВОЛНА + hit-зона для скраббинга + маркеры */}
+              {/* ВОЛНА: теперь контролируемая progress={progress} */}
               <div
                 ref={waveWrapRef}
                 className="stems__wave-wrap item-type-a"
@@ -233,15 +200,14 @@ export default function StemsPlayground() {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
               >
-                <Waveform src={waveformSrc} clock={clock} height={64} />
-                <div
-                  className="stems__wave-progress"
-                  style={{ transform: `scaleX(${progress})` }}
+                <Waveform
+                  src={currentSong?.stems.vocal ?? currentSong?.stems.drums}
+                  progress={progress}
+                  height={64}
                 />
                 <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
               </div>
 
-              {/* портреты-мутизаторы */}
               <div className="stems__grid item-type-a">
                 <StemCard
                   title={labels.drums}
