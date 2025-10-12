@@ -1,150 +1,167 @@
-// src/audio/stemsEngine.ts
-// WebAudio-движок для синхронного проигрывания стемов
-// API: load(song), play(), pause(), seek(sec), setMuted(kind, on), state getters
-
+// src/audio/StemEngine.ts
 export type StemKind = 'drums' | 'bass' | 'guitar' | 'vocal';
-export type SongLike = {
-  id: string;
-  title: string;
-  stems: Record<StemKind, string>;
-};
+type StemMap = Partial<Record<StemKind, string>>;
 
-type StemNodes = {
+type Nodes = {
+  buffer: AudioBuffer;
+  source: AudioBufferSourceNode | null;
   gain: GainNode;
-  buffer?: AudioBuffer;
-  source?: AudioBufferSourceNode; // пересоздаём на каждом play/seek
 };
 
-export function createStemsEngine() {
-  const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
-  const ctx = new AC();
+export class StemEngine {
+  private ctx: AudioContext;
+  private masterGain: GainNode;
+  private nodes = new Map<StemKind, Nodes>();
+  private startAt = 0; // момент запуска в системном времени аудиоконтекста
+  private startOffset = 0; // смещение (сек) внутри трека, с которого начался текущий запуск
+  private playing = false;
 
-  const stems: Record<StemKind, StemNodes> = {
-    drums: { gain: new GainNode(ctx) },
-    bass: { gain: new GainNode(ctx) },
-    guitar: { gain: new GainNode(ctx) },
-    vocal: { gain: new GainNode(ctx) },
-  };
-
-  // подключаем к мастер-выходу
-  Object.values(stems).forEach((s) => s.gain.connect(ctx.destination));
-
-  let duration = 0;
-  let isPlaying = false;
-  let startedAtCtx = 0; // ctx.currentTime, когда начался запуск
-  let offsetAtStart = 0; // смещение в секундах, с которого запускаем
-  let pausedAt = 0; // где остановились (секунды в треке)
-  let currentSong: SongLike | null = null;
-
-  async function decodeUrl(url: string) {
-    const resp = await fetch(url, { cache: 'force-cache' });
-    const arr = await resp.arrayBuffer();
-    return await ctx.decodeAudioData(arr);
-  }
-
-  function stopSources() {
-    (Object.keys(stems) as StemKind[]).forEach((k) => {
-      const s = stems[k];
-      if (s.source) {
-        try {
-          s.source.stop();
-        } catch (e) {
-          // может быть ошибка, если источник уже остановлен
-        }
-        s.source.disconnect();
-        s.source = undefined;
-      }
-    });
-  }
-
-  function scheduleAll(offset: number) {
-    const when = ctx.currentTime + 0.06; // небольшой «лид-тайм» для стабильности
-    (Object.keys(stems) as StemKind[]).forEach((k) => {
-      const s = stems[k];
-      if (!s.buffer) return;
-
-      const src = new AudioBufferSourceNode(ctx, { buffer: s.buffer });
-      src.connect(s.gain);
-      // без петель; если нужно — можно добавить loop=true
-      src.start(when, Math.min(offset, (s.buffer.duration || 0) - 0.001));
-      s.source = src;
-    });
-
-    startedAtCtx = when;
-    offsetAtStart = offset;
-    isPlaying = true;
-  }
-
-  function getCurrentTimeSec(): number {
-    if (!isPlaying) return pausedAt;
-    // сколько прошло с момента запуска + offset, но не больше duration
-    const t = offsetAtStart + (ctx.currentTime - startedAtCtx);
-    return Math.max(0, Math.min(duration, t));
-  }
-
-  return {
-    get context() {
-      return ctx;
-    },
-    get isPlaying() {
-      return isPlaying;
-    },
-    get duration() {
-      return duration;
-    },
-    get currentTime() {
-      return getCurrentTimeSec();
-    },
-
-    async load(song: SongLike) {
-      currentSong = song;
-      stopSources();
-      isPlaying = false;
-      pausedAt = 0;
-      offsetAtStart = 0;
-
-      // загружаем и декодируем все стемы параллельно
-      const entries = Object.entries(song.stems) as [StemKind, string][];
-      const buffers = await Promise.all(entries.map(([, url]) => decodeUrl(url)));
-
-      entries.forEach(([k], i) => {
-        stems[k].buffer = buffers[i];
+  constructor(
+    private stems: StemMap,
+    ctx?: AudioContext
+  ) {
+    this.ctx =
+      ctx ??
+      new (window.AudioContext || (window as any).webkitAudioContext)({
+        latencyHint: 'interactive',
+        // sampleRate: 44100, // при необходимости зафиксируй sampleRate
       });
-      // общая длительность — по длиннейшему стему
-      duration = Math.max(...buffers.map((b) => b.duration)) || 0;
-    },
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 1;
+    this.masterGain.connect(this.ctx.destination);
+  }
 
-    async play() {
-      if (!currentSong) return;
-      await ctx.resume(); // на iOS/Chrome активация аудио требует юзер-жеста → тут ок
-      stopSources();
-      scheduleAll(pausedAt);
-    },
+  /** Разрешить аудио на iOS/мобилках (вызвать на первом пользовательском клике) */
+  async unlock() {
+    if (this.ctx.state === 'suspended') await this.ctx.resume();
+  }
 
-    pause() {
-      if (!isPlaying) return;
-      pausedAt = getCurrentTimeSec();
-      stopSources();
-      isPlaying = false;
-    },
+  /** Предзагрузка и декодирование всех stem’ов */
+  async loadAll() {
+    const entries = Object.entries(this.stems) as [StemKind, string][];
+    await Promise.all(
+      entries.map(async ([kind, url]) => {
+        const resp = await fetch(url!, { cache: 'force-cache' });
+        const buf = await resp.arrayBuffer();
+        const audio = await this.ctx.decodeAudioData(buf);
+        const gain = this.ctx.createGain();
+        gain.connect(this.masterGain);
+        this.nodes.set(kind, { buffer: audio, source: null, gain });
+      })
+    );
+  }
 
-    async seek(seconds: number, keepPlaying: boolean) {
-      const sec = Math.max(0, Math.min(duration, seconds));
-      pausedAt = sec;
-      stopSources();
-      if (keepPlaying) {
-        await ctx.resume();
-        scheduleAll(sec);
+  /** Длительность (берём по первой буферной дорожке) */
+  get duration(): number {
+    const first = this.nodes.values().next().value as Nodes | undefined;
+    return first?.buffer.duration ?? 0;
+  }
+
+  /** Текущее время воспроизведения по единому таймкоду контекста */
+  get currentTime(): number {
+    return this.playing
+      ? Math.max(0, this.ctx.currentTime - this.startAt + this.startOffset)
+      : this.startOffset;
+  }
+
+  /** Статус */
+  get isPlaying() {
+    return this.playing;
+  }
+
+  /** Мьют/анмьют отдельного stem’а */
+  setMuted(kind: StemKind, muted: boolean) {
+    const n = this.nodes.get(kind);
+    if (n) n.gain.gain.value = muted ? 0 : 1;
+  }
+
+  /** Запуск синхронно с общего такта */
+  async play(from?: number) {
+    await this.unlock();
+    if (typeof from === 'number') {
+      this.startOffset = Math.max(0, Math.min(from, this.duration));
+    }
+    this.stopInternal(false);
+
+    const when = this.ctx.currentTime + 0.05; // небольшой lookahead
+    this.startAt = when;
+    const offset = this.startOffset;
+
+    for (const n of this.nodes.values()) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = n.buffer;
+      src.connect(n.gain);
+      src.start(when, offset);
+      n.source = src;
+
+      // если дошли до конца — останавливаем всё и сбрасываем play-кнопку
+      src.onended = () => {
+        if (this.playing && this.currentTime + 0.02 >= this.duration) {
+          this.stop();
+        }
+      };
+    }
+    this.playing = true;
+  }
+
+  /** Пауза (идеально синхронная) */
+  async pause() {
+    if (!this.playing) return;
+    this.startOffset = this.currentTime;
+    await this.ctx.suspend();
+    this.playing = false;
+  }
+
+  /** Возобновление после pause() */
+  async resume() {
+    if (this.playing) return;
+    await this.ctx.resume();
+    await this.play(this.startOffset);
+  }
+
+  /** Полный стоп (сброс в 0) */
+  stop() {
+    this.stopInternal(true);
+  }
+
+  private stopInternal(resetOffset: boolean) {
+    for (const n of this.nodes.values()) {
+      try {
+        n.source?.stop();
+      } catch (e) {
+        console.warn('Error stopping source', e);
       }
-    },
+      try {
+        n.source?.disconnect();
+      } catch (e) {
+        console.warn('Error disconnecting source', e);
+      }
+      n.source = null;
+    }
+    if (resetOffset) this.startOffset = 0;
+    this.playing = false;
+  }
 
-    setMuted(kind: StemKind, muted: boolean) {
-      const s = stems[kind];
-      s.gain.gain.value = muted ? 0 : 1;
-    },
+  /** Скраббинг/перемотка: мгновенный переход */
+  async seek(timeSec: number) {
+    this.startOffset = Math.max(0, Math.min(timeSec, this.duration));
+    if (this.playing) {
+      await this.play(this.startOffset); // пересоздаём источники и стартуем в такт
+    }
+  }
 
-    // На случай глобального mute/volume — можно расширить API
-  };
+  /** Освобождение ресурсов */
+  dispose() {
+    this.stopInternal(true);
+    try {
+      this.masterGain.disconnect();
+    } catch (e) {
+      console.warn('Error disconnecting master gain', e);
+    }
+    try {
+      this.ctx.close();
+    } catch (e) {
+      console.warn('Error closing audio context', e);
+    }
+  }
 }
-
-export type StemsEngine = ReturnType<typeof createStemsEngine>;
