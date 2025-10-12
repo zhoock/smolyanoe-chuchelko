@@ -19,9 +19,10 @@ $ms-4: 123.363px; // 6.854rem;
   $background,
   $hover-color,
   $hover-background,
+  $margin: var(--ms-1) 0,
   $disabled-background: var(--link-color, #ddd)
 ) {
-  margin: var(--ms-1) 0;
+  margin: $margin;
   padding: var(--ms-01) var(--ms-0);
   color: var(#{$color});
   border: 0;

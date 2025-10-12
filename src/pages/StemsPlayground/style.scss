@@ -1,11 +1,41 @@
+/* stylelint-disable order/properties-order */
+/* stylelint-disable no-duplicate-selectors */
 // Импортируем общий файл с зависимостями
 @use '../../scss/common/mixins' as *;
+
+/* 1) одна переменная высоты для select и кнопки на этой странице */
+.stems-page {
+  //   --control-height: 56px; /* мобильная высота как у кнопки */
+  --margin: 0;
+
+  /* если хочешь — на крупных экранах можно сделать чуть ниже */
+  @include breakpoint(tablet) {
+    --control-height: 51.38px;
+  }
+}
 
 .stems-page {
   .stems__wrapper {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 0 var(--ms-1);
+  }
+
+  .select-control {
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: var(--ms-1);
+      top: 50%;
+      width: 0;
+      height: 0;
+      margin-top: -3px;
+      border: 6px solid transparent;
+      border-top-color: var(--link-color); /* маленький «треугольник» */
+      pointer-events: none;
+    }
   }
 
   .item {
@@ -20,14 +50,24 @@
     }
 
     select {
+      box-sizing: border-box;
+      height: var(--control-height); /* фиксируем высоту */
+      min-height: var(--control-height);
+      padding-inline: var(--ms-1) calc(var(--ms-1) + 18px); /* место под стрелку */
+      padding-block: 0; /* вертикальный центр за счёт высоты */
+      //   line-height: calc(var(--control-height) - 2px);
       width: 100%;
-      margin: var(--ms-1) 0;
       padding: var(--ms-01);
       min-width: 260px;
       color: var(--link-color);
       background: var(--button-background-color);
       border: 1px solid var(--hr-color);
       border-radius: var(--ms-01);
+      /* stylelint-disable-next-line comment-empty-line-before */
+      /* важно для iOS, иначе высота может игнорироваться */
+      /* stylelint-disable-next-line property-no-vendor-prefix */
+      -webkit-appearance: none;
+      appearance: none;
     }
 
     .wrapper-transport-controls {
@@ -47,7 +87,8 @@
         --link-color,
         --button-background-color,
         --link-color-hover,
-        --accent-color
+        --accent-color,
+        --margin
       );
 
       @include breakpoint(tablet) {
@@ -60,6 +101,7 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: var(--ms-1);
+    margin-block-end: $ms-1;
 
     @include breakpoint(desktops) {
       grid-template-columns: repeat(4, 1fr);
@@ -68,7 +110,6 @@
 
   .stem-card {
     position: relative;
-    margin-block-end: $ms-1;
     display: grid;
     gap: var(--ms-01);
     padding: var(--ms-01);

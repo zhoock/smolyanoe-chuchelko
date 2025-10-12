@@ -194,19 +194,21 @@ export default function StemsPlayground() {
 
               {/* выбор песни */}
               <div className="item">
-                <select
-                  id="song-select"
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  aria-label="Выбор песни"
-                  disabled={isPlaying || loading}
-                >
-                  {SONGS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.title}
-                    </option>
-                  ))}
-                </select>
+                <div className="select-control">
+                  <select
+                    id="song-select"
+                    value={selectedId}
+                    onChange={(e) => setSelectedId(e.target.value)}
+                    aria-label="Выбор песни"
+                    disabled={isPlaying || loading}
+                  >
+                    {SONGS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* транспорт */}
