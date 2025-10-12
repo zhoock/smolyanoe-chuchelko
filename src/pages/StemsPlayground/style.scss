@@ -84,11 +84,10 @@
       grid-column: 1 / 3;
       text-transform: capitalize;
 
-      &:disabled,
-      &.btn[aria-disabled='true'] {
+      &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
-        filter: grayscale(20%);
+        filter: grayscale(100%);
       }
 
       @include button-variant(
