@@ -246,7 +246,13 @@ export default function StemsPlayground() {
                 {/* транспорт */}
                 <div className="item">
                   <div className="wrapper-transport-controls">
-                    <button className="btn" onClick={togglePlay} disabled={loading}>
+                    <button
+                      className="btn"
+                      onClick={togglePlay}
+                      type="button"
+                      disabled={loading}
+                      aria-pressed={isPlaying}
+                    >
                       {isPlaying ? labels.pause : labels.play}
                     </button>
                   </div>

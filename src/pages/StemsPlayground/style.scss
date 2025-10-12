@@ -63,16 +63,7 @@
       background: var(--button-background-color);
       border: 1px solid var(--hr-color);
       border-radius: var(--ms-01);
-      /* stylelint-disable-next-line comment-empty-line-before */
-      /* важно для iOS, иначе высота может игнорироваться */
-      /* stylelint-disable-next-line property-no-vendor-prefix */
-      -webkit-appearance: none;
       appearance: none;
-    }
-
-    .wrapper-transport-controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
     }
 
     .btn {
@@ -93,6 +84,30 @@
 
       @include breakpoint(tablet) {
         grid-column: 1 / 2;
+      }
+    }
+
+    .wrapper-transport-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+
+      /* когда ИДЁТ воспроизведение — красим кнопку, используя :has на родителе */
+      &:has(.btn[aria-pressed='true']) .btn {
+        background: var(--accent-color);
+        color: var(--link-color-hover);
+      }
+
+      /* на тач-устройствах запрещаем ховер-переопределения */
+      @media (hover: none) and (pointer: coarse) {
+        .wrapper-transport-controls:has(.btn[aria-pressed='true']) .btn:hover {
+          background: var(--accent-color);
+          color: var(--link-color-hover);
+        }
+      }
+
+      &:has(.btn[aria-pressed='false']) .btn {
+        background: var(--button-background-color);
+        color: var(--link-color);
       }
     }
   }
