@@ -12,8 +12,8 @@ export class StemEngine {
   private ctx: AudioContext;
   private masterGain: GainNode;
   private nodes = new Map<StemKind, Nodes>();
-  private startAt = 0;
-  private startOffset = 0;
+  private startAt = 0; // момент запуска в time аудиоконтекста
+  private startOffset = 0; // смещение (сек) от начала буфера
   private playing = false;
 
   constructor(
@@ -30,12 +30,22 @@ export class StemEngine {
     this.masterGain.connect(this.ctx.destination);
   }
 
+  /** Разрешить аудио на iOS/мобилках (вызвать на первом клике пользователя) */
   async unlock() {
     if (this.ctx.state === 'suspended') await this.ctx.resume();
   }
 
-  async loadAll() {
+  /** Предзагрузка и декодирование всех stem’ов; progress(0..1) — опциональный колбэк */
+  async loadAll(progress?: (p: number) => void) {
     const entries = Object.entries(this.stems) as [StemKind, string][];
+    let done = 0;
+    const total = entries.length;
+
+    const oneDone = () => {
+      done += 1;
+      progress?.(Math.min(1, done / total));
+    };
+
     await Promise.all(
       entries.map(async ([kind, url]) => {
         const resp = await fetch(url!, { cache: 'force-cache' });
@@ -44,38 +54,49 @@ export class StemEngine {
         const gain = this.ctx.createGain();
         gain.connect(this.masterGain);
         this.nodes.set(kind, { buffer: audio, source: null, gain });
+        oneDone();
       })
     );
   }
 
-  getDuration(): number {
+  /** Длительность (берём из первого буфера) */
+  get duration(): number {
     const first = this.nodes.values().next().value as Nodes | undefined;
     return first?.buffer.duration ?? 0;
   }
+  getDuration() {
+    return this.duration;
+  }
 
-  getCurrentTime(): number {
+  /** Текущее время воспроизведения по единому таймкоду контекста */
+  get currentTime(): number {
     return this.playing
       ? Math.max(0, this.ctx.currentTime - this.startAt + this.startOffset)
       : this.startOffset;
+  }
+  getCurrentTime() {
+    return this.currentTime;
   }
 
   get isPlaying() {
     return this.playing;
   }
 
+  /** Мьют/анмьют отдельного stem’а */
   setMuted(kind: StemKind, muted: boolean) {
     const n = this.nodes.get(kind);
     if (n) n.gain.gain.value = muted ? 0 : 1;
   }
 
+  /** Запуск синхронно с общего такта */
   async play(from?: number) {
     await this.unlock();
     if (typeof from === 'number') {
-      this.startOffset = Math.max(0, Math.min(from, this.getDuration()));
+      this.startOffset = Math.max(0, Math.min(from, this.duration));
     }
     this.stopInternal(false);
 
-    const when = this.ctx.currentTime + 0.05;
+    const when = this.ctx.currentTime + 0.05; // небольшой lookahead
     this.startAt = when;
     const offset = this.startOffset;
 
@@ -87,27 +108,30 @@ export class StemEngine {
       n.source = src;
 
       src.onended = () => {
-        if (this.playing && this.getCurrentTime() + 0.02 >= this.getDuration()) {
-          this.stop();
-        }
+        // если действительно дошли до конца — стопаем всё
+        const nearEnd = this.currentTime + 0.02 >= this.duration;
+        if (this.playing && nearEnd) this.stop();
       };
     }
     this.playing = true;
   }
 
+  /** Пауза (идеально синхронная) */
   async pause() {
     if (!this.playing) return;
-    this.startOffset = this.getCurrentTime();
+    this.startOffset = this.currentTime;
     await this.ctx.suspend();
     this.playing = false;
   }
 
+  /** Возобновление после pause() */
   async resume() {
     if (this.playing) return;
     await this.ctx.resume();
     await this.play(this.startOffset);
   }
 
+  /** Полный стоп (сброс в 0) */
   stop() {
     this.stopInternal(true);
   }
@@ -130,13 +154,15 @@ export class StemEngine {
     this.playing = false;
   }
 
+  /** Скраббинг/перемотка: мгновенный переход */
   async seek(timeSec: number) {
-    this.startOffset = Math.max(0, Math.min(timeSec, this.getDuration()));
+    this.startOffset = Math.max(0, Math.min(timeSec, this.duration));
     if (this.playing) {
-      await this.play(this.startOffset);
+      await this.play(this.startOffset); // пересоздаём источники и стартуем в такт
     }
   }
 
+  /** Освобождение ресурсов */
   dispose() {
     this.stopInternal(true);
     try {
@@ -147,7 +173,7 @@ export class StemEngine {
     try {
       this.ctx.close();
     } catch (e) {
-      console.warn('Error closing AudioContext', e);
+      console.warn('Error closing audio context', e);
     }
   }
 }

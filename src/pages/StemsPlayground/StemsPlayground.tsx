@@ -1,7 +1,7 @@
 // src/pages/StemsPlayground/StemsPlayground.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Waveform } from '../../components/Waveform';
+import Waveform from '../../components/Waveform/Waveform';
 import { useLang } from '../../contexts/lang';
 import { useAlbumsData, getImageUrl } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
@@ -47,18 +47,29 @@ export default function StemsPlayground() {
   const { lang } = useLang();
   const data = useAlbumsData(lang);
 
+  // Engine
   const engineRef = useRef<StemEngine | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0);
+
+  // Waveform interactions
   const waveWrapRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
+  const wasPlayingRef = useRef(false);
 
   const currentSong = useMemo(() => SONGS.find((s) => s.id === selectedId), [selectedId]);
 
-  // создать/пересоздать движок при смене трека
+  // Создаём/перезагружаем движок при смене трека
   useEffect(() => {
     const song = currentSong;
     if (!song) return;
 
+    setLoading(true);
+    setLoadProgress(0);
+
+    // прибираем старый
     engineRef.current?.dispose();
+
     const engine = new StemEngine({
       drums: song.stems.drums,
       bass: song.stems.bass,
@@ -68,10 +79,11 @@ export default function StemsPlayground() {
     engineRef.current = engine;
 
     (async () => {
-      await engine.loadAll();
-      // восстановить mute-состояния
-      Object.entries(muted).forEach(([k, v]) => engine.setMuted(k as StemKind, v));
-      if (isPlaying) await engine.play();
+      await engine.loadAll((p) => setLoadProgress(p));
+      setLoading(false);
+      if (isPlaying) engine.play();
+      // применим текущие mute-состояния
+      (Object.keys(muted) as StemKind[]).forEach((k) => engine.setMuted(k, muted[k]));
     })();
 
     return () => {
@@ -81,13 +93,19 @@ export default function StemsPlayground() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // RAF: снимать время/длительность из движка
+  // RAF-цикл для прогресса
   const [time, setTime] = useState({ current: 0, duration: 0 });
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       const e = engineRef.current;
-      if (e) setTime({ current: e.getCurrentTime(), duration: e.getDuration() });
+      if (e) {
+        setTime({ current: e.getCurrentTime(), duration: e.getDuration() });
+        // если дошли до конца — сбросим кнопку
+        if (e.getDuration() > 0 && e.getCurrentTime() + 0.02 >= e.getDuration() && e.isPlaying) {
+          setIsPlaying(false);
+        }
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -95,11 +113,12 @@ export default function StemsPlayground() {
   }, []);
 
   const progress = time.duration > 0 ? time.current / time.duration : 0;
+  const waveformSrc = currentSong?.stems.vocal ?? currentSong?.stems.drums;
 
-  // play/pause
+  // Транспорт
   const togglePlay = async () => {
     const e = engineRef.current;
-    if (!e) return;
+    if (!e || loading) return;
     if (!isPlaying) {
       await e.play();
       setIsPlaying(true);
@@ -109,7 +128,7 @@ export default function StemsPlayground() {
     }
   };
 
-  // mute
+  // Mute
   const toggleMute = (stem: StemKind) => {
     const e = engineRef.current;
     if (!e) return;
@@ -120,32 +139,37 @@ export default function StemsPlayground() {
     });
   };
 
-  // скраббинг
+  // Скраббинг
   const seekToClientX = (clientX: number) => {
     const wrap = waveWrapRef.current;
     const e = engineRef.current;
     if (!wrap || !e || !Number.isFinite(e.getDuration())) return;
+
     const rect = wrap.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     const newTime = ratio * e.getDuration();
+
     e.seek(newTime);
     setTime((t) => ({ ...t, current: newTime }));
   };
-
-  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (ev) => {
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (evt) => {
+    if (loading) return;
     draggingRef.current = true;
-    (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
-    seekToClientX(ev.clientX);
+    wasPlayingRef.current = isPlaying;
+    evt.currentTarget.setPointerCapture(evt.pointerId);
+    seekToClientX(evt.clientX);
   };
-  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (ev) => {
-    if (!draggingRef.current) return;
-    seekToClientX(ev.clientX);
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (evt) => {
+    if (!draggingRef.current || loading) return;
+    seekToClientX(evt.clientX);
   };
-  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (ev) => {
+  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (evt) => {
     draggingRef.current = false;
-    (ev.currentTarget as HTMLElement).releasePointerCapture(ev.pointerId);
+    evt.currentTarget.releasePointerCapture(evt.pointerId);
+    if (wasPlayingRef.current && !isPlaying) return;
   };
 
+  // Если лоадер ещё не отдал промисы — ничего не рендерим (страница получит словарь чуть позже)
   if (!data) return null;
 
   return (
@@ -168,13 +192,14 @@ export default function StemsPlayground() {
             <div className="wrapper stems__wrapper">
               <h2 className="item-type-a">{labels.pageTitle}</h2>
 
+              {/* выбор песни */}
               <div className="item">
                 <select
                   id="song-select"
                   value={selectedId}
                   onChange={(e) => setSelectedId(e.target.value)}
                   aria-label="Выбор песни"
-                  disabled={isPlaying}
+                  disabled={isPlaying || loading}
                 >
                   {SONGS.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -184,30 +209,42 @@ export default function StemsPlayground() {
                 </select>
               </div>
 
+              {/* транспорт */}
               <div className="item">
                 <div className="wrapper-transport-controls">
-                  <button className="btn" onClick={togglePlay}>
+                  <button className="btn" onClick={togglePlay} disabled={loading}>
                     {isPlaying ? labels.pause : labels.play}
                   </button>
                 </div>
               </div>
 
-              {/* ВОЛНА: теперь контролируемая progress={progress} */}
+              {/* ВОЛНА или ЛОАДЕР */}
               <div
                 ref={waveWrapRef}
-                className="stems__wave-wrap item-type-a"
+                className={clsx('stems__wave-wrap', 'item-type-a', { 'is-loading': loading })}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
               >
-                <Waveform
-                  src={currentSong?.stems.vocal ?? currentSong?.stems.drums}
-                  progress={progress}
-                  height={64}
-                />
-                <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
+                {loading ? (
+                  <div className="stems__loader in-wave" aria-live="polite" aria-busy="true">
+                    <div className="stems__loader-bar">
+                      <div
+                        className="stems__loader-fill"
+                        style={{ transform: `scaleX(${loadProgress})` }}
+                      />
+                    </div>
+                    <small>{Math.round(loadProgress * 100)}%</small>
+                  </div>
+                ) : (
+                  <>
+                    <Waveform src={waveformSrc} progress={progress} height={64} />
+                    <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
+                  </>
+                )}
               </div>
 
+              {/* портреты-мутизаторы */}
               <div className="stems__grid item-type-a">
                 <StemCard
                   title={labels.drums}

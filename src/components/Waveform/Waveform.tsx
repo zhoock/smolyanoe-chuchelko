@@ -2,24 +2,15 @@
 import { useEffect, useRef } from 'react';
 
 type Props = {
+  /** Файл, по которому строим пики */
   src?: string;
-  /** Контролируемый прогресс 0..1 */
+  /** Прогресс 0..1 (даёт страница/движок) */
   progress?: number;
   height?: number;
   peaksCount?: number;
-  /** Можно передать имена CSS-переменных, если используешь другие */
-  barsVar?: string; // default: --wave-bars
-  barsActiveVar?: string; // default: --wave-bars-active
 };
 
-export default function Waveform({
-  src,
-  progress = 0,
-  height = 56,
-  peaksCount = 900,
-  barsVar = '--wave-bars',
-  barsActiveVar = '--wave-bars-active',
-}: Props) {
+export default function Waveform({ src, progress = 0, height = 56, peaksCount = 900 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const peaksRef = useRef<number[] | null>(null);
 
@@ -33,6 +24,7 @@ export default function Waveform({
 
       const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
       const ac = new AC();
+
       const resp = await fetch(src, { cache: 'force-cache' });
       const buf = await resp.arrayBuffer();
       const audio = await ac.decodeAudioData(buf);
@@ -61,7 +53,7 @@ export default function Waveform({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, peaksCount]);
 
-  // перерисовка при ресайзе
+  // ресайз → перерисовать
   useEffect(() => {
     const onResize = () => draw(progress);
     window.addEventListener('resize', onResize);
@@ -69,26 +61,17 @@ export default function Waveform({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // если меняется progress → перерисовать
+  // любое изменение progress → перерисовать
   useEffect(() => {
     draw(progress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress]);
 
-  // если меняется тема (классы на <html>) → перерисовать, чтобы подтянулись новые var()
-  useEffect(() => {
-    const mo = new MutationObserver(() => draw(progress));
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => mo.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const getCssColor = (varName: string, fallback = 'currentColor') => {
-    const cvs = canvasRef.current;
-    if (!cvs) return fallback;
-    const styles = getComputedStyle(cvs);
-    const v = styles.getPropertyValue(varName).trim();
-    return v || fallback;
+  const readColors = (el: HTMLElement) => {
+    const cs = getComputedStyle(el);
+    const bg = cs.getPropertyValue('--wave-bars').trim() || 'rgb(255 255 255 / 35%)';
+    const act = cs.getPropertyValue('--wave-bars-active').trim() || 'rgb(255 255 255 / 82%)';
+    return { bg, act };
   };
 
   const draw = (p: number) => {
@@ -105,16 +88,14 @@ export default function Waveform({
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
 
-    // читаем цвета ИМЕННО из CSS-переменных на канвасе
-    const backgroundColor = getCssColor(barsVar);
-    const progressColor = getCssColor(barsActiveVar);
+    const { bg, act } = readColors(cvs);
 
     const mid = h / 2;
     const barW = w / peaks.length;
 
     // фоновые бары
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = backgroundColor;
+    ctx.fillStyle = bg;
     for (let i = 0; i < peaks.length; i++) {
       const amp = peaks[i] * (h * 0.9) * 0.5;
       ctx.fillRect(i * barW, mid - amp, Math.max(1, barW * 0.9), amp * 2);
@@ -122,7 +103,7 @@ export default function Waveform({
 
     // активная часть
     const cutoff = Math.floor(peaks.length * Math.min(1, Math.max(0, p)));
-    ctx.fillStyle = progressColor;
+    ctx.fillStyle = act;
     for (let i = 0; i < cutoff; i++) {
       const amp = peaks[i] * (h * 0.9) * 0.5;
       ctx.fillRect(i * barW, mid - amp, Math.max(1, barW * 0.9), amp * 2);
@@ -131,7 +112,6 @@ export default function Waveform({
 
   return (
     <div className="waveform" style={{ width: '100%' }}>
-      {/* канвас унаследует CSS-переменные от родителя (.stems__wave-wrap / :root / html.theme-*) */}
       <canvas ref={canvasRef} style={{ width: '100%', height }} />
     </div>
   );
