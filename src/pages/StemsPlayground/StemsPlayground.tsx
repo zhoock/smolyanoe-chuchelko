@@ -234,7 +234,7 @@ export default function StemsPlayground() {
                         style={{ transform: `scaleX(${loadProgress})` }}
                       />
                     </div>
-                    <small>{Math.round(loadProgress * 100)}%</small>
+                    {/* <small>{Math.round(loadProgress * 100)}%</small> */}
                   </div>
                 ) : (
                   <>
