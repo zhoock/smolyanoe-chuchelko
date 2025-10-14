@@ -205,7 +205,8 @@
   background: var(--wave-bg);
   border-radius: var(--ms-01);
   overflow: hidden;
-  min-block-size: 72px; // чтобы лоадер и канвас имели высоту
+
+  //   min-block-size: 72px; // чтобы лоадер и канвас имели высоту
 
   &.is-loading {
     cursor: default;
@@ -215,7 +216,6 @@
 /* канвас волны */
 .stems__wave-wrap canvas {
   position: relative;
-  z-index: 1;
 }
 
 /* курсор волны */
@@ -223,7 +223,6 @@
   position: absolute;
   inset-block: 0;
   left: 0%;
-  z-index: 3;
   inline-size: 2px;
   background: var(--wave-cursor-color);
   transform: translateX(-1px);
@@ -245,7 +244,7 @@
 
   &-bar {
     width: 100%;
-    height: 72px;
+    height: 64px;
     background: rgb(255 255 255 / 10%);
     border-radius: var(--ms-01);
     overflow: hidden;

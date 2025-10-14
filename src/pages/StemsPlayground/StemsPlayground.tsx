@@ -36,6 +36,23 @@ const SONGS: Song[] = [
       vocal: getImageUrl('stems/vocalist', '.png'),
     },
   },
+
+  {
+    id: 'song-2',
+    title: 'Швайс',
+    stems: {
+      drums: '/audio/song-2/drums.mp3',
+      bass: '/audio/song-2/bass.mp3',
+      guitar: '/audio/song-2/guitar.mp3',
+      vocal: '/audio/song-2/vocal.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/23/drummer', '.png'),
+      bass: getImageUrl('stems/23/bassist', '.png'),
+      guitar: getImageUrl('stems/23/guitarist', '.png'),
+      vocal: getImageUrl('stems/23/vocalist', '.png'),
+    },
+  },
 ];
 
 export default function StemsPlayground() {
