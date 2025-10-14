@@ -30,10 +30,10 @@ const SONGS: Song[] = [
       vocal: '/audio/EP_Mixer/PK_05_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/EP/drummer', '.png'),
-      bass: getImageUrl('stems/EP/bassist', '.png'),
-      guitar: getImageUrl('stems/EP/guitarist', '.png'),
-      vocal: getImageUrl('stems/EP/vocalist', '.png'),
+      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
+      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
+      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
+      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
     },
   },
 
@@ -47,10 +47,10 @@ const SONGS: Song[] = [
       vocal: '/audio/23_Mixer/S_03_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/23/drummer', '.png'),
-      bass: getImageUrl('stems/23/bassist', '.png'),
-      guitar: getImageUrl('stems/23/guitarist', '.png'),
-      vocal: getImageUrl('stems/23/vocalist', '.png'),
+      drums: getImageUrl('stems/23/23_drummer', '.png'),
+      bass: getImageUrl('stems/23/23_bassist', '.png'),
+      guitar: getImageUrl('stems/23/23_guitarist', '.png'),
+      vocal: getImageUrl('stems/23/23_vocalist', '.png'),
     },
   },
 ];
