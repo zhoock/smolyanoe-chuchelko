@@ -18,17 +18,32 @@ Temporary Items
 .apdisk
 *.icloud
 
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
 # Logs
 *.log
 logs
 **/*.backup.*
 **/*.back.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Node
 node_modules
 bower_components
+# SWC / Babel caches
+.swc/
+.babel-cache/
+# TypeScript incremental
+*.tsbuildinfo
 
-# Editors
+# Editors / IDE
 *.sublime*
 .vscode/*
 !.vscode/settings.json
@@ -38,12 +53,21 @@ bower_components
 !.vscode/*.code-snippets
 .history/
 .ionide
+.idea/
+*.iml
+.vs/
+.fleet/
 
 # Sass
 .sass-cache/
 *.css.map
 *.sass.map
 *.scss.map
+
+# Lint/format caches
+.eslintcache
+.stylelintcache
+.prettier-cache/
 
 # Assets
 # НЕ игнорируем images — нам нужны src/images/** в гите
@@ -60,26 +84,45 @@ bower_components
 # Coverage / reports
 coverage/
 **/lcov-report/**
+.nyc_output/
 
 # Build artifacts
 dist/
 build/
 .out/
 .next/
-
-# Storybook
-storybook-static/
 .storybook-out/
+storybook-static/
 
-# Cache/temp
+# Tool caches
 .cache/
+.parcel-cache/
+.vite/
+.turbo/
+.vercel/
+# Если используешь Yarn Berry:
+# .yarn/*
+# !.yarn/patches
+# !.yarn/plugins
+# !.yarn/releases
+# !.yarn/sdks
+# !.yarn/versions
+# .pnp.*
+# .pnp/
+
+# Temp
 tmp/
+temp/
 
 # Netlify
 .netlify
 
-# Jest snapshots
-*.snap
+# E2E (при наличии)
+cypress/videos/
+cypress/screenshots/
+playwright-report/
+test-results/
+blob-report/
 
 # Env
 .env

@@ -1,4 +1,0 @@
-User-agent: *
-Disallow:
-
-Sitemap: https://smolyanoechuchelko.ru/sitemap.xml
