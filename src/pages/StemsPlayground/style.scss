@@ -1,20 +1,12 @@
-/* stylelint-disable order/properties-order */
-/* stylelint-disable no-duplicate-selectors */
+// src/pages/StemsPlayground/style.scss
+
 // Импортируем общий файл с зависимостями
 @use '../../scss/common/mixins' as *;
 
-/* 1) одна переменная высоты для select и кнопки на этой странице */
 .stems-page {
   //   --control-height: 56px; /* мобильная высота как у кнопки */
   --margin: 0;
 
-  /* если хочешь — на крупных экранах можно сделать чуть ниже */
-  @include breakpoint(tablet) {
-    --control-height: 51.38px;
-  }
-}
-
-.stems-page {
   .stems__wrapper {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -42,8 +34,8 @@
       &::after {
         content: '';
         position: absolute;
-        right: var(--ms-1);
         top: 50%;
+        right: var(--ms-1);
         width: 0;
         height: 0;
         margin-top: -3px;
@@ -55,12 +47,13 @@
 
     select {
       box-sizing: border-box;
+      width: 100%;
       height: var(--control-height); /* фиксируем высоту */
       min-height: var(--control-height);
       padding-inline: var(--ms-1) calc(var(--ms-1) + 18px); /* место под стрелку */
       padding-block: 0; /* вертикальный центр за счёт высоты */
       //   line-height: calc(var(--control-height) - 2px);
-      width: 100%;
+
       padding: var(--ms-01);
       min-width: 260px;
       color: var(--link-color);
@@ -98,6 +91,11 @@
         --margin
       );
 
+      .icon-controller-play {
+        color: currentcolor;
+        font-size: 25px;
+      }
+
       @include breakpoint(tablet) {
         grid-column: 1 / 2;
       }
@@ -109,21 +107,21 @@
 
       /* когда ИДЁТ воспроизведение — красим кнопку, используя :has на родителе */
       &:has(.btn[aria-pressed='true']) .btn {
-        background: var(--error-color);
         color: var(--link-color-hover);
+        background: var(--error-color);
       }
 
       /* на тач-устройствах запрещаем ховер-переопределения */
       @media (hover: none) and (pointer: coarse) {
         .wrapper-transport-controls:has(.btn[aria-pressed='true']) .btn:hover {
-          background: var(--error-color);
           color: var(--link-color-hover);
+          background: var(--error-color);
         }
       }
 
       &:has(.btn[aria-pressed='false']) .btn {
+        color: var(--link-color-hover);
         background: var(--accent-color);
-        color: var(--link-color);
       }
     }
   }
@@ -150,8 +148,11 @@
     cursor: pointer;
     transition: transform 0.15s ease;
 
-    &:hover {
-      transform: translateY(-2px);
+    // Ховер-эффект — ТОЛЬКО на устройствах с настоящим hover
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        transform: translateY(-2px);
+      }
     }
 
     &.muted {

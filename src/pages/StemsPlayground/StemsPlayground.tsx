@@ -291,6 +291,11 @@ export default function StemsPlayground() {
                       disabled={loading}
                       aria-pressed={isPlaying}
                     >
+                      <span
+                        className={clsx(
+                          isPlaying ? 'icon-controller-pause' : 'icon-controller-play'
+                        )}
+                      ></span>
                       {isPlaying ? labels.pause : labels.play}
                     </button>
                   </div>
