@@ -85,6 +85,10 @@ export default function StemsPlayground() {
 
   const currentSong = useMemo(() => SONGS.find((s) => s.id === selectedId), [selectedId]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, []);
+
   // Создаём/перезагружаем движок при смене трека
   useEffect(() => {
     const song = currentSong;
