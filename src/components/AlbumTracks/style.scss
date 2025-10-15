@@ -28,8 +28,8 @@
       text-decoration: none;
 
       @include button-variant(
-        --link-color,
-        --button-background-color,
+        --link-color-hover,
+        --accent-color,
         --link-color-hover,
         --accent-color
       );

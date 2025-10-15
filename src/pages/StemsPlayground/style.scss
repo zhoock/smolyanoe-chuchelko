@@ -82,8 +82,8 @@
         text-transform: capitalize;
 
         @include button-variant(
-          --link-color,
-          --button-background-color,
+          --link-color-hover,
+          --accent-color,
           --link-color-hover,
           --accent-color,
           --margin
@@ -93,11 +93,6 @@
         &[aria-pressed='true'] {
           color: var(--link-color-hover);
           background: var(--error-color);
-        }
-
-        &[aria-pressed='false'] {
-          color: var(--link-color-hover);
-          background: var(--accent-color);
         }
 
         &:disabled {
