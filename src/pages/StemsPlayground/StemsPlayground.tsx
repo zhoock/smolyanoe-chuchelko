@@ -22,6 +22,22 @@ type Song = {
 const SONGS: Song[] = [
   {
     id: 'song-1',
+    title: 'Последний поршнеый бомбардировщик',
+    stems: {
+      drums: '/audio/EP_Mixer/PPB_01_drums.mp3',
+      bass: '/audio/EP_Mixer/PPB_01_bass.mp3',
+      guitar: '/audio/EP_Mixer/PPB_01_guitars.mp3',
+      vocal: '/audio/EP_Mixer/PPB_01_vocals.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
+      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
+      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
+      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+    },
+  },
+  {
+    id: 'song-5',
     title: 'Падение кита',
     stems: {
       drums: '/audio/EP_Mixer/PK_05_drums.mp3',
