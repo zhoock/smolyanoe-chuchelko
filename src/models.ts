@@ -130,6 +130,7 @@ export interface IInterface {
   stems?: {
     text: string;
     pageTitle: string;
+    notice: string;
   };
 }
 

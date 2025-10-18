@@ -328,6 +328,7 @@ export default function StemsPlayground() {
           const t = ui?.[0]?.titles ?? {};
           const pageTitle = ui?.[0]?.stems?.pageTitle as string;
           const pageText = (ui?.[0]?.stems?.text as string) || '';
+          const notice = (ui?.[0]?.stems?.notice as string) || '';
 
           const labels = {
             play: b.playButton as string,
@@ -338,6 +339,7 @@ export default function StemsPlayground() {
             vocals: b.vocals as string,
             pageTitle,
             pageText,
+            notice,
           };
 
           return (
@@ -363,10 +365,7 @@ export default function StemsPlayground() {
                   className="item-type-a notice notice--warning"
                   aria-label="Важная информация"
                 >
-                  Пока у меня нет возможности получить исходные стемы, поэтому я временно использую
-                  дорожки, извлечённые из мастер-треков c помощью ИИ. Это сделано исключительно для
-                  проверки и демонстрации миксера, из-за чего качество звука может отличаться от
-                  финального. Когда будут доступны оригинальные стемы, я обновлю аудио.
+                  {labels.notice}
                 </Text>
 
                 {/* выбор песни */}
