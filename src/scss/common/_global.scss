@@ -247,3 +247,29 @@ body {
   inline-size: 1px; /* делают элемент очень маленьким, но таким, чтобы не пропал совсем */
   block-size: 1px;
 }
+
+/* Предупреждающий блок */
+.notice {
+  padding: var(--ms-01);
+  color: var(--text-color);
+  background: rgba(var(--extra-background-color), 0.7);
+  align-items: start;
+  border: 1px solid var(--hr-color);
+  border-left: 6px solid var(--accent-color);
+  border-radius: var(--ms-01);
+
+  @include adjust-font-size-to($ms-01, 0.382, $ms-01);
+
+  /* Вариант «осторожно/важно» — красный акцент */
+  &--warning {
+    border-left-color: var(--error-color);
+    background: rgb(255 77 77 / 8%); /* мягкий красный */
+  }
+}
+
+/* На устройствах без hover ничего не «подсвечиваем» */
+@media (hover: none) and (pointer: coarse) {
+  .notice {
+    background: rgba(var(--extra-background-color), 0.85);
+  }
+}

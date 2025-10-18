@@ -130,6 +130,13 @@ $desktops: 'width >= 1024px';
 
 // https://designmodo.com/vertical-rhythm/
 
+// Функция для настройки размера шрифта с учетом базовой линии
+// $to-font-size - целевой размер шрифта
+// $scale-value - множитель масштаба (по умолчанию 1)
+// $base-line-height - базовая высота строки (по умолчанию 18px * 1.618)
+// $base-font-size - базовый размер шрифта (по умолчанию 18px)
+// пример использования: adjust-font-size-to($ms-0, 0.382, 18px);
+
 @mixin adjust-font-size-to(
   $to-font-size,
   $scale-value: 1,

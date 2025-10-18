@@ -8,6 +8,7 @@ import { DataAwait } from '../../shared/DataAwait';
 import { Loader } from '../../components/Loader/Loader';
 import ErrorI18n from '../../components/ErrorMessage/ErrorI18n';
 import { StemEngine, StemKind } from '../../audio/stemsEngine';
+import { Text } from '../../shared/ui/text';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import './style.scss';
@@ -356,7 +357,17 @@ export default function StemsPlayground() {
 
               <div className="wrapper stems__wrapper">
                 <h2 className="item-type-a">{labels.pageTitle}</h2>
-                <p className="item-type-a">{labels.pageText}</p>
+                <Text className="item-type-a">{labels.pageText}</Text>
+                <Text
+                  as="span"
+                  className="item-type-a notice notice--warning"
+                  aria-label="Важная информация"
+                >
+                  Пока у меня нет возможности получить исходные стемы, поэтому я временно использую
+                  дорожки, извлечённые из мастер-треков c помощью ИИ. Это сделано исключительно для
+                  проверки и демонстрации миксера, из-за чего качество звука может отличаться от
+                  финального. Когда будут доступны оригинальные стемы, я обновлю аудио.
+                </Text>
 
                 {/* выбор песни */}
                 <div className="item">

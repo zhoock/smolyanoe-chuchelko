@@ -7,7 +7,7 @@ import { useAlbumsData } from '../../hooks/data';
 import { DataAwait } from '../../shared/DataAwait';
 import { useLang } from '../../contexts/lang';
 
-import s from './style.module.scss';
+import s from './AboutUs.module.scss';
 
 type TheBandItem = string | { text: string[]; link: string };
 
