@@ -22,12 +22,60 @@ type Song = {
 const SONGS: Song[] = [
   {
     id: 'song-1',
-    title: 'Последний поршнеый бомбардировщик',
+    title: 'Последний поршневый бомбардировщик',
     stems: {
-      drums: '/audio/EP_Mixer/PPB_01_drums.mp3',
-      bass: '/audio/EP_Mixer/PPB_01_bass.mp3',
-      guitar: '/audio/EP_Mixer/PPB_01_guitars.mp3',
-      vocal: '/audio/EP_Mixer/PPB_01_vocals.mp3',
+      drums: '/audio/EP_Mixer/01_PPB_drums.mp3',
+      bass: '/audio/EP_Mixer/01_PPB_bass.mp3',
+      guitar: '/audio/EP_Mixer/01_PPB_guitars.mp3',
+      vocal: '/audio/EP_Mixer/01_PPB_vocals.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
+      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
+      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
+      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+    },
+  },
+  {
+    id: 'song-2',
+    title: 'Водянистая влага',
+    stems: {
+      drums: '/audio/EP_Mixer/02_VV_drums.mp3',
+      bass: '/audio/EP_Mixer/02_VV_bass.mp3',
+      guitar: '/audio/EP_Mixer/02_VV_guitars.mp3',
+      vocal: '/audio/EP_Mixer/02_VV_vocals.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
+      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
+      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
+      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+    },
+  },
+  {
+    id: 'song-3',
+    title: 'Рулевой мёртв',
+    stems: {
+      drums: '/audio/EP_Mixer/03_RM_drums.mp3',
+      bass: '/audio/EP_Mixer/03_RM_bass.mp3',
+      guitar: '/audio/EP_Mixer/03_RM_guitars.mp3',
+      vocal: '/audio/EP_Mixer/03_RM_vocals.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
+      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
+      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
+      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+    },
+  },
+  {
+    id: 'song-4',
+    title: 'Бром и сталь',
+    stems: {
+      drums: '/audio/EP_Mixer/04_BIS_drums.mp3',
+      bass: '/audio/EP_Mixer/04_BIS_bass.mp3',
+      guitar: '/audio/EP_Mixer/04_BIS_guitars.mp3',
+      vocal: '/audio/EP_Mixer/04_BIS_vocals.mp3',
     },
     portraits: {
       drums: getImageUrl('stems/EP/EP_drummer', '.png'),
@@ -40,10 +88,10 @@ const SONGS: Song[] = [
     id: 'song-5',
     title: 'Падение кита',
     stems: {
-      drums: '/audio/EP_Mixer/PK_05_drums.mp3',
-      bass: '/audio/EP_Mixer/PK_05_bass.mp3',
-      guitar: '/audio/EP_Mixer/PK_05_guitars.mp3',
-      vocal: '/audio/EP_Mixer/PK_05_vocals.mp3',
+      drums: '/audio/EP_Mixer/05_PK_drums.mp3',
+      bass: '/audio/EP_Mixer/05_PK_bass.mp3',
+      guitar: '/audio/EP_Mixer/05_PK_guitars.mp3',
+      vocal: '/audio/EP_Mixer/05_PK_vocals.mp3',
     },
     portraits: {
       drums: getImageUrl('stems/EP/EP_drummer', '.png'),
@@ -52,15 +100,46 @@ const SONGS: Song[] = [
       vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
     },
   },
-
   {
-    id: 'song-2',
+    id: 'song-6',
+    title: 'Фиджийская русалка Барнума',
+    stems: {
+      drums: '/audio/23_Mixer/01_FRB_drums.mp3',
+      bass: '/audio/23_Mixer/01_FRB_bass.mp3',
+      guitar: '/audio/23_Mixer/01_FRB_guitars.mp3',
+      vocal: '/audio/23_Mixer/01_FRB_vocals.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/23/23_drummer', '.png'),
+      bass: getImageUrl('stems/23/23_bassist', '.png'),
+      guitar: getImageUrl('stems/23/23_guitarist', '.png'),
+      vocal: getImageUrl('stems/23/23_vocalist', '.png'),
+    },
+  },
+  {
+    id: 'song-7',
+    title: 'Слипер',
+    stems: {
+      drums: '/audio/23_Mixer/02_SL_drums.mp3',
+      bass: '/audio/23_Mixer/02_SL_bass.mp3',
+      guitar: '/audio/23_Mixer/02_SL_guitars.mp3',
+      vocal: '/audio/23_Mixer/02_SL_vocals.mp3',
+    },
+    portraits: {
+      drums: getImageUrl('stems/23/23_drummer', '.png'),
+      bass: getImageUrl('stems/23/23_bassist', '.png'),
+      guitar: getImageUrl('stems/23/23_guitarist', '.png'),
+      vocal: getImageUrl('stems/23/23_vocalist', '.png'),
+    },
+  },
+  {
+    id: 'song-8',
     title: 'Швайс',
     stems: {
-      drums: '/audio/23_Mixer/S_03_drums.mp3',
-      bass: '/audio/23_Mixer/S_03_bass.mp3',
-      guitar: '/audio/23_Mixer/S_03_guitars.mp3',
-      vocal: '/audio/23_Mixer/S_03_vocals.mp3',
+      drums: '/audio/23_Mixer/03_SH_drums.mp3',
+      bass: '/audio/23_Mixer/03_SH_bass.mp3',
+      guitar: '/audio/23_Mixer/03_SH_guitars.mp3',
+      vocal: '/audio/23_Mixer/03_SH_vocals.mp3',
     },
     portraits: {
       drums: getImageUrl('stems/23/23_drummer', '.png'),
