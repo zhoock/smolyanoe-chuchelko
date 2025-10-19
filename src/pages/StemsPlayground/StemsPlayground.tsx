@@ -16,6 +16,7 @@ import './style.scss';
 type Song = {
   id: string;
   title: string;
+  mix?: string;
   stems: Record<StemKind, string>;
   portraits?: Partial<Record<StemKind, string>>;
 };
@@ -24,6 +25,7 @@ const SONGS: Song[] = [
   {
     id: 'song-1',
     title: 'Последний поршневый бомбардировщик',
+    mix: '/audio/Smolyanoe-chuchelko/01-The-last-piston-bomber-1644.wav',
     stems: {
       drums: '/audio/EP_Mixer/01_PPB_drums.mp3',
       bass: '/audio/EP_Mixer/01_PPB_bass.mp3',
@@ -40,6 +42,7 @@ const SONGS: Song[] = [
   {
     id: 'song-2',
     title: 'Водянистая влага',
+    mix: '/audio/Smolyanoe-chuchelko/02-Watery-moisture-1644.wav',
     stems: {
       drums: '/audio/EP_Mixer/02_VV_drums.mp3',
       bass: '/audio/EP_Mixer/02_VV_bass.mp3',
@@ -56,6 +59,7 @@ const SONGS: Song[] = [
   {
     id: 'song-3',
     title: 'Рулевой мёртв',
+    mix: '/audio/Smolyanoe-chuchelko/03-Helmsman-is-dead-1644.wav',
     stems: {
       drums: '/audio/EP_Mixer/03_RM_drums.mp3',
       bass: '/audio/EP_Mixer/03_RM_bass.mp3',
@@ -72,6 +76,7 @@ const SONGS: Song[] = [
   {
     id: 'song-4',
     title: 'Бром и сталь',
+    mix: '/audio/Smolyanoe-chuchelko/04-Bromine-and-steel-1644.wav',
     stems: {
       drums: '/audio/EP_Mixer/04_BIS_drums.mp3',
       bass: '/audio/EP_Mixer/04_BIS_bass.mp3',
@@ -88,6 +93,7 @@ const SONGS: Song[] = [
   {
     id: 'song-5',
     title: 'Падение кита',
+    mix: '/audio/Smolyanoe-chuchelko/05-Whale-falling-1644.wav',
     stems: {
       drums: '/audio/EP_Mixer/05_PK_drums.mp3',
       bass: '/audio/EP_Mixer/05_PK_bass.mp3',
@@ -104,6 +110,7 @@ const SONGS: Song[] = [
   {
     id: 'song-6',
     title: 'Фиджийская русалка Барнума',
+    mix: '/audio/23/01-Barnums-Fijian-Mermaid-1644.wav',
     stems: {
       drums: '/audio/23_Mixer/01_FRB_drums.mp3',
       bass: '/audio/23_Mixer/01_FRB_bass.mp3',
@@ -120,6 +127,7 @@ const SONGS: Song[] = [
   {
     id: 'song-7',
     title: 'Слипер',
+    mix: '/audio/23/02-Sleeper-1644.wav',
     stems: {
       drums: '/audio/23_Mixer/02_SL_drums.mp3',
       bass: '/audio/23_Mixer/02_SL_bass.mp3',
@@ -136,6 +144,7 @@ const SONGS: Song[] = [
   {
     id: 'song-8',
     title: 'Швайс',
+    mix: '/audio/23/03-Schweiz-1644.wav',
     stems: {
       drums: '/audio/23_Mixer/03_SH_drums.mp3',
       bass: '/audio/23_Mixer/03_SH_bass.mp3',
@@ -236,7 +245,7 @@ export default function StemsPlayground() {
   }, []);
 
   const progress = time.duration > 0 ? time.current / time.duration : 0;
-  const waveformSrc = currentSong?.stems.vocal ?? currentSong?.stems.drums;
+  const waveformSrc = currentSong?.mix ?? currentSong?.stems.vocal ?? currentSong?.stems.drums;
 
   // Транспорт
   const togglePlay = async () => {
@@ -360,11 +369,7 @@ export default function StemsPlayground() {
               <div className="wrapper stems__wrapper">
                 <h2 className="item-type-a">{labels.pageTitle}</h2>
                 <Text className="item-type-a">{labels.pageText}</Text>
-                <Text
-                  as="span"
-                  className="item-type-a notice notice--warning"
-                  aria-label="Важная информация"
-                >
+                <Text as="span" className="item-type-a notice" aria-label="Важная информация">
                   {labels.notice}
                 </Text>
 

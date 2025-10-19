@@ -268,8 +268,8 @@ body {
 }
 
 /* На устройствах без hover ничего не «подсвечиваем» */
-@media (hover: none) and (pointer: coarse) {
-  .notice {
-    background: rgba(var(--extra-background-color), 0.85);
-  }
-}
+// @media (hover: none) and (pointer: coarse) {
+//   .notice {
+//     background: rgba(var(--extra-background-color), 0.85);
+//   }
+// }
