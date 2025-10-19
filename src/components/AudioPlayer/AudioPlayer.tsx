@@ -1,5 +1,6 @@
 // src/components/AudioPlayer/AudioPlayer.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import clsx from 'clsx';
 import AlbumCover from '../Album/AlbumCover';
 import { IAlbums } from '../../models';
 import { gaEvent } from '../../utils/ga';
@@ -230,11 +231,18 @@ export default function AudioPlayer({
   // Отображение
   return (
     <div className="player">
-      <AlbumCover
-        {...album.cover}
-        fullName={album.fullName}
-        onColorsExtracted={handleColorsExtracted}
-      />
+      <div
+        className={clsx('player__cover', {
+          'player__cover--playing': isPlaying,
+          'player__cover--paused': !isPlaying,
+        })}
+      >
+        <AlbumCover
+          {...album.cover}
+          fullName={album.fullName}
+          onColorsExtracted={handleColorsExtracted}
+        />
+      </div>
 
       <div className="player__track-info">
         <h2>{album.tracks[currentTrackIndex]?.title || 'Unknown Track'}</h2>

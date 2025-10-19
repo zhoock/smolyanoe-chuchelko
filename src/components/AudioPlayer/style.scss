@@ -75,6 +75,64 @@
   }
 }
 
+.player__cover {
+  display: inline-block;
+  transition: transform 0.35s ease;
+  will-change: transform;
+
+  &--playing {
+    transform: scale(1);
+    animation: cover-bounce-in 520ms ease-out both;
+  }
+
+  &--paused {
+    transform: scale(0.8);
+    animation: cover-bounce-out 520ms ease both;
+  }
+
+  /* Быстрый оверсут + мягкое оседание */
+  @keyframes cover-bounce-in {
+    0% {
+      transform: scale(0.8);
+    }
+
+    60% {
+      transform: scale(1.04);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Небольшое "приседание" и возврат */
+  @keyframes cover-bounce-out {
+    0% {
+      transform: scale(1);
+    }
+
+    100% {
+      transform: scale(0.8);
+    }
+  }
+
+  /* Если у пользователя снижена анимация — уважаем это */
+  @media (prefers-reduced-motion: reduce) {
+    .player__cover,
+    .player__cover.is-playing,
+    .player__cover.is-paused {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  .album-cover {
+    display: block;
+    inline-size: 100%;
+    transition: transform 0.35s ease;
+  }
+}
+
 input[type='range'] {
   inline-size: 100%;
   height: 8px;
