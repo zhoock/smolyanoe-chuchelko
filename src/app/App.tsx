@@ -123,10 +123,11 @@ function Layout() {
         {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
         <Popup isActive={popup} onClose={() => setPopup(false)}>
-          <Navigation onToggle={() => setPopup(!popup)} />
+          <Hamburger isActive={popup} onToggle={() => setPopup(false)} zIndex="1000" />
+          <Navigation onToggle={() => setPopup(false)} />
         </Popup>
 
-        <Hamburger isActive={popup} onToggle={() => setPopup(!popup)} zIndex="1000" />
+        {!popup && <Hamburger isActive={popup} onToggle={() => setPopup(true)} zIndex="1000" />}
 
         {/* ВСЕГДА один и тот же Routes.
            Если есть background, используем его как "виртуальную" локацию,
