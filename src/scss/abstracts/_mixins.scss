@@ -103,7 +103,7 @@ $desktops: 'width >= 1024px';
 
 // link
 
-@mixin link-colors($normal, $hover: false, $active: false, $visited: false, $focus: false) {
+@mixin link-colors($normal: false, $hover: false, $active: false, $visited: false, $focus: false) {
   color: var(#{$normal});
 
   @if $hover {
@@ -242,9 +242,9 @@ $desktops: 'width >= 1024px';
   --links-header-color-active: var(--charcoal);
   --button-lang-menu-color: var(--graphite-green);
   --button-lang-menu-color-hover: var(--charcoal);
-  --link-hamburger-color: var(--charcoal);
-  --link-hamburger-color-hover: var(--white);
-  --link-hamburger-color-active: var(--white);
+  --link-hamburger-color: var(--graphite-green);
+  --link-hamburger-color-hover: var(--charcoal);
+  --link-hamburger-color-active: var(--charcoal);
   --link-subtitle-color: var(--graphite-green);
   --link-button-color: var(--graphite-green);
   --link-button-background-color: var(--icy-mist);

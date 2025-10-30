@@ -25,10 +25,18 @@
     .logo {
       text-decoration: none;
       font-weight: var(--bold, 700);
-      color: var(--links-header-color, #dddddd);
+
+      @include link-colors(
+        --links-header-color,
+        --links-header-color-hover,
+        --links-header-color-active
+      );
     }
 
     .theme-toggler {
+      --theme-toggler-transition-duration: 0.3s;
+      --theme-toggler-transition-timing: ease;
+
       display: grid;
       place-items: center;
 
@@ -43,8 +51,10 @@
             border-radius: 50%;
             box-shadow: inset 13px -13px 0 0 var(--theme-toggler-color, #998238);
             transition:
-              box-shadow 0.5s ease 0s,
-              transform 0.4s ease 0.1s;
+              box-shadow var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing),
+              transform var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing);
             transform: scale(1) rotate(-2deg);
             inline-size: var(--ms-1);
             block-size: var(--ms-1);
@@ -52,7 +62,8 @@
             &::before {
               position: absolute;
               border-radius: inherit;
-              transition: background 0.3s ease;
+              transition: background var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing);
               content: '';
               inline-size: inherit;
               block-size: inherit;
@@ -73,7 +84,8 @@
                 -13px 13px 0 var(--theme-toggler-color, #998238),
                 13px -13px 0 var(--theme-toggler-color, #998238),
                 -13px -13px 0 var(--theme-toggler-color, #998238);
-              transition: all 0.3s ease;
+              transition: transform var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing);
               transform: scale(0);
               content: '';
               inline-size: 8px;
@@ -86,17 +98,21 @@
           &:checked + div {
             box-shadow: inset 32px -32px 0 0 var(--theme-toggler-color, #998238);
             transition:
-              transform 0.3s ease 0.1s,
-              box-shadow 0.2s ease 0s;
+              transform var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing),
+              box-shadow var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing);
             transform: scale(0.5) rotate(0deg);
 
             &::before {
               background: var(--theme-toggler-color, #998238);
-              transition: background 0.3s ease 0.1s;
+              transition: background var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing);
             }
 
             &::after {
-              transition: transform 0.5s ease 0.13s;
+              transition: transform var(--theme-toggler-transition-duration)
+                var(--theme-toggler-transition-timing);
               transform: scale(1.5);
             }
           }
@@ -115,13 +131,13 @@
 
   .lang-current {
     font-weight: bold;
-    width: 43px;
-    height: 43px;
+    width: 40.25px;
+    height: 40.25px;
 
     @include button-variant(
       $color: var(--button-lang-menu-color, #998238),
       $margin: 0,
-      $padding: var(--ms-02),
+      $padding: 0,
       $border-radius: 50%
     );
   }

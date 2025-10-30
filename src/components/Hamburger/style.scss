@@ -9,11 +9,18 @@
   background: none;
   border: none;
   transition: background-color 0.15s ease;
-  inset-block-start: 7px;
+  inset-block-start: 9px;
   inset-inline-end: 29px;
-  inline-size: 40px;
-  block-size: 40px;
+  inline-size: 40.25px;
+  block-size: 40.25px;
   cursor: pointer;
+
+  @include button-variant(
+    $color: var(--button-lang-menu-color, #998238),
+    $margin: 0,
+    $padding: 0,
+    $border-radius: 50%
+  );
 
   &:hover {
     span {
@@ -25,9 +32,9 @@
   .two,
   .three {
     display: block;
-    inline-size: 100%;
+    inline-size: var(--ms-0);
     block-size: 3px;
-    margin: 9px auto;
+    margin: 4px auto;
     background: var(--link-hamburger-color, #dddddd);
     backface-visibility: hidden;
     transition-duration: 0.15s;
@@ -35,7 +42,8 @@
 
   &.active {
     .one {
-      background: var(--link-hamburger-color-active);
+      margin: 9px auto;
+      background: var(--link-hamburger-color-active, #ffffff);
       transform: rotate(45deg) translate(7px, 7px);
     }
 
@@ -44,7 +52,8 @@
     }
 
     .three {
-      background: var(--link-hamburger-color-active);
+      margin: 9px auto;
+      background: var(--link-hamburger-color-active, #ffffff);
       transform: rotate(-45deg) translate(10px, -10px);
     }
   }
