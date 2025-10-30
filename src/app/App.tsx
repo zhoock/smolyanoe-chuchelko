@@ -1,5 +1,5 @@
 // src/app/App.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -7,6 +7,7 @@ import {
   Routes,
   Route,
   useRevalidator,
+  matchPath,
 } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '../routes/loaders/albumsLoader';
@@ -63,6 +64,18 @@ function Layout() {
 
   const { lang } = useLang() as { lang: 'ru' | 'en' };
   const { revalidate } = useRevalidator();
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') {
+      return 'dark';
+    }
+
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light' || stored === 'dark') {
+      return stored;
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     if (currentLang !== lang) {
@@ -71,6 +84,16 @@ function Layout() {
       revalidate();
     }
   }, [lang, revalidate]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('theme-dark', theme === 'dark');
+    document.documentElement.classList.toggle('theme-light', theme === 'light');
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const seo = {
     ru: {
@@ -91,6 +114,53 @@ function Layout() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  const knownRoutes = [
+    '/',
+    '/albums/:albumId',
+    '/albums/:albumId/track/:trackId',
+    '/articles/:articleId',
+    '/forms',
+    '/stems',
+  ];
+
+  const isKnownRoute = knownRoutes.some((pattern) =>
+    matchPath({ path: pattern, end: true }, location.pathname)
+  );
+  const shouldHideChrome = !isKnownRoute;
+
+  const standardRoutes = (
+    <>
+      <Routes location={background ?? location}>
+        <Route path="/" element={<Home />} />
+        <Route path="/albums/:albumId" element={<Album />} />
+        <Route path="/albums/:albumId/track/:trackId" element={<TracksLyrics />} />
+        <Route path="/articles/:articleId" element={<Article />} />
+        <Route path="/forms" element={<Form />} />
+        <Route path="*" element={<NotFoundPage />} />
+        <Route path="/stems" element={<StemsPlayground />} />
+      </Routes>
+
+      {background && (
+        <Routes>
+          <Route
+            path="/albums/:albumId/track/:trackId"
+            element={
+              <ModalRoute>
+                <TracksLyrics />
+              </ModalRoute>
+            }
+          />
+        </Routes>
+      )}
+    </>
+  );
+
+  const notFoundRoutes = (
+    <Routes>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
 
   return (
     <>
@@ -118,49 +188,34 @@ function Layout() {
         <meta name="twitter:description" content={seo[lang].desc} />
         <meta name="twitter:image" content={seo[lang].ogImage} />
       </Helmet>
-      <Header />
-      <main>
-        <Hero />
 
-        {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
+      {shouldHideChrome ? (
+        <main>{notFoundRoutes}</main>
+      ) : (
+        <>
+          <Header theme={theme} onToggleTheme={toggleTheme} />
+          <main>
+            <Hero />
 
-        <Popup isActive={popup} onClose={() => dispatch(closePopup())}>
-          <Hamburger isActive={popup} onToggle={() => dispatch(closePopup())} zIndex="1000" />
-          <Navigation onToggle={() => dispatch(closePopup())} />
-        </Popup>
+            {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
-        {!popup && (
-          <Hamburger isActive={popup} onToggle={() => dispatch(openPopup())} zIndex="1000" />
-        )}
+            <Popup isActive={popup} onClose={() => dispatch(closePopup())}>
+              <Hamburger isActive={popup} onToggle={() => dispatch(closePopup())} zIndex="1000" />
+              <Navigation onToggle={() => dispatch(closePopup())} />
+            </Popup>
 
-        {/* ВСЕГДА один и тот же Routes.
-           Если есть background, используем его как "виртуальную" локацию,
-           иначе — текущую. Дерево остаётся тем же, нет размонтирования. */}
-        <Routes location={background ?? location}>
-          <Route path="/" element={<Home />} />
-          <Route path="/albums/:albumId" element={<Album />} />
-          <Route path="/albums/:albumId/track/:trackId" element={<TracksLyrics />} />
-          <Route path="/articles/:articleId" element={<Article />} />
-          <Route path="/forms" element={<Form />} />
-          <Route path="*" element={<NotFoundPage />} />
-          <Route path="/stems" element={<StemsPlayground />} />
-        </Routes>
+            {!popup && (
+              <Hamburger isActive={popup} onToggle={() => dispatch(openPopup())} zIndex="1000" />
+            )}
 
-        {/* Модалка поверх: слушает реальный URL */}
-        {background && (
-          <Routes>
-            <Route
-              path="/albums/:albumId/track/:trackId"
-              element={
-                <ModalRoute>
-                  <TracksLyrics />
-                </ModalRoute>
-              }
-            />
-          </Routes>
-        )}
-      </main>
-      <Footer />
+            {/* ВСЕГДА один и тот же Routes.
+            Если есть background, используем его как "виртуальную" локацию,
+            иначе — текущую. Дерево остаётся тем же, нет размонтирования. */}
+            {standardRoutes}
+          </main>
+          <Footer />
+        </>
+      )}
     </>
   );
 }

@@ -7,31 +7,20 @@ import { useLang } from '../../contexts/lang'; // берём из контекс
 import { setCurrentLang } from '../../state/langStore'; // для синхронизации с глобальным стором
 import './style.scss';
 
-export const Header = () => {
-  const [theme, setTheme] = useState(
-    () =>
-      localStorage.getItem('theme') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-  );
+type Theme = 'light' | 'dark';
 
+type HeaderProps = {
+  theme: Theme;
+  onToggleTheme: () => void;
+};
+
+export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
   const { lang, setLang } = useLang(); // язык из контекста
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
   // revalidate для перезагрузки данных из лоадеров (react-router)
   const { revalidate } = useRevalidator();
-
-  // Применяем тему
-  useEffect(() => {
-    document.documentElement.classList.toggle('theme-dark', theme === 'dark');
-    document.documentElement.classList.toggle('theme-light', theme === 'light');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Проставляем <html lang="..."> под текущий язык
-  useEffect(() => {
-    document.documentElement.setAttribute('lang', lang);
-  }, [lang]);
 
   // Закрываем меню при клике вне
   useEffect(() => {
@@ -43,10 +32,6 @@ export const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
 
   // Смена языка: контекст → стор для лоадера → revalidate()
   const changeLang = (newLang: string) => {
@@ -100,7 +85,7 @@ export const Header = () => {
               type="checkbox"
               className="theme-toggler__control"
               checked={theme === 'light'}
-              onChange={toggleTheme}
+              onChange={onToggleTheme}
             />
             <div></div>
           </label>

@@ -229,6 +229,7 @@ $desktops: 'width >= 1024px';
 @mixin light-theme-variables {
   --main-background-color: var(--white);
   --extra-background-color: var(--moon-ash);
+  --extra-background-color-rgb: var(--moon-ash-rgb);
   --nested-background-color: var(--white);
   --nested-background-text-color: var(--graphite-green);
   --theme-toggler-color: var(--graphite-green);

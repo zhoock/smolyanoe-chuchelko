@@ -11,15 +11,10 @@
   button {
     inline-size: fit-content;
 
-    @include button-variant(
-      --link-color,
-      --link-button-background-color,
-      --link-color-hover,
-      --accent-color
-    );
-
-    a {
-      text-decoration: none;
-    }
+    @include button-variant;
   }
+}
+
+#root:has(.not-found) {
+  display: block;
 }
