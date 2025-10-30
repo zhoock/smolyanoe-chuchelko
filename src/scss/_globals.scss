@@ -2,10 +2,11 @@
 // Главный файл со всеми глобальными стилями и переменными
 // Импортируем файлы с переменными и миксинами
 
-@use './common/pallete' as *;
-@use './common/light' as *;
-@use './common/dark' as *;
-@use './common/typography' as *;
-@use './common/mixins' as *;
-@use './common/global' as *;
+@use './abstracts/palette' as *;
+@use './abstracts/typography' as *;
+@use './abstracts/mixins' as *;
+@use './base/base' as *;
+@use './components/breadcrumb' as *;
+@use './themes/light' as *;
+@use './themes/dark' as *;
 @use './vendor/icomoon' as *;

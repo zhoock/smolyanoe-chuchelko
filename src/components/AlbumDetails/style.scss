@@ -2,7 +2,7 @@
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .album-details {
   text-wrap: balance;
@@ -16,7 +16,7 @@
   }
 
   &__link {
-    @include link-colors(--album-details-link, --album-details-link);
+    @include link-colors(--link-color, --link-color);
   }
 
   &__artwork-photographer,
@@ -24,16 +24,15 @@
     margin-block-end: var(--ms-1);
   }
 
-  &__released {
-    &-time {
-      display: block;
-      font-family: var(--base-accent-font, sans-serif);
+  &__released-time {
+    display: block;
+    font-family: var(--base-accent-font, sans-serif);
+    color: var(--nested-background-text-color, #373633);
 
-      @include adjust-font-size-to($ms-2);
+    @include adjust-font-size-to($ms-2);
 
-      @include breakpoint(desktops) {
-        @include adjust-font-size-to($ms-3, 2);
-      }
+    @include breakpoint(desktops) {
+      @include adjust-font-size-to($ms-3, 2);
     }
   }
 }

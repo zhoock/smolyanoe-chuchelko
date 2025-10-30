@@ -126,6 +126,9 @@ export interface IInterface {
   titles: {
     [key: string]: string;
   };
+  links?: {
+    [key: string]: string;
+  };
   theBand: Array<string | { text: string[]; link: string }>;
   stems?: {
     text: string;

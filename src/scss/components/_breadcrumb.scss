@@ -1,0 +1,30 @@
+// src/scss/components/_breadcrumb.scss
+
+// Импортируем общий файл с зависимостями
+@use '../../scss/abstracts/mixins' as *;
+
+.breadcrumb {
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    margin-block-start: var(--ms-1);
+
+    li {
+      &::after {
+        position: relative;
+        inset-block-start: 2px;
+        display: inline-flex;
+        font-family: 'icomoon', sans-serif !important;
+        content: '\ea50';
+        rotate: 0.25turn;
+        color: var(--link-color, #998238);
+      }
+
+      a {
+        text-transform: capitalize;
+
+        @include link-colors(--link-color, --link-color);
+      }
+    }
+  }
+}

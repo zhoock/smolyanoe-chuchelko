@@ -1,9 +1,9 @@
 // src/components/ServiceButtons/ServiceButtonsPurchase.tsx
 import GetButton from './GetButton';
-import { String, IAlbums } from '../../models'; // ← используем твои типы
-import { useAlbumsData } from '../../hooks/data';
-import { useLang } from '../../contexts/lang';
-import { DataAwait } from '../../shared/DataAwait';
+import { String, IAlbums } from 'models'; // ← используем твои типы
+import { useAlbumsData } from '@hooks/data';
+import { useLang } from '@contexts/lang';
+import { DataAwait } from '@shared/DataAwait';
 import './style.scss';
 
 export default function ServiceButtonsPurchase({

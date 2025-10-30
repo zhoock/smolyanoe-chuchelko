@@ -1,0 +1,32 @@
+// src/scss/abstracts/_palette.scss
+
+// Файл с цветовыми переменными
+
+:root {
+  --deep-coal: #20201d;
+  --white: #ffffff;
+  --white-rgb: 255 255 255; // for rgb(var(--*-rgb)) usage
+  --black: #000000;
+  --black-rgb: 0 0 0; // for rgb(var(--*-rgb)) usage
+  --deep-black: #1e1e1e;
+  --deep-black-rgb: 30 30 30; // for rgb(var(--*-rgb)) usage
+  --moon-ash: #e7e7e6;
+  --moon-ash-rgb: 231 231 230; // for rgb(var(--*-rgb)) usage
+  --graphite-green: #373633;
+  --icy-mist: #e6e6e6;
+  --grey: #ababab;
+  --light-grey: #dddddd;
+  --dark-greenish-yellow: #998238;
+  --pink-terracotta: #cf807d;
+  --olive-green: #8f8a44;
+  --brown-beige: #867650;
+  --honeydew-melon: #faab1f;
+  --warm-concrete: #9b9b9a;
+  --quiet-gray: #828282;
+  --mango-sorbet: #fae59b;
+  --mango-sorbet-rgb: 250 229 155; // for rgb(var(--*-rgb)) usage
+  --iron-slate: #3d3c3a;
+  --charcoal: #272727;
+  --charcoal-rgb: 39 39 39;
+  --hr-color: var(--iron-slate);
+}

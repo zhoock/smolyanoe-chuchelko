@@ -1,7 +1,7 @@
 // src/components/Footer/Footer.tsx
-import { useAlbumsData } from '../../hooks/data';
-import { DataAwait } from '../../shared/DataAwait';
-import { useLang } from '../../contexts/lang';
+import { useAlbumsData } from '@hooks/data';
+import { DataAwait } from '@shared/DataAwait';
+import { useLang } from '@contexts/lang';
 
 import './style.scss';
 

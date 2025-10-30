@@ -1,8 +1,8 @@
 // src/components/AlbumDetails/AlbumDetailsArtwork.tsx
-import type { IAlbums } from '../../models';
-import { useAlbumsData } from '../../hooks/data';
-import { useLang } from '../../contexts/lang';
-import { DataAwait } from '../../shared/DataAwait';
+import type { IAlbums } from 'models';
+import { useAlbumsData } from '@hooks/data';
+import { useLang } from '@contexts/lang';
+import { DataAwait } from '@shared/DataAwait';
 
 /**
  * Компонент отображает блок с информацией об обложке альбома.

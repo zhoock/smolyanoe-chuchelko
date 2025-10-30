@@ -1,22 +1,29 @@
 // src/components/AudioPlayer/AudioPlayer.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
-import AlbumCover from '../Album/AlbumCover';
+import { AlbumCover } from '@entities/album';
 import { IAlbums } from '../../models';
 import { gaEvent } from '../../utils/ga';
 import './style.scss';
 
 export default function AudioPlayer({
   album,
-  autoPlay = false,
   setBgColor,
+  activeTrackIndex = 0,
+  playRequestId,
+  onTrackChange,
 }: {
   album: IAlbums;
-  autoPlay?: boolean;
+  activeTrackIndex?: number;
+  playRequestId: number;
+  onTrackChange?: (index: number) => void;
   setBgColor: (color: string) => void;
 }) {
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0); // индекс текущего трека (начинается с 0)
-  const [isPlaying, setIsPlaying] = useState(autoPlay); // флаг, указывающий, играет ли трек (изначально false)
+  const currentTrackIndex = Math.min(
+    Math.max(activeTrackIndex ?? 0, 0),
+    Math.max(album.tracks.length - 1, 0)
+  );
+  const [isPlaying, setIsPlaying] = useState(false); // флаг, указывающий, играет ли трек (изначально false)
   const [progress, setProgress] = useState(0); // прогресс трека в процентах (0-100)
   const [volume, setVolume] = useState(50); // уровень громкости (по умолчанию 50%)
   const [isSeeking, setIsSeeking] = useState(false); // указывает, выполняет ли пользователь перемотку
@@ -55,6 +62,16 @@ export default function AudioPlayer({
     else el.pause();
   }, [isPlaying, currentTrackIndex]);
 
+  // Стартуем воспроизведение по запросу извне
+  useEffect(() => {
+    if (!playRequestId) return;
+    const el = audioRef.current;
+    if (!el) return;
+    el.currentTime = 0;
+    el.play().catch(console.error);
+    setIsPlaying(true);
+  }, [playRequestId, currentTrackIndex]);
+
   // Эффект для перехода к следующему треку после завершения текущего
   useEffect(() => {
     const audio = audioRef.current;
@@ -62,7 +79,14 @@ export default function AudioPlayer({
 
     const handleTrackEnd = () => {
       console.log('🎵 Трек завершён, переключаем на следующий');
-      setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % album.tracks.length);
+      if (album.tracks.length === 0) return;
+      const nextIndex = (currentTrackIndex + 1) % album.tracks.length;
+      if (onTrackChange) {
+        onTrackChange(nextIndex);
+      } else if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(console.error);
+      }
     };
 
     audio.addEventListener('ended', handleTrackEnd);
@@ -70,7 +94,7 @@ export default function AudioPlayer({
     return () => {
       audio.removeEventListener('ended', handleTrackEnd);
     };
-  }, [album.tracks.length]);
+  }, [album.tracks.length, currentTrackIndex, onTrackChange]);
 
   // Эффект для обновления времени и прогресса
   useEffect(() => {
@@ -182,12 +206,16 @@ export default function AudioPlayer({
 
   // переключает на следующий трек
   const nextTrack = () => {
-    setCurrentTrackIndex((currentTrackIndex + 1) % album.tracks.length);
+    if (!album.tracks.length) return;
+    const nextIndex = (currentTrackIndex + 1) % album.tracks.length;
+    onTrackChange?.(nextIndex);
   };
 
   // переключает на предыдущий
   const prevTrack = () => {
-    setCurrentTrackIndex((currentTrackIndex - 1 + album.tracks.length) % album.tracks.length);
+    if (!album.tracks.length) return;
+    const prevIndex = (currentTrackIndex - 1 + album.tracks.length) % album.tracks.length;
+    onTrackChange?.(prevIndex);
   };
 
   // Ползунок прогресса. Позволяет перематывать трек.

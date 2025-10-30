@@ -3,13 +3,13 @@ import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { useAlbumsData, getImageUrl } from '../../hooks/data';
-import { DataAwait } from '../../shared/DataAwait';
-import type { ArticledetailsProps } from '../../models';
-import { Loader } from '../Loader/Loader';
-import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { useAlbumsData, getImageUrl } from '@hooks/data';
+import { DataAwait } from '@shared/DataAwait';
+import type { ArticledetailsProps } from 'models';
+import { Loader } from '@shared/ui/loader';
+import { ErrorMessage } from '@shared/ui/error-message';
 import { formatDateInWords } from './Function';
-import { useLang } from '../../contexts/lang';
+import { useLang } from '@contexts/lang';
 
 /**
  * Компонент отображает блок со статьёй.
@@ -17,7 +17,7 @@ import { useLang } from '../../contexts/lang';
 export const Article = () => {
   // скролл наверх при входе на страницу
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0 });
   }, []);
 
   const { lang } = useLang() as { lang: keyof typeof formatDateInWords };
@@ -63,21 +63,14 @@ export const Article = () => {
   return (
     <section className="article main-background" aria-label="Блок со статьёй">
       <div className="wrapper">
-        {/* хлебные крошки */}
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
             <li>
-              <DataAwait value={data.templateC} fallback={<span>…</span>} error={null}>
-                {(ui) => (
-                  <Link to="/articles">
-                    {ui?.[0]?.titles?.articles ?? (lang === 'en' ? 'Articles' : 'Статьи')}
-                  </Link>
-                )}
-              </DataAwait>
-            </li>
-            <li className="active">
-              <DataAwait value={data.templateB} fallback={<span>…</span>} error={null}>
-                {(articles) => articles.find((a) => a.articleId === articleId)?.nameArticle ?? '…'}
+              <DataAwait value={data.templateC} fallback={null} error={null}>
+                {(ui) => {
+                  const homeLabel = ui?.[0]?.links?.home;
+                  return homeLabel ? <Link to="/">{homeLabel}</Link> : null;
+                }}
               </DataAwait>
             </li>
           </ul>

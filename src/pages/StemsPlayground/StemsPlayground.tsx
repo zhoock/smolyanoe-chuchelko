@@ -1,14 +1,14 @@
 // src/pages/StemsPlayground/StemsPlayground.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import Waveform from '../../components/Waveform/Waveform';
-import { useLang } from '../../contexts/lang';
-import { useAlbumsData, getImageUrl } from '../../hooks/data';
-import { DataAwait } from '../../shared/DataAwait';
-import { Loader } from '../../components/Loader/Loader';
-import ErrorI18n from '../../components/ErrorMessage/ErrorI18n';
+import { Waveform } from '@shared/ui/waveform';
+import { useLang } from '@contexts/lang';
+import { useAlbumsData, getImageUrl } from '@hooks/data';
+import { DataAwait } from '@shared/DataAwait';
+import { Loader } from '@shared/ui/loader';
+import { ErrorI18n } from '@shared/ui/error-message';
 import { StemEngine, StemKind } from '../../audio/stemsEngine';
-import { Text } from '../../shared/ui/text';
+import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import './style.scss';
@@ -387,7 +387,7 @@ export default function StemsPlayground() {
                       disabled={selectDisabled}
                     >
                       {SONGS.map((s) => (
-                        <option key={s.id} value={s.id}>
+                        <option key={s.id} value={s.id} title={s.title}>
                           {s.title}
                         </option>
                       ))}

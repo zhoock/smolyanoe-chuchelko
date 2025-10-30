@@ -1,13 +1,13 @@
 // src/components/Header/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .header {
   grid-area: header;
   position: fixed;
   inset: 0 0 auto;
   z-index: 1;
-  background: rgba(var(--extra-background-color), 0.8);
+  background: rgb(var(--extra-background-color-rgb) / 80%);
   backdrop-filter: blur(20px) saturate(0.8%);
   font-family: 'Oswald', sans-serif;
 
@@ -25,81 +25,82 @@
     .logo {
       text-decoration: none;
       font-weight: var(--bold, 700);
+      color: var(--links-header-color, #dddddd);
     }
 
     .theme-toggler {
       display: grid;
       place-items: center;
-    }
-  }
-}
 
-.theme-toggler__label {
-  cursor: pointer;
+      &__label {
+        cursor: pointer;
 
-  .theme-toggler__control {
-    display: none;
+        .theme-toggler__control {
+          display: none;
 
-    & + div {
-      position: relative;
-      border-radius: 50%;
-      box-shadow: inset 13px -13px 0 0 var(--heading-color, #998238);
-      transition:
-        box-shadow 0.5s ease 0s,
-        transform 0.4s ease 0.1s;
-      transform: scale(1) rotate(-2deg);
-      inline-size: var(--ms-1);
-      block-size: var(--ms-1);
+          & + div {
+            position: relative;
+            border-radius: 50%;
+            box-shadow: inset 13px -13px 0 0 var(--theme-toggler-color, #998238);
+            transition:
+              box-shadow 0.5s ease 0s,
+              transform 0.4s ease 0.1s;
+            transform: scale(1) rotate(-2deg);
+            inline-size: var(--ms-1);
+            block-size: var(--ms-1);
 
-      &::before {
-        position: absolute;
-        border-radius: inherit;
-        transition: background 0.3s ease;
-        content: '';
-        inline-size: inherit;
-        block-size: inherit;
-        inset-inline-start: 0;
-        inset-block-start: 0;
-      }
+            &::before {
+              position: absolute;
+              border-radius: inherit;
+              transition: background 0.3s ease;
+              content: '';
+              inline-size: inherit;
+              block-size: inherit;
+              inset-inline-start: 0;
+              inset-block-start: 0;
+            }
 
-      &::after {
-        position: absolute;
-        margin: -4px 0 0 -4px;
-        border-radius: 50%;
-        box-shadow:
-          0 -20px 0 var(--heading-color, #998238),
-          0 20px 0 var(--heading-color, #998238),
-          20px 0 0 var(--heading-color, #998238),
-          -20px 0 0 var(--heading-color, #998238),
-          13px 13px 0 var(--heading-color, #998238),
-          -13px 13px 0 var(--heading-color, #998238),
-          13px -13px 0 var(--heading-color, #998238),
-          -13px -13px 0 var(--heading-color, #998238);
-        transition: all 0.3s ease;
-        transform: scale(0);
-        content: '';
-        inline-size: 8px;
-        block-size: 8px;
-        inset-block-start: 50%;
-        inset-inline-start: 50%;
-      }
-    }
+            &::after {
+              position: absolute;
+              margin: -4px 0 0 -4px;
+              border-radius: 50%;
+              box-shadow:
+                0 -20px 0 var(--theme-toggler-color, #998238),
+                0 20px 0 var(--theme-toggler-color, #998238),
+                20px 0 0 var(--theme-toggler-color, #998238),
+                -20px 0 0 var(--theme-toggler-color, #998238),
+                13px 13px 0 var(--theme-toggler-color, #998238),
+                -13px 13px 0 var(--theme-toggler-color, #998238),
+                13px -13px 0 var(--theme-toggler-color, #998238),
+                -13px -13px 0 var(--theme-toggler-color, #998238);
+              transition: all 0.3s ease;
+              transform: scale(0);
+              content: '';
+              inline-size: 8px;
+              block-size: 8px;
+              inset-block-start: 50%;
+              inset-inline-start: 50%;
+            }
+          }
 
-    &:checked + div {
-      box-shadow: inset 32px -32px 0 0 var(--heading-color, #998238);
-      transition:
-        transform 0.3s ease 0.1s,
-        box-shadow 0.2s ease 0s;
-      transform: scale(0.5) rotate(0deg);
+          &:checked + div {
+            box-shadow: inset 32px -32px 0 0 var(--theme-toggler-color, #998238);
+            transition:
+              transform 0.3s ease 0.1s,
+              box-shadow 0.2s ease 0s;
+            transform: scale(0.5) rotate(0deg);
 
-      &::before {
-        background: var(--heading-color, #998238);
-        transition: background 0.3s ease 0.1s;
-      }
+            &::before {
+              background: var(--theme-toggler-color, #998238);
+              transition: background 0.3s ease 0.1s;
+            }
 
-      &::after {
-        transition: transform 0.5s ease 0.13s;
-        transform: scale(1.5);
+            &::after {
+              transition: transform 0.5s ease 0.13s;
+              transform: scale(1.5);
+            }
+          }
+        }
       }
     }
   }
@@ -113,20 +114,25 @@
   position: relative;
 
   .lang-current {
-    color: var(--header-links-list-item, #998238);
-    background: none;
-    border: none;
     font-weight: bold;
-    cursor: pointer;
+    width: 43px;
+    height: 43px;
+
+    @include button-variant(
+      $color: var(--button-lang-menu-color, #998238),
+      $margin: 0,
+      $padding: var(--ms-02),
+      $border-radius: 50%
+    );
   }
 
   .lang-list {
     position: absolute;
     top: 100%;
-    left: -17px;
+    left: -7px;
     z-index: 100;
     padding: 0;
-    background: rgba(var(--extra-background-color), 0.8);
+    background: rgba(var(--extra-background-color-rgb) / 80%);
     border-radius: var(--ms-01);
     list-style: none;
     margin-top: var(--ms-0);
@@ -139,18 +145,18 @@
       padding: var(--ms-01) var(--ms-0);
 
       .lang-option {
-        color: var(--link-color);
+        color: var(--links-header-color, #dddddd);
         background: transparent;
         border: none;
         appearance: none;
         cursor: pointer;
 
         &.active {
-          color: var(--header-links-list-item, #998238);
+          color: var(--button-lang-menu-color, #998238);
         }
 
         &:hover {
-          color: var(--link-color-hover);
+          color: var(--button-lang-menu-color-hover, #ffffff);
         }
       }
     }

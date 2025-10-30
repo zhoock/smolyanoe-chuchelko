@@ -5,14 +5,14 @@ import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import AlbumDetails from '../../components/AlbumDetails/AlbumDetails';
-import AlbumCover from '../../components/Album/AlbumCover';
+import { AlbumCover } from '@entities/album';
 import AlbumTracks from '../../components/AlbumTracks/AlbumTracks';
 import Share from '../../components/Share/Share';
 import ServiceButtons from '../../components/ServiceButtons/ServiceButtons';
-import ErrorI18n from '../../components/ErrorMessage/ErrorI18n';
-import { useAlbumsData } from '../../hooks/data';
-import { DataAwait } from '../../shared/DataAwait';
-import { Loader } from '../../components/Loader/Loader';
+import { ErrorI18n } from '@shared/ui/error-message';
+import { useAlbumsData } from '@hooks/data';
+import { DataAwait } from '@shared/DataAwait';
+import { Loader } from '@shared/ui/loader';
 import { useLang } from '../../contexts/lang';
 
 export default function Album() {
@@ -21,7 +21,7 @@ export default function Album() {
   const { albumId = '' } = useParams<{ albumId: string }>();
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0 });
   }, [albumId]);
 
   if (!data) {
@@ -55,17 +55,7 @@ export default function Album() {
           if (!album) {
             return (
               <div className="wrapper album__wrapper">
-                <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
-                  <ul>
-                    <li>
-                      <DataAwait value={data.templateC} fallback={<span>…</span>}>
-                        {(ui) => <Link to="/albums">{ui?.[0]?.titles?.albums ?? '…'}</Link>}
-                      </DataAwait>
-                    </li>
-                    <li className="active">—</li>
-                  </ul>
-                </nav>
-                <ErrorI18n code="albumLoadFailed" />
+                <ErrorI18n code="albumNotFound" />
               </div>
             );
           }
@@ -95,11 +85,13 @@ export default function Album() {
                 <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
                   <ul>
                     <li>
-                      <DataAwait value={data.templateC} fallback={<span>…</span>}>
-                        {(ui) => <Link to="/albums">{ui?.[0]?.titles?.albums ?? '…'}</Link>}
+                      <DataAwait value={data.templateC} fallback={null} error={null}>
+                        {(ui) => {
+                          const homeLabel = ui?.[0]?.links?.home;
+                          return homeLabel ? <Link to="/">{homeLabel}</Link> : null;
+                        }}
                       </DataAwait>
                     </li>
-                    <li className="active">{album.album}</li>
                   </ul>
                 </nav>
 

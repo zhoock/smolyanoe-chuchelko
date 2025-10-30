@@ -2,7 +2,7 @@
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .share-list {
   display: grid;
@@ -20,16 +20,17 @@
 
   &__link {
     padding: var(--ms-01);
-    background: var(--button-background-color, #373633);
+    color: var(--link-button-color, #dddddd);
+    background: var(--link-button-background-color, #373633);
     border-radius: 50%;
 
     &:hover {
       color: var(--link-color-hover, #ffffff);
-      background-color: var(--accent-color, #998238);
+      background-color: var(--link-button-background-color-hover, #998238);
 
       @media (hover: none) and (pointer: coarse) {
         color: inherit;
-        background-color: var(--button-background-color, #373633);
+        background-color: var(--link-button-background-color, #373633);
         transition: none;
       }
     }

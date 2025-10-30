@@ -1,0 +1,19 @@
+// src/scss/themes/_light.scss
+// Файл с цветовой темой для светлого режима
+
+@use '../abstracts/mixins' as *;
+
+html.theme-light {
+  @include light-theme-variables;
+}
+
+@media (prefers-color-scheme: light) {
+  // когда у пользователя система/браузер настроены на светлую тему (включён light mode).
+  // Light-медиа-блок нужен для чистого CSS и первой загрузки без "мигания" темы.
+  html {
+    @include light-theme-variables;
+
+    /* rgb()-вариант для фонов, использующих rgb(var(...)) */
+    --extra-background-color-rgb: var(--moon-ash-rgb);
+  }
+}

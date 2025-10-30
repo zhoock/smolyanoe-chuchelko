@@ -2,7 +2,7 @@
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .hamburger {
   position: fixed;
@@ -17,7 +17,7 @@
 
   &:hover {
     span {
-      background: var(--link-color-hover, #ffffff);
+      background: var(--link-hamburger-color-hover, #ffffff);
     }
   }
 
@@ -28,13 +28,14 @@
     inline-size: 100%;
     block-size: 3px;
     margin: 9px auto;
-    background: var(--link-color, #dddddd);
+    background: var(--link-hamburger-color, #dddddd);
     backface-visibility: hidden;
     transition-duration: 0.15s;
   }
 
   &.active {
     .one {
+      background: var(--link-hamburger-color-active);
       transform: rotate(45deg) translate(7px, 7px);
     }
 
@@ -43,6 +44,7 @@
     }
 
     .three {
+      background: var(--link-hamburger-color-active);
       transform: rotate(-45deg) translate(10px, -10px);
     }
   }

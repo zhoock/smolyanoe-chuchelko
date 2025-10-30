@@ -33,6 +33,13 @@ module.exports = {
     alias: {
       // Псевдонимы для путей
       '@components': path.resolve(__dirname, '../src/components'),
+      '@shared': path.resolve(__dirname, '../src/shared'),
+      '@entities': path.resolve(__dirname, '../src/entities'),
+      '@features': path.resolve(__dirname, '../src/features'),
+      '@widgets': path.resolve(__dirname, '../src/widgets'),
+      '@app': path.resolve(__dirname, '../src/app'),
+      '@hooks': path.resolve(__dirname, '../src/hooks'),
+      '@contexts': path.resolve(__dirname, '../src/contexts'),
     },
   },
 

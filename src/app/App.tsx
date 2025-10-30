@@ -1,5 +1,5 @@
 // src/app/App.tsx
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -12,12 +12,13 @@ import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '../routes/loaders/albumsLoader';
 import { useLang } from '../contexts/lang';
 import { currentLang, setCurrentLang } from '../state/langStore';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
 import {
   Header,
   Footer,
-  AboutUs,
-  Articles,
   Article,
   Navigation,
   Hamburger,
@@ -28,9 +29,9 @@ import {
   Hero,
   TracksLyrics,
 } from '@components';
-import Albums from '../pages/Albums/Albums';
 import Album from '../pages/Album/Album';
 import StemsPlayground from '../pages/StemsPlayground/StemsPlayground';
+import Home from '../pages/Home';
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -54,7 +55,8 @@ export default function App() {
 }
 
 function Layout() {
-  const [popup, setPopup] = useState(false);
+  const dispatch = useAppDispatch();
+  const popup = useAppSelector(getIsPopupOpen);
   const location = useLocation(); // background location для модалки трека
   const state = location.state as { background?: Location } | undefined;
   const background = state?.background;
@@ -122,23 +124,22 @@ function Layout() {
 
         {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
-        <Popup isActive={popup} onClose={() => setPopup(false)}>
-          <Hamburger isActive={popup} onToggle={() => setPopup(false)} zIndex="1000" />
-          <Navigation onToggle={() => setPopup(false)} />
+        <Popup isActive={popup} onClose={() => dispatch(closePopup())}>
+          <Hamburger isActive={popup} onToggle={() => dispatch(closePopup())} zIndex="1000" />
+          <Navigation onToggle={() => dispatch(closePopup())} />
         </Popup>
 
-        {!popup && <Hamburger isActive={popup} onToggle={() => setPopup(true)} zIndex="1000" />}
+        {!popup && (
+          <Hamburger isActive={popup} onToggle={() => dispatch(openPopup())} zIndex="1000" />
+        )}
 
         {/* ВСЕГДА один и тот же Routes.
            Если есть background, используем его как "виртуальную" локацию,
            иначе — текущую. Дерево остаётся тем же, нет размонтирования. */}
         <Routes location={background ?? location}>
-          <Route path="/" element={<Albums />} />
-          <Route path="/albums" element={<Albums />} />
+          <Route path="/" element={<Home />} />
           <Route path="/albums/:albumId" element={<Album />} />
           <Route path="/albums/:albumId/track/:trackId" element={<TracksLyrics />} />
-          <Route path="/aboutus" element={<AboutUs />} />
-          <Route path="/articles" element={<Articles />} />
           <Route path="/articles/:articleId" element={<Article />} />
           <Route path="/forms" element={<Form />} />
           <Route path="*" element={<NotFoundPage />} />

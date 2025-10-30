@@ -2,7 +2,7 @@
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .articles,
 .article {
@@ -36,10 +36,5 @@
   &__picture {
     aspect-ratio: 3 / 2;
     border-radius: var(--ms-01);
-  }
-
-  time {
-    color: var(--fucking-color, #ababab);
-    white-space: nowrap;
   }
 }

@@ -2,16 +2,15 @@
 
 export * from './Header';
 export * from './Footer';
-export * from './AboutUs';
 export * from './Articles';
 export * from './Navigation';
 export * from './Hamburger';
-export * from './ModalRoute';
-export * from './Popup';
-export * from './NotFoundPage';
-export * from './Forms';
-export * from './Hero';
-export * from './TracksLyrics';
+export { ModalRoute } from '@widgets/modalRoute';
+export { Popup } from '@shared/ui/popup';
+export { NotFoundPage } from '../widgets/notFound';
+export { Form } from '../widgets/form';
+export { Hero } from '../widgets/hero';
+export { TracksLyrics } from '../widgets/tracksLyrics';
 
 // export * from './Album';
 // export * from './AlbumTracks';

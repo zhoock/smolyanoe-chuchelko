@@ -28,8 +28,8 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     templateA = getJSON<IAlbums[]>(`albums-${lang}.json`, signal);
   }
 
-  // Статьи нужны на "/articles*"
-  if (pathname.startsWith('/articles')) {
+  // Статьи нужны на "/" (главная) и "/articles*"
+  if (pathname === '/' || pathname.startsWith('/articles')) {
     templateB = getJSON<IArticles[]>(`articles-${lang}.json`, signal);
   }
 

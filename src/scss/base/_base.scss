@@ -1,0 +1,224 @@
+// src/scss/base/_base.scss
+
+@use 'sass:color';
+
+// Импортируем общий файл с зависимостями
+@use '../abstracts/mixins' as *;
+
+:root {
+  position: relative;
+  min-block-size: 100%;
+}
+
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent font size inflation */
+html {
+  color: var(--text-color, #dddddd);
+  font: var(--light, 300) var(--base-font-size) var(--base-font-family);
+  line-height: var(--base-line-height);
+  text-size-adjust: none;
+  min-block-size: 100%;
+  color-scheme: light dark; /* Для правильной работы скроллбаров и форм в разных темах */
+}
+
+/* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+html:focus-within {
+  scroll-behavior: smooth; /* Make the scrolling inside of any scrollable element smooth */
+}
+
+img,
+picture,
+svg,
+video,
+canvas {
+  vertical-align: middle; /* Makes text next to inline images look better */
+  font-style: italic; /* If the images don't load it makes the alt decription look better */
+  background-repeat: no-repeat; /* The background repeat and size are there if you want to load a picture first like a backroung image that is worse quality while the better quality image loads */
+  background-size: cover;
+  max-inline-size: 100%; /* Makes it responsive */
+  block-size: auto; /* Makes it responsive */
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit; /* Makes these elements inherit fonts */
+}
+
+body {
+  background: var(--black, #000000);
+  scroll-behavior: smooth; /* Makes normal scrolling smooth */
+  block-size: 100vb;
+
+  #root {
+    display: grid;
+    block-size: 100vb;
+    grid-template:
+      'header' calc(1.618rem * 2)
+      'main' auto
+      'footer' 165px / 1fr;
+
+    .main-background {
+      background: var(--main-background-color, #20201d);
+    }
+
+    .extra-background {
+      background: var(--extra-background-color, #1e1e1e);
+    }
+
+    .nested-background {
+      color: var(--nested-background-text-color, #373633);
+      background: var(--nested-background-color, #dddddd);
+    }
+
+    .wrapper {
+      margin-inline: auto;
+      margin-block: 0;
+      padding-inline: var(--ms-1);
+      padding-block: 0;
+      inline-size: min(100vi, 1000px);
+    }
+
+    main {
+      display: grid;
+      grid-area: main;
+
+      @include breakpoint(old-phones) {
+        grid-template-rows: 190px auto;
+      }
+
+      @include breakpoint(phones) {
+        grid-template-rows: 59vw auto;
+      }
+
+      @include breakpoint(tablet) {
+        grid-template-rows: 22vw auto;
+      }
+
+      @include breakpoint(desktops) {
+        grid-template-rows: 15vw auto;
+      }
+    }
+  }
+
+  p,
+  img,
+  iframe {
+    margin-block-end: $ms-1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--theme-toggler-color, #998238);
+    font-family: var(--base-accent-font);
+    font-weight: var(--light, 300);
+    letter-spacing: 1.618px;
+    text-transform: capitalize;
+    text-wrap: balance;
+  }
+
+  h2 {
+    @include adjust-font-size-to($ms-1);
+
+    @include breakpoint(tablet) {
+      @include adjust-font-size-to($ms-2);
+    }
+  }
+
+  h3 {
+    // letter-spacing: 2.5px;
+    font-weight: var(--regular, 400);
+
+    @include adjust-font-size-to($ms-0, 0.382, 18px);
+
+    @include breakpoint(tablet) {
+      font-weight: var(--light, 300);
+
+      @include adjust-font-size-to($ms-1, 0.382);
+    }
+
+    &.error {
+      color: var(--error-color, #cf807d);
+    }
+  }
+
+  ul,
+  ol {
+    margin-block-end: $ms-1;
+
+    li {
+      list-style: none;
+    }
+  }
+
+  a {
+    text-decoration-thickness: from-font;
+    text-underline-offset: 5px;
+    transition: all 200ms ease;
+
+    @include link-colors(--link-color, --link-color-hover);
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover {
+        background-color: inherit;
+      }
+    }
+
+    &.dashed {
+      border-block-end: 1px dashed var(--link-color, #998238);
+    }
+
+    &[class*=' icon-'] {
+      text-decoration: none;
+    }
+
+    &:not([class]) {
+      text-decoration-skip-ink: auto; /* Makes link undelines look better */
+    }
+  }
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 4px solid var(--outline-color, #8f8a44);
+}
+
+::selection {
+  background-color: var(--selection-color, #867650);
+}
+
+.visually-hidden {
+  position: absolute; /* элемент вырывают из потока */
+  margin: -1px; /* элемент убирают из поля зрения, сдвинув на размер самого себя */
+  padding: 0; /* обнуляют отступы, они есть у некоторых элементов по умолчанию */
+  border: 0; /* убирают границу, она тоже может быть у каких-то элементов */
+  overflow: hidden; /* на всякий случай скрывают видимое за пределами блока */
+  clip: rect(0 0 0 0); /* это свойство обрезает видимую область до нулевого значения */
+  inline-size: 1px; /* делают элемент очень маленьким, но таким, чтобы не пропал совсем */
+  block-size: 1px;
+}
+
+time {
+  display: block;
+  color: var(--time-color, #9b9b9a);
+  white-space: nowrap;
+}

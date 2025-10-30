@@ -32,6 +32,9 @@
       "tracks": "tracks",
       "stems": "mixer"
     },
+    "links": {
+      "home": "home"
+    },
     "theBand": [
       {
         "text": [

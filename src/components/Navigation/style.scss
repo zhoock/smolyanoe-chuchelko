@@ -1,6 +1,6 @@
 // src/components/Navigation/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .header {
   &__menu {
@@ -18,13 +18,15 @@
 
     .header__link {
       text-decoration: none;
-      text-transform: uppercase;
+      text-transform: capitalize;
+      color: var(--links-header-color, #dddddd);
+      font-weight: var(--bold, 700);
 
-      &.active {
-        color: var(--header-links-list-item, #998238);
-
-        // pointer-events: none; /* disables click event */
-      }
+      @include link-colors(
+        --links-header-color,
+        --links-header-color-hover,
+        --links-header-color-active
+      );
 
       &.pending {
         opacity: 0.5;

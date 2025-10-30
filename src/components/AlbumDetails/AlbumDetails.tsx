@@ -2,10 +2,10 @@
 import AlbumDetailsRelease from './AlbumDetailsRelease';
 import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
-import { String, IAlbums } from '../../models';
-import { useAlbumsData } from '../../hooks/data';
-import { useLang } from '../../contexts/lang';
-import { DataAwait } from '../../shared/DataAwait';
+import { String, IAlbums } from 'models';
+import { useAlbumsData } from '@hooks/data';
+import { useLang } from '@contexts/lang';
+import { DataAwait } from '@shared/DataAwait';
 import './style.scss';
 
 /**

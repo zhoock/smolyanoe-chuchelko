@@ -1,6 +1,6 @@
 // src/components/Footer/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .footer {
   grid-area: footer;
@@ -27,7 +27,7 @@
       color: var(--social-networks-background-color, #373633);
 
       &:hover {
-        color: var(--album-details-link, #f2bb4b);
+        color: var(--link-color, #998238);
       }
     }
   }

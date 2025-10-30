@@ -1,0 +1,58 @@
+// src/scss/themes/_dark.scss
+
+// При первом заходе код берёт localStorage.getItem('theme'), и если там ничего нет,
+// проверяет window.matchMedia('(prefers-color-scheme: dark)').
+// Если у пользователя система настроена на тёмную тему, сайт стартует в тёмной; если на светлую — в светлой.
+// После переключения выбранная тема сохраняется в localStorage,
+// и следующие визиты будут использовать сохранённое значение независимо от системных настроек.
+
+// Без дополнительных классов браузер берёт вторые аргументы у всех var(), и почти везде это тёмные значения.
+// Пока JS не выставил html.theme-light или html.theme-dark,
+// эти дефолты и формируют внешний вид. Поэтому “по умолчанию” страница тёмная
+
+// Если убрать вторые аргументы у var(), то до тех пор,
+// пока на <html> не появится theme-light или theme-dark, переменные останутся не определены
+// и страница станет серой смесью дефолтов браузера.
+
+// Файл с темной темой, переопределяющий цветовые переменные
+html.theme-dark {
+  --main-background-color: var(--deep-coal);
+  --extra-background-color: var(--deep-black);
+  --extra-background-color-rgb: var(--deep-black-rgb);
+  --nested-background-color: var(--light-grey);
+  --nested-background-text-color: var(--graphite-green);
+  --theme-toggler-color: var(--dark-greenish-yellow);
+  --text-color: var(--light-grey);
+  --time-color: var(--warm-concrete);
+  --link-color: var(--dark-greenish-yellow);
+  --link-color-hover: var(--white);
+  --links-header-color: var(--light-grey);
+  --links-header-color-hover: var(--white);
+  --links-header-color-active: var(--dark-greenish-yellow);
+  --button-lang-menu-color: var(--dark-greenish-yellow);
+  --button-lang-menu-color-hover: var(--dark-greenish-yellow);
+  --button-lang-menu-color-active: var(--dark-greenish-yellow);
+  --link-hamburger-color: var(--light-grey);
+  --link-hamburger-color-hover: var(--white);
+  --link-hamburger-color-active: var(--white);
+  --link-subtitle-color: var(--light-grey);
+  --link-button-color: var(--light-grey);
+  --link-button-background-color: var(--graphite-green);
+  --link-button-background-color-hover: var(--dark-greenish-yellow);
+  --button-color: var(--light-grey);
+  --button-background-color: var(--graphite-green);
+  --button-color-hover: var(--white);
+  --button-background-color-hover: var(--dark-greenish-yellow);
+  --button-disabled-background: var(--warm-concrete);
+  --social-networks-background-color: var(--graphite-green);
+  --accent-color: var(--dark-greenish-yellow);
+  --error-color: var(--pink-terracotta);
+  --outline-color: var(--olive-green);
+  --selection-color: var(--brown-beige);
+  --hr-color: var(--iron-slate);
+  --wave-bg: rgb(var(--black-rgb, 0 0 0) / 40%);
+  --wave-progress-fill: rgb(var(--white-rgb, 255 255 255) / 10%);
+  --wave-cursor-color: rgb(var(--white-rgb, 255 255 255) / 90%);
+  --wave-bars: rgb(var(--white-rgb, 255 255 255) / 35%);
+  --wave-bars-active: rgb(var(--white-rgb, 255 255 255) / 82%);
+}

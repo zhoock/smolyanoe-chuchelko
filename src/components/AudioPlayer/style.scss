@@ -2,7 +2,7 @@
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/common/mixins' as *;
+@use '../../scss/abstracts/mixins' as *;
 
 .player {
   display: grid;

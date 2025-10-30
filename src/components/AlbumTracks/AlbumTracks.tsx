@@ -1,49 +1,66 @@
 // src/components/AlbumTracks/AlbumTracks.tsx
-import { useEffect } from 'react';
-import { useState, MouseEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 
 import { Hamburger, Popup } from '@components';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
 
 import type { IAlbums, TracksProps } from '../../models';
-import { useAlbumsData } from '../../hooks/data';
-import { DataAwait } from '../../shared/DataAwait';
-import { useLang } from '../../contexts/lang';
+import { useAlbumsData } from '@hooks/data';
+import { DataAwait } from '@shared/DataAwait';
+import { useLang } from '@contexts/lang';
 import { gaEvent } from '../../utils/ga';
 
 import './style.scss';
 
 /**
- * Компонент отображает название альбома и нумерованный список песен.
- * При клике на название трека выводит текст выбранной песни в popup.
+ * Форматирует продолжительность трека из формата mm.ss → mm:ss.
+ */
+function formatDuration(duration?: number): string {
+  if (duration == null) return '';
+  const [minutes, rawSeconds = '0'] = duration.toString().split('.');
+  const normalizedSeconds =
+    rawSeconds.length === 1 ? `${rawSeconds}0` : rawSeconds.slice(0, 2).padEnd(2, '0');
+  return `${minutes}:${normalizedSeconds}`;
+}
+
+/**
+ * Компонент отображает список треков и управляет аудиоплеером.
+ * Клик по треку запускает воспроизведение, меню открывает текст песни.
  */
 export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [popupPlayer, setPopupPlayer] = useState(false); // показ попапа с аудиоплеером
   const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color), 0.8)'); // фон попапа
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState<number>(-1);
+  const [playRequestId, setPlayRequestId] = useState(0);
 
   const { lang } = useLang();
   const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { trackId } = useParams<{ trackId?: string }>();
 
   // Синхронизация: если в URL #player → показываем попап, иначе скрываем
   useEffect(() => {
     setPopupPlayer(location.hash === '#player');
   }, [location.hash]);
 
-  // Открывает попап с плеером (и не даёт всплыть клику до текста трека)
-  function openPlayerPopup(e: MouseEvent<HTMLElement>) {
-    e.stopPropagation();
-    navigate({
-      pathname: location.pathname,
-      search: location.search,
-      hash: '#player',
-    });
-  }
+  const openPlayer = useCallback(
+    (trackIndex: number) => {
+      setSelectedTrackIndex(trackIndex);
+      setPlayRequestId((prev) => prev + 1);
+      navigate(
+        {
+          pathname: location.pathname,
+          search: location.search,
+          hash: '#player',
+        },
+        { replace: location.hash === '#player' }
+      );
+    },
+    [location.hash, location.pathname, location.search, navigate]
+  );
 
   // Закрывает попап с плеером
   function closePopups() {
@@ -56,24 +73,30 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
     }
   }
 
+  const handleTrackPlayed = useCallback((index: number) => {
+    setSelectedTrackIndex(index);
+  }, []);
+
   // Основной контент — принимает готовые строки UI (или дефолты)
   function Block({
     tracks,
     playText = 'Play',
     tracksTitle = 'Треки',
+    lyricsLabel,
   }: {
     tracks: TracksProps[];
     playText?: string;
     tracksTitle?: string;
+    lyricsLabel: string;
   }) {
     return (
       <>
         <h2 className="album-title">{album?.album}</h2>
 
         <div className="wrapper-album-play">
-          <Link
+          <button
+            type="button"
             className="album-play"
-            to={{ hash: '#player' }}
             aria-label="Кнопка play"
             aria-description="Открывает плеер"
             onClick={() => {
@@ -82,25 +105,24 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
                 album_title: album?.album,
                 lang,
               });
+              openPlayer(0);
             }}
           >
             <span className="icon-controller-play"></span>
             {playText}
-          </Link>
+          </button>
         </div>
 
-        <h3>{tracksTitle}</h3>
+        {/* <h3>{tracksTitle}</h3> */}
 
         {/* Рендерится кнопка на каждый трек. Активный подсвечивается. */}
         <div className="tracks">
-          {tracks?.map((track) => (
-            <Link
-              key={track.id}
-              to={`track/${track.id}`}
-              state={{ background: location }}
-              className={clsx('tracks__btn', { active: String(track.id) === trackId })}
+          {tracks?.map((track, index) => (
+            <button
+              type="button"
+              className={clsx('tracks__btn', { active: selectedTrackIndex === index })}
               aria-label="Кнопка с названием песни"
-              aria-description={`Показать текст: ${track.title}`}
+              aria-description={`Воспроизвести: ${track.title}`}
               onClick={() => {
                 gaEvent('track_select', {
                   album_id: album?.albumId,
@@ -109,17 +131,42 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
                   track_title: track.title,
                   lang,
                 });
+                openPlayer(index);
               }}
             >
-              {track.title}
-            </Link>
+              <span className="tracks__title">{track.title}</span>
+              {track.duration != null && (
+                <span className="tracks__duration">{formatDuration(track.duration)}</span>
+              )}
+              <Link
+                to={{
+                  pathname: `/albums/${album.albumId}/track/${track.id}`,
+                  search: location.search,
+                  hash: location.hash === '#player' ? '#player' : undefined,
+                }}
+                state={{ background: location }}
+                className="tracks__menu"
+                aria-label={`${lyricsLabel}: ${track.title}`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <span aria-hidden="true">⋯</span>
+              </Link>
+            </button>
           ))}
         </div>
 
         {/* Попап с аудиоплеером */}
         {popupPlayer && (
           <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
-            {album && <AudioPlayer album={album} setBgColor={setBgColor} autoPlay />}
+            {album && (
+              <AudioPlayer
+                album={album}
+                setBgColor={setBgColor}
+                activeTrackIndex={Math.max(selectedTrackIndex, 0)}
+                playRequestId={playRequestId}
+                onTrackChange={handleTrackPlayed}
+              />
+            )}
             <Hamburger isActive={popupPlayer} onToggle={closePopups} />
           </Popup>
         )}
@@ -127,23 +174,37 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
     );
   }
 
+  const defaultLyricsLabel = useMemo(
+    () => (lang === 'en' ? 'Show lyrics' : 'Показать текст'),
+    [lang]
+  );
+
   // Если данных от лоадера ещё нет — отрисуем блок с дефолтными подписями
   if (!data) {
-    return <Block tracks={album?.tracks || []} />;
+    return <Block tracks={album?.tracks || []} lyricsLabel={defaultLyricsLabel} />;
   }
 
   // Когда словарь подгрузится — возьмём тексты из него
   return (
     <DataAwait
       value={data.templateC}
-      fallback={<Block tracks={album?.tracks || []} />}
+      fallback={<Block tracks={album?.tracks || []} lyricsLabel={defaultLyricsLabel} />}
       error={null}
     >
       {(ui) => {
         const dict = ui?.[0];
         const playText = dict?.buttons?.playButton ?? 'Play';
         const tracksTitle = dict?.titles?.tracks ?? 'Треки';
-        return <Block tracks={album?.tracks || []} playText={playText} tracksTitle={tracksTitle} />;
+        const lyricsLabel =
+          dict?.buttons?.lyrics ?? (lang === 'en' ? 'Show lyrics' : 'Показать текст');
+        return (
+          <Block
+            tracks={album?.tracks || []}
+            playText={playText}
+            tracksTitle={tracksTitle}
+            lyricsLabel={lyricsLabel}
+          />
+        );
       }}
     </DataAwait>
   );
