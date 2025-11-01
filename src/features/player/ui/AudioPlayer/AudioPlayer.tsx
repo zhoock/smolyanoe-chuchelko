@@ -157,6 +157,8 @@ export default function AudioPlayer({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // отдельный ref для таймера долгого нажатия
   const isLongPressRef = useRef(false);
   const wasRewindingRef = useRef(false); // флаг: была ли перемотка (чтобы предотвратить переключение трека после)
+  const hasLongPressTimerRef = useRef(false); // флаг: запущен ли таймер долгого нажатия (чтобы предотвратить переключение трека даже если таймер ещё не сработал)
+  const shouldBlockTrackSwitchRef = useRef(false); // флаг: блокировать ли переключение трека (устанавливается при начале перемотки)
   const timeRef = useRef(time); // ref для актуальных значений времени в setInterval
 
   // Обновляем ref при изменении time
@@ -174,18 +176,26 @@ export default function AudioPlayer({
       pressStartTimeRef.current = startTime;
       isLongPressRef.current = false;
       wasRewindingRef.current = false; // сбрасываем флаг перемотки
+      hasLongPressTimerRef.current = false; // сбрасываем флаг запуска таймера
+      shouldBlockTrackSwitchRef.current = false; // сбрасываем флаг блокировки (будет установлен при начале перемотки)
 
       // Очищаем предыдущий таймер, если он есть
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
       }
 
-      // Через 300мс начинаем перемотку, если кнопка всё ещё удерживается
+      // Помечаем, что таймер запущен (даже до его срабатывания)
+      // Это предотвратит переключение трека при коротких нажатиях
+      hasLongPressTimerRef.current = true;
+
+      // Через 200мс начинаем перемотку, если кнопка всё ещё удерживается
+      // Уменьшили время до 200мс для более быстрой реакции
       longPressTimerRef.current = setTimeout(() => {
         if (pressStartTimeRef.current === startTime) {
           // Это долгое нажатие - начинаем перемотку
           isLongPressRef.current = true;
           wasRewindingRef.current = true; // устанавливаем флаг что была перемотка
+          shouldBlockTrackSwitchRef.current = true; // БЛОКИРУЕМ переключение трека раз и навсегда
           const step = direction === 'backward' ? -5 : 5; // перемотка на 5 секунд
 
           rewindIntervalRef.current = setInterval(() => {
@@ -210,7 +220,7 @@ export default function AudioPlayer({
             }
           }, 200); // каждые 200мс
         }
-      }, 300); // задержка перед началом перемотки
+      }, 200); // задержка перед началом перемотки (уменьшили с 300мс до 200мс)
     },
     [dispatch, time]
   );
@@ -222,6 +232,10 @@ export default function AudioPlayer({
   const handleRewindEnd = useCallback(
     (direction: 'backward' | 'forward', originalHandler: () => void) => {
       const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+
+      // КРИТИЧЕСКИ ВАЖНО: Сохраняем значение флага блокировки СРАЗУ, ДО всех операций
+      // Это единственный источник правды - если он установлен, перемотка РАБОТАЛА
+      const isRewindingActive = shouldBlockTrackSwitchRef.current;
 
       // Останавливаем таймер долгого нажатия
       if (longPressTimerRef.current) {
@@ -240,17 +254,43 @@ export default function AudioPlayer({
         }
       }
 
-      // Если это было короткое нажатие (< 300мс) и НЕ было перемотки - переключаем трек
-      if (!wasRewindingRef.current && pressDuration > 0 && pressDuration < 300) {
-        originalHandler();
+      // ПРОСТАЯ ЛОГИКА: Если перемотка работала (флаг блокировки был установлен) - НЕ переключаем трек
+      // Флаг устанавливается ТОЛЬКО когда перемотка реально началась (таймер сработал и интервал запущен)
+      if (isRewindingActive) {
+        // Перемотка работала - трек НЕ переключаем
+        // Сбрасываем флаги и выходим
+        setTimeout(() => {
+          pressStartTimeRef.current = null;
+          isLongPressRef.current = false;
+          hasLongPressTimerRef.current = false;
+          wasRewindingRef.current = false;
+          // Сбрасываем флаг блокировки после всех проверок (даём время onClick проверить)
+          setTimeout(() => {
+            shouldBlockTrackSwitchRef.current = false;
+          }, 300);
+        }, 150);
+        return;
       }
 
-      pressStartTimeRef.current = null;
-      isLongPressRef.current = false;
-      // Сбрасываем флаг перемотки с небольшой задержкой, чтобы onClick успел проверить
+      // Если перемотка НЕ работала - проверяем, был ли это короткий клик
+      // Переключаем трек ТОЛЬКО если нажатие было очень коротким (< 150мс)
+      // Если нажатие >= 180мс, таймер мог сработать, поэтому не переключаем
+      if (pressDuration > 0 && pressDuration < 150) {
+        // Очень короткое нажатие - переключаем трек
+        originalHandler();
+      } else if (pressDuration >= 180) {
+        // Нажатие было достаточно долгим - таймер мог сработать, не переключаем трек
+        // Это дополнительная защита на случай гонки условий
+      }
+      // Средние нажатия (150-180мс) тоже не переключаем трек (на всякий случай)
+
+      // Сбрасываем флаги с задержкой, чтобы onClick успел проверить
       setTimeout(() => {
+        pressStartTimeRef.current = null;
+        isLongPressRef.current = false;
+        hasLongPressTimerRef.current = false;
         wasRewindingRef.current = false;
-      }, 100);
+      }, 150);
     },
     [dispatch, isPlaying]
   );
@@ -261,11 +301,11 @@ export default function AudioPlayer({
    */
   const handleRewindClick = useCallback(
     (direction: 'backward' | 'forward', originalHandler: () => void) => {
-      // Если была перемотка или долгое нажатие - НЕ переключаем трек
-      if (wasRewindingRef.current || isLongPressRef.current) {
+      // ПРОСТАЯ ЛОГИКА: Если перемотка работает (флаг блокировки установлен) - НЕ переключаем трек
+      if (shouldBlockTrackSwitchRef.current) {
         return;
       }
-      // Если это был обычный клик (не долгое нажатие) - переключаем трек
+      // Если перемотка НЕ работает - переключаем трек
       originalHandler();
     },
     []
@@ -398,6 +438,11 @@ export default function AudioPlayer({
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
+      // Сбрасываем флаги при размонтировании
+      hasLongPressTimerRef.current = false;
+      isLongPressRef.current = false;
+      wasRewindingRef.current = false;
+      pressStartTimeRef.current = null;
     };
   }, []);
 
@@ -448,14 +493,19 @@ export default function AudioPlayer({
             e.preventDefault(); // Предотвращаем клик при touch
             handleRewindStart('backward');
           }}
-          onTouchEnd={() => handleRewindEnd('backward', prevTrack)}
+          onTouchEnd={(e) => {
+            e.preventDefault(); // Предотвращаем двойной вызов
+            handleRewindEnd('backward', prevTrack);
+          }}
           onClick={(e) => {
-            // Предотвращаем срабатывание клика если было долгое нажатие
-            if (isLongPressRef.current) {
+            // ПРОСТАЯ ЛОГИКА: Если перемотка работает (флаг блокировки установлен) - блокируем клик
+            // Проверяем ДО вызова handleRewindClick
+            if (shouldBlockTrackSwitchRef.current) {
               e.preventDefault();
+              e.stopPropagation();
               return;
             }
-            // Если это был обычный клик без удержания - переключаем трек
+            // Если перемотка НЕ работает - переключаем трек
             handleRewindClick('backward', prevTrack);
           }}
         >
@@ -479,14 +529,19 @@ export default function AudioPlayer({
             e.preventDefault(); // Предотвращаем клик при touch
             handleRewindStart('forward');
           }}
-          onTouchEnd={() => handleRewindEnd('forward', nextTrack)}
+          onTouchEnd={(e) => {
+            e.preventDefault(); // Предотвращаем двойной вызов
+            handleRewindEnd('forward', nextTrack);
+          }}
           onClick={(e) => {
-            // Предотвращаем срабатывание клика если было долгое нажатие
-            if (isLongPressRef.current) {
+            // ПРОСТАЯ ЛОГИКА: Если перемотка работает (флаг блокировки установлен) - блокируем клик
+            // Проверяем ДО вызова handleRewindClick
+            if (shouldBlockTrackSwitchRef.current) {
               e.preventDefault();
+              e.stopPropagation();
               return;
             }
-            // Если это был обычный клик без удержания - переключаем трек
+            // Если перемотка НЕ работает - переключаем трек
             handleRewindClick('forward', nextTrack);
           }}
         >
