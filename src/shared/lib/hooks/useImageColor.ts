@@ -13,6 +13,17 @@ declare global {
   }
 }
 
+// Глобальный кеш для отслеживания уже обработанных изображений
+const processedImagesCache = new Set<string>();
+
+/**
+ * Очищает кеш обработанных изображений для указанного пути.
+ * Используется при смене альбома, чтобы принудительно переизвлечь цвета.
+ */
+export function clearImageColorCache(imgSrc: string): void {
+  processedImagesCache.delete(imgSrc);
+}
+
 /* Этот хук useImageColor предназначен для извлечения доминантного цвета
  * и палитры из изображения с использованием библиотеки Color Thief.
  * Он загружает скрипт Color Thief при необходимости, обрабатывает изображение
@@ -31,6 +42,12 @@ export function useImageColor(
   // В данном случае он загружает Color Thief и извлекает цвета из изображения.
   useEffect(() => {
     if (!onColorsExtracted) return; // если нет onColorsExtracted, выход из эффекта
+
+    // Проверяем кеш - если для этого изображения уже извлекались цвета, не делаем ничего
+    // Кеш может быть очищен извне через clearImageColorCache при смене альбома
+    if (processedImagesCache.has(imgSrc)) {
+      return; // Цвета уже извлечены для этого изображения
+    }
 
     // Проверяет, загружен ли уже Color Thief.
     // Если нет, создаёт <script> и добавляет в document.body.
@@ -68,6 +85,9 @@ export function useImageColor(
           const dominantColor = colorThief.getColor(img);
           // Получает палитру из 10 цветов.
           const palette = colorThief.getPalette(img, 10);
+
+          // Помечаем изображение как обработанное ПЕРЕД вызовом колбэка
+          processedImagesCache.add(imgSrc);
 
           // Преобразует массив [r, g, b] в строку "rgb(r, g, b)".
           // Вызывает onColorsExtracted.

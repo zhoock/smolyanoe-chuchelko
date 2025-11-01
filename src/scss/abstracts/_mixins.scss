@@ -21,13 +21,14 @@ $ms-4: 123.363px; // 6.854rem;
   $hover-background: var(--button-background-color-hover, #998238),
   $margin: var(--ms-1) 0,
   $padding: var(--ms-01) var(--ms-0),
+  $border: 0,
   $border-radius: var(--ms-01),
   $disabled-background: var(--button-disabled-background, #9b9b9a)
 ) {
   margin: $margin;
   padding: $padding;
   color: $color;
-  border: 0;
+  border: $border;
   border-radius: $border-radius;
   transition: all 200ms ease;
   background-color: $background;

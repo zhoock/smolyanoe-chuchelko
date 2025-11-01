@@ -2,9 +2,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { playerActions, playerSelectors } from '@features/player';
 
 import { Hamburger, Popup } from '@components';
-import AudioPlayer from '../AudioPlayer/AudioPlayer';
+import { AudioPlayer } from '@features/player';
 
 import type { IAlbums, TracksProps } from '../../models';
 import { useAlbumsData } from '@hooks/data';
@@ -31,9 +34,9 @@ function formatDuration(duration?: number): string {
  */
 export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [popupPlayer, setPopupPlayer] = useState(false); // показ попапа с аудиоплеером
-  const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color), 0.8)'); // фон попапа
-  const [selectedTrackIndex, setSelectedTrackIndex] = useState<number>(-1);
-  const [playRequestId, setPlayRequestId] = useState(0);
+  const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color-rgb) / 80%)'); // фон попапа
+  const dispatch = useAppDispatch();
+  const activeIndex = useAppSelector(playerSelectors.selectCurrentTrackIndex);
 
   const { lang } = useLang();
   const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
@@ -43,13 +46,19 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
 
   // Синхронизация: если в URL #player → показываем попап, иначе скрываем
   useEffect(() => {
-    setPopupPlayer(location.hash === '#player');
+    const shouldBeOpen = location.hash === '#player';
+    setPopupPlayer(shouldBeOpen);
+
+    // НЕ сбрасываем bgColor при закрытии попапа - это предотвращает моргание
+    // bgColor остаётся с последним значением для плавного закрытия
   }, [location.hash]);
 
   const openPlayer = useCallback(
     (trackIndex: number) => {
-      setSelectedTrackIndex(trackIndex);
-      setPlayRequestId((prev) => prev + 1);
+      // Передаём плейлист в стор при открытии плеера
+      dispatch(playerActions.setPlaylist(album.tracks || []));
+      dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+      dispatch(playerActions.requestPlay());
       navigate(
         {
           pathname: location.pathname,
@@ -59,7 +68,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         { replace: location.hash === '#player' }
       );
     },
-    [location.hash, location.pathname, location.search, navigate]
+    [dispatch, album.tracks, location.hash, location.pathname, location.search, navigate]
   );
 
   // Закрывает попап с плеером
@@ -72,10 +81,6 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
       }
     }
   }
-
-  const handleTrackPlayed = useCallback((index: number) => {
-    setSelectedTrackIndex(index);
-  }, []);
 
   // Основной контент — принимает готовые строки UI (или дефолты)
   function Block({
@@ -120,7 +125,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
           {tracks?.map((track, index) => (
             <button
               type="button"
-              className={clsx('tracks__btn', { active: selectedTrackIndex === index })}
+              className={clsx('tracks__btn', { active: activeIndex === index })}
               aria-label="Кнопка с названием песни"
               aria-description={`Воспроизвести: ${track.title}`}
               onClick={() => {
@@ -135,9 +140,9 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
               }}
             >
               <span className="tracks__title">{track.title}</span>
-              {track.duration != null && (
+              {/* {track.duration != null && (
                 <span className="tracks__duration">{formatDuration(track.duration)}</span>
-              )}
+              )} */}
               <Link
                 to={{
                   pathname: `/albums/${album.albumId}/track/${track.id}`,
@@ -156,20 +161,10 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         </div>
 
         {/* Попап с аудиоплеером */}
-        {popupPlayer && (
-          <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
-            {album && (
-              <AudioPlayer
-                album={album}
-                setBgColor={setBgColor}
-                activeTrackIndex={Math.max(selectedTrackIndex, 0)}
-                playRequestId={playRequestId}
-                onTrackChange={handleTrackPlayed}
-              />
-            )}
-            <Hamburger isActive={popupPlayer} onToggle={closePopups} />
-          </Popup>
-        )}
+        <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
+          {popupPlayer && album && <AudioPlayer album={album} setBgColor={setBgColor} />}
+          <Hamburger isActive={popupPlayer} onToggle={closePopups} />
+        </Popup>
       </>
     );
   }

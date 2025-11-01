@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { getImageUrl } from 'hooks/data';
 import type { CoverProps } from 'models';
 import { useImageColor } from 'shared/lib/hooks/useImageColor';
@@ -6,7 +6,7 @@ import { useImageColor } from 'shared/lib/hooks/useImageColor';
 /**
  * Компонент отображает обложку альбома.
  */
-export default function AlbumCover({
+function AlbumCover({
   img,
   fullName,
   size = 448,
@@ -44,3 +44,19 @@ export default function AlbumCover({
     </>
   );
 }
+
+// Мемоизируем компонент, чтобы он не пересоздавался при смене трека
+export default memo(AlbumCover, (prevProps, nextProps) => {
+  // Компонент не должен пересоздаваться, если img и fullName не изменились
+  // Для onColorsExtracted: если оба undefined или оба отсутствуют - считаем равными
+  const prevCallback = prevProps.onColorsExtracted;
+  const nextCallback = nextProps.onColorsExtracted;
+  const callbacksEqual = prevCallback === nextCallback || (!prevCallback && !nextCallback);
+
+  return (
+    prevProps.img === nextProps.img &&
+    prevProps.fullName === nextProps.fullName &&
+    prevProps.size === nextProps.size &&
+    callbacksEqual
+  );
+});

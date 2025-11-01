@@ -8,24 +8,29 @@ export const Popup = ({ children, isActive, bgColor, onClose }: PopupProps) => {
 
   useEffect(() => {
     const dialog = dialogRef.current;
+    if (!dialog) return;
 
-    if (isActive && dialog && !dialog.open) {
+    if (isActive && !dialog.open) {
       dialog.showModal();
-      // dialog.focus(); // Устанавливаем фокус на сам диалог
-    } else if (!isActive && dialog?.open) {
+    } else if (!isActive && dialog.open) {
       dialog.close();
     }
+  }, [isActive]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
 
     const handleClose = () => {
       onClose?.();
     };
 
-    dialog?.addEventListener('close', handleClose);
+    dialog.addEventListener('close', handleClose);
 
     return () => {
-      dialog?.removeEventListener('close', handleClose);
+      dialog.removeEventListener('close', handleClose);
     };
-  }, [isActive, onClose]);
+  }, [onClose]);
 
   return (
     <dialog ref={dialogRef} style={{ background: bgColor }}>

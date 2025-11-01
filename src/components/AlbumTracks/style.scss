@@ -19,14 +19,15 @@
 
     .album-play {
       display: flex;
-      color: var(--button-color-hover, #ffffff) !important;
-      background: var(--button-background-color-hover, #998238) !important;
       align-items: center;
       justify-content: center;
       gap: 4px;
       grid-column: 1 / 3;
 
-      @include button-variant;
+      @include button-variant(
+        $color: var(--button-color-hover),
+        $background: var(--button-background-color-hover)
+      );
 
       .icon-controller-play {
         color: currentcolor;
@@ -45,40 +46,30 @@
     counter-reset: n 0;
 
     &__btn {
+      /* обычные декларации — до миксина */
       display: flex;
-      margin: 0 !important;
       text-align: inherit;
-      background: none !important;
-      border-radius: 0 !important;
-      transition: color 200ms ease;
-      border-block-start: 1px solid var(--hr-color, #3d3c3a) !important;
-      text-overflow: ellipsis;
-      overflow: hidden;
-      counter-increment: n;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      counter-increment: n;
       align-items: center;
       gap: var(--ms-01);
-      padding-inline: var(--ms-01) !important;
 
-      @include button-variant;
+      @include button-variant(
+        $background: var(--main-background-color, #20201d),
+        $margin: 0,
+        $border-radius: 0,
+        $padding: var(--ms-01) var(--ms-0)
+      );
 
-      @media (hover: none) and (pointer: coarse) {
-        &:hover,
-        &:active {
-          color: var(--link-color-hover) !important;
-          background: var(--main-background-color) !important;
-          border-radius: none !important;
-          border-block-start-color: var(--hr-color, #3d3c3a) !important;
-          border-block-end-color: var(--hr-color, #3d3c3a) !important ;
+      /* если границу нужно ставить «после» — заверните в & { } */
+      &:where(*) {
+        border-block-start: 1px solid var(--hr-color, #3d3c3a);
+      }
 
-          &::before {
-            filter: brightness(100%) !important;
-          }
-
-          &:hover + button {
-            border-block-start-color: var(--main-background-color) !important;
-          }
-        }
+      &:last-child {
+        border-block-end: 1px solid var(--hr-color, #3d3c3a);
       }
 
       &::before {
@@ -87,48 +78,39 @@
         width: var(--ms-0);
       }
 
-      &:last-child {
-        border-block-end: 1px solid var(--hr-color, #3d3c3a) !important;
-      }
-
       .tracks__title {
         flex: 1 1 auto;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      .tracks__duration {
-        display: none;
+      // .tracks__duration {
+      //   @include breakpoint(tablet) {
+      //     flex: 0 0 auto;
+      //     color: var(--muted-text-color, #9f9f9f);
+      //     font-variant-numeric: tabular-nums;
+      //   }
+      // }
 
-        @include breakpoint(tablet) {
-          // display: block;
-          flex: 0 0 auto;
-          color: var(--muted-text-color, #9f9f9f);
-          font-variant-numeric: tabular-nums;
-        }
-      }
+      @media (hover: hover) and (pointer: fine) {
+        &:hover,
+        &:focus-visible {
+          color: var(--button-color-hover, #373633);
+          background: var(--button-background-color-hover, #998238);
+          border-radius: var(--ms-01);
+          border-block-start-color: var(--button-background-color-hover, #998238);
+          border-block-end-color: var(--button-background-color-hover, #998238);
 
-      &:hover,
-      &:focus-visible {
-        color: var(--button-color-hover, #373633) !important;
-        background: var(--button-background-color-hover, #998238) !important;
-        border-radius: var(--ms-01) !important;
-        border-block-start-color: var(--button-background-color-hover, #998238) !important;
-        border-block-end-color: var(--button-background-color-hover, #998238) !important;
+          &::before {
+            font-family: 'icomoon', sans-serif;
+            content: '\e911';
+            color: var(--link-color-hover, #ffffff);
+            filter: brightness(100%);
+          }
 
-        &::before {
-          font-family: 'icomoon', sans-serif !important;
-          content: '\e911';
-          color: var(--link-color-hover);
-          filter: brightness(100%);
-        }
-
-        .tracks__duration {
-          color: var(--accent-foreground-color, #0f0f0f);
-        }
-
-        & + button {
-          border-block-start-color: transparent !important;
+          & + button {
+            border-block-start-color: transparent;
+          }
         }
       }
     }
@@ -137,7 +119,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--link-color-hover);
+      color: var(--link-color-hover, #ffffff);
       background: none;
       border: none;
       cursor: pointer;
@@ -151,7 +133,7 @@
 
       &:hover,
       &:focus-visible {
-        color: var(--link-color-hover);
+        color: var(--link-color-hover, #ffffff);
       }
     }
   }
