@@ -45,10 +45,9 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   const albumId = useAppSelector((state) => state.player.albumId);
   const albumTitle = useAppSelector((state) => state.player.albumTitle);
   const currentTrackIndex = useAppSelector(playerSelectors.selectCurrentTrackIndex);
-  const isPlaying = useAppSelector(playerSelectors.selectIsPlaying);
 
-  // volume НЕ берём из селектора чтобы не вызывать перерендер при изменении громкости
-  // Читаем его напрямую из store только при сохранении
+  // isPlaying и volume НЕ берём из селекторов чтобы не вызывать перерендер при их изменении
+  // Читаем их напрямую из store только при сохранении
 
   const { lang } = useLang();
   const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
@@ -106,20 +105,22 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   }, [location.hash, playlist.length, album, dispatch]);
 
   // Сохраняем состояние плеера в localStorage при изменении ключевых параметров
-  // volume читаем напрямую из store чтобы не вызывать перерендер при изменении громкости
+  // volume и isPlaying читаем напрямую из store чтобы не вызывать перерендер при их изменении
   useEffect(() => {
     if (albumId && playlist.length > 0) {
-      const currentVolume = store.getState().player.volume; // читаем напрямую из store
+      const state = store.getState().player;
+      const currentVolume = state.volume; // читаем напрямую из store
+      const currentIsPlaying = state.isPlaying; // читаем напрямую из store
       savePlayerState({
         albumId,
         albumTitle,
         currentTrackIndex,
         volume: currentVolume,
-        isPlaying,
+        isPlaying: currentIsPlaying,
         playlist,
       } as Parameters<typeof savePlayerState>[0]);
     }
-  }, [albumId, albumTitle, currentTrackIndex, isPlaying, playlist.length, store]); // store стабилен, не вызывает перерендер
+  }, [albumId, albumTitle, currentTrackIndex, playlist.length, store]); // store стабилен, не вызывает перерендер
 
   const openPlayer = useCallback(
     (trackIndex: number) => {
