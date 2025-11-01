@@ -139,11 +139,61 @@ playerListenerMiddleware.startListening({
 /**
  * Слушатель для запроса воспроизведения.
  * requestPlay() используется когда нужно запустить трек (например, при открытии плеера).
- * Это действие просто инкрементирует playRequestId, а этот слушатель вызывает play().
+ * Убеждается что трек загружен и метаданные готовы перед запуском воспроизведения.
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.requestPlay,
-  effect: (_, api) => {
+  effect: async (_, api) => {
+    const state = api.getState();
+    const track = state.player.playlist?.[state.player.currentTrackIndex];
+
+    if (!track?.src) return;
+
+    // Убеждаемся что источник установлен (если еще не установлен)
+    const el = audioController.element;
+    if (el.src !== track.src) {
+      audioController.setSource(track.src);
+    }
+
+    // Ждём загрузки метаданных если они еще не загружены
+    // readyState: 0 = HAVE_NOTHING, 1 = HAVE_METADATA, 2 = HAVE_CURRENT_DATA, 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA
+    if (el.readyState < 2) {
+      // Ждём загрузки метаданных или хотя бы части данных
+      await new Promise<void>((resolve) => {
+        let resolved = false;
+        const resolveOnce = () => {
+          if (!resolved) {
+            resolved = true;
+            resolve();
+          }
+        };
+
+        // Слушаем событие loadedmetadata или canplay (когда можно начать воспроизведение)
+        const onLoadedMetadata = () => {
+          el.removeEventListener('loadedmetadata', onLoadedMetadata);
+          el.removeEventListener('canplay', onCanPlay);
+          resolveOnce();
+        };
+        const onCanPlay = () => {
+          el.removeEventListener('loadedmetadata', onLoadedMetadata);
+          el.removeEventListener('canplay', onCanPlay);
+          resolveOnce();
+        };
+
+        el.addEventListener('loadedmetadata', onLoadedMetadata);
+        el.addEventListener('canplay', onCanPlay);
+
+        // Если событие уже произошло, проверяем готовность
+        if (el.readyState >= 2) {
+          resolveOnce();
+        } else {
+          // Таймаут на случай если события не сработают
+          setTimeout(resolveOnce, 2000);
+        }
+      });
+    }
+
+    // Теперь запускаем воспроизведение
     api.dispatch(playerActions.play());
   },
 });

@@ -1,10 +1,12 @@
 // src/components/AlbumTracks/AlbumTracks.tsx
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { useStore } from 'react-redux';
+import type { AppStore, RootState } from '@app/providers/StoreProvider/config/store';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { playerActions, playerSelectors } from '@features/player';
+import { playerActions, playerSelectors, savePlayerState, loadPlayerState } from '@features/player';
 
 import { Hamburger, Popup } from '@components';
 import { AudioPlayer } from '@features/player';
@@ -36,7 +38,17 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
   const [popupPlayer, setPopupPlayer] = useState(false); // показ попапа с аудиоплеером
   const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color-rgb) / 80%)'); // фон попапа
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>(); // получаем store для чтения volume без перерендера
   const activeIndex = useAppSelector(playerSelectors.selectCurrentTrackIndex);
+  const playlist = useAppSelector(playerSelectors.selectPlaylist);
+  // Используем отдельные селекторы для сохранения состояния
+  const albumId = useAppSelector((state) => state.player.albumId);
+  const albumTitle = useAppSelector((state) => state.player.albumTitle);
+  const currentTrackIndex = useAppSelector(playerSelectors.selectCurrentTrackIndex);
+  const isPlaying = useAppSelector(playerSelectors.selectIsPlaying);
+
+  // volume НЕ берём из селектора чтобы не вызывать перерендер при изменении громкости
+  // Читаем его напрямую из store только при сохранении
 
   const { lang } = useLang();
   const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
@@ -49,9 +61,65 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
     const shouldBeOpen = location.hash === '#player';
     setPopupPlayer(shouldBeOpen);
 
+    // Если попап открыт при загрузке страницы, но в Redux нет данных о треке,
+    // восстанавливаем состояние из localStorage
+    if (shouldBeOpen && playlist.length === 0 && album && album.tracks && album.tracks.length > 0) {
+      const savedState = loadPlayerState();
+
+      // Вычисляем albumId для текущего альбома
+      const currentAlbumId =
+        album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
+
+      if (savedState && savedState.albumId === currentAlbumId) {
+        // Если сохранённый альбом совпадает с текущим, восстанавливаем конкретный трек
+        const validTrackIndex = Math.max(
+          0,
+          Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
+        );
+
+        // Восстанавливаем состояние трека
+        dispatch(playerActions.setPlaylist(album.tracks));
+        dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
+        dispatch(
+          playerActions.setAlbumInfo({
+            albumId: savedState.albumId,
+            albumTitle: savedState.albumTitle ?? album.album,
+          })
+        );
+        dispatch(playerActions.setVolume(savedState.volume));
+
+        // ВАЖНО: Всегда ставим трек на паузу при восстановлении из localStorage
+        // Это гарантирует правильное состояние и классы, даже если трек до этого играл
+        dispatch(playerActions.pause());
+      } else {
+        // Если сохранённого состояния нет или альбом не совпадает, используем первый трек
+        dispatch(playerActions.setPlaylist(album.tracks));
+        dispatch(playerActions.setCurrentTrackIndex(0));
+        dispatch(playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album }));
+        // При обычном открытии (не восстановление) запускаем трек
+        dispatch(playerActions.requestPlay());
+      }
+    }
+
     // НЕ сбрасываем bgColor при закрытии попапа - это предотвращает моргание
     // bgColor остаётся с последним значением для плавного закрытия
-  }, [location.hash]);
+  }, [location.hash, playlist.length, album, dispatch]);
+
+  // Сохраняем состояние плеера в localStorage при изменении ключевых параметров
+  // volume читаем напрямую из store чтобы не вызывать перерендер при изменении громкости
+  useEffect(() => {
+    if (albumId && playlist.length > 0) {
+      const currentVolume = store.getState().player.volume; // читаем напрямую из store
+      savePlayerState({
+        albumId,
+        albumTitle,
+        currentTrackIndex,
+        volume: currentVolume,
+        isPlaying,
+        playlist,
+      } as Parameters<typeof savePlayerState>[0]);
+    }
+  }, [albumId, albumTitle, currentTrackIndex, isPlaying, playlist.length, store]); // store стабилен, не вызывает перерендер
 
   const openPlayer = useCallback(
     (trackIndex: number) => {
