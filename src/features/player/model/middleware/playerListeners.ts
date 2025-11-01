@@ -8,6 +8,7 @@ import { createListenerMiddleware, isAnyOf, type ListenerEffectAPI } from '@redu
 import { audioController } from '../lib/audioController';
 import { playerActions } from '../slice/playerSlice';
 import type { RootState, AppDispatch } from '@app/providers/StoreProvider/config/store';
+import { gaEvent } from '@utils/ga';
 
 // Создаём middleware для слушателей
 export const playerListenerMiddleware = createListenerMiddleware<RootState, AppDispatch>();
@@ -155,12 +156,17 @@ playerListenerMiddleware.startListening({
  * - timeupdate → обновление времени и прогресса
  * - loadedmetadata → сброс времени при загрузке нового трека
  * - ended → автоматический переход на следующий трек
+ * - playing → отправка GA события audio_start
+ * - pause → отправка GA события audio_pause
  */
 export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootState): void => {
   const el = audioController.element;
 
   // Устанавливаем начальную громкость из стейта
   audioController.setVolume(getState().player.volume);
+
+  // Храним ключ последнего отправленного события audio_start для предотвращения дубликатов
+  let lastStartedKey: string | null = null;
 
   /**
    * Событие timeupdate срабатывает постоянно во время воспроизведения.
@@ -186,6 +192,8 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
   el.addEventListener('loadedmetadata', () => {
     dispatch(playerActions.setTime({ current: 0, duration: el.duration }));
     dispatch(playerActions.setProgress(0));
+    // Сбрасываем ключ для audio_start, чтобы событие отправилось для нового трека
+    lastStartedKey = null;
   });
 
   /**
@@ -197,5 +205,51 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
     if (playlist.length > 0) {
       dispatch(playerActions.nextTrack(playlist.length));
     }
+  });
+
+  /**
+   * Событие playing срабатывает когда трек начинает воспроизводиться.
+   * Отправляем GA событие audio_start (только один раз для каждого трека).
+   */
+  el.addEventListener('playing', () => {
+    const state = getState();
+    const { albumId, albumTitle, currentTrackIndex, playlist } = state.player;
+    const track = playlist[currentTrackIndex];
+
+    if (!albumId || !albumTitle) return; // нет данных об альбоме
+
+    const key = `${albumId}:${currentTrackIndex}`;
+    // Если событие уже отправлено для этого трека, не отправляем повторно
+    if (lastStartedKey === key) return;
+
+    gaEvent('audio_start', {
+      album_id: albumId,
+      album_title: albumTitle,
+      track_id: track?.id ?? String(currentTrackIndex),
+      track_title: track?.title ?? 'Unknown Track',
+      position_seconds: Math.floor(el.currentTime),
+    });
+
+    lastStartedKey = key;
+  });
+
+  /**
+   * Событие pause срабатывает когда трек ставится на паузу.
+   * Отправляем GA событие audio_pause.
+   */
+  el.addEventListener('pause', () => {
+    const state = getState();
+    const { albumId, albumTitle, currentTrackIndex, playlist } = state.player;
+    const track = playlist[currentTrackIndex];
+
+    if (!albumId || !albumTitle) return; // нет данных об альбоме
+
+    gaEvent('audio_pause', {
+      album_id: albumId,
+      album_title: albumTitle,
+      track_id: track?.id ?? String(currentTrackIndex),
+      track_title: track?.title ?? 'Unknown Track',
+      position_seconds: Math.floor(el.currentTime),
+    });
   });
 };

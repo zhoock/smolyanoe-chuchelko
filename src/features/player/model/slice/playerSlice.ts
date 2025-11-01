@@ -106,6 +106,19 @@ const playerSlice = createSlice({
     requestPlay(state) {
       state.playRequestId += 1;
     },
+    /**
+     * Устанавливает данные текущего альбома (для аналитики и других целей).
+     * Используется когда открывается плеер с новым альбомом.
+     */
+    setAlbumInfo(state, action: PayloadAction<{ albumId: string; albumTitle: string } | null>) {
+      if (action.payload) {
+        state.albumId = action.payload.albumId;
+        state.albumTitle = action.payload.albumTitle;
+      } else {
+        state.albumId = null;
+        state.albumTitle = null;
+      }
+    },
   },
 });
 

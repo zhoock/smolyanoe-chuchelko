@@ -55,9 +55,14 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
 
   const openPlayer = useCallback(
     (trackIndex: number) => {
-      // Передаём плейлист в стор при открытии плеера
+      // Вычисляем уникальный ID альбома для аналитики
+      const albumId =
+        album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
+
+      // Передаём плейлист и данные альбома в стор при открытии плеера
       dispatch(playerActions.setPlaylist(album.tracks || []));
       dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+      dispatch(playerActions.setAlbumInfo({ albumId, albumTitle: album.album }));
       dispatch(playerActions.requestPlay());
       navigate(
         {
@@ -68,7 +73,7 @@ export default function AlbumTracks({ album }: { album: IAlbums }) {
         { replace: location.hash === '#player' }
       );
     },
-    [dispatch, album.tracks, location.hash, location.pathname, location.search, navigate]
+    [dispatch, album, location.hash, location.pathname, location.search, navigate]
   );
 
   // Закрывает попап с плеером

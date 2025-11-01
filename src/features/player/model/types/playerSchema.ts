@@ -23,6 +23,8 @@ export interface PlayerState {
   currentTrackIndex: number; // индекс текущего трека в плейлисте
   playlist: TracksProps[]; // массив треков текущего альбома
   playRequestId: number; // счётчик для запросов на воспроизведение (инкрементируется при requestPlay)
+  albumId: string | null; // уникальный ID текущего альбома (для аналитики)
+  albumTitle: string | null; // название текущего альбома (для аналитики)
 }
 
 /**
@@ -38,4 +40,6 @@ export const initialPlayerState: PlayerState = {
   currentTrackIndex: 0,
   playlist: [],
   playRequestId: 0,
+  albumId: null, // данные альбома для аналитики
+  albumTitle: null,
 };

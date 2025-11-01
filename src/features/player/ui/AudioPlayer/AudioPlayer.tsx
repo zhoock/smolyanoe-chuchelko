@@ -7,7 +7,6 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { AlbumCover } from '@entities/album';
 import type { IAlbums } from 'models';
-import { gaEvent } from '@utils/ga';
 import './style.scss';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -34,7 +33,6 @@ export default function AudioPlayer({
   const currentTrackIndex = useAppSelector(playerSelectors.selectCurrentTrackIndex); // индекс текущего трека
   const playlist = useAppSelector(playerSelectors.selectPlaylist); // массив треков текущего альбома
   const currentTrack = useAppSelector(playerSelectors.selectCurrentTrack); // объект текущего трека
-  const playRequestId = useAppSelector(playerSelectors.selectPlayRequestId); // ID запроса на воспроизведение
 
   /**
    * Вычисляем уникальный ID альбома для аналитики и ключей.
@@ -46,12 +44,11 @@ export default function AudioPlayer({
   );
 
   // Refs для работы с DOM элементами и хранения промежуточных значений
-  const startedKeyRef = useRef<string | null>(null); // ключ для предотвращения дублирования GA событий
   const audioContainerRef = useRef<HTMLDivElement | null>(null); // контейнер для прикрепления audio элемента к DOM
   const progressInputRef = useRef<HTMLInputElement | null>(null); // слайдер прогресса для установки CSS переменной
   const coverRef = useRef<HTMLDivElement | null>(null); // контейнер обложки для управления анимацией
-  const prevIsPlayingRef = useRef(isPlaying); // предыдущее состояние isPlaying для отслеживания изменений
-  const prevTrackIndexRef = useRef(currentTrackIndex); // предыдущий индекс трека для отслеживания смены трека
+  const prevIsPlayingRef = useRef<boolean | null>(null); // предыдущее состояние isPlaying (null = ещё не установлено)
+  const prevTrackIndexRef = useRef<number | null>(null); // предыдущий индекс трека (null = ещё не установлено)
   const bgColorSetForAlbumRef = useRef<string | null>(null); // флаг: установлен ли уже цвет фона для текущего альбома
 
   /**
@@ -78,36 +75,33 @@ export default function AudioPlayer({
   /**
    * Управление анимацией обложки альбома при play/pause и смене трека.
    * Используем прямую работу с DOM через classList чтобы избежать ненужных ре-рендеров.
-   * requestAnimationFrame гарантирует что класс добавится в правильный момент анимации.
    *
-   * ВАЖНО: При смене трека ВСЕГДА принудительно синхронизируем класс с текущим isPlaying,
-   * независимо от предыдущего состояния. Это исправляет ситуацию когда трек был на паузе,
-   * а новый трек начинает играть.
+   * ВАЖНО:
+   * - При первом рендере или смене трека синхронизируем класс с текущим isPlaying БЕЗ анимации (синхронно)
+   * - При изменении isPlaying (play/pause) обновляем класс С анимацией
+   * Это предотвращает анимацию увеличения при смене трека на паузе.
    */
   useEffect(() => {
     if (!coverRef.current) return;
 
     const element = coverRef.current;
     const expectedClass = isPlaying ? 'player__cover--playing' : 'player__cover--paused';
-    const isPlayingChanged = prevIsPlayingRef.current !== isPlaying;
-    const trackChanged = prevTrackIndexRef.current !== currentTrackIndex;
+    const wasInitialized = prevIsPlayingRef.current !== null && prevTrackIndexRef.current !== null;
+    const isPlayingChanged = wasInitialized && prevIsPlayingRef.current !== isPlaying;
+    const trackChanged = wasInitialized && prevTrackIndexRef.current !== currentTrackIndex;
 
-    // При смене трека ВСЕГДА обновляем класс, синхронизируя с текущим isPlaying
-    // НЕ обновляем prevIsPlayingRef при смене трека, чтобы не потерять отслеживание изменения isPlaying
-    if (trackChanged) {
+    // При первом рендере или смене трека синхронизируем класс с текущим isPlaying БЕЗ анимации
+    if (!wasInitialized || trackChanged) {
+      // Устанавливаем правильный класс синхронно, чтобы не было анимации
       element.classList.remove('player__cover--playing', 'player__cover--paused');
-      requestAnimationFrame(() => {
-        if (element) {
-          element.classList.add(expectedClass);
-        }
-      });
-      prevTrackIndexRef.current = currentTrackIndex;
-      // Не обновляем prevIsPlayingRef здесь, чтобы отследить последующее изменение isPlaying
-    }
+      element.classList.add(expectedClass);
 
-    // При изменении isPlaying (play/pause) обновляем класс
-    // Это сработает и когда трек меняется и isPlaying меняется следом
-    if (isPlayingChanged) {
+      // Обновляем refs
+      prevIsPlayingRef.current = isPlaying;
+      prevTrackIndexRef.current = currentTrackIndex;
+    } else if (isPlayingChanged) {
+      // При изменении isPlaying (play/pause) обновляем класс С анимацией
+      // Только если это не первый рендер и трек не менялся
       element.classList.remove('player__cover--playing', 'player__cover--paused');
       requestAnimationFrame(() => {
         if (element) {
@@ -117,59 +111,6 @@ export default function AudioPlayer({
       prevIsPlayingRef.current = isPlaying;
     }
   }, [isPlaying, currentTrackIndex]);
-
-  /**
-   * Обработка запроса на воспроизведение.
-   * Когда playRequestId изменяется (инкрементируется), запускаем воспроизведение.
-   * Используется когда пользователь открывает плеер или выбирает новый трек.
-   */
-  useEffect(() => {
-    if (!playRequestId) return;
-    dispatch(playerActions.play());
-  }, [playRequestId, dispatch]);
-
-  /**
-   * Отслеживание событий воспроизведения для Google Analytics.
-   * Отправляем события когда трек начинает играть или ставится на паузу.
-   * Используем startedKeyRef чтобы не отправлять дубликаты события 'audio_start' для одного и того же трека.
-   */
-  useEffect(() => {
-    const el = audioController.element;
-    const track = currentTrack;
-
-    const onPlaying = () => {
-      const key = `${albumId}:${currentTrackIndex}`;
-      // Если событие уже отправлено для этого трека, не отправляем повторно
-      if (startedKeyRef.current === key) return;
-
-      gaEvent('audio_start', {
-        album_id: albumId,
-        album_title: album.album,
-        track_id: track?.id ?? String(currentTrackIndex),
-        track_title: track?.title ?? 'Unknown Track',
-        position_seconds: Math.floor(el.currentTime),
-      });
-
-      startedKeyRef.current = key;
-    };
-
-    const onPause = () => {
-      gaEvent('audio_pause', {
-        album_id: albumId,
-        album_title: album.album,
-        track_id: track?.id ?? String(currentTrackIndex),
-        track_title: track?.title ?? 'Unknown Track',
-        position_seconds: Math.floor(el.currentTime),
-      });
-    };
-
-    el.addEventListener('playing', onPlaying);
-    el.addEventListener('pause', onPause);
-    return () => {
-      el.removeEventListener('playing', onPlaying);
-      el.removeEventListener('pause', onPause);
-    };
-  }, [albumId, album.album, currentTrackIndex, currentTrack]);
 
   /**
    * Форматирует время в секундах в строку вида "MM:SS".
