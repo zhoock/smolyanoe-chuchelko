@@ -84,13 +84,13 @@
         text-overflow: ellipsis;
       }
 
-      // .tracks__duration {
-      //   @include breakpoint(tablet) {
-      //     flex: 0 0 auto;
-      //     color: var(--muted-text-color, #9f9f9f);
-      //     font-variant-numeric: tabular-nums;
-      //   }
-      // }
+      .tracks__duration {
+        @include breakpoint(tablet) {
+          flex: 0 0 auto;
+          color: var(--muted-text-color, #9f9f9f);
+          font-variant-numeric: tabular-nums;
+        }
+      }
 
       @media (hover: hover) and (pointer: fine) {
         &:hover,
@@ -112,28 +112,6 @@
             border-block-start-color: transparent;
           }
         }
-      }
-    }
-
-    &__menu {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--link-color-hover, #ffffff);
-      background: none;
-      border: none;
-      cursor: pointer;
-      transition: color 120ms ease;
-      text-decoration: none;
-
-      span {
-        font-size: 1.4rem;
-        line-height: 1;
-      }
-
-      &:hover,
-      &:focus-visible {
-        color: var(--link-color-hover, #ffffff);
       }
     }
   }

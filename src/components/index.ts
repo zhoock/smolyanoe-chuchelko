@@ -10,7 +10,6 @@ export { Popup } from '@shared/ui/popup';
 export { NotFoundPage } from '../widgets/notFound';
 export { Form } from '../widgets/form';
 export { Hero } from '../widgets/hero';
-export { TracksLyrics } from '../widgets/tracksLyrics';
 
 // export * from './Album';
 // export * from './AlbumTracks';

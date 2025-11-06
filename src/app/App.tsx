@@ -23,12 +23,10 @@ import {
   Article,
   Navigation,
   Hamburger,
-  ModalRoute,
   Popup,
   NotFoundPage,
   Form,
   Hero,
-  TracksLyrics,
 } from '@components';
 import Album from '../pages/Album/Album';
 import StemsPlayground from '../pages/StemsPlayground/StemsPlayground';
@@ -62,9 +60,7 @@ export default function App() {
 function Layout() {
   const dispatch = useAppDispatch();
   const popup = useAppSelector(getIsPopupOpen);
-  const location = useLocation(); // background location для модалки трека
-  const state = location.state as { background?: Location } | undefined;
-  const background = state?.background;
+  const location = useLocation();
 
   const { lang } = useLang() as { lang: 'ru' | 'en' };
   const { revalidate } = useRevalidator();
@@ -122,7 +118,6 @@ function Layout() {
   const knownRoutes = [
     '/',
     '/albums/:albumId',
-    '/albums/:albumId/track/:trackId',
     '/articles/:articleId',
     '/forms',
     '/stems',
@@ -139,10 +134,9 @@ function Layout() {
 
   const standardRoutes = (
     <>
-      <Routes location={background ?? location}>
+      <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/albums/:albumId" element={<Album />} />
-        <Route path="/albums/:albumId/track/:trackId" element={<TracksLyrics />} />
         <Route path="/articles/:articleId" element={<Article />} />
         <Route path="/forms" element={<Form />} />
         <Route path="/stems" element={<StemsPlayground />} />
@@ -152,19 +146,6 @@ function Layout() {
         <Route path="/admin/text/:albumId/:trackId" element={<AdminText />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-
-      {background && (
-        <Routes>
-          <Route
-            path="/albums/:albumId/track/:trackId"
-            element={
-              <ModalRoute>
-                <TracksLyrics />
-              </ModalRoute>
-            }
-          />
-        </Routes>
-      )}
     </>
   );
 
@@ -220,9 +201,6 @@ function Layout() {
               <Hamburger isActive={popup} onToggle={() => dispatch(openPopup())} zIndex="1000" />
             )}
 
-            {/* ВСЕГДА один и тот же Routes.
-            Если есть background, используем его как "виртуальную" локацию,
-            иначе — текущую. Дерево остаётся тем же, нет размонтирования. */}
             {standardRoutes}
           </main>
           <Footer />

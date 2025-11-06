@@ -1,6 +1,6 @@
 // src/components/AlbumTracks/AlbumTracks.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { useStore } from 'react-redux';
 import type { AppStore, RootState } from '@app/providers/StoreProvider/config/store';
@@ -38,7 +38,6 @@ const TracksList = React.memo(function TracksList({
   tracks,
   album,
   activeIndex: initialActiveIndex,
-  lyricsLabel,
   location,
   lang,
   openPlayer,
@@ -47,7 +46,6 @@ const TracksList = React.memo(function TracksList({
   tracks: TracksProps[];
   album: IAlbums;
   activeIndex: number;
-  lyricsLabel: string;
   location: ReturnType<typeof useLocation>;
   lang: string;
   openPlayer: (index: number) => void;
@@ -86,22 +84,9 @@ const TracksList = React.memo(function TracksList({
           }}
         >
           <span className="tracks__title">{track.title}</span>
-          {/* {track.duration != null && (
+          {track.duration != null && (
             <span className="tracks__duration">{formatDuration(track.duration)}</span>
-          )} */}
-          <Link
-            to={{
-              pathname: `/albums/${album.albumId}/track/${track.id}`,
-              search: location.search,
-              hash: location.hash === '#player' ? '#player' : undefined,
-            }}
-            state={{ background: location }}
-            className="tracks__menu"
-            aria-label={`${lyricsLabel}: ${track.title}`}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <span aria-hidden="true">⋯</span>
-          </Link>
+          )}
         </button>
       ))}
     </div>
@@ -333,12 +318,10 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
     tracks,
     playText = 'Play',
     tracksTitle = 'Треки',
-    lyricsLabel,
   }: {
     tracks: TracksProps[];
     playText?: string;
     tracksTitle?: string;
-    lyricsLabel: string;
   }) {
     // Мемоизируем статичные части, которые не должны перерендериваться при смене трека
     const albumHeader = useMemo(
@@ -382,7 +365,6 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           tracks={tracks}
           album={album}
           activeIndex={activeIndexRef.current}
-          lyricsLabel={lyricsLabel}
           location={location}
           lang={lang}
           openPlayer={openPlayer}
@@ -398,37 +380,23 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
     );
   }
 
-  const defaultLyricsLabel = useMemo(
-    () => (lang === 'en' ? 'Show lyrics' : 'Показать текст'),
-    [lang]
-  );
-
-  // Если данных от лоадера ещё нет — отрисуем блок с дефолтными подписями
+  // Если данных от лоадера ещё нет — отрисуем блок
   if (!data) {
-    return <Block tracks={album?.tracks || []} lyricsLabel={defaultLyricsLabel} />;
+    return <Block tracks={album?.tracks || []} />;
   }
 
   // Когда словарь подгрузится — возьмём тексты из него
   return (
     <DataAwait
       value={data.templateC}
-      fallback={<Block tracks={album?.tracks || []} lyricsLabel={defaultLyricsLabel} />}
+      fallback={<Block tracks={album?.tracks || []} />}
       error={null}
     >
       {(ui) => {
         const dict = ui?.[0];
         const playText = dict?.buttons?.playButton ?? 'Play';
         const tracksTitle = dict?.titles?.tracks ?? 'Треки';
-        const lyricsLabel =
-          dict?.buttons?.lyrics ?? (lang === 'en' ? 'Show lyrics' : 'Показать текст');
-        return (
-          <Block
-            tracks={album?.tracks || []}
-            playText={playText}
-            tracksTitle={tracksTitle}
-            lyricsLabel={lyricsLabel}
-          />
-        );
+        return <Block tracks={album?.tracks || []} playText={playText} tracksTitle={tracksTitle} />;
       }}
     </DataAwait>
   );
