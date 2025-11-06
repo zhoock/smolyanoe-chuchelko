@@ -1,21 +1,13 @@
 // src/pages/AdminSync/style.scss
-.admin-sync {
-  margin: 0 auto;
-  padding: var(--ms-2);
-  max-width: 1200px;
+@use '../../scss/abstracts/mixins' as *;
 
+.admin-sync {
   &__header {
     margin-block-end: var(--ms-2);
 
-    &-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-block-end: var(--ms-0);
-    }
-
     h1 {
       margin-block-end: 0;
+      font-size: var(--ms-2);
     }
 
     p {
@@ -24,19 +16,11 @@
     }
   }
 
-  &__link-to-text {
-    padding: var(--ms-01) var(--ms-0);
-    color: var(--link-color-hover, #ffffff);
+  &__description {
+    margin-block-start: var(--ms-1);
+    color: var(--muted-text-color, #9f9f9f);
     font-size: var(--ms-0);
-    border: 1px solid var(--hr-color, #3d3c3a);
-    border-radius: var(--ms-01);
-    transition: background-color 0.2s ease;
-    text-decoration: none;
-
-    &:hover {
-      background-color: var(--button-background-color-hover, #998238);
-      color: var(--button-color-hover, #373633);
-    }
+    line-height: 1.5;
   }
 
   &__player {
@@ -194,15 +178,20 @@
     gap: var(--ms-1);
   }
 
+  &__loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--ms-3);
+    min-height: 200px;
+  }
+
   &__controls {
     display: flex;
-    padding: var(--ms-1);
-    background: var(--main-background-color, #20201d);
-    border: 1px solid var(--hr-color, #3d3c3a);
-    border-radius: var(--ms-01);
     align-items: center;
     gap: var(--ms-0);
     margin-block-start: var(--ms-2);
+    padding: var(--ms-1);
   }
 
   &__saved-indicator {
@@ -270,14 +259,29 @@
     min-width: 200px;
   }
 
+  &__line-end {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-01);
+
+    @include breakpoint(tablet) {
+      margin-inline-start: var(--ms-1);
+      padding-inline-start: var(--ms-1);
+      border-inline-start: 1px solid var(--hr-color, #3d3c3a);
+    }
+  }
+
   &__time-btn {
     padding: var(--ms-01) var(--ms-0);
     color: var(--link-color-hover, #ffffff);
     font-size: var(--ms-0);
+    text-align: center;
     background: var(--button-background-color, transparent);
     border: 1px solid var(--hr-color, #3d3c3a);
     border-radius: var(--ms-01);
     cursor: pointer;
+    min-width: 5ch;
+    font-variant-numeric: tabular-nums;
 
     &:disabled {
       opacity: 0.5;
@@ -287,12 +291,16 @@
     &:hover:not(:disabled) {
       background: var(--button-background-color-hover, #998238);
     }
-  }
 
-  &__time-value {
-    color: var(--muted-text-color, #9f9f9f);
-    font-size: var(--ms-0);
-    min-width: 5ch;
-    text-align: center;
+    &--clear {
+      display: flex;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      font-size: var(--ms-0);
+      min-width: auto;
+      align-items: center;
+      justify-content: center;
+    }
   }
 }

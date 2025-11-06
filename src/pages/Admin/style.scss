@@ -1,0 +1,180 @@
+// src/pages/Admin/style.scss
+@use '../../scss/abstracts/mixins' as *;
+
+.admin {
+  &__header {
+    margin-block-end: var(--ms-2);
+    text-align: center;
+
+    h1 {
+      margin: 0;
+      margin-block-end: var(--ms-01);
+      color: var(--text-color, #ffffff);
+      font-size: var(--ms-2);
+      font-weight: 700;
+    }
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: var(--muted-text-color, #9f9f9f);
+    font-size: var(--ms-0);
+  }
+
+  &__search {
+    margin-block-end: var(--ms-2);
+
+    &-input {
+      width: 100%;
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--text-color, #ffffff);
+      font-size: var(--ms-0);
+      background: var(--main-background-color, #20201d);
+      border: 1px solid var(--hr-color, #3d3c3a);
+      border-radius: var(--ms-01);
+      font-family: inherit;
+
+      &::placeholder {
+        color: var(--muted-text-color, #9f9f9f);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--button-background-color-hover, #998238);
+      }
+    }
+  }
+
+  &__albums {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--ms-2);
+
+    @include breakpoint(mobile) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__album-card {
+    display: flex;
+    padding: var(--ms-1);
+    color: inherit;
+    background: var(--main-background-color, #20201d);
+    border: 1px solid var(--hr-color, #3d3c3a);
+    border-radius: var(--ms-01);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
+    flex-direction: column;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--button-background-color, transparent);
+      border-color: var(--button-background-color-hover, #998238);
+      transform: translateY(-2px);
+    }
+  }
+
+  &__album-cover {
+    margin-block-end: var(--ms-1);
+    text-align: center;
+
+    .album-cover {
+      display: inline-block;
+      max-width: 200px;
+      width: 100%;
+
+      &__image {
+        width: 100%;
+        height: auto;
+        border-radius: var(--ms-01);
+      }
+    }
+  }
+
+  &__album-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__album-title {
+    margin: 0;
+    margin-block-end: var(--ms-01);
+    color: var(--text-color, #ffffff);
+    font-size: var(--ms-1);
+    font-weight: 600;
+  }
+
+  &__album-artist {
+    margin: 0;
+    margin-block-end: var(--ms-1);
+    color: var(--muted-text-color, #9f9f9f);
+    font-size: var(--ms-0);
+  }
+
+  &__album-stats {
+    margin-block-start: auto;
+  }
+
+  &__album-progress {
+    margin-block-end: var(--ms-01);
+  }
+
+  &__album-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--hr-color, #3d3c3a);
+    border-radius: var(--ms-01);
+    overflow: hidden;
+    margin-block-end: var(--ms-01);
+  }
+
+  &__album-progress-fill {
+    height: 100%;
+    background: var(--button-background-color-hover, #998238);
+    transition: width 0.3s ease;
+  }
+
+  &__album-progress-text {
+    display: block;
+    color: var(--muted-text-color, #9f9f9f);
+    font-size: var(--ms-0);
+    text-align: center;
+  }
+
+  &__album-status {
+    display: flex;
+    justify-content: space-around;
+    gap: var(--ms-01);
+  }
+
+  &__album-status-item {
+    padding: var(--ms-01);
+    font-size: var(--ms-0);
+    text-align: center;
+    background: var(--hr-color, #3d3c3a);
+    border-radius: var(--ms-01);
+    flex: 1;
+
+    &--synced {
+      color: #4caf50;
+    }
+
+    &--text-only {
+      color: #ff9800;
+    }
+
+    &--empty {
+      color: var(--muted-text-color, #9f9f9f);
+    }
+  }
+
+  &__empty {
+    padding: var(--ms-3);
+    color: var(--muted-text-color, #9f9f9f);
+    font-size: var(--ms-1);
+    text-align: center;
+  }
+}

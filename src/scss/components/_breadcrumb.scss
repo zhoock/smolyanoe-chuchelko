@@ -7,24 +7,52 @@
   ul {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     margin-block-start: var(--ms-1);
 
     li {
+      display: flex;
+      align-items: center;
+
       &::after {
-        position: relative;
-        inset-block-start: 2px;
         display: inline-flex;
+        align-items: center;
+        margin-inline-start: 0.25em;
         font-family: 'icomoon', sans-serif !important;
         content: '\ea50';
         rotate: 0.25turn;
         color: var(--link-color, #998238);
       }
 
-      a {
-        text-transform: capitalize;
+      &--no-arrow::after {
+        display: none;
+      }
 
-        @include link-colors(--link-color, --link-color);
+      a,
+      span {
+        text-transform: capitalize;
+        color: var(--link-color, #998238);
+        text-decoration: underline;
+        text-decoration-thickness: from-font;
+        text-underline-offset: 5px;
+        transition: color 200ms ease;
+
+        @media (hover: hover) and (pointer: fine) {
+          &:hover {
+            color: var(--link-color-hover, var(--link-color, #998238));
+          }
+        }
       }
     }
+  }
+
+  // Для единственного элемента показываем стрелку
+  &--single ul li:last-child::after {
+    display: inline-flex !important;
+  }
+
+  // Для нескольких элементов скрываем стрелку у последнего
+  &:not(&--single) ul li:last-child::after {
+    display: none;
   }
 }

@@ -1,15 +1,18 @@
 // src/pages/AdminText/style.scss
 .admin-text {
-  margin: 0 auto;
-  padding: var(--ms-2);
-  max-width: 1200px;
-
   &__header {
     margin-block-end: var(--ms-2);
 
     h1 {
       margin-block-end: var(--ms-0);
       font-size: var(--ms-2);
+    }
+
+    h4 {
+      margin-block-end: var(--ms-0);
+      color: var(--muted-text-color, #9f9f9f);
+      font-size: var(--ms-0);
+      font-weight: normal;
     }
 
     p {
@@ -20,7 +23,8 @@
 
   &__authorship {
     display: flex;
-    padding: var(--ms-1);
+
+    // padding: var(--ms-1);
     background: var(--main-background-color, #20201d);
     border-radius: var(--ms-01);
     margin-block-end: var(--ms-2);
@@ -149,7 +153,8 @@
 
   &__preview {
     margin-block-end: var(--ms-2);
-    padding: var(--ms-1);
+
+    // padding: var(--ms-1);
     background: var(--main-background-color, #20201d);
     border-radius: var(--ms-01);
 
@@ -164,7 +169,8 @@
   &__preview-content {
     max-height: 400px;
     overflow-y: auto;
-    padding: var(--ms-01);
+
+    // padding: var(--ms-01);
   }
 
   &__preview-line {
@@ -205,7 +211,8 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--ms-0);
-    padding: var(--ms-1);
+
+    // padding: var(--ms-1);
     background: var(--main-background-color, #20201d);
     border-radius: var(--ms-01);
 

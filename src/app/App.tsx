@@ -33,6 +33,8 @@ import {
 import Album from '../pages/Album/Album';
 import StemsPlayground from '../pages/StemsPlayground/StemsPlayground';
 import Home from '../pages/Home';
+import Admin from '../pages/Admin/Admin';
+import AdminAlbum from '../pages/AdminAlbum/AdminAlbum';
 import AdminSync from '../pages/AdminSync/AdminSync';
 import AdminText from '../pages/AdminText/AdminText';
 
@@ -124,6 +126,8 @@ function Layout() {
     '/articles/:articleId',
     '/forms',
     '/stems',
+    '/admin',
+    '/admin/album/:albumId',
     '/admin/sync/:albumId/:trackId',
     '/admin/text/:albumId/:trackId',
   ];
@@ -142,6 +146,8 @@ function Layout() {
         <Route path="/articles/:articleId" element={<Article />} />
         <Route path="/forms" element={<Form />} />
         <Route path="/stems" element={<StemsPlayground />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/album/:albumId" element={<AdminAlbum />} />
         <Route path="/admin/sync/:albumId/:trackId" element={<AdminSync />} />
         <Route path="/admin/text/:albumId/:trackId" element={<AdminText />} />
         <Route path="*" element={<NotFoundPage />} />

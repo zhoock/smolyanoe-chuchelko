@@ -764,10 +764,16 @@ export default function AudioPlayer({
           line.endTime !== undefined ? line.endTime : nextLine ? nextLine.startTime : Infinity;
 
         // Если время попадает в диапазон текущей строки
+        // ВАЖНО: если endTime === startTime следующей строки, в момент t = endTime активна должна быть следующая строка
+        // Поэтому для текущей строки используем строгое < для endTime
         if (timeValue >= line.startTime && timeValue < lineEndTime) {
           activeIndex = i;
           break;
         }
+
+        // Специальная обработка: если endTime текущей строки === startTime следующей,
+        // и время равно этому значению, то активна должна быть следующая строка
+        // (это обработается на следующей итерации цикла)
 
         // Если это последняя строка
         if (!nextLine) {
@@ -902,24 +908,34 @@ export default function AudioPlayer({
   // ВАЖНО: при резком изменении времени (клик на прогрессбар) нужно прокрутить к нужной позиции
   useEffect(() => {
     const container = lyricsContainerRef.current;
-    if (!container) return;
+    if (!container || !syncedLyrics || syncedLyrics.length === 0) return;
 
-    // Если currentLineIndex === null (время до начала текста), прокручиваем к началу
+    // Если currentLineIndex === null, проверяем, почему:
+    // 1. Время до начала текста - прокручиваем к началу
+    // 2. Время в промежутке между строками - не прокручиваем к началу, оставляем текущую позицию
     if (currentLineIndexComputed === null) {
-      // Проверяем, не прокручивал ли пользователь вручную недавно
-      const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
-      const USER_SCROLL_TIMEOUT = 2000; // 2 секунды
+      const timeValue = time.current;
+      const firstLine = syncedLyrics[0];
 
-      // Если пользователь прокручивал вручную недавно - не вмешиваемся
-      if (timeSinceUserScroll < USER_SCROLL_TIMEOUT) {
-        return;
+      // Если время до начала первой строки - прокручиваем к началу
+      if (timeValue < firstLine.startTime) {
+        // Проверяем, не прокручивал ли пользователь вручную недавно
+        const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
+        const USER_SCROLL_TIMEOUT = 2000; // 2 секунды
+
+        // Если пользователь прокручивал вручную недавно - не вмешиваемся
+        if (timeSinceUserScroll < USER_SCROLL_TIMEOUT) {
+          return;
+        }
+
+        // Прокручиваем к началу (к placeholder перед первой строкой)
+        container.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
       }
-
-      // Прокручиваем к началу (к placeholder перед первой строкой)
-      container.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
+      // Если время в промежутке между строками - не прокручиваем, оставляем текущую позицию
+      // (заглушка будет показана, но прокрутка не изменится)
       return;
     }
 
@@ -1182,6 +1198,11 @@ export default function AudioPlayer({
               if (index > 0) {
                 const prevLine = syncedLyrics[index - 1];
                 if (prevLine.endTime !== undefined) {
+                  // ВАЖНО: если endTime предыдущей строки === startTime текущей, промежутка нет - не показываем заглушку
+                  if (prevLine.endTime === line.startTime) {
+                    return { show: false, progress: 0 };
+                  }
+
                   // Показываем placeholder если время в диапазоне [endTime - 0.5, startTime)
                   if (timeValue >= prevLine.endTime - 0.5 && timeValue < line.startTime) {
                     // Прогресс от 0 (начало промежутка) до 1 (конец промежутка)
