@@ -29,7 +29,11 @@
       "tidal": "https://listen.tidal.com/artist/19213146"
     },
     "details": [
-      { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
+      {
+        "id": 1,
+        "title": "Жанр",
+        "content": ["Гранж, альтернативный рок."]
+      },
       {
         "id": 2,
         "title": "Запись",
@@ -84,7 +88,6 @@
             "text": ["", "Никита Минеев", " — бас-гитара."],
             "link": "https://www.instagram.com/chinkaychi/"
           },
-
           "",
           {
             "text": ["", "Олег Ингиозов", " — барабаны."],
@@ -162,7 +165,11 @@
       "tidal": "https://listen.tidal.com/album/211242116"
     },
     "details": [
-      { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
+      {
+        "id": 1,
+        "title": "Жанр",
+        "content": ["Гранж, альтернативный рок."]
+      },
       {
         "id": 2,
         "title": "Запись",
@@ -221,7 +228,6 @@
             "text": ["", "Никита Минеев", " — бас-гитара."],
             "link": "https://www.instagram.com/chinkaychi/"
           },
-
           "",
           {
             "text": ["", "Олег Ингиозов", " — барабаны."],
@@ -298,7 +304,11 @@
       "designerURL": "https://en.wikipedia.org/wiki/Blexbolex"
     },
     "details": [
-      { "id": 1, "title": "Жанр", "content": ["Гранж, альтернативный рок."] },
+      {
+        "id": 1,
+        "title": "Жанр",
+        "content": ["Гранж, альтернативный рок."]
+      },
       {
         "id": 2,
         "title": "Запись",

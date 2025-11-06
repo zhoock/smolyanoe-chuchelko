@@ -85,6 +85,40 @@ export default [
     },
   },
 
+  // --- скрипты для браузера (export-localStorage.js) ---
+  {
+    files: ['scripts/export-localStorage.js'],
+    languageOptions: {
+      globals: {
+        ...browserGlobals,
+        Blob: 'readonly',
+        URL: 'readonly',
+      },
+    },
+    rules: {
+      'no-undef': 'off',
+      'no-console': 'off',
+    },
+  },
+
+  // --- скрипты для Node.js (update-json-from-export.js) ---
+  {
+    files: ['scripts/update-json-from-export.js'],
+    languageOptions: {
+      globals: {
+        require: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+      },
+    },
+    rules: {
+      'no-undef': 'off',
+      'no-console': 'off',
+    },
+  },
+
   // --- игноры ---
   {
     ignores: [
