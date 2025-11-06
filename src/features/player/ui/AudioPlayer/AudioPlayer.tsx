@@ -1048,7 +1048,25 @@ export default function AudioPlayer({
 
   // Показываем текст только если есть синхронизированный текст (караоке)
   // НЕ проверяем currentTrack?.content, так как это обычный текст, не караоке
-  const hasTextToShow = syncedLyrics && syncedLyrics.length > 0;
+  // ВАЖНО: Проверяем как загруженный syncedLyrics, так и currentTrack.syncedLyrics напрямую
+  // Это гарантирует, что кнопка будет активна даже если useEffect еще не загрузил данные (например, после pull/hot reload)
+  const hasTextToShow = useMemo(() => {
+    // Сначала проверяем загруженный syncedLyrics
+    if (syncedLyrics && syncedLyrics.length > 0) {
+      return true;
+    }
+
+    // Если syncedLyrics еще не загружен, проверяем currentTrack напрямую
+    if (currentTrack) {
+      const albumIdComputed = albumId;
+      // Проверяем localStorage (dev mode) или syncedLyrics из трека
+      const storedSync = loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
+      const baseSynced = storedSync || currentTrack.syncedLyrics;
+      return baseSynced && baseSynced.length > 0;
+    }
+
+    return false;
+  }, [syncedLyrics, currentTrack, albumId, lang]);
 
   // Мемоизируем оба значения времени вместе для синхронного обновления
   // Используем один селектор selectTime для атомарного получения обоих значений
