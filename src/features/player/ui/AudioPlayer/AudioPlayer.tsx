@@ -277,8 +277,10 @@ export default function AudioPlayer({
   const prevTrackCallRef = useRef<string | null>(null);
 
   /**
-   * Переключает на предыдущий трек в плейлисте.
-   * Проверяем что плейлист не пуст перед переключением.
+   * Переключает на предыдущий трек в плейлисте или начинает текущий трек с начала.
+   * Логика:
+   * - Если трек проигрывается меньше 3 секунд → переключает на предыдущий трек
+   * - Если трек проигрывается 3 секунды и больше → начинает текущий трек с начала
    * ВАЖНО: Защита от повторных вызовов - если уже был вызов в течение последних 500мс, игнорируем.
    */
   const prevTrack = useCallback(() => {
@@ -295,7 +297,19 @@ export default function AudioPlayer({
     // Сохраняем ID вызова
     prevTrackCallRef.current = callId;
 
-    dispatch(playerActions.prevTrack(playlist.length));
+    // Порог времени: если трек проигрывается меньше 3 секунд, переключаем на предыдущий
+    const TIME_THRESHOLD = 3; // секунды
+    const currentTimeValue = time.current;
+
+    if (currentTimeValue < TIME_THRESHOLD) {
+      // Трек только начал проигрываться → переключаем на предыдущий трек
+      dispatch(playerActions.prevTrack(playlist.length));
+    } else {
+      // Трек уже проигрывается какое-то время → начинаем с начала
+      dispatch(playerActions.setCurrentTime(0));
+      audioController.setCurrentTime(0);
+      dispatch(playerActions.setProgress(0));
+    }
 
     // Сбрасываем ID через 500мс
     setTimeout(() => {
@@ -303,7 +317,7 @@ export default function AudioPlayer({
         prevTrackCallRef.current = null;
       }
     }, 500);
-  }, [dispatch, playlist.length]);
+  }, [dispatch, playlist.length, time]);
 
   // Refs для перемотки при удержании кнопок
   const rewindIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
