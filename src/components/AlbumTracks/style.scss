@@ -85,11 +85,9 @@
       }
 
       .tracks__duration {
-        @include breakpoint(tablet) {
-          flex: 0 0 auto;
-          color: var(--muted-text-color, #9f9f9f);
-          font-variant-numeric: tabular-nums;
-        }
+        flex: 0 0 auto;
+        color: var(--time-color, #9b9b9a);
+        font-variant-numeric: tabular-nums;
       }
 
       @media (hover: hover) and (pointer: fine) {

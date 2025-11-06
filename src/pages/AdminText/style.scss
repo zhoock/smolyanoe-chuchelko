@@ -10,13 +10,13 @@
 
     h4 {
       margin-block-end: var(--ms-0);
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
       font-size: var(--ms-0);
       font-weight: normal;
     }
 
     p {
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
       font-size: var(--ms-0);
     }
   }
@@ -54,7 +54,7 @@
     }
 
     &::placeholder {
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
     }
   }
 
@@ -87,7 +87,7 @@
   }
 
   &__char-count {
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
   }
 
@@ -147,7 +147,7 @@
     }
 
     &::placeholder {
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
     }
   }
 
@@ -191,7 +191,7 @@
   }
 
   &__preview-number {
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
     text-align: right;
     min-width: 3ch;
@@ -246,7 +246,7 @@
   }
 
   &__dirty-indicator {
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
   }
 

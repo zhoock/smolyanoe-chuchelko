@@ -11,14 +11,14 @@
     }
 
     p {
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
       font-size: var(--ms-0);
     }
   }
 
   &__description {
     margin-block-start: var(--ms-1);
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
     line-height: 1.5;
   }
@@ -78,7 +78,7 @@
     }
 
     &-artist {
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
       font-size: var(--ms-0);
       white-space: nowrap;
       overflow: hidden;
@@ -165,7 +165,7 @@
 
     &-time {
       display: flex;
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
       font-size: var(--ms-0);
       justify-content: space-between;
       font-variant-numeric: tabular-nums;
@@ -220,7 +220,7 @@
   }
 
   &__dirty-indicator {
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
   }
 
@@ -241,7 +241,7 @@
   }
 
   &__line-number {
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
     text-align: right;
     min-width: 2ch;

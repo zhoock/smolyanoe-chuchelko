@@ -17,7 +17,7 @@
 
   &__subtitle {
     margin: 0;
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
   }
 
@@ -35,7 +35,7 @@
       font-family: inherit;
 
       &::placeholder {
-        color: var(--muted-text-color, #9f9f9f);
+        color: var(--time-color, #9b9b9a);
       }
 
       &:focus {
@@ -110,7 +110,7 @@
   &__album-artist {
     margin: 0;
     margin-block-end: var(--ms-1);
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
   }
 
@@ -139,7 +139,7 @@
 
   &__album-progress-text {
     display: block;
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-0);
     text-align: center;
   }
@@ -167,13 +167,13 @@
     }
 
     &--empty {
-      color: var(--muted-text-color, #9f9f9f);
+      color: var(--time-color, #9b9b9a);
     }
   }
 
   &__empty {
     padding: var(--ms-3);
-    color: var(--muted-text-color, #9f9f9f);
+    color: var(--time-color, #9b9b9a);
     font-size: var(--ms-1);
     text-align: center;
   }
