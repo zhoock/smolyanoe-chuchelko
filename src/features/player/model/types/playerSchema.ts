@@ -21,10 +21,13 @@ export interface PlayerState {
   progress: number; // прогресс воспроизведения от 0 до 100 (%)
   time: PlayerTimeState; // текущее время и длительность
   currentTrackIndex: number; // индекс текущего трека в плейлисте
-  playlist: TracksProps[]; // массив треков текущего альбома
+  playlist: TracksProps[]; // массив треков текущего альбома (может быть перемешан, если shuffle включен)
+  originalPlaylist: TracksProps[]; // оригинальный порядок треков (для восстановления при выключении shuffle)
   playRequestId: number; // счётчик для запросов на воспроизведение (инкрементируется при requestPlay)
   albumId: string | null; // уникальный ID текущего альбома (для аналитики)
   albumTitle: string | null; // название текущего альбома (для аналитики)
+  shuffle: boolean; // перемешивание треков включено/выключено
+  repeat: 'none' | 'all' | 'one'; // режим зацикливания: 'none' - без зацикливания, 'all' - зацикливание плейлиста, 'one' - зацикливание одного трека
 }
 
 /**
@@ -39,7 +42,10 @@ export const initialPlayerState: PlayerState = {
   time: { current: 0, duration: NaN }, // NaN значит "ещё не загружено"
   currentTrackIndex: 0,
   playlist: [],
+  originalPlaylist: [], // оригинальный порядок треков (для восстановления при выключении shuffle)
   playRequestId: 0,
   albumId: null, // данные альбома для аналитики
   albumTitle: null,
+  shuffle: false, // перемешивание выключено по умолчанию
+  repeat: 'none', // зацикливание выключено по умолчанию
 };

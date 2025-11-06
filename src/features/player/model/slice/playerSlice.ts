@@ -6,6 +6,27 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { PlayerState, initialPlayerState, PlayerTimeState } from '../types/playerSchema';
 import type { TracksProps } from '../../../../models';
 
+/**
+ * Перемешивает массив треков используя алгоритм Fisher-Yates.
+ * Не изменяет исходный массив, возвращает новый перемешанный массив.
+ */
+const shufflePlaylist = <T>(array: T[]): T[] => {
+  const shuffled = [...array]; // Создаём копию массива
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+/**
+ * Находит индекс трека в новом плейлисте по его ID.
+ * Используется для обновления currentTrackIndex при перемешивании.
+ */
+const findTrackIndexById = (playlist: TracksProps[], trackId: string | number): number => {
+  return playlist.findIndex((track) => track.id === trackId);
+};
+
 const playerSlice = createSlice({
   name: 'player',
   initialState: initialPlayerState,
@@ -63,11 +84,43 @@ const playerSlice = createSlice({
     },
     /**
      * Устанавливает новый плейлист (массив треков).
+     * Сохраняет оригинальный порядок в originalPlaylist.
+     * Если shuffle включен, перемешивает плейлист.
      * Если текущий индекс выходит за пределы нового плейлиста, сбрасываем его на 0.
      */
     setPlaylist(state, action: PayloadAction<TracksProps[]>) {
-      state.playlist = action.payload ?? [];
-      // сбрасывать индекс, если он вышел за пределы
+      const newPlaylist = action.payload ?? [];
+
+      // Сохраняем оригинальный порядок
+      state.originalPlaylist = [...newPlaylist];
+
+      // Если shuffle включен, перемешиваем плейлист
+      if (state.shuffle) {
+        // Сохраняем текущий трек перед перемешиванием
+        const currentTrack = state.playlist[state.currentTrackIndex];
+        const currentTrackId = currentTrack?.id;
+
+        // Перемешиваем новый плейлист
+        state.playlist = shufflePlaylist(newPlaylist);
+
+        // Если был текущий трек, находим его в перемешанном списке
+        if (currentTrackId !== undefined && currentTrackId !== null) {
+          const newIndex = findTrackIndexById(state.playlist, currentTrackId);
+          if (newIndex !== -1) {
+            state.currentTrackIndex = newIndex;
+          } else {
+            // Если трек не найден (новый альбом), сбрасываем индекс
+            state.currentTrackIndex = 0;
+          }
+        } else {
+          state.currentTrackIndex = 0;
+        }
+      } else {
+        // Если shuffle выключен, используем оригинальный порядок
+        state.playlist = [...newPlaylist];
+      }
+
+      // Сбрасываем индекс, если он вышел за пределы
       if (state.currentTrackIndex >= state.playlist.length) {
         state.currentTrackIndex = 0;
       }
@@ -82,21 +135,51 @@ const playerSlice = createSlice({
     },
     /**
      * Переключает на следующий трек в плейлисте.
-     * Использует модульную арифметику для циклического переключения.
+     * ВАЖНО: Ручное переключение всегда работает с зацикливанием (модульная арифметика),
+     * независимо от режима repeat. Режим repeat влияет только на автоматическое переключение
+     * при окончании трека (ended событие).
      * @param action.payload - общее количество треков в плейлисте
      */
     nextTrack(state, action: PayloadAction<number>) {
       const total = Math.max(0, action.payload);
-      if (total > 0) state.currentTrackIndex = (state.currentTrackIndex + 1) % total;
+      if (total > 0) {
+        const oldIndex = state.currentTrackIndex;
+        const expectedNewIndex = (oldIndex + 1) % total;
+
+        // КРИТИЧНО: Защита от повторных вызовов nextTrack
+        // Если индекс уже изменился (не равен oldIndex), значит nextTrack уже вызывался
+        // Это может произойти если ended срабатывает дважды или nextTrack вызывается из разных мест
+        if (state.currentTrackIndex !== oldIndex) {
+          // Проверяем, не является ли текущий индекс уже ожидаемым новым индексом
+          // (это означает, что первый вызов уже успел выполниться)
+          if (state.currentTrackIndex === expectedNewIndex) {
+            return;
+          }
+          // Если индекс изменился на что-то другое, игнорируем повторный вызов
+          return;
+        }
+
+        // ВСЕГДА используем модульную арифметику для ручного переключения
+        // Это позволяет пользователю переключаться между треками даже при repeat: 'none'
+        state.currentTrackIndex = expectedNewIndex;
+      }
     },
     /**
      * Переключает на предыдущий трек в плейлисте.
-     * Использует модульную арифметику для циклического переключения.
+     * ВАЖНО: Ручное переключение всегда работает с зацикливанием (модульная арифметика),
+     * независимо от режима repeat. Режим repeat влияет только на автоматическое переключение
+     * при окончании трека (ended событие).
      * @param action.payload - общее количество треков в плейлисте
      */
     prevTrack(state, action: PayloadAction<number>) {
       const total = Math.max(0, action.payload);
-      if (total > 0) state.currentTrackIndex = (state.currentTrackIndex - 1 + total) % total;
+      if (total > 0) {
+        const oldIndex = state.currentTrackIndex;
+
+        // ВСЕГДА используем модульную арифметику для ручного переключения
+        // Это позволяет пользователю переключаться между треками даже при repeat: 'none'
+        state.currentTrackIndex = (oldIndex - 1 + total) % total;
+      }
     },
     /**
      * Запрос на воспроизведение.
@@ -117,6 +200,68 @@ const playerSlice = createSlice({
       } else {
         state.albumId = null;
         state.albumTitle = null;
+      }
+    },
+    /**
+     * Переключает режим перемешивания треков (shuffle).
+     * При включении: перемешивает плейлист, сохраняя оригинальный порядок.
+     * При выключении: восстанавливает оригинальный порядок и обновляет currentTrackIndex.
+     */
+    toggleShuffle(state) {
+      state.shuffle = !state.shuffle;
+
+      if (state.shuffle) {
+        // Включаем shuffle: перемешиваем плейлист
+        // Сохраняем текущий трек перед перемешиванием
+        const currentTrack = state.playlist[state.currentTrackIndex];
+        const currentTrackId = currentTrack?.id;
+
+        // Перемешиваем плейлист
+        state.playlist = shufflePlaylist(
+          state.originalPlaylist.length > 0 ? state.originalPlaylist : state.playlist
+        );
+
+        // Если был текущий трек, находим его в перемешанном списке
+        if (currentTrackId !== undefined && currentTrackId !== null) {
+          const newIndex = findTrackIndexById(state.playlist, currentTrackId);
+          if (newIndex !== -1) {
+            state.currentTrackIndex = newIndex;
+          }
+        }
+      } else {
+        // Выключаем shuffle: восстанавливаем оригинальный порядок
+        // Сохраняем текущий трек перед восстановлением
+        const currentTrack = state.playlist[state.currentTrackIndex];
+        const currentTrackId = currentTrack?.id;
+
+        // Восстанавливаем оригинальный плейлист
+        state.playlist = [...state.originalPlaylist];
+
+        // Находим текущий трек в восстановленном плейлисте
+        if (currentTrackId !== undefined && currentTrackId !== null) {
+          const newIndex = findTrackIndexById(state.playlist, currentTrackId);
+          if (newIndex !== -1) {
+            state.currentTrackIndex = newIndex;
+          } else {
+            // Если трек не найден (не должно происходить, но на всякий случай)
+            state.currentTrackIndex = 0;
+          }
+        } else {
+          state.currentTrackIndex = 0;
+        }
+      }
+    },
+    /**
+     * Переключает режим зацикливания треков.
+     * Цикл: 'none' → 'all' → 'one' → 'none'
+     */
+    toggleRepeat(state) {
+      if (state.repeat === 'none') {
+        state.repeat = 'all';
+      } else if (state.repeat === 'all') {
+        state.repeat = 'one';
+      } else {
+        state.repeat = 'none';
       }
     },
   },

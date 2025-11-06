@@ -279,8 +279,29 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
 
       // Передаём плейлист и данные альбома в стор при открытии плеера
-      dispatch(playerActions.setPlaylist(album.tracks || []));
-      dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+      // ВАЖНО: убеждаемся, что порядок треков в плейлисте соответствует порядку в UI
+      const playlist = album.tracks || [];
+      const selectedTrack = playlist[trackIndex];
+
+      // Устанавливаем плейлист (он может быть перемешан, если shuffle включен)
+      dispatch(playerActions.setPlaylist(playlist));
+
+      // После установки плейлиста находим нужный трек в актуальном плейлисте (перемешанном или нет)
+      // Это гарантирует правильный индекс даже при включенном shuffle
+      if (selectedTrack) {
+        const currentState = store.getState().player;
+        const actualPlaylist = currentState.playlist;
+        const actualIndex = actualPlaylist.findIndex((track) => track.id === selectedTrack.id);
+        if (actualIndex !== -1) {
+          dispatch(playerActions.setCurrentTrackIndex(actualIndex));
+        } else {
+          // Если трек не найден (не должно происходить), используем переданный индекс
+          dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+        }
+      } else {
+        dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+      }
+
       dispatch(playerActions.setAlbumInfo({ albumId, albumTitle: album.album }));
       dispatch(playerActions.requestPlay());
       navigate(

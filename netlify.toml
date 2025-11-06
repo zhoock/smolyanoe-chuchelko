@@ -12,4 +12,10 @@
   to = "/index.html"
   status = 200
 
+# API routes для сохранения синхронизаций
+[[redirects]]
+  from = "/api/save-synced-lyrics"
+  to = "/.netlify/functions/save-synced-lyrics"
+  status = 200
+
 

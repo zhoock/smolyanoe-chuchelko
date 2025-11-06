@@ -119,12 +119,24 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   matcher: isAnyOf(playerActions.nextTrack, playerActions.prevTrack),
-  effect: async (_, api) => {
+  effect: async (action, api) => {
     const state = api.getState();
     const { playlist = [], currentTrackIndex, isPlaying: wasPlaying, volume } = state.player;
     const trackSrc = playlist[currentTrackIndex]?.src;
 
-    if (!trackSrc) return;
+    if (!trackSrc) {
+      return;
+    }
+
+    // ВАЖНО: Сбрасываем флаги при переключении трека через nextTrack/prevTrack
+    // Это нужно, чтобы событие ended нового трека могло корректно обработаться
+    // Сбрасываем флаги через небольшую задержку, чтобы дать время старому ended событию завершиться
+    setTimeout(() => {
+      isProcessingEnded = false;
+      endedTrackIndex = null;
+      isNextTrackPending = false;
+      lastNextTrackCallId = null;
+    }, 100);
 
     resetProgress(api);
     audioController.pause();
@@ -209,8 +221,47 @@ playerListenerMiddleware.startListening({
  * - playing → отправка GA события audio_start
  * - pause → отправка GA события audio_pause
  */
+// Храним обработчики событий для возможности их удаления при повторном вызове
+let endedHandler: (() => void) | null = null;
+let timeupdateHandler: (() => void) | null = null;
+let loadedmetadataHandler: (() => void) | null = null;
+let playingHandler: (() => void) | null = null;
+let pauseHandler: (() => void) | null = null;
+
+// Флаг для предотвращения множественных вызовов ended подряд
+// Вынесен на уровень модуля, чтобы был доступен и в middleware, и в attachAudioEvents
+let isProcessingEnded = false;
+// Сохраняем индекс трека, для которого обрабатывается ended, чтобы предотвратить обработку ended для другого трека
+let endedTrackIndex: number | null = null;
+// Флаг для предотвращения повторного вызова nextTrack из ended
+let isNextTrackPending = false;
+// Уникальный ID для каждого вызова nextTrack из ended - используется для отслеживания дубликатов
+let lastNextTrackCallId: string | null = null;
+
 export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootState): void => {
   const el = audioController.element;
+
+  // Удаляем старые обработчики, если они есть (защита от повторного вызова при hot reload)
+  if (endedHandler) {
+    el.removeEventListener('ended', endedHandler);
+    endedHandler = null;
+  }
+  if (timeupdateHandler) {
+    el.removeEventListener('timeupdate', timeupdateHandler);
+    timeupdateHandler = null;
+  }
+  if (loadedmetadataHandler) {
+    el.removeEventListener('loadedmetadata', loadedmetadataHandler);
+    loadedmetadataHandler = null;
+  }
+  if (playingHandler) {
+    el.removeEventListener('playing', playingHandler);
+    playingHandler = null;
+  }
+  if (pauseHandler) {
+    el.removeEventListener('pause', pauseHandler);
+    pauseHandler = null;
+  }
 
   // Устанавливаем начальную громкость из стейта
   audioController.setVolume(getState().player.volume);
@@ -218,14 +269,30 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
   // Храним ключ последнего отправленного события audio_start для предотвращения дубликатов
   let lastStartedKey: string | null = null;
 
+  // Флаг для предотвращения множественных вызовов ended подряд
+  let isProcessingEnded = false;
+
   /**
    * Событие timeupdate срабатывает постоянно во время воспроизведения.
    * Обновляет текущее время и прогресс в стейте.
    * НО: не обновляет, если пользователь перематывает трек вручную (isSeeking = true).
+   *
+   * ВАЖНО: Используем throttling (раз в секунду) для уменьшения частоты обновлений UI.
+   * Это помогает браузеру синхронизировать отрисовку обоих значений времени.
    */
-  el.addEventListener('timeupdate', () => {
+  let lastUpdateTime = 0;
+  const UPDATE_INTERVAL = 1000; // Обновляем раз в секунду (1000мс)
+
+  timeupdateHandler = () => {
     const state = getState();
     if (state.player.isSeeking) return;
+
+    const now = Date.now();
+    // Throttling: обновляем только если прошло достаточно времени с последнего обновления
+    if (now - lastUpdateTime < UPDATE_INTERVAL) {
+      return;
+    }
+    lastUpdateTime = now;
 
     const { duration, currentTime } = el;
     if (!Number.isFinite(duration) || duration <= 0) return;
@@ -233,35 +300,154 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
     const progress = (currentTime / duration) * 100;
     dispatch(playerActions.setTime({ current: currentTime, duration }));
     dispatch(playerActions.setProgress(progress));
-  });
+  };
+  el.addEventListener('timeupdate', timeupdateHandler);
 
   /**
    * Событие loadedmetadata срабатывает когда загружены метаданные трека (длительность и т.д.).
    * Сбрасываем время и прогресс, чтобы UI показал начало трека.
    */
-  el.addEventListener('loadedmetadata', () => {
+  loadedmetadataHandler = () => {
     dispatch(playerActions.setTime({ current: 0, duration: el.duration }));
     dispatch(playerActions.setProgress(0));
     // Сбрасываем ключ для audio_start, чтобы событие отправилось для нового трека
     lastStartedKey = null;
-  });
+    // Сбрасываем флаги обработки ended при загрузке нового трека
+    isProcessingEnded = false;
+    endedTrackIndex = null;
+    isNextTrackPending = false;
+    lastNextTrackCallId = null;
+  };
+  el.addEventListener('loadedmetadata', loadedmetadataHandler);
 
   /**
    * Событие ended срабатывает когда трек доиграл до конца.
    * Автоматически переключаем на следующий трек, если плейлист не пуст.
+   * ВАЖНО: защита от множественных вызовов подряд (может происходить при hot reload или багах браузера).
    */
-  el.addEventListener('ended', () => {
-    const { playlist = [] } = getState().player;
-    if (playlist.length > 0) {
-      dispatch(playerActions.nextTrack(playlist.length));
+  endedHandler = () => {
+    // КРИТИЧНО: Устанавливаем флаги В САМОМ НАЧАЛЕ, до любых проверок
+    // Это гарантирует, что если ended сработает дважды синхронно, второй вызов будет проигнорирован
+    if (isProcessingEnded || isNextTrackPending) {
+      return;
     }
-  });
+
+    // Устанавливаем флаги сразу, чтобы заблокировать повторные вызовы
+    isProcessingEnded = true;
+    isNextTrackPending = true;
+
+    const state = getState().player;
+    const { playlist = [], currentTrackIndex } = state;
+
+    // Сохраняем индекс трека
+    endedTrackIndex = currentTrackIndex;
+
+    // КРИТИЧНО: Проверяем, что индекс трека не изменился с момента начала обработки
+    // Если endedTrackIndex уже установлен и отличается от currentTrackIndex,
+    // значит трек уже переключился, и это событие ended относится к старому треку
+    if (endedTrackIndex !== null && endedTrackIndex !== currentTrackIndex) {
+      // Сбрасываем флаги, если индекс изменился
+      isProcessingEnded = false;
+      isNextTrackPending = false;
+      endedTrackIndex = null;
+      return;
+    }
+
+    // Дополнительная проверка: убеждаемся, что трек действительно доиграл до конца
+    // (currentTime должен быть близок к duration или равен ему)
+    const { currentTime, duration } = el;
+    const isActuallyEnded =
+      Number.isFinite(duration) && duration > 0 && currentTime >= duration - 0.5;
+
+    if (!isActuallyEnded) {
+      // Сбрасываем флаги, если трек не доиграл
+      isProcessingEnded = false;
+      isNextTrackPending = false;
+      endedTrackIndex = null;
+      return;
+    }
+
+    // КРИТИЧНО: Генерируем уникальный ID для этого вызова nextTrack СИНХРОННО
+    // Это гарантирует, что если ended сработает дважды синхронно, второй вызов будет проигнорирован
+    const callId = `${Date.now()}-${Math.random()}`;
+
+    // Проверяем, не был ли уже запланирован вызов nextTrack
+    if (lastNextTrackCallId !== null) {
+      // Сбрасываем флаги, если игнорируем
+      isProcessingEnded = false;
+      isNextTrackPending = false;
+      endedTrackIndex = null;
+      return;
+    }
+
+    // Сохраняем ID вызова СИНХРОННО, до любых асинхронных операций
+    lastNextTrackCallId = callId;
+
+    // Используем requestAnimationFrame для асинхронного вызова nextTrack
+    // Это гарантирует, что Redux успеет обновить состояние перед вызовом
+    requestAnimationFrame(() => {
+      // Проверяем, что это всё ещё наш вызов (ID не изменился)
+      if (lastNextTrackCallId !== callId) {
+        return;
+      }
+
+      // Проверяем, что индекс всё ещё тот же (не изменился из-за другого вызова)
+      const currentState = getState().player;
+      if (currentState.currentTrackIndex === endedTrackIndex && playlist.length > 0) {
+        // КРИТИЧНО: Сбрасываем флаги ПЕРЕД вызовом dispatch
+        isProcessingEnded = false;
+        isNextTrackPending = false;
+        endedTrackIndex = null;
+        lastNextTrackCallId = null; // Сбрасываем ID сразу, чтобы предотвратить повторные вызовы
+
+        // Обрабатываем зацикливание в зависимости от режима repeat
+        const { repeat, currentTrackIndex } = currentState;
+        const isLastTrack = currentTrackIndex === playlist.length - 1;
+
+        if (repeat === 'one') {
+          // Зацикливание одного трека: перезапускаем текущий трек
+          // Сбрасываем прогресс и время в стейте
+          resetProgress({ dispatch, getState } as ListenerEffectAPI<RootState, AppDispatch>);
+          audioController.setCurrentTime(0);
+          dispatch(playerActions.play());
+        } else if (repeat === 'all') {
+          // Зацикливание плейлиста: переключаем на следующий трек (с зацикливанием)
+          dispatch(playerActions.nextTrack(playlist.length));
+        } else {
+          // repeat === 'none': переключаем на следующий трек, если он есть
+          // Останавливаем воспроизведение только если это последний трек
+          if (isLastTrack) {
+            // Это последний трек - останавливаем воспроизведение
+            dispatch(playerActions.pause());
+          } else {
+            // Есть следующий трек - переключаемся на него
+            dispatch(playerActions.nextTrack(playlist.length));
+          }
+        }
+      } else {
+        // Сбрасываем флаги, если отменяем вызов
+        isProcessingEnded = false;
+        isNextTrackPending = false;
+        endedTrackIndex = null;
+        lastNextTrackCallId = null;
+      }
+    });
+
+    // Сбрасываем флаг через небольшую задержку, чтобы предотвратить повторные вызовы
+    // Увеличиваем задержку до 1000мс, чтобы дать время новому треку загрузиться
+    setTimeout(() => {
+      isProcessingEnded = false;
+      endedTrackIndex = null;
+      isNextTrackPending = false; // Дополнительный сброс на случай, если что-то пошло не так
+    }, 1000);
+  };
+  el.addEventListener('ended', endedHandler);
 
   /**
    * Событие playing срабатывает когда трек начинает воспроизводиться.
    * Отправляем GA событие audio_start (только один раз для каждого трека).
    */
-  el.addEventListener('playing', () => {
+  playingHandler = () => {
     const state = getState();
     const { albumId, albumTitle, currentTrackIndex, playlist } = state.player;
     const track = playlist[currentTrackIndex];
@@ -281,13 +467,14 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
     });
 
     lastStartedKey = key;
-  });
+  };
+  el.addEventListener('playing', playingHandler);
 
   /**
    * Событие pause срабатывает когда трек ставится на паузу.
    * Отправляем GA событие audio_pause.
    */
-  el.addEventListener('pause', () => {
+  pauseHandler = () => {
     const state = getState();
     const { albumId, albumTitle, currentTrackIndex, playlist } = state.player;
     const track = playlist[currentTrackIndex];
@@ -301,5 +488,6 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
       track_title: track?.title ?? 'Unknown Track',
       position_seconds: Math.floor(el.currentTime),
     });
-  });
+  };
+  el.addEventListener('pause', pauseHandler);
 };

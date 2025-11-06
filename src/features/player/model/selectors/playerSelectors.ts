@@ -13,7 +13,13 @@ export const selectIsPlaying = createSelector([selectPlayer], (player) => player
 export const selectVolume = createSelector([selectPlayer], (player) => player.volume);
 export const selectIsSeeking = createSelector([selectPlayer], (player) => player.isSeeking);
 export const selectProgress = createSelector([selectPlayer], (player) => player.progress);
+// Селектор для времени трека - возвращает весь объект времени
+// ВАЖНО: Не используем resultEqualityCheck, так как объект time всегда новый при каждом обновлении
+// Вместо этого используем отдельные селекторы selectTimeCurrent и selectTimeDuration
 export const selectTime = createSelector([selectPlayer], (player) => player.time);
+// Отдельные селекторы для current и duration для более точного отслеживания изменений
+export const selectTimeCurrent = createSelector([selectPlayer], (player) => player.time.current);
+export const selectTimeDuration = createSelector([selectPlayer], (player) => player.time.duration);
 export const selectCurrentTrackIndex = createSelector(
   [selectPlayer],
   (player) => player.currentTrackIndex
@@ -29,3 +35,9 @@ export const selectCurrentTrack = createSelector(
   [selectPlaylist, selectCurrentTrackIndex],
   (playlist, index) => playlist[index]
 );
+
+// Селектор для режима перемешивания
+export const selectShuffle = createSelector([selectPlayer], (player) => player.shuffle);
+
+// Селектор для режима зацикливания
+export const selectRepeat = createSelector([selectPlayer], (player) => player.repeat);

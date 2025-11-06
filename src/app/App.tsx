@@ -33,6 +33,8 @@ import {
 import Album from '../pages/Album/Album';
 import StemsPlayground from '../pages/StemsPlayground/StemsPlayground';
 import Home from '../pages/Home';
+import AdminSync from '../pages/AdminSync/AdminSync';
+import AdminText from '../pages/AdminText/AdminText';
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -122,6 +124,8 @@ function Layout() {
     '/articles/:articleId',
     '/forms',
     '/stems',
+    '/admin/sync/:albumId/:trackId',
+    '/admin/text/:albumId/:trackId',
   ];
 
   const isKnownRoute = knownRoutes.some((pattern) =>
@@ -137,8 +141,10 @@ function Layout() {
         <Route path="/albums/:albumId/track/:trackId" element={<TracksLyrics />} />
         <Route path="/articles/:articleId" element={<Article />} />
         <Route path="/forms" element={<Form />} />
-        <Route path="*" element={<NotFoundPage />} />
         <Route path="/stems" element={<StemsPlayground />} />
+        <Route path="/admin/sync/:albumId/:trackId" element={<AdminSync />} />
+        <Route path="/admin/text/:albumId/:trackId" element={<AdminText />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {background && (

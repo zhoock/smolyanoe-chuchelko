@@ -67,13 +67,30 @@ export interface detailsProps {
   content: Array<string | { text: string[]; link: string }>;
 }
 
+/**
+ * Интерфейс для синхронизированной строки текста с тайм-кодами.
+ * Используется для karaoke-style отображения текста песни.
+ */
+export interface SyncedLyricsLine {
+  /** Текст строки (или слова, если синхронизация по словам) */
+  text: string;
+  /** Время начала строки в секундах */
+  startTime: number;
+  /** Время окончания строки в секундах (опционально) */
+  endTime?: number;
+}
+
 export interface TracksProps {
   /** Идентификатор песни */
   id: number;
   /** Название песни */
   title: string;
-  /** Текст песни */
+  /** Текст песни (обычный формат, для обратной совместимости) */
   content: string;
+  /** Синхронизированный текст с тайм-кодами (для karaoke-style отображения) */
+  syncedLyrics?: SyncedLyricsLine[];
+  /** Текст авторства (автоматически добавляется в конец синхронизированных текстов) */
+  authorship?: string;
   /** Общая продолжительность всех треков в альбоме */
   duration: number;
   /** Путь к треку */

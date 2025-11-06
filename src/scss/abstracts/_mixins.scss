@@ -37,28 +37,30 @@ $ms-4: 123.363px; // 6.854rem;
   user-select: none;
   text-transform: capitalize;
 
-  &:hover,
-  &:active {
-    color: $hover-color;
-    background-color: $hover-background;
-
-    @media (hover: none) and (pointer: coarse) {
-      color: $color;
-      background-color: $background;
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      color: $hover-color;
+      background-color: $hover-background;
     }
   }
 
   &:active {
+    color: $hover-color;
+    background-color: $hover-background;
     scale: 0.98;
   }
 
   &.disabled,
   &[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
+
     &:hover,
     &:focus,
     &:active {
       background-color: $disabled-background;
-      cursor: default;
+      cursor: not-allowed;
     }
   }
 }

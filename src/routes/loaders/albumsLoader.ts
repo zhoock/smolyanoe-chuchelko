@@ -23,8 +23,8 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   let templateA: Promise<IAlbums[]> = Promise.resolve([]);
   let templateB: Promise<IArticles[]> = Promise.resolve([]);
 
-  // Альбомы нужны на "/" и "/albums*"
-  if (pathname === '/' || pathname.startsWith('/albums')) {
+  // Альбомы нужны на "/", "/albums*" и "/admin/*" (админ-страницы)
+  if (pathname === '/' || pathname.startsWith('/albums') || pathname.startsWith('/admin')) {
     templateA = getJSON<IAlbums[]>(`albums-${lang}.json`, signal);
   }
 

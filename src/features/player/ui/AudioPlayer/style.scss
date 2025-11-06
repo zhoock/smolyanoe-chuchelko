@@ -3,15 +3,16 @@
 @use '../../../../scss/abstracts/mixins' as *;
 
 .player {
+  position: relative;
   display: grid;
   margin: 0 auto;
   padding: var(--ms-3) var(--ms-1);
-  text-align: center;
   inline-size: min(100vi, 1000px);
   block-size: 100dvh;
   grid-template-rows: repeat(4, auto);
   gap: var(--ms-0);
   align-items: center;
+  text-align: center;
 
   @include breakpoint(tablet) {
     gap: var(--ms-1);
@@ -45,6 +46,22 @@
     align-items: center;
     justify-content: space-around;
     gap: var(--ms-1);
+    transition:
+      height 0.3s ease,
+      margin 0.3s ease,
+      opacity 0.3s ease,
+      transform 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+
+    &--hidden {
+      height: 0;
+      margin: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+      transform: translateY(10px);
+    }
 
     button {
       width: var(--ms-3);
@@ -76,24 +93,25 @@
         }
       }
 
-      &:has(.icon-controller-play),
-      &:has(.icon-controller-pause) {
+      // Иконки play/pause крупнее
+      &.icon-controller-play,
+      &.icon-controller-pause {
         font-size: calc(var(--ms-2) * 1.3);
       }
 
-      span {
-        display: block;
-      }
-
-      &:has(.icon-controller-play) span {
+      // Смещение иконок для визуального баланса
+      &.icon-controller-play::before {
+        display: inline-block;
         transform: translateX(3px);
       }
 
-      &:has(.icon-controller-fast-backward) span {
+      &.icon-controller-fast-backward::before {
+        display: inline-block;
         transform: translateX(-3px);
       }
 
-      &:has(.icon-controller-fast-forward) span {
+      &.icon-controller-fast-forward::before {
+        display: inline-block;
         transform: translateX(3px);
       }
 
@@ -106,8 +124,8 @@
           scale: unset;
         }
 
-        span {
-          transform: none;
+        &::before {
+          transform: none !important;
         }
       }
     }
@@ -117,6 +135,22 @@
     display: flex;
     gap: var(--ms-0);
     align-items: center;
+    transition:
+      height 0.3s ease,
+      margin 0.3s ease,
+      opacity 0.3s ease,
+      transform 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+
+    &--hidden {
+      height: 0;
+      margin: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+      transform: translateY(10px);
+    }
 
     @media (hover: none) and (pointer: coarse) {
       display: none;
@@ -127,60 +161,616 @@
       color: var(--white, #ffffff);
       line-height: 0;
     }
+
+    input {
+      --volume-progress-width: 50%;
+
+      background: linear-gradient(
+        to right,
+        var(--white, #ffffff) var(--volume-progress-width),
+        #dddddd80 var(--volume-progress-width)
+      );
+
+      // Увеличение при hover (только на устройствах с hover)
+      @media (hover: hover) and (pointer: fine) {
+        &:hover {
+          transform: scaleY(1.5);
+        }
+      }
+    }
+  }
+
+  &__cover {
+    display: inline-block;
+    transition: scale 0.35s ease;
+    will-change: scale;
+
+    &--playing {
+      scale: 1;
+      animation: cover-bounce-in 520ms ease-out both;
+    }
+
+    &--paused {
+      scale: 0.8;
+      animation: cover-bounce-out 520ms ease both;
+    }
+
+    /* Если у пользователя снижена анимация — уважаем это */
+    @media (prefers-reduced-motion: reduce) {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    .album-cover {
+      display: block;
+      inline-size: 100%;
+    }
+  }
+
+  &__secondary-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
+    gap: var(--ms-1);
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+
+    &--hidden {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+  }
+
+  &__progress-container {
+    position: relative;
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+
+    &--hidden {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+  }
+
+  &__progress-bar {
+    display: flex;
+
+    input {
+      --progress-width: 0%;
+
+      background: linear-gradient(
+        to right,
+        var(--white, #ffffff) var(--progress-width),
+        #dddddd80 var(--progress-width)
+      );
+
+      // Увеличение при hover (только на устройствах с hover)
+      @media (hover: hover) and (pointer: fine) {
+        &:hover {
+          transform: scaleY(1.5);
+        }
+      }
+    }
+  }
+
+  &__time-container {
+    position: absolute;
+    inset-block-start: var(--ms-01);
+    inset-inline: 0;
+    display: flex;
+    justify-content: space-between;
+    color: var(--light-grey, #dddddd);
+    font-size: var(--ms-01);
+
+    // Используем CSS оптимизации для синхронизации рендеринга
+    will-change: contents;
+    contain: layout style paint;
+
+    // Используем псевдоэлементы для отображения обоих значений из data-атрибутов
+    // Это гарантирует атомарное обновление, так как оба значения берутся из одного элемента
+    // и обновляются синхронно через useLayoutEffect
+    &::before {
+      content: attr(data-current);
+
+      // Фиксированная ширина для предотвращения "прыгания" текста при изменении цифр
+      // Используем ch (ширина символа "0") для адаптивности к размеру шрифта
+      display: inline-block;
+      width: 4ch; // Фиксированная ширина для формата "MM:SS" (например, "0:00" или "10:00")
+      text-align: left;
+      overflow: hidden; // Скрываем текст, если он выходит за границы
+      // Используем моноширинный шрифт для более предсказуемой ширины цифр
+      font-variant-numeric: tabular-nums;
+
+      // Используем CSS оптимизации для синхронизации рендеринга псевдоэлементов
+      will-change: contents;
+    }
+
+    &::after {
+      content: '-' attr(data-remaining);
+
+      // Фиксированная ширина для предотвращения "прыгания" текста при изменении цифр
+      // Используем ch (ширина символа "0") для адаптивности к размеру шрифта
+      display: inline-block;
+      width: 5ch; // Фиксированная ширина для формата "-MM:SS" (например, "-0:00" или "-10:00")
+      text-align: right; // Выравниваем по правому краю внутри фиксированной ширины
+      overflow: hidden; // Скрываем текст, если он выходит за границы
+      // Используем моноширинный шрифт для более предсказуемой ширины цифр
+      font-variant-numeric: tabular-nums;
+
+      // Используем CSS оптимизации для синхронизации рендеринга псевдоэлементов
+      will-change: contents;
+    }
+  }
+
+  &__control-button,
+  &__lyrics-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--ms-2);
+
+    @include button-variant(
+      $color: var(--white, #ffffff),
+      $background: rgb(var(--white-rgb) / 15%),
+      $hover-background: rgb(var(--white-rgb) / 20%),
+      $margin: 0,
+      $padding: 0
+    );
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        scale: 1.05;
+        color: var(--graphite-green, #373633);
+      }
+
+      &:active {
+        scale: 0.9;
+        color: var(--graphite-green, #373633);
+      }
+    }
+
+    &-icon {
+      font-size: var(--ms-1);
+      font-weight: 400 !important;
+    }
+  }
+
+  // Активное состояние только для control-button
+  &__control-button {
+    &--active {
+      color: var(--graphite-green, #373633);
+      background: rgb(var(--white-rgb) / 50%);
+    }
+  }
+
+  // Активное состояние для lyrics-toggle
+  &__lyrics-toggle {
+    &--active {
+      color: var(--graphite-green, #373633);
+      background: rgb(var(--white-rgb) / 50%);
+    }
   }
 }
 
-.player__cover {
-  display: inline-block;
-  transition: scale 0.35s ease;
-  will-change: scale;
-
-  &--playing {
-    scale: 1;
-    animation: cover-bounce-in 520ms ease-out both;
+/* Быстрый оверсут + мягкое оседание */
+@keyframes cover-bounce-in {
+  0% {
+    transform: scale(0.8);
   }
 
-  &--paused {
-    scale: 0.8;
-    animation: cover-bounce-out 520ms ease both;
+  60% {
+    transform: scale(1.04);
   }
 
-  /* Быстрый оверсут + мягкое оседание */
-  @keyframes cover-bounce-in {
-    0% {
-      transform: scale(0.8);
-    }
+  100% {
+    transform: scale(1);
+  }
+}
 
-    60% {
-      transform: scale(1.04);
-    }
+/* Небольшое "приседание" и возврат */
+@keyframes cover-bounce-out {
+  0% {
+    transform: scale(1);
+  }
 
-    100% {
+  100% {
+    transform: scale(0.8);
+  }
+}
+
+// Стили для строк синхронизированного текста (используются и в обычных строках, и в placeholder)
+.player__synced-lyrics-line {
+  padding: var(--ms-01) var(--ms-0);
+  margin-block-end: var(--ms-1);
+  color: var(--white, #ffffff);
+  font-size: var(--ms-1);
+  font-weight: 600;
+  line-height: 1;
+  text-align: left;
+  border-radius: var(--ms-01);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 0.3s ease,
+    background-color 0.3s ease,
+    transform 0.2s ease,
+    filter 0.4s ease,
+    opacity 0.4s ease;
+  filter: blur(var(--blur-amount, 8px));
+  opacity: var(--line-opacity, 0.25);
+
+  &:hover {
+    opacity: calc(var(--line-opacity, 0.25) + 0.2);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  @include breakpoint(tablet) {
+    font-size: var(--ms-2);
+  }
+
+  // Градиент размытия в зависимости от data-distance (усиленный)
+  // ВАЖНО: применяется только к неактивным строкам
+  &:not(&--active)[data-distance='1'] {
+    --blur-amount: 2px;
+    --line-opacity: 0.7;
+  }
+
+  &:not(&--active)[data-distance='2'] {
+    --blur-amount: 4px;
+    --line-opacity: 0.6;
+  }
+
+  &:not(&--active)[data-distance='3'] {
+    --blur-amount: 5px;
+    --line-opacity: 0.5;
+  }
+
+  &:not(&--active)[data-distance='4'] {
+    --blur-amount: 6px;
+    --line-opacity: 0.4;
+  }
+
+  &:not(&--active)[data-distance='5'] {
+    --blur-amount: 7px;
+    --line-opacity: 0.35;
+  }
+
+  &:not(&--active)[data-distance='6'],
+  &:not(&--active)[data-distance='7'],
+  &:not(&--active)[data-distance='8'],
+  &:not(&--active)[data-distance='9'],
+  &:not(&--active)[data-distance='10'] {
+    --blur-amount: 8px;
+    --line-opacity: 0.25;
+  }
+
+  // Активная (текущая) строка - четкая и яркая
+  // ВАЖНО: должна быть после data-distance, чтобы перекрыть их стили
+  &--active {
+    color: #ffffff !important; // Явно белый цвет, без CSS переменных
+    transform: scale(1.02);
+    font-weight: 600;
+    filter: blur(0) !important;
+    opacity: 1 !important;
+  }
+
+  // Заглушка в виде троеточия для промежутков без текста
+  &--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    gap: var(--ms-01);
+    padding: var(--ms-01) var(--ms-0);
+    margin-block-end: var(--ms-1);
+    cursor: default;
+
+    // Отключаем все эффекты для троеточия (blur, opacity, scale)
+    filter: none !important;
+    transform: none !important;
+    background-color: transparent !important;
+    opacity: 1 !important; // Переопределяем наследуемую opacity от .player__synced-lyrics-line
+
+    // Точки троеточия - линейный градиент слева направо
+    // --placeholder-progress изменяется от 0 (начало промежутка) до 1 (конец промежутка)
+    .player__lyrics-placeholder-dot {
+      display: inline-block;
+      color: var(--white, #ffffff);
+      font-size: var(--ms-3);
+      font-weight: 600;
+      animation: pulse-dot 1.5s ease-in-out infinite; // Пульсация точек
       transform: scale(1);
+
+      // Градиент для каждой точки: первая точка темнеет раньше, вторая - в середине, третья - позже
+      // data-dot-index: 0, 1, 2
+      // Первая точка начинает появляться при progress = 0, вторая при progress = 0.33, третья при progress = 0.66
+      &[data-dot-index='0'] {
+        // Первая точка: начинает темнеть сразу (progress от 0 до 0.33)
+        // Диапазон opacity от 0.2 (чуть видимая) до 1.0 (полностью видимая)
+        // Когда progress = 0: opacity = 0.2, когда progress = 0.33: opacity = 1.0
+        --dot-progress-0: calc(var(--placeholder-progress, 0) / 0.33);
+
+        opacity: clamp(0.2, var(--dot-progress-0), 1);
+        animation-delay: 0s;
+      }
+
+      &[data-dot-index='1'] {
+        // Вторая точка: начинает темнеть в середине (progress от 0.33 до 0.66)
+        // Когда progress < 0.33: opacity = 0.2, когда progress = 0.66: opacity = 1.0
+        --dot-progress-1: calc((var(--placeholder-progress, 0) - 0.33) / 0.33);
+
+        opacity: clamp(
+          0.2,
+          calc(var(--dot-progress-1) * 0.8 + 0.2),
+          1
+        ); // Если progress < 0.33, то dot-progress-1 будет отрицательным, используем clamp для ограничения снизу
+
+        animation-delay: 0.3s;
+      }
+
+      &[data-dot-index='2'] {
+        // Третья точка: начинает темнеть ближе к концу (progress от 0.66 до 1.0)
+        // Когда progress < 0.66: opacity = 0.2, когда progress = 1.0: opacity = 1.0
+        --dot-progress-2: calc((var(--placeholder-progress, 0) - 0.66) / 0.34);
+
+        opacity: clamp(0.2, calc(var(--dot-progress-2) * 0.8 + 0.2), 1);
+        animation-delay: 0.6s;
+      }
+
+      @include breakpoint(tablet) {
+        font-size: var(--ms-4);
+      }
+    }
+  }
+}
+
+// Режим прозрачности: ручная прокрутка текста
+// При прокрутке все строки становятся более видимыми и менее размытыми
+// УСИЛЕННЫЙ ЭФФЕКТ ДЛЯ ТЕСТИРОВАНИЯ
+.player__synced-lyrics[data-opacity-mode='user-scrolling'] {
+  // ВАЖНО: применяем стили напрямую к строкам, чтобы перекрыть базовые стили
+  .player__synced-lyrics-line {
+    // УСИЛЕННЫЙ ЭФФЕКТ: почти все строки полностью видимы и без размытия
+    // Используем !important чтобы гарантированно перекрыть базовые стили
+    color: var(--white, #ffffff) !important;
+    filter: blur(var(--blur-amount-user-scroll, 0)) !important;
+    opacity: var(--line-opacity-user-scroll, 1) !important;
+
+    // Плавный переход при смене режима
+    transition:
+      filter 0.3s ease,
+      opacity 0.3s ease,
+      color 0.3s ease;
+
+    // Активная строка остается яркой и белой
+    &--active {
+      color: #ffffff !important;
+      filter: blur(0) !important;
+      opacity: 1 !important;
+      transform: scale(1.02) !important;
+    }
+
+    // Более плавный градиент размытия в зависимости от расстояния
+    // ВАЖНО: применяется только к неактивным строкам
+    // УСИЛЕННЫЙ ЭФФЕКТ: все строки почти полностью видимы
+    &:not(&--active)[data-distance='1'] {
+      --blur-amount-user-scroll: 0;
+      --line-opacity-user-scroll: 1;
+    }
+
+    &:not(&--active)[data-distance='2'] {
+      --blur-amount-user-scroll: 0;
+      --line-opacity-user-scroll: 1;
+    }
+
+    &:not(&--active)[data-distance='3'] {
+      --blur-amount-user-scroll: 0;
+      --line-opacity-user-scroll: 0.95;
+    }
+
+    &:not(&--active)[data-distance='4'] {
+      --blur-amount-user-scroll: 0;
+      --line-opacity-user-scroll: 0.9;
+    }
+
+    &:not(&--active)[data-distance='5'],
+    &:not(&--active)[data-distance='6'],
+    &:not(&--active)[data-distance='7'],
+    &:not(&--active)[data-distance='8'],
+    &:not(&--active)[data-distance='9'],
+    &:not(&--active)[data-distance='10'] {
+      --blur-amount-user-scroll: 0;
+      --line-opacity-user-scroll: 0.85;
+    }
+  }
+}
+
+// Режим прозрачности: перетаскивание прогресс-бара
+// При перетаскивании создается более контрастный эффект с более резким градиентом
+.player__synced-lyrics[data-opacity-mode='seeking'] {
+  .player__synced-lyrics-line {
+    // Очень быстрый переход при смене режима (мгновенный возврат к нормальному)
+    transition:
+      filter 0.05s ease,
+      opacity 0.05s ease,
+      transform 0.05s ease;
+
+    // Более контрастный эффект: активная строка очень яркая, остальные более прозрачные
+    filter: blur(var(--blur-amount-seeking, 6px));
+    opacity: var(--line-opacity-seeking, 0.3);
+
+    // Активная строка - такая же как в обычном режиме (без увеличения)
+    &--active {
+      color: #ffffff !important;
+      filter: blur(0) !important;
+      opacity: 1 !important;
+      transform: scale(1.02); // Такое же увеличение, как в обычном режиме
+    }
+
+    // Более резкий градиент: ближайшие строки видимы, дальние сильно размыты
+    // ВАЖНО: применяется только к неактивным строкам
+    &:not(&--active)[data-distance='1'] {
+      --blur-amount-seeking: 3px;
+      --line-opacity-seeking: 0.5;
+    }
+
+    &:not(&--active)[data-distance='2'] {
+      --blur-amount-seeking: 4px;
+      --line-opacity-seeking: 0.4;
+    }
+
+    &:not(&--active)[data-distance='3'] {
+      --blur-amount-seeking: 5px;
+      --line-opacity-seeking: 0.3;
+    }
+
+    &:not(&--active)[data-distance='4'] {
+      --blur-amount-seeking: 6px;
+      --line-opacity-seeking: 0.25;
+    }
+
+    &:not(&--active)[data-distance='5'] {
+      --blur-amount-seeking: 7px;
+      --line-opacity-seeking: 0.2;
+    }
+
+    &:not(&--active)[data-distance='6'],
+    &:not(&--active)[data-distance='7'],
+    &:not(&--active)[data-distance='8'],
+    &:not(&--active)[data-distance='9'],
+    &:not(&--active)[data-distance='10'] {
+      --blur-amount-seeking: 8px;
+      --line-opacity-seeking: 0.15;
+    }
+  }
+}
+
+// Когда текст виден - меняем вёрстку: обложка и информация о треке рядом
+.player--lyrics-visible {
+  grid-template-rows: auto 1fr auto auto auto;
+  grid-template-columns: 1fr;
+
+  // Когда контролы скрыты - блок текста расширяется на всю доступную высоту
+  // Используем только 2 ряда: обложка + информация (auto) и блок текста (1fr)
+  // Скрытые элементы (height: 0, margin: 0) не занимают место, grid автоматически перераспределяет пространство
+  &.player--controls-hidden {
+    // Убираем строки для скрытых контролов, оставляем только обложку и блок текста
+    grid-template-rows: auto 1fr;
+
+    // Полностью скрываем элементы контролов, чтобы они не занимали место
+    .player__progress-container,
+    .player__controls,
+    .player__volume-control,
+    .player__secondary-controls {
+      display: none;
     }
   }
 
-  /* Небольшое "приседание" и возврат */
-  @keyframes cover-bounce-out {
-    0% {
-      transform: scale(1);
+  // Контейнер для обложки и информации о треке (flex row)
+  .player__cover-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-2);
+    justify-content: center;
+  }
+
+  .player__cover {
+    flex-shrink: 0;
+    max-width: 150px;
+    margin: 0;
+
+    // В режиме показа текста обложка становится кликабельной кнопкой
+    &.player__cover--clickable {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &:active {
+        opacity: 0.6;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent-color, #998238);
+        outline-offset: 2px;
+        border-radius: var(--ms-02);
+      }
+    }
+  }
+
+  .player__track-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: start;
+    align-items: flex-start;
+    min-width: 0; // Позволяет тексту обрезаться при необходимости
+
+    h2 {
+      margin: 0;
+      font-size: clamp(0.875rem, 0.7rem + 0.9vw, 1.1rem);
+      line-height: 1.3;
     }
 
-    100% {
-      transform: scale(0.8);
+    h3 {
+      margin: 0;
+      margin-block-start: var(--ms-01);
+      font-size: clamp(0.75rem, 0.6rem + 0.75vw, 0.95rem);
     }
   }
 
-  /* Если у пользователя снижена анимация — уважаем это */
-  @media (prefers-reduced-motion: reduce) {
-    animation: none !important;
-    transition: none !important;
-  }
+  // Синхронизированный текст песни
+  // Элемент рендерится только когда showLyrics === true (внутри .player--lyrics-visible)
+  .player__synced-lyrics {
+    position: relative;
+    height: 100%; // Занимает всё доступное пространство в grid (1fr)
+    min-height: 0; // Важно для корректной работы overflow в grid
+    overflow-y: auto;
+    padding-block-start: var(--ms-3);
 
-  .album-cover {
-    display: block;
-    inline-size: 100%;
+    // padding: var(--ms-1);
+    scroll-behavior: smooth;
+
+    // Мягкий переход сверху и снизу с градиентом (используем значения типографики)
+    // Градиент делает текст полностью невидимым по краям, предотвращая обрезание
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black var(--ms-4),
+      black calc(100% - var(--ms-4)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black var(--ms-4),
+      black calc(100% - var(--ms-4)),
+      transparent 100%
+    );
+
+    // Скрываем скроллбар для более чистого вида
+    @extend %hide-scrollbar;
   }
+}
+
+// Блок авторства - такой же как обычные строки, но с префиксом "Авторство: "
+.player__synced-lyrics-line--authorship {
+  // Стили такие же как у обычных строк, но можно добавить небольшой отступ сверху
+  margin-block-start: var(--ms-2);
 }
 
 input[type='range'] {
@@ -188,45 +778,22 @@ input[type='range'] {
   height: 8px;
   appearance: none;
   border-radius: var(--ms-02);
+  transition: transform 0.2s ease;
+  transform-origin: center;
+
+  // Увеличение при active (работает на всех устройствах, включая мобильные)
+  &:active {
+    transform: scaleY(1.5); // Увеличение в 1.5 раза
+  }
 }
 
-.player__progress-bar input {
-  --progress-width: 0%;
+@keyframes pulse-dot {
+  0%,
+  100% {
+    transform: scale(1);
+  }
 
-  background: linear-gradient(
-    to right,
-    var(--white, #ffffff) var(--progress-width),
-    #dddddd80 var(--progress-width)
-  );
-}
-
-.player__volume-control input {
-  --volume-progress-width: 50%;
-
-  background: linear-gradient(
-    to right,
-    var(--white, #ffffff) var(--volume-progress-width),
-    #dddddd80 var(--volume-progress-width)
-  );
-}
-
-.player__progress-container {
-  position: relative;
-}
-
-.player__progress-bar {
-  display: flex;
-}
-
-.player__time-container {
-  position: absolute;
-  inset-block-start: var(--ms-01);
-  inset-inline: 0;
-  display: flex;
-  justify-content: space-between;
-
-  .player__time {
-    color: var(--light-grey, #dddddd);
-    font-size: var(--ms-01);
+  50% {
+    transform: scale(1.15);
   }
 }
