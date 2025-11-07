@@ -5,6 +5,7 @@
  * Компонент получает данные из стейта через селекторы и диспатчит действия для управления плеером.
  */
 import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { AlbumCover } from '@entities/album';
 import type { IAlbums, SyncedLyricsLine } from 'models';
 import './style.scss';
@@ -1068,27 +1069,73 @@ export default function AudioPlayer({
     return false;
   }, [syncedLyrics, currentTrack, albumId, lang]);
 
-  // Мемоизируем оба значения времени вместе для синхронного обновления
-  // Используем один селектор selectTime для атомарного получения обоих значений
-  const timeDisplay = useMemo(() => {
-    const current = formatTime(time.current);
-    const remaining = formatTime(time.duration - time.current);
-    return { current, remaining };
-  }, [time.current, time.duration, formatTime]);
+  // Ref для прямого доступа к элементу отображения времени
+  const timeDisplayRef = useRef<HTMLDivElement | null>(null);
 
-  // Ref для прямого доступа к контейнеру времени
-  const timeContainerRef = useRef<HTMLDivElement | null>(null);
+  // ПОЛНОСТЬЮ ОБХОДИМ REDUX для обновления таймеров!
+  // Подписываемся напрямую на audio элемент и обновляем ОДИН текстовый узел
+  useEffect(() => {
+    const element = timeDisplayRef.current;
+    if (!element) return;
 
-  // Используем useLayoutEffect для синхронного обновления одного элемента
-  // Обновляем оба data-атрибута одновременно, чтобы CSS псевдоэлементы обновились атомарно
-  useLayoutEffect(() => {
-    if (timeContainerRef.current) {
-      // Обновляем оба data-атрибута синхронно в одном блоке
-      // Это гарантирует, что браузер обновит оба псевдоэлемента одновременно
-      timeContainerRef.current.setAttribute('data-current', timeDisplay.current);
-      timeContainerRef.current.setAttribute('data-remaining', timeDisplay.remaining);
-    }
-  }, [timeDisplay.current, timeDisplay.remaining]);
+    const audioElement = audioController.element;
+
+    // Throttling для оптимизации
+    let lastUpdate = 0;
+    const UPDATE_INTERVAL = 100; // 100мс = 10 обновлений в секунду
+
+    const updateDisplay = () => {
+      const now = Date.now();
+      if (now - lastUpdate < UPDATE_INTERVAL) return;
+      lastUpdate = now;
+
+      const { currentTime, duration } = audioElement;
+      if (!Number.isFinite(duration) || duration <= 0) return;
+
+      // Преобразуем время в целые секунды, чтобы избежать разницы округления
+      const totalSeconds = Math.max(0, Math.floor(duration));
+      const elapsedSeconds = Math.min(totalSeconds, Math.max(0, Math.floor(currentTime)));
+      const remainingSeconds = Math.max(totalSeconds - elapsedSeconds, 0);
+
+      // Вычисляем оба значения на основе одинакового округления
+      const currentValue = formatTime(elapsedSeconds);
+      const remainingValue = formatTime(remainingSeconds);
+
+      // Создаем DocumentFragment для батчинга DOM операций
+      // Это самый низкоуровневый способ гарантировать синхронность
+      const fragment = document.createDocumentFragment();
+
+      const currentSpan = document.createElement('span');
+      currentSpan.className = 'player__time-current';
+      currentSpan.textContent = currentValue;
+
+      const remainingSpan = document.createElement('span');
+      remainingSpan.className = 'player__time-remaining';
+      remainingSpan.textContent = remainingValue;
+
+      fragment.appendChild(currentSpan);
+      fragment.appendChild(remainingSpan);
+
+      // replaceChildren() заменяет ВСЕ дочерние элементы за ОДНУ атомарную операцию
+      element.replaceChildren(fragment);
+    };
+
+    // Подписываемся на событие timeupdate напрямую
+    audioElement.addEventListener('timeupdate', updateDisplay);
+    // Также обновляем при загрузке метаданных
+    audioElement.addEventListener('loadedmetadata', updateDisplay);
+    // И при изменении длительности
+    audioElement.addEventListener('durationchange', updateDisplay);
+
+    // Первоначальное обновление
+    updateDisplay();
+
+    return () => {
+      audioElement.removeEventListener('timeupdate', updateDisplay);
+      audioElement.removeEventListener('loadedmetadata', updateDisplay);
+      audioElement.removeEventListener('durationchange', updateDisplay);
+    };
+  }, [formatTime]);
 
   // Отслеживание активности пользователя (мышь, клавиатура, тач)
   // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
@@ -1374,13 +1421,9 @@ export default function AudioPlayer({
           />
         </div>
         {/* Время: текущее и оставшееся */}
-        {/* Используем один элемент с data-атрибутами и CSS псевдоэлементы для атомарного обновления */}
-        <div
-          ref={timeContainerRef}
-          className="player__time-container"
-          data-current={timeDisplay.current}
-          data-remaining={timeDisplay.remaining}
-        />
+        {/* ВАЖНО: используем один контейнер для обоих значений */}
+        {/* Обновление через innerHTML гарантирует абсолютную атомарность - оба значения обновляются за одну операцию */}
+        <div ref={timeDisplayRef} className="player__time-container"></div>
       </div>
 
       {/* Кнопки управления: предыдущий трек, play/pause, следующий трек */}

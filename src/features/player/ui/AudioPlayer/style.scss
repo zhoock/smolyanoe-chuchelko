@@ -265,49 +265,32 @@
     position: absolute;
     inset-block-start: var(--ms-01);
     inset-inline: 0;
-    display: flex;
-    justify-content: space-between;
     color: var(--light-grey, #dddddd);
     font-size: var(--ms-01);
+    font-variant-numeric: tabular-nums;
+    height: 1.2em; // Фиксированная высота для контейнера
 
-    // Используем CSS оптимизации для синхронизации рендеринга
+    // Создаем единый композитный слой для всего контейнера
     will-change: contents;
-    contain: layout style paint;
+    isolation: isolate;
+  }
 
-    // Используем псевдоэлементы для отображения обоих значений из data-атрибутов
-    // Это гарантирует атомарное обновление, так как оба значения берутся из одного элемента
-    // и обновляются синхронно через useLayoutEffect
-    &::before {
-      content: attr(data-current);
+  &__time-current,
+  &__time-remaining {
+    position: absolute;
+    inset-block-start: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
 
-      // Фиксированная ширина для предотвращения "прыгания" текста при изменении цифр
-      // Используем ch (ширина символа "0") для адаптивности к размеру шрифта
-      display: inline-block;
-      width: 4ch; // Фиксированная ширина для формата "MM:SS" (например, "0:00" или "10:00")
-      text-align: left;
-      overflow: hidden; // Скрываем текст, если он выходит за границы
-      // Используем моноширинный шрифт для более предсказуемой ширины цифр
-      font-variant-numeric: tabular-nums;
+  &__time-current {
+    inset-inline-start: 0;
+    text-align: left;
+  }
 
-      // Используем CSS оптимизации для синхронизации рендеринга псевдоэлементов
-      will-change: contents;
-    }
-
-    &::after {
-      content: '-' attr(data-remaining);
-
-      // Фиксированная ширина для предотвращения "прыгания" текста при изменении цифр
-      // Используем ch (ширина символа "0") для адаптивности к размеру шрифта
-      display: inline-block;
-      width: 5ch; // Фиксированная ширина для формата "-MM:SS" (например, "-0:00" или "-10:00")
-      text-align: right; // Выравниваем по правому краю внутри фиксированной ширины
-      overflow: hidden; // Скрываем текст, если он выходит за границы
-      // Используем моноширинный шрифт для более предсказуемой ширины цифр
-      font-variant-numeric: tabular-nums;
-
-      // Используем CSS оптимизации для синхронизации рендеринга псевдоэлементов
-      will-change: contents;
-    }
+  &__time-remaining {
+    inset-inline-end: 0;
+    text-align: right;
   }
 
   &__control-button,
