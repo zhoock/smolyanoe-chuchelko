@@ -3,7 +3,8 @@
  * Админ-страница для синхронизации текста песни с музыкой.
  * Позволяет устанавливать тайм-коды для каждой строки текста вручную.
  */
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
@@ -33,8 +34,12 @@ export default function AdminSync() {
   const dispatch = useAppDispatch();
 
   // Получаем текущее время из Redux плеера для установки тайм-кодов
-  const currentTime = useAppSelector(playerSelectors.selectTime);
+  // Используем один селектор selectTime для атомарного получения обоих значений (как в AudioPlayer)
+  const time = useAppSelector(playerSelectors.selectTime);
+  const currentTime = time; // Алиас для совместимости с остальным кодом
   const isPlaying = useAppSelector(playerSelectors.selectIsPlaying);
+  const progress = useAppSelector(playerSelectors.selectProgress);
+  const isSeeking = useAppSelector(playerSelectors.selectIsSeeking);
 
   const [syncedLines, setSyncedLines] = useState<SyncedLyricsLine[]>([]);
   const [isDirty, setIsDirty] = useState(false); // флаг изменений
@@ -45,7 +50,6 @@ export default function AdminSync() {
   const initializedRef = useRef<string | null>(null); // ref для отслеживания инициализированного трека
 
   // Инициализируем плейлист в Redux когда загружаются данные альбома
-  // Это нужно чтобы AudioPlayer мог отобразить название трека вместо "Unknown Track"
   // ВАЖНО: При загрузке страницы синхронизации останавливаем воспроизведение и сбрасываем время
   useEffect(() => {
     if (!data) return;
@@ -62,12 +66,7 @@ export default function AdminSync() {
       audioController.pause();
 
       // Сбрасываем время на 0
-      // Получаем текущую длительность из audio элемента, если она доступна
-      const audioDuration = audioController.element.duration;
-      const duration = Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : 0;
-
       dispatch(playerActions.setCurrentTime(0));
-      dispatch(playerActions.setTime({ current: 0, duration }));
       dispatch(playerActions.setProgress(0));
       audioController.setCurrentTime(0);
 
@@ -84,6 +83,11 @@ export default function AdminSync() {
             albumTitle: album.album,
           })
         );
+        // Явно устанавливаем источник трека, чтобы загрузить метаданные
+        // Глобальный обработчик loadedmetadata в playerListeners.ts обновит duration автоматически
+        if (track.src) {
+          audioController.setSource(track.src);
+        }
       }
     });
   }, [data, albumId, trackId, dispatch]);
@@ -535,12 +539,40 @@ export default function AdminSync() {
     }
   }, []);
 
+  // Duration обновляется автоматически через глобальный обработчик loadedmetadata в playerListeners.ts
+  // Не нужно дублировать логику здесь
+
   // Форматирование времени для отображения (MM:SS)
   const formatTimeCompact = useCallback((seconds: number) => {
+    if (isNaN(seconds) || !Number.isFinite(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
+
+  // Ref для прямого доступа к контейнеру времени и прогресс-бару
+  const timeContainerRef = useRef<HTMLDivElement | null>(null);
+  const progressInputRef = useRef<HTMLInputElement | null>(null);
+  const currentTimeRef = useRef<HTMLSpanElement | null>(null);
+  const remainingTimeRef = useRef<HTMLSpanElement | null>(null);
+
+  // Используем useLayoutEffect с flushSync для принудительной синхронизации обновлений
+  // Обновляем два отдельных элемента через textContent в одном синхронном блоке
+  // flushSync гарантирует, что оба элемента обновятся синхронно до следующего рендера
+  useLayoutEffect(() => {
+    if (currentTimeRef.current && remainingTimeRef.current) {
+      // Вычисляем значения напрямую из time
+      const currentValue = formatTimeCompact(time.current);
+      const remainingValue = formatTimeCompact(time.duration - time.current);
+
+      // Используем flushSync для принудительной синхронизации обновлений
+      // Это гарантирует, что оба элемента обновятся синхронно до следующего рендера
+      flushSync(() => {
+        currentTimeRef.current!.textContent = currentValue;
+        remainingTimeRef.current!.textContent = remainingValue;
+      });
+    }
+  }, [time.current, time.duration, formatTimeCompact]);
 
   // Форматирование времени для отображения (с миллисекундами для тайм-кодов)
   const formatTime = useCallback((seconds: number) => {
@@ -555,44 +587,37 @@ export default function AdminSync() {
     dispatch(playerActions.toggle());
   }, [dispatch]);
 
-  // Обработка клика по прогресс-бару
-  const handleProgressClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
-      const progressBar = e.currentTarget;
-      const rect = progressBar.getBoundingClientRect();
-      let clickX: number;
+  // Обработка изменения прогресс-бара (как в AudioPlayer)
+  const handleProgressChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const duration = time.duration;
+      if (!Number.isFinite(duration) || duration <= 0) return;
 
-      if ('clientX' in e) {
-        clickX = e.clientX - rect.left;
-      } else {
-        // Для клавиатуры используем центр прогресс-бара
-        clickX = rect.width / 2;
-      }
-
-      const progress = Math.max(0, Math.min(1, clickX / rect.width));
-      const newTime = progress * (currentTime.duration || 0);
+      const value = Number(event.target.value);
+      const newTime = (value / 100) * duration;
 
       dispatch(playerActions.setSeeking(true));
+      // ЯВНО устанавливаем время в audio элементе сразу, не дожидаясь middleware
+      // Это гарантирует, что аудио перематывается немедленно при клике на слайдер
+      audioController.setCurrentTime(newTime);
       dispatch(playerActions.setCurrentTime(newTime));
-      dispatch(playerActions.setTime({ current: newTime, duration: currentTime.duration }));
-      dispatch(playerActions.setProgress(progress * 100));
-
-      // Автоматически возобновляем воспроизведение после перемотки
-      setTimeout(() => {
-        dispatch(playerActions.setSeeking(false));
-        if (isPlaying) {
-          dispatch(playerActions.play());
-        }
-      }, 100);
+      dispatch(playerActions.setTime({ current: newTime, duration }));
+      dispatch(playerActions.setProgress(value));
+      if (progressInputRef.current) {
+        progressInputRef.current.style.setProperty('--progress-width', `${value}%`);
+      }
     },
-    [dispatch, currentTime.duration, isPlaying]
+    [dispatch, time.duration]
   );
 
-  // Получаем прогресс для отображения
-  const progress = useMemo(() => {
-    if (!currentTime.duration) return 0;
-    return (currentTime.current / currentTime.duration) * 100;
-  }, [currentTime]);
+  // Обработчик окончания перемотки (как в AudioPlayer)
+  const handleSeekEnd = useCallback(() => {
+    // Снимаем флаг isSeeking (разрешает автообновление прогресса)
+    dispatch(playerActions.setSeeking(false));
+    if (isPlaying) {
+      dispatch(playerActions.play());
+    }
+  }, [dispatch, isPlaying]);
 
   if (!data) {
     return (
@@ -713,31 +738,27 @@ export default function AdminSync() {
                       </button>
                     </div>
                     <div className="admin-sync__player-progress-wrapper">
-                      <div
-                        className="admin-sync__player-progress"
-                        onClick={handleProgressClick}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleProgressClick(e);
-                          }
-                        }}
-                        aria-label="Прогресс воспроизведения"
-                      >
-                        <div
-                          className="admin-sync__player-progress-bar"
-                          style={{ width: `${progress}%` }}
-                        />
-                        <div
-                          className="admin-sync__player-progress-handle"
-                          style={{ left: `${progress}%` }}
+                      <div className="admin-sync__player-progress-bar">
+                        <input
+                          ref={progressInputRef}
+                          type="range"
+                          value={progress}
+                          min="0"
+                          max="100"
+                          onChange={handleProgressChange}
+                          onInput={handleProgressChange}
+                          onMouseUp={handleSeekEnd}
+                          onTouchEnd={handleSeekEnd}
+                          aria-label="Прогресс воспроизведения"
                         />
                       </div>
-                      <div className="admin-sync__player-time">
-                        <span>{formatTimeCompact(currentTime.current)}</span>
-                        <span>{formatTimeCompact(currentTime.duration || 0)}</span>
+                      {/* Время: текущее и оставшееся */}
+                      {/* Используем два отдельных элемента для атомарного обновления через textContent */}
+                      <div className="admin-sync__player-time" ref={timeContainerRef}>
+                        <span ref={currentTimeRef}>{formatTimeCompact(time.current)}</span>
+                        <span ref={remainingTimeRef}>
+                          {formatTimeCompact(time.duration - time.current)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -788,28 +809,29 @@ export default function AdminSync() {
                       ))}
                     </div>
                   )}
-
-                  {!isLoading && syncedLines.length > 0 && (
-                    <div className="admin-sync__controls">
-                      <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={!isDirty}
-                        className="admin-sync__save-btn"
-                      >
-                        Сохранить синхронизации
-                      </button>
-                      {isSaved && (
-                        <span className="admin-sync__saved-indicator">Синхронизации сохранены</span>
-                      )}
-                      {isDirty && (
-                        <span className="admin-sync__dirty-indicator">
-                          Есть несохранённые изменения
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
+
+                {/* Кнопка сохранения вынесена за пределы блока строк */}
+                {!isLoading && syncedLines.length > 0 && (
+                  <div className="admin-sync__controls">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={!isDirty}
+                      className="admin-sync__save-btn"
+                    >
+                      Сохранить синхронизации
+                    </button>
+                    {isSaved && (
+                      <span className="admin-sync__saved-indicator">Синхронизации сохранены</span>
+                    )}
+                    {isDirty && (
+                      <span className="admin-sync__dirty-indicator">
+                        Есть несохранённые изменения
+                      </span>
+                    )}
+                  </div>
+                )}
               </>
             );
           }}

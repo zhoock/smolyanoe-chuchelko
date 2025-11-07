@@ -6,7 +6,7 @@
   position: relative;
   display: grid;
   margin: 0 auto;
-  padding: var(--ms-3) var(--ms-1);
+  padding: var(--ms-3) var(--ms-1) var(--ms-1);
   inline-size: min(100vi, 1000px);
   block-size: 100dvh;
   grid-template-rows: repeat(4, auto);
@@ -180,6 +180,10 @@
     }
   }
 
+  &__cover-wrapper {
+    display: contents;
+  }
+
   &__cover {
     display: inline-block;
     transition: scale 0.35s ease;
@@ -265,10 +269,10 @@
     position: absolute;
     inset-block-start: var(--ms-01);
     inset-inline: 0;
+    height: 1.2em; // Фиксированная высота для контейнера
     color: var(--light-grey, #dddddd);
     font-size: var(--ms-01);
     font-variant-numeric: tabular-nums;
-    height: 1.2em; // Фиксированная высота для контейнера
 
     // Создаем единый композитный слой для всего контейнера
     will-change: contents;
@@ -660,10 +664,10 @@
   }
 
   // Контейнер для обложки и информации о треке (flex row)
-  .player__cover-wrapper {
+  .player__cover-wrapper--lyrics {
     display: flex;
     align-items: center;
-    gap: var(--ms-2);
+    gap: var(--ms-1);
     justify-content: center;
   }
 
@@ -710,7 +714,6 @@
 
     h3 {
       margin: 0;
-      margin-block-start: var(--ms-01);
       font-size: clamp(0.75rem, 0.6rem + 0.75vw, 0.95rem);
     }
   }
@@ -723,10 +726,9 @@
     min-height: 0; // Важно для корректной работы overflow в grid
     overflow-y: auto;
     padding-block-start: var(--ms-3);
+    scroll-behavior: smooth; // Плавный скролл для десктопа
 
     // padding: var(--ms-1);
-    scroll-behavior: smooth;
-
     // Мягкий переход сверху и снизу с градиентом (используем значения типографики)
     // Градиент делает текст полностью невидимым по краям, предотвращая обрезание
     /* stylelint-disable-next-line property-no-vendor-prefix */
@@ -745,8 +747,21 @@
       transparent 100%
     );
 
+    // Оптимизация для плавного скролла на мобильных устройствах
+    -webkit-overflow-scrolling: touch;
+
+    // Создаём композитный слой для стабильности маски при скролле
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: scroll-position;
+
     // Скрываем скроллбар для более чистого вида
     @extend %hide-scrollbar;
+
+    &[data-platform='ios'] {
+      scroll-behavior: auto; // Отключаем smooth scroll на iOS, используем кастомный
+      // На iOS оставляем маску, но используем оптимизацию для стабильности
+    }
   }
 }
 

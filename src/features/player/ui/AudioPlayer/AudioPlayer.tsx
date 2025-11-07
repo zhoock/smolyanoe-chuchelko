@@ -76,13 +76,81 @@ export default function AudioPlayer({
   // Refs для работы с DOM элементами и хранения промежуточных значений
   const audioContainerRef = useRef<HTMLDivElement | null>(null); // контейнер для прикрепления audio элемента к DOM
   const progressInputRef = useRef<HTMLInputElement | null>(null); // слайдер прогресса для установки CSS переменной
-  const coverRef = useRef<HTMLDivElement | null>(null); // контейнер обложки для управления анимацией
   const prevIsPlayingRef = useRef<boolean | null>(null); // предыдущее состояние isPlaying (null = ещё не установлено)
   const prevTrackIndexRef = useRef<number | null>(null); // предыдущий индекс трека (null = ещё не установлено)
+  const isIOSDevice = useMemo(() => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }, []);
+
   const bgColorSetForAlbumRef = useRef<string | null>(null); // флаг: установлен ли уже цвет фона для текущего альбома
   const prevTrackIdRef = useRef<string | number | null>(null); // предыдущий ID трека для отслеживания смены трека
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // таймер для скрытия контролов после бездействия
   const playerContainerRef = useRef<HTMLDivElement | null>(null); // контейнер плеера для отслеживания активности
+  const lastAutoScrollTimeRef = useRef<number>(0); // время последнего автоскролла для throttling
+  const autoScrollRafRef = useRef<number | null>(null); // ref для requestAnimationFrame
+  const smoothScrollAnimationRef = useRef<number | null>(null); // ref для плавной анимации скролла
+  const smoothScrollStartRef = useRef<number>(0); // начальная позиция скролла
+  const smoothScrollTargetRef = useRef<number>(0); // целевая позиция скролла
+  const smoothScrollStartTimeRef = useRef<number>(0); // время начала анимации
+
+  // Easing функция для плавного скролла (ease-out cubic)
+  const easeOutCubic = useCallback((t: number): number => {
+    return 1 - Math.pow(1 - t, 3);
+  }, []);
+
+  // Функция плавного скролла (как в Apple Music) - только для iOS
+  const smoothScrollTo = useCallback(
+    (container: HTMLElement, targetScrollTop: number, duration: number = 600) => {
+      // На десктопе используем нативный smooth scroll
+      if (!isIOSDevice) {
+        container.scrollTo({
+          top: targetScrollTop,
+          behavior: 'smooth',
+        });
+        lastAutoScrollTimeRef.current = Date.now();
+        return;
+      }
+
+      // На iOS используем кастомный плавный скролл
+      // Отменяем предыдущую анимацию если она есть
+      if (smoothScrollAnimationRef.current !== null) {
+        cancelAnimationFrame(smoothScrollAnimationRef.current);
+      }
+
+      smoothScrollStartRef.current = container.scrollTop;
+      smoothScrollTargetRef.current = targetScrollTop;
+      smoothScrollStartTimeRef.current = performance.now();
+
+      const animate = () => {
+        const elapsed = performance.now() - smoothScrollStartTimeRef.current;
+        const progress = Math.min(elapsed / duration, 1);
+        const easedProgress = easeOutCubic(progress);
+
+        const currentScrollTop =
+          smoothScrollStartRef.current +
+          (smoothScrollTargetRef.current - smoothScrollStartRef.current) * easedProgress;
+
+        // Используем scrollTo вместо прямого изменения scrollTop для стабильности маски
+        container.scrollTo({
+          top: currentScrollTop,
+          behavior: 'auto',
+        });
+
+        if (progress < 1) {
+          smoothScrollAnimationRef.current = requestAnimationFrame(animate);
+        } else {
+          smoothScrollAnimationRef.current = null;
+          lastAutoScrollTimeRef.current = Date.now();
+        }
+      };
+
+      smoothScrollAnimationRef.current = requestAnimationFrame(animate);
+    },
+    [easeOutCubic, isIOSDevice]
+  );
 
   /**
    * Прикрепляем глобальный audio элемент к DOM при монтировании компонента.
@@ -114,88 +182,16 @@ export default function AudioPlayer({
    * - При изменении isPlaying (play/pause) обновляем класс С анимацией
    * Это предотвращает анимацию увеличения при смене трека на паузе.
    */
-  useEffect(() => {
-    if (!coverRef.current) return;
+  const [coverAnimationClass, setCoverAnimationClass] = useState<string>(() =>
+    isPlaying ? 'player__cover--playing' : 'player__cover--paused'
+  );
 
-    const element = coverRef.current;
+  useEffect(() => {
     const expectedClass = isPlaying ? 'player__cover--playing' : 'player__cover--paused';
-    const wasInitialized = prevIsPlayingRef.current !== null && prevTrackIndexRef.current !== null;
-    const isPlayingChanged = wasInitialized && prevIsPlayingRef.current !== isPlaying;
-    const trackChanged = wasInitialized && prevTrackIndexRef.current !== currentTrackIndex;
-
-    // При первом рендере или смене трека синхронизируем класс с текущим isPlaying БЕЗ анимации
-    if (!wasInitialized || trackChanged) {
-      // Проверяем, не установлен ли уже правильный класс (чтобы избежать лишних операций с DOM)
-      const hasCorrectClass = element.classList.contains(expectedClass);
-
-      if (!hasCorrectClass) {
-        // Устанавливаем правильный класс синхронно, чтобы не было анимации
-        element.classList.remove('player__cover--playing', 'player__cover--paused');
-        element.classList.add(expectedClass);
-      }
-
-      // Обновляем refs
-      prevIsPlayingRef.current = isPlaying;
-      prevTrackIndexRef.current = currentTrackIndex;
-    } else if (isPlayingChanged) {
-      // При изменении isPlaying (play/pause) обновляем класс С анимацией
-      // Только если это не первый рендер и трек не менялся
-      element.classList.remove('player__cover--playing', 'player__cover--paused');
-      requestAnimationFrame(() => {
-        if (element) {
-          element.classList.add(expectedClass);
-        }
-      });
-      prevIsPlayingRef.current = isPlaying;
-    }
-  }, [isPlaying, currentTrackIndex, showLyrics]);
-
-  /**
-   * Дополнительная проверка: гарантируем, что класс обложки всегда соответствует текущему состоянию.
-   * Это защита от случаев, когда класс не установился по какой-то причине (например, из-за порядка выполнения эффектов).
-   * Срабатывает при каждом изменении isPlaying или currentTrackIndex, но с небольшой задержкой,
-   * чтобы не конфликтовать с основной логикой анимации.
-   */
-  useEffect(() => {
-    if (!coverRef.current) return;
-
-    // Используем небольшую задержку, чтобы основная логика анимации успела выполниться
-    const timeoutId = setTimeout(() => {
-      if (!coverRef.current) return;
-
-      const element = coverRef.current;
-      const expectedClass = isPlaying ? 'player__cover--playing' : 'player__cover--paused';
-      const hasCorrectClass = element.classList.contains(expectedClass);
-
-      // Если класс не соответствует ожидаемому - устанавливаем его принудительно
-      if (!hasCorrectClass) {
-        element.classList.remove('player__cover--playing', 'player__cover--paused');
-        element.classList.add(expectedClass);
-        // Обновляем refs для синхронизации
-        prevIsPlayingRef.current = isPlaying;
-        prevTrackIndexRef.current = currentTrackIndex;
-      }
-    }, 50); // Небольшая задержка, чтобы основная логика успела выполниться
-
-    return () => clearTimeout(timeoutId);
+    setCoverAnimationClass(expectedClass);
+    prevIsPlayingRef.current = isPlaying;
+    prevTrackIndexRef.current = currentTrackIndex;
   }, [isPlaying, currentTrackIndex]);
-
-  /**
-   * Устанавливаем правильный класс обложки при переключении режима текста.
-   * При переключении showLyrics React пересоздаёт DOM-элемент, поэтому нужно установить класс синхронно.
-   */
-  useEffect(() => {
-    if (!coverRef.current) return;
-
-    const element = coverRef.current;
-    const expectedClass = isPlaying ? 'player__cover--playing' : 'player__cover--paused';
-
-    // Устанавливаем класс синхронно, чтобы избежать анимации при пересоздании элемента
-    if (!element.classList.contains(expectedClass)) {
-      element.classList.remove('player__cover--playing', 'player__cover--paused');
-      element.classList.add(expectedClass);
-    }
-  }, [showLyrics, isPlaying]); // Срабатывает при изменении showLyrics или isPlaying
 
   /**
    * Форматирует время в секундах в строку вида "MM:SS".
@@ -921,9 +917,15 @@ export default function AudioPlayer({
   // Автоскролл к активной строке
   // Не скроллим, если пользователь недавно прокручивал вручную (в течение 2 секунд)
   // ВАЖНО: при резком изменении времени (клик на прогрессбар) нужно прокрутить к нужной позиции
+  // Используем плавный скролл с easing функцией для максимальной плавности (как в Apple Music)
   useEffect(() => {
     const container = lyricsContainerRef.current;
     if (!container || !syncedLyrics || syncedLyrics.length === 0) return;
+
+    // Throttling: разный для iOS и десктопа
+    const now = Date.now();
+    const timeSinceLastScroll = now - lastAutoScrollTimeRef.current;
+    const SCROLL_THROTTLE = isIOSDevice ? 50 : 50; // мс (уменьшили для iOS чтобы успевать за сменой строк)
 
     // Если currentLineIndex === null, проверяем, почему:
     // 1. Время до начала текста - прокручиваем к началу
@@ -943,11 +945,13 @@ export default function AudioPlayer({
           return;
         }
 
-        // Прокручиваем к началу (к placeholder перед первой строкой)
-        container.scrollTo({
-          top: 0,
-          behavior: 'smooth',
-        });
+        // Throttling для скролла к началу
+        if (timeSinceLastScroll < SCROLL_THROTTLE) {
+          return;
+        }
+
+        // Используем плавный скролл
+        smoothScrollTo(container, 0, isIOSDevice ? 300 : 300);
       }
       // Если время в промежутке между строками - не прокручиваем, оставляем текущую позицию
       // (заглушка будет показана, но прокрутка не изменится)
@@ -963,6 +967,11 @@ export default function AudioPlayer({
 
     // Если пользователь прокручивал вручную недавно - не вмешиваемся
     if (timeSinceUserScroll < USER_SCROLL_TIMEOUT) {
+      return;
+    }
+
+    // Throttling: пропускаем если прошло мало времени с последнего скролла
+    if (timeSinceLastScroll < SCROLL_THROTTLE) {
       return;
     }
 
@@ -994,22 +1003,22 @@ export default function AudioPlayer({
 
     // Если строка не в правильной позиции или обрезана - скроллим
     if (!isInCorrectPosition || !isFullyVisibleBottom) {
-      // Если строка находится слишком высоко (выше желаемой позиции более чем на 20px)
-      if (currentLineTopRelative < topOffset - 20) {
-        container.scrollTo({
-          top: desiredScrollTop,
-          behavior: 'smooth',
-        });
-      }
-      // Если строка находится слишком низко или обрезана снизу
-      else if (currentLineTopRelative > topOffset + 20 || !isFullyVisibleBottom) {
-        container.scrollTo({
-          top: desiredScrollTop,
-          behavior: 'smooth',
-        });
-      }
+      // Используем плавный скролл с разной длительностью для iOS и десктопа
+      smoothScrollTo(container, desiredScrollTop, isIOSDevice ? 300 : 300);
     }
-  }, [currentLineIndexComputed]);
+
+    return () => {
+      // Очищаем анимацию при размонтировании или изменении зависимостей
+      if (smoothScrollAnimationRef.current !== null) {
+        cancelAnimationFrame(smoothScrollAnimationRef.current);
+        smoothScrollAnimationRef.current = null;
+      }
+      if (autoScrollRafRef.current !== null) {
+        cancelAnimationFrame(autoScrollRafRef.current);
+        autoScrollRafRef.current = null;
+      }
+    };
+  }, [currentLineIndexComputed, smoothScrollTo, isIOSDevice]);
 
   /**
    * Очищаем таймеры перемотки при размонтировании компонента.
@@ -1023,6 +1032,15 @@ export default function AudioPlayer({
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
+      }
+      // Очищаем анимацию плавного скролла
+      if (smoothScrollAnimationRef.current !== null) {
+        cancelAnimationFrame(smoothScrollAnimationRef.current);
+        smoothScrollAnimationRef.current = null;
+      }
+      if (autoScrollRafRef.current !== null) {
+        cancelAnimationFrame(autoScrollRafRef.current);
+        autoScrollRafRef.current = null;
       }
       // Сбрасываем флаги при размонтировании
       hasLongPressTimerRef.current = false;
@@ -1190,53 +1208,46 @@ export default function AudioPlayer({
     }
   }, [showLyrics, isPlaying, resetInactivityTimer]);
 
+  const coverWrapperClassName = `player__cover-wrapper${showLyrics ? ' player__cover-wrapper--lyrics' : ''}`;
+  const coverClassName = `player__cover ${coverAnimationClass}${showLyrics ? ' player__cover--clickable' : ''}`;
+  const coverInteractiveProps = useMemo<React.HTMLAttributes<HTMLDivElement>>(() => {
+    if (!showLyrics) {
+      return {};
+    }
+
+    return {
+      role: 'button',
+      tabIndex: 0,
+      'aria-label': 'Скрыть текст',
+      onClick: () => {
+        toggleLyrics();
+        resetInactivityTimer();
+      },
+      onKeyDown: (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleLyrics();
+          resetInactivityTimer();
+        }
+      },
+    };
+  }, [showLyrics, toggleLyrics, resetInactivityTimer]);
+
   return (
     <div
       ref={playerContainerRef}
       className={`player ${showLyrics ? 'player--lyrics-visible' : ''} ${!controlsVisible ? 'player--controls-hidden' : ''}`}
     >
       {/* Обложка альбома и информация о треке */}
-      {showLyrics ? (
-        <div className="player__cover-wrapper">
-          <div
-            ref={coverRef}
-            className="player__cover player__cover--clickable"
-            onClick={() => {
-              toggleLyrics();
-              resetInactivityTimer();
-            }}
-            role="button"
-            tabIndex={0}
-            aria-label="Скрыть текст"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggleLyrics();
-                resetInactivityTimer();
-              }
-            }}
-          >
-            {memoizedAlbumCover}
-          </div>
-          <div className="player__track-info">
-            <h2>{currentTrack?.title || 'Unknown Track'}</h2>
-            <h3>{album.artist || 'Unknown Artist'}</h3>
-          </div>
+      <div className={coverWrapperClassName}>
+        <div className={coverClassName.trim()} {...coverInteractiveProps}>
+          {memoizedAlbumCover}
         </div>
-      ) : (
-        <>
-          {/* Обложка альбома с анимацией при play/pause */}
-          <div ref={coverRef} className="player__cover">
-            {memoizedAlbumCover}
-          </div>
-
-          {/* Информация о текущем треке: название и артист */}
-          <div className="player__track-info">
-            <h2>{currentTrack?.title || 'Unknown Track'}</h2>
-            <h3>{album.artist || 'Unknown Artist'}</h3>
-          </div>
-        </>
-      )}
+        <div className="player__track-info">
+          <h2>{currentTrack?.title || 'Unknown Track'}</h2>
+          <h3>{album.artist || 'Unknown Artist'}</h3>
+        </div>
+      </div>
 
       {/* Синхронизированный текст песни (karaoke-style) */}
       {showLyrics && syncedLyrics && syncedLyrics.length > 0 && (
@@ -1244,6 +1255,7 @@ export default function AudioPlayer({
           className="player__synced-lyrics"
           ref={lyricsContainerRef}
           data-opacity-mode={lyricsOpacityMode}
+          data-platform={isIOSDevice ? 'ios' : 'default'}
         >
           {syncedLyrics.map((line: SyncedLyricsLine, index: number) => {
             const isActive = currentLineIndexComputed === index;
