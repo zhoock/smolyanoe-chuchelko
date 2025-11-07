@@ -60,6 +60,15 @@ dialog {
   }
 }
 
+// Убираем автофокус на range inputs при открытии dialog
+dialog input[type='range']:focus {
+  outline: none;
+}
+
+dialog input[type='range']:focus-visible {
+  outline: none;
+}
+
 @media (hover: none) and (pointer: coarse) {
   dialog :focus {
     outline: none;

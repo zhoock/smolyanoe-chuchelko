@@ -380,7 +380,7 @@
 // Стили для строк синхронизированного текста (используются и в обычных строках, и в placeholder)
 .player__synced-lyrics-line {
   padding: var(--ms-01) var(--ms-0);
-  margin-block-end: var(--ms-1);
+  margin-block-end: var(--ms-0); // Компактный отступ для мобильных
   color: var(--white, #ffffff);
   font-size: var(--ms-1);
   font-weight: 600;
@@ -407,6 +407,7 @@
   }
 
   @include breakpoint(tablet) {
+    margin-block-end: var(--ms-1); // Больше отступ для планшетов и десктопа
     font-size: var(--ms-2);
   }
 
@@ -463,7 +464,7 @@
     justify-content: left;
     gap: var(--ms-01);
     padding: var(--ms-01) var(--ms-0);
-    margin-block-end: var(--ms-1);
+    margin-block-end: var(--ms-0); // Компактный отступ для мобильных
     cursor: default;
 
     // Отключаем все эффекты для троеточия (blur, opacity, scale)
@@ -471,6 +472,10 @@
     transform: none !important;
     background-color: transparent !important;
     opacity: 1 !important; // Переопределяем наследуемую opacity от .player__synced-lyrics-line
+
+    @include breakpoint(tablet) {
+      margin-block-end: var(--ms-1); // Больше отступ для планшетов и десктопа
+    }
 
     // Точки троеточия - линейный градиент слева направо
     // --placeholder-progress изменяется от 0 (начало промежутка) до 1 (конец промежутка)

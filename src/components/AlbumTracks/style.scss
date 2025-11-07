@@ -106,6 +106,10 @@
             filter: brightness(100%);
           }
 
+          .tracks__duration {
+            color: var(--link-color-hover, #ffffff);
+          }
+
           & + button {
             border-block-start-color: transparent;
           }
