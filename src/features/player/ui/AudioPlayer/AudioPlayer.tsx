@@ -20,6 +20,13 @@ import {
 } from '../../../../utils/syncedLyrics';
 import { useLang } from '../../../../contexts/lang';
 
+// Helper для debug-логов только в development
+const debugLog = (...args: any[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args);
+  }
+};
+
 export default function AudioPlayer({
   album,
   setBgColor,
@@ -539,7 +546,7 @@ export default function AudioPlayer({
       isUserScrollingRef.current = false;
       // Устанавливаем режим прозрачности для перетаскивания прогресс-бара
       setLyricsOpacityMode((prevMode) => {
-        console.log('🔍 Seeking started, prev mode:', prevMode, '-> seeking');
+        debugLog('🔍 Seeking started, prev mode:', prevMode, '-> seeking');
         return 'seeking';
       });
       // Сбрасываем таймер бездействия при взаимодействии с прогресс-баром
@@ -571,10 +578,10 @@ export default function AudioPlayer({
       setLyricsOpacityMode((prevMode) => {
         // Не сбрасываем, если пользователь активно прокручивает
         if (prevMode === 'user-scrolling') {
-          console.log('⚠️ handleSeekEnd: keeping user-scrolling mode');
+          debugLog('⚠️ handleSeekEnd: keeping user-scrolling mode');
           return prevMode;
         }
-        console.log('🔍 handleSeekEnd: resetting to normal');
+        debugLog('🔍 handleSeekEnd: resetting to normal');
         return 'normal';
       });
     }
@@ -727,7 +734,7 @@ export default function AudioPlayer({
     prevTrackIdRef.current = currentTrackId;
     // Сбрасываем режим прозрачности при смене трека
     setLyricsOpacityMode((prevMode) => {
-      console.log('🔍 Track changed, resetting opacity mode from:', prevMode);
+      debugLog('🔍 Track changed, resetting opacity mode from:', prevMode);
       return 'normal';
     });
 
@@ -831,17 +838,17 @@ export default function AudioPlayer({
   useEffect(() => {
     // Ждем, пока контейнер будет готов (showLyrics может быть false при первом рендере)
     if (!showLyrics) {
-      console.log('⚠️ showLyrics is false, skipping scroll listener setup');
+      debugLog('⚠️ showLyrics is false, skipping scroll listener setup');
       return;
     }
 
     const container = lyricsContainerRef.current;
     if (!container) {
-      console.log('⚠️ Container not found, skipping scroll listener setup');
+      debugLog('⚠️ Container not found, skipping scroll listener setup');
       return;
     }
 
-    console.log('✅ Scroll listener setup for container:', container);
+    debugLog('✅ Scroll listener setup for container:', container);
 
     let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
     let isProgrammaticScroll = false; // Флаг для отслеживания программного скролла
@@ -849,11 +856,10 @@ export default function AudioPlayer({
     const handleScroll = () => {
       // Если это программный скролл - игнорируем
       if (isProgrammaticScroll) {
-        console.log('⚠️ Ignoring programmatic scroll');
         return;
       }
 
-      console.log('✅ Manual scroll detected!');
+      debugLog('✅ Manual scroll detected!');
 
       // Помечаем, что пользователь прокручивает вручную
       userScrollTimestampRef.current = Date.now();
@@ -861,7 +867,7 @@ export default function AudioPlayer({
       // Устанавливаем режим прозрачности для ручной прокрутки
       // Используем функциональную форму, чтобы гарантировать установку
       setLyricsOpacityMode((prevMode) => {
-        console.log('🔍 User scrolling detected, prev mode:', prevMode, '-> user-scrolling');
+        debugLog('🔍 User scrolling detected, prev mode:', prevMode, '-> user-scrolling');
         return 'user-scrolling';
       });
 
@@ -876,7 +882,7 @@ export default function AudioPlayer({
         setLyricsOpacityMode((prevMode) => {
           if (prevMode === 'user-scrolling') {
             isUserScrollingRef.current = false;
-            console.log('🔍 Scroll timeout, opacity mode reset to: normal');
+            debugLog('🔍 Scroll timeout, opacity mode reset to: normal');
             return 'normal';
           }
           return prevMode;
@@ -902,10 +908,10 @@ export default function AudioPlayer({
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
-    console.log('✅ Scroll event listener added');
+    debugLog('✅ Scroll event listener added');
 
     return () => {
-      console.log('🧹 Cleaning up scroll listener');
+      debugLog('🧹 Cleaning up scroll listener');
       container.removeEventListener('scroll', handleScroll);
       container.scrollTo = originalScrollTo;
       if (scrollTimeout) {
@@ -1310,7 +1316,7 @@ export default function AudioPlayer({
             })();
 
             return (
-              <>
+              <React.Fragment key={`line-fragment-${index}`}>
                 {/* Троеточие перед строкой, если нужно */}
                 {placeholderData.show && (
                   <div
@@ -1367,7 +1373,7 @@ export default function AudioPlayer({
                     ? `Авторство: ${line.text}`
                     : line.text}
                 </div>
-              </>
+              </React.Fragment>
             );
           })}
 

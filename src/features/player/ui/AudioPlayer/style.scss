@@ -46,21 +46,20 @@
     align-items: center;
     justify-content: space-around;
     gap: var(--ms-1);
+    height: var(--ms-3); // Фиксированная высота для плавной анимации
+    max-height: var(--ms-3); // Для анимации max-height
     transition:
-      height 0.3s ease,
-      margin 0.3s ease,
-      opacity 0.3s ease,
-      transform 0.3s ease;
+      max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
     transform: translateY(0);
 
     &--hidden {
-      height: 0;
-      margin: 0;
+      max-height: 0; // Схлопываем по высоте
       opacity: 0;
-      overflow: hidden;
       pointer-events: none;
-      transform: translateY(10px);
+      transform: translateY(20px);
     }
 
     button {
@@ -135,21 +134,19 @@
     display: flex;
     gap: var(--ms-0);
     align-items: center;
+    max-height: 50px; // Фиксированная высота для анимации
     transition:
-      height 0.3s ease,
-      margin 0.3s ease,
-      opacity 0.3s ease,
-      transform 0.3s ease;
+      max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
     transform: translateY(0);
 
     &--hidden {
-      height: 0;
-      margin: 0;
+      max-height: 0; // Схлопываем по высоте
       opacity: 0;
-      overflow: hidden;
       pointer-events: none;
-      transform: translateY(10px);
+      transform: translateY(20px);
     }
 
     @media (hover: none) and (pointer: coarse) {
@@ -216,31 +213,38 @@
     grid-template-columns: repeat(3, 1fr);
     align-items: center;
     gap: var(--ms-1);
+    height: var(--ms-2); // Фиксированная высота (как у кнопок внутри)
+    max-height: var(--ms-2); // Для анимации max-height
     transition:
-      opacity 0.3s ease,
-      transform 0.3s ease;
+      max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
     transform: translateY(0);
 
     &--hidden {
+      max-height: 0; // Схлопываем по высоте
       opacity: 0;
-      transform: translateY(10px);
       pointer-events: none;
+      transform: translateY(20px);
     }
   }
 
   &__progress-container {
     position: relative;
+    max-height: 100px; // Фиксированная высота для анимации
     transition:
-      opacity 0.3s ease,
-      transform 0.3s ease;
+      max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
     transform: translateY(0);
 
     &--hidden {
+      max-height: 0; // Схлопываем по высоте
       opacity: 0;
-      transform: translateY(10px);
       pointer-events: none;
+      transform: translateY(20px);
     }
   }
 
@@ -654,13 +658,8 @@
     // Убираем строки для скрытых контролов, оставляем только обложку и блок текста
     grid-template-rows: auto 1fr;
 
-    // Полностью скрываем элементы контролов, чтобы они не занимали место
-    .player__progress-container,
-    .player__controls,
-    .player__volume-control,
-    .player__secondary-controls {
-      display: none;
-    }
+    // Элементы скрываются через свои --hidden классы с анимацией
+    // display: none убран, чтобы работала плавная анимация opacity/transform
   }
 
   // Контейнер для обложки и информации о треке (flex row)
