@@ -64,12 +64,23 @@ export default function AudioPlayer({
   // Ref для отслеживания ручной прокрутки пользователя
   const userScrollTimestampRef = useRef<number>(0);
   const isUserScrollingRef = useRef<boolean>(false);
+  // Ref для отслеживания направления прокрутки
+  const lastScrollTopRef = useRef<number>(0);
+  const lastScrollDirectionRef = useRef<'up' | 'down' | null>(null);
+  const manualScrollRafRef = useRef<number | null>(null);
+  const pendingScrollTopRef = useRef<number>(0);
+  // Ref для отслеживания, прокрутил ли пользователь текст до конца
+  const userScrolledToEndRef = useRef<boolean>(false);
   // Состояние режима прозрачности текста: 'normal' | 'user-scrolling' | 'seeking'
   const [lyricsOpacityMode, setLyricsOpacityMode] = useState<
     'normal' | 'user-scrolling' | 'seeking'
   >('normal');
   // Состояние видимости контролов плеера (скрываются после 5 секунд бездействия)
   const [controlsVisible, setControlsVisible] = useState(true);
+  const controlsVisibleRef = useRef<boolean>(true);
+  useEffect(() => {
+    controlsVisibleRef.current = controlsVisible;
+  }, [controlsVisible]);
 
   /**
    * Вычисляем уникальный ID альбома для аналитики и ключей.
@@ -217,6 +228,7 @@ export default function AudioPlayer({
   const resetInactivityTimer = useCallback(() => {
     // Показываем контролы при любом взаимодействии
     setControlsVisible(true);
+    controlsVisibleRef.current = true;
 
     // Очищаем предыдущий таймер
     if (inactivityTimerRef.current) {
@@ -229,6 +241,7 @@ export default function AudioPlayer({
     if (showLyrics && isPlaying) {
       // Устанавливаем новый таймер на 5 секунд
       inactivityTimerRef.current = setTimeout(() => {
+        controlsVisibleRef.current = false;
         setControlsVisible(false);
       }, 5000);
     }
@@ -718,6 +731,7 @@ export default function AudioPlayer({
     if (!currentTrack) {
       setShowLyrics(false);
       prevTrackIdRef.current = null;
+      userScrolledToEndRef.current = false;
       return;
     }
 
@@ -737,6 +751,8 @@ export default function AudioPlayer({
       debugLog('🔍 Track changed, resetting opacity mode from:', prevMode);
       return 'normal';
     });
+    // Сбрасываем флаг прокрутки до конца при смене трека
+    userScrolledToEndRef.current = false;
 
     // Проверяем только синхронизированный текст (караоке), не обычный content
     // Используем ту же логику, что и при загрузке синхронизированного текста
@@ -850,35 +866,151 @@ export default function AudioPlayer({
 
     debugLog('✅ Scroll listener setup for container:', container);
 
-    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
-    let isProgrammaticScroll = false; // Флаг для отслеживания программного скролла
+    // Инициализируем начальные значения
+    lastScrollTopRef.current = container.scrollTop;
+    pendingScrollTopRef.current = container.scrollTop;
+    lastScrollDirectionRef.current = null;
+    manualScrollRafRef.current = null;
 
-    const handleScroll = () => {
-      // Если это программный скролл - игнорируем
-      if (isProgrammaticScroll) {
-        return;
+    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+    let directionTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isProgrammaticScroll = false; // Флаг для отслеживания программного скролла
+    let scrollStartPosition = container.scrollTop;
+    const IMMEDIATE_DIRECTION_THRESHOLD = 2;
+    const STICKY_END_THRESHOLD = 24;
+
+    const applyDirectionChange = (direction: 'up' | 'down') => {
+      if (direction === 'down') {
+        let didHide = false;
+        setControlsVisible((prev) => {
+          if (!prev) {
+            return prev;
+          }
+          didHide = true;
+          return false;
+        });
+        if (didHide) {
+          controlsVisibleRef.current = false;
+          if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+            inactivityTimerRef.current = null;
+          }
+        }
+      } else {
+        let didShow = false;
+        setControlsVisible((prev) => {
+          if (prev) {
+            return prev;
+          }
+          didShow = true;
+          return true;
+        });
+        if (didShow) {
+          controlsVisibleRef.current = true;
+          resetInactivityTimer();
+        }
+      }
+    };
+
+    const processScroll = (currentScrollTop: number) => {
+      debugLog('✅ Manual scroll detected!');
+
+      // Отменяем любую активную анимацию скролла при ручной прокрутке
+      if (smoothScrollAnimationRef.current !== null) {
+        cancelAnimationFrame(smoothScrollAnimationRef.current);
+        smoothScrollAnimationRef.current = null;
       }
 
-      debugLog('✅ Manual scroll detected!');
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtEnd = currentScrollTop + clientHeight >= scrollHeight - 10; // 10px допуск
+      const distanceFromBottom = Math.max(0, scrollHeight - clientHeight - currentScrollTop);
+      const isNearStickyEnd = distanceFromBottom <= STICKY_END_THRESHOLD;
+      const previousScrollTop = lastScrollTopRef.current;
+      const scrollDelta = currentScrollTop - previousScrollTop;
 
       // Помечаем, что пользователь прокручивает вручную
       userScrollTimestampRef.current = Date.now();
       isUserScrollingRef.current = true;
+
+      // Если пользователь прокрутил до конца, устанавливаем флаг
+      if (isAtEnd) {
+        userScrolledToEndRef.current = true;
+        debugLog('📍 User scrolled to end');
+      } else if (userScrolledToEndRef.current && distanceFromBottom > STICKY_END_THRESHOLD) {
+        userScrolledToEndRef.current = false;
+        debugLog('📍 User left end zone, reset flag');
+      }
+
       // Устанавливаем режим прозрачности для ручной прокрутки
-      // Используем функциональную форму, чтобы гарантировать установку
       setLyricsOpacityMode((prevMode) => {
         debugLog('🔍 User scrolling detected, prev mode:', prevMode, '-> user-scrolling');
         return 'user-scrolling';
       });
 
-      // Сбрасываем предыдущий таймер
+      if (Math.abs(scrollDelta) > IMMEDIATE_DIRECTION_THRESHOLD) {
+        const direction = scrollDelta > 0 ? 'down' : 'up';
+        let shouldReactImmediately =
+          lastScrollDirectionRef.current !== direction ||
+          (direction === 'down' && controlsVisibleRef.current) ||
+          (direction === 'up' && !controlsVisibleRef.current);
+
+        if (direction === 'up' && isNearStickyEnd) {
+          shouldReactImmediately = false;
+        }
+
+        if (shouldReactImmediately) {
+          applyDirectionChange(direction);
+          lastScrollDirectionRef.current = direction;
+        }
+      }
+
+      // Обновляем предыдущее значение scrollTop после обработки
+      lastScrollTopRef.current = currentScrollTop;
+
+      // Сбрасываем таймеры
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
+      if (directionTimeout) {
+        clearTimeout(directionTimeout);
+        directionTimeout = null;
+      }
+
+      scrollStartPosition = currentScrollTop;
+
+      // Определяем направление только ПОСЛЕ окончания прокрутки (200мс после последнего события)
+      // Это предотвращает зацикливание и дёргание анимации
+      directionTimeout = setTimeout(() => {
+        const finalScrollTop = container.scrollTop;
+        const totalDelta = finalScrollTop - scrollStartPosition;
+        const finalDistanceFromBottom = Math.max(0, scrollHeight - clientHeight - finalScrollTop);
+        const finalIsNearStickyEnd = finalDistanceFromBottom <= STICKY_END_THRESHOLD;
+
+        if (Math.abs(totalDelta) > 30) {
+          const finalDirection = totalDelta > 0 ? 'down' : 'up';
+          let shouldReactFinal =
+            lastScrollDirectionRef.current !== finalDirection ||
+            (finalDirection === 'down' && controlsVisibleRef.current) ||
+            (finalDirection === 'up' && !controlsVisibleRef.current);
+
+          if (finalDirection === 'up' && finalIsNearStickyEnd) {
+            shouldReactFinal = false;
+          }
+
+          if (shouldReactFinal) {
+            applyDirectionChange(finalDirection);
+            lastScrollDirectionRef.current = finalDirection;
+          }
+        }
+
+        // Обновляем начальную позицию для следующей прокрутки
+        scrollStartPosition = finalScrollTop;
+        directionTimeout = null;
+      }, 200); // Определяем направление 200мс после последнего scroll события
 
       // Устанавливаем таймер для возврата к нормальному режиму через 2 секунды после последнего скролла
       scrollTimeout = setTimeout(() => {
-        // Проверяем, что режим все еще user-scrolling (не был изменен другим кодом)
         setLyricsOpacityMode((prevMode) => {
           if (prevMode === 'user-scrolling') {
             isUserScrollingRef.current = false;
@@ -890,10 +1022,29 @@ export default function AudioPlayer({
       }, 2000);
     };
 
+    const handleScroll = () => {
+      // Если это программный скролл - игнорируем
+      if (isProgrammaticScroll) {
+        return;
+      }
+
+      pendingScrollTopRef.current = container.scrollTop;
+
+      if (manualScrollRafRef.current !== null) {
+        return;
+      }
+
+      manualScrollRafRef.current = requestAnimationFrame(() => {
+        manualScrollRafRef.current = null;
+        processScroll(pendingScrollTopRef.current);
+      });
+    };
+
     // Перехватываем программный скролл
     const originalScrollTo = container.scrollTo.bind(container);
     container.scrollTo = function (optionsOrX?: ScrollToOptions | number, y?: number) {
       isProgrammaticScroll = true;
+
       if (typeof optionsOrX === 'number' && typeof y === 'number') {
         originalScrollTo(optionsOrX, y);
       } else if (optionsOrX !== undefined) {
@@ -901,9 +1052,13 @@ export default function AudioPlayer({
       } else {
         originalScrollTo();
       }
-      // Сбрасываем флаг после небольшой задержки (больше, чтобы точно не перехватить событие scroll)
+
+      // Сбрасываем флаг и обновляем начальную позицию после завершения скролла
+      // Используем задержку, чтобы дождаться завершения smooth scroll
       setTimeout(() => {
         isProgrammaticScroll = false;
+        // Обновляем начальную позицию для отслеживания направления прокрутки
+        scrollStartPosition = container.scrollTop;
       }, 300);
     };
 
@@ -917,8 +1072,16 @@ export default function AudioPlayer({
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
+      if (directionTimeout) {
+        clearTimeout(directionTimeout);
+        directionTimeout = null;
+      }
+      if (manualScrollRafRef.current !== null) {
+        cancelAnimationFrame(manualScrollRafRef.current);
+        manualScrollRafRef.current = null;
+      }
     };
-  }, [showLyrics]); // Добавляем showLyrics в зависимости, чтобы эффект перезапускался при его изменении
+  }, [showLyrics, resetInactivityTimer]); // Добавляем showLyrics и resetInactivityTimer в зависимости
 
   // Автоскролл к активной строке
   // Не скроллим, если пользователь недавно прокручивал вручную (в течение 2 секунд)
@@ -970,10 +1133,41 @@ export default function AudioPlayer({
     // Проверяем, не прокручивал ли пользователь вручную недавно
     const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
     const USER_SCROLL_TIMEOUT = 2000; // 2 секунды
+    const USER_SCROLL_RETURN_DELAY = 3500; // 3.5 секунды - после этого возвращаемся к активной строке даже если пользователь прокручивал далеко
 
     // Если пользователь прокручивал вручную недавно - не вмешиваемся
     if (timeSinceUserScroll < USER_SCROLL_TIMEOUT) {
       return;
+    }
+
+    // Если пользователь прокрутил до конца, проверяем, дошел ли трек до конца
+    if (userScrolledToEndRef.current) {
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const scrollTop = container.scrollTop;
+      const isStillAtEnd = scrollTop + clientHeight >= scrollHeight - 10;
+
+      // Если пользователь все еще в конце, проверяем, является ли текущая строка последней
+      if (isStillAtEnd) {
+        const isLastLine = currentLineIndexComputed === syncedLyrics.length - 1;
+        const timeValue = time.current;
+        const lastLine = syncedLyrics[syncedLyrics.length - 1];
+        const lastLineEndTime = lastLine.endTime !== undefined ? lastLine.endTime : Infinity;
+
+        // Если трек еще не дошел до конца последней строки - не возвращаемся к автоскроллу
+        if (timeValue < lastLineEndTime) {
+          if (timeSinceUserScroll < USER_SCROLL_RETURN_DELAY) {
+            debugLog('📍 User at end (grace period), skipping auto-scroll');
+            return;
+          }
+        }
+        // Трек дошел до конца или истек период ожидания - разрешаем автоскролл
+        userScrolledToEndRef.current = false;
+        debugLog('📍 Allowing auto-scroll after user reached end');
+      } else {
+        // Пользователь больше не в конце - сбрасываем флаг
+        userScrolledToEndRef.current = false;
+      }
     }
 
     // Throttling: пропускаем если прошло мало времени с последнего скролла
@@ -1006,6 +1200,18 @@ export default function AudioPlayer({
 
     // Проверяем, полностью ли видна строка (не обрезана снизу)
     const isFullyVisibleBottom = lineTop + lineHeight <= scrollTop + containerHeight - bottomOffset;
+
+    // ВАЖНО: Если пользователь прокрутил дальше текущей активной строки, не пытаемся прокрутить обратно
+    // Это предотвращает конфликт и зацикливание анимации
+    const userScrolledAhead = scrollTop > desiredScrollTop + 50; // 50px допуск
+
+    if (userScrolledAhead) {
+      if (timeSinceUserScroll < USER_SCROLL_RETURN_DELAY) {
+        debugLog('📍 User ahead (grace period), skipping auto-scroll');
+        return;
+      }
+      debugLog('📍 Grace period elapsed, auto-scrolling back to active line');
+    }
 
     // Если строка не в правильной позиции или обрезана - скроллим
     if (!isInCorrectPosition || !isFullyVisibleBottom) {
@@ -1053,6 +1259,7 @@ export default function AudioPlayer({
       isLongPressRef.current = false;
       wasRewindingRef.current = false;
       pressStartTimeRef.current = null;
+      userScrolledToEndRef.current = false;
     };
   }, []);
 
@@ -1203,6 +1410,7 @@ export default function AudioPlayer({
     // Если трек поставили на паузу ИЛИ вышли из режима текста — сразу показываем контролы
     if (!showLyrics || !isPlaying) {
       setControlsVisible(true);
+      controlsVisibleRef.current = true;
       // Очищаем таймер, так как скрытие больше не нужно
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
