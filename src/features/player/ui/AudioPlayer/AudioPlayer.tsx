@@ -1230,13 +1230,17 @@ export default function AudioPlayer({
     const topOffset = Math.min(containerHeight * 0.25, 120);
     // Отступ снизу (минимальный)
     const bottomOffset = Math.min(containerHeight * 0.1, 40);
+    const reservedSpace = Math.min(containerHeight * 0.35, 220);
+    const maxScrollTop = Math.max(0, container.scrollHeight - containerHeight - reservedSpace);
 
     // Вычисляем желаемую позицию скролла (чтобы строка была на 25% от верха)
-    const desiredScrollTop = Math.max(0, lineTop - topOffset);
+    const rawDesiredScrollTop = Math.max(0, lineTop - topOffset);
+    const desiredScrollTop = Math.min(rawDesiredScrollTop, maxScrollTop);
     const currentLineTopRelative = lineTop - scrollTop;
+    const desiredLineTopRelative = lineTop - desiredScrollTop;
 
     // Проверяем, находится ли строка в правильной позиции (около 25% от верха)
-    const isInCorrectPosition = Math.abs(currentLineTopRelative - topOffset) <= 20;
+    const isInCorrectPosition = Math.abs(currentLineTopRelative - desiredLineTopRelative) <= 20;
 
     // Проверяем, полностью ли видна строка (не обрезана снизу)
     const isFullyVisibleBottom = lineTop + lineHeight <= scrollTop + containerHeight - bottomOffset;
@@ -1467,6 +1471,55 @@ export default function AudioPlayer({
       resetInactivityTimer();
     }
   }, [showLyrics, isPlaying, resetInactivityTimer, showControls]);
+
+  useEffect(() => {
+    if (!showLyrics) {
+      setCurrentLineIndex(null);
+    }
+  }, [showLyrics]);
+
+  useEffect(() => {
+    const container = playerContainerRef.current;
+    if (!container) return;
+
+    // Обработчики для различных типов активности
+    const handleActivity = (event: Event) => {
+      const eventType = event.type;
+      if ((eventType === 'mousemove' || eventType === 'touchmove') && !controlsVisibleRef.current) {
+        return;
+      }
+      resetInactivityTimer();
+    };
+
+    // Добавляем обработчики событий только если режим текста включен
+    if (showLyrics) {
+      container.addEventListener('mousemove', handleActivity, { passive: true });
+      container.addEventListener('mousedown', handleActivity, { passive: true });
+      if (!isCoarsePointerDevice) {
+        container.addEventListener('touchstart', handleActivity, { passive: true });
+        container.addEventListener('touchmove', handleActivity, { passive: true });
+      }
+      document.addEventListener('keydown', handleActivity, { passive: true });
+
+      // Инициализируем таймер только если трек играет
+      if (isPlaying) {
+        resetInactivityTimer();
+      }
+    }
+
+    return () => {
+      container.removeEventListener('mousemove', handleActivity);
+      container.removeEventListener('mousedown', handleActivity);
+      if (!isCoarsePointerDevice) {
+        container.removeEventListener('touchstart', handleActivity);
+        container.removeEventListener('touchmove', handleActivity);
+      }
+      document.removeEventListener('keydown', handleActivity);
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, [resetInactivityTimer, showLyrics, isPlaying, isCoarsePointerDevice]);
 
   const coverWrapperClassName = `player__cover-wrapper${showLyrics ? ' player__cover-wrapper--lyrics' : ''}`;
   const coverClassName = `player__cover ${coverAnimationClass}${showLyrics ? ' player__cover--clickable' : ''}`;

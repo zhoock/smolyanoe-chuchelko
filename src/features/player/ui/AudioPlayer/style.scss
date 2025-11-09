@@ -769,8 +769,10 @@
     position: relative;
     height: 100%; // Занимает всё доступное пространство в grid (1fr)
     min-height: 0; // Важно для корректной работы overflow в grid
-    overflow: hidden auto; // Блокируем горизонтальный скролл, оставляем вертикальный
+    overflow-y: auto;
     padding-block-start: var(--ms-3);
+    /* stylelint-disable-next-line declaration-block-no-redundant-longhand-properties */
+    padding-block-end: clamp(180px, 55vh, 420px);
     scroll-behavior: smooth; // Плавный скролл для десктопа
     touch-action: pan-y; // Разрешаем только вертикальные жесты
     overscroll-behavior-x: contain;
@@ -820,8 +822,11 @@
 
 // Блок авторства - такой же как обычные строки, но с префиксом "Авторство: "
 .player__synced-lyrics-line--authorship {
-  // Стили такие же как у обычных строк, но можно добавить небольшой отступ сверху
-  margin-block-start: var(--ms-2);
+  font-size: var(--ms-0);
+
+  @include breakpoint(tablet) {
+    font-size: var(--ms-1);
+  }
 }
 
 input[type='range'] {
