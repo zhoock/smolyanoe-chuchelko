@@ -62,6 +62,17 @@
       transform: translateY(20px);
     }
 
+    @media (hover: none) and (pointer: coarse) {
+      transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+
+      &--hidden {
+        max-height: 0;
+        transform: translateY(28px);
+      }
+    }
+
     button {
       width: var(--ms-3);
       height: var(--ms-3);
@@ -151,6 +162,14 @@
 
     @media (hover: none) and (pointer: coarse) {
       display: none;
+      transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+
+      &--hidden {
+        max-height: 0;
+        transform: translateY(28px);
+      }
     }
 
     .icon-volume-mute,
@@ -228,6 +247,17 @@
       pointer-events: none;
       transform: translateY(20px);
     }
+
+    @media (hover: none) and (pointer: coarse) {
+      transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+
+      &--hidden {
+        max-height: 0;
+        transform: translateY(24px);
+      }
+    }
   }
 
   &__progress-container {
@@ -245,6 +275,17 @@
       opacity: 0;
       pointer-events: none;
       transform: translateY(20px);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+
+      &--hidden {
+        max-height: 0;
+        transform: translateY(24px);
+      }
     }
   }
 
@@ -728,9 +769,11 @@
     position: relative;
     height: 100%; // Занимает всё доступное пространство в grid (1fr)
     min-height: 0; // Важно для корректной работы overflow в grid
-    overflow-y: auto;
+    overflow: hidden auto; // Блокируем горизонтальный скролл, оставляем вертикальный
     padding-block-start: var(--ms-3);
     scroll-behavior: smooth; // Плавный скролл для десктопа
+    touch-action: pan-y; // Разрешаем только вертикальные жесты
+    overscroll-behavior-x: contain;
 
     // padding: var(--ms-1);
     // Мягкий переход сверху и снизу с градиентом (используем значения типографики)
@@ -750,6 +793,12 @@
       black calc(100% - var(--ms-4)),
       transparent 100%
     );
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    /* stylelint-disable-next-line property-no-vendor-prefix */
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
 
     // Оптимизация для плавного скролла на мобильных устройствах
     -webkit-overflow-scrolling: touch;

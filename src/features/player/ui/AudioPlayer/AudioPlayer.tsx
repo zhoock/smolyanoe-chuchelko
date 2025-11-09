@@ -103,6 +103,18 @@ export default function AudioPlayer({
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
   }, []);
 
+  const isCoarsePointerDevice = useMemo(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+    return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  }, []);
+
+  const isSeekingRef = useRef<boolean>(isSeeking);
+  useEffect(() => {
+    isSeekingRef.current = isSeeking;
+  }, [isSeeking]);
+
   const bgColorSetForAlbumRef = useRef<string | null>(null); // флаг: установлен ли уже цвет фона для текущего альбома
   const prevTrackIdRef = useRef<string | number | null>(null); // предыдущий ID трека для отслеживания смены трека
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // таймер для скрытия контролов после бездействия
@@ -513,6 +525,7 @@ export default function AudioPlayer({
 
       const newTime = Math.max(0, Math.min(time.duration, startTime));
       const progress = (newTime / time.duration) * 100;
+      const shouldResumePlayback = !isPlaying;
 
       dispatch(playerActions.setSeeking(true));
       dispatch(playerActions.setCurrentTime(newTime));
@@ -528,7 +541,7 @@ export default function AudioPlayer({
       // Если трек играл, продолжаем воспроизведение
       setTimeout(() => {
         dispatch(playerActions.setSeeking(false));
-        if (isPlaying) {
+        if (isPlaying || shouldResumePlayback) {
           dispatch(playerActions.play());
         }
       }, 100);
@@ -880,6 +893,9 @@ export default function AudioPlayer({
     const STICKY_END_THRESHOLD = 24;
 
     const applyDirectionChange = (direction: 'up' | 'down') => {
+      if (direction === 'down' && isSeekingRef.current) {
+        return;
+      }
       if (direction === 'down') {
         let didHide = false;
         setControlsVisible((prev) => {
@@ -913,6 +929,10 @@ export default function AudioPlayer({
     };
 
     const processScroll = (currentScrollTop: number) => {
+      if (isSeekingRef.current) {
+        lastScrollTopRef.current = currentScrollTop;
+        return;
+      }
       debugLog('✅ Manual scroll detected!');
 
       // Отменяем любую активную анимацию скролла при ручной прокрутке
@@ -988,6 +1008,11 @@ export default function AudioPlayer({
         const finalIsNearStickyEnd = finalDistanceFromBottom <= STICKY_END_THRESHOLD;
 
         if (Math.abs(totalDelta) > 30) {
+          if (isSeekingRef.current && totalDelta > 0) {
+            scrollStartPosition = finalScrollTop;
+            directionTimeout = null;
+            return;
+          }
           const finalDirection = totalDelta > 0 ? 'down' : 'up';
           let shouldReactFinal =
             lastScrollDirectionRef.current !== finalDirection ||
@@ -1025,6 +1050,11 @@ export default function AudioPlayer({
     const handleScroll = () => {
       // Если это программный скролл - игнорируем
       if (isProgrammaticScroll) {
+        return;
+      }
+
+      if (isCoarsePointerDevice) {
+        processScroll(container.scrollTop);
         return;
       }
 
@@ -1081,7 +1111,7 @@ export default function AudioPlayer({
         manualScrollRafRef.current = null;
       }
     };
-  }, [showLyrics, resetInactivityTimer]); // Добавляем showLyrics и resetInactivityTimer в зависимости
+  }, [showLyrics, resetInactivityTimer, isCoarsePointerDevice]); // Добавляем showLyrics и resetInactivityTimer в зависимости
 
   // Автоскролл к активной строке
   // Не скроллим, если пользователь недавно прокручивал вручную (в течение 2 секунд)
@@ -1375,7 +1405,11 @@ export default function AudioPlayer({
     if (!container) return;
 
     // Обработчики для различных типов активности
-    const handleActivity = () => {
+    const handleActivity = (event: Event) => {
+      const eventType = event.type;
+      if ((eventType === 'mousemove' || eventType === 'touchmove') && !controlsVisibleRef.current) {
+        return;
+      }
       resetInactivityTimer();
     };
 
@@ -1383,8 +1417,10 @@ export default function AudioPlayer({
     if (showLyrics) {
       container.addEventListener('mousemove', handleActivity, { passive: true });
       container.addEventListener('mousedown', handleActivity, { passive: true });
-      container.addEventListener('touchstart', handleActivity, { passive: true });
-      container.addEventListener('touchmove', handleActivity, { passive: true });
+      if (!isCoarsePointerDevice) {
+        container.addEventListener('touchstart', handleActivity, { passive: true });
+        container.addEventListener('touchmove', handleActivity, { passive: true });
+      }
       document.addEventListener('keydown', handleActivity, { passive: true });
 
       // Инициализируем таймер только если трек играет
@@ -1396,14 +1432,16 @@ export default function AudioPlayer({
     return () => {
       container.removeEventListener('mousemove', handleActivity);
       container.removeEventListener('mousedown', handleActivity);
-      container.removeEventListener('touchstart', handleActivity);
-      container.removeEventListener('touchmove', handleActivity);
+      if (!isCoarsePointerDevice) {
+        container.removeEventListener('touchstart', handleActivity);
+        container.removeEventListener('touchmove', handleActivity);
+      }
       document.removeEventListener('keydown', handleActivity);
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
       }
     };
-  }, [resetInactivityTimer, showLyrics, isPlaying]);
+  }, [resetInactivityTimer, showLyrics, isPlaying, isCoarsePointerDevice]);
 
   // Обработка изменения состояния: показываем контролы при паузе или выходе из режима текста
   useEffect(() => {
