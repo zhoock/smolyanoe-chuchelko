@@ -812,12 +812,11 @@
     @extend %hide-scrollbar;
 
     /* stylelint-disable-next-line declaration-block-no-redundant-longhand-properties */
-    padding-block-end: max(clamp(160px, 38vh, 320px), var(--controls-reserved-space, 0px));
+    padding-block-end: var(--controls-reserved-space, clamp(160px, 38vh, 320px));
 
     @supports (padding-bottom: env(safe-area-inset-bottom)) {
       padding-block-end: calc(
-        max(clamp(160px, 38vh, 320px), var(--controls-reserved-space, 0px)) +
-          env(safe-area-inset-bottom)
+        var(--controls-reserved-space, clamp(160px, 38vh, 320px)) + env(safe-area-inset-bottom)
       );
     }
 

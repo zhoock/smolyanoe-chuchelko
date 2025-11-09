@@ -128,6 +128,7 @@ export default function AudioPlayer({
   const smoothScrollStartRef = useRef<number>(0); // начальная позиция скролла
   const smoothScrollTargetRef = useRef<number>(0); // целевая позиция скролла
   const smoothScrollStartTimeRef = useRef<number>(0); // время начала анимации
+  const previousPlaybackStateRef = useRef<boolean>(isPlaying);
   const updateLyricsReservedSpace = useCallback(() => {
     const containerEl = playerContainerRef.current;
     const lyricsEl = lyricsContainerRef.current;
@@ -143,10 +144,9 @@ export default function AudioPlayer({
       return;
     }
 
-    const reservedSpace = Math.max(
-      0,
-      Math.ceil(playerRect.bottom - lyricsRect.bottom)
-    );
+    const controlsHeight = Math.max(0, Math.ceil(playerRect.bottom - lyricsRect.bottom));
+    const extraSpacing = Math.min(72, Math.max(24, Math.round(playerRect.height * 0.04)));
+    const reservedSpace = controlsHeight + extraSpacing;
     const reservedSpaceValue = `${reservedSpace}px`;
 
     if (lyricsEl.style.getPropertyValue('--controls-reserved-space') !== reservedSpaceValue) {
@@ -289,6 +289,45 @@ export default function AudioPlayer({
     [easeOutCubic, isIOSDevice]
   );
 
+  const resetLyricsViewToStart = useCallback(() => {
+    const container = lyricsContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    if (manualScrollRafRef.current !== null) {
+      cancelAnimationFrame(manualScrollRafRef.current);
+      manualScrollRafRef.current = null;
+    }
+    if (autoScrollRafRef.current !== null) {
+      cancelAnimationFrame(autoScrollRafRef.current);
+      autoScrollRafRef.current = null;
+    }
+    if (smoothScrollAnimationRef.current !== null) {
+      cancelAnimationFrame(smoothScrollAnimationRef.current);
+      smoothScrollAnimationRef.current = null;
+    }
+
+    userScrollTimestampRef.current = 0;
+    isUserScrollingRef.current = false;
+    userScrolledToEndRef.current = false;
+    lastScrollTopRef.current = 0;
+    pendingScrollTopRef.current = 0;
+    lastScrollDirectionRef.current = null;
+
+    if (isIOSDevice) {
+      smoothScrollTo(container, 0, 450);
+    } else {
+      container.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+      lastAutoScrollTimeRef.current = Date.now();
+    }
+
+    setLyricsOpacityMode('normal');
+  }, [isIOSDevice, smoothScrollTo]);
+
   /**
    * Прикрепляем глобальный audio элемент к DOM при монтировании компонента.
    * audioController.element - это единственный audio элемент на всё приложение (Singleton).
@@ -329,6 +368,55 @@ export default function AudioPlayer({
     prevIsPlayingRef.current = isPlaying;
     prevTrackIndexRef.current = currentTrackIndex;
   }, [isPlaying, currentTrackIndex]);
+
+  useEffect(() => {
+    const wasPlaying = previousPlaybackStateRef.current;
+    previousPlaybackStateRef.current = isPlaying;
+
+    if (!wasPlaying || isPlaying) {
+      return;
+    }
+
+    if (repeat !== 'none') {
+      return;
+    }
+
+    if (playlist.length === 0) {
+      return;
+    }
+
+    const isLastTrack = currentTrackIndex === playlist.length - 1;
+    if (!isLastTrack) {
+      return;
+    }
+
+    const hasDuration = Number.isFinite(time.duration) && time.duration > 0;
+    const reachedEnd =
+      (hasDuration && time.current >= time.duration - 0.5) || progress >= 99.5;
+
+    if (!reachedEnd) {
+      return;
+    }
+
+    resetLyricsViewToStart();
+
+    if (hasDuration) {
+      dispatch(playerActions.setTime({ current: 0, duration: time.duration }));
+    } else {
+      dispatch(playerActions.setTime({ current: 0, duration: NaN }));
+    }
+    dispatch(playerActions.setProgress(0));
+  }, [
+    isPlaying,
+    repeat,
+    playlist.length,
+    currentTrackIndex,
+    time.current,
+    time.duration,
+    progress,
+    resetLyricsViewToStart,
+    dispatch,
+  ]);
 
   /**
    * Форматирует время в секундах в строку вида "MM:SS".
