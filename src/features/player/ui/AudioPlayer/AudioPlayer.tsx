@@ -51,6 +51,8 @@ export default function AudioPlayer({
   const shuffle = useAppSelector(playerSelectors.selectShuffle); // включено ли перемешивание треков
   const repeat = useAppSelector(playerSelectors.selectRepeat); // режим зацикливания: 'none' | 'all' | 'one'
 
+  const INACTIVITY_TIMEOUT = 5000;
+
   // Состояние для синхронизированного текста
   const { lang } = useLang();
   const [syncedLyrics, setSyncedLyrics] = useState<SyncedLyricsLine[] | null>(null);
@@ -111,6 +113,7 @@ export default function AudioPlayer({
   }, []);
 
   const isSeekingRef = useRef<boolean>(isSeeking);
+  const seekProtectionUntilRef = useRef<number>(0);
   useEffect(() => {
     isSeekingRef.current = isSeeking;
   }, [isSeeking]);
@@ -234,30 +237,29 @@ export default function AudioPlayer({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, []);
 
-  // Функция для сброса таймера бездействия и показа контролов
-  // Объявляем раньше, чтобы использовать в других callback'ах
-  // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
-  const resetInactivityTimer = useCallback(() => {
-    // Показываем контролы при любом взаимодействии
-    setControlsVisible(true);
-    controlsVisibleRef.current = true;
-
-    // Очищаем предыдущий таймер
+  const scheduleControlsHide = useCallback(() => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-
-    // Таймер работает только если:
-    // 1. Режим показа текста включен (showLyrics === true)
-    // 2. Трек играет (isPlaying === true)
     if (showLyrics && isPlaying) {
-      // Устанавливаем новый таймер на 5 секунд
       inactivityTimerRef.current = setTimeout(() => {
         controlsVisibleRef.current = false;
         setControlsVisible(false);
-      }, 5000);
+      }, INACTIVITY_TIMEOUT);
     }
   }, [showLyrics, isPlaying]);
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    controlsVisibleRef.current = true;
+    scheduleControlsHide();
+  }, [scheduleControlsHide]);
+
+  // Функция для сброса таймера бездействия и показа контролов
+  // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
+  const resetInactivityTimer = useCallback(() => {
+    showControls();
+  }, [showControls]);
 
   /**
    * Переключает воспроизведение (play ↔ pause).
@@ -369,6 +371,8 @@ export default function AudioPlayer({
    */
   const handleRewindStart = useCallback(
     (direction: 'backward' | 'forward') => {
+      showControls();
+
       const startTime = Date.now();
       pressStartTimeRef.current = startTime;
       isLongPressRef.current = false;
@@ -393,6 +397,9 @@ export default function AudioPlayer({
           isLongPressRef.current = true;
           wasRewindingRef.current = true; // устанавливаем флаг что была перемотка
           shouldBlockTrackSwitchRef.current = true; // БЛОКИРУЕМ переключение трека раз и навсегда
+          isSeekingRef.current = true;
+          seekProtectionUntilRef.current = Date.now() + 2000;
+          showControls();
           const step = direction === 'backward' ? -5 : 5; // перемотка на 5 секунд
 
           rewindIntervalRef.current = setInterval(() => {
@@ -407,6 +414,7 @@ export default function AudioPlayer({
             const progress = (newTime / duration) * 100;
 
             dispatch(playerActions.setSeeking(true));
+            seekProtectionUntilRef.current = Date.now() + 2000;
             dispatch(playerActions.setCurrentTime(newTime));
             dispatch(playerActions.setTime({ current: newTime, duration }));
             dispatch(playerActions.setProgress(progress));
@@ -445,6 +453,9 @@ export default function AudioPlayer({
         clearInterval(rewindIntervalRef.current);
         rewindIntervalRef.current = null;
         dispatch(playerActions.setSeeking(false));
+        isSeekingRef.current = false;
+        seekProtectionUntilRef.current = Date.now() + 1500;
+        showControls();
         // Если трек играл, продолжаем воспроизведение
         if (isPlaying) {
           dispatch(playerActions.play());
@@ -528,6 +539,8 @@ export default function AudioPlayer({
       const shouldResumePlayback = !isPlaying;
 
       dispatch(playerActions.setSeeking(true));
+      isSeekingRef.current = true;
+      seekProtectionUntilRef.current = Date.now() + 2000;
       dispatch(playerActions.setCurrentTime(newTime));
       dispatch(playerActions.setTime({ current: newTime, duration: time.duration }));
       dispatch(playerActions.setProgress(progress));
@@ -541,6 +554,8 @@ export default function AudioPlayer({
       // Если трек играл, продолжаем воспроизведение
       setTimeout(() => {
         dispatch(playerActions.setSeeking(false));
+        isSeekingRef.current = false;
+        seekProtectionUntilRef.current = Date.now() + 1500;
         if (isPlaying || shouldResumePlayback) {
           dispatch(playerActions.play());
         }
@@ -577,6 +592,8 @@ export default function AudioPlayer({
       });
       // Сбрасываем таймер бездействия при взаимодействии с прогресс-баром
       resetInactivityTimer();
+      isSeekingRef.current = true;
+      seekProtectionUntilRef.current = Date.now() + 2000;
     },
     [dispatch, time.duration, resetInactivityTimer]
   );
@@ -594,9 +611,11 @@ export default function AudioPlayer({
   const handleSeekEnd = useCallback(() => {
     // Сразу снимаем флаг isSeeking (разрешает автообновление прогресса)
     dispatch(playerActions.setSeeking(false));
+    isSeekingRef.current = false;
     if (isPlaying) {
       dispatch(playerActions.play());
     }
+    seekProtectionUntilRef.current = Date.now() + 1500;
     // Возвращаем режим прозрачности к нормальному сразу после окончания перетаскивания
     // Только если пользователь не прокручивает вручную
     const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
@@ -893,7 +912,9 @@ export default function AudioPlayer({
     const STICKY_END_THRESHOLD = 24;
 
     const applyDirectionChange = (direction: 'up' | 'down') => {
-      if (direction === 'down' && isSeekingRef.current) {
+      const now = Date.now();
+      const isSeekProtectionActive = now < seekProtectionUntilRef.current;
+      if (direction === 'down' && (isSeekingRef.current || isSeekProtectionActive)) {
         return;
       }
       if (direction === 'down') {
@@ -913,23 +934,14 @@ export default function AudioPlayer({
           }
         }
       } else {
-        let didShow = false;
-        setControlsVisible((prev) => {
-          if (prev) {
-            return prev;
-          }
-          didShow = true;
-          return true;
-        });
-        if (didShow) {
-          controlsVisibleRef.current = true;
-          resetInactivityTimer();
-        }
+        showControls();
       }
     };
 
     const processScroll = (currentScrollTop: number) => {
-      if (isSeekingRef.current) {
+      const now = Date.now();
+      const isSeekProtectionActive = now < seekProtectionUntilRef.current;
+      if (isSeekingRef.current || isSeekProtectionActive) {
         lastScrollTopRef.current = currentScrollTop;
         return;
       }
@@ -978,7 +990,6 @@ export default function AudioPlayer({
         if (direction === 'up' && isNearStickyEnd) {
           shouldReactImmediately = false;
         }
-
         if (shouldReactImmediately) {
           applyDirectionChange(direction);
           lastScrollDirectionRef.current = direction;
@@ -1022,7 +1033,6 @@ export default function AudioPlayer({
           if (finalDirection === 'up' && finalIsNearStickyEnd) {
             shouldReactFinal = false;
           }
-
           if (shouldReactFinal) {
             applyDirectionChange(finalDirection);
             lastScrollDirectionRef.current = finalDirection;
@@ -1111,7 +1121,7 @@ export default function AudioPlayer({
         manualScrollRafRef.current = null;
       }
     };
-  }, [showLyrics, resetInactivityTimer, isCoarsePointerDevice]); // Добавляем showLyrics и resetInactivityTimer в зависимости
+  }, [showLyrics, resetInactivityTimer, isCoarsePointerDevice, showControls, scheduleControlsHide]); // Добавляем зависимости
 
   // Автоскролл к активной строке
   // Не скроллим, если пользователь недавно прокручивал вручную (в течение 2 секунд)
@@ -1447,9 +1457,7 @@ export default function AudioPlayer({
   useEffect(() => {
     // Если трек поставили на паузу ИЛИ вышли из режима текста — сразу показываем контролы
     if (!showLyrics || !isPlaying) {
-      setControlsVisible(true);
-      controlsVisibleRef.current = true;
-      // Очищаем таймер, так как скрытие больше не нужно
+      showControls();
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
         inactivityTimerRef.current = null;
@@ -1458,7 +1466,7 @@ export default function AudioPlayer({
       // Если вошли в режим текста И трек играет — запускаем таймер
       resetInactivityTimer();
     }
-  }, [showLyrics, isPlaying, resetInactivityTimer]);
+  }, [showLyrics, isPlaying, resetInactivityTimer, showControls]);
 
   const coverWrapperClassName = `player__cover-wrapper${showLyrics ? ' player__cover-wrapper--lyrics' : ''}`;
   const coverClassName = `player__cover ${coverAnimationClass}${showLyrics ? ' player__cover--clickable' : ''}`;
