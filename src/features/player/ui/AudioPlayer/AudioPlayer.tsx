@@ -27,6 +27,18 @@ const debugLog = (...args: any[]) => {
   }
 };
 
+const formatTimerValue = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return '--:--';
+  }
+
+  const safeSeconds = Math.max(0, Math.floor(value));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
 export default function AudioPlayer({
   album,
   setBgColor,
@@ -66,6 +78,7 @@ export default function AudioPlayer({
   // Ref для отслеживания ручной прокрутки пользователя
   const userScrollTimestampRef = useRef<number>(0);
   const isUserScrollingRef = useRef<boolean>(false);
+  const suppressActiveLineRef = useRef<boolean>(false);
   // Ref для отслеживания направления прокрутки
   const lastScrollTopRef = useRef<number>(0);
   const lastScrollDirectionRef = useRef<'up' | 'down' | null>(null);
@@ -295,6 +308,8 @@ export default function AudioPlayer({
       return;
     }
 
+    suppressActiveLineRef.current = true;
+
     if (manualScrollRafRef.current !== null) {
       cancelAnimationFrame(manualScrollRafRef.current);
       manualScrollRafRef.current = null;
@@ -370,6 +385,12 @@ export default function AudioPlayer({
   }, [isPlaying, currentTrackIndex]);
 
   useEffect(() => {
+    if (isPlaying) {
+      suppressActiveLineRef.current = false;
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
     const wasPlaying = previousPlaybackStateRef.current;
     previousPlaybackStateRef.current = isPlaying;
 
@@ -400,6 +421,25 @@ export default function AudioPlayer({
 
     resetLyricsViewToStart();
 
+    audioController.setCurrentTime(0);
+
+    const timeContainer = timeDisplayRef.current;
+    if (timeContainer) {
+      const fragment = document.createDocumentFragment();
+
+      const currentSpan = document.createElement('span');
+      currentSpan.className = 'player__time-current';
+      currentSpan.textContent = formatTimerValue(0);
+
+      const remainingSpan = document.createElement('span');
+      remainingSpan.className = 'player__time-remaining';
+      remainingSpan.textContent = formatTimerValue(hasDuration ? time.duration : NaN);
+
+      fragment.appendChild(currentSpan);
+      fragment.appendChild(remainingSpan);
+      timeContainer.replaceChildren(fragment);
+    }
+
     if (hasDuration) {
       dispatch(playerActions.setTime({ current: 0, duration: time.duration }));
     } else {
@@ -423,10 +463,7 @@ export default function AudioPlayer({
    * Мемоизируем чтобы не создавать функцию заново при каждом рендере.
    */
   const formatTime = useCallback((time: number) => {
-    if (isNaN(time)) return '--:--';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return formatTimerValue(time);
   }, []);
 
   const scheduleControlsHide = useCallback(() => {
@@ -726,6 +763,8 @@ export default function AudioPlayer({
     (startTime: number) => {
       if (!time.duration || time.duration <= 0) return;
 
+      suppressActiveLineRef.current = false;
+
       const newTime = Math.max(0, Math.min(time.duration, startTime));
       const progress = (newTime / time.duration) * 100;
       const shouldResumePlayback = !isPlaying;
@@ -760,6 +799,8 @@ export default function AudioPlayer({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const duration = time.duration;
       if (!Number.isFinite(duration) || duration <= 0) return;
+
+      suppressActiveLineRef.current = false;
 
       const value = Number(event.target.value);
       const newTime = (value / 100) * duration;
@@ -1001,8 +1042,17 @@ export default function AudioPlayer({
       return null;
     }
 
+    if (suppressActiveLineRef.current) {
+      return null;
+    }
+
     const timeValue = time.current;
     const lines = syncedLyrics;
+    const firstLineStart = lines[0]?.startTime ?? 0;
+
+    if (!isPlaying && timeValue <= firstLineStart + 0.05) {
+      return null;
+    }
 
     // Находим текущую строку: ищем строку, где time >= startTime и time < endTime
     let activeIndex: number | null = null;
@@ -1067,7 +1117,7 @@ export default function AudioPlayer({
     }
 
     return activeIndex;
-  }, [syncedLyrics, time.current, time.duration]);
+  }, [syncedLyrics, time.current, time.duration, isPlaying]);
 
   // Синхронизируем вычисленное значение с состоянием для совместимости
   useEffect(() => {
