@@ -771,8 +771,6 @@
     min-height: 0; // Важно для корректной работы overflow в grid
     overflow-y: auto;
     padding-block-start: var(--ms-3);
-    /* stylelint-disable-next-line declaration-block-no-redundant-longhand-properties */
-    padding-block-end: clamp(180px, 55vh, 420px);
     scroll-behavior: smooth; // Плавный скролл для десктопа
     touch-action: pan-y; // Разрешаем только вертикальные жесты
     overscroll-behavior-x: contain;
@@ -812,6 +810,16 @@
 
     // Скрываем скроллбар для более чистого вида
     @extend %hide-scrollbar;
+
+    /* stylelint-disable-next-line declaration-block-no-redundant-longhand-properties */
+    padding-block-end: max(clamp(160px, 38vh, 320px), var(--controls-reserved-space, 0px));
+
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      padding-block-end: calc(
+        max(clamp(160px, 38vh, 320px), var(--controls-reserved-space, 0px)) +
+          env(safe-area-inset-bottom)
+      );
+    }
 
     &[data-platform='ios'] {
       scroll-behavior: auto; // Отключаем smooth scroll на iOS, используем кастомный

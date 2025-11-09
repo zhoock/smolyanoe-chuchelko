@@ -128,6 +128,110 @@ export default function AudioPlayer({
   const smoothScrollStartRef = useRef<number>(0); // начальная позиция скролла
   const smoothScrollTargetRef = useRef<number>(0); // целевая позиция скролла
   const smoothScrollStartTimeRef = useRef<number>(0); // время начала анимации
+  const updateLyricsReservedSpace = useCallback(() => {
+    const containerEl = playerContainerRef.current;
+    const lyricsEl = lyricsContainerRef.current;
+
+    if (!containerEl || !lyricsEl) {
+      return;
+    }
+
+    const playerRect = containerEl.getBoundingClientRect();
+    const lyricsRect = lyricsEl.getBoundingClientRect();
+
+    if (playerRect.width === 0 && playerRect.height === 0) {
+      return;
+    }
+
+    const reservedSpace = Math.max(
+      0,
+      Math.ceil(playerRect.bottom - lyricsRect.bottom)
+    );
+    const reservedSpaceValue = `${reservedSpace}px`;
+
+    if (lyricsEl.style.getPropertyValue('--controls-reserved-space') !== reservedSpaceValue) {
+      lyricsEl.style.setProperty('--controls-reserved-space', reservedSpaceValue);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const lyricsEl = lyricsContainerRef.current;
+    const containerEl = playerContainerRef.current;
+
+    if (!showLyrics || !lyricsEl || !containerEl) {
+      if (lyricsEl) {
+        lyricsEl.style.removeProperty('--controls-reserved-space');
+      }
+      return;
+    }
+
+    let frameId: number | null = null;
+
+    const scheduleUpdate = () => {
+      if (frameId !== null) {
+        return;
+      }
+      frameId = window.requestAnimationFrame(() => {
+        updateLyricsReservedSpace();
+        frameId = null;
+      });
+    };
+
+    scheduleUpdate();
+
+    const observedElements: Element[] = [];
+    let resizeObserver: ResizeObserver | null = null;
+
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        scheduleUpdate();
+      });
+
+      resizeObserver.observe(containerEl);
+      observedElements.push(containerEl);
+
+      resizeObserver.observe(lyricsEl);
+      observedElements.push(lyricsEl);
+
+      const trackedSelectors = [
+        '.player__controls',
+        '.player__progress-container',
+        '.player__secondary-controls',
+        '.player__volume-control',
+      ];
+
+      trackedSelectors.forEach((selector) => {
+        const element = containerEl.querySelector(selector);
+        if (element) {
+          resizeObserver?.observe(element);
+          observedElements.push(element);
+        }
+      });
+    } else {
+      window.addEventListener('resize', scheduleUpdate);
+    }
+
+    return () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      if (resizeObserver) {
+        observedElements.forEach((element) => {
+          resizeObserver?.unobserve(element);
+        });
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener('resize', scheduleUpdate);
+      }
+
+      lyricsEl.style.removeProperty('--controls-reserved-space');
+    };
+  }, [showLyrics, controlsVisible, updateLyricsReservedSpace]);
 
   // Easing функция для плавного скролла (ease-out cubic)
   const easeOutCubic = useCallback((t: number): number => {
@@ -1230,17 +1334,13 @@ export default function AudioPlayer({
     const topOffset = Math.min(containerHeight * 0.25, 120);
     // Отступ снизу (минимальный)
     const bottomOffset = Math.min(containerHeight * 0.1, 40);
-    const reservedSpace = Math.min(containerHeight * 0.35, 220);
-    const maxScrollTop = Math.max(0, container.scrollHeight - containerHeight - reservedSpace);
 
     // Вычисляем желаемую позицию скролла (чтобы строка была на 25% от верха)
-    const rawDesiredScrollTop = Math.max(0, lineTop - topOffset);
-    const desiredScrollTop = Math.min(rawDesiredScrollTop, maxScrollTop);
+    const desiredScrollTop = Math.max(0, lineTop - topOffset);
     const currentLineTopRelative = lineTop - scrollTop;
-    const desiredLineTopRelative = lineTop - desiredScrollTop;
 
     // Проверяем, находится ли строка в правильной позиции (около 25% от верха)
-    const isInCorrectPosition = Math.abs(currentLineTopRelative - desiredLineTopRelative) <= 20;
+    const isInCorrectPosition = Math.abs(currentLineTopRelative - topOffset) <= 20;
 
     // Проверяем, полностью ли видна строка (не обрезана снизу)
     const isFullyVisibleBottom = lineTop + lineHeight <= scrollTop + containerHeight - bottomOffset;
