@@ -1,0 +1,148 @@
+// src/features/player/ui/PlayerShell/style.scss
+@use '../../../../scss/abstracts/mixins' as *;
+
+.mini-player {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--mini-player-bottom, 24px);
+  z-index: 1200;
+  margin-inline: auto;
+  inline-size: min(94vi, 1000px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ms-01);
+  padding: var(--ms-01);
+  color: var(--mini-player-text, var(--black, #000000));
+  background: rgb(var(--mini-player-background, var(--white-color-rgb, 255 255 255)) / 88%);
+  border-radius: var(--ms-0);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    rgb(0 0 0 / 18%) 0 8px 20px -12px,
+    rgb(0 0 0 / 22%) 0 -4px 16px -12px;
+  cursor: pointer;
+
+  @include breakpoint(mobileonly) {
+    padding-inline: var(--ms-0, 12px);
+    gap: var(--ms-0, 12px);
+  }
+
+  &::after {
+    position: absolute;
+    content: '';
+    inset: 0;
+    pointer-events: none;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: inherit;
+  }
+
+  &__cover {
+    position: relative;
+    inline-size: 40px;
+    block-size: 40px;
+    padding: 0;
+
+    @include breakpoint(tablet) {
+      inline-size: 64px;
+      block-size: 64px;
+    }
+
+    img {
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: var(--ms-02);
+    }
+
+    &-placeholder {
+      inline-size: 100%;
+      block-size: 100%;
+      background: linear-gradient(135deg, rgb(255 255 255 / 18%), rgb(255 255 255 / 4%));
+    }
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-0, 12px);
+  }
+
+  &__title {
+    flex: 1;
+    margin: 0;
+    font-size: clamp(0.85rem, 0.7rem + 0.4vw, 1rem);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  &__control {
+    inline-size: 48px;
+    block-size: 48px;
+    font-size: 1.2rem;
+
+    @include button-variant(
+      $color: var(--mini-player-button, var(--mini-player-text, var(--black, #000000))),
+      $background: transparent,
+      $hover-color: var(--mini-player-button, var(--mini-player-text, var(--black, #000000))),
+      $hover-background: rgb(255 255 255 / 18%),
+      $margin: 0,
+      $padding: 0,
+      $border-radius: 50%
+    );
+
+    &:active {
+      background-color: rgb(255 255 255 / 10%);
+      transform: scale(0.85);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        transform: scale(1.05);
+      }
+
+      &:active {
+        transform: scale(0.9);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+      transform: none;
+
+      &:hover,
+      &:active {
+        transform: none;
+      }
+    }
+
+    &--expand {
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: rgb(255 255 255 / 16%);
+
+      .mini-player__expand-icon {
+        font-family: inherit;
+        line-height: 1;
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+.mini-player + dialog[open] {
+  display: block;
+}
+
+.mini-player__control.icon-controller-play,
+.mini-player__control.icon-controller-pause,
+.mini-player__control.icon-controller-fast-forward {
+  font-size: 2rem;
+}
+
+.mini-player__control.icon-controller-play::before,
+.mini-player__control.icon-controller-fast-forward::before {
+  display: inline-block;
+  transform: translateX(3px);
+}
