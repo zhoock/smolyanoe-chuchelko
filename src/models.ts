@@ -101,6 +101,8 @@ export interface CoverProps {
   img: string;
   fullName: string;
   size?: number;
+  densities?: Array<1 | 2 | 3>;
+  sizes?: string;
 }
 
 export interface String {

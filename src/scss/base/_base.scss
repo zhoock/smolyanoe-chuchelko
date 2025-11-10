@@ -96,6 +96,8 @@ body {
     main {
       display: grid;
       grid-area: main;
+      padding-block-end: var(--ms-4);
+      background: var(--main-background-color, #ffffff);
 
       @include breakpoint(old-phones) {
         grid-template-rows: 190px auto;

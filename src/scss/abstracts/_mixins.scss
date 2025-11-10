@@ -268,4 +268,7 @@ $desktops: 'width >= 1024px';
   --wave-cursor-color: rgb(var(--mango-sorbet-rgb, 250 229 155) / 90%);
   --wave-bars: rgb(var(--charcoal-rgb, 39 39 39) / 42%);
   --wave-bars-active: rgb(var(--mango-sorbet-rgb, 250 229 155) / 78%);
+  --mini-player-background: var(--white-color-rgb, 255 255 255);
+  --mini-player-text: var(--black, #000000);
+  --mini-player-button: var(--black, #000000);
 }

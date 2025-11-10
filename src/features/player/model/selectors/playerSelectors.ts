@@ -41,3 +41,18 @@ export const selectShuffle = createSelector([selectPlayer], (player) => player.s
 
 // Селектор для режима зацикливания
 export const selectRepeat = createSelector([selectPlayer], (player) => player.repeat);
+
+// Селектор для минимальных данных альбома
+export const selectAlbumMeta = createSelector([selectPlayer], (player) => player.albumMeta);
+
+// Селектор для маршрута, где был открыт плеер
+export const selectSourceLocation = createSelector(
+  [selectPlayer],
+  (player) => player.sourceLocation
+);
+
+// Утилита: есть ли что воспроизводить
+export const selectHasPlaylist = createSelector(
+  [selectPlaylist],
+  (playlist) => playlist.length > 0
+);

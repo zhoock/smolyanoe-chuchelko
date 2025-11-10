@@ -55,4 +55,7 @@ html.theme-dark {
   --wave-cursor-color: rgb(var(--white-rgb, 255 255 255) / 90%);
   --wave-bars: rgb(var(--white-rgb, 255 255 255) / 35%);
   --wave-bars-active: rgb(var(--white-rgb, 255 255 255) / 82%);
+  --mini-player-background: var(--graphite-green-rgb, 55 54 51);
+  --mini-player-text: var(--white, #ffffff);
+  --mini-player-button: var(--white, #ffffff);
 }

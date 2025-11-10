@@ -125,6 +125,11 @@ export default function AdminAlbum() {
                       <p className="admin-album__artist">{album.artist}</p>
                     </div>
                   </div>
+                  <div className="admin-album__actions">
+                    <Link to={`/admin/json/${albumId}`} className="admin-album__json-link">
+                      Редактировать JSON →
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="admin-album__tracks">

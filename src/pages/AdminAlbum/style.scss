@@ -4,6 +4,11 @@
 .admin-album {
   &__header {
     margin-block-end: var(--ms-3);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ms-2);
   }
 
   &__info {
@@ -49,6 +54,39 @@
     margin: 0;
     color: var(--time-color, #9b9b9a);
     font-size: var(--ms-1);
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+  }
+
+  &__json-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: var(--ms-01) var(--ms-0);
+    border-radius: var(--ms-01);
+    border: 1px solid var(--hr-color, #3d3c3a);
+    background: var(--button-background-color, transparent);
+    color: var(--link-color-hover, #ffffff);
+    font-size: var(--ms-0);
+    text-decoration: none;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+
+    &:hover {
+      color: var(--button-color-hover, #373633);
+      background: var(--button-background-color-hover, #998238);
+      border-color: var(--button-background-color-hover, #998238);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-color, #998238);
+      outline-offset: 2px;
+    }
   }
 
   &__tracks {

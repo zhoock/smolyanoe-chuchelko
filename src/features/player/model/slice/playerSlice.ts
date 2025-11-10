@@ -3,7 +3,13 @@
  * Здесь определяем все действия (actions) и как они изменяют стейт.
  */
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { PlayerState, initialPlayerState, PlayerTimeState } from '../types/playerSchema';
+import {
+  PlayerState,
+  initialPlayerState,
+  PlayerTimeState,
+  PlayerAlbumMeta,
+  PlayerSourceLocation,
+} from '../types/playerSchema';
 import type { TracksProps } from '../../../../models';
 
 /**
@@ -200,7 +206,21 @@ const playerSlice = createSlice({
       } else {
         state.albumId = null;
         state.albumTitle = null;
+        state.albumMeta = null;
       }
+    },
+    /**
+     * Сохраняет минимальные данные об альбоме для отображения в UI (мини-плеер, полноэкранный плеер).
+     */
+    setAlbumMeta(state, action: PayloadAction<PlayerAlbumMeta | null>) {
+      state.albumMeta = action.payload;
+    },
+    /**
+     * Запоминает маршрут, на котором пользователь открыл плеер.
+     * Используется для переходов из мини-плеера в полноэкранный режим.
+     */
+    setSourceLocation(state, action: PayloadAction<PlayerSourceLocation | null>) {
+      state.sourceLocation = action.payload;
     },
     /**
      * Переключает режим перемешивания треков (shuffle).

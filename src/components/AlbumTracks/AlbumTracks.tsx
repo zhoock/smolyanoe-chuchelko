@@ -1,15 +1,11 @@
 // src/components/AlbumTracks/AlbumTracks.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useStore } from 'react-redux';
 import type { AppStore, RootState } from '@app/providers/StoreProvider/config/store';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
-import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, playerSelectors, savePlayerState, loadPlayerState } from '@features/player';
-
-import { Hamburger, Popup } from '@components';
-import { AudioPlayer } from '@features/player';
 
 import type { IAlbums, TracksProps } from '../../models';
 import { useAlbumsData } from '@hooks/data';
@@ -52,43 +48,81 @@ const TracksList = React.memo(function TracksList({
   store: ReturnType<typeof useStore<RootState>>;
 }) {
   const [activeIndex, setActiveIndex] = React.useState(initialActiveIndex);
+  const [isPlaying, setIsPlaying] = React.useState(store.getState().player.isPlaying);
+  const [currentTrackId, setCurrentTrackId] = React.useState<string | number | null>(() => {
+    const playerState = store.getState().player;
+    return playerState.playlist[playerState.currentTrackIndex]?.id ?? null;
+  });
+  const [currentAlbumId, setCurrentAlbumId] = React.useState<string | null>(
+    store.getState().player.albumId ?? null
+  );
+
+  const albumUniqueId = React.useMemo(
+    () => album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-'),
+    [album.albumId, album.artist, album.album]
+  );
 
   // Подписываемся на изменения activeIndex в store, чтобы обновлять только список треков
   React.useEffect(() => {
     const unsubscribe = store.subscribe(() => {
-      const newActiveIndex = store.getState().player.currentTrackIndex;
-      setActiveIndex(newActiveIndex);
+      const playerState = store.getState().player;
+      setActiveIndex(playerState.currentTrackIndex);
+      setIsPlaying(playerState.isPlaying);
+      setCurrentAlbumId(playerState.albumId ?? null);
+      setCurrentTrackId(playerState.playlist[playerState.currentTrackIndex]?.id ?? null);
     });
     // Синхронизируем начальное значение
-    setActiveIndex(store.getState().player.currentTrackIndex);
+    const initialState = store.getState().player;
+    setActiveIndex(initialState.currentTrackIndex);
+    setIsPlaying(initialState.isPlaying);
+    setCurrentAlbumId(initialState.albumId ?? null);
+    setCurrentTrackId(initialState.playlist[initialState.currentTrackIndex]?.id ?? null);
     return unsubscribe;
   }, [store]);
   return (
     <div className="tracks">
-      {tracks?.map((track, index) => (
-        <button
-          key={track.id}
-          type="button"
-          className={clsx('tracks__btn', { active: activeIndex === index })}
-          aria-label="Кнопка с названием песни"
-          aria-description={`Воспроизвести: ${track.title}`}
-          onClick={() => {
-            gaEvent('track_select', {
-              album_id: album?.albumId,
-              album_title: album?.album,
-              track_id: track.id,
-              track_title: track.title,
-              lang,
-            });
-            openPlayer(index);
-          }}
-        >
-          <span className="tracks__title">{track.title}</span>
-          {track.duration != null && (
-            <span className="tracks__duration">{formatDuration(track.duration)}</span>
-          )}
-        </button>
-      ))}
+      {tracks?.map((track, index) => {
+        const isCurrentAlbum = currentAlbumId === albumUniqueId;
+        const isActive = isCurrentAlbum && activeIndex === index;
+        const isPlayingNow = isCurrentAlbum && isPlaying && currentTrackId === track.id;
+
+        return (
+          <button
+            key={track.id}
+            type="button"
+            className={clsx('tracks__btn', {
+              active: isActive,
+              'tracks__btn--playing': isPlayingNow,
+            })}
+            aria-label="Кнопка с названием песни"
+            aria-description={`Воспроизвести: ${track.title}`}
+            onClick={() => {
+              gaEvent('track_select', {
+                album_id: album?.albumId,
+                album_title: album?.album,
+                track_id: track.id,
+                track_title: track.title,
+                lang,
+              });
+              openPlayer(index);
+            }}
+          >
+            {isPlayingNow ? (
+              <span className="tracks__equalizer" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
+            ) : (
+              <span className="tracks__index">{index + 1}</span>
+            )}
+            <span className="tracks__title">{track.title}</span>
+            {track.duration != null && (
+              <span className="tracks__duration">{formatDuration(track.duration)}</span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 });
@@ -99,8 +133,6 @@ const TracksList = React.memo(function TracksList({
  * Мемоизирован чтобы не перерендеривался при изменении состояния плеера в Redux.
  */
 const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
-  const [popupPlayer, setPopupPlayer] = useState(false); // показ попапа с аудиоплеером
-  const [bgColor, setBgColor] = useState('rgba(var(--extra-background-color-rgb) / 80%)'); // фон попапа
   const dispatch = useAppDispatch();
   const store = useStore<RootState>(); // получаем store для чтения состояния без перерендера
 
@@ -133,12 +165,9 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
 
   const location = useLocation();
-  const navigate = useNavigate();
 
-  // Синхронизация: если в URL #player → показываем попап, иначе скрываем
   useEffect(() => {
     const shouldBeOpen = location.hash === '#player';
-    setPopupPlayer(shouldBeOpen);
 
     // Если попап открыт при загрузке страницы, но в Redux нет данных о треке,
     // восстанавливаем состояние из localStorage
@@ -171,6 +200,21 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
               albumTitle: savedState.albumTitle ?? album.album,
             })
           );
+          dispatch(
+            playerActions.setAlbumMeta({
+              albumId: savedState.albumId,
+              album: album.album,
+              artist: album.artist,
+              fullName: album.fullName ?? `${album.artist} — ${album.album}`,
+              cover: album.cover ?? null,
+            })
+          );
+          dispatch(
+            playerActions.setSourceLocation({
+              pathname: location.pathname,
+              search: location.search || undefined,
+            })
+          );
           dispatch(playerActions.setVolume(savedState.volume));
 
           // ВАЖНО: Всегда ставим трек на паузу при восстановлении из localStorage
@@ -183,15 +227,27 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           dispatch(
             playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album })
           );
+          dispatch(
+            playerActions.setAlbumMeta({
+              albumId: currentAlbumId,
+              album: album.album,
+              artist: album.artist,
+              fullName: album.fullName ?? `${album.artist} — ${album.album}`,
+              cover: album.cover ?? null,
+            })
+          );
+          dispatch(
+            playerActions.setSourceLocation({
+              pathname: location.pathname,
+              search: location.search || undefined,
+            })
+          );
           // При обычном открытии (не восстановление) запускаем трек
           dispatch(playerActions.requestPlay());
         }
       }
     }
-
-    // НЕ сбрасываем bgColor при закрытии попапа - это предотвращает моргание
-    // bgColor остаётся с последним значением для плавного закрытия
-  }, [location.hash, album, dispatch, store]);
+  }, [location.hash, location.pathname, location.search, album, dispatch, store]);
 
   // Сохраняем состояние плеера в localStorage при изменении ключевых параметров
   // Все значения читаем напрямую из store чтобы не вызывать перерендер
@@ -218,14 +274,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           state.currentTrackIndex !== lastSavedState.currentTrackIndex ||
           state.playlist.length !== lastSavedState.playlistLength)
       ) {
-        savePlayerState({
-          albumId: state.albumId,
-          albumTitle: state.albumTitle,
-          currentTrackIndex: state.currentTrackIndex,
-          volume: state.volume,
-          isPlaying: state.isPlaying,
-          playlist: state.playlist,
-        } as Parameters<typeof savePlayerState>[0]);
+        savePlayerState(state);
 
         lastSavedState = {
           albumId: state.albumId,
@@ -238,14 +287,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
     // Сохраняем начальное состояние
     const initialState = store.getState().player;
     if (initialState.albumId && initialState.playlist.length > 0) {
-      savePlayerState({
-        albumId: initialState.albumId,
-        albumTitle: initialState.albumTitle,
-        currentTrackIndex: initialState.currentTrackIndex,
-        volume: initialState.volume,
-        isPlaying: initialState.isPlaying,
-        playlist: initialState.playlist,
-      } as Parameters<typeof savePlayerState>[0]);
+      savePlayerState(initialState);
 
       lastSavedState = {
         albumId: initialState.albumId,
@@ -288,30 +330,25 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       }
 
       dispatch(playerActions.setAlbumInfo({ albumId, albumTitle: album.album }));
-      dispatch(playerActions.requestPlay());
-      navigate(
-        {
-          pathname: location.pathname,
-          search: location.search,
-          hash: '#player',
-        },
-        { replace: location.hash === '#player' }
+      dispatch(
+        playerActions.setAlbumMeta({
+          albumId,
+          album: album.album,
+          artist: album.artist,
+          fullName: album.fullName ?? `${album.artist} — ${album.album}`,
+          cover: album.cover ?? null,
+        })
       );
+      dispatch(
+        playerActions.setSourceLocation({
+          pathname: location.pathname,
+          search: location.search || undefined,
+        })
+      );
+      dispatch(playerActions.requestPlay());
     },
-    [dispatch, album, location.hash, location.pathname, location.search, navigate]
+    [dispatch, album, location.pathname, location.search]
   );
-
-  // Закрывает попап с плеером
-  // Мемоизируем чтобы не пересоздавался при каждом рендере
-  const closePopups = useCallback(() => {
-    if (location.hash === '#player') {
-      if (window.history.length > 1) {
-        navigate(-1); // обычный случай
-      } else {
-        navigate({ pathname: location.pathname, search: location.search }, { replace: true });
-      }
-    }
-  }, [location.hash, location.pathname, location.search, navigate]);
 
   // Основной контент — принимает готовые строки UI (или дефолты)
   function Block({
@@ -370,12 +407,6 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           openPlayer={openPlayer}
           store={store}
         />
-
-        {/* Попап с аудиоплеером */}
-        <Popup isActive={popupPlayer} bgColor={bgColor} onClose={closePopups}>
-          {popupPlayer && album && <AudioPlayer album={album} setBgColor={setBgColor} />}
-          <Hamburger isActive={popupPlayer} onToggle={closePopups} />
-        </Popup>
       </>
     );
   }

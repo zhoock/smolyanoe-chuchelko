@@ -8,7 +8,20 @@ export interface PlayerTimeState {
   duration: number; // общая длительность трека в секундах (NaN если трек не загружен)
 }
 
-import type { TracksProps } from '../../../../models';
+import type { TracksProps, CoverProps } from '../../../../models';
+
+export interface PlayerAlbumMeta {
+  albumId: string | null;
+  album: string | null;
+  artist: string | null;
+  fullName: string | null;
+  cover: CoverProps | null;
+}
+
+export interface PlayerSourceLocation {
+  pathname: string;
+  search?: string;
+}
 
 /**
  * Интерфейс состояния плеера в Redux.
@@ -26,6 +39,8 @@ export interface PlayerState {
   playRequestId: number; // счётчик для запросов на воспроизведение (инкрементируется при requestPlay)
   albumId: string | null; // уникальный ID текущего альбома (для аналитики)
   albumTitle: string | null; // название текущего альбома (для аналитики)
+  albumMeta: PlayerAlbumMeta | null; // минимальные данные альбома для отображения UI
+  sourceLocation: PlayerSourceLocation | null; // маршрут, где был открыт плеер
   shuffle: boolean; // перемешивание треков включено/выключено
   repeat: 'none' | 'all' | 'one'; // режим зацикливания: 'none' - без зацикливания, 'all' - зацикливание плейлиста, 'one' - зацикливание одного трека
 }
@@ -46,6 +61,8 @@ export const initialPlayerState: PlayerState = {
   playRequestId: 0,
   albumId: null, // данные альбома для аналитики
   albumTitle: null,
+  albumMeta: null,
+  sourceLocation: null,
   shuffle: false, // перемешивание выключено по умолчанию
   repeat: 'none', // зацикливание выключено по умолчанию
 };

@@ -17,6 +17,8 @@ interface PersistedPlayerState {
   currentTrackIndex: number;
   volume: number;
   isPlaying: boolean;
+  albumMeta?: PlayerState['albumMeta'];
+  sourceLocation?: PlayerState['sourceLocation'];
 }
 
 /**
@@ -31,6 +33,8 @@ export function savePlayerState(state: PlayerState): void {
       currentTrackIndex: state.currentTrackIndex,
       volume: state.volume,
       isPlaying: state.isPlaying,
+      albumMeta: state.albumMeta ? { ...state.albumMeta } : null,
+      sourceLocation: state.sourceLocation ? { ...state.sourceLocation } : null,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
   } catch (error) {
@@ -56,7 +60,9 @@ export function loadPlayerState(): PersistedPlayerState | null {
       typeof parsed.volume !== 'number' ||
       typeof parsed.isPlaying !== 'boolean' ||
       (parsed.albumId !== null && typeof parsed.albumId !== 'string') ||
-      (parsed.albumTitle !== null && typeof parsed.albumTitle !== 'string')
+      (parsed.albumTitle !== null && typeof parsed.albumTitle !== 'string') ||
+      (parsed.albumMeta != null && typeof parsed.albumMeta !== 'object') ||
+      (parsed.sourceLocation != null && typeof parsed.sourceLocation !== 'object')
     ) {
       return null;
     }

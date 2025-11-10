@@ -116,6 +116,9 @@ export default function Admin() {
         <div className="admin__header">
           <h1>Личный кабинет</h1>
           <p className="admin__subtitle">Управление альбомами и синхронизацией текстов</p>
+          <Link to="/admin/builder" className="admin__builder-link">
+            Создать новый альбом →
+          </Link>
         </div>
 
         <div className="admin__search">
