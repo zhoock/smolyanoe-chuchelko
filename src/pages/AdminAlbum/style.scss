@@ -63,19 +63,19 @@
 
   &__json-link {
     display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
     padding: var(--ms-01) var(--ms-0);
-    border-radius: var(--ms-01);
-    border: 1px solid var(--hr-color, #3d3c3a);
-    background: var(--button-background-color, transparent);
     color: var(--link-color-hover, #ffffff);
     font-size: var(--ms-0);
-    text-decoration: none;
+    background: var(--button-background-color, transparent);
+    border: 1px solid var(--hr-color, #3d3c3a);
+    border-radius: var(--ms-01);
     transition:
       background-color 0.2s ease,
       border-color 0.2s ease,
       color 0.2s ease;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none;
 
     &:hover {
       color: var(--button-color-hover, #373633);

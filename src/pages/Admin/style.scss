@@ -181,20 +181,20 @@
 
 .admin__builder-link {
   display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-block-start: var(--ms-2);
   padding: 0.65rem 1rem;
-  border-radius: var(--ms-02);
-  border: 1px solid rgb(255 255 255 / 18%);
-  background: rgb(255 255 255 / 6%);
   color: var(--white, #ffffff);
   font-size: 0.9rem;
-  text-decoration: none;
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: var(--ms-02);
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease;
+  align-items: center;
+  gap: 0.4rem;
+  margin-block-start: var(--ms-2);
+  text-decoration: none;
 
   &:hover {
     background: rgb(255 255 255 / 12%);
