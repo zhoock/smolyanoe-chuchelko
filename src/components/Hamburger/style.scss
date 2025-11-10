@@ -6,6 +6,7 @@
 
 .hamburger {
   position: fixed;
+  z-index: 1500;
   background: none;
   border: none;
   transition: background-color 0.15s ease;

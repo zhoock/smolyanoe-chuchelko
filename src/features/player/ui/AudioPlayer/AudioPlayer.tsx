@@ -86,6 +86,7 @@ export default function AudioPlayer({
   const pendingScrollTopRef = useRef<number>(0);
   // Ref для отслеживания, прокрутил ли пользователь текст до конца
   const userScrolledToEndRef = useRef<boolean>(false);
+  const suppressScrollHandlingUntilRef = useRef<number>(0);
   // Состояние режима прозрачности текста: 'normal' | 'user-scrolling' | 'seeking'
   const [lyricsOpacityMode, setLyricsOpacityMode] = useState<
     'normal' | 'user-scrolling' | 'seeking'
@@ -412,8 +413,7 @@ export default function AudioPlayer({
     }
 
     const hasDuration = Number.isFinite(time.duration) && time.duration > 0;
-    const reachedEnd =
-      (hasDuration && time.current >= time.duration - 0.5) || progress >= 99.5;
+    const reachedEnd = (hasDuration && time.current >= time.duration - 0.5) || progress >= 99.5;
 
     if (!reachedEnd) {
       return;
@@ -467,11 +467,17 @@ export default function AudioPlayer({
   }, []);
 
   const scheduleControlsHide = useCallback(() => {
+    if (isCoarsePointerDevice) {
+      setControlsVisible(true);
+      return;
+    }
+
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
     if (showLyrics && isPlaying) {
       inactivityTimerRef.current = setTimeout(() => {
+        suppressScrollHandlingUntilRef.current = Date.now() + 400;
         controlsVisibleRef.current = false;
         setControlsVisible(false);
       }, INACTIVITY_TIMEOUT);
@@ -479,6 +485,7 @@ export default function AudioPlayer({
   }, [showLyrics, isPlaying]);
 
   const showControls = useCallback(() => {
+    suppressScrollHandlingUntilRef.current = Date.now() + 400;
     setControlsVisible(true);
     controlsVisibleRef.current = true;
     scheduleControlsHide();
@@ -997,6 +1004,7 @@ export default function AudioPlayer({
       setShowLyrics(false);
       prevTrackIdRef.current = null;
       userScrolledToEndRef.current = false;
+      setControlsVisible(true);
       return;
     }
 
@@ -1160,6 +1168,7 @@ export default function AudioPlayer({
         return;
       }
       if (direction === 'down') {
+        suppressScrollHandlingUntilRef.current = Date.now() + 400;
         let didHide = false;
         setControlsVisible((prev) => {
           if (!prev) {
@@ -1176,12 +1185,17 @@ export default function AudioPlayer({
           }
         }
       } else {
+        suppressScrollHandlingUntilRef.current = Date.now() + 400;
         showControls();
       }
     };
 
     const processScroll = (currentScrollTop: number) => {
       const now = Date.now();
+      if (now < suppressScrollHandlingUntilRef.current) {
+        lastScrollTopRef.current = currentScrollTop;
+        return;
+      }
       const isSeekProtectionActive = now < seekProtectionUntilRef.current;
       if (isSeekingRef.current || isSeekProtectionActive) {
         lastScrollTopRef.current = currentScrollTop;
