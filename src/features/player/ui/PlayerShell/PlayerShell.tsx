@@ -1,0 +1,364 @@
+// src/features/player/ui/PlayerShell/PlayerShell.tsx
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { IAlbums } from 'models';
+
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { Popup, Hamburger } from '@components';
+import { playerActions } from '../../model/slice/playerSlice';
+import * as playerSelectors from '../../model/selectors/playerSelectors';
+import { audioController } from '../../model/lib/audioController';
+import { MiniPlayer } from './MiniPlayer';
+import AudioPlayer from '../AudioPlayer/AudioPlayer';
+
+const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';
+const DEFAULT_BOTTOM_OFFSET = 24;
+
+export const PlayerShell: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const albumMeta = useAppSelector(playerSelectors.selectAlbumMeta);
+  const playlist = useAppSelector(playerSelectors.selectPlaylist);
+  const currentTrack = useAppSelector(playerSelectors.selectCurrentTrack);
+  const isPlaying = useAppSelector(playerSelectors.selectIsPlaying);
+  const time = useAppSelector(playerSelectors.selectTime);
+  const isSeeking = useAppSelector(playerSelectors.selectIsSeeking);
+  const hasPlaylist = useAppSelector(playerSelectors.selectHasPlaylist);
+  const sourceLocation = useAppSelector(playerSelectors.selectSourceLocation);
+
+  const [bgColor, setBgColor] = useState<string>(DEFAULT_BG);
+  const [miniBottomOffset, setMiniBottomOffset] = useState<number>(DEFAULT_BOTTOM_OFFSET);
+
+  const isFullScreen = location.hash === '#player';
+  const shouldRenderMini = hasPlaylist && !!albumMeta && !!currentTrack && !isFullScreen;
+
+  const miniPlayerRef = useRef<HTMLDivElement | null>(null);
+  const rewindIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pressStartTimeRef = useRef<number | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressRef = useRef(false);
+  const wasRewindingRef = useRef(false);
+  const hasLongPressTimerRef = useRef(false);
+  const shouldBlockTrackSwitchRef = useRef(false);
+  const timeRef = useRef(time);
+  const isSeekingRef = useRef(isSeeking);
+  const seekProtectionUntilRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (albumMeta) {
+      setBgColor(DEFAULT_BG);
+    }
+  }, [albumMeta?.albumId]);
+
+  useEffect(() => {
+    timeRef.current = time;
+  }, [time]);
+
+  useEffect(() => {
+    isSeekingRef.current = isSeeking;
+  }, [isSeeking]);
+
+  const updateMiniPlayerPosition = useCallback(() => {
+    const playerEl = miniPlayerRef.current;
+    const footerEl = document.querySelector('footer');
+
+    if (!playerEl || !footerEl) {
+      setMiniBottomOffset(DEFAULT_BOTTOM_OFFSET);
+      return;
+    }
+
+    const footerRect = footerEl.getBoundingClientRect();
+    const overlap = window.innerHeight - DEFAULT_BOTTOM_OFFSET - footerRect.top;
+    const extraOffset =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ms-0')) || 0;
+    const nextOffset = DEFAULT_BOTTOM_OFFSET + Math.max(0, overlap + extraOffset);
+
+    setMiniBottomOffset((prev) => {
+      if (Math.abs(prev - nextOffset) > 1) {
+        return nextOffset;
+      }
+      return prev;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!shouldRenderMini) {
+      setMiniBottomOffset(DEFAULT_BOTTOM_OFFSET);
+      return;
+    }
+
+    const handle = () => {
+      updateMiniPlayerPosition();
+    };
+
+    handle();
+
+    window.addEventListener('scroll', handle, { passive: true });
+    window.addEventListener('resize', handle);
+
+    return () => {
+      window.removeEventListener('scroll', handle);
+      window.removeEventListener('resize', handle);
+    };
+  }, [shouldRenderMini, updateMiniPlayerPosition]);
+
+  useLayoutEffect(() => {
+    if (!shouldRenderMini) {
+      return;
+    }
+
+    setMiniBottomOffset(DEFAULT_BOTTOM_OFFSET);
+    let frameId = 0;
+    let secondFrameId = 0;
+    frameId = requestAnimationFrame(() => {
+      secondFrameId = requestAnimationFrame(() => {
+        updateMiniPlayerPosition();
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      cancelAnimationFrame(secondFrameId);
+    };
+  }, [location.pathname, location.search, updateMiniPlayerPosition, shouldRenderMini]);
+
+  const albumForPlayer = useMemo<IAlbums | null>(() => {
+    if (!albumMeta) {
+      return null;
+    }
+
+    const cover =
+      albumMeta.cover ??
+      ({
+        img: '',
+        fullName: albumMeta.fullName ?? albumMeta.album ?? '',
+      } as IAlbums['cover']);
+
+    return {
+      albumId: albumMeta.albumId ?? undefined,
+      artist: albumMeta.artist ?? '',
+      album: albumMeta.album ?? '',
+      fullName:
+        albumMeta.fullName ||
+        (albumMeta.artist && albumMeta.album ? `${albumMeta.artist} — ${albumMeta.album}` : ''),
+      description: '',
+      cover,
+      release: {},
+      buttons: {},
+      details: [],
+      tracks: playlist,
+    };
+  }, [albumMeta, playlist]);
+
+  const canRenderPopup = !!albumForPlayer;
+
+  const handleToggle = useCallback(() => {
+    dispatch(playerActions.toggle());
+  }, [dispatch]);
+
+  const handleNext = useCallback(() => {
+    dispatch(playerActions.nextTrack(playlist.length));
+  }, [dispatch, playlist.length]);
+
+  const handleFastForwardStart = useCallback(() => {
+    const startTime = Date.now();
+    pressStartTimeRef.current = startTime;
+    isLongPressRef.current = false;
+    wasRewindingRef.current = false;
+    hasLongPressTimerRef.current = false;
+    shouldBlockTrackSwitchRef.current = false;
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
+    hasLongPressTimerRef.current = true;
+
+    longPressTimerRef.current = setTimeout(() => {
+      if (pressStartTimeRef.current === startTime) {
+        isLongPressRef.current = true;
+        wasRewindingRef.current = true;
+        shouldBlockTrackSwitchRef.current = true;
+        isSeekingRef.current = true;
+        seekProtectionUntilRef.current = Date.now() + 2000;
+        const step = 5;
+
+        rewindIntervalRef.current = setInterval(() => {
+          const currentTime = timeRef.current.current || 0;
+          const duration = timeRef.current.duration || 0;
+          let newTime = currentTime + step;
+
+          newTime = Math.max(0, Math.min(duration, newTime));
+          const progress = duration > 0 ? (newTime / duration) * 100 : 0;
+
+          dispatch(playerActions.setSeeking(true));
+          seekProtectionUntilRef.current = Date.now() + 2000;
+          dispatch(playerActions.setCurrentTime(newTime));
+          dispatch(playerActions.setTime({ current: newTime, duration }));
+          dispatch(playerActions.setProgress(progress));
+          audioController.setCurrentTime(newTime);
+        }, 200);
+      }
+    }, 200);
+  }, [dispatch]);
+
+  const handleFastForwardEnd = useCallback(() => {
+    const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
+    const isRewindingActive = shouldBlockTrackSwitchRef.current;
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (rewindIntervalRef.current) {
+      clearInterval(rewindIntervalRef.current);
+      rewindIntervalRef.current = null;
+      dispatch(playerActions.setSeeking(false));
+      isSeekingRef.current = false;
+      seekProtectionUntilRef.current = Date.now() + 1500;
+      if (isPlaying) {
+        dispatch(playerActions.play());
+      }
+    }
+
+    if (isRewindingActive) {
+      setTimeout(() => {
+        pressStartTimeRef.current = null;
+        isLongPressRef.current = false;
+        hasLongPressTimerRef.current = false;
+        wasRewindingRef.current = false;
+        setTimeout(() => {
+          shouldBlockTrackSwitchRef.current = false;
+        }, 300);
+      }, 150);
+      return;
+    }
+
+    if (pressDuration > 0 && pressDuration < 150) {
+      handleNext();
+    }
+
+    setTimeout(() => {
+      pressStartTimeRef.current = null;
+      isLongPressRef.current = false;
+      hasLongPressTimerRef.current = false;
+      wasRewindingRef.current = false;
+    }, 150);
+  }, [dispatch, handleNext, isPlaying]);
+
+  const handleFastForwardClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (shouldBlockTrackSwitchRef.current) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      handleNext();
+    },
+    [handleNext]
+  );
+
+  const forwardHandlers = useMemo(
+    () => ({
+      onMouseDown: (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        handleFastForwardStart();
+      },
+      onMouseUp: () => {
+        handleFastForwardEnd();
+      },
+      onMouseLeave: () => {
+        handleFastForwardEnd();
+      },
+      onTouchStart: (event: React.TouchEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        handleFastForwardStart();
+      },
+      onTouchEnd: (event: React.TouchEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        handleFastForwardEnd();
+      },
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+        handleFastForwardClick(event);
+      },
+    }),
+    [handleFastForwardStart, handleFastForwardEnd, handleFastForwardClick]
+  );
+
+  const handleExpand = useCallback(() => {
+    const target = sourceLocation ?? {
+      pathname: location.pathname,
+      search: location.search || undefined,
+    };
+
+    navigate(
+      {
+        pathname: target.pathname,
+        search: target.search,
+        hash: '#player',
+      },
+      { replace: false }
+    );
+  }, [navigate, sourceLocation, location.pathname, location.search]);
+
+  const handleClose = useCallback(() => {
+    navigate(
+      {
+        pathname: sourceLocation?.pathname ?? location.pathname,
+        search: sourceLocation?.search ?? location.search,
+      },
+      { replace: true }
+    );
+  }, [navigate, sourceLocation, location.pathname, location.search]);
+
+  useEffect(() => {
+    if ((!albumMeta || playlist.length === 0) && isPlaying) {
+      dispatch(playerActions.pause());
+    }
+  }, [albumMeta, playlist.length, dispatch, isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (rewindIntervalRef.current) {
+        clearInterval(rewindIntervalRef.current);
+        rewindIntervalRef.current = null;
+      }
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  if (!albumMeta || playlist.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {shouldRenderMini && currentTrack && (
+        <MiniPlayer
+          title={currentTrack.title}
+          cover={albumMeta.cover}
+          isPlaying={isPlaying}
+          onToggle={handleToggle}
+          onExpand={handleExpand}
+          forwardHandlers={forwardHandlers}
+          bottomOffset={miniBottomOffset}
+          containerRef={miniPlayerRef}
+        />
+      )}
+
+      {canRenderPopup && albumForPlayer && (
+        <Popup isActive={isFullScreen} bgColor={bgColor} onClose={handleClose}>
+          <Hamburger isActive onToggle={handleClose} />
+          <AudioPlayer album={albumForPlayer} setBgColor={setBgColor} />
+        </Popup>
+      )}
+    </>
+  );
+};
