@@ -854,6 +854,33 @@
     /* stylelint-disable-next-line declaration-block-no-redundant-longhand-properties */
     padding-block-end: var(--controls-reserved-space, clamp(160px, 38vh, 320px));
 
+    &--plain {
+      padding-block-start: var(--ms-2);
+      padding-inline: var(--ms-1);
+      scroll-behavior: auto;
+      /* stylelint-disable-next-line property-no-vendor-prefix */
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black var(--ms-3),
+        black calc(100% - var(--ms-3)),
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black var(--ms-3),
+        black calc(100% - var(--ms-3)),
+        transparent 100%
+      );
+      /* stylelint-disable-next-line property-no-vendor-prefix */
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      /* stylelint-disable-next-line property-no-vendor-prefix */
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+    }
+
     @supports (padding-bottom: env(safe-area-inset-bottom)) {
       padding-block-end: calc(
         var(--controls-reserved-space, clamp(160px, 38vh, 320px)) + env(safe-area-inset-bottom)
@@ -864,6 +891,16 @@
       scroll-behavior: auto; // Отключаем smooth scroll на iOS, используем кастомный
       // На iOS оставляем маску, но используем оптимизацию для стабильности
     }
+  }
+
+  .player__plain-lyrics {
+    inline-size: 100%;
+    margin: 0;
+    color: var(--white, #ffffff);
+    font-size: clamp(0.95rem, 0.8rem + 0.9vw, 1.1rem);
+    line-height: 1.6;
+    text-align: start;
+    white-space: pre-line;
   }
 }
 

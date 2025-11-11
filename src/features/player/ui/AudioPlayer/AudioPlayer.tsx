@@ -1137,8 +1137,22 @@ export default function AudioPlayer({
     // НЕ проверяем currentTrack.content, так как это обычный текст, не караоке
     const hasSyncedLyrics = baseSynced && baseSynced.length > 0;
 
-    // Если трек не добавлен в караоке (нет синхронизированного текста) - скрываем текст
-    if (!hasSyncedLyrics) {
+    let hasPlainLyrics = false;
+    if (currentTrack.content && currentTrack.content.trim().length > 0) {
+      hasPlainLyrics = true;
+    } else {
+      const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
+      try {
+        const stored =
+          typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
+        hasPlainLyrics = !!(stored && stored.trim().length > 0);
+      } catch (error) {
+        debugLog('Cannot read stored text content', { error });
+      }
+    }
+
+    // Если трек не добавлен в караоке и нет обычного текста — скрываем блок
+    if (!hasSyncedLyrics && !hasPlainLyrics) {
       setShowLyrics(false);
     }
   }, [currentTrack, albumId, lang, showControls]);
@@ -1710,30 +1724,89 @@ export default function AudioPlayer({
     dispatch(playerActions.toggleRepeat());
   }, [dispatch]);
 
-  // Показываем текст только если есть синхронизированный текст (караоке)
-  // НЕ проверяем currentTrack?.content, так как это обычный текст, не караоке
-  // ВАЖНО: Проверяем как загруженный syncedLyrics, так и currentTrack.syncedLyrics напрямую
-  // Это гарантирует, что кнопка будет активна даже если useEffect еще не загрузил данные (например, после pull/hot reload)
-  const hasTextToShow = useMemo(() => {
-    // Сначала проверяем загруженный syncedLyrics
+  const plainLyricsContent = useMemo(() => {
+    if (!currentTrack) {
+      return null;
+    }
+
+    const normalize = (text: string) => text.replace(/\r\n/g, '\n').trim();
+
+    if (currentTrack.content && currentTrack.content.trim().length > 0) {
+      return normalize(currentTrack.content);
+    }
+
+    const albumIdComputed = albumId;
+    const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
+
+    try {
+      const stored =
+        typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
+      if (stored && stored.trim().length > 0) {
+        return normalize(stored);
+      }
+    } catch (error) {
+      debugLog('Cannot read stored text content', { error });
+    }
+
+    return null;
+  }, [currentTrack, albumId, lang]);
+
+  const hasPlainLyrics = !!plainLyricsContent;
+
+  const hasSyncedLyricsAvailable = useMemo(() => {
     if (syncedLyrics && syncedLyrics.length > 0) {
       return true;
     }
 
-    // Если syncedLyrics еще не загружен, проверяем currentTrack напрямую
-    if (currentTrack) {
-      const albumIdComputed = albumId;
-      // Проверяем localStorage (dev mode) или syncedLyrics из трека
-      const storedSync = loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-      const baseSynced = storedSync || currentTrack.syncedLyrics;
-      return baseSynced && baseSynced.length > 0;
+    if (!currentTrack) {
+      return false;
     }
 
-    return false;
+    const albumIdComputed = albumId;
+    const storedSync = loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
+    const baseSynced = storedSync || currentTrack.syncedLyrics;
+
+    return !!(baseSynced && baseSynced.length > 0);
   }, [syncedLyrics, currentTrack, albumId, lang]);
+
+  const hasTextToShow = hasSyncedLyricsAvailable || hasPlainLyrics;
 
   // Ref для прямого доступа к элементу отображения времени
   const timeDisplayRef = useRef<HTMLDivElement | null>(null);
+
+  const renderTimeDisplay = useCallback(
+    (currentSeconds: number, durationSeconds: number) => {
+      const container = timeDisplayRef.current;
+      if (!container) {
+        return;
+      }
+
+      const normalizedCurrent = Number.isFinite(currentSeconds)
+        ? Math.max(0, Math.floor(currentSeconds))
+        : 0;
+      const hasDuration = Number.isFinite(durationSeconds) && durationSeconds > 0;
+      const normalizedDuration = hasDuration ? Math.max(0, Math.floor(durationSeconds)) : 0;
+      const elapsed = hasDuration
+        ? Math.min(normalizedCurrent, normalizedDuration)
+        : normalizedCurrent;
+      const remaining = hasDuration ? Math.max(normalizedDuration - elapsed, 0) : NaN;
+
+      const fragment = document.createDocumentFragment();
+
+      const currentSpan = document.createElement('span');
+      currentSpan.className = 'player__time-current';
+      currentSpan.textContent = formatTime(elapsed);
+
+      const remainingSpan = document.createElement('span');
+      remainingSpan.className = 'player__time-remaining';
+      remainingSpan.textContent = hasDuration ? `-${formatTime(remaining)}` : formatTime(remaining);
+
+      fragment.appendChild(currentSpan);
+      fragment.appendChild(remainingSpan);
+      container.replaceChildren(fragment);
+    },
+    [formatTime]
+  );
 
   // ПОЛНОСТЬЮ ОБХОДИМ REDUX для обновления таймеров!
   // Подписываемся напрямую на audio элемент и обновляем ОДИН текстовый узел
@@ -1752,35 +1825,7 @@ export default function AudioPlayer({
       if (now - lastUpdate < UPDATE_INTERVAL) return;
       lastUpdate = now;
 
-      const { currentTime, duration } = audioElement;
-      if (!Number.isFinite(duration) || duration <= 0) return;
-
-      // Преобразуем время в целые секунды, чтобы избежать разницы округления
-      const totalSeconds = Math.max(0, Math.floor(duration));
-      const elapsedSeconds = Math.min(totalSeconds, Math.max(0, Math.floor(currentTime)));
-      const remainingSeconds = Math.max(totalSeconds - elapsedSeconds, 0);
-
-      // Вычисляем оба значения на основе одинакового округления
-      const currentValue = formatTime(elapsedSeconds);
-      const remainingValue = formatTime(remainingSeconds);
-
-      // Создаем DocumentFragment для батчинга DOM операций
-      // Это самый низкоуровневый способ гарантировать синхронность
-      const fragment = document.createDocumentFragment();
-
-      const currentSpan = document.createElement('span');
-      currentSpan.className = 'player__time-current';
-      currentSpan.textContent = currentValue;
-
-      const remainingSpan = document.createElement('span');
-      remainingSpan.className = 'player__time-remaining';
-      remainingSpan.textContent = remainingValue;
-
-      fragment.appendChild(currentSpan);
-      fragment.appendChild(remainingSpan);
-
-      // replaceChildren() заменяет ВСЕ дочерние элементы за ОДНУ атомарную операцию
-      element.replaceChildren(fragment);
+      renderTimeDisplay(audioElement.currentTime, audioElement.duration);
     };
 
     // Подписываемся на событие timeupdate напрямую
@@ -1798,7 +1843,11 @@ export default function AudioPlayer({
       audioElement.removeEventListener('loadedmetadata', updateDisplay);
       audioElement.removeEventListener('durationchange', updateDisplay);
     };
-  }, [formatTime]);
+  }, [renderTimeDisplay]);
+
+  useEffect(() => {
+    renderTimeDisplay(time.current, time.duration);
+  }, [time.current, time.duration, renderTimeDisplay]);
 
   // Отслеживание активности пользователя (мышь, клавиатура, тач)
   // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
@@ -1879,12 +1928,6 @@ export default function AudioPlayer({
     }
   }, [showLyrics, isPlaying, resetInactivityTimer, showControls]);
 
-  useEffect(() => {
-    if (!showLyrics) {
-      setCurrentLineIndex(null);
-    }
-  }, [showLyrics]);
-
   const coverWrapperClassName = `player__cover-wrapper${showLyrics ? ' player__cover-wrapper--lyrics' : ''}`;
   const coverClassName = `player__cover ${coverAnimationClass}${showLyrics ? ' player__cover--clickable' : ''}`;
   const coverInteractiveProps = useMemo<React.HTMLAttributes<HTMLDivElement>>(() => {
@@ -1918,6 +1961,9 @@ export default function AudioPlayer({
   ]
     .filter(Boolean)
     .join(' ');
+
+  const shouldRenderSyncedLyrics = showLyrics && !!(syncedLyrics && syncedLyrics.length > 0);
+  const shouldRenderPlainLyrics = showLyrics && !shouldRenderSyncedLyrics && !!plainLyricsContent;
 
   useEffect(() => {
     if (!isFullScreenPlayer) {
@@ -1971,76 +2017,140 @@ export default function AudioPlayer({
         </div>
       </div>
 
-      {/* Синхронизированный текст песни (karaoke-style) */}
-      {showLyrics && syncedLyrics && syncedLyrics.length > 0 && (
+      {/* Текст песни */}
+      {showLyrics && (shouldRenderSyncedLyrics || shouldRenderPlainLyrics) && (
         <div
-          className="player__synced-lyrics"
+          className={`player__synced-lyrics${shouldRenderSyncedLyrics ? '' : ' player__synced-lyrics--plain'}`}
           ref={lyricsContainerRef}
-          data-opacity-mode={lyricsOpacityMode}
-          data-platform={isIOSDevice ? 'ios' : 'default'}
+          data-opacity-mode={shouldRenderSyncedLyrics ? lyricsOpacityMode : undefined}
+          data-platform={shouldRenderSyncedLyrics ? (isIOSDevice ? 'ios' : 'default') : undefined}
         >
-          {syncedLyrics.map((line: SyncedLyricsLine, index: number) => {
-            const isActive = currentLineIndexComputed === index;
-            // Вычисляем расстояние от активной строки для градиента размытия
-            const distance =
-              currentLineIndexComputed !== null ? Math.abs(index - currentLineIndexComputed) : null;
+          {shouldRenderSyncedLyrics && syncedLyrics ? (
+            <>
+              {syncedLyrics.map((line: SyncedLyricsLine, index: number) => {
+                const isActive = currentLineIndexComputed === index;
+                const distance =
+                  currentLineIndexComputed !== null
+                    ? Math.abs(index - currentLineIndexComputed)
+                    : null;
 
-            // Определяем, нужно ли показывать троеточие перед этой строкой и вычисляем прогресс градиента
-            // Используем time.current напрямую для гарантированного обновления при клике на слайдер
-            const placeholderData = (() => {
-              const timeValue = time.current;
-              const firstLine = syncedLyrics[0];
+                const placeholderData = (() => {
+                  const timeValue = time.current;
+                  const firstLine = syncedLyrics[0];
 
-              // Перед первой строкой: если первая строка не начинается с 0 и время меньше startTime
-              // ВАЖНО: эта проверка должна быть первой и применяться только к первой строке (index === 0)
-              if (index === 0 && firstLine.startTime > 0) {
-                // Если время меньше startTime первой строки - показываем placeholder перед первой строкой
-                // Увеличиваем порог до 1 секунды, чтобы покрыть случаи, когда клик устанавливает небольшое время
-                if (timeValue < firstLine.startTime) {
-                  // Прогресс от 0 (начало) до 1 (конец промежутка)
-                  const normalizedTime = Math.max(0, timeValue); // Не позволяем отрицательным значениям
-                  const progress = Math.max(0, Math.min(1, normalizedTime / firstLine.startTime));
-                  return { show: true, progress };
-                }
-                // Если время >= startTime первой строки - не показываем placeholder перед первой строкой
-                return { show: false, progress: 0 };
-              }
-
-              // Между строками: если у предыдущей строки есть endTime и время между endTime и startTime текущей
-              // Увеличиваем погрешность до 0.5 секунды для корректной работы при перемотке и переключении треков
-              if (index > 0) {
-                const prevLine = syncedLyrics[index - 1];
-                if (prevLine.endTime !== undefined) {
-                  // ВАЖНО: если endTime предыдущей строки === startTime текущей, промежутка нет - не показываем заглушку
-                  if (prevLine.endTime === line.startTime) {
+                  if (index === 0 && firstLine.startTime > 0) {
+                    if (timeValue < firstLine.startTime) {
+                      const normalizedTime = Math.max(0, timeValue);
+                      const progress = Math.max(
+                        0,
+                        Math.min(1, normalizedTime / firstLine.startTime)
+                      );
+                      return { show: true, progress };
+                    }
                     return { show: false, progress: 0 };
                   }
 
-                  // Показываем placeholder если время в диапазоне [endTime - 0.5, startTime)
-                  if (timeValue >= prevLine.endTime - 0.5 && timeValue < line.startTime) {
-                    // Прогресс от 0 (начало промежутка) до 1 (конец промежутка)
-                    const intervalDuration = line.startTime - prevLine.endTime;
-                    const elapsed = Math.max(0, timeValue - prevLine.endTime);
-                    const progress =
-                      intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
-                    return { show: true, progress };
+                  if (index > 0) {
+                    const prevLine = syncedLyrics[index - 1];
+                    if (prevLine.endTime !== undefined) {
+                      if (prevLine.endTime === line.startTime) {
+                        return { show: false, progress: 0 };
+                      }
+
+                      if (timeValue >= prevLine.endTime - 0.5 && timeValue < line.startTime) {
+                        const intervalDuration = line.startTime - prevLine.endTime;
+                        const elapsed = Math.max(0, timeValue - prevLine.endTime);
+                        const progress =
+                          intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
+                        return { show: true, progress };
+                      }
+                    }
                   }
-                }
-              }
 
-              return { show: false, progress: 0 };
-            })();
+                  return { show: false, progress: 0 };
+                })();
 
-            return (
-              <React.Fragment key={`line-fragment-${index}`}>
-                {/* Троеточие перед строкой, если нужно */}
-                {placeholderData.show && (
+                return (
+                  <React.Fragment key={`line-fragment-${index}`}>
+                    {placeholderData.show && (
+                      <div
+                        key={`placeholder-${index}`}
+                        className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
+                        style={
+                          {
+                            '--placeholder-progress': placeholderData.progress,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <span className="player__lyrics-placeholder-dot" data-dot-index="0">
+                          ·
+                        </span>
+                        <span className="player__lyrics-placeholder-dot" data-dot-index="1">
+                          ·
+                        </span>
+                        <span className="player__lyrics-placeholder-dot" data-dot-index="2">
+                          ·
+                        </span>
+                      </div>
+                    )}
+
+                    <div
+                      key={index}
+                      ref={(el) => {
+                        if (el) {
+                          lineRefs.current.set(index, el);
+                        } else {
+                          lineRefs.current.delete(index);
+                        }
+                      }}
+                      className={`player__synced-lyrics-line ${isActive ? 'player__synced-lyrics-line--active' : ''} ${authorshipText && line.text === authorshipText ? 'player__synced-lyrics-line--authorship' : ''}`}
+                      data-distance={
+                        distance !== null && !isActive ? Math.min(distance, 10) : undefined
+                      }
+                      onClick={() => {
+                        handleLineClick(line.startTime);
+                        resetInactivityTimer();
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleLineClick(line.startTime);
+                          resetInactivityTimer();
+                        }
+                      }}
+                      aria-label={`Перемотать к ${line.text}`}
+                    >
+                      {authorshipText && line.text === authorshipText
+                        ? `Авторство: ${line.text}`
+                        : line.text}
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+
+              {(() => {
+                const timeValue = time.current;
+                const lastLine = syncedLyrics[syncedLyrics.length - 1];
+                const showPlaceholderAfter =
+                  lastLine.endTime !== undefined &&
+                  timeValue >= lastLine.endTime - 0.5 &&
+                  timeValue < time.duration;
+
+                if (!showPlaceholderAfter || lastLine.endTime === undefined) return null;
+
+                const intervalDuration = time.duration - lastLine.endTime;
+                const elapsed = Math.max(0, timeValue - lastLine.endTime);
+                const progress = intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
+
+                return (
                   <div
-                    key={`placeholder-${index}`}
+                    key="placeholder-after"
                     className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
                     style={
                       {
-                        '--placeholder-progress': placeholderData.progress,
+                        '--placeholder-progress': progress,
                       } as React.CSSProperties
                     }
                   >
@@ -2054,84 +2164,12 @@ export default function AudioPlayer({
                       ·
                     </span>
                   </div>
-                )}
-
-                {/* Сама строка текста */}
-                <div
-                  key={index}
-                  ref={(el) => {
-                    if (el) {
-                      lineRefs.current.set(index, el);
-                    } else {
-                      lineRefs.current.delete(index);
-                    }
-                  }}
-                  className={`player__synced-lyrics-line ${isActive ? 'player__synced-lyrics-line--active' : ''} ${authorshipText && line.text === authorshipText ? 'player__synced-lyrics-line--authorship' : ''}`}
-                  data-distance={
-                    distance !== null && !isActive ? Math.min(distance, 10) : undefined
-                  }
-                  onClick={() => {
-                    handleLineClick(line.startTime);
-                    resetInactivityTimer();
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleLineClick(line.startTime);
-                      resetInactivityTimer();
-                    }
-                  }}
-                  aria-label={`Перемотать к ${line.text}`}
-                >
-                  {authorshipText && line.text === authorshipText
-                    ? `Авторство: ${line.text}`
-                    : line.text}
-                </div>
-              </React.Fragment>
-            );
-          })}
-
-          {/* Троеточие после последней строки, если нужно */}
-          {(() => {
-            const timeValue = time.current;
-            const lastLine = syncedLyrics[syncedLyrics.length - 1];
-            // Увеличиваем погрешность до 0.5 секунды для корректной работы при перемотке и переключении треков
-            const showPlaceholderAfter =
-              lastLine.endTime !== undefined &&
-              timeValue >= lastLine.endTime - 0.5 &&
-              timeValue < time.duration;
-
-            if (!showPlaceholderAfter || lastLine.endTime === undefined) return null;
-
-            // Прогресс от 0 (начало промежутка после последней строки) до 1 (конец трека)
-            const intervalDuration = time.duration - lastLine.endTime;
-            const elapsed = Math.max(0, timeValue - lastLine.endTime);
-            const progress = intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
-
-            return (
-              <div
-                key="placeholder-after"
-                className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
-                style={
-                  {
-                    '--placeholder-progress': progress,
-                  } as React.CSSProperties
-                }
-              >
-                <span className="player__lyrics-placeholder-dot" data-dot-index="0">
-                  ·
-                </span>
-                <span className="player__lyrics-placeholder-dot" data-dot-index="1">
-                  ·
-                </span>
-                <span className="player__lyrics-placeholder-dot" data-dot-index="2">
-                  ·
-                </span>
-              </div>
-            );
-          })()}
+                );
+              })()}
+            </>
+          ) : (
+            <div className="player__plain-lyrics">{plainLyricsContent}</div>
+          )}
         </div>
       )}
 
