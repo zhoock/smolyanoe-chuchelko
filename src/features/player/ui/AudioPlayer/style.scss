@@ -752,6 +752,8 @@
     height: 100%; // Занимает всё доступное пространство в grid (1fr)
     min-height: 0; // Важно для корректной работы overflow в grid
     overflow-y: auto;
+    /* stylelint-disable-next-line declaration-block-no-redundant-longhand-properties */
+    overflow-x: hidden;
     padding-block-start: var(--ms-3);
     scroll-behavior: smooth; // Плавный скролл для десктопа
     touch-action: pan-y; // Разрешаем только вертикальные жесты
