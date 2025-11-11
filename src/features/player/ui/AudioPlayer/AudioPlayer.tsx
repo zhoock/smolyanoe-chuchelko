@@ -1063,6 +1063,7 @@ export default function AudioPlayer({
       prevTrackIdRef.current = null;
       userScrolledToEndRef.current = false;
       setControlsVisible(true);
+      showControls();
       return;
     }
 
@@ -1084,6 +1085,7 @@ export default function AudioPlayer({
     });
     // Сбрасываем флаг прокрутки до конца при смене трека
     userScrolledToEndRef.current = false;
+    showControls();
 
     // Проверяем только синхронизированный текст (караоке), не обычный content
     // Используем ту же логику, что и при загрузке синхронизированного текста
@@ -1099,7 +1101,7 @@ export default function AudioPlayer({
     if (!hasSyncedLyrics) {
       setShowLyrics(false);
     }
-  }, [currentTrack, albumId, lang]);
+  }, [currentTrack, albumId, lang, showControls]);
 
   // Определяем текущую строку на основе времени воспроизведения
   // Используем useMemo для синхронного вычисления при каждом изменении времени
