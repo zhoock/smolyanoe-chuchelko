@@ -234,20 +234,16 @@ const playerSlice = createSlice({
      * При выключении: восстанавливает оригинальный порядок и обновляет currentTrackIndex.
      */
     toggleShuffle(state) {
+      const currentTrack = state.playlist[state.currentTrackIndex];
+      const currentTrackId = currentTrack?.id;
+
       state.shuffle = !state.shuffle;
 
       if (state.shuffle) {
-        // Включаем shuffle: перемешиваем плейлист
-        // Сохраняем текущий трек перед перемешиванием
-        const currentTrack = state.playlist[state.currentTrackIndex];
-        const currentTrackId = currentTrack?.id;
+        const sourceList =
+          state.originalPlaylist.length > 0 ? state.originalPlaylist : state.playlist;
+        state.playlist = shufflePlaylist(sourceList);
 
-        // Перемешиваем плейлист
-        state.playlist = shufflePlaylist(
-          state.originalPlaylist.length > 0 ? state.originalPlaylist : state.playlist
-        );
-
-        // Если был текущий трек, находим его в перемешанном списке
         if (currentTrackId !== undefined && currentTrackId !== null) {
           const newIndex = findTrackIndexById(state.playlist, currentTrackId);
           if (newIndex !== -1) {
@@ -257,10 +253,6 @@ const playerSlice = createSlice({
       } else {
         // Выключаем shuffle: восстанавливаем оригинальный порядок
         // Сохраняем текущий трек перед восстановлением
-        const currentTrack = state.playlist[state.currentTrackIndex];
-        const currentTrackId = currentTrack?.id;
-
-        // Восстанавливаем оригинальный плейлист
         state.playlist = [...state.originalPlaylist];
 
         // Находим текущий трек в восстановленном плейлисте
@@ -326,13 +318,30 @@ const playerSlice = createSlice({
         controlsVisible,
       } = action.payload;
 
-      state.playlist = playlist ? [...playlist] : [];
-      state.originalPlaylist =
+      const resolvedOriginal =
         originalPlaylist && originalPlaylist.length > 0
           ? [...originalPlaylist]
-          : [...state.playlist];
+          : playlist && playlist.length > 0
+            ? [...playlist]
+            : [];
+      state.originalPlaylist = resolvedOriginal;
+
+      const resolvedPlaylist = shuffle
+        ? playlist && playlist.length > 0
+          ? [...playlist]
+          : [...resolvedOriginal]
+        : [...resolvedOriginal];
+      state.playlist = resolvedPlaylist;
+
       const maxIndex = state.playlist.length > 0 ? state.playlist.length - 1 : 0;
-      const normalizedIndex = Math.max(0, Math.min(currentTrackIndex ?? 0, maxIndex));
+      let normalizedIndex = Math.max(0, Math.min(currentTrackIndex ?? 0, maxIndex));
+      const targetTrack = playlist?.[currentTrackIndex ?? 0];
+      if (targetTrack) {
+        const actualIndex = state.playlist.findIndex((track) => track.id === targetTrack.id);
+        if (actualIndex >= 0) {
+          normalizedIndex = actualIndex;
+        }
+      }
       state.currentTrackIndex = normalizedIndex;
       state.albumId = albumId;
       state.albumTitle = albumTitle;

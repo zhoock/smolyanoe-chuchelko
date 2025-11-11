@@ -221,6 +221,17 @@ playerListenerMiddleware.startListening({
 });
 
 /**
+ * Слушатель для смены плейлиста.
+ * Когда диспатчится playerActions.setPlaylist(), сбрасывает прогресс и время трека.
+ */
+playerListenerMiddleware.startListening({
+  actionCreator: playerActions.setPlaylist,
+  effect: (_, api) => {
+    api.cancelActiveListeners();
+  },
+});
+
+/**
  * Привязывает события HTMLAudioElement к обновлениям Redux стейта.
  * Эта функция вызывается один раз при создании store.
  *

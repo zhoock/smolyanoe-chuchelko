@@ -12,7 +12,6 @@ interface ForwardHandlers {
   onMouseLeave: () => void;
   onTouchStart: (event: React.TouchEvent<HTMLButtonElement>) => void;
   onTouchEnd: (event: React.TouchEvent<HTMLButtonElement>) => void;
-  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 interface MiniPlayerProps {
@@ -106,7 +105,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           }}
           onClick={(event) => {
             event.stopPropagation();
-            forwardHandlers.onClick(event);
           }}
           aria-label="Следующий трек"
         />

@@ -35,6 +35,10 @@ interface PersistedPlayerState {
  */
 export function savePlayerState(state: PlayerState): void {
   try {
+    const safePlaylist = state.playlist ? JSON.parse(JSON.stringify(state.playlist)) : [];
+    const safeOriginalPlaylist = state.originalPlaylist
+      ? JSON.parse(JSON.stringify(state.originalPlaylist))
+      : [];
     const persistedState: PersistedPlayerState = {
       albumId: state.albumId,
       albumTitle: state.albumTitle,
@@ -43,8 +47,8 @@ export function savePlayerState(state: PlayerState): void {
       isPlaying: state.isPlaying,
       albumMeta: state.albumMeta ? { ...state.albumMeta } : null,
       sourceLocation: state.sourceLocation ? { ...state.sourceLocation } : null,
-      playlist: state.playlist ? [...state.playlist] : [],
-      originalPlaylist: state.originalPlaylist ? [...state.originalPlaylist] : [],
+      playlist: safePlaylist,
+      originalPlaylist: safeOriginalPlaylist,
       shuffle: state.shuffle,
       repeat: state.repeat,
       time: { ...state.time },

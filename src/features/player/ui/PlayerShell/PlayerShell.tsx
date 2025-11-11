@@ -370,18 +370,6 @@ export const PlayerShell: React.FC = () => {
     }, 150);
   }, [dispatch, handleNext, isPlaying]);
 
-  const handleFastForwardClick = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      if (shouldBlockTrackSwitchRef.current) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-      handleNext();
-    },
-    [handleNext]
-  );
-
   const forwardHandlers = useMemo(
     () => ({
       onMouseDown: (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -402,11 +390,8 @@ export const PlayerShell: React.FC = () => {
         event.preventDefault();
         handleFastForwardEnd();
       },
-      onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
-        handleFastForwardClick(event);
-      },
     }),
-    [handleFastForwardStart, handleFastForwardEnd, handleFastForwardClick]
+    [handleFastForwardStart, handleFastForwardEnd]
   );
 
   const handleExpand = useCallback(() => {
