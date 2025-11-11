@@ -5,6 +5,7 @@
  * Компонент получает данные из стейта через селекторы и диспатчит действия для управления плеером.
  */
 import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { flushSync } from 'react-dom';
 import { AlbumCover } from '@entities/album';
 import type { IAlbums, SyncedLyricsLine } from 'models';
@@ -59,6 +60,9 @@ export default function AudioPlayer({
 }) {
   // Получаем функцию для диспатча действий
   const dispatch = useAppDispatch();
+  const location = useLocation();
+  const isFullScreenPlayer = location.hash === '#player';
+  const [isLandscapeBlocked, setIsLandscapeBlocked] = useState(false);
 
   // Получаем все данные о плеере из Redux стейта через селекторы
   const isPlaying = useAppSelector(playerSelectors.selectIsPlaying); // играет ли трек
@@ -112,6 +116,42 @@ export default function AudioPlayer({
   useEffect(() => {
     controlsVisibleRef.current = controlsVisible;
   }, [controlsVisible]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (!isFullScreenPlayer) {
+      setIsLandscapeBlocked(false);
+      return;
+    }
+
+    const isTouchDevice = () =>
+      window.matchMedia ? window.matchMedia('(hover: none) and (pointer: coarse)').matches : false;
+
+    const updateOrientationState = () => {
+      if (!isFullScreenPlayer) {
+        setIsLandscapeBlocked(false);
+        return;
+      }
+
+      const { innerWidth: width, innerHeight: height } = window;
+      const isLandscape = width > height;
+
+      setIsLandscapeBlocked(isLandscape && isTouchDevice());
+    };
+
+    updateOrientationState();
+
+    window.addEventListener('resize', updateOrientationState);
+    window.addEventListener('orientationchange', updateOrientationState);
+
+    return () => {
+      window.removeEventListener('resize', updateOrientationState);
+      window.removeEventListener('orientationchange', updateOrientationState);
+    };
+  }, [isFullScreenPlayer]);
 
   useEffect(() => {
     trackDebug('init', {
@@ -1870,11 +1910,47 @@ export default function AudioPlayer({
     };
   }, [showLyrics, toggleLyrics, resetInactivityTimer]);
 
+  const playerClassName = [
+    'player',
+    showLyrics ? 'player--lyrics-visible' : '',
+    !controlsVisible ? 'player--controls-hidden' : '',
+    isLandscapeBlocked ? 'player--orientation-blocked' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div
-      ref={playerContainerRef}
-      className={`player ${showLyrics ? 'player--lyrics-visible' : ''} ${!controlsVisible ? 'player--controls-hidden' : ''}`}
-    >
+    <div ref={playerContainerRef} className={playerClassName}>
+      {isLandscapeBlocked && (
+        <div className="player__orientation-lock" role="alert" aria-live="assertive">
+          <div className="player__orientation-lock-content">
+            <svg
+              className="player__orientation-lock-icon"
+              width="72"
+              height="72"
+              viewBox="0 0 64 64"
+              role="img"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <g
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M32 10a22 22 0 1 0 22 22" />
+                <path d="M54 10h-12" />
+                <path d="M54 10v12" />
+              </g>
+            </svg>
+            <p className="player__orientation-lock-message">
+              Поверните устройство в портретный режим, чтобы продолжить прослушивание.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Обложка альбома и информация о треке */}
       <div className={coverWrapperClassName}>
         <div className={coverClassName.trim()} {...coverInteractiveProps}>

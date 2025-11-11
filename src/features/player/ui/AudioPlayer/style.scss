@@ -3,13 +3,23 @@
 @use '../../../../scss/abstracts/mixins' as *;
 
 .player {
+  --player-progress-row-size: auto;
+  --player-controls-row-size: auto;
+  --player-volume-row-size: auto;
+  --player-secondary-row-height: var(--ms-2);
+
   position: relative;
   display: grid;
   margin: 0 auto;
   padding: var(--ms-3) var(--ms-1) var(--ms-1);
   inline-size: min(100vi, 1000px);
   block-size: 100dvh;
-  grid-template-rows: repeat(4, auto);
+  grid-template:
+    'player-cover' auto
+    'player-progress' minmax(0, var(--player-progress-row-size))
+    'player-controls' minmax(0, var(--player-controls-row-size))
+    'player-volume' minmax(0, var(--player-volume-row-size))
+    'player-secondary' minmax(0, var(--player-secondary-row-height)) / 1fr;
   gap: var(--ms-0);
   align-items: center;
   text-align: center;
@@ -41,8 +51,53 @@
       rgb(0 0 0 / 30%) 0 18px 36px -18px;
   }
 
+  &__orientation-lock {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ms-2);
+    color: var(--white, #ffffff);
+    text-align: center;
+    background: rgb(5 5 5 / 70%);
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+    touch-action: none;
+    user-select: none;
+
+    &-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--ms-1);
+      max-inline-size: min(90vi, 320px);
+    }
+
+    &-icon {
+      inline-size: clamp(48px, 14vw, 72px);
+      block-size: auto;
+    }
+
+    &-message {
+      margin: 0;
+      font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
+      line-height: 1.4;
+    }
+  }
+
+  &--orientation-blocked {
+    overflow: hidden;
+
+    > *:not(.player__orientation-lock) {
+      pointer-events: none;
+    }
+  }
+
   &__controls {
     display: flex;
+    grid-area: player-controls;
     align-items: center;
     justify-content: space-around;
     gap: var(--ms-1);
@@ -145,6 +200,7 @@
     display: flex;
     gap: var(--ms-0);
     align-items: center;
+    grid-area: player-volume;
     max-height: 50px; // Фиксированная высота для анимации
     transition:
       max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
@@ -197,7 +253,10 @@
   }
 
   &__cover-wrapper {
-    display: contents;
+    display: grid;
+    grid-area: player-cover;
+    justify-items: center;
+    row-gap: var(--ms-0);
   }
 
   &__cover {
@@ -232,8 +291,9 @@
     justify-content: space-around;
     align-items: center;
     gap: var(--ms-1);
-    height: var(--ms-2); // Фиксированная высота (как у кнопок внутри)
-    max-height: var(--ms-2); // Для анимации max-height
+    grid-area: player-secondary;
+    height: var(--player-secondary-row-height); // Фиксированная высота (как у кнопок внутри)
+    max-height: var(--player-secondary-row-height); // Для анимации max-height
     transition:
       max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
       opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
@@ -262,6 +322,7 @@
 
   &__progress-container {
     position: relative;
+    grid-area: player-progress;
     max-height: 100px; // Фиксированная высота для анимации
     transition:
       max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
@@ -676,19 +737,13 @@
 
 // Когда текст виден - меняем вёрстку: обложка и информация о треке рядом
 .player--lyrics-visible {
-  grid-template-rows: auto 1fr auto auto auto;
-  grid-template-columns: 1fr;
-
-  // Когда контролы скрыты - блок текста расширяется на всю доступную высоту
-  // Используем только 2 ряда: обложка + информация (auto) и блок текста (1fr)
-  // Скрытые элементы (height: 0, margin: 0) не занимают место, grid автоматически перераспределяет пространство
-  &.player--controls-hidden {
-    // Убираем строки для скрытых контролов, оставляем только обложку и блок текста
-    grid-template-rows: auto 1fr;
-
-    // Элементы скрываются через свои --hidden классы с анимацией
-    // display: none убран, чтобы работала плавная анимация opacity/transform
-  }
+  grid-template:
+    'player-cover' auto
+    'player-lyrics' minmax(0, 1fr)
+    'player-progress' minmax(0, var(--player-progress-row-size))
+    'player-controls' minmax(0, var(--player-controls-row-size))
+    'player-volume' minmax(0, var(--player-volume-row-size))
+    'player-secondary' minmax(0, var(--player-secondary-row-height)) / 1fr;
 
   // Контейнер для обложки и информации о треке (flex row)
   .player__cover-wrapper--lyrics {
@@ -749,6 +804,7 @@
   // Элемент рендерится только когда showLyrics === true (внутри .player--lyrics-visible)
   .player__synced-lyrics {
     position: relative;
+    grid-area: player-lyrics;
     height: 100%; // Занимает всё доступное пространство в grid (1fr)
     min-height: 0; // Важно для корректной работы overflow в grid
     overflow-y: auto;
