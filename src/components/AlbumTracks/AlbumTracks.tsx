@@ -1,6 +1,6 @@
 // src/components/AlbumTracks/AlbumTracks.tsx
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { useStore } from 'react-redux';
 import type { AppStore, RootState } from '@app/providers/StoreProvider/config/store';
@@ -44,7 +44,7 @@ const TracksList = React.memo(function TracksList({
   activeIndex: number;
   location: ReturnType<typeof useLocation>;
   lang: string;
-  openPlayer: (index: number) => void;
+  openPlayer: (index: number, options?: { openFullScreen?: boolean }) => void;
   store: ReturnType<typeof useStore<RootState>>;
 }) {
   const [activeIndex, setActiveIndex] = React.useState(initialActiveIndex);
@@ -95,8 +95,21 @@ const TracksList = React.memo(function TracksList({
               'tracks__btn--playing': isPlayingNow,
             })}
             aria-label="Кнопка с названием песни"
-            aria-description={`Воспроизвести: ${track.title}`}
+            aria-description={
+              isPlayingNow
+                ? `Остановить воспроизведение: ${track.title}`
+                : `Воспроизвести: ${track.title}`
+            }
             onClick={() => {
+              if (isCurrentAlbum && isActive) {
+                if (isPlayingNow) {
+                  store.dispatch(playerActions.pause());
+                } else {
+                  store.dispatch(playerActions.play());
+                }
+                return;
+              }
+
               gaEvent('track_select', {
                 album_id: album?.albumId,
                 album_title: album?.album,
@@ -104,18 +117,22 @@ const TracksList = React.memo(function TracksList({
                 track_title: track.title,
                 lang,
               });
-              openPlayer(index);
+              openPlayer(index, { openFullScreen: false });
             }}
           >
-            {isPlayingNow ? (
-              <span className="tracks__equalizer" aria-hidden>
+            <span
+              className={clsx('tracks__symbol', { 'tracks__symbol--playing': isPlayingNow })}
+              aria-hidden
+            >
+              <span className="tracks__symbol-index">{index + 1}</span>
+              <span className="tracks__symbol-play icon-controller-play" />
+              <span className="tracks__symbol-equalizer">
                 <span />
                 <span />
                 <span />
               </span>
-            ) : (
-              <span className="tracks__index">{index + 1}</span>
-            )}
+              <span className="tracks__symbol-pause icon-controller-pause" />
+            </span>
             <span className="tracks__title">{track.title}</span>
             {track.duration != null && (
               <span className="tracks__duration">{formatDuration(track.duration)}</span>
@@ -165,6 +182,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const shouldBeOpen = location.hash === '#player';
@@ -300,7 +318,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   }, [store]);
 
   const openPlayer = useCallback(
-    (trackIndex: number) => {
+    (trackIndex: number, options?: { openFullScreen?: boolean }) => {
       // Вычисляем уникальный ID альбома для аналитики
       const albumId =
         album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
@@ -346,8 +364,21 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         })
       );
       dispatch(playerActions.requestPlay());
+
+      // Добавляем хеш #player к текущему маршруту, чтобы открыть полноэкранный плеер,
+      // при этом сохраняем исходную страницу в истории браузера
+      if (options?.openFullScreen !== false) {
+        navigate(
+          {
+            pathname: location.pathname,
+            search: location.search || undefined,
+            hash: '#player',
+          },
+          { replace: false }
+        );
+      }
     },
-    [dispatch, album, location.pathname, location.search]
+    [dispatch, album, location.pathname, location.search, navigate, store]
   );
 
   // Основной контент — принимает готовые строки UI (или дефолты)
@@ -378,7 +409,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
                   album_title: album?.album,
                   lang,
                 });
-                openPlayer(0);
+                openPlayer(0, { openFullScreen: false });
               }}
             >
               <span className="icon-controller-play"></span>

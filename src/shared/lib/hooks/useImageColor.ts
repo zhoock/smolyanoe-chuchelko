@@ -53,13 +53,26 @@ export function useImageColor(
     // Если нет, создаёт <script> и добавляет в document.body.
     // Если уже загружен, сразу вызывает extractColors.
     const loadScript = () => {
-      if (!document.querySelector('script[src*="color-thief"]')) {
+      const existingScript = document.querySelector('script[src*="color-thief"]');
+      if (!existingScript) {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js';
-        script.onload = extractColors;
+        script.onload = () => {
+          // Небольшая задержка для гарантии инициализации в мобильных браузерах
+          setTimeout(extractColors, 50);
+        };
+        script.onerror = () => {
+          console.error('Ошибка загрузки ColorThief скрипта');
+        };
         document.body.appendChild(script);
       } else if (window.ColorThief) {
-        extractColors();
+        // Если скрипт уже загружен, вызываем extractColors с небольшой задержкой
+        setTimeout(extractColors, 50);
+      } else {
+        // Скрипт есть в DOM, но еще не загружен - ждем события загрузки
+        existingScript.addEventListener('load', () => {
+          setTimeout(extractColors, 50);
+        });
       }
     };
 
@@ -81,6 +94,23 @@ export function useImageColor(
       // Извлечение цветов
       const getColors = () => {
         try {
+          // В мобильных браузерах img.complete может быть true, но изображение еще не готово
+          // Проверяем naturalWidth и naturalHeight для гарантии готовности
+          if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+            // Изображение еще не загружено полностью, ждем следующего события
+            if (!img.complete) {
+              img.onload = getColors;
+            } else {
+              // Если complete=true, но размеры 0, пробуем через небольшую задержку
+              setTimeout(() => {
+                if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                  getColors();
+                }
+              }, 100);
+            }
+            return;
+          }
+
           // Получает основной цвет.
           const dominantColor = colorThief.getColor(img);
           // Получает палитру из 10 цветов.
@@ -97,16 +127,31 @@ export function useImageColor(
           });
         } catch (error) {
           console.error('Ошибка при извлечении цветов:', error);
+          // При ошибке не добавляем в кеш, чтобы можно было повторить попытку
         }
       };
 
       // Обработка загрузки изображения.
-      // Если изображение уже загружено — сразу извлекает цвета.
-      // Если нет — ждёт onload и затем вызывает getColors.
-      if (img.complete) {
+      // Если изображение уже загружено — проверяем готовность и извлекаем цвета.
+      // Если нет — ждём onload и затем вызываем getColors.
+      if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        // Изображение полностью загружено и готово
         getColors();
       } else {
-        img.onload = getColors;
+        // Ждем загрузки изображения
+        const handleLoad = () => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          // Небольшая задержка для гарантии готовности в мобильных браузерах
+          setTimeout(getColors, 50);
+        };
+        const handleError = () => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          console.error('Ошибка загрузки изображения для извлечения цветов:', imgSrc);
+        };
+        img.addEventListener('load', handleLoad);
+        img.addEventListener('error', handleError);
       }
     };
 

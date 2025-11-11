@@ -27,6 +27,17 @@ const debugLog = (...args: any[]) => {
   }
 };
 
+const trackDebug = (label: string, data: Record<string, unknown> = {}) => {
+  const entry = { t: Date.now(), label, ...data };
+  if (typeof window !== 'undefined') {
+    (window as any).__playerDebug ??= [];
+    (window as any).__playerDebug.push(entry);
+  }
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[player-debug]', entry);
+  }
+};
+
 const formatTimerValue = (value: number): string => {
   if (!Number.isFinite(value)) {
     return '--:--';
@@ -87,6 +98,10 @@ export default function AudioPlayer({
   // Ref для отслеживания, прокрутил ли пользователь текст до конца
   const userScrolledToEndRef = useRef<boolean>(false);
   const suppressScrollHandlingUntilRef = useRef<number>(0);
+  const controlsVisibilityCooldownUntilRef = useRef<number>(0);
+  const lastResetTimestampRef = useRef<number>(0);
+  const lastMouseMoveTimestampRef = useRef<number>(0);
+  const ignoreActivityUntilRef = useRef<number>(0);
   // Состояние режима прозрачности текста: 'normal' | 'user-scrolling' | 'seeking'
   const [lyricsOpacityMode, setLyricsOpacityMode] = useState<
     'normal' | 'user-scrolling' | 'seeking'
@@ -97,6 +112,15 @@ export default function AudioPlayer({
   useEffect(() => {
     controlsVisibleRef.current = controlsVisible;
   }, [controlsVisible]);
+
+  useEffect(() => {
+    trackDebug('init', {
+      isCoarsePointerDevice:
+        typeof window !== 'undefined' && window.matchMedia
+          ? window.matchMedia('(hover: none) and (pointer: coarse)').matches
+          : null,
+    });
+  }, []);
 
   /**
    * Вычисляем уникальный ID альбома для аналитики и ключей.
@@ -469,31 +493,65 @@ export default function AudioPlayer({
   const scheduleControlsHide = useCallback(() => {
     if (isCoarsePointerDevice) {
       setControlsVisible(true);
+      controlsVisibleRef.current = true;
+      trackDebug('scheduleControlsHide:coarse');
       return;
     }
 
+    // Очищаем предыдущий таймер перед созданием нового
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
     }
+
     if (showLyrics && isPlaying) {
       inactivityTimerRef.current = setTimeout(() => {
-        suppressScrollHandlingUntilRef.current = Date.now() + 400;
-        controlsVisibleRef.current = false;
-        setControlsVisible(false);
+        // Проверяем, что состояние не изменилось за время ожидания
+        if (showLyrics && isPlaying && controlsVisibleRef.current) {
+          suppressScrollHandlingUntilRef.current = Date.now() + 400;
+          controlsVisibleRef.current = false;
+          setControlsVisible(false);
+          trackDebug('controls-hidden:timer', { showLyrics, isPlaying });
+        }
+        inactivityTimerRef.current = null;
       }, INACTIVITY_TIMEOUT);
+      trackDebug('scheduleControlsHide:set', {
+        showLyrics,
+        isPlaying,
+        timeout: INACTIVITY_TIMEOUT,
+      });
+    } else {
+      trackDebug('scheduleControlsHide:skip', { showLyrics, isPlaying });
     }
-  }, [showLyrics, isPlaying]);
+  }, [showLyrics, isPlaying, isCoarsePointerDevice]);
 
   const showControls = useCallback(() => {
-    suppressScrollHandlingUntilRef.current = Date.now() + 400;
-    setControlsVisible(true);
+    // Очищаем таймер скрытия при показе контроллеров
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+      trackDebug('showControls:clear-timer');
+    }
+
+    const now = Date.now();
+    suppressScrollHandlingUntilRef.current = now + 400;
     controlsVisibleRef.current = true;
+    setControlsVisible(true);
+    controlsVisibilityCooldownUntilRef.current = now + (isCoarsePointerDevice ? 900 : 400);
+    trackDebug('showControls', { now, cooldown: controlsVisibilityCooldownUntilRef.current });
     scheduleControlsHide();
   }, [scheduleControlsHide]);
 
   // Функция для сброса таймера бездействия и показа контролов
   // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
   const resetInactivityTimer = useCallback(() => {
+    const now = Date.now();
+    if (now - lastResetTimestampRef.current < 200) {
+      trackDebug('resetInactivityTimer:throttled', { delta: now - lastResetTimestampRef.current });
+      return;
+    }
+    lastResetTimestampRef.current = now;
+    trackDebug('resetInactivityTimer');
     showControls();
   }, [showControls]);
 
@@ -1163,30 +1221,45 @@ export default function AudioPlayer({
 
     const applyDirectionChange = (direction: 'up' | 'down') => {
       const now = Date.now();
+      if (now < controlsVisibilityCooldownUntilRef.current) {
+        trackDebug('applyDirectionChange:suppressed', { direction });
+        return;
+      }
       const isSeekProtectionActive = now < seekProtectionUntilRef.current;
       if (direction === 'down' && (isSeekingRef.current || isSeekProtectionActive)) {
+        trackDebug('applyDirectionChange:seek-suppressed', {
+          direction,
+          isSeeking: isSeekingRef.current,
+          isSeekProtectionActive,
+        });
         return;
       }
       if (direction === 'down') {
-        suppressScrollHandlingUntilRef.current = Date.now() + 400;
-        let didHide = false;
-        setControlsVisible((prev) => {
-          if (!prev) {
-            return prev;
-          }
-          didHide = true;
-          return false;
-        });
-        if (didHide) {
+        const suppressionWindow = isCoarsePointerDevice ? 1200 : 500;
+        suppressScrollHandlingUntilRef.current = now + suppressionWindow;
+        // Синхронизируем состояние: сначала обновляем ref, потом state
+        if (controlsVisibleRef.current) {
           controlsVisibleRef.current = false;
+          // Очищаем таймер перед скрытием
           if (inactivityTimerRef.current) {
             clearTimeout(inactivityTimerRef.current);
             inactivityTimerRef.current = null;
+            trackDebug('applyDirectionChange:clear-timer', { direction });
           }
+          setControlsVisible(false);
         }
+        controlsVisibilityCooldownUntilRef.current = now + suppressionWindow;
+        trackDebug('applyDirectionChange:down', { suppressionWindow });
       } else {
-        suppressScrollHandlingUntilRef.current = Date.now() + 400;
+        suppressScrollHandlingUntilRef.current = now + 400;
+        // Синхронизируем состояние: сначала обновляем ref, потом state
+        if (!controlsVisibleRef.current) {
+          controlsVisibleRef.current = true;
+          setControlsVisible(true);
+        }
         showControls();
+        controlsVisibilityCooldownUntilRef.current = now + 400;
+        trackDebug('applyDirectionChange:up');
       }
     };
 
@@ -1202,6 +1275,11 @@ export default function AudioPlayer({
         return;
       }
       debugLog('✅ Manual scroll detected!');
+      trackDebug('scroll:manual', { currentScrollTop });
+
+      if (isCoarsePointerDevice) {
+        resetInactivityTimer();
+      }
 
       // Отменяем любую активную анимацию скролла при ручной прокрутке
       if (smoothScrollAnimationRef.current !== null) {
@@ -1236,7 +1314,7 @@ export default function AudioPlayer({
         return 'user-scrolling';
       });
 
-      if (Math.abs(scrollDelta) > IMMEDIATE_DIRECTION_THRESHOLD) {
+      if (!isCoarsePointerDevice && Math.abs(scrollDelta) > IMMEDIATE_DIRECTION_THRESHOLD) {
         const direction = scrollDelta > 0 ? 'down' : 'up';
         let shouldReactImmediately =
           lastScrollDirectionRef.current !== direction ||
@@ -1274,7 +1352,7 @@ export default function AudioPlayer({
         const finalDistanceFromBottom = Math.max(0, scrollHeight - clientHeight - finalScrollTop);
         const finalIsNearStickyEnd = finalDistanceFromBottom <= STICKY_END_THRESHOLD;
 
-        if (Math.abs(totalDelta) > 30) {
+        if (!isCoarsePointerDevice && Math.abs(totalDelta) > 30) {
           if (isSeekingRef.current && totalDelta > 0) {
             scrollStartPosition = finalScrollTop;
             directionTimeout = null;
@@ -1292,6 +1370,11 @@ export default function AudioPlayer({
           if (shouldReactFinal) {
             applyDirectionChange(finalDirection);
             lastScrollDirectionRef.current = finalDirection;
+            trackDebug('scroll:direction-final', {
+              direction: finalDirection,
+              totalDelta,
+              finalDistanceFromBottom,
+            });
           }
         }
 
@@ -1561,7 +1644,14 @@ export default function AudioPlayer({
 
   // Переключатель показа/скрытия текста
   const toggleLyrics = useCallback(() => {
-    setShowLyrics((prev) => !prev);
+    trackDebug('toggleLyrics');
+    setShowLyrics((prev) => {
+      const next = !prev;
+      trackDebug('toggleLyrics:result', { next });
+      suppressScrollHandlingUntilRef.current = Date.now() + 1200;
+      ignoreActivityUntilRef.current = Date.now() + 600;
+      return next;
+    });
   }, []);
 
   // Переключатель режима перемешивания треков
@@ -1673,9 +1763,28 @@ export default function AudioPlayer({
     // Обработчики для различных типов активности
     const handleActivity = (event: Event) => {
       const eventType = event.type;
+      const now = Date.now();
+
+      if (now < ignoreActivityUntilRef.current) {
+        trackDebug('activity:ignored', { eventType, reason: 'cooldown' });
+        return;
+      }
+
+      if (eventType === 'mousemove') {
+        if (isCoarsePointerDevice) {
+          return;
+        }
+        if (now - lastMouseMoveTimestampRef.current < 400) {
+          return;
+        }
+        lastMouseMoveTimestampRef.current = now;
+      }
+
       if ((eventType === 'mousemove' || eventType === 'touchmove') && !controlsVisibleRef.current) {
         return;
       }
+
+      trackDebug('activity:processed', { eventType });
       resetInactivityTimer();
     };
 
@@ -1729,49 +1838,6 @@ export default function AudioPlayer({
       setCurrentLineIndex(null);
     }
   }, [showLyrics]);
-
-  useEffect(() => {
-    const container = playerContainerRef.current;
-    if (!container) return;
-
-    // Обработчики для различных типов активности
-    const handleActivity = (event: Event) => {
-      const eventType = event.type;
-      if ((eventType === 'mousemove' || eventType === 'touchmove') && !controlsVisibleRef.current) {
-        return;
-      }
-      resetInactivityTimer();
-    };
-
-    // Добавляем обработчики событий только если режим текста включен
-    if (showLyrics) {
-      container.addEventListener('mousemove', handleActivity, { passive: true });
-      container.addEventListener('mousedown', handleActivity, { passive: true });
-      if (!isCoarsePointerDevice) {
-        container.addEventListener('touchstart', handleActivity, { passive: true });
-        container.addEventListener('touchmove', handleActivity, { passive: true });
-      }
-      document.addEventListener('keydown', handleActivity, { passive: true });
-
-      // Инициализируем таймер только если трек играет
-      if (isPlaying) {
-        resetInactivityTimer();
-      }
-    }
-
-    return () => {
-      container.removeEventListener('mousemove', handleActivity);
-      container.removeEventListener('mousedown', handleActivity);
-      if (!isCoarsePointerDevice) {
-        container.removeEventListener('touchstart', handleActivity);
-        container.removeEventListener('touchmove', handleActivity);
-      }
-      document.removeEventListener('keydown', handleActivity);
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-    };
-  }, [resetInactivityTimer, showLyrics, isPlaying, isCoarsePointerDevice]);
 
   const coverWrapperClassName = `player__cover-wrapper${showLyrics ? ' player__cover-wrapper--lyrics' : ''}`;
   const coverClassName = `player__cover ${coverAnimationClass}${showLyrics ? ' player__cover--clickable' : ''}`;
@@ -2131,10 +2197,12 @@ export default function AudioPlayer({
             resetInactivityTimer();
           }}
           disabled={!hasTextToShow}
-          className={`player__lyrics-toggle icon-quote ${showLyrics ? 'player__lyrics-toggle--active' : ''}`}
+          className={`player__lyrics-toggle ${showLyrics ? 'player__lyrics-toggle--active' : ''}`}
           aria-label={showLyrics ? 'Скрыть текст' : 'Показать текст'}
           aria-disabled={!hasTextToShow}
-        />
+        >
+          <span className="player__lyrics-toggle-icon icon-quote"></span>
+        </button>
       </div>
 
       {/* Невидимый контейнер для прикрепления audio элемента к DOM */}

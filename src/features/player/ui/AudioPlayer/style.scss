@@ -228,8 +228,8 @@
   }
 
   &__secondary-controls {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    justify-content: space-around;
     align-items: center;
     gap: var(--ms-1);
     height: var(--ms-2); // Фиксированная высота (как у кнопок внутри)
@@ -344,15 +344,10 @@
 
   &__control-button,
   &__lyrics-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: var(--ms-2);
-
     @include button-variant(
-      $color: var(--white, #ffffff),
-      $background: rgb(var(--white-rgb) / 15%),
-      $hover-background: rgb(var(--white-rgb) / 20%),
+      $color: #dddddd80,
+      $background: none,
+      $hover-background: none,
       $margin: 0,
       $padding: 0
     );
@@ -360,34 +355,21 @@
     @media (hover: hover) and (pointer: fine) {
       &:hover {
         scale: 1.05;
-        color: var(--graphite-green, #373633);
+        color: var(--white, #ffffff);
       }
 
       &:active {
         scale: 0.9;
-        color: var(--graphite-green, #373633);
+        color: var(--white, #ffffff);
       }
     }
 
     &-icon {
       font-size: var(--ms-1);
-      font-weight: 400 !important;
     }
-  }
 
-  // Активное состояние только для control-button
-  &__control-button {
     &--active {
-      color: var(--graphite-green, #373633);
-      background: rgb(var(--white-rgb) / 50%);
-    }
-  }
-
-  // Активное состояние для lyrics-toggle
-  &__lyrics-toggle {
-    &--active {
-      color: var(--graphite-green, #373633);
-      background: rgb(var(--white-rgb) / 50%);
+      color: var(--white, #ffffff);
     }
   }
 }

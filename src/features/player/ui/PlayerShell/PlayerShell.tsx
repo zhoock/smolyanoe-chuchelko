@@ -290,30 +290,40 @@ export const PlayerShell: React.FC = () => {
   );
 
   const handleExpand = useCallback(() => {
-    const target = sourceLocation ?? {
+    const currentLocation = {
       pathname: location.pathname,
       search: location.search || undefined,
     };
 
+    dispatch(playerActions.setSourceLocation(currentLocation));
+
     navigate(
       {
-        pathname: target.pathname,
-        search: target.search,
+        pathname: currentLocation.pathname,
+        search: currentLocation.search,
         hash: '#player',
       },
       { replace: false }
     );
-  }, [navigate, sourceLocation, location.pathname, location.search]);
+  }, [dispatch, navigate, location.pathname, location.search]);
 
   const handleClose = useCallback(() => {
-    navigate(
-      {
-        pathname: sourceLocation?.pathname ?? location.pathname,
-        search: sourceLocation?.search ?? location.search,
-      },
-      { replace: true }
-    );
-  }, [navigate, sourceLocation, location.pathname, location.search]);
+    // Используем sourceLocation для возврата на исходную страницу
+    // Если sourceLocation установлен, возвращаемся на него
+    // Иначе используем navigate(-1) как fallback
+    if (sourceLocation) {
+      navigate(
+        {
+          pathname: sourceLocation.pathname,
+          search: sourceLocation.search,
+        },
+        { replace: true }
+      );
+    } else {
+      // Fallback: возвращаемся назад в истории браузера
+      navigate(-1);
+    }
+  }, [navigate, sourceLocation]);
 
   useEffect(() => {
     if ((!albumMeta || playlist.length === 0) && isPlaying) {

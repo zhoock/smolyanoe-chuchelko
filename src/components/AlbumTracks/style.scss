@@ -46,6 +46,7 @@
 
     &__btn {
       /* обычные декларации — до миксина */
+      position: relative;
       display: flex;
       text-align: inherit;
       white-space: nowrap;
@@ -70,22 +71,63 @@
         border-block-end: 1px solid var(--hr-color, #3d3c3a);
       }
 
-      .tracks__index {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      .tracks__symbol {
+        position: relative;
+        display: grid;
+        place-items: center;
         inline-size: var(--ms-0);
-        filter: brightness(70%);
+        min-inline-size: var(--ms-0);
         flex-shrink: 0;
+        transition: color 0.2s ease;
+
+        & > * {
+          grid-area: 1 / 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
       }
 
-      .tracks__equalizer {
+      .tracks__symbol-index {
+        filter: brightness(70%);
+        transition:
+          opacity 0.2s ease,
+          transform 0.2s ease,
+          filter 0.2s ease;
+      }
+
+      .tracks__symbol-play {
+        display: inline-flex;
+        font-size: 0.95rem;
+        opacity: 0;
+        transition:
+          opacity 0.2s ease,
+          transform 0.2s ease;
+        transform: scale(0.8);
+      }
+
+      .tracks__symbol-pause {
+        display: inline-flex;
+        font-size: 1rem;
+        opacity: 0;
+        transition:
+          opacity 0.2s ease,
+          transform 0.2s ease;
+        transform: scale(0.8);
+      }
+
+      .tracks__symbol-equalizer {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 2px;
-        inline-size: var(--ms-0);
-        flex-shrink: 0;
+        inline-size: 0.85rem;
+        block-size: 0.9rem;
+        opacity: 0;
+        transition:
+          opacity 0.2s ease,
+          transform 0.2s ease;
+        transform: scale(0.75);
 
         span {
           display: inline-block;
@@ -130,8 +172,15 @@
           border-block-start-color: var(--button-background-color-hover, #998238);
           border-block-end-color: var(--button-background-color-hover, #998238);
 
-          .tracks__index {
+          .tracks__symbol-index {
+            opacity: 0;
             filter: brightness(100%);
+            transform: scale(0.7);
+          }
+
+          .tracks__symbol-play {
+            opacity: 1;
+            transform: scale(1);
           }
 
           .tracks__duration {
@@ -148,8 +197,33 @@
         color: var(--link-color-hover, #ffffff);
         background: rgb(255 255 255 / 6%);
 
+        .tracks__symbol-index,
+        .tracks__symbol-play {
+          display: none;
+        }
+
+        .tracks__symbol-equalizer {
+          opacity: 1;
+          transform: scale(1);
+        }
+
         .tracks__duration {
           color: var(--link-color-hover, #ffffff);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          &:hover,
+          &:focus-visible {
+            .tracks__symbol-equalizer {
+              opacity: 0;
+              transform: scale(0.75);
+            }
+
+            .tracks__symbol-pause {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
         }
       }
     }
