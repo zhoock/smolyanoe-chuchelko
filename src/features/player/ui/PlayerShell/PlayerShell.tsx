@@ -1,6 +1,7 @@
 // src/features/player/ui/PlayerShell/PlayerShell.tsx
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useStore } from 'react-redux';
 import type { IAlbums } from 'models';
 
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -11,6 +12,8 @@ import * as playerSelectors from '../../model/selectors/playerSelectors';
 import { audioController } from '../../model/lib/audioController';
 import { MiniPlayer } from './MiniPlayer';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
+import type { RootState } from '@app/providers/StoreProvider/config/store';
+import { loadPlayerState } from '../../model/lib/playerPersist';
 
 const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';
 const DEFAULT_BOTTOM_OFFSET = 24;
@@ -19,6 +22,7 @@ export const PlayerShell: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const navigate = useNavigate();
+  const store = useStore<RootState>();
 
   const albumMeta = useAppSelector(playerSelectors.selectAlbumMeta);
   const playlist = useAppSelector(playerSelectors.selectPlaylist);
@@ -46,6 +50,80 @@ export const PlayerShell: React.FC = () => {
   const timeRef = useRef(time);
   const isSeekingRef = useRef(isSeeking);
   const seekProtectionUntilRef = useRef<number>(0);
+  const hasHydratedFromStorageRef = useRef(false);
+
+  useEffect(() => {
+    if (hasHydratedFromStorageRef.current) {
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (location.hash !== '#player') {
+      return;
+    }
+
+    const currentState = store.getState().player;
+    if (
+      currentState.playlist.length > 0 &&
+      currentState.albumMeta &&
+      currentState.albumMeta.albumId
+    ) {
+      hasHydratedFromStorageRef.current = true;
+      return;
+    }
+
+    const savedState = loadPlayerState();
+    if (!savedState || !Array.isArray(savedState.playlist) || savedState.playlist.length === 0) {
+      hasHydratedFromStorageRef.current = true;
+      return;
+    }
+
+    const playlist = savedState.playlist;
+    const originalPlaylist =
+      Array.isArray(savedState.originalPlaylist) && savedState.originalPlaylist.length > 0
+        ? savedState.originalPlaylist
+        : playlist;
+    const safeIndex = Math.max(0, Math.min(savedState.currentTrackIndex ?? 0, playlist.length - 1));
+
+    hasHydratedFromStorageRef.current = true;
+
+    const fallbackSourceLocation = {
+      pathname: location.pathname,
+      search: location.search || undefined,
+    };
+
+    dispatch(
+      playerActions.hydrateFromPersistedState({
+        playlist,
+        originalPlaylist,
+        currentTrackIndex: safeIndex,
+        albumId: savedState.albumId ?? null,
+        albumTitle:
+          savedState.albumTitle ??
+          savedState.albumMeta?.album ??
+          savedState.albumMeta?.fullName ??
+          null,
+        albumMeta: savedState.albumMeta ?? null,
+        sourceLocation: savedState.sourceLocation ?? fallbackSourceLocation,
+        volume: savedState.volume ?? 50,
+        isPlaying: savedState.isPlaying ?? false,
+        shuffle: savedState.shuffle ?? false,
+        repeat: savedState.repeat ?? 'none',
+      })
+    );
+
+    dispatch(playerActions.setVolume(savedState.volume ?? 50));
+    dispatch(playerActions.setCurrentTrackIndex(safeIndex));
+
+    if (savedState.isPlaying) {
+      dispatch(playerActions.play());
+    } else {
+      dispatch(playerActions.pause());
+    }
+  }, [dispatch, location.hash, location.pathname, location.search, store]);
 
   useEffect(() => {
     if (albumMeta) {

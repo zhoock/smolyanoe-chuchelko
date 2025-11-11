@@ -284,6 +284,56 @@ const playerSlice = createSlice({
         state.repeat = 'none';
       }
     },
+    hydrateFromPersistedState(
+      state,
+      action: PayloadAction<{
+        playlist: TracksProps[];
+        originalPlaylist?: TracksProps[];
+        currentTrackIndex: number;
+        albumId: string | null;
+        albumTitle: string | null;
+        albumMeta: PlayerAlbumMeta | null;
+        sourceLocation: PlayerSourceLocation | null;
+        volume: number;
+        isPlaying: boolean;
+        shuffle?: boolean;
+        repeat?: PlayerState['repeat'];
+      }>
+    ) {
+      const {
+        playlist,
+        originalPlaylist,
+        currentTrackIndex,
+        albumId,
+        albumTitle,
+        albumMeta,
+        sourceLocation,
+        volume,
+        isPlaying,
+        shuffle,
+        repeat,
+      } = action.payload;
+
+      state.playlist = playlist ? [...playlist] : [];
+      state.originalPlaylist =
+        originalPlaylist && originalPlaylist.length > 0
+          ? [...originalPlaylist]
+          : [...state.playlist];
+      const maxIndex = state.playlist.length > 0 ? state.playlist.length - 1 : 0;
+      const normalizedIndex = Math.max(0, Math.min(currentTrackIndex ?? 0, maxIndex));
+      state.currentTrackIndex = normalizedIndex;
+      state.albumId = albumId;
+      state.albumTitle = albumTitle;
+      state.albumMeta = albumMeta ?? null;
+      state.sourceLocation = sourceLocation ?? null;
+      state.volume = Math.max(0, Math.min(100, volume ?? state.volume));
+      state.isPlaying = !!isPlaying;
+      state.shuffle = shuffle ?? false;
+      state.repeat = repeat ?? 'none';
+      state.progress = 0;
+      state.time = { current: 0, duration: NaN };
+      state.isSeeking = false;
+    },
   },
 });
 

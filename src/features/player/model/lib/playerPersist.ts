@@ -4,6 +4,7 @@
  */
 
 import type { PlayerState } from '../types/playerSchema';
+import type { TracksProps } from '../../../../models';
 
 const STORAGE_KEY = 'playerState';
 
@@ -19,6 +20,10 @@ interface PersistedPlayerState {
   isPlaying: boolean;
   albumMeta?: PlayerState['albumMeta'];
   sourceLocation?: PlayerState['sourceLocation'];
+  playlist?: TracksProps[];
+  originalPlaylist?: TracksProps[];
+  shuffle?: boolean;
+  repeat?: PlayerState['repeat'];
 }
 
 /**
@@ -35,6 +40,10 @@ export function savePlayerState(state: PlayerState): void {
       isPlaying: state.isPlaying,
       albumMeta: state.albumMeta ? { ...state.albumMeta } : null,
       sourceLocation: state.sourceLocation ? { ...state.sourceLocation } : null,
+      playlist: state.playlist ? [...state.playlist] : [],
+      originalPlaylist: state.originalPlaylist ? [...state.originalPlaylist] : [],
+      shuffle: state.shuffle,
+      repeat: state.repeat,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
   } catch (error) {
@@ -67,7 +76,19 @@ export function loadPlayerState(): PersistedPlayerState | null {
       return null;
     }
 
-    return parsed;
+    const playlist = Array.isArray(parsed.playlist) ? parsed.playlist : [];
+    const originalPlaylist = Array.isArray(parsed.originalPlaylist) ? parsed.originalPlaylist : [];
+
+    return {
+      ...parsed,
+      playlist,
+      originalPlaylist,
+      shuffle: typeof parsed.shuffle === 'boolean' ? parsed.shuffle : false,
+      repeat:
+        parsed.repeat === 'one' || parsed.repeat === 'all' || parsed.repeat === 'none'
+          ? parsed.repeat
+          : 'none',
+    };
   } catch (error) {
     console.warn('Failed to load player state from localStorage:', error);
     return null;
