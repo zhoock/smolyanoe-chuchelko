@@ -26,9 +26,12 @@ class AudioController {
    * Устанавливает источник аудио (URL трека) и загружает его.
    * @param src - путь к аудиофайлу
    */
-  setSource(src: string | undefined) {
+  setSource(src: string | undefined, autoplay: boolean = true) {
     this.audio.src = src || '';
     this.audio.load();
+    if (!autoplay) {
+      this.audio.pause();
+    }
   }
 
   /**

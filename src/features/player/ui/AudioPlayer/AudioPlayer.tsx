@@ -85,7 +85,25 @@ export default function AudioPlayer({
   const [syncedLyrics, setSyncedLyrics] = useState<SyncedLyricsLine[] | null>(null);
   const [authorshipText, setAuthorshipText] = useState<string | null>(null); // текст авторства
   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
-  const [showLyrics, setShowLyrics] = useState(false); // показывать ли текст песни
+  const globalShowLyrics = useAppSelector(playerSelectors.selectShowLyrics);
+  const globalControlsVisible = useAppSelector(playerSelectors.selectControlsVisible);
+  const [controlsVisible, setControlsVisible] = useState<boolean>(globalControlsVisible);
+  const [showLyrics, setShowLyrics] = useState<boolean>(() => globalShowLyrics); // показывать ли текст песни
+
+  const showLyricsRef = useRef(showLyrics);
+  const controlsVisibleRef = useRef<boolean>(true);
+  useEffect(() => {
+    controlsVisibleRef.current = controlsVisible;
+    dispatch(playerActions.setControlsVisible(controlsVisible));
+  }, [controlsVisible]);
+
+  useEffect(() => {
+    setShowLyrics(globalShowLyrics);
+  }, [globalShowLyrics]);
+
+  useEffect(() => {
+    setControlsVisible(globalControlsVisible);
+  }, [globalControlsVisible]);
 
   // Refs для автоскролла синхронизированного текста
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
@@ -110,12 +128,6 @@ export default function AudioPlayer({
   const [lyricsOpacityMode, setLyricsOpacityMode] = useState<
     'normal' | 'user-scrolling' | 'seeking'
   >('normal');
-  // Состояние видимости контролов плеера (скрываются после 5 секунд бездействия)
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const controlsVisibleRef = useRef<boolean>(true);
-  useEffect(() => {
-    controlsVisibleRef.current = controlsVisible;
-  }, [controlsVisible]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -581,6 +593,12 @@ export default function AudioPlayer({
     trackDebug('showControls', { now, cooldown: controlsVisibilityCooldownUntilRef.current });
     scheduleControlsHide();
   }, [scheduleControlsHide]);
+
+  useEffect(() => {
+    controlsVisibleRef.current = true;
+    setControlsVisible(true);
+    showControls();
+  }, [globalShowLyrics, showControls]);
 
   // Функция для сброса таймера бездействия и показа контролов
   // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
@@ -1119,7 +1137,7 @@ export default function AudioPlayer({
     // Обновляем ref для следующей проверки
     prevTrackIdRef.current = currentTrackId;
     // Сбрасываем режим прозрачности при смене трека
-    setLyricsOpacityMode((prevMode) => {
+    setLyricsOpacityMode((prevMode: typeof lyricsOpacityMode) => {
       debugLog('🔍 Track changed, resetting opacity mode from:', prevMode);
       return 'normal';
     });
@@ -1710,6 +1728,7 @@ export default function AudioPlayer({
       trackDebug('toggleLyrics:result', { next });
       suppressScrollHandlingUntilRef.current = Date.now() + 1200;
       ignoreActivityUntilRef.current = Date.now() + 600;
+      dispatch(playerActions.setShowLyrics(next));
       return next;
     });
   }, []);
@@ -2168,7 +2187,7 @@ export default function AudioPlayer({
               })()}
             </>
           ) : (
-            <div className="player__plain-lyrics">{plainLyricsContent}</div>
+            <div className="player__plain-lyrics">{plainLyricsContent ?? ''}</div>
           )}
         </div>
       )}

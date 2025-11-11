@@ -43,6 +43,8 @@ export interface PlayerState {
   sourceLocation: PlayerSourceLocation | null; // маршрут, где был открыт плеер
   shuffle: boolean; // перемешивание треков включено/выключено
   repeat: 'none' | 'all' | 'one'; // режим зацикливания: 'none' - без зацикливания, 'all' - зацикливание плейлиста, 'one' - зацикливание одного трека
+  showLyrics: boolean; // отображается ли текст песни
+  controlsVisible: boolean; // отображаются ли контролы
 }
 
 /**
@@ -65,4 +67,6 @@ export const initialPlayerState: PlayerState = {
   sourceLocation: null,
   shuffle: false, // перемешивание выключено по умолчанию
   repeat: 'none', // зацикливание выключено по умолчанию
+  showLyrics: false,
+  controlsVisible: true,
 };

@@ -24,6 +24,9 @@ interface PersistedPlayerState {
   originalPlaylist?: TracksProps[];
   shuffle?: boolean;
   repeat?: PlayerState['repeat'];
+  time?: PlayerState['time'];
+  showLyrics?: boolean;
+  controlsVisible?: boolean;
 }
 
 /**
@@ -44,6 +47,9 @@ export function savePlayerState(state: PlayerState): void {
       originalPlaylist: state.originalPlaylist ? [...state.originalPlaylist] : [],
       shuffle: state.shuffle,
       repeat: state.repeat,
+      time: { ...state.time },
+      showLyrics: state.showLyrics,
+      controlsVisible: state.controlsVisible,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
   } catch (error) {
@@ -88,6 +94,15 @@ export function loadPlayerState(): PersistedPlayerState | null {
         parsed.repeat === 'one' || parsed.repeat === 'all' || parsed.repeat === 'none'
           ? parsed.repeat
           : 'none',
+      time:
+        parsed.time && typeof parsed.time === 'object'
+          ? {
+              current: Number.isFinite(parsed.time.current) ? parsed.time.current : 0,
+              duration: Number.isFinite(parsed.time.duration) ? parsed.time.duration : NaN,
+            }
+          : { current: 0, duration: NaN },
+      showLyrics: typeof parsed.showLyrics === 'boolean' ? parsed.showLyrics : false,
+      controlsVisible: typeof parsed.controlsVisible === 'boolean' ? parsed.controlsVisible : true,
     };
   } catch (error) {
     console.warn('Failed to load player state from localStorage:', error);

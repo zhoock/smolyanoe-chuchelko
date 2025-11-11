@@ -17,12 +17,13 @@ export const playerListenerMiddleware = createListenerMiddleware<RootState, AppD
  * Вспомогательная функция: устанавливает громкость и запускает воспроизведение.
  * Игнорирует ошибки autoplay (когда браузер блокирует автозапуск).
  */
-const tryPlayWithVolume = async (volume: number): Promise<void> => {
+const tryPlayWithVolume = async (volume: number): Promise<boolean> => {
   audioController.setVolume(volume);
   try {
     await audioController.play();
+    return true;
   } catch {
-    // ignore autoplay errors
+    return false;
   }
 };
 
@@ -43,7 +44,10 @@ playerListenerMiddleware.startListening({
   actionCreator: playerActions.play,
   effect: async (_, api) => {
     const state = api.getState();
-    await tryPlayWithVolume(state.player.volume);
+    const played = await tryPlayWithVolume(state.player.volume);
+    if (!played) {
+      api.dispatch(playerActions.pause());
+    }
   },
 });
 
@@ -67,7 +71,10 @@ playerListenerMiddleware.startListening({
   effect: async (_, api) => {
     const state = api.getState();
     if (state.player.isPlaying) {
-      await tryPlayWithVolume(state.player.volume);
+      const played = await tryPlayWithVolume(state.player.volume);
+      if (!played) {
+        api.dispatch(playerActions.pause());
+      }
     } else {
       audioController.pause();
     }
@@ -107,7 +114,7 @@ playerListenerMiddleware.startListening({
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
     resetProgress(api);
-    audioController.setSource(track?.src);
+    audioController.setSource(track?.src, state.player.isPlaying);
   },
 });
 
@@ -140,10 +147,13 @@ playerListenerMiddleware.startListening({
 
     resetProgress(api);
     audioController.pause();
-    audioController.setSource(trackSrc);
+    audioController.setSource(trackSrc, wasPlaying);
 
     if (wasPlaying) {
-      await tryPlayWithVolume(volume);
+      const played = await tryPlayWithVolume(volume);
+      if (!played) {
+        api.dispatch(playerActions.pause());
+      }
     }
   },
 });
@@ -164,7 +174,7 @@ playerListenerMiddleware.startListening({
     // Убеждаемся что источник установлен (если еще не установлен)
     const el = audioController.element;
     if (el.src !== track.src) {
-      audioController.setSource(track.src);
+      audioController.setSource(track.src, true);
     }
 
     // Ждём загрузки метаданных если они еще не загружены
@@ -309,8 +319,31 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
    * Сбрасываем время и прогресс, чтобы UI показал начало трека.
    */
   loadedmetadataHandler = () => {
-    dispatch(playerActions.setTime({ current: 0, duration: el.duration }));
-    dispatch(playerActions.setProgress(0));
+    const state = getState().player;
+    const persistedTime = state.time?.current ?? 0;
+    const duration = el.duration;
+    const hasDuration = Number.isFinite(duration) && duration > 0;
+    const shouldRestorePosition =
+      Number.isFinite(persistedTime) && persistedTime > 0 && hasDuration;
+    const restoredCurrent = shouldRestorePosition ? Math.min(persistedTime, duration) : 0;
+
+    dispatch(
+      playerActions.setTime({
+        current: restoredCurrent,
+        duration,
+      })
+    );
+    dispatch(
+      playerActions.setProgress(
+        shouldRestorePosition && hasDuration
+          ? Math.min(100, Math.max(0, (restoredCurrent / duration) * 100))
+          : 0
+      )
+    );
+
+    if (shouldRestorePosition) {
+      audioController.setCurrentTime(restoredCurrent);
+    }
     // Сбрасываем ключ для audio_start, чтобы событие отправилось для нового трека
     lastStartedKey = null;
     // Сбрасываем флаги обработки ended при загрузке нового трека

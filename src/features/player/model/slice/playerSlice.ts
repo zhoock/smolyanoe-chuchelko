@@ -222,6 +222,12 @@ const playerSlice = createSlice({
     setSourceLocation(state, action: PayloadAction<PlayerSourceLocation | null>) {
       state.sourceLocation = action.payload;
     },
+    setShowLyrics(state, action: PayloadAction<boolean>) {
+      state.showLyrics = action.payload;
+    },
+    setControlsVisible(state, action: PayloadAction<boolean>) {
+      state.controlsVisible = action.payload;
+    },
     /**
      * Переключает режим перемешивания треков (shuffle).
      * При включении: перемешивает плейлист, сохраняя оригинальный порядок.
@@ -298,6 +304,9 @@ const playerSlice = createSlice({
         isPlaying: boolean;
         shuffle?: boolean;
         repeat?: PlayerState['repeat'];
+        time?: PlayerState['time'];
+        showLyrics?: boolean;
+        controlsVisible?: boolean;
       }>
     ) {
       const {
@@ -312,6 +321,9 @@ const playerSlice = createSlice({
         isPlaying,
         shuffle,
         repeat,
+        time,
+        showLyrics,
+        controlsVisible,
       } = action.payload;
 
       state.playlist = playlist ? [...playlist] : [];
@@ -330,9 +342,26 @@ const playerSlice = createSlice({
       state.isPlaying = !!isPlaying;
       state.shuffle = shuffle ?? false;
       state.repeat = repeat ?? 'none';
-      state.progress = 0;
-      state.time = { current: 0, duration: NaN };
+
+      const nextTime: PlayerState['time'] = {
+        current: Number.isFinite(time?.current) ? (time?.current as number) : 0,
+        duration: Number.isFinite(time?.duration) ? (time?.duration as number) : NaN,
+      };
+      state.time = nextTime;
+      if (Number.isFinite(nextTime.duration) && nextTime.duration > 0) {
+        state.progress = Math.min(100, Math.max(0, (nextTime.current / nextTime.duration) * 100));
+      } else {
+        state.progress = 0;
+      }
       state.isSeeking = false;
+      if (typeof showLyrics === 'boolean') {
+        state.showLyrics = showLyrics;
+      }
+      if (typeof controlsVisible === 'boolean') {
+        state.controlsVisible = controlsVisible;
+      } else {
+        state.controlsVisible = true;
+      }
     },
   },
 });

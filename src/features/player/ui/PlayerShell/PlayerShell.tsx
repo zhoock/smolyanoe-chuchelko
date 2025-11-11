@@ -13,7 +13,7 @@ import { audioController } from '../../model/lib/audioController';
 import { MiniPlayer } from './MiniPlayer';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
 import type { RootState } from '@app/providers/StoreProvider/config/store';
-import { loadPlayerState } from '../../model/lib/playerPersist';
+import { loadPlayerState, savePlayerState } from '../../model/lib/playerPersist';
 
 const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';
 const DEFAULT_BOTTOM_OFFSET = 24;
@@ -51,6 +51,42 @@ export const PlayerShell: React.FC = () => {
   const isSeekingRef = useRef(isSeeking);
   const seekProtectionUntilRef = useRef<number>(0);
   const hasHydratedFromStorageRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    let lastSerialized = '';
+    let lastSavedAt = 0;
+    const unsubscribe = store.subscribe(() => {
+      const playerState = store.getState().player;
+      if (!playerState || playerState.playlist.length === 0 || !playerState.albumMeta?.albumId) {
+        return;
+      }
+
+      const serializedCandidate = JSON.stringify({
+        albumId: playerState.albumId,
+        currentTrackIndex: playerState.currentTrackIndex,
+        playlistLength: playerState.playlist.length,
+        timeCurrent: Math.floor(playerState.time.current),
+        timeDuration: Math.floor(
+          Number.isFinite(playerState.time.duration) ? playerState.time.duration : 0
+        ),
+        volume: playerState.volume,
+        isPlaying: playerState.isPlaying,
+      });
+
+      const now = Date.now();
+      if (serializedCandidate !== lastSerialized || now - lastSavedAt > 1000) {
+        lastSerialized = serializedCandidate;
+        lastSavedAt = now;
+        savePlayerState(playerState);
+      }
+    });
+
+    return unsubscribe;
+  }, [store]);
 
   useEffect(() => {
     if (hasHydratedFromStorageRef.current) {
@@ -95,6 +131,8 @@ export const PlayerShell: React.FC = () => {
       search: location.search || undefined,
     };
 
+    const playbackTime = savedState.time ?? { current: 0, duration: NaN };
+
     dispatch(
       playerActions.hydrateFromPersistedState({
         playlist,
@@ -112,11 +150,15 @@ export const PlayerShell: React.FC = () => {
         isPlaying: savedState.isPlaying ?? false,
         shuffle: savedState.shuffle ?? false,
         repeat: savedState.repeat ?? 'none',
+        time: playbackTime,
+        showLyrics: savedState.showLyrics ?? false,
+        controlsVisible: savedState.controlsVisible ?? true,
       })
     );
 
-    dispatch(playerActions.setVolume(savedState.volume ?? 50));
-    dispatch(playerActions.setCurrentTrackIndex(safeIndex));
+    audioController.setVolume(savedState.volume ?? 50);
+    audioController.setSource(playlist[safeIndex]?.src, savedState.isPlaying ?? false);
+    audioController.setCurrentTime(playbackTime.current ?? 0);
 
     if (savedState.isPlaying) {
       dispatch(playerActions.play());
