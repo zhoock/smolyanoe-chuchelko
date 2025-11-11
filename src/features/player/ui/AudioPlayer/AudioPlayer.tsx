@@ -1237,6 +1237,10 @@ export default function AudioPlayer({
         return;
       }
       if (direction === 'down') {
+        if (isCoarsePointerDevice) {
+          trackDebug('applyDirectionChange:down-skipped', { reason: 'coarse-pointer' });
+          return;
+        }
         const suppressionWindow = isCoarsePointerDevice ? 1200 : 500;
         suppressScrollHandlingUntilRef.current = now + suppressionWindow;
         // Синхронизируем состояние: сначала обновляем ref, потом state
