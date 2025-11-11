@@ -1919,6 +1919,15 @@ export default function AudioPlayer({
     .filter(Boolean)
     .join(' ');
 
+  useEffect(() => {
+    if (!isFullScreenPlayer) {
+      return;
+    }
+    controlsVisibleRef.current = true;
+    setControlsVisible(true);
+    showControls();
+  }, [isFullScreenPlayer, showControls]);
+
   return (
     <div ref={playerContainerRef} className={playerClassName}>
       {isLandscapeBlocked && (
