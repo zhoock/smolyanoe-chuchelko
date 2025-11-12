@@ -1,6 +1,6 @@
 // src/pages/Home/index.tsx
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
@@ -11,8 +11,9 @@ import 'entities/album/ui/style.scss';
 import WrapperArticle from '@components/Articles/WrapperArticle';
 import '@components/Articles/style.scss';
 import aboutStyles from '@components/AboutUs/AboutUs.module.scss';
-
-type TheBandItem = string | { text: string[]; link: string };
+import { Popup } from '@shared/ui/popup';
+import { Text } from '@shared/ui/text';
+import { Hamburger } from '@components';
 
 /**
  * Главная страница с витриной альбомов
@@ -20,7 +21,7 @@ type TheBandItem = string | { text: string[]; link: string };
 export default function Home() {
   const { lang } = useLang();
   const data = useAlbumsData(lang);
-  const [isAboutExpanded, setIsAboutExpanded] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -35,57 +36,11 @@ export default function Home() {
     }
   }, [location.hash]);
 
-  const renderAboutParagraph = (item: TheBandItem, index: number) => {
-    if (typeof item === 'string') {
-      const parts = item.split(/(<23>|<Смоляное чучелко>|<Smolyanoe Chuchelko>)/g);
-      return (
-        <p key={index} className={aboutStyles.aboutText}>
-          {parts.map((part, idx) => {
-            if (part === '<23>') {
-              return (
-                <Link key={idx} to="/albums/23" className="album-details__link">
-                  23
-                </Link>
-              );
-            }
-            if (part === '<Смоляное чучелко>' || part === '<Smolyanoe Chuchelko>') {
-              return (
-                <Link key={idx} to="/albums/smolyanoechuchelko" className="album-details__link">
-                  {lang === 'en' ? 'Smolyanoe Chuchelko' : 'Смоляное чучелко'}
-                </Link>
-              );
-            }
-            return part;
-          })}
-        </p>
-      );
-    }
-
-    return (
-      <p key={index} className={aboutStyles.aboutText}>
-        {item.text?.[0]}{' '}
-        <a
-          className="album-details__link"
-          href={item.link}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {item.text?.[1]}
-        </a>{' '}
-        {item.text?.[2]}
-      </p>
-    );
-  };
-
   return (
     <>
-      <section
-        id="albums"
-        className="albums main-background"
-        aria-label="Блок c ссылками на альбомы Смоляное чучелко"
-      >
+      <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">
         <div className="wrapper">
-          <h2>
+          <h2 id="home-albums-heading">
             {data ? (
               <DataAwait value={data.templateC} fallback={<span>…</span>}>
                 {(ui) => ui?.[0]?.titles?.albums}
@@ -120,10 +75,10 @@ export default function Home() {
       <section
         id="articles"
         className="articles main-background"
-        aria-label="Блок c ссылками на статьи Смоляное чучелко"
+        aria-labelledby="home-articles-heading"
       >
         <div className="wrapper articles__wrapper">
-          <h2>
+          <h2 id="home-articles-heading">
             {data ? (
               <DataAwait value={data.templateC} fallback={<span>…</span>}>
                 {(ui) => ui?.[0]?.titles?.articles}
@@ -156,53 +111,80 @@ export default function Home() {
       <section
         id="about"
         className={`${aboutStyles.about} main-background`}
-        aria-label={lang === 'en' ? 'About the band' : 'Блок о группе Смоляное чучелко'}
+        aria-labelledby="home-about-heading"
       >
         <div className="wrapper">
           {data ? (
             <DataAwait value={data.templateC} fallback={<h2>…</h2>} error={null}>
               {(ui) => {
                 const dict = ui?.[0];
-                const title =
-                  dict?.titles?.theBand ?? (lang === 'en' ? 'About the Band' : 'Группа');
-                const theBand = (dict?.theBand as TheBandItem[]) ?? [];
-                const buttons =
-                  dict?.buttons ??
-                  (lang === 'en'
-                    ? { show: 'Show', more: 'more', less: 'less' }
-                    : { show: 'Показать', more: 'ещё', less: 'меньше' });
-
+                const title = dict?.titles?.theBand ?? '';
+                const theBand = Array.isArray(dict?.theBand)
+                  ? (dict.theBand as string[]).filter(Boolean)
+                  : [];
+                const previewParagraphs = theBand.slice(0, 1);
+                const showLabel = dict?.buttons?.show ?? '';
                 return (
                   <>
-                    <h2>{title}</h2>
+                    <h2 id="home-about-heading">{title}</h2>
 
-                    <div
-                      className={`${aboutStyles.aboutContent} ${
-                        isAboutExpanded ? aboutStyles.aboutContentActive : ''
-                      }`}
-                    >
-                      {theBand.map(renderAboutParagraph)}
+                    <div className={aboutStyles.aboutContent}>
+                      {previewParagraphs.map(
+                        (paragraph, index) =>
+                          paragraph && (
+                            <Text key={index} className={aboutStyles.aboutText}>
+                              {paragraph}
+                            </Text>
+                          )
+                      )}
                     </div>
 
                     <button
                       className={aboutStyles.aboutLookMore}
-                      onClick={() => setIsAboutExpanded((prev) => !prev)}
+                      onClick={() => setIsAboutModalOpen(true)}
                       type="button"
-                      aria-expanded={isAboutExpanded}
+                      aria-haspopup="dialog"
                     >
-                      <span className={aboutStyles.firstWord}>{buttons.show}</span>
-                      <span>{isAboutExpanded ? buttons.less : buttons.more}</span>
-                      <span
-                        className={`icon-ctrl ${aboutStyles.iconCtrl}`}
-                        aria-hidden="true"
-                      ></span>
+                      {showLabel}
                     </button>
+
+                    <Popup
+                      isActive={isAboutModalOpen}
+                      onClose={() => setIsAboutModalOpen(false)}
+                      aria-labelledby="about-popup-title"
+                    >
+                      <div className={aboutStyles.aboutPopup}>
+                        <Hamburger
+                          isActive={isAboutModalOpen}
+                          onToggle={() => setIsAboutModalOpen(false)}
+                          zIndex="1200"
+                          className={aboutStyles.aboutPopupHamburger}
+                        />
+
+                        <div className={aboutStyles.aboutPopupInner}>
+                          <h3 id="about-popup-title" className={aboutStyles.aboutPopupTitle}>
+                            {title}
+                          </h3>
+
+                          <div className={aboutStyles.aboutPopupContent}>
+                            {theBand.map(
+                              (paragraph, index) =>
+                                paragraph && (
+                                  <Text key={index} className={aboutStyles.aboutText}>
+                                    {paragraph}
+                                  </Text>
+                                )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Popup>
                   </>
                 );
               }}
             </DataAwait>
           ) : (
-            <h2>{lang === 'en' ? 'About the Band' : 'О группе'}</h2>
+            <h2 id="home-about-heading">{''}</h2>
           )}
         </div>
       </section>

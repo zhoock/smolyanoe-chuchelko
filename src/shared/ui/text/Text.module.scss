@@ -3,4 +3,8 @@
 // Импортируем общий файл с зависимостями
 @use '../../../scss/abstracts/mixins' as *;
 
-/* .text {} */
+.text {
+  margin-block: 0;
+  color: inherit;
+  font: inherit;
+}

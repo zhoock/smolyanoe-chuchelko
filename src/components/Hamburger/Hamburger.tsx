@@ -6,12 +6,13 @@ import './style.scss';
 /**
  * Компонент отображает гамбургер-меню.
  */
-export const Hamburger = ({ isActive, onToggle, zIndex }: HamburgerProps) => {
+export const Hamburger = ({ isActive, onToggle, zIndex, className }: HamburgerProps) => {
   return (
     <button
       className={clsx(
         'hamburger', // базовый класс
-        isActive && 'active' // добавляется, если isActive === true
+        isActive && 'active', // добавляется, если isActive === true
+        className
       )}
       onClick={onToggle}
       style={{ zIndex }}

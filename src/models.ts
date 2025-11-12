@@ -13,6 +13,7 @@ export interface HamburgerProps extends NavigationProps {
   zIndex?: string;
   bgColor?: string;
   onClose?: () => void; // Новый пропс
+  className?: string;
 }
 
 export interface PopupProps extends HamburgerProps {

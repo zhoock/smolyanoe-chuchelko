@@ -7,52 +7,72 @@
   &__content {
     display: -webkit-box;
     overflow: hidden;
+    -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
     line-clamp: 3;
-    -webkit-box-orient: vertical;
+    gap: var(--ms-2);
+    margin-block: 0 var(--ms-2);
+    color: var(--text-color, #dddddd);
+    font-size: clamp(1rem, 0.915rem + 0.35vw, 1.125rem);
+    line-height: 1.55;
 
-    &_active {
-      -webkit-line-clamp: unset;
-      line-clamp: unset;
+    &:last-of-type {
+      margin-block-end: 0;
     }
-  }
-
-  &__text:last-of-type {
-    margin-block-end: 0;
   }
 
   &__look-more {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-
-    .first-word {
-      text-transform: capitalize;
-    }
 
     @include button-variant;
-
-    .icon-ctrl {
-      position: relative;
-      top: -5px;
-      color: currentcolor;
-      font: var(--medium, 500) 1.618rem/1 sans-serif;
-      transition: scale 0.3s ease-in-out;
-      rotate: 0.5turn;
-    }
   }
 
-  &:has(.about__content_active) {
-    .about__look-more {
-      color: var(--link-color-hover, #ffffff);
-      background-color: var(--button-background-color-hover, #998238);
+  &__popup {
+    position: relative;
+    inline-size: min(680px, 92vw);
+    max-block-size: min(80vh, 680px);
+    margin: auto;
+    padding: clamp(var(--ms-2), 4vw, var(--ms-4));
+    color: var(--text-color, #f3f3f3);
+    background: rgb(var(--extra-background-color-rgb, 18 18 18) / 95%);
+    border-radius: 24px;
+    box-shadow: 0 18px 42px rgb(0 0 0 / 45%);
+    overflow: hidden;
+  }
 
-      .icon-ctrl {
-        inset-block-start: 8px;
-        position: relative;
-        color: var(--link-color-hover, #ffffff);
-        scale: -100%;
-      }
-    }
+  &__popup-hamburger {
+    position: absolute;
+    inset-block-start: var(--ms-1);
+    inset-inline-end: var(--ms-1);
+    z-index: 5;
+  }
+
+  &__popup-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-2);
+    inline-size: 100%;
+    block-size: 100%;
+    padding-block-start: calc(var(--ms-2) + var(--ms-1));
+  }
+
+  &__popup-title {
+    margin: 0;
+    font-size: clamp(1.45rem, 1.25rem + 0.8vw, 1.9rem);
+    line-height: 1.25;
+    text-align: left;
+    padding-inline-end: calc(var(--ms-4));
+  }
+
+  &__popup-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-2);
+    overflow-y: auto;
+    padding-inline-end: var(--ms-1);
+
+    @extend %hide-scrollbar;
   }
 }
