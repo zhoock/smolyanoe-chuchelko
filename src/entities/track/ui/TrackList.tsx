@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import type { TracksProps, IAlbums } from '@models';
-import type { AppStore } from '@app/providers/StoreProvider/config/store';
+import type { AppStore, RootState } from '@app/providers/StoreProvider/config/store';
 
 function formatDuration(duration?: number): string {
   if (duration == null) return '';
@@ -24,14 +24,15 @@ type TrackListProps = {
 };
 
 export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProps) {
-  const [activeIndex, setActiveIndex] = React.useState(store.getState().player.currentTrackIndex);
-  const [isPlaying, setIsPlaying] = React.useState(store.getState().player.isPlaying);
+  const initialState = store.getState() as RootState;
+  const [activeIndex, setActiveIndex] = React.useState(initialState.player.currentTrackIndex);
+  const [isPlaying, setIsPlaying] = React.useState(initialState.player.isPlaying);
   const [currentTrackId, setCurrentTrackId] = React.useState<string | number | null>(() => {
-    const playerState = store.getState().player;
+    const playerState = (store.getState() as RootState).player;
     return playerState.playlist[playerState.currentTrackIndex]?.id ?? null;
   });
   const [currentAlbumId, setCurrentAlbumId] = React.useState<string | null>(
-    store.getState().player.albumId ?? null
+    (store.getState() as RootState).player.albumId ?? null
   );
 
   const albumUniqueId = useMemo(
@@ -41,17 +42,19 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
 
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
-      const playerState = store.getState().player;
+      const playerState = (store.getState() as RootState).player;
       setActiveIndex(playerState.currentTrackIndex);
       setIsPlaying(playerState.isPlaying);
       setCurrentAlbumId(playerState.albumId ?? null);
       setCurrentTrackId(playerState.playlist[playerState.currentTrackIndex]?.id ?? null);
     });
-    const initialState = store.getState().player;
-    setActiveIndex(initialState.currentTrackIndex);
-    setIsPlaying(initialState.isPlaying);
-    setCurrentAlbumId(initialState.albumId ?? null);
-    setCurrentTrackId(initialState.playlist[initialState.currentTrackIndex]?.id ?? null);
+    const currentState = store.getState() as RootState;
+    setActiveIndex(currentState.player.currentTrackIndex);
+    setIsPlaying(currentState.player.isPlaying);
+    setCurrentAlbumId(currentState.player.albumId ?? null);
+    setCurrentTrackId(
+      currentState.player.playlist[currentState.player.currentTrackIndex]?.id ?? null
+    );
     return unsubscribe;
   }, [store]);
 
