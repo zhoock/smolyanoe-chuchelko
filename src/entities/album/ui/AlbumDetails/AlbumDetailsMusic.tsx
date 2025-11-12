@@ -1,5 +1,4 @@
-// src/components/AlbumDetails/AlbumDetailsMusic.tsx
-import { IAlbums, detailsProps } from '@/models';
+import type { IAlbums, detailsProps } from '@models';
 
 /**
  * Компонент отображает блок с участниками и местами записи альбома.

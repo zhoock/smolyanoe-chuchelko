@@ -4,8 +4,7 @@ import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import AlbumDetails from '@components/AlbumDetails/AlbumDetails';
-import { AlbumCover } from '@entities/album';
+import { AlbumCover, AlbumDetails } from '@entities/album';
 import AlbumTracks from '@components/AlbumTracks/AlbumTracks';
 import Share from '@components/Share/Share';
 import ServiceButtons from '@components/ServiceButtons/ServiceButtons';

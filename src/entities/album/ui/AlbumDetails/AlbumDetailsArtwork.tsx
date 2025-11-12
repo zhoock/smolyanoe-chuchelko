@@ -1,5 +1,4 @@
-// src/components/AlbumDetails/AlbumDetailsArtwork.tsx
-import type { IAlbums } from 'models';
+import type { IAlbums } from '@models';
 import { useAlbumsData } from '@hooks/data';
 import { useLang } from '@contexts/lang';
 import { DataAwait } from '@shared/DataAwait';
