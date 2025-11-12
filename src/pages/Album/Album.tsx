@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { AlbumCover, AlbumDetails } from '@entities/album';
-import AlbumTracks from '@components/AlbumTracks/AlbumTracks';
+import { AlbumTracks } from '@widgets/albumTracks';
 import Share from '@components/Share/Share';
 import ServiceButtons from '@components/ServiceButtons/ServiceButtons';
 import { ErrorI18n } from '@shared/ui/error-message';

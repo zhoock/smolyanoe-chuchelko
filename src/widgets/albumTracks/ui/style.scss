@@ -1,6 +1,7 @@
-// src/components/AlbumTracks/style.scss
+@use 'sass:color';
+
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .album {
   .album-title {
@@ -45,7 +46,6 @@
     margin-block-end: var(--ms-1);
 
     &__btn {
-      /* обычные декларации — до миксина */
       position: relative;
       display: flex;
       text-align: inherit;
@@ -62,7 +62,6 @@
         $padding: var(--ms-01) var(--ms-0)
       );
 
-      /* если границу нужно ставить «после» — заверните в & { } */
       &:where(*) {
         border-block-start: 1px solid var(--hr-color, #3d3c3a);
       }

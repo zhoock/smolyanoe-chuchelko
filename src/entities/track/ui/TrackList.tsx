@@ -1,3 +1,8 @@
+import React, { useEffect, useMemo } from 'react';
+import clsx from 'clsx';
+import type { TracksProps, IAlbums } from '@models';
+import type { AppStore } from '@app/providers/StoreProvider/config/store';
+
 function formatDuration(duration?: number): string {
   if (duration == null) return '';
   const [minutes, rawSeconds = '0'] = duration.toString().split('.');
@@ -5,37 +10,20 @@ function formatDuration(duration?: number): string {
     rawSeconds.length === 1 ? `${rawSeconds}0` : rawSeconds.slice(0, 2).padEnd(2, '0');
   return `${minutes}:${normalizedSeconds}`;
 }
-import React, { useEffect, useMemo } from 'react';
-import clsx from 'clsx';
-import type { TracksProps, IAlbums } from '@models';
-import { playerActions } from '@features/player';
-import type { RootState } from '@app/providers/StoreProvider/config/store';
-import { useStore } from 'react-redux';
 
 type TrackListProps = {
   tracks: TracksProps[];
   album: IAlbums;
-  lang: string;
-  openPlayer: (index: number, options?: { openFullScreen?: boolean }) => void;
   onSelectTrack: (payload: {
     index: number;
     track: TracksProps;
-    album: IAlbums;
-    lang: string;
     isActive: boolean;
     isPlayingNow: boolean;
   }) => void;
-  store: ReturnType<typeof useStore<RootState>>;
+  store: AppStore;
 };
 
-export function TrackList({
-  tracks,
-  album,
-  lang,
-  openPlayer,
-  store,
-  onSelectTrack,
-}: TrackListProps) {
+export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProps) {
   const [activeIndex, setActiveIndex] = React.useState(store.getState().player.currentTrackIndex);
   const [isPlaying, setIsPlaying] = React.useState(store.getState().player.isPlaying);
   const [currentTrackId, setCurrentTrackId] = React.useState<string | number | null>(() => {
@@ -88,16 +76,7 @@ export function TrackList({
                 ? `Остановить воспроизведение: ${track.title}`
                 : `Воспроизвести: ${track.title}`
             }
-            onClick={() =>
-              onSelectTrack({
-                index,
-                track,
-                album,
-                lang,
-                isActive,
-                isPlayingNow,
-              })
-            }
+            onClick={() => onSelectTrack({ index, track, isActive, isPlayingNow })}
           >
             <span className="tracks__symbol">
               <span className="tracks__symbol-index">{index + 1}</span>
