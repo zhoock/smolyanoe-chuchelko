@@ -1,0 +1,82 @@
+import { useState, MouseEvent } from 'react';
+import './style.scss';
+
+type SharePlatform = 'facebook' | 'twitter';
+
+const platformConfig: Record<
+  SharePlatform,
+  { baseUrl: string; windowName: string; width: number; height: number }
+> = {
+  facebook: {
+    baseUrl: 'https://www.facebook.com/sharer/sharer.php?u=',
+    windowName: 'Share on Facebook',
+    width: 464,
+    height: 210,
+  },
+  twitter: {
+    baseUrl: 'https://twitter.com/intent/tweet?text=',
+    windowName: 'Share on Twitter',
+    width: 464,
+    height: 210,
+  },
+};
+
+function openShareWindow(
+  url: string,
+  { windowName, width, height }: typeof platformConfig.facebook
+) {
+  const left = screen.width ? (screen.width - width) / 2 : 100;
+  const top = screen.height ? (screen.height - height) / 2 : 100;
+  const settings =
+    `width=${width},height=${height},top=${top},left=${left},scrollbars=no,` +
+    'location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no';
+
+  window.open(url, windowName, settings);
+}
+
+export function Share() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleToggle = (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    setIsOpen((prev) => !prev);
+  };
+
+  const handleShare = (platform: SharePlatform, uri: string) => {
+    const targetUrl = uri === 'this' ? window.location.href : uri;
+    const config = platformConfig[platform];
+    const encoded = encodeURIComponent(targetUrl);
+
+    openShareWindow(`${config.baseUrl}${encoded}`, config);
+  };
+
+  return (
+    <ul className="share-list js-share-item">
+      <li className="share-list__item" onClick={handleToggle}>
+        <a
+          className={`share-list__link icon-share ${isOpen ? 'active' : ''}`}
+          href="#"
+          title="Поделиться"
+        ></a>
+      </li>
+      <li className={`share-list__item ${isOpen ? 'show' : ''}`}>
+        <a
+          className="share-list__link icon-facebook1"
+          href="#"
+          title="Поделиться на Facebook"
+          onClick={() => handleShare('facebook', 'this')}
+        ></a>
+      </li>
+      <li className={`share-list__item ${isOpen ? 'show' : ''}`}>
+        <a
+          className="share-list__link icon-twitter"
+          href="#"
+          title="Поделиться на Twitter"
+          onClick={() => handleShare('twitter', 'this')}
+        ></a>
+      </li>
+    </ul>
+  );
+}
+
+export default Share;
