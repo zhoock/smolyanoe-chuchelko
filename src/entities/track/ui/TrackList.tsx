@@ -1,3 +1,10 @@
+function formatDuration(duration?: number): string {
+  if (duration == null) return '';
+  const [minutes, rawSeconds = '0'] = duration.toString().split('.');
+  const normalizedSeconds =
+    rawSeconds.length === 1 ? `${rawSeconds}0` : rawSeconds.slice(0, 2).padEnd(2, '0');
+  return `${minutes}:${normalizedSeconds}`;
+}
 import React, { useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import type { TracksProps, IAlbums } from '@models';
@@ -107,7 +114,7 @@ export function TrackList({
               </span>
             </span>
             <span className="tracks__title">{track.title}</span>
-            <span className="tracks__duration">{track.durationStr ?? ''}</span>
+            <span className="tracks__duration">{formatDuration(track.duration)}</span>
           </button>
         );
       })}
