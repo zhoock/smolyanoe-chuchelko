@@ -1,8 +1,8 @@
-// src/components/Share/style.scss
+// src/features/share/ui/style.scss
 @use 'sass:color';
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .share-list {
   display: grid;
