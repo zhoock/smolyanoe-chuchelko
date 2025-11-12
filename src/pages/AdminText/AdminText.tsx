@@ -17,8 +17,8 @@ import {
   formatTrackText,
   splitTextIntoLines,
   countLines,
-} from '../../utils/trackText';
-import { loadAuthorshipFromStorage } from '../../utils/syncedLyrics';
+} from '@utils/trackText';
+import { loadAuthorshipFromStorage } from '@utils/syncedLyrics';
 import './style.scss';
 
 export default function AdminText() {

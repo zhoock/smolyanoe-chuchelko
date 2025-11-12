@@ -7,11 +7,11 @@ import type { AppStore, RootState } from '@app/providers/StoreProvider/config/st
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { playerActions, playerSelectors, savePlayerState, loadPlayerState } from '@features/player';
 
-import type { IAlbums, TracksProps } from '../../models';
+import type { IAlbums, TracksProps } from '@/models';
 import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
-import { gaEvent } from '../../utils/ga';
+import { gaEvent } from '@utils/ga';
 
 import './style.scss';
 

@@ -32,14 +32,21 @@ module.exports = {
     plugins: [new TsconfigPathsPlugin()], // Поддержка путей из tsconfig.json
     alias: {
       // Псевдонимы для путей
+      '@': path.resolve(__dirname, '../src'),
       '@components': path.resolve(__dirname, '../src/components'),
       '@shared': path.resolve(__dirname, '../src/shared'),
       '@entities': path.resolve(__dirname, '../src/entities'),
       '@features': path.resolve(__dirname, '../src/features'),
       '@widgets': path.resolve(__dirname, '../src/widgets'),
+      '@pages': path.resolve(__dirname, '../src/pages'),
+      '@utils': path.resolve(__dirname, '../src/utils'),
       '@app': path.resolve(__dirname, '../src/app'),
       '@hooks': path.resolve(__dirname, '../src/hooks'),
       '@contexts': path.resolve(__dirname, '../src/contexts'),
+      '@routes': path.resolve(__dirname, '../src/routes'),
+      '@state': path.resolve(__dirname, '../src/state'),
+      '@audio': path.resolve(__dirname, '../src/audio'),
+      '@models': path.resolve(__dirname, '../src/models'),
     },
   },
 

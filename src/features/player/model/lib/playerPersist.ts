@@ -3,8 +3,8 @@
  * Позволяет сохранить текущий трек, альбом, громкость и состояние воспроизведения.
  */
 
-import type { PlayerState } from '../types/playerSchema';
-import type { TracksProps } from '../../../../models';
+import type { PlayerState } from '@features/player/model/types/playerSchema';
+import type { TracksProps } from '@models';
 
 const STORAGE_KEY = 'playerState';
 

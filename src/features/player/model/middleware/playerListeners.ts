@@ -5,8 +5,8 @@
  * Это позволяет вынести всю логику управления аудио из компонентов в слой модели.
  */
 import { createListenerMiddleware, isAnyOf, type ListenerEffectAPI } from '@reduxjs/toolkit';
-import { audioController } from '../lib/audioController';
-import { playerActions } from '../slice/playerSlice';
+import { audioController } from '@features/player/model/lib/audioController';
+import { playerActions } from '@features/player/model/slice/playerSlice';
 import type { RootState, AppDispatch } from '@app/providers/StoreProvider/config/store';
 import { gaEvent } from '@utils/ga';
 

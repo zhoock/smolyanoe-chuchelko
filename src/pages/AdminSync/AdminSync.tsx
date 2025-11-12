@@ -16,14 +16,14 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
-import type { SyncedLyricsLine } from '../../models';
+import type { SyncedLyricsLine } from '@/models';
 import { AlbumCover } from '@entities/album';
 import {
   saveSyncedLyrics,
   loadSyncedLyricsFromStorage,
   loadAuthorshipFromStorage,
-} from '../../utils/syncedLyrics';
-import { loadTrackTextFromStorage } from '../../utils/trackText';
+} from '@utils/syncedLyrics';
+import { loadTrackTextFromStorage } from '@utils/trackText';
 import './style.scss';
 
 export default function AdminSync() {

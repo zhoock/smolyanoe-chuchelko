@@ -2,18 +2,18 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from 'react-redux';
-import type { IAlbums } from 'models';
+import type { IAlbums } from '@models';
 
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { Popup, Hamburger } from '@components';
-import { playerActions } from '../../model/slice/playerSlice';
-import * as playerSelectors from '../../model/selectors/playerSelectors';
-import { audioController } from '../../model/lib/audioController';
+import { playerActions } from '@features/player/model/slice/playerSlice';
+import * as playerSelectors from '@features/player/model/selectors/playerSelectors';
+import { audioController } from '@features/player/model/lib/audioController';
 import { MiniPlayer } from './MiniPlayer';
-import AudioPlayer from '../AudioPlayer/AudioPlayer';
+import AudioPlayer from '@features/player/ui/AudioPlayer/AudioPlayer';
 import type { RootState } from '@app/providers/StoreProvider/config/store';
-import { loadPlayerState, savePlayerState } from '../../model/lib/playerPersist';
+import { loadPlayerState, savePlayerState } from '@features/player/model/lib/playerPersist';
 
 const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';
 const DEFAULT_BOTTOM_OFFSET = 24;

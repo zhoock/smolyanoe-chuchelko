@@ -16,7 +16,7 @@ import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { Breadcrumb } from '@shared/ui/breadcrumb';
-import type { IAlbums } from '../../models';
+import type { IAlbums } from '@models';
 import './style.scss';
 
 type StatusType = 'success' | 'error' | 'info';

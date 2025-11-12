@@ -1,5 +1,5 @@
 // src/components/ServiceButtons/GetButton.tsx
-import { String } from '../../models';
+import { String } from '@models';
 
 /**
  * Компонент отображает кнопку-ссылку агрегатора.

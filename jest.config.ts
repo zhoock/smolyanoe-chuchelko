@@ -95,6 +95,22 @@ const config: Config = {
   moduleNameMapper: {
     '\\.(css|scss)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|svg|webp|avif)$': '<rootDir>/__mocks__/fileMock.js',
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@components/(.*)$': '<rootDir>/src/components/$1',
+    '^@shared/(.*)$': '<rootDir>/src/shared/$1',
+    '^@entities/(.*)$': '<rootDir>/src/entities/$1',
+    '^@features/(.*)$': '<rootDir>/src/features/$1',
+    '^@widgets/(.*)$': '<rootDir>/src/widgets/$1',
+    '^@pages/(.*)$': '<rootDir>/src/pages/$1',
+    '^@utils/(.*)$': '<rootDir>/src/utils/$1',
+    '^@app/(.*)$': '<rootDir>/src/app/$1',
+    '^@hooks/(.*)$': '<rootDir>/src/hooks/$1',
+    '^@contexts/(.*)$': '<rootDir>/src/contexts/$1',
+    '^@routes/(.*)$': '<rootDir>/src/routes/$1',
+    '^@state/(.*)$': '<rootDir>/src/state/$1',
+    '^@audio/(.*)$': '<rootDir>/src/audio/$1',
+    '^@models$': '<rootDir>/src/models',
+    '^@models/(.*)$': '<rootDir>/src/models/$1',
   },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader

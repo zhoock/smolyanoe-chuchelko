@@ -4,16 +4,16 @@ import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import AlbumDetails from '../../components/AlbumDetails/AlbumDetails';
+import AlbumDetails from '@components/AlbumDetails/AlbumDetails';
 import { AlbumCover } from '@entities/album';
-import AlbumTracks from '../../components/AlbumTracks/AlbumTracks';
-import Share from '../../components/Share/Share';
-import ServiceButtons from '../../components/ServiceButtons/ServiceButtons';
+import AlbumTracks from '@components/AlbumTracks/AlbumTracks';
+import Share from '@components/Share/Share';
+import ServiceButtons from '@components/ServiceButtons/ServiceButtons';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
-import { useLang } from '../../contexts/lang';
+import { useLang } from '@contexts/lang';
 
 export default function Album() {
   const { lang } = useLang();

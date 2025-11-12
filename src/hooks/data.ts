@@ -1,6 +1,6 @@
 // src/hooks/data.ts
 import { useRouteLoaderData } from 'react-router-dom';
-import type { AlbumsDeferred } from '../routes/loaders/albumsLoader';
+import type { AlbumsDeferred } from '@/routes/loaders/albumsLoader';
 
 export function useAlbumsData(_lang: string) {
   return useRouteLoaderData('root') as AlbumsDeferred | null;

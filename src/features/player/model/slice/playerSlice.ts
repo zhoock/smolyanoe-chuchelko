@@ -9,8 +9,8 @@ import {
   PlayerTimeState,
   PlayerAlbumMeta,
   PlayerSourceLocation,
-} from '../types/playerSchema';
-import type { TracksProps } from '../../../../models';
+} from '@features/player/model/types/playerSchema';
+import type { TracksProps } from '@models';
 
 /**
  * Перемешивает массив треков используя алгоритм Fisher-Yates.

@@ -1,31 +1,26 @@
-// src/components/Articles/Article.tsx
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { useAlbumsData, getImageUrl } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
-import type { ArticledetailsProps } from 'models';
+import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
-import { formatDateInWords } from './Function';
 import { useLang } from '@contexts/lang';
+import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
+import '@entities/article/ui/style.scss';
 
-/**
- * Компонент отображает блок со статьёй.
- */
-export const Article = () => {
-  // скролл наверх при входе на страницу
+export function ArticlePage() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const { lang } = useLang() as { lang: keyof typeof formatDateInWords };
+  const { lang } = useLang() as { lang: LocaleKey };
   const data = useAlbumsData(lang);
   const { formatDate } = formatDateInWords[lang];
   const { articleId = '' } = useParams<{ articleId: string }>();
 
-  // рендер одного блока контента статьи
   function Block({ title, subtitle, strong, content, img, alt }: ArticledetailsProps) {
     return (
       <>
@@ -48,7 +43,6 @@ export const Article = () => {
     );
   }
 
-  // фоллбек, если данных нет
   if (!data) {
     return (
       <section className="article main-background" aria-label="Блок со статьёй">
@@ -76,7 +70,6 @@ export const Article = () => {
           </ul>
         </nav>
 
-        {/* сама статья */}
         <DataAwait
           value={data.templateB}
           fallback={<Loader />}
@@ -94,7 +87,6 @@ export const Article = () => {
               );
             }
 
-            // SEO на основе данных статьи
             const seoTitle = article.nameArticle;
             const seoDesc = article.description;
             const canonical =
@@ -130,4 +122,6 @@ export const Article = () => {
       </div>
     </section>
   );
-};
+}
+
+export default ArticlePage;

@@ -3,7 +3,7 @@
  * Утилиты для работы с синхронизированным текстом песен.
  * Сохранение синхронизаций в API или localStorage (для разработки).
  */
-import type { SyncedLyricsLine } from '../models';
+import type { SyncedLyricsLine } from '@models';
 
 export interface SaveSyncedLyricsRequest {
   albumId: string;

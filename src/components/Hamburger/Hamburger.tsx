@@ -1,6 +1,6 @@
 // src/components/Hamburger/Hamburger.tsx
 import clsx from 'clsx';
-import { HamburgerProps } from '../../models';
+import { HamburgerProps } from '@/models';
 import './style.scss';
 
 /**

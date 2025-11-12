@@ -1,6 +1,6 @@
 // src/hooks/__tests__/data.test.ts
 import { jest, describe, test, expect } from '@jest/globals';
-import { getImageUrl, formatDate, useAlbumsData } from '../data';
+import { getImageUrl, formatDate, useAlbumsData } from '@hooks/data';
 
 // Мокаем только то, что нужно из react-router-dom
 jest.mock('react-router-dom', () => ({

@@ -1,8 +1,3 @@
-// src/components/Articles/Function.ts
-
-/**
- * Функция возвращает правильное падежное окончание для месяцев.
- */
 export const formatDateInWords = {
   ru: {
     formatDate: (dateRelease: string): string => {
@@ -55,4 +50,6 @@ export const formatDateInWords = {
       return `${mm} ${dd}, ${yy}`;
     },
   },
-};
+} as const;
+
+export type LocaleKey = keyof typeof formatDateInWords;

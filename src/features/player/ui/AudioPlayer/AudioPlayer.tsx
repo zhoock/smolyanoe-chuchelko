@@ -8,18 +8,15 @@ import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useSta
 import { useLocation } from 'react-router-dom';
 import { flushSync } from 'react-dom';
 import { AlbumCover } from '@entities/album';
-import type { IAlbums, SyncedLyricsLine } from 'models';
+import type { IAlbums, SyncedLyricsLine } from '@models';
 import './style.scss';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
 import { clearImageColorCache } from '@shared/lib/hooks/useImageColor';
-import {
-  loadSyncedLyricsFromStorage,
-  loadAuthorshipFromStorage,
-} from '../../../../utils/syncedLyrics';
-import { useLang } from '../../../../contexts/lang';
+import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@utils/syncedLyrics';
+import { useLang } from '@contexts/lang';
 
 // Helper для debug-логов только в development
 const debugLog = (...args: any[]) => {

@@ -1,8 +1,8 @@
 // src/components/Navigation/Navigation.tsx
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
-import { NavigationProps } from '../../models';
-import { useAlbumsData } from '../../hooks/data';
+import { NavigationProps } from '@models';
+import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
 import './style.scss';

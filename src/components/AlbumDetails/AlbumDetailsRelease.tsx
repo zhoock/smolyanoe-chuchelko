@@ -1,8 +1,8 @@
 // src/components/AlbumDetails/AlbumDetailsRelease.tsx
-import { IAlbums, String } from '../../models';
-import { formatDate } from '../../hooks/data';
+import { IAlbums, String } from '@models';
+import { formatDate } from '@hooks/data';
 import { functionsMap } from './Functions'; // Импортируем функции
-import { useLang } from '../../contexts/lang';
+import { useLang } from '@contexts/lang';
 
 /**
  * Компонент отображает блок с датой релиза альбома.

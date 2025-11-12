@@ -1,6 +1,6 @@
 // src/contexts/lang.tsx
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { getLang as getLangLS, setLang as setLangLS } from '../utils/language';
+import { getLang as getLangLS, setLang as setLangLS } from '@utils/language';
 
 // в контексте лежит один объект с двумя полями:
 // lang: строка (текущий язык),

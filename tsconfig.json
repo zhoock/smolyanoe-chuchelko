@@ -18,6 +18,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "./src", // База для неотносительных путей
     "paths": {
+      "@/*": ["*"],
       "@components": ["components/index"],
       "@components/*": ["components/*"],
       "@pages/*": ["pages/*"],
@@ -28,7 +29,12 @@
       "@widgets/*": ["widgets/*"],
       "@app/*": ["app/*"],
       "@hooks/*": ["hooks/*"],
-      "@contexts/*": ["contexts/*"]
+      "@contexts/*": ["contexts/*"],
+      "@routes/*": ["routes/*"],
+      "@state/*": ["state/*"],
+      "@audio/*": ["audio/*"],
+      "@models": ["models"],
+      "@models/*": ["models/*"]
     },
 
     // 🔽 ДОБАВЛЕНО: типы для глобального API Jest и Node

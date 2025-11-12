@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Breadcrumb } from '@shared/ui/breadcrumb';
-import type { IAlbums, TracksProps } from '../../models';
+import type { IAlbums, TracksProps } from '@models';
 import './style.scss';
 
 type StatusKind = 'success' | 'error' | 'info';

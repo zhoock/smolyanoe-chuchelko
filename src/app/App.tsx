@@ -11,7 +11,7 @@ import {
 } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '../routes/loaders/albumsLoader';
-import { useLang } from '../contexts/lang';
+import { useLang } from '@contexts/lang';
 import { currentLang, setCurrentLang } from '../state/langStore';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -20,7 +20,6 @@ import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 import {
   Header,
   Footer,
-  Article,
   Navigation,
   Hamburger,
   Popup,
@@ -29,15 +28,16 @@ import {
   Hero,
 } from '@components';
 import { PlayerShell } from '@features/player';
-import Album from '../pages/Album/Album';
-import StemsPlayground from '../pages/StemsPlayground/StemsPlayground';
-import Home from '../pages/Home';
-import Admin from '../pages/Admin/Admin';
-import AdminAlbum from '../pages/AdminAlbum/AdminAlbum';
-import AdminSync from '../pages/AdminSync/AdminSync';
-import AdminText from '../pages/AdminText/AdminText';
-import AdminAlbumJson from '../pages/AdminAlbumJson/AdminAlbumJson';
-import AdminAlbumBuilder from '../pages/AdminAlbumBuilder/AdminAlbumBuilder';
+import Album from '@pages/Album/Album';
+import StemsPlayground from '@pages/StemsPlayground/StemsPlayground';
+import Home from '@pages/Home';
+import Admin from '@pages/Admin/Admin';
+import AdminAlbum from '@pages/AdminAlbum/AdminAlbum';
+import AdminSync from '@pages/AdminSync/AdminSync';
+import AdminText from '@pages/AdminText/AdminText';
+import AdminAlbumJson from '@pages/AdminAlbumJson/AdminAlbumJson';
+import AdminAlbumBuilder from '@pages/AdminAlbumBuilder/AdminAlbumBuilder';
+import ArticlePage from '@pages/Article';
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -142,7 +142,7 @@ function Layout() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/albums/:albumId" element={<Album />} />
-        <Route path="/articles/:articleId" element={<Article />} />
+        <Route path="/articles/:articleId" element={<ArticlePage />} />
         <Route path="/forms" element={<Form />} />
         <Route path="/stems" element={<StemsPlayground />} />
         <Route path="/admin" element={<Admin />} />

@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { Provider } from 'react-redux';
-import { createReduxStore } from '../config/store';
+import { createReduxStore } from '@app/providers/StoreProvider/config/store';
 
 interface StoreProviderProps {
   children: ReactNode;
