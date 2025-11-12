@@ -1972,11 +1972,14 @@ export default function AudioPlayer({
     };
   }, [showLyrics, toggleLyrics, resetInactivityTimer]);
 
+  const shouldShowVolumeControl = !isCoarsePointerDevice;
+
   const playerClassName = [
     'player',
     showLyrics ? 'player--lyrics-visible' : '',
     !controlsVisible ? 'player--controls-hidden' : '',
     isLandscapeBlocked ? 'player--orientation-blocked' : '',
+    !shouldShowVolumeControl ? 'player--no-volume' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -2289,13 +2292,15 @@ export default function AudioPlayer({
       </div>
 
       {/* Контрол громкости (скрыт на мобильных устройствах) */}
-      <div
-        className={`player__volume-control ${!controlsVisible ? 'player__volume-control--hidden' : ''}`}
-      >
-        <span className="icon-volume-mute"></span>
-        <input type="range" value={volume} min="0" max="100" onChange={handleVolumeChange} />
-        <span className="icon-volume-hight"></span>
-      </div>
+      {shouldShowVolumeControl ? (
+        <div
+          className={`player__volume-control ${!controlsVisible ? 'player__volume-control--hidden' : ''}`}
+        >
+          <span className="icon-volume-mute"></span>
+          <input type="range" value={volume} min="0" max="100" onChange={handleVolumeChange} />
+          <span className="icon-volume-hight"></span>
+        </div>
+      ) : null}
 
       {/* Контрол переключения текста и режимов воспроизведения */}
       <div

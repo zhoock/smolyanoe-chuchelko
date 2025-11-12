@@ -6,7 +6,7 @@
   --player-progress-row-size: auto;
   --player-controls-row-size: auto;
   --player-volume-row-size: auto;
-  --player-secondary-row-height: var(--ms-2);
+  --player-secondary-row-height: var(--ms-1);
 
   position: relative;
   display: grid;
@@ -92,6 +92,23 @@
 
     > *:not(.player__orientation-lock) {
       pointer-events: none;
+    }
+  }
+
+  &--no-volume {
+    grid-template:
+      'player-cover' auto
+      'player-progress' minmax(0, var(--player-progress-row-size))
+      'player-controls' minmax(0, var(--player-controls-row-size))
+      'player-secondary' minmax(0, var(--player-secondary-row-height)) / 1fr;
+
+    &.player--lyrics-visible {
+      grid-template:
+        'player-cover' auto
+        'player-lyrics' minmax(0, 1fr)
+        'player-progress' minmax(0, var(--player-progress-row-size))
+        'player-controls' minmax(0, var(--player-controls-row-size))
+        'player-secondary' minmax(0, var(--player-secondary-row-height)) / 1fr;
     }
   }
 
