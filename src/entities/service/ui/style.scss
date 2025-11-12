@@ -1,9 +1,5 @@
-// src/components/ServiceButtons/style.scss
-
 @use 'sass:color';
-
-// Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .service-buttons {
   &__list {

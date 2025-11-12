@@ -7,7 +7,7 @@ import { Helmet } from 'react-helmet-async';
 import { AlbumCover, AlbumDetails } from '@entities/album';
 import { AlbumTracks } from '@widgets/albumTracks';
 import Share from '@components/Share/Share';
-import ServiceButtons from '@components/ServiceButtons/ServiceButtons';
+import { ServiceButtons } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
