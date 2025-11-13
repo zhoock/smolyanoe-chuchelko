@@ -1,5 +1,3 @@
-// hooks/useLang.ts
-
 import { useEffect, useState } from 'react';
 import { getLang, setLang } from '@utils/language';
 
@@ -20,3 +18,4 @@ export function useLang() {
 
   return { lang, changeLang };
 }
+

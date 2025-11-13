@@ -103,7 +103,6 @@ const config: Config = {
     '^@pages/(.*)$': '<rootDir>/src/pages/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
-    '^@hooks/(.*)$': '<rootDir>/src/hooks/$1',
     '^@contexts/(.*)$': '<rootDir>/src/contexts/$1',
     '^@routes/(.*)$': '<rootDir>/src/routes/$1',
     '^@state/(.*)$': '<rootDir>/src/state/$1',

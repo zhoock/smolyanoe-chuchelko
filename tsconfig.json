@@ -26,7 +26,6 @@
       "@features/*": ["features/*"],
       "@widgets/*": ["widgets/*"],
       "@app/*": ["app/*"],
-      "@hooks/*": ["hooks/*"],
       "@contexts/*": ["contexts/*"],
       "@routes/*": ["routes/*"],
       "@state/*": ["state/*"],

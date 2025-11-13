@@ -40,7 +40,6 @@ module.exports = {
       '@pages': path.resolve(__dirname, '../src/pages'),
       '@utils': path.resolve(__dirname, '../src/utils'),
       '@app': path.resolve(__dirname, '../src/app'),
-      '@hooks': path.resolve(__dirname, '../src/hooks'),
       '@contexts': path.resolve(__dirname, '../src/contexts'),
       '@routes': path.resolve(__dirname, '../src/routes'),
       '@state': path.resolve(__dirname, '../src/state'),
