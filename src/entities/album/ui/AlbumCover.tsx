@@ -2,7 +2,7 @@
 import { memo, useMemo } from 'react';
 import { getImageUrl } from 'hooks/data';
 import type { CoverProps } from 'models';
-import { useImageColor } from 'shared/lib/hooks/useImageColor';
+import { useImageColor } from '@shared/lib/hooks/useImageColor';
 
 type ImageFormat = 'webp' | 'jpg';
 type Density = 1 | 2 | 3;

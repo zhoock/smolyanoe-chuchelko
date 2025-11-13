@@ -1,4 +1,4 @@
-// src/components/Waveform/Waveform.tsx
+// src/shared/ui/waveform/ui/Waveform.tsx
 import { useEffect, useRef } from 'react';
 
 type Props = {
