@@ -37,7 +37,7 @@
 | ----------------- | ------------------------------------- | ---------------------------- |
 | `ga.ts`           | Интеграция Google Analytics           | `shared/lib/analytics`       |
 | `http.ts`         | HTTP-утилиты                          | `shared/api/http`            |
-| `language.ts`     | Помощники локализации                 | `shared/lib/lang`            |
+| `language.ts`     | Помощники локализации                 | ✅ перенесено в `shared/lib/lang` (`getLang`, `setLang`) |
 | `syncedLyrics.ts` | Работа с синхронизированными лириками | `features/synced-lyrics/lib` |
 | `trackText.ts`    | Работа с текстами треков              | `entities/track/lib`         |
 

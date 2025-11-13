@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getLang, setLang } from '@utils/language';
+import { getLang, setLang } from '@shared/lib/lang';
 
 export function useLang() {
   const [lang, setLangState] = useState(getLang());
