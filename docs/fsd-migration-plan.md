@@ -4,22 +4,22 @@
 
 ### `src/components`
 
-| Текущая директория | Назначение сейчас               | Рекомендованный слой                                          |
-| ------------------ | ------------------------------- | ------------------------------------------------------------- |
-| `AboutUs`          | Статический блок «О нас», стили | `widgets/about-us` или `shared/ui/about`                      |
-| `AlbumDetails`     | Компоненты карточки альбома     | `entities/album/ui` (детализация)                             |
-| `AlbumTracks`      | Список треков                   | `entities/track/ui` (создать сущность)                        |
-| `Articles`         | Превью статей, враппер          | `entities/article` (`ui`, `model`)                            |
-| `Footer`           | Глобальный подвал сайта         | `widgets/footer`                                              |
-| `Forms`            | Общая форма                     | `shared/ui/form` или `features/form` (если с логикой)         |
-| `Hamburger`        | Кнопка меню                     | `shared/ui/hamburger`                                         |
-| `Header`           | Шапка сайта                     | `widgets/header`                                              |
-| `Hero`             | Герой-блок                      | уже есть `widgets/hero` → объединить и удалить дубли          |
-| `Navigation`       | Меню навигации                  | `widgets/navigation` или часть `widgets/header`               |
-| `ServiceButtons`   | Кнопки сервисов                 | `features/share-buttons` (если логика) или `entities/service` |
-| `Share`            | Шэринг                          | `features/share`                                              |
-| `UseImageColor`    | Хук/компонент получения цвета   | вынести в `shared/lib/color` + `shared/ui` при необходимости  |
-| `Waveform`         | Отображение волны аудио         | `features/audio-waveform` или `entities/track/ui`             |
+| Текущая директория | Назначение сейчас               | Статус / итоговое расположение                                      |
+| ------------------ | ------------------------------- | ------------------------------------------------------------------- |
+| `AboutUs`          | Статический блок «О нас», стили | ✅ перенесено → `@pages/Home/ui/AboutSection`                       |
+| `AlbumDetails`     | Компоненты карточки альбома     | ✅ перенесено → `@entities/album/ui/AlbumDetails`                   |
+| `AlbumTracks`      | Список треков                   | ✅ перенесено → `@widgets/albumTracks` + `@entities/track/ui`       |
+| `Articles`         | Превью статей, враппер          | ✅ перенесено → `@entities/article`                                 |
+| `Footer`           | Глобальный подвал сайта         | ✅ перенесено → `@widgets/footer`                                   |
+| `Forms`            | Общая форма                     | ✅ перенесено → `@widgets/form`                                     |
+| `Hamburger`        | Кнопка меню                     | ✅ перенесено → `@shared/ui/hamburger`                              |
+| `Header`           | Шапка сайта                     | ✅ перенесено → `@widgets/header`                                   |
+| `Hero`             | Герой-блок                      | ✅ перенесено → `@widgets/hero`                                     |
+| `Navigation`       | Меню навигации                  | ✅ перенесено → `@features/navigation`                              |
+| `ServiceButtons`   | Кнопки сервисов                 | ✅ перенесено → `@entities/service`                                 |
+| `Share`            | Шэринг                          | ✅ перенесено → `@features/share`                                   |
+| `UseImageColor`    | Хук/компонент получения цвета   | ✅ перенесено → `@shared/lib/hooks/useImageColor`                   |
+| `Waveform`         | Отображение волны аудио         | ✅ перенесено → `@shared/ui/waveform`                               |
 
 После переноса `components/index.ts` следует удалить или превратить в реэкспорты новых слоёв.
 
