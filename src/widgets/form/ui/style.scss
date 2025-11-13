@@ -1,5 +1,6 @@
+// src/widgets/form/ui/style.scss
 // // Импортируем общий файл с зависимостями
-// @import '../../scss/abstracts/mixins';
+// @import '../../../scss/abstracts/mixins';
 
 // .form__wrapper {
 //   display: grid;
@@ -37,7 +38,7 @@
 //   }
 
 //   input[type='checkbox']:checked + span {
-//     background: url('../../images/svg/check.svg') no-repeat center / contain;
+//     background: url('../../../images/svg/check.svg') no-repeat center / contain;
 //   }
 
 //   input[type='radio']:focus-visible + span,
@@ -158,3 +159,4 @@ input[type='range']::-moz-range-track {
   border-radius: var(--ms-02);
   cursor: pointer;
 }
+

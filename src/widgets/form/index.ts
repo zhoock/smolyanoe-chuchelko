@@ -1,3 +1,3 @@
-// src/components/Forms/index.ts
+// src/widgets/form/index.ts
 
-export { Form } from './Form';
+export { Form } from './ui/Form';

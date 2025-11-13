@@ -1,8 +1,7 @@
-// src/components/Forms/Form.tsx
-
+// src/widgets/form/ui/Form.tsx
 import './style.scss';
 
-export const Form = () => {
+export function Form() {
   return (
     <section className="form main-background" aria-label="Блок c формой">
       <div className="wrapper">
@@ -120,4 +119,7 @@ export const Form = () => {
       </div>
     </section>
   );
-};
+}
+
+export default Form;
+
