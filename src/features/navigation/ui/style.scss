@@ -1,6 +1,6 @@
-// src/components/Navigation/style.scss
+// src/features/navigation/ui/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .header {
   &__menu {

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
-import { Hamburger } from '@components';
+import { Hamburger } from '@shared/ui/hamburger';
 
 export const ModalRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();

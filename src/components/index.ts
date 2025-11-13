@@ -1,9 +1,5 @@
 // src/components/index.ts
 
-export * from './Header';
-export * from './Footer';
-export * from './Navigation';
-export * from './Hamburger';
 export { ModalRoute } from '@widgets/modalRoute';
 export { Popup } from '@shared/ui/popup';
 export { NotFoundPage } from '@widgets/notFound';

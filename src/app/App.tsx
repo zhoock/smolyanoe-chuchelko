@@ -17,16 +17,11 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
-import {
-  Header,
-  Footer,
-  Navigation,
-  Hamburger,
-  Popup,
-  NotFoundPage,
-  Form,
-  Hero,
-} from '@components';
+import { Popup, NotFoundPage, Form, Hero } from '@components';
+import { Header } from '@widgets/header';
+import { Footer } from '@widgets/footer';
+import { Navigation } from '@features/navigation';
+import { Hamburger } from '@shared/ui/hamburger';
 import { PlayerShell } from '@features/player';
 import Album from '@pages/Album/Album';
 import StemsPlayground from '@pages/StemsPlayground/StemsPlayground';

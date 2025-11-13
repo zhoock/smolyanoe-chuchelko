@@ -6,7 +6,8 @@ import type { IAlbums } from '@models';
 
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
-import { Popup, Hamburger } from '@components';
+import { Popup } from '@shared/ui/popup';
+import { Hamburger } from '@shared/ui/hamburger';
 import { playerActions } from '@features/player/model/slice/playerSlice';
 import * as playerSelectors from '@features/player/model/selectors/playerSelectors';
 import { audioController } from '@features/player/model/lib/audioController';

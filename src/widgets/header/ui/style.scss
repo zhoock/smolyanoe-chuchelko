@@ -1,6 +1,6 @@
-// src/components/Header/style.scss
+// src/widgets/header/ui/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .header {
   grid-area: header;

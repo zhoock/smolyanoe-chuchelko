@@ -1,7 +1,7 @@
 import { DataAwait } from '@shared/DataAwait';
 import { Popup } from '@shared/ui/popup';
 import { Text } from '@shared/ui/text';
-import { Hamburger } from '@components';
+import { Hamburger } from '@shared/ui/hamburger';
 import aboutStyles from '@components/AboutUs/AboutUs.module.scss';
 import type { AlbumsDeferred } from '@/routes/loaders/albumsLoader';
 

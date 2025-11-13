@@ -1,6 +1,6 @@
-// src/components/Footer/style.scss
+// src/widgets/footer/ui/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .footer {
   grid-area: footer;

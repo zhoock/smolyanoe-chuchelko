@@ -1,24 +1,20 @@
-// src/components/Footer/Footer.tsx
 import { useAlbumsData } from '@hooks/data';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
-
 import './style.scss';
 
-export const Footer = () => {
+const socialNetwork = [
+  { id: 1, name: 'youtube', href: 'https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/' },
+  { id: 2, name: 'instagram', href: 'https://www.instagram.com/smolyanoechuchelko/' },
+  { id: 3, name: 'facebook', href: 'https://www.facebook.com/smolyanoechuchelko/' },
+  { id: 4, name: 'vk', href: 'https://vk.com/smolyanoechuchelko' },
+];
+
+const supportLink = (label: string) => <a href="mailto:feedback@smolyanoechuchelko.ru">{label}</a>;
+
+export function Footer() {
   const { lang } = useLang();
-  const data = useAlbumsData(lang); // берём промисы из роутер-лоадера
-
-  const socialNetwork = [
-    { id: 1, name: 'youtube', href: 'https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/' },
-    { id: 2, name: 'instagram', href: 'https://www.instagram.com/smolyanoechuchelko/' },
-    { id: 3, name: 'facebook', href: 'https://www.facebook.com/smolyanoechuchelko/' },
-    { id: 4, name: 'vk', href: 'https://vk.com/smolyanoechuchelko' },
-  ];
-
-  const supportLink = (label: string) => (
-    <a href="mailto:feedback@smolyanoechuchelko.ru">{label}</a>
-  );
+  const data = useAlbumsData(lang);
 
   return (
     <footer role="contentinfo" className="footer extra-background">
@@ -59,4 +55,6 @@ export const Footer = () => {
       </div>
     </footer>
   );
-};
+}
+
+export default Footer;
