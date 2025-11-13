@@ -2,7 +2,7 @@ import { DataAwait } from '@shared/DataAwait';
 import { Popup } from '@shared/ui/popup';
 import { Text } from '@shared/ui/text';
 import { Hamburger } from '@shared/ui/hamburger';
-import aboutStyles from '@components/AboutUs/AboutUs.module.scss';
+import aboutStyles from './AboutSection.module.scss';
 import type { AlbumsDeferred } from '@/routes/loaders/albumsLoader';
 
 type AboutSectionProps = {

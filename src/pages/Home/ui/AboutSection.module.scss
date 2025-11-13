@@ -1,7 +1,7 @@
-// src/components/AboutUs/AboutUs.module.scss
+// src/pages/Home/ui/AboutSection.module.scss
 
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .about {
   &__content {
@@ -58,3 +58,4 @@
     block-size: 100%;
   }
 }
+
