@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import type { TracksProps, IAlbums } from '@models';
-import type { AppStore, RootState } from '@app/providers/StoreProvider/config/store';
+import type { AppStore, RootState } from '@shared/model/appStore/types';
 
 function formatDuration(duration?: number): string {
   if (duration == null) return '';

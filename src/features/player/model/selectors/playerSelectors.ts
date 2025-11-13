@@ -3,7 +3,7 @@
  * Используем createSelector для мемоизации - это предотвращает лишние пересчёты и ре-рендеры.
  */
 import { createSelector } from '@reduxjs/toolkit';
-import type { RootState } from '@app/providers/StoreProvider/config/store';
+import type { RootState } from '@shared/model/appStore/types';
 
 // Базовый селектор - получает весь стейт плеера
 export const selectPlayer = (state: RootState) => state.player;

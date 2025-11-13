@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from 'react-redux';
-import type { RootState } from '@app/providers/StoreProvider/config/store';
+import type { RootState } from '@shared/model/appStore/types';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { playerActions, loadPlayerState, savePlayerState } from '@features/player';
 import type { IAlbums, TracksProps } from '@models';

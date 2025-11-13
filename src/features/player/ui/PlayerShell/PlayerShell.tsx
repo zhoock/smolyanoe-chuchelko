@@ -13,7 +13,7 @@ import * as playerSelectors from '@features/player/model/selectors/playerSelecto
 import { audioController } from '@features/player/model/lib/audioController';
 import { MiniPlayer } from './MiniPlayer';
 import AudioPlayer from '@features/player/ui/AudioPlayer/AudioPlayer';
-import type { RootState } from '@app/providers/StoreProvider/config/store';
+import type { RootState } from '@shared/model/appStore/types';
 import { loadPlayerState, savePlayerState } from '@features/player/model/lib/playerPersist';
 
 const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';

@@ -4,13 +4,20 @@
  * Здесь мы "слушаем" действия Redux и выполняем соответствующие операции с аудио-элементом.
  * Это позволяет вынести всю логику управления аудио из компонентов в слой модели.
  */
-import { createListenerMiddleware, isAnyOf, type ListenerEffectAPI } from '@reduxjs/toolkit';
+import {
+  createListenerMiddleware,
+  isAnyOf,
+  type ListenerEffectAPI,
+  type PayloadAction,
+} from '@reduxjs/toolkit';
 import { audioController } from '@features/player/model/lib/audioController';
 import { playerActions } from '@features/player/model/slice/playerSlice';
-import type { RootState, AppDispatch } from '@app/providers/StoreProvider/config/store';
+import type { RootState, AppDispatch } from '@shared/model/appStore/types';
 import { gaEvent } from '@shared/lib/analytics';
 
 // Создаём middleware для слушателей
+type PlayerListenerApi = ListenerEffectAPI<RootState, AppDispatch>;
+
 export const playerListenerMiddleware = createListenerMiddleware<RootState, AppDispatch>();
 
 /**
@@ -42,7 +49,7 @@ const resetProgress = (api: ListenerEffectAPI<RootState, AppDispatch>) => {
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.play,
-  effect: async (_, api) => {
+  effect: async (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     const played = await tryPlayWithVolume(state.player.volume);
     if (!played) {
@@ -68,7 +75,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.toggle,
-  effect: async (_, api) => {
+  effect: async (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     if (state.player.isPlaying) {
       const played = await tryPlayWithVolume(state.player.volume);
@@ -87,7 +94,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.setVolume,
-  effect: ({ payload }) => {
+  effect: ({ payload }: PayloadAction<number>) => {
     audioController.setVolume(payload);
   },
 });
@@ -98,7 +105,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.setCurrentTime,
-  effect: ({ payload }) => {
+  effect: ({ payload }: PayloadAction<number>) => {
     audioController.setCurrentTime(payload);
   },
 });
@@ -110,7 +117,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.setCurrentTrackIndex,
-  effect: (_, api) => {
+  effect: (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
     resetProgress(api);
@@ -126,7 +133,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   matcher: isAnyOf(playerActions.nextTrack, playerActions.prevTrack),
-  effect: async (action, api) => {
+  effect: async (action, api: PlayerListenerApi) => {
     const state = api.getState();
     const { playlist = [], currentTrackIndex, isPlaying: wasPlaying, volume } = state.player;
     const trackSrc = playlist[currentTrackIndex]?.src;
@@ -165,7 +172,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.requestPlay,
-  effect: async (_, api) => {
+  effect: async (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
 
@@ -226,7 +233,7 @@ playerListenerMiddleware.startListening({
  */
 playerListenerMiddleware.startListening({
   actionCreator: playerActions.setPlaylist,
-  effect: (_, api) => {
+  effect: (_action, api: PlayerListenerApi) => {
     api.cancelActiveListeners();
   },
 });
