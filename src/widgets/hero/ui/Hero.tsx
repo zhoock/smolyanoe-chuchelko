@@ -1,15 +1,10 @@
-// src/components/Hero/Hero.tsx
-import { useState, useEffect } from 'react';
+// src/widgets/hero/ui/Hero.tsx
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import './style.scss';
 
 const photos = [
-  // `image-set(
-  //   url('/images/hero/1.avif') type('image/avif'),
-  //   url('/images/hero/1.webp') type('image/webp'),
-  //   url('/images/hero/1.jpg') type('image/jpg')
-  // )`,
   `image-set(
     url('/images/hero/2.avif') type('image/avif'),
     url('/images/hero/2.webp') type('image/webp'),
@@ -52,19 +47,21 @@ const photos = [
   )`,
 ];
 
-export const Hero = () => {
+export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
-  const location = useLocation(); // Хук для отслеживания изменений URL
+  const location = useLocation();
 
   useEffect(() => {
-    // При каждом изменении URL выбираем новое случайное изображение
     const randomIndex = Math.floor(Math.random() * photos.length);
     setBackgroundImage(photos[randomIndex]);
-  }, [location.pathname]); // Зависимость от пути (pathname)
+  }, [location.pathname]);
 
   return (
     <section className="hero" style={{ backgroundImage }}>
       <h1 className="hero__title">Cмоляное чучелко</h1>
     </section>
   );
-};
+}
+
+export default Hero;
+

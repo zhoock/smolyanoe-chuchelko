@@ -1,2 +1,2 @@
-// src/components/Hero/index.ts
-export { Hero } from './Hero';
+// src/widgets/hero/index.ts
+export { Hero } from './ui/Hero';

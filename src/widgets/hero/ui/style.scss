@@ -1,7 +1,6 @@
-// src/components/Hero/style.scss
-
+// src/widgets/hero/ui/style.scss
 // Импортируем общий файл с зависимостями
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 .hero {
   position: relative;
@@ -72,3 +71,4 @@
     text-transform: capitalize;
   }
 }
+
