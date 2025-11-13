@@ -1,4 +1,4 @@
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
 import './style.scss';

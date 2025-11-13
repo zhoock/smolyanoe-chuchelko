@@ -1,5 +1,5 @@
 import type { IAlbums } from '@models';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { useLang } from '@contexts/lang';
 import { DataAwait } from '@shared/DataAwait';
 

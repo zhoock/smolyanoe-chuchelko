@@ -1,5 +1,5 @@
 import type { IAlbums, String } from '@models';
-import { formatDate } from '@hooks/data';
+import { formatDate } from '@shared/api/albums';
 import { useLang } from '@contexts/lang';
 import { functionsMap } from './Functions'; // Импортируем функции
 

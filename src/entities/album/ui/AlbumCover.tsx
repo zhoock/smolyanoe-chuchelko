@@ -1,6 +1,6 @@
 // src/entities/album/ui/AlbumCover.tsx
 import { memo, useMemo } from 'react';
-import { getImageUrl } from 'hooks/data';
+import { getImageUrl } from '@shared/api/albums';
 import type { CoverProps } from 'models';
 import { useImageColor } from '@shared/lib/hooks/useImageColor';
 

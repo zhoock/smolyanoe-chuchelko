@@ -1,4 +1,3 @@
-// src/hooks/data.ts
 import { useRouteLoaderData } from 'react-router-dom';
 import type { AlbumsDeferred } from '@/routes/loaders/albumsLoader';
 
@@ -17,3 +16,4 @@ export function formatDate(dateRelease: string): string {
   const yyyy = date.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
+

@@ -9,7 +9,7 @@ import { AlbumTracks } from '@widgets/albumTracks';
 import { Share } from '@features/share';
 import { ServiceButtons } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
 import { useLang } from '@contexts/lang';

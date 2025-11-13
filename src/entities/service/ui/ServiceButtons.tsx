@@ -1,6 +1,6 @@
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import type { String, IAlbums } from '@models';
 import { GetButton } from './GetButton';
 import './style.scss';

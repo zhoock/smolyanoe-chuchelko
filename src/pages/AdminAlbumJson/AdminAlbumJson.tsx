@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { useLang } from '@contexts/lang';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';

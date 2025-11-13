@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { useAlbumsData, getImageUrl } from '@hooks/data';
+import { useAlbumsData, getImageUrl } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';

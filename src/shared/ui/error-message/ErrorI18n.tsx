@@ -1,6 +1,6 @@
 // src/shared/ui/error-message/ErrorI18n.tsx
 import { DataAwait } from '@shared/DataAwait';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { useLang } from '@contexts/lang';
 import { ErrorMessage } from './ErrorMessage';
 

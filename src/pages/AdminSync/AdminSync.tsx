@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useParams } from 'react-router-dom';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
 import { Loader } from '@shared/ui/loader';

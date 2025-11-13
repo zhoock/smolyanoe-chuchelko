@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
-import { getImageUrl } from '@hooks/data';
+import { getImageUrl } from '@shared/api/albums';
 import { useLang } from '@contexts/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import './style.scss';

@@ -2,7 +2,7 @@ import AlbumDetailsRelease from './AlbumDetailsRelease';
 import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import type { String, IAlbums } from '@models';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { useLang } from '@contexts/lang';
 import { DataAwait } from '@shared/DataAwait';
 import './style.scss';

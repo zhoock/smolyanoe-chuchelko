@@ -1,8 +1,6 @@
-// src/hooks/__tests__/data.test.ts
 import { jest, describe, test, expect } from '@jest/globals';
-import { getImageUrl, formatDate, useAlbumsData } from '@hooks/data';
+import { getImageUrl, formatDate, useAlbumsData } from '@shared/api/albums';
 
-// Мокаем только то, что нужно из react-router-dom
 jest.mock('react-router-dom', () => ({
   useRouteLoaderData: jest.fn(),
 }));
@@ -21,7 +19,6 @@ describe('getImageUrl', () => {
 
 describe('formatDate', () => {
   test('форматирует ISO дату в dd/mm/yyyy', () => {
-    // Берём "середину дня" в UTC, чтобы не было сюрпризов с часовыми поясами
     const iso = '2024-01-05T12:34:56Z';
     expect(formatDate(iso)).toBe('05/01/2024');
   });

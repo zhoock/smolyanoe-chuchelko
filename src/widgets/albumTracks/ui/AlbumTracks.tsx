@@ -5,7 +5,7 @@ import type { RootState } from '@app/providers/StoreProvider/config/store';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { playerActions, loadPlayerState, savePlayerState } from '@features/player';
 import type { IAlbums, TracksProps } from '@models';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
 import { gaEvent } from '@utils/ga';

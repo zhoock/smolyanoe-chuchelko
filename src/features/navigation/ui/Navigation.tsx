@@ -2,7 +2,7 @@
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { NavigationProps } from '@models';
-import { useAlbumsData } from '@hooks/data';
+import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
 import './style.scss';

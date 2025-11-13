@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
 import { useLang } from '@contexts/lang';
-import { useAlbumsData, getImageUrl } from '@hooks/data';
+import { useAlbumsData, getImageUrl } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
