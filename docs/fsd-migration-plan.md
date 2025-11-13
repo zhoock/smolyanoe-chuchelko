@@ -41,6 +41,16 @@
 | `syncedLyrics.ts` | Работа с синхронизированными лириками | ✅ перенесено в `features/syncedLyrics/lib`              |
 | `trackText.ts`    | Работа с текстами треков              | ✅ перенесено в `entities/track/lib`                     |
 
+### Провайдеры и стор
+
+| Элемент              | Назначение                    | Статус / итоговое расположение                       |
+| -------------------- | ----------------------------- | ---------------------------------------------------- |
+| `StoreProvider`      | Провайдер Redux стора         | ✅ `@app/providers/StoreProvider`                    |
+| `LangProvider`       | Контекст языка + setters      | ✅ `@app/providers/lang`                             |
+| `useAppDispatch`     | Типизированный dispatch       | ✅ `@shared/lib/hooks/useAppDispatch` (тип из `StoreProvider`) |
+| `useLang`            | Хук текущего языка            | ✅ `@app/providers/lang`                             |
+| `langStore.ts`       | Глобальный стор языка         | ✅ перенесено → `@shared/model/lang/store`           |
+
 ### Дополнительные действия
 
 - Сверить `widgets` и `features` на предмет дублирования с компонентами.
