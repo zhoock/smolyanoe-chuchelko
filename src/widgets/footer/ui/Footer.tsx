@@ -1,6 +1,6 @@
 import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import './style.scss';
 
 const socialNetwork = [

@@ -8,7 +8,7 @@ import { flushSync } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { Breadcrumb } from '@shared/ui/breadcrumb';

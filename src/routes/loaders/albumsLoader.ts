@@ -1,7 +1,7 @@
 // src/routes/loaders/albumsLoader.ts
 import type { LoaderFunctionArgs } from 'react-router';
 import type { IAlbums, IArticles, IInterface } from '@models';
-import { currentLang } from '@state/langStore';
+import { currentLang } from '@shared/model/lang';
 import { getJSON } from '@shared/api/http';
 
 export type AlbumsDeferred = {

@@ -9,7 +9,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerSelectors } from '@features/player';
 import { loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import type { SyncedLyricsLine, IAlbums } from '@models';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import './style.scss';
 
 interface SyncedLyricsDisplayProps {

@@ -3,7 +3,7 @@ import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import type { String, IAlbums } from '@models';
 import { useAlbumsData } from '@shared/api/albums';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { DataAwait } from '@shared/DataAwait';
 import './style.scss';
 

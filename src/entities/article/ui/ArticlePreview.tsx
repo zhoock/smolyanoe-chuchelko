@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
 import { getImageUrl } from '@shared/api/albums';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import './style.scss';
 

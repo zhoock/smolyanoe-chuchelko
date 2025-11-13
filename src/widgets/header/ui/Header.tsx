@@ -3,8 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Link, useRevalidator } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
-import { useLang } from '@contexts/lang'; // берём из контекста
-import { setCurrentLang } from '@state/langStore'; // для синхронизации с глобальным стором
+import { useLang } from '@app/providers/lang'; // берём из контекста
 import './style.scss';
 
 type Theme = 'light' | 'dark';
@@ -36,8 +35,7 @@ export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
   // Смена языка: контекст → стор для лоадера → revalidate()
   const changeLang = (newLang: string) => {
     if (newLang !== lang) {
-      setLang(newLang); // UI-строки
-      setCurrentLang(newLang); // для albumsLoader
+      setLang(newLang); // UI-строки + обновляем глобальный стор
       revalidate(); // перезагрузить данные на новом языке
     }
     setLangOpen(false);

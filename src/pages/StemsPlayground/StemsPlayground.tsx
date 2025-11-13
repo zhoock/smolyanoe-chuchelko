@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { useAlbumsData, getImageUrl } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';

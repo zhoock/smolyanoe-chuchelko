@@ -25,9 +25,7 @@
       "@features/*": ["features/*"],
       "@widgets/*": ["widgets/*"],
       "@app/*": ["app/*"],
-      "@contexts/*": ["contexts/*"],
       "@routes/*": ["routes/*"],
-      "@state/*": ["state/*"],
       "@audio/*": ["audio/*"],
       "@models": ["models"],
       "@models/*": ["models/*"]

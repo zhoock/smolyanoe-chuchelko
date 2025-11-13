@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { useAlbumsData } from '@shared/api/albums';
 import type { AlbumsDeferred } from '@/routes/loaders/albumsLoader';
 import { scrollToHash } from '@pages/Home/lib/scrollToHash';

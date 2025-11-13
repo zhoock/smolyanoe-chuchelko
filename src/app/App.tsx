@@ -1,5 +1,5 @@
 // src/app/App.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -11,8 +11,7 @@ import {
 } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '@routes/loaders/albumsLoader';
-import { useLang } from '@contexts/lang';
-import { currentLang, setCurrentLang } from '@state/langStore';
+import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
@@ -78,10 +77,11 @@ function Layout() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
+  const previousLangRef = useRef(lang);
+
   useEffect(() => {
-    if (currentLang !== lang) {
-      // ← дергаем только когда язык реально сменился+
-      setCurrentLang(lang);
+    if (previousLangRef.current !== lang) {
+      previousLangRef.current = lang;
       revalidate();
     }
   }, [lang, revalidate]);

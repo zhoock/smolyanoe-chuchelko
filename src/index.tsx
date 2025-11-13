@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './app/App';
 import { StoreProvider } from '@app/providers/StoreProvider';
-import { LangProvider } from './contexts/lang';
+import { LangProvider } from '@app/providers/lang';
 import { HelmetProvider } from 'react-helmet-async';
 import './main.scss';
 

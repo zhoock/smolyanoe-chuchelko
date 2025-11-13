@@ -1,7 +1,7 @@
 // src/shared/ui/error-message/ErrorI18n.tsx
 import { DataAwait } from '@shared/DataAwait';
 import { useAlbumsData } from '@shared/api/albums';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { ErrorMessage } from './ErrorMessage';
 
 // Коды ошибок, которые будем использовать из компонентов

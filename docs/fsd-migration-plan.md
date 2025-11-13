@@ -4,22 +4,22 @@
 
 ### `src/components`
 
-| Текущая директория | Назначение сейчас               | Статус / итоговое расположение                                      |
-| ------------------ | ------------------------------- | ------------------------------------------------------------------- |
-| `AboutUs`          | Статический блок «О нас», стили | ✅ перенесено → `@pages/Home/ui/AboutSection`                       |
-| `AlbumDetails`     | Компоненты карточки альбома     | ✅ перенесено → `@entities/album/ui/AlbumDetails`                   |
-| `AlbumTracks`      | Список треков                   | ✅ перенесено → `@widgets/albumTracks` + `@entities/track/ui`       |
-| `Articles`         | Превью статей, враппер          | ✅ перенесено → `@entities/article`                                 |
-| `Footer`           | Глобальный подвал сайта         | ✅ перенесено → `@widgets/footer`                                   |
-| `Forms`            | Общая форма                     | ✅ перенесено → `@widgets/form`                                     |
-| `Hamburger`        | Кнопка меню                     | ✅ перенесено → `@shared/ui/hamburger`                              |
-| `Header`           | Шапка сайта                     | ✅ перенесено → `@widgets/header`                                   |
-| `Hero`             | Герой-блок                      | ✅ перенесено → `@widgets/hero`                                     |
-| `Navigation`       | Меню навигации                  | ✅ перенесено → `@features/navigation`                              |
-| `ServiceButtons`   | Кнопки сервисов                 | ✅ перенесено → `@entities/service`                                 |
-| `Share`            | Шэринг                          | ✅ перенесено → `@features/share`                                   |
-| `UseImageColor`    | Хук/компонент получения цвета   | ✅ перенесено → `@shared/lib/hooks/useImageColor`                   |
-| `Waveform`         | Отображение волны аудио         | ✅ перенесено → `@shared/ui/waveform`                               |
+| Текущая директория | Назначение сейчас               | Статус / итоговое расположение                                |
+| ------------------ | ------------------------------- | ------------------------------------------------------------- |
+| `AboutUs`          | Статический блок «О нас», стили | ✅ перенесено → `@pages/Home/ui/AboutSection`                 |
+| `AlbumDetails`     | Компоненты карточки альбома     | ✅ перенесено → `@entities/album/ui/AlbumDetails`             |
+| `AlbumTracks`      | Список треков                   | ✅ перенесено → `@widgets/albumTracks` + `@entities/track/ui` |
+| `Articles`         | Превью статей, враппер          | ✅ перенесено → `@entities/article`                           |
+| `Footer`           | Глобальный подвал сайта         | ✅ перенесено → `@widgets/footer`                             |
+| `Forms`            | Общая форма                     | ✅ перенесено → `@widgets/form`                               |
+| `Hamburger`        | Кнопка меню                     | ✅ перенесено → `@shared/ui/hamburger`                        |
+| `Header`           | Шапка сайта                     | ✅ перенесено → `@widgets/header`                             |
+| `Hero`             | Герой-блок                      | ✅ перенесено → `@widgets/hero`                               |
+| `Navigation`       | Меню навигации                  | ✅ перенесено → `@features/navigation`                        |
+| `ServiceButtons`   | Кнопки сервисов                 | ✅ перенесено → `@entities/service`                           |
+| `Share`            | Шэринг                          | ✅ перенесено → `@features/share`                             |
+| `UseImageColor`    | Хук/компонент получения цвета   | ✅ перенесено → `@shared/lib/hooks/useImageColor`             |
+| `Waveform`         | Отображение волны аудио         | ✅ перенесено → `@shared/ui/waveform`                         |
 
 После переноса `components/index.ts` следует удалить или превратить в реэкспорты новых слоёв.
 

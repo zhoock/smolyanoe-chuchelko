@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAlbumsData } from '@shared/api/albums';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';

@@ -1,6 +1,6 @@
 import type { IAlbums } from '@models';
 import { useAlbumsData } from '@shared/api/albums';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { DataAwait } from '@shared/DataAwait';
 
 /**

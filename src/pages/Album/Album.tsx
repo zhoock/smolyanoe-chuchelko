@@ -12,7 +12,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 
 export default function Album() {
   const { lang } = useLang();

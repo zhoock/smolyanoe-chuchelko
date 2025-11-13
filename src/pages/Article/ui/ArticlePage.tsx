@@ -7,7 +7,7 @@ import { DataAwait } from '@shared/DataAwait';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
-import { useLang } from '@contexts/lang';
+import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import '@entities/article/ui/style.scss';
 
