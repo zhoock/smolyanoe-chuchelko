@@ -12,8 +12,11 @@ import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { Breadcrumb } from '@shared/ui/breadcrumb';
 import { AlbumCover } from '@entities/album';
-import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@utils/syncedLyrics';
-import { loadTrackTextFromStorage } from '@utils/trackText';
+import {
+  loadSyncedLyricsFromStorage,
+  loadAuthorshipFromStorage,
+} from '@features/syncedLyrics/lib';
+import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { TracksProps } from '@models';
 import './style.scss';
 

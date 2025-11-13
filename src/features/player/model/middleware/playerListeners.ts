@@ -8,7 +8,7 @@ import { createListenerMiddleware, isAnyOf, type ListenerEffectAPI } from '@redu
 import { audioController } from '@features/player/model/lib/audioController';
 import { playerActions } from '@features/player/model/slice/playerSlice';
 import type { RootState, AppDispatch } from '@app/providers/StoreProvider/config/store';
-import { gaEvent } from '@utils/ga';
+import { gaEvent } from '@shared/lib/analytics';
 
 // Создаём middleware для слушателей
 export const playerListenerMiddleware = createListenerMiddleware<RootState, AppDispatch>();

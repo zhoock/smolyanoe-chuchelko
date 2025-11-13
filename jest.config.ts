@@ -101,7 +101,6 @@ const config: Config = {
     '^@features/(.*)$': '<rootDir>/src/features/$1',
     '^@widgets/(.*)$': '<rootDir>/src/widgets/$1',
     '^@pages/(.*)$': '<rootDir>/src/pages/$1',
-    '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@contexts/(.*)$': '<rootDir>/src/contexts/$1',
     '^@routes/(.*)$': '<rootDir>/src/routes/$1',

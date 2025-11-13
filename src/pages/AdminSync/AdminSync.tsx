@@ -22,8 +22,8 @@ import {
   saveSyncedLyrics,
   loadSyncedLyricsFromStorage,
   loadAuthorshipFromStorage,
-} from '@utils/syncedLyrics';
-import { loadTrackTextFromStorage } from '@utils/trackText';
+} from '@features/syncedLyrics/lib';
+import { loadTrackTextFromStorage } from '@entities/track/lib';
 import './style.scss';
 
 export default function AdminSync() {

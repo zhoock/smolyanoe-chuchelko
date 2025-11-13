@@ -35,11 +35,11 @@
 
 | Файл              | Назначение                            | Рекомендованный слой         |
 | ----------------- | ------------------------------------- | ---------------------------- |
-| `ga.ts`           | Интеграция Google Analytics           | `shared/lib/analytics`       |
-| `http.ts`         | HTTP-утилиты                          | `shared/api/http`            |
+| `ga.ts`           | Интеграция Google Analytics           | ✅ перенесено в `shared/lib/analytics` (`gaEvent`) |
+| `http.ts`         | HTTP-утилиты                          | ✅ перенесено в `shared/api/http` (`http`, `getJSON`) |
 | `language.ts`     | Помощники локализации                 | ✅ перенесено в `shared/lib/lang` (`getLang`, `setLang`) |
-| `syncedLyrics.ts` | Работа с синхронизированными лириками | `features/synced-lyrics/lib` |
-| `trackText.ts`    | Работа с текстами треков              | `entities/track/lib`         |
+| `syncedLyrics.ts` | Работа с синхронизированными лириками | ✅ перенесено в `features/syncedLyrics/lib` |
+| `trackText.ts`    | Работа с текстами треков              | ✅ перенесено в `entities/track/lib` |
 
 ### Дополнительные действия
 

@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerSelectors } from '@features/player';
-import { loadSyncedLyricsFromStorage } from '@utils/syncedLyrics';
+import { loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import type { SyncedLyricsLine, IAlbums } from '@models';
 import { useLang } from '@contexts/lang';
 import './style.scss';

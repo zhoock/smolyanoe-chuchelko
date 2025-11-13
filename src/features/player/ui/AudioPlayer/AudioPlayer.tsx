@@ -15,7 +15,10 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
 import { clearImageColorCache } from '@shared/lib/hooks/useImageColor';
-import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@utils/syncedLyrics';
+import {
+  loadSyncedLyricsFromStorage,
+  loadAuthorshipFromStorage,
+} from '@features/syncedLyrics/lib';
 import { useLang } from '@contexts/lang';
 
 // Helper для debug-логов только в development

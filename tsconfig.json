@@ -20,7 +20,6 @@
     "paths": {
       "@/*": ["*"],
       "@pages/*": ["pages/*"],
-      "@utils/*": ["utils/*"],
       "@shared/*": ["shared/*"],
       "@entities/*": ["entities/*"],
       "@features/*": ["features/*"],

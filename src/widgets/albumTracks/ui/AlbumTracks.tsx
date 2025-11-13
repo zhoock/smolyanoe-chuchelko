@@ -8,7 +8,7 @@ import type { IAlbums, TracksProps } from '@models';
 import { useAlbumsData } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@contexts/lang';
-import { gaEvent } from '@utils/ga';
+import { gaEvent } from '@shared/lib/analytics';
 import { TrackList } from '@entities/track/ui/TrackList';
 import './style.scss';
 
