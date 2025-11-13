@@ -7,7 +7,7 @@ import { useAlbumsData, getImageUrl } from '@shared/api/albums';
 import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { StemEngine, StemKind } from '../../audio/stemsEngine';
+import { StemEngine, StemKind } from '@audio/stemsEngine';
 import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';

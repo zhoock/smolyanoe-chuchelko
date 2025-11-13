@@ -10,9 +10,9 @@ import {
   matchPath,
 } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { albumsLoader } from '../routes/loaders/albumsLoader';
+import { albumsLoader } from '@routes/loaders/albumsLoader';
 import { useLang } from '@contexts/lang';
-import { currentLang, setCurrentLang } from '../state/langStore';
+import { currentLang, setCurrentLang } from '@state/langStore';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';

@@ -1,7 +1,7 @@
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
 import { AboutSection } from './AboutSection';
-import { useHomeData } from '../model/useHomeData';
+import { useHomeData } from '@pages/Home/model/useHomeData';
 import '@entities/album/ui/style.scss';
 import '@entities/article/ui/style.scss';
 
