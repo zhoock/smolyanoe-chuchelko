@@ -396,7 +396,7 @@ export default function AdminSync() {
         console.error('❌ Ошибка загрузки данных:', error);
         setIsLoading(false);
       });
-  }, [data, albumId, trackId, lang, currentTime.duration]);
+  }, [data, albumId, trackId, lang, currentTime.duration, currentTrackId, lastTextHash]);
 
   // Установить тайм-код для конкретной строки
   const setLineTime = useCallback(
@@ -572,7 +572,7 @@ export default function AdminSync() {
         remainingTimeRef.current!.textContent = remainingValue;
       });
     }
-  }, [time.current, time.duration, formatTimeCompact]);
+  }, [time, formatTimeCompact]);
 
   // Форматирование времени для отображения (с миллисекундами для тайм-кодов)
   const formatTime = useCallback((seconds: number) => {

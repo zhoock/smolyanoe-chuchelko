@@ -15,10 +15,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
 import { clearImageColorCache } from '@shared/lib/hooks/useImageColor';
-import {
-  loadSyncedLyricsFromStorage,
-  loadAuthorshipFromStorage,
-} from '@features/syncedLyrics/lib';
+import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { useLang } from '@contexts/lang';
 
 // Helper для debug-логов только в development
@@ -95,7 +92,7 @@ export default function AudioPlayer({
   useEffect(() => {
     controlsVisibleRef.current = controlsVisible;
     dispatch(playerActions.setControlsVisible(controlsVisible));
-  }, [controlsVisible]);
+  }, [controlsVisible, dispatch]);
 
   useEffect(() => {
     setShowLyrics(globalShowLyrics);
@@ -172,7 +169,7 @@ export default function AudioPlayer({
           ? window.matchMedia('(hover: none) and (pointer: coarse)').matches
           : null,
     });
-  }, []);
+  }, [dispatch]);
 
   /**
    * Вычисляем уникальный ID альбома для аналитики и ключей.
@@ -527,8 +524,7 @@ export default function AudioPlayer({
     repeat,
     playlist.length,
     currentTrackIndex,
-    time.current,
-    time.duration,
+    time,
     progress,
     resetLyricsViewToStart,
     dispatch,
@@ -592,7 +588,7 @@ export default function AudioPlayer({
     controlsVisibilityCooldownUntilRef.current = now + (isCoarsePointerDevice ? 900 : 400);
     trackDebug('showControls', { now, cooldown: controlsVisibilityCooldownUntilRef.current });
     scheduleControlsHide();
-  }, [scheduleControlsHide]);
+  }, [scheduleControlsHide, isCoarsePointerDevice]);
 
   useEffect(() => {
     controlsVisibleRef.current = true;
@@ -779,7 +775,7 @@ export default function AudioPlayer({
         }
       }, 200); // задержка перед началом перемотки (уменьшили с 300мс до 200мс)
     },
-    [dispatch, time]
+    [dispatch, showControls]
   );
 
   /**
@@ -852,7 +848,7 @@ export default function AudioPlayer({
         wasRewindingRef.current = false;
       }, 150);
     },
-    [dispatch, isPlaying]
+    [dispatch, isPlaying, showControls]
   );
 
   /**
@@ -1257,7 +1253,7 @@ export default function AudioPlayer({
     }
 
     return activeIndex;
-  }, [syncedLyrics, time.current, time.duration, isPlaying]);
+  }, [syncedLyrics, time, isPlaying]);
 
   // Синхронизируем вычисленное значение с состоянием для совместимости
   useEffect(() => {
@@ -1687,7 +1683,7 @@ export default function AudioPlayer({
         autoScrollRafRef.current = null;
       }
     };
-  }, [currentLineIndexComputed, smoothScrollTo, isIOSDevice]);
+  }, [currentLineIndexComputed, smoothScrollTo, isIOSDevice, syncedLyrics, time]);
 
   /**
    * Очищаем таймеры перемотки при размонтировании компонента.
@@ -1731,7 +1727,7 @@ export default function AudioPlayer({
       dispatch(playerActions.setShowLyrics(next));
       return next;
     });
-  }, []);
+  }, [dispatch]);
 
   // Переключатель режима перемешивания треков
   const toggleShuffle = useCallback(() => {
@@ -1866,7 +1862,7 @@ export default function AudioPlayer({
 
   useEffect(() => {
     renderTimeDisplay(time.current, time.duration);
-  }, [time.current, time.duration, renderTimeDisplay]);
+  }, [time, renderTimeDisplay]);
 
   // Отслеживание активности пользователя (мышь, клавиатура, тач)
   // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении

@@ -172,7 +172,7 @@ export const PlayerShell: React.FC = () => {
     if (albumMeta) {
       setBgColor(DEFAULT_BG);
     }
-  }, [albumMeta?.albumId]);
+  }, [albumMeta]);
 
   useEffect(() => {
     timeRef.current = time;

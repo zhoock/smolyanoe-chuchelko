@@ -105,7 +105,7 @@ export default function AdminText() {
     } else {
       alert(`Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
     }
-  }, [albumId, trackId, lang, formattedText, authorship]);
+  }, [albumId, trackId, lang, formattedText, authorship, text]);
 
   if (!data) {
     return (

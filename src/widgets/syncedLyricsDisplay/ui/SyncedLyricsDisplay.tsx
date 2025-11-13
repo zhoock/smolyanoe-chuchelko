@@ -115,7 +115,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     }
 
     setCurrentLineIndex(activeIndex);
-  }, [syncedLyrics, currentTime.current]);
+  }, [syncedLyrics, currentTime]);
 
   // Автоскролл к активной строке
   // Более мягкая логика: скроллим только если строка действительно не видна, с минимальным отступом
