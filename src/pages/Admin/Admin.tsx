@@ -11,10 +11,7 @@ import { useLang } from '@contexts/lang';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { AlbumCover } from '@entities/album';
-import {
-  loadSyncedLyricsFromStorage,
-  loadAuthorshipFromStorage,
-} from '@features/syncedLyrics/lib';
+import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { IAlbums } from '@models';
 import './style.scss';

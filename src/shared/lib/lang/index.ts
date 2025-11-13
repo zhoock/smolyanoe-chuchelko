@@ -7,4 +7,3 @@ export function getLang(): string {
 export function setLang(lang: string): void {
   localStorage.setItem(LANG_KEY, lang);
 }
-

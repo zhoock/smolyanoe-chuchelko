@@ -16,4 +16,3 @@ export function formatDate(dateRelease: string): string {
   const yyyy = date.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
-

@@ -24,4 +24,3 @@ export function gaEvent(name: string, params: Record<string, any> = {}) {
     window.dataLayer.push({ event: name, ...params });
   }
 }
-

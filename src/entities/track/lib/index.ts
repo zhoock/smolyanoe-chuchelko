@@ -11,9 +11,7 @@ export interface SaveTrackTextResponse {
   message?: string;
 }
 
-export async function saveTrackText(
-  data: SaveTrackTextRequest
-): Promise<SaveTrackTextResponse> {
+export async function saveTrackText(data: SaveTrackTextRequest): Promise<SaveTrackTextResponse> {
   if (process.env.NODE_ENV === 'development') {
     try {
       const key = `track-text-${data.lang}-${data.albumId}-${data.trackId}`;
@@ -112,4 +110,3 @@ export function splitTextIntoLines(text: string): string[] {
 export function countLines(text: string): number {
   return splitTextIntoLines(text).length;
 }
-

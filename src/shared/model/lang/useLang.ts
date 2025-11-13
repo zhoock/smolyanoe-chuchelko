@@ -18,4 +18,3 @@ export function useLang() {
 
   return { lang, changeLang };
 }
-

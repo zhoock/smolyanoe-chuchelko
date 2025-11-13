@@ -10,4 +10,3 @@ export async function getJSON<T>(path: string, signal?: AbortSignal): Promise<T>
   const { data } = await http.get<T>(path, { signal });
   return data;
 }
-

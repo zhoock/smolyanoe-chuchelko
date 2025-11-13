@@ -1,2 +1,1 @@
 export { useLang } from './useLang';
-
