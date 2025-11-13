@@ -96,7 +96,6 @@ const config: Config = {
     '\\.(css|scss)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|svg|webp|avif)$': '<rootDir>/__mocks__/fileMock.js',
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@components/(.*)$': '<rootDir>/src/components/$1',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^@entities/(.*)$': '<rootDir>/src/entities/$1',
     '^@features/(.*)$': '<rootDir>/src/features/$1',

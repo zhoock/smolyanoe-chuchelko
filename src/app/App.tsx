@@ -17,7 +17,10 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
-import { Popup, NotFoundPage, Form, Hero } from '@components';
+import { Popup } from '@shared/ui/popup';
+import { NotFoundPage } from '@widgets/notFound';
+import { Form } from '@widgets/form';
+import { Hero } from '@widgets/hero';
 import { Header } from '@widgets/header';
 import { Footer } from '@widgets/footer';
 import { Navigation } from '@features/navigation';

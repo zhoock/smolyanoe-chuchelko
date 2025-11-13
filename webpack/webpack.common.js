@@ -33,7 +33,6 @@ module.exports = {
     alias: {
       // Псевдонимы для путей
       '@': path.resolve(__dirname, '../src'),
-      '@components': path.resolve(__dirname, '../src/components'),
       '@shared': path.resolve(__dirname, '../src/shared'),
       '@entities': path.resolve(__dirname, '../src/entities'),
       '@features': path.resolve(__dirname, '../src/features'),

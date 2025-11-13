@@ -19,8 +19,6 @@
     "baseUrl": "./src", // База для неотносительных путей
     "paths": {
       "@/*": ["*"],
-      "@components": ["components/index"],
-      "@components/*": ["components/*"],
       "@pages/*": ["pages/*"],
       "@utils/*": ["utils/*"],
       "@shared/*": ["shared/*"],
