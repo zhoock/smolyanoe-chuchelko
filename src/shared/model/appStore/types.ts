@@ -12,4 +12,3 @@ export interface RootState {
 
 export type AppStore = ReturnType<typeof configureStore<RootState>>;
 export type AppDispatch = ThunkDispatch<RootState, unknown, UnknownAction>;
-
