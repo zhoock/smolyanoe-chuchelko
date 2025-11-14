@@ -1,69 +1,66 @@
+import { useEffect } from 'react';
 import AlbumDetailsRelease from './AlbumDetailsRelease';
 import AlbumDetailsArtwork from './AlbumDetailsArtwork';
 import AlbumDetailsMusic from './AlbumDetailsMusic';
 import type { String, IAlbums } from '@models';
-import { useAlbumsData } from '@shared/api/albums';
 import { useLang } from '@app/providers/lang';
-import { DataAwait } from '@shared/DataAwait';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 import './style.scss';
 
 /**
  * Компонент отображает дополнительные данные об альбоме.
  */
 export default function AlbumDetails({ album }: { album: IAlbums }) {
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang); // берём промисы из лоадера
+  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  function Block({ music, release, albumCover }: String) {
-    return (
-      <section className="album-details nested-background">
-        <hr />
-        <div className="wrapper album__wrapper">
-          <div className="item">
-            <div className="album-details__music">
-              <h2>{music}</h2>
-              <AlbumDetailsMusic album={album} />
-            </div>
-          </div>
-          <div className="item item-release">
-            <div className="album-details__released">
-              <h2>{release}</h2>
-              <AlbumDetailsRelease album={album} />
-              <hr />
-            </div>
-            <div className="album-details__artwork">
-              <h2>{albumCover}</h2>
-              <AlbumDetailsArtwork album={album} />
-              <hr />
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  useEffect(() => {
+    if (uiStatus === 'idle' || uiStatus === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, uiStatus]);
 
-  if (!data) {
-    // теоретический фоллбек — когда лоадер не вернул данных
+  const titles = (ui?.titles as String | undefined) ?? {};
+  const { music, release, albumCover } = titles;
+
+  if (!music && !release && !albumCover) {
     return null;
   }
 
   return (
-    <DataAwait
-      value={data.templateC}
-      // лёгкий скелет, пока словарь не загрузился
-      fallback={
-        <section className="album-details nested-background">
-          <hr />
-          <div className="wrapper album__wrapper" />
-        </section>
-      }
-      error={null}
-    >
-      {(ui) => {
-        const titles = ui?.[0]?.titles as String | undefined;
-        if (!titles) return null;
-        return <Block {...titles} />;
-      }}
-    </DataAwait>
+    <section className="album-details nested-background">
+      <hr />
+      <div className="wrapper album__wrapper">
+        <div className="item">
+          <div className="album-details__music">
+            {music && <h2>{music}</h2>}
+            <AlbumDetailsMusic album={album} />
+          </div>
+        </div>
+        <div className="item item-release">
+          <div className="album-details__released">
+            {release && <h2>{release}</h2>}
+            <AlbumDetailsRelease album={album} />
+            <hr />
+          </div>
+          <div className="album-details__artwork">
+            {albumCover && <h2>{albumCover}</h2>}
+            <AlbumDetailsArtwork album={album} />
+            <hr />
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

@@ -6,14 +6,13 @@ import '@entities/album/ui/style.scss';
 import '@entities/article/ui/style.scss';
 
 export function HomePage() {
-  const { data, isAboutModalOpen, openAboutModal, closeAboutModal } = useHomeData();
+  const { isAboutModalOpen, openAboutModal, closeAboutModal } = useHomeData();
 
   return (
     <>
-      <AlbumsSection data={data} />
-      <ArticlesSection data={data} />
+      <AlbumsSection />
+      <ArticlesSection />
       <AboutSection
-        data={data}
         isAboutModalOpen={isAboutModalOpen}
         onOpen={openAboutModal}
         onClose={closeAboutModal}

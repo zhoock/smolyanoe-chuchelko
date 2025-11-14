@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { DataAwait } from '@shared/DataAwait';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -12,44 +11,47 @@ import {
   selectAlbumsError,
   selectAlbumsData,
 } from '@entities/album';
-import type { AlbumsDeferred } from '@/routes/loaders/albumsLoader';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 
-type AlbumsSectionProps = {
-  data: AlbumsDeferred | null;
-};
-
-export function AlbumsSection({ data }: AlbumsSectionProps) {
+export function AlbumsSection() {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const error = useAppSelector((state) => selectAlbumsError(state, lang));
+  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
+  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   useEffect(() => {
-    if (status === 'idle' || status === 'failed') {
+    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
       const promise = dispatch(fetchAlbums({ lang }));
       return () => {
         promise.abort();
       };
     }
-  }, [dispatch, lang, status]);
+  }, [dispatch, lang, albumsStatus]);
+
+  useEffect(() => {
+    if (uiStatus === 'idle' || uiStatus === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, uiStatus]);
 
   return (
     <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">
       <div className="wrapper">
-        <h2 id="home-albums-heading">
-          {data ? (
-            <DataAwait value={data.templateC} fallback={<span>…</span>}>
-              {(ui) => ui?.[0]?.titles?.albums}
-            </DataAwait>
-          ) : (
-            <span>…</span>
-          )}
-        </h2>
+        <h2 id="home-albums-heading">{ui?.titles?.albums ?? '…'}</h2>
 
-        {status === 'loading' || status === 'idle' ? (
+        {albumsStatus === 'loading' || albumsStatus === 'idle' ? (
           <Loader />
-        ) : status === 'failed' ? (
+        ) : albumsStatus === 'failed' ? (
           <ErrorI18n code="albumsLoadFailed" />
         ) : (
           <div className="albums__list">

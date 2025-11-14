@@ -6,6 +6,11 @@ import { getStore } from '@shared/model/appStore';
 import { selectCurrentLang } from '@shared/model/lang';
 import { fetchArticles, selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { fetchAlbums, selectAlbumsStatus, selectAlbumsData } from '@entities/album';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryData,
+} from '@shared/model/uiDictionary';
 
 export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
@@ -22,7 +27,39 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   const lang = selectCurrentLang(state);
 
   // СЛОВАРЬ НУЖЕН ВЕЗДЕ: шапка, меню, футер, aboutus и т.д.
-  const templateC = getJSON<IInterface[]>(`${lang}.json`, signal);
+  let templateC: Promise<IInterface[]>;
+  const uiStatus = selectUiDictionaryStatus(state, lang);
+  if (uiStatus === 'succeeded') {
+    templateC = Promise.resolve(selectUiDictionaryData(state, lang));
+  } else {
+    const fetchThunkPromise = store.dispatch(fetchUiDictionary({ lang }));
+
+    const createNeverResolvingPromise = () => new Promise<IInterface[]>(() => {});
+
+    if (signal.aborted) {
+      fetchThunkPromise.abort();
+      templateC = createNeverResolvingPromise();
+    } else {
+      const abortHandler = () => {
+        fetchThunkPromise.abort();
+      };
+      signal.addEventListener('abort', abortHandler, { once: true });
+
+      templateC = fetchThunkPromise.unwrap().catch((error) => {
+        if (
+          error === 'AbortError' ||
+          error === 'Aborted' ||
+          (typeof error === 'object' &&
+            error !== null &&
+            'name' in error &&
+            (error as { name?: string }).name === 'AbortError')
+        ) {
+          return createNeverResolvingPromise();
+        }
+        throw error;
+      });
+    }
+  }
 
   // По умолчанию — пустые промисы, чтобы типы были стабильными
   let templateA: Promise<IAlbums[]> = Promise.resolve([]);

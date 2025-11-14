@@ -2,8 +2,7 @@ import { Fragment, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { useAlbumsData, getImageUrl } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
+import { getImageUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -18,6 +17,11 @@ import {
   selectArticlesStatus,
   type RequestStatus,
 } from '@entities/article';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
@@ -28,11 +32,12 @@ export function ArticlePage() {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
   const locale = useMemo(() => lang as LocaleKey, [lang]);
-  const data = useAlbumsData(lang);
   const { articleId = '' } = useParams<{ articleId: string }>();
-  const status = useAppSelector((state) => selectArticlesStatus(state, lang));
-  const error = useAppSelector((state) => selectArticlesError(state, lang));
+  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
+  const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const article = useAppSelector((state) => selectArticleById(state, lang, articleId));
+  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
 
   function Block({ title, subtitle, strong, content, img, alt }: ArticledetailsProps) {
@@ -62,46 +67,35 @@ export function ArticlePage() {
       return;
     }
 
-    if (status === 'idle' || status === 'failed') {
+    if (articlesStatus === 'idle' || articlesStatus === 'failed') {
       const promise = dispatch(fetchArticles({ lang }));
       return () => {
         promise.abort();
       };
     }
+  }, [dispatch, lang, articlesStatus, articleId]);
 
-    return;
-  }, [dispatch, lang, status, articleId]);
-
-  if (!data) {
-    return (
-      <section className="article main-background" aria-label="Блок со статьёй">
-        <div className="wrapper">
-          <h2>{locale === 'en' ? 'Article' : 'Статья'}</h2>
-          <Loader />
-        </div>
-      </section>
-    );
-  }
+  useEffect(() => {
+    if (uiStatus === 'idle' || uiStatus === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, uiStatus]);
 
   return (
     <section className="article main-background" aria-label="Блок со статьёй">
       <div className="wrapper">
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
-            <li>
-              <DataAwait value={data.templateC} fallback={null} error={null}>
-                {(ui) => {
-                  const homeLabel = ui?.[0]?.links?.home;
-                  return homeLabel ? <Link to="/">{homeLabel}</Link> : null;
-                }}
-              </DataAwait>
-            </li>
+            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
           </ul>
         </nav>
 
         <ArticleContent
-          status={status}
-          error={error}
+          status={articlesStatus}
+          error={articlesError}
           article={article}
           formatDate={formatDate}
           lang={locale}

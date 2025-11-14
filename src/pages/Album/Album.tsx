@@ -9,8 +9,6 @@ import { AlbumTracks } from '@widgets/albumTracks';
 import { Share } from '@features/share';
 import { ServiceButtons } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { useAlbumsData } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
 import { Loader } from '@shared/ui/loader';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -21,15 +19,21 @@ import {
   selectAlbumsError,
   selectAlbumById,
 } from '@entities/album';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 
 export default function Album() {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
   const { albumId = '' } = useParams<{ albumId: string }>();
-  const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const error = useAppSelector((state) => selectAlbumsError(state, lang));
+  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
+  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -40,15 +44,24 @@ export default function Album() {
       return;
     }
 
-    if (status === 'idle' || status === 'failed') {
+    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
       const promise = dispatch(fetchAlbums({ lang }));
       return () => {
         promise.abort();
       };
     }
-  }, [dispatch, lang, status, albumId]);
+  }, [dispatch, lang, albumsStatus, albumId]);
 
-  if (!data) {
+  useEffect(() => {
+    if (uiStatus === 'idle' || uiStatus === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, uiStatus]);
+
+  if (albumsStatus === 'loading' || albumsStatus === 'idle') {
     return (
       <section className="album main-background" aria-label="Блок c альбомом">
         <div className="wrapper album__wrapper">
@@ -58,17 +71,7 @@ export default function Album() {
     );
   }
 
-  if (status === 'loading' || status === 'idle') {
-    return (
-      <section className="album main-background" aria-label="Блок c альбомом">
-        <div className="wrapper album__wrapper">
-          <Loader />
-        </div>
-      </section>
-    );
-  }
-
-  if (status === 'failed') {
+  if (albumsStatus === 'failed') {
     return (
       <section className="album main-background" aria-label="Блок c альбомом">
         <div className="wrapper album__wrapper">
@@ -112,14 +115,7 @@ export default function Album() {
       <div className="wrapper album__wrapper">
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
-            <li>
-              <DataAwait value={data.templateC} fallback={null} error={null}>
-                {(ui) => {
-                  const homeLabel = ui?.[0]?.links?.home;
-                  return homeLabel ? <Link to="/">{homeLabel}</Link> : null;
-                }}
-              </DataAwait>
-            </li>
+            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
           </ul>
         </nav>
 

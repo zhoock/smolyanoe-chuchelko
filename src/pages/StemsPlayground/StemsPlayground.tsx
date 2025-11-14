@@ -3,10 +3,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
 import { useLang } from '@app/providers/lang';
-import { useAlbumsData, getImageUrl } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
+import { getImageUrl } from '@shared/api/albums';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 import { StemEngine, StemKind } from '@audio/stemsEngine';
 import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
@@ -175,8 +181,19 @@ export default function StemsPlayground() {
     (typeof window !== 'undefined' && window.location.origin) || 'https://smolyanoechuchelko.ru';
   const canonical = `${origin}${pathname}`;
 
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
+  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+
+  useEffect(() => {
+    if (uiStatus === 'idle' || uiStatus === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, uiStatus]);
 
   // Engine
   const engineRef = useRef<StemEngine | null>(null);
@@ -304,8 +321,9 @@ export default function StemsPlayground() {
     if (wasPlayingRef.current && !isPlaying) return;
   };
 
-  // Пока route-лоадер не отдал данные — общий Loader
-  if (!data) {
+  const selectDisabled = isPlaying || loading;
+
+  if (uiStatus === 'loading' || uiStatus === 'idle') {
     return (
       <section className="stems-page main-background" aria-label="Блок c миксером">
         <div className="wrapper stems__wrapper">
@@ -315,163 +333,148 @@ export default function StemsPlayground() {
     );
   }
 
-  const selectDisabled = isPlaying || loading;
+  if (uiStatus === 'failed') {
+    return (
+      <section className="stems-page main-background" aria-label="Блок c миксером">
+        <div className="wrapper stems__wrapper">
+          <ErrorI18n code="uiLoadFailed" />
+        </div>
+      </section>
+    );
+  }
+
+  const b = ui?.buttons ?? {};
+  const pageTitle = (ui?.stems?.pageTitle as string) ?? '';
+  const pageText = (ui?.stems?.text as string) || '';
+  const notice = (ui?.stems?.notice as string) || '';
+
+  const labels = {
+    play: (b.playButton as string) ?? 'Play',
+    pause: (b.pause as string) ?? 'Pause',
+    drums: (b.drums as string) ?? 'Drums',
+    bass: (b.bass as string) ?? 'Bass',
+    guitar: (b.guitar as string) ?? 'Guitar',
+    vocals: (b.vocals as string) ?? 'Vocals',
+    pageTitle,
+    pageText,
+    notice,
+  };
 
   return (
     <section className="stems-page main-background" aria-label="Блок c миксером">
-      <DataAwait
-        value={data.templateC}
-        fallback={
-          <div className="wrapper stems__wrapper">
-            <Loader />
+      <Helmet>
+        <title>{labels.pageTitle}</title>
+        <meta name="description" content={labels.pageText} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={labels.pageTitle} />
+        <meta property="og:description" content={labels.pageText} />
+        <meta property="og:url" content={canonical} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={labels.pageTitle} />
+        <meta name="twitter:description" content={labels.pageText} />
+      </Helmet>
+
+      <div className="wrapper stems__wrapper">
+        <h2 className="item-type-a">{labels.pageTitle}</h2>
+        <Text className="item-type-a">{labels.pageText}</Text>
+        <Text as="span" className="item-type-a notice" aria-label="Важная информация">
+          {labels.notice}
+        </Text>
+
+        {/* выбор песни */}
+        <div className="item">
+          <div
+            className={clsx('select-control', { 'is-disabled': selectDisabled })}
+            aria-disabled={selectDisabled}
+          >
+            <select
+              id="song-select"
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
+              aria-label="Выбор песни"
+              disabled={selectDisabled}
+            >
+              {SONGS.map((s) => (
+                <option key={s.id} value={s.id} title={s.title}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
           </div>
-        }
-        error={
-          <div className="wrapper stems__wrapper">
-            <ErrorI18n code="albumsLoadFailed" />
+        </div>
+
+        {/* транспорт */}
+        <div className="item">
+          <div className="wrapper-transport-controls">
+            <button
+              className="btn"
+              onClick={togglePlay}
+              type="button"
+              disabled={loading}
+              aria-pressed={isPlaying}
+            >
+              <span
+                className={clsx(isPlaying ? 'icon-controller-pause' : 'icon-controller-play')}
+              ></span>
+              {isPlaying ? labels.pause : labels.play}
+            </button>
           </div>
-        }
-      >
-        {(ui) => {
-          const b = ui?.[0]?.buttons ?? {};
-          const t = ui?.[0]?.titles ?? {};
-          const pageTitle = ui?.[0]?.stems?.pageTitle as string;
-          const pageText = (ui?.[0]?.stems?.text as string) || '';
-          const notice = (ui?.[0]?.stems?.notice as string) || '';
+        </div>
 
-          const labels = {
-            play: b.playButton as string,
-            pause: b.pause as string,
-            drums: b.drums as string,
-            bass: b.bass as string,
-            guitar: b.guitar as string,
-            vocals: b.vocals as string,
-            pageTitle,
-            pageText,
-            notice,
-          };
-
-          return (
-            <>
-              <Helmet>
-                <title>{labels.pageTitle}</title>
-                <meta name="description" content={labels.pageText} />
-                <link rel="canonical" href={canonical} />
-                <meta property="og:type" content="website" />
-                <meta property="og:title" content={labels.pageTitle} />
-                <meta property="og:description" content={labels.pageText} />
-                <meta property="og:url" content={canonical} />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={labels.pageTitle} />
-                <meta name="twitter:description" content={labels.pageText} />
-              </Helmet>
-
-              <div className="wrapper stems__wrapper">
-                <h2 className="item-type-a">{labels.pageTitle}</h2>
-                <Text className="item-type-a">{labels.pageText}</Text>
-                <Text as="span" className="item-type-a notice" aria-label="Важная информация">
-                  {labels.notice}
-                </Text>
-
-                {/* выбор песни */}
-                <div className="item">
-                  <div
-                    className={clsx('select-control', { 'is-disabled': selectDisabled })}
-                    aria-disabled={selectDisabled}
-                  >
-                    <select
-                      id="song-select"
-                      value={selectedId}
-                      onChange={(e) => setSelectedId(e.target.value)}
-                      aria-label="Выбор песни"
-                      disabled={selectDisabled}
-                    >
-                      {SONGS.map((s) => (
-                        <option key={s.id} value={s.id} title={s.title}>
-                          {s.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* транспорт */}
-                <div className="item">
-                  <div className="wrapper-transport-controls">
-                    <button
-                      className="btn"
-                      onClick={togglePlay}
-                      type="button"
-                      disabled={loading}
-                      aria-pressed={isPlaying}
-                    >
-                      <span
-                        className={clsx(
-                          isPlaying ? 'icon-controller-pause' : 'icon-controller-play'
-                        )}
-                      ></span>
-                      {isPlaying ? labels.pause : labels.play}
-                    </button>
-                  </div>
-                </div>
-
-                {/* ВОЛНА или ЛОАДЕР */}
+        {/* ВОЛНА или ЛОАДЕР */}
+        <div
+          ref={waveWrapRef}
+          className={clsx('stems__wave-wrap', 'item-type-a', { 'is-loading': loading })}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        >
+          {loading ? (
+            <div className="stems__loader in-wave" aria-live="polite" aria-busy="true">
+              <div className="stems__loader-bar">
                 <div
-                  ref={waveWrapRef}
-                  className={clsx('stems__wave-wrap', 'item-type-a', { 'is-loading': loading })}
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                >
-                  {loading ? (
-                    <div className="stems__loader in-wave" aria-live="polite" aria-busy="true">
-                      <div className="stems__loader-bar">
-                        <div
-                          className="stems__loader-fill"
-                          style={{ transform: `scaleX(${loadProgress})` }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <Waveform src={waveformSrc} progress={progress} height={64} />
-                      <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
-                    </>
-                  )}
-                </div>
-
-                {/* портреты-мутизаторы */}
-                <div className="stems__grid item-type-a">
-                  <StemCard
-                    title={labels.drums}
-                    img={currentSong?.portraits?.drums}
-                    active={!muted.drums}
-                    onClick={() => toggleMute('drums')}
-                  />
-                  <StemCard
-                    title={labels.bass}
-                    img={currentSong?.portraits?.bass}
-                    active={!muted.bass}
-                    onClick={() => toggleMute('bass')}
-                  />
-                  <StemCard
-                    title={labels.guitar}
-                    img={currentSong?.portraits?.guitar}
-                    active={!muted.guitar}
-                    onClick={() => toggleMute('guitar')}
-                  />
-                  <StemCard
-                    title={labels.vocals}
-                    img={currentSong?.portraits?.vocal}
-                    active={!muted.vocal}
-                    onClick={() => toggleMute('vocal')}
-                  />
-                </div>
+                  className="stems__loader-fill"
+                  style={{ transform: `scaleX(${loadProgress})` }}
+                />
               </div>
+            </div>
+          ) : (
+            <>
+              <Waveform src={waveformSrc} progress={progress} height={64} />
+              <div className="stems__wave-cursor" style={{ left: `${progress * 100}%` }} />
             </>
-          );
-        }}
-      </DataAwait>
+          )}
+        </div>
+
+        {/* портреты-мутизаторы */}
+        <div className="stems__grid item-type-a">
+          <StemCard
+            title={labels.drums}
+            img={currentSong?.portraits?.drums}
+            active={!muted.drums}
+            onClick={() => toggleMute('drums')}
+          />
+          <StemCard
+            title={labels.bass}
+            img={currentSong?.portraits?.bass}
+            active={!muted.bass}
+            onClick={() => toggleMute('bass')}
+          />
+          <StemCard
+            title={labels.guitar}
+            img={currentSong?.portraits?.guitar}
+            active={!muted.guitar}
+            onClick={() => toggleMute('guitar')}
+          />
+          <StemCard
+            title={labels.vocals}
+            img={currentSong?.portraits?.vocal}
+            active={!muted.vocal}
+            onClick={() => toggleMute('vocal')}
+          />
+        </div>
+      </div>
     </section>
   );
 }

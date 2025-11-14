@@ -1,6 +1,12 @@
-import { useAlbumsData } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
+import { useEffect } from 'react';
 import { useLang } from '@app/providers/lang';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 import './style.scss';
 
 const socialNetwork = [
@@ -13,8 +19,19 @@ const socialNetwork = [
 const supportLink = (label: string) => <a href="mailto:feedback@smolyanoechuchelko.ru">{label}</a>;
 
 export function Footer() {
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
+  const status = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+
+  useEffect(() => {
+    if (status === 'idle' || status === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, status]);
 
   return (
     <footer role="contentinfo" className="footer extra-background">
@@ -41,15 +58,7 @@ export function Footer() {
             </small>
           </li>
           <li>
-            <small>
-              {data ? (
-                <DataAwait value={data.templateC} fallback={supportLink('Поддержка')} error={null}>
-                  {(ui) => supportLink(ui?.[0]?.titles?.support ?? 'Поддержка')}
-                </DataAwait>
-              ) : (
-                supportLink('Поддержка')
-              )}
-            </small>
+            <small>{supportLink(ui?.titles?.support ?? 'Поддержка')}</small>
           </li>
         </ul>
       </div>

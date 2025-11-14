@@ -9,6 +9,7 @@ import {
 import { langReducer, langListenerMiddleware, applyLangSideEffects } from '@shared/model/lang';
 import { articlesReducer } from '@entities/article';
 import { albumsReducer } from '@entities/album';
+import { uiDictionaryReducer } from '@shared/model/uiDictionary';
 
 import type { AppDispatch, AppStore as AppStoreType, RootState } from './types';
 
@@ -18,6 +19,7 @@ const rootReducer = {
   lang: langReducer,
   articles: articlesReducer,
   albums: albumsReducer,
+  uiDictionary: uiDictionaryReducer,
 };
 
 let storeInstance: AppStoreType | null = null;

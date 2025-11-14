@@ -1,7 +1,13 @@
 // src/shared/ui/error-message/ErrorI18n.tsx
-import { DataAwait } from '@shared/DataAwait';
-import { useAlbumsData } from '@shared/api/albums';
+import { useEffect } from 'react';
 import { useLang } from '@app/providers/lang';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import {
+  fetchUiDictionary,
+  selectUiDictionaryStatus,
+  selectUiDictionaryFirst,
+} from '@shared/model/uiDictionary';
 import { ErrorMessage } from './ErrorMessage';
 
 // Коды ошибок, которые будем использовать из компонентов
@@ -39,25 +45,24 @@ const FALLBACK: Record<string, Record<ErrorCode, string>> = {
 };
 
 export default function ErrorI18n({ code, fallback }: { code: ErrorCode; fallback?: string }) {
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
+  const status = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const def = fallback ?? FALLBACK[lang as 'ru' | 'en']?.[code] ?? FALLBACK.en.generic;
 
-  // Если лоадер не прикручен/ещё не дал данные — показываем дефолт
-  if (!data) return <ErrorMessage error={def} />;
+  useEffect(() => {
+    if (status === 'idle' || status === 'failed') {
+      const promise = dispatch(fetchUiDictionary({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, status]);
 
-  // Берём текст из словаря, если он там есть: templateC[0]?.errors?.<code>
-  return (
-    <DataAwait value={data.templateC} fallback={<ErrorMessage error={def} />} error={null}>
-      {(ui) => {
-        // Поддержка словаря вида: { errors: { albumsLoadFailed: "..." } }
-        const dict = ui?.[0];
-        const localized =
-          // @ts-ignore — если у тебя в типах нет поля errors, просто читаем опционально
-          dict?.errors?.[code] ?? def;
+  // Поддержка словаря вида: { errors: { albumsLoadFailed: "..." } }
+  // @ts-ignore — если у тебя в типах нет поля errors, просто читаем опционально
+  const localized = (ui?.errors as Record<ErrorCode, string> | undefined)?.[code] ?? def;
 
-        return <ErrorMessage error={localized} />;
-      }}
-    </DataAwait>
-  );
+  return <ErrorMessage error={localized} />;
 }
