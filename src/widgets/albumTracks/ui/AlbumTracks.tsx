@@ -6,11 +6,7 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, loadPlayerState, savePlayerState } from '@features/player';
 import type { IAlbums, TracksProps } from '@models';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
 import { gaEvent } from '@shared/lib/analytics';
 import { TrackList } from '@entities/track/ui/TrackList';
@@ -27,20 +23,12 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   const playlistLengthRef = useRef(0);
 
   const { lang } = useLang();
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // UI словарь загружается через loader
 
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {

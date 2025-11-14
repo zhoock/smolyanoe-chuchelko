@@ -1,13 +1,7 @@
 // src/shared/ui/error-message/ErrorI18n.tsx
-import { useEffect } from 'react';
 import { useLang } from '@app/providers/lang';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { ErrorMessage } from './ErrorMessage';
 
 // Коды ошибок, которые будем использовать из компонентов
@@ -45,20 +39,11 @@ const FALLBACK: Record<string, Record<ErrorCode, string>> = {
 };
 
 export default function ErrorI18n({ code, fallback }: { code: ErrorCode; fallback?: string }) {
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const status = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const def = fallback ?? FALLBACK[lang as 'ru' | 'en']?.[code] ?? FALLBACK.en.generic;
 
-  useEffect(() => {
-    if (status === 'idle' || status === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, status]);
+  // UI словарь загружается через loader
 
   // Поддержка словаря вида: { errors: { albumsLoadFailed: "..." } }
   // @ts-ignore — если у тебя в типах нет поля errors, просто читаем опционально

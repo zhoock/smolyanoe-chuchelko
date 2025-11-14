@@ -1,15 +1,9 @@
-import { useEffect } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { Text } from '@shared/ui/text';
 import { Hamburger } from '@shared/ui/hamburger';
 import { useLang } from '@app/providers/lang';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import aboutStyles from './AboutSection.module.scss';
 
 type AboutSectionProps = {
@@ -19,19 +13,10 @@ type AboutSectionProps = {
 };
 
 export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSectionProps) {
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // UI словарь загружается через loader
 
   const title = ui?.titles?.theBand ?? '';
   const theBand = Array.isArray(ui?.theBand) ? (ui.theBand as string[]).filter(Boolean) : [];

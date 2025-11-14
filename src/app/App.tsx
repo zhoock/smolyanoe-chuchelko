@@ -78,13 +78,32 @@ function Layout() {
   });
 
   const previousLangRef = useRef(lang);
+  const revalidateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (previousLangRef.current !== lang) {
       previousLangRef.current = lang;
-      revalidate();
+
+      // Отменяем предыдущий таймаут, если он есть
+      if (revalidateTimeoutRef.current) {
+        clearTimeout(revalidateTimeoutRef.current);
+      }
+
+      // Используем debounce, чтобы предотвратить множественные вызовы
+      revalidateTimeoutRef.current = setTimeout(() => {
+        revalidate();
+        revalidateTimeoutRef.current = null;
+      }, 50);
     }
-  }, [lang, revalidate]);
+
+    return () => {
+      if (revalidateTimeoutRef.current) {
+        clearTimeout(revalidateTimeoutRef.current);
+        revalidateTimeoutRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('theme-dark', theme === 'dark');

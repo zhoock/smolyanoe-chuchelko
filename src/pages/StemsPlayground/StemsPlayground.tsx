@@ -6,13 +6,8 @@ import { useLang } from '@app/providers/lang';
 import { getImageUrl } from '@shared/api/albums';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { StemEngine, StemKind } from '@audio/stemsEngine';
 import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
@@ -181,19 +176,10 @@ export default function StemsPlayground() {
     (typeof window !== 'undefined' && window.location.origin) || 'https://smolyanoechuchelko.ru';
   const canonical = `${origin}${pathname}`;
 
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // UI словарь загружается через loader
 
   // Engine
   const engineRef = useRef<StemEngine | null>(null);
@@ -322,26 +308,6 @@ export default function StemsPlayground() {
   };
 
   const selectDisabled = isPlaying || loading;
-
-  if (uiStatus === 'loading' || uiStatus === 'idle') {
-    return (
-      <section className="stems-page main-background" aria-label="Блок c миксером">
-        <div className="wrapper stems__wrapper">
-          <Loader />
-        </div>
-      </section>
-    );
-  }
-
-  if (uiStatus === 'failed') {
-    return (
-      <section className="stems-page main-background" aria-label="Блок c миксером">
-        <div className="wrapper stems__wrapper">
-          <ErrorI18n code="uiLoadFailed" />
-        </div>
-      </section>
-    );
-  }
 
   const b = ui?.buttons ?? {};
   const pageTitle = (ui?.stems?.pageTitle as string) ?? '';

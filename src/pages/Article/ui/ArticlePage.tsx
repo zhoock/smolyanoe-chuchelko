@@ -7,21 +7,15 @@ import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { useLang } from '@app/providers/lang';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { formatDateInWords, type LocaleKey } from '@entities/article/lib/formatDate';
 import {
-  fetchArticles,
   selectArticleById,
   selectArticlesError,
   selectArticlesStatus,
   type RequestStatus,
 } from '@entities/article';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
@@ -29,14 +23,12 @@ export function ArticlePage() {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
   const locale = useMemo(() => lang as LocaleKey, [lang]);
   const { articleId = '' } = useParams<{ articleId: string }>();
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const article = useAppSelector((state) => selectArticleById(state, lang, articleId));
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
 
@@ -62,27 +54,7 @@ export function ArticlePage() {
     );
   }
 
-  useEffect(() => {
-    if (!articleId) {
-      return;
-    }
-
-    if (articlesStatus === 'idle' || articlesStatus === 'failed') {
-      const promise = dispatch(fetchArticles({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, articlesStatus, articleId]);
-
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // Данные загружаются через loader
 
   return (
     <section className="article main-background" aria-label="Блок со статьёй">

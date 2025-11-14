@@ -1,48 +1,19 @@
-import { useEffect } from 'react';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { ArticlePreview } from '@entities/article';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import {
-  fetchArticles,
-  selectArticlesStatus,
-  selectArticlesError,
-  selectArticlesData,
-} from '@entities/article';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectArticlesStatus, selectArticlesError, selectArticlesData } from '@entities/article';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 
 export function ArticlesSection() {
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const articles = useAppSelector((state) => selectArticlesData(state, lang));
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  useEffect(() => {
-    if (articlesStatus === 'idle' || articlesStatus === 'failed') {
-      const promise = dispatch(fetchArticles({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, articlesStatus]);
-
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // Данные загружаются через loader, не нужно загружать здесь
 
   return (
     <section

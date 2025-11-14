@@ -3,6 +3,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getJSON } from '@shared/api/http';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
+import type { RootState } from '@shared/model/appStore/types';
 
 import type { ArticlesEntry, ArticlesState } from './types';
 
@@ -21,18 +22,32 @@ const initialState: ArticlesState = {
 export const fetchArticles = createAsyncThunk<
   IArticles[],
   { lang: SupportedLang },
-  { rejectValue: string }
->('articles/fetchByLang', async ({ lang }, { signal, rejectWithValue }) => {
-  try {
-    const articles = await getJSON<IArticles[]>(`articles-${lang}.json`, signal);
-    return articles;
-  } catch (error) {
-    if (error instanceof Error) {
-      return rejectWithValue(error.message);
+  { rejectValue: string; state: RootState }
+>(
+  'articles/fetchByLang',
+  async ({ lang }, { signal, rejectWithValue }) => {
+    try {
+      const articles = await getJSON<IArticles[]>(`articles-${lang}.json`, signal);
+      return articles;
+    } catch (error) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Unknown error');
     }
-    return rejectWithValue('Unknown error');
+  },
+  {
+    condition: ({ lang }, { getState }) => {
+      const state = getState();
+      const entry = state.articles[lang];
+      // Не запускаем, если уже загружается или уже загружено
+      if (entry.status === 'loading' || entry.status === 'succeeded') {
+        return false;
+      }
+      return true;
+    },
   }
-});
+);
 
 const articlesSlice = createSlice({
   name: 'articles',

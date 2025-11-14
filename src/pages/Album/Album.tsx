@@ -11,55 +11,23 @@ import { ServiceButtons } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { Loader } from '@shared/ui/loader';
 import { useLang } from '@app/providers/lang';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  fetchAlbums,
-  selectAlbumsStatus,
-  selectAlbumsError,
-  selectAlbumById,
-} from '@entities/album';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 
 export default function Album() {
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
   const { albumId = '' } = useParams<{ albumId: string }>();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [albumId]);
 
-  useEffect(() => {
-    if (!albumId) {
-      return;
-    }
-
-    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
-      const promise = dispatch(fetchAlbums({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, albumsStatus, albumId]);
-
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // Данные загружаются через loader
 
   if (albumsStatus === 'loading' || albumsStatus === 'idle') {
     return (

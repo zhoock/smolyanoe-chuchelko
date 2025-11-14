@@ -1,48 +1,19 @@
-import { useEffect } from 'react';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import {
-  fetchAlbums,
-  selectAlbumsStatus,
-  selectAlbumsError,
-  selectAlbumsData,
-} from '@entities/album';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectAlbumsStatus, selectAlbumsError, selectAlbumsData } from '@entities/album';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 
 export function AlbumsSection() {
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  useEffect(() => {
-    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
-      const promise = dispatch(fetchAlbums({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, albumsStatus]);
-
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // Данные загружаются через loader, не нужно загружать здесь
 
   return (
     <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">

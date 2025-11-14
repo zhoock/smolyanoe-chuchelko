@@ -1,12 +1,6 @@
-import { useEffect } from 'react';
 import { useLang } from '@app/providers/lang';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  fetchUiDictionary,
-  selectUiDictionaryStatus,
-  selectUiDictionaryFirst,
-} from '@shared/model/uiDictionary';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { String, IAlbums } from '@models';
 import { GetButton } from './GetButton';
 import './style.scss';
@@ -85,19 +79,10 @@ function ServiceButtonsContent({
 }
 
 export function ServiceButtons({ album, section }: ServiceButtonsProps) {
-  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const uiStatus = useAppSelector((state) => selectUiDictionaryStatus(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  useEffect(() => {
-    if (uiStatus === 'idle' || uiStatus === 'failed') {
-      const promise = dispatch(fetchUiDictionary({ lang }));
-      return () => {
-        promise.abort();
-      };
-    }
-  }, [dispatch, lang, uiStatus]);
+  // UI словарь загружается через loader
 
   const fallbackLabels = { purchase: 'Купить', stream: 'Слушать' };
   const buttons = ui?.buttons ?? {};

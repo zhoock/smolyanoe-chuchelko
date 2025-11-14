@@ -1,6 +1,6 @@
 // src/widgets/header/ui/Header.tsx
 import { useEffect, useState, useRef } from 'react';
-import { Link, useRevalidator } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
 import { useLang } from '@app/providers/lang'; // берём из контекста
@@ -21,9 +21,6 @@ export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
-  // revalidate для перезагрузки данных из лоадеров (react-router)
-  const { revalidate } = useRevalidator();
-
   // Закрываем меню при клике вне
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -35,11 +32,10 @@ export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Смена языка: контекст → стор для лоадера → revalidate()
+  // Смена языка: обновляем Redux, revalidate вызывается в Layout
   const changeLang = (newLang: SupportedLang) => {
     if (newLang !== lang) {
-      setLang(newLang); // UI-строки + обновляем глобальный стор
-      revalidate(); // перезагрузить данные на новом языке
+      setLang(newLang); // Обновляем Redux, Layout автоматически вызовет revalidate
     }
     setLangOpen(false);
   };

@@ -31,6 +31,9 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   const uiStatus = selectUiDictionaryStatus(state, lang);
   if (uiStatus === 'succeeded') {
     templateC = Promise.resolve(selectUiDictionaryData(state, lang));
+  } else if (uiStatus === 'loading') {
+    // Данные уже загружаются, создаем промис, который будет разрешен когда загрузка завершится
+    templateC = new Promise<IInterface[]>(() => {}); // Никогда не разрешается, чтобы не блокировать
   } else {
     const fetchThunkPromise = store.dispatch(fetchUiDictionary({ lang }));
 
@@ -70,6 +73,9 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     const status = selectAlbumsStatus(state, lang);
     if (status === 'succeeded') {
       templateA = Promise.resolve(selectAlbumsData(state, lang));
+    } else if (status === 'loading') {
+      // Данные уже загружаются
+      templateA = new Promise<IAlbums[]>(() => {});
     } else {
       const fetchThunkPromise = store.dispatch(fetchAlbums({ lang }));
 
@@ -106,6 +112,9 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     const status = selectArticlesStatus(state, lang);
     if (status === 'succeeded') {
       templateB = Promise.resolve(selectArticlesData(state, lang));
+    } else if (status === 'loading') {
+      // Данные уже загружаются
+      templateB = new Promise<IArticles[]>(() => {});
     } else {
       const fetchThunkPromise = store.dispatch(fetchArticles({ lang }));
 
