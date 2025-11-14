@@ -5,9 +5,9 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAlbumsData } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { Breadcrumb } from '@shared/ui/breadcrumb';
@@ -23,8 +23,10 @@ import './style.scss';
 
 export default function AdminText() {
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
   const { albumId = '', trackId = '' } = useParams<{ albumId: string; trackId: string }>();
+  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
+  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
+  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
 
   const [text, setText] = useState<string>('');
   const [authorship, setAuthorship] = useState<string>('');
@@ -38,32 +40,28 @@ export default function AdminText() {
 
   // Инициализация при загрузке или смене трека
   useEffect(() => {
-    if (!data) return;
+    if (!album || albumsStatus !== 'succeeded') return;
 
-    data.templateA.then((albums) => {
-      const album = albums.find((a) => a.albumId === albumId);
-      const track = album?.tracks.find((t) => String(t.id) === trackId);
+    const track = album.tracks.find((t) => String(t.id) === trackId);
+    if (!track) return;
 
-      if (!track) return;
+    // Инициализируем только при смене трека
+    if (currentTrackId !== String(track.id)) {
+      setCurrentTrackId(String(track.id));
 
-      // Инициализируем только при смене трека
-      if (currentTrackId !== String(track.id)) {
-        setCurrentTrackId(String(track.id));
+      // Загружаем сохранённый текст из localStorage (dev mode)
+      const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
+      const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
 
-        // Загружаем сохранённый текст из localStorage (dev mode)
-        const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-        const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
+      // Используем сохранённый текст или текст из JSON
+      const initialText = storedText || track.content || '';
+      const initialAuthorship = storedAuthorship || track.authorship || '';
 
-        // Используем сохранённый текст или текст из JSON
-        const initialText = storedText || track.content || '';
-        const initialAuthorship = storedAuthorship || track.authorship || '';
-
-        setText(initialText);
-        setAuthorship(initialAuthorship);
-        setIsDirty(false);
-      }
-    });
-  }, [data, albumId, trackId, lang, currentTrackId]);
+      setText(initialText);
+      setAuthorship(initialAuthorship);
+      setIsDirty(false);
+    }
+  }, [album, albumsStatus, albumId, trackId, lang, currentTrackId]);
 
   // Обработчик изменения текста
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -107,7 +105,9 @@ export default function AdminText() {
     }
   }, [albumId, trackId, lang, formattedText, authorship, text]);
 
-  if (!data) {
+  // Данные загружаются через loader
+
+  if (albumsStatus === 'loading' || albumsStatus === 'idle') {
     return (
       <section className="admin-text main-background" aria-label="Редактирование текста">
         <div className="wrapper">
@@ -117,151 +117,147 @@ export default function AdminText() {
     );
   }
 
+  if (albumsStatus === 'failed') {
+    return (
+      <section className="admin-text main-background" aria-label="Редактирование текста">
+        <div className="wrapper">
+          <ErrorMessage error={albumsError || 'Не удалось загрузить данные трека'} />
+        </div>
+      </section>
+    );
+  }
+
+  if (!album) {
+    return (
+      <section className="admin-text main-background" aria-label="Редактирование текста">
+        <div className="wrapper">
+          <ErrorMessage error={`Альбом "${albumId}" не найден`} />
+        </div>
+      </section>
+    );
+  }
+
+  const track = album.tracks.find((t) => String(t.id) === trackId);
+
+  if (!track) {
+    return (
+      <section className="admin-text main-background" aria-label="Редактирование текста">
+        <div className="wrapper">
+          <ErrorMessage
+            error={`Трек #${trackId} не найден в альбоме "${album.album}". Доступные треки: ${album.tracks.map((t) => `${t.id} - ${t.title}`).join(', ')}`}
+          />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="admin-text main-background" aria-label="Редактирование текста">
       <div className="wrapper">
-        <DataAwait
-          value={data.templateA}
-          fallback={<Loader />}
-          error={<ErrorMessage error="Не удалось загрузить данные трека" />}
-        >
-          {(albums) => {
-            const album = albums.find((a) => a.albumId === albumId);
+        <Breadcrumb
+          items={[
+            { label: 'К альбомам', to: '/admin' },
+            { label: album.album, to: `/admin/album/${albumId}` },
+          ]}
+        />
+        <div className="admin-text__header">
+          <h1>Редактирование текста</h1>
+          <h4>{track.title}</h4>
+          <h4>Альбом: {album.album}</h4>
+        </div>
 
-            if (!album) {
-              return (
-                <ErrorMessage
-                  error={`Альбом "${albumId}" не найден. Доступные: ${albums.map((a) => a.albumId).join(', ')}`}
-                />
-              );
-            }
+        {/* Поле ввода авторства */}
+        <div className="admin-text__authorship">
+          <label htmlFor="authorship-input" className="admin-text__authorship-label">
+            Авторство:
+          </label>
+          <input
+            id="authorship-input"
+            type="text"
+            value={authorship}
+            onChange={handleAuthorshipChange}
+            placeholder="Например: Ярослав Жук — слова и музыка"
+            className="admin-text__authorship-input"
+          />
+        </div>
 
-            const track = album.tracks.find((t) => String(t.id) === trackId);
+        {/* Редактор текста */}
+        <div className="admin-text__editor">
+          <div className="admin-text__editor-controls">
+            <button
+              type="button"
+              onClick={handleFormat}
+              className="admin-text__format-btn"
+              title="Применить форматирование (удалить лишние пробелы, нормализовать переносы строк)"
+            >
+              Форматировать
+            </button>
+            <span className="admin-text__char-count">
+              Символов: {text.length} | Строк: {lineCount}
+            </span>
+          </div>
+          <textarea
+            value={text}
+            onChange={handleTextChange}
+            placeholder="Введите текст песни..."
+            className="admin-text__textarea"
+            rows={20}
+          />
+        </div>
 
-            if (!track) {
-              return (
-                <ErrorMessage
-                  error={`Трек #${trackId} не найден в альбоме "${album.album}". Доступные треки: ${album.tracks.map((t) => `${t.id} - ${t.title}`).join(', ')}`}
-                />
-              );
-            }
-
-            return (
-              <>
-                <Breadcrumb
-                  items={[
-                    { label: 'К альбомам', to: '/admin' },
-                    { label: album.album, to: `/admin/album/${albumId}` },
-                  ]}
-                />
-                <div className="admin-text__header">
-                  <h1>Редактирование текста</h1>
-                  <h4>{track.title}</h4>
-                  <h4>Альбом: {album.album}</h4>
+        {/* Предпросмотр разбивки на строки */}
+        {lines.length > 0 && (
+          <div className="admin-text__preview">
+            <h2>Предпросмотр (как будет разбит текст на строки):</h2>
+            <div className="admin-text__preview-content">
+              {lines.map((line, index) => (
+                <div key={index} className="admin-text__preview-line">
+                  <span className="admin-text__preview-number">{index + 1}</span>
+                  <span className="admin-text__preview-text">{line}</span>
                 </div>
-
-                {/* Поле ввода авторства */}
-                <div className="admin-text__authorship">
-                  <label htmlFor="authorship-input" className="admin-text__authorship-label">
-                    Авторство:
-                  </label>
-                  <input
-                    id="authorship-input"
-                    type="text"
-                    value={authorship}
-                    onChange={handleAuthorshipChange}
-                    placeholder="Например: Ярослав Жук — слова и музыка"
-                    className="admin-text__authorship-input"
-                  />
+              ))}
+              {authorship && (
+                <div className="admin-text__preview-line admin-text__preview-line--authorship">
+                  <span className="admin-text__preview-number">~</span>
+                  <span className="admin-text__preview-text">Авторство: {authorship}</span>
                 </div>
+              )}
+            </div>
+          </div>
+        )}
 
-                {/* Редактор текста */}
-                <div className="admin-text__editor">
-                  <div className="admin-text__editor-controls">
-                    <button
-                      type="button"
-                      onClick={handleFormat}
-                      className="admin-text__format-btn"
-                      title="Применить форматирование (удалить лишние пробелы, нормализовать переносы строк)"
-                    >
-                      Форматировать
-                    </button>
-                    <span className="admin-text__char-count">
-                      Символов: {text.length} | Строк: {lineCount}
-                    </span>
-                  </div>
-                  <textarea
-                    value={text}
-                    onChange={handleTextChange}
-                    placeholder="Введите текст песни..."
-                    className="admin-text__textarea"
-                    rows={20}
-                  />
-                </div>
-
-                {/* Предпросмотр разбивки на строки */}
-                {lines.length > 0 && (
-                  <div className="admin-text__preview">
-                    <h2>Предпросмотр (как будет разбит текст на строки):</h2>
-                    <div className="admin-text__preview-content">
-                      {lines.map((line, index) => (
-                        <div key={index} className="admin-text__preview-line">
-                          <span className="admin-text__preview-number">{index + 1}</span>
-                          <span className="admin-text__preview-text">{line}</span>
-                        </div>
-                      ))}
-                      {authorship && (
-                        <div className="admin-text__preview-line admin-text__preview-line--authorship">
-                          <span className="admin-text__preview-number">~</span>
-                          <span className="admin-text__preview-text">Авторство: {authorship}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Кнопки управления */}
-                <div className="admin-text__controls">
-                  <div className="admin-text__controls-left">
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={!isDirty || !text.trim()}
-                      className="admin-text__save-btn"
-                    >
-                      Сохранить текст
-                    </button>
-                    {isDirty && (
-                      <span className="admin-text__dirty-indicator">
-                        Есть несохранённые изменения
-                      </span>
-                    )}
-                    {!isDirty && text.trim() && (
-                      <span className="admin-text__saved-indicator">Текст сохранён</span>
-                    )}
-                  </div>
-                  <Link
-                    to={`/admin/sync/${albumId}/${trackId}`}
-                    className={`admin-text__link-to-sync ${!isDirty && text.trim() ? 'admin-text__link-to-sync--active' : 'admin-text__link-to-sync--disabled'}`}
-                    onClick={(e) => {
-                      if (isDirty || !text.trim()) {
-                        e.preventDefault();
-                        alert('Сначала сохраните текст перед переходом к синхронизации');
-                      }
-                    }}
-                    title={
-                      isDirty || !text.trim()
-                        ? 'Сначала сохраните текст'
-                        : 'Перейти к синхронизации'
-                    }
-                  >
-                    Перейти к синхронизации →
-                  </Link>
-                </div>
-              </>
-            );
-          }}
-        </DataAwait>
+        {/* Кнопки управления */}
+        <div className="admin-text__controls">
+          <div className="admin-text__controls-left">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!isDirty || !text.trim()}
+              className="admin-text__save-btn"
+            >
+              Сохранить текст
+            </button>
+            {isDirty && (
+              <span className="admin-text__dirty-indicator">Есть несохранённые изменения</span>
+            )}
+            {!isDirty && text.trim() && (
+              <span className="admin-text__saved-indicator">Текст сохранён</span>
+            )}
+          </div>
+          <Link
+            to={`/admin/sync/${albumId}/${trackId}`}
+            className={`admin-text__link-to-sync ${!isDirty && text.trim() ? 'admin-text__link-to-sync--active' : 'admin-text__link-to-sync--disabled'}`}
+            onClick={(e) => {
+              if (isDirty || !text.trim()) {
+                e.preventDefault();
+                alert('Сначала сохраните текст перед переходом к синхронизации');
+              }
+            }}
+            title={isDirty || !text.trim() ? 'Сначала сохраните текст' : 'Перейти к синхронизации'}
+          >
+            Перейти к синхронизации →
+          </Link>
+        </div>
       </div>
     </section>
   );

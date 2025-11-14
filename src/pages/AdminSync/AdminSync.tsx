@@ -6,8 +6,6 @@
 import { useCallback, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useParams } from 'react-router-dom';
-import { useAlbumsData } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@app/providers/lang';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -18,6 +16,7 @@ import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
 import type { SyncedLyricsLine } from '@/models';
 import { AlbumCover } from '@entities/album';
+import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
 import {
   saveSyncedLyrics,
   loadSyncedLyricsFromStorage,
@@ -28,8 +27,10 @@ import './style.scss';
 
 export default function AdminSync() {
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
   const { albumId = '', trackId = '' } = useParams<{ albumId: string; trackId: string }>();
+  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
+  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
+  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
 
   const dispatch = useAppDispatch();
 
@@ -52,45 +53,40 @@ export default function AdminSync() {
   // Инициализируем плейлист в Redux когда загружаются данные альбома
   // ВАЖНО: При загрузке страницы синхронизации останавливаем воспроизведение и сбрасываем время
   useEffect(() => {
-    if (!data) return;
+    if (!album || albumsStatus !== 'succeeded') return;
 
-    data.templateA.then((albums) => {
-      const album = albums.find((a) => a.albumId === albumId);
-      if (!album) return;
+    const track = album.tracks.find((t) => String(t.id) === trackId);
+    if (!track) return;
 
-      const track = album.tracks.find((t) => String(t.id) === trackId);
-      if (!track) return;
+    // Останавливаем воспроизведение при загрузке страницы синхронизации
+    dispatch(playerActions.pause());
+    audioController.pause();
 
-      // Останавливаем воспроизведение при загрузке страницы синхронизации
-      dispatch(playerActions.pause());
-      audioController.pause();
+    // Сбрасываем время на 0
+    dispatch(playerActions.setCurrentTime(0));
+    dispatch(playerActions.setProgress(0));
+    audioController.setCurrentTime(0);
 
-      // Сбрасываем время на 0
-      dispatch(playerActions.setCurrentTime(0));
-      dispatch(playerActions.setProgress(0));
-      audioController.setCurrentTime(0);
+    // Устанавливаем плейлист и текущий трек
+    dispatch(playerActions.setPlaylist(album.tracks || []));
 
-      // Устанавливаем плейлист и текущий трек
-      dispatch(playerActions.setPlaylist(album.tracks || []));
-
-      // Находим индекс текущего трека в плейлисте
-      const trackIndex = album.tracks.findIndex((t) => String(t.id) === trackId);
-      if (trackIndex >= 0) {
-        dispatch(playerActions.setCurrentTrackIndex(trackIndex));
-        dispatch(
-          playerActions.setAlbumInfo({
-            albumId: album.albumId || albumId,
-            albumTitle: album.album,
-          })
-        );
-        // Явно устанавливаем источник трека, чтобы загрузить метаданные
-        // Глобальный обработчик loadedmetadata в playerListeners.ts обновит duration автоматически
-        if (track.src) {
-          audioController.setSource(track.src);
-        }
+    // Находим индекс текущего трека в плейлисте
+    const trackIndex = album.tracks.findIndex((t) => String(t.id) === trackId);
+    if (trackIndex >= 0) {
+      dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+      dispatch(
+        playerActions.setAlbumInfo({
+          albumId: album.albumId || albumId,
+          albumTitle: album.album,
+        })
+      );
+      // Явно устанавливаем источник трека, чтобы загрузить метаданные
+      // Глобальный обработчик loadedmetadata в playerListeners.ts обновит duration автоматически
+      if (track.src) {
+        audioController.setSource(track.src);
       }
-    });
-  }, [data, albumId, trackId, dispatch]);
+    }
+  }, [album, albumsStatus, albumId, trackId, dispatch]);
 
   // Отслеживаем изменения текста в localStorage (для обновления при сохранении в другой вкладке)
   useEffect(() => {
@@ -188,7 +184,8 @@ export default function AdminSync() {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('🔄 useEffect запущен:', {
-        hasData: !!data,
+        hasAlbum: !!album,
+        albumsStatus,
         albumId,
         trackId,
         currentTrackId,
@@ -196,7 +193,7 @@ export default function AdminSync() {
       });
     }
 
-    if (!data) {
+    if (albumsStatus !== 'succeeded' || !album) {
       setIsLoading(false);
       return;
     }
@@ -235,168 +232,173 @@ export default function AdminSync() {
     setIsSaved(false);
     setIsLoading(true); // Показываем лоадер при смене трека
 
-    data.templateA
-      .then((albums) => {
-        const album = albums.find((a) => a.albumId === albumId);
-        if (!album) {
-          setIsLoading(false);
-          return;
-        }
+    // Данные загружаются через loader, используем album из Redux
+    if (albumsStatus !== 'succeeded' || !album) {
+      setIsLoading(false);
+      return;
+    }
 
-        const track = album.tracks.find((t) => String(t.id) === trackId);
-        if (!track) {
-          setIsLoading(false);
-          return;
-        }
+    const track = album.tracks.find((t) => String(t.id) === trackId);
+    if (!track) {
+      setIsLoading(false);
+      return;
+    }
 
-        const currentTrackIdStr = String(track.id);
+    // Используем синхронный код вместо промиса
+    (() => {
+      const currentTrackIdStr = String(track.id);
 
-        // Загружаем авторство
-        const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
-        const trackAuthorship = track.authorship || storedAuthorship || '';
+      // Загружаем авторство
+      const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
+      const trackAuthorship = track.authorship || storedAuthorship || '';
 
-        // Загружаем сохранённые синхронизации
-        const storedSync = loadSyncedLyricsFromStorage(albumId, track.id, lang);
+      // Загружаем сохранённые синхронизации
+      const storedSync = loadSyncedLyricsFromStorage(albumId, track.id, lang);
 
-        // Проверяем сохранённый текст из админки текста
-        const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-        const textToUse = storedText || track.content || '';
+      // Проверяем сохранённый текст из админки текста
+      const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
+      const textToUse = storedText || track.content || '';
 
-        // Вычисляем хэш текста
-        const textHash = `${textToUse}-${trackAuthorship}`;
+      // Вычисляем хэш текста
+      const textHash = `${textToUse}-${trackAuthorship}`;
 
-        // Логирование только в development для отладки
+      // Логирование только в development для отладки
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Инициализация синхронизаций:', {
+          albumId,
+          trackId: track.id,
+          lang,
+          hasStoredSync: !!storedSync,
+          storedSyncLength: storedSync?.length || 0,
+        });
+      }
+
+      // Проверяем, изменился ли текст
+      // Текст считается изменившимся только если есть сохранённый текст И он отличается от текста в JSON
+      const textChanged =
+        storedText !== null &&
+        storedText !== undefined &&
+        storedText.trim() !== (track.content || '').trim();
+
+      // Вычисляем хэш текущего текста для сравнения
+      const currentTextHash = `${textToUse}-${trackAuthorship}`;
+
+      // Проверяем, изменился ли текст с момента последнего сохранения
+      // Если lastTextHash установлен и отличается от текущего - текст изменился
+      const textChangedSinceSave = lastTextHash !== null && lastTextHash !== currentTextHash;
+
+      // Также проверяем, совпадает ли текст в сохранённых синхронизациях с текущим текстом
+      // Если не совпадает - текст изменился, игнорируем сохранённые синхронизации
+      let textMatchesStoredSync = true;
+      if (storedSync && storedSync.length > 0) {
+        const currentLines = textToUse.split('\n').filter((line) => line.trim());
+        const storedLines = storedSync
+          .filter((line) => line.text !== trackAuthorship) // Исключаем авторство
+          .map((line) => line.text.trim());
+        textMatchesStoredSync =
+          currentLines.length === storedLines.length &&
+          currentLines.every((line, index) => line.trim() === storedLines[index]);
+      }
+
+      let linesToDisplay: SyncedLyricsLine[] = [];
+
+      // ПРИОРИТЕТ: Если текст изменился после сохранения - игнорируем сохранённые синхронизации
+      // Иначе используем сохранённые синхронизации, если они есть
+      if (textChangedSinceSave || !textMatchesStoredSync) {
+        // Текст изменился после сохранения - создаём новые строки без таймкодов
         if (process.env.NODE_ENV === 'development') {
-          console.log('🔄 Инициализация синхронизаций:', {
+          console.log('📝 Текст изменился после сохранения, сбрасываем таймкоды', {
+            textChangedSinceSave,
+            textMatchesStoredSync,
+          });
+        }
+        const contentLines = textToUse.split('\n').filter((line) => line.trim());
+        linesToDisplay = contentLines.map((line) => ({
+          text: line.trim(),
+          startTime: 0,
+          endTime: undefined,
+        }));
+      } else if (storedSync && storedSync.length > 0) {
+        // Используем сохранённые в localStorage синхронизации (текст не изменился)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📥 Загрузка сохранённых синхронизаций из localStorage:', {
             albumId,
             trackId: track.id,
             lang,
-            hasStoredSync: !!storedSync,
-            storedSyncLength: storedSync?.length || 0,
+            linesCount: storedSync.length,
           });
         }
+        linesToDisplay = storedSync;
+      } else if (textChanged) {
+        // Текст изменился И нет сохранённых синхронизаций - создаём новые строки без таймкодов
+        console.log('📝 Текст изменился, создаём новые строки без таймкодов');
+        const contentLines = textToUse.split('\n').filter((line) => line.trim());
+        linesToDisplay = contentLines.map((line) => ({
+          text: line.trim(),
+          startTime: 0,
+          endTime: undefined,
+        }));
+      } else if (track.syncedLyrics && track.syncedLyrics.length > 0) {
+        // Используем синхронизации из JSON файла (текст не изменился)
+        console.log('📄 Используем синхронизации из JSON файла');
+        linesToDisplay = track.syncedLyrics;
+      } else {
+        // Разбиваем обычный текст на строки
+        console.log('📝 Создаём строки из обычного текста');
+        const contentLines = textToUse.split('\n').filter((line) => line.trim());
+        linesToDisplay = contentLines.map((line) => ({
+          text: line.trim(),
+          startTime: 0,
+          endTime: undefined,
+        }));
+      }
 
-        // Проверяем, изменился ли текст
-        // Текст считается изменившимся только если есть сохранённый текст И он отличается от текста в JSON
-        const textChanged =
-          storedText !== null &&
-          storedText !== undefined &&
-          storedText.trim() !== (track.content || '').trim();
-
-        // Вычисляем хэш текущего текста для сравнения
-        const currentTextHash = `${textToUse}-${trackAuthorship}`;
-
-        // Проверяем, изменился ли текст с момента последнего сохранения
-        // Если lastTextHash установлен и отличается от текущего - текст изменился
-        const textChangedSinceSave = lastTextHash !== null && lastTextHash !== currentTextHash;
-
-        // Также проверяем, совпадает ли текст в сохранённых синхронизациях с текущим текстом
-        // Если не совпадает - текст изменился, игнорируем сохранённые синхронизации
-        let textMatchesStoredSync = true;
-        if (storedSync && storedSync.length > 0) {
-          const currentLines = textToUse.split('\n').filter((line) => line.trim());
-          const storedLines = storedSync
-            .filter((line) => line.text !== trackAuthorship) // Исключаем авторство
-            .map((line) => line.text.trim());
-          textMatchesStoredSync =
-            currentLines.length === storedLines.length &&
-            currentLines.every((line, index) => line.trim() === storedLines[index]);
-        }
-
-        let linesToDisplay: SyncedLyricsLine[] = [];
-
-        // ПРИОРИТЕТ: Если текст изменился после сохранения - игнорируем сохранённые синхронизации
-        // Иначе используем сохранённые синхронизации, если они есть
-        if (textChangedSinceSave || !textMatchesStoredSync) {
-          // Текст изменился после сохранения - создаём новые строки без таймкодов
-          if (process.env.NODE_ENV === 'development') {
-            console.log('📝 Текст изменился после сохранения, сбрасываем таймкоды', {
-              textChangedSinceSave,
-              textMatchesStoredSync,
-            });
-          }
-          const contentLines = textToUse.split('\n').filter((line) => line.trim());
-          linesToDisplay = contentLines.map((line) => ({
-            text: line.trim(),
-            startTime: 0,
+      // Добавляем строку авторства в конец, если она есть
+      if (trackAuthorship) {
+        // Проверяем, не добавлена ли уже строка авторства в конец
+        const lastLine = linesToDisplay[linesToDisplay.length - 1];
+        if (!lastLine || lastLine.text !== trackAuthorship) {
+          linesToDisplay.push({
+            text: trackAuthorship,
+            startTime: currentTime.duration || 0,
             endTime: undefined,
-          }));
-        } else if (storedSync && storedSync.length > 0) {
-          // Используем сохранённые в localStorage синхронизации (текст не изменился)
-          if (process.env.NODE_ENV === 'development') {
-            console.log('📥 Загрузка сохранённых синхронизаций из localStorage:', {
-              albumId,
-              trackId: track.id,
-              lang,
-              linesCount: storedSync.length,
-            });
-          }
-          linesToDisplay = storedSync;
-        } else if (textChanged) {
-          // Текст изменился И нет сохранённых синхронизаций - создаём новые строки без таймкодов
-          console.log('📝 Текст изменился, создаём новые строки без таймкодов');
-          const contentLines = textToUse.split('\n').filter((line) => line.trim());
-          linesToDisplay = contentLines.map((line) => ({
-            text: line.trim(),
-            startTime: 0,
-            endTime: undefined,
-          }));
-        } else if (track.syncedLyrics && track.syncedLyrics.length > 0) {
-          // Используем синхронизации из JSON файла (текст не изменился)
-          console.log('📄 Используем синхронизации из JSON файла');
-          linesToDisplay = track.syncedLyrics;
-        } else {
-          // Разбиваем обычный текст на строки
-          console.log('📝 Создаём строки из обычного текста');
-          const contentLines = textToUse.split('\n').filter((line) => line.trim());
-          linesToDisplay = contentLines.map((line) => ({
-            text: line.trim(),
-            startTime: 0,
-            endTime: undefined,
-          }));
-        }
-
-        // Добавляем строку авторства в конец, если она есть
-        if (trackAuthorship) {
-          // Проверяем, не добавлена ли уже строка авторства в конец
-          const lastLine = linesToDisplay[linesToDisplay.length - 1];
-          if (!lastLine || lastLine.text !== trackAuthorship) {
-            linesToDisplay.push({
-              text: trackAuthorship,
-              startTime: currentTime.duration || 0,
-              endTime: undefined,
-            });
-          }
-        }
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Установка синхронизаций:', {
-            linesCount: linesToDisplay.length,
-            firstLine: linesToDisplay[0]?.text?.substring(0, 30),
           });
         }
+      }
 
-        // Устанавливаем данные
-        setSyncedLines(linesToDisplay);
-        setLastTextHash(textHash);
-        setCurrentTrackId(String(track.id));
-        setIsDirty(false);
-        setIsSaved(false);
-        initializedRef.current = String(track.id);
-        setIsLoading(false); // Загрузка завершена
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Установка синхронизаций:', {
+          linesCount: linesToDisplay.length,
+          firstLine: linesToDisplay[0]?.text?.substring(0, 30),
+        });
+      }
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log(
-            '✅ Загрузка завершена, syncedLines установлен, linesCount:',
-            linesToDisplay.length
-          );
-        }
-      })
-      .catch((error) => {
-        console.error('❌ Ошибка загрузки данных:', error);
-        setIsLoading(false);
-      });
-  }, [data, albumId, trackId, lang, currentTime.duration, currentTrackId, lastTextHash]);
+      // Устанавливаем данные
+      setSyncedLines(linesToDisplay);
+      setLastTextHash(textHash);
+      setCurrentTrackId(String(track.id));
+      setIsDirty(false);
+      setIsSaved(false);
+      initializedRef.current = String(track.id);
+      setIsLoading(false); // Загрузка завершена
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          '✅ Загрузка завершена, syncedLines установлен, linesCount:',
+          linesToDisplay.length
+        );
+      }
+    })();
+  }, [
+    album,
+    albumsStatus,
+    albumId,
+    trackId,
+    lang,
+    currentTime.duration,
+    currentTrackId,
+    lastTextHash,
+  ]);
 
   // Установить тайм-код для конкретной строки
   const setLineTime = useCallback(
@@ -456,10 +458,8 @@ export default function AdminSync() {
 
     // Получаем трек для получения авторства из JSON
     let trackAuthorship = '';
-    if (data) {
-      const albums = await data.templateA;
-      const album = albums.find((a) => a.albumId === albumId);
-      const track = album?.tracks.find((t) => String(t.id) === trackId);
+    if (album) {
+      const track = album.tracks.find((t) => String(t.id) === trackId);
       trackAuthorship = track?.authorship || storedAuthorship || '';
     } else {
       trackAuthorship = storedAuthorship || '';
@@ -527,7 +527,7 @@ export default function AdminSync() {
       setIsSaved(false);
       alert(`❌ Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
     }
-  }, [albumId, trackId, lang, syncedLines, data, currentTime.duration]);
+  }, [albumId, trackId, lang, syncedLines, album, currentTime.duration]);
 
   // Ref для контейнера audio элемента
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
@@ -619,7 +619,9 @@ export default function AdminSync() {
     }
   }, [dispatch, isPlaying]);
 
-  if (!data) {
+  // Данные загружаются через loader
+
+  if (albumsStatus === 'loading' || albumsStatus === 'idle') {
     return (
       <section className="admin-sync main-background" aria-label="Синхронизация текста">
         <div className="wrapper">
@@ -629,213 +631,188 @@ export default function AdminSync() {
     );
   }
 
+  if (albumsStatus === 'failed') {
+    return (
+      <section className="admin-sync main-background" aria-label="Синхронизация текста">
+        <div className="wrapper">
+          <ErrorMessage error={albumsError || 'Не удалось загрузить данные трека'} />
+        </div>
+      </section>
+    );
+  }
+
+  if (!album) {
+    return (
+      <section className="admin-sync main-background" aria-label="Синхронизация текста">
+        <div className="wrapper">
+          <ErrorMessage error={`Альбом "${albumId}" не найден`} />
+        </div>
+      </section>
+    );
+  }
+
+  const track = album.tracks.find((t) => String(t.id) === trackId);
+
+  if (!track) {
+    return (
+      <section className="admin-sync main-background" aria-label="Синхронизация текста">
+        <div className="wrapper">
+          <ErrorMessage
+            error={`Трек #${trackId} не найден в альбоме "${album.album}". Доступные треки: ${album.tracks.map((t) => `${t.id} - ${t.title}`).join(', ')}`}
+          />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="admin-sync main-background" aria-label="Синхронизация текста">
       <div className="wrapper">
-        <DataAwait
-          value={data.templateA}
-          fallback={<Loader />}
-          error={<ErrorMessage error="Не удалось загрузить данные трека" />}
-        >
-          {(albums) => {
-            const album = albums.find((a) => a.albumId === albumId);
+        <Breadcrumb
+          items={[
+            { label: 'К альбомам', to: '/admin' },
+            { label: album.album, to: `/admin/album/${albumId}` },
+          ]}
+        />
+        <div className="admin-sync__header">
+          <h1>Синхронизация текста</h1>
+          <p className="admin-sync__description">
+            Запустите трек и нажимайте кнопки с временем рядом со строками, когда они начинают
+            звучать. Конец строки устанавливается автоматически при установке начала следующей. Если
+            нужно создать паузу между строками (заглушка в виде троеточия), установите конец
+            предыдущей строки раньше начала следующей или начните первую строку не с нуля. Не
+            забудьте сохранить синхронизацию после завершения.
+          </p>
+        </div>
 
-            // Отладочная информация
-            if (!album) {
-              console.warn('❌ Альбом не найден:', {
-                albumId,
-                availableAlbums: albums.map((a) => a.albumId),
-              });
-              return (
-                <ErrorMessage
-                  error={`Альбом "${albumId}" не найден. Доступные: ${albums.map((a) => a.albumId).join(', ')}`}
+        {/* Компактный плеер для прослушивания трека */}
+        <div className="admin-sync__player">
+          <div className="admin-sync__player-container" ref={audioContainerRef}>
+            {/* Audio элемент будет вставлен сюда автоматически */}
+          </div>
+          <div className="admin-sync__player-wrapper">
+            <div className="admin-sync__player-cover">
+              <AlbumCover
+                {...album.cover}
+                fullName={`${album.artist} - ${album.album}`}
+                size={448}
+              />
+            </div>
+            <div className="admin-sync__player-info">
+              <div className="admin-sync__player-title">{track.title}</div>
+              <div className="admin-sync__player-artist">{album.artist}</div>
+            </div>
+            <div className="admin-sync__player-controls">
+              <button
+                type="button"
+                onClick={togglePlayPause}
+                className="admin-sync__player-play-btn"
+                aria-label={isPlaying ? 'Пауза' : 'Воспроизведение'}
+              >
+                {isPlaying ? (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M5 3h2v10H5V3zm4 0h2v10H9V3z" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4 3l10 5-10 5V3z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            <div className="admin-sync__player-progress-wrapper">
+              <div className="admin-sync__player-progress-bar">
+                <input
+                  ref={progressInputRef}
+                  type="range"
+                  value={progress}
+                  min="0"
+                  max="100"
+                  onChange={handleProgressChange}
+                  onInput={handleProgressChange}
+                  onMouseUp={handleSeekEnd}
+                  onTouchEnd={handleSeekEnd}
+                  aria-label="Прогресс воспроизведения"
                 />
-              );
-            }
+              </div>
+              {/* Время: текущее и оставшееся */}
+              {/* Используем два отдельных элемента для атомарного обновления через textContent */}
+              <div className="admin-sync__player-time" ref={timeContainerRef}>
+                <span ref={currentTimeRef}>{formatTimeCompact(time.current)}</span>
+                <span ref={remainingTimeRef}>
+                  {formatTimeCompact(time.duration - time.current)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            const track = album.tracks.find((t) => String(t.id) === trackId);
-
-            if (!track) {
-              console.warn('❌ Трек не найден:', {
-                trackId,
-                albumId,
-                availableTracks: album.tracks.map((t) => ({ id: t.id, title: t.title })),
-              });
-              return (
-                <ErrorMessage
-                  error={`Трек #${trackId} не найден в альбоме "${album.album}". Доступные треки: ${album.tracks.map((t) => `${t.id} - ${t.title}`).join(', ')}`}
-                />
-              );
-            }
-
-            // Загружаем авторство (только для добавления в список строк, не для редактирования)
-            const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
-            const trackAuthorship = track.authorship || storedAuthorship || '';
-
-            // Сначала проверяем localStorage (для dev mode)
-            const storedSync = loadSyncedLyricsFromStorage(albumId, track.id, lang);
-
-            // Проверяем сохранённый текст из админки текста
-            const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-            const textToUse = storedText || track.content || '';
-
-            // Вычисляем хэш текста для отслеживания изменений
-            const textHash = `${textToUse}-${trackAuthorship}`;
-
-            return (
-              <>
-                <Breadcrumb
-                  items={[
-                    { label: 'К альбомам', to: '/admin' },
-                    { label: album.album, to: `/admin/album/${albumId}` },
-                  ]}
-                />
-                <div className="admin-sync__header">
-                  <h1>Синхронизация текста</h1>
-                  <p className="admin-sync__description">
-                    Запустите трек и нажимайте кнопки с временем рядом со строками, когда они
-                    начинают звучать. Конец строки устанавливается автоматически при установке
-                    начала следующей. Если нужно создать паузу между строками (заглушка в виде
-                    троеточия), установите конец предыдущей строки раньше начала следующей или
-                    начните первую строку не с нуля. Не забудьте сохранить синхронизацию после
-                    завершения.
-                  </p>
-                </div>
-
-                {/* Компактный плеер для прослушивания трека */}
-                <div className="admin-sync__player">
-                  <div className="admin-sync__player-container" ref={audioContainerRef}>
-                    {/* Audio элемент будет вставлен сюда автоматически */}
-                  </div>
-                  <div className="admin-sync__player-wrapper">
-                    <div className="admin-sync__player-cover">
-                      <AlbumCover
-                        {...album.cover}
-                        fullName={`${album.artist} - ${album.album}`}
-                        size={448}
-                      />
-                    </div>
-                    <div className="admin-sync__player-info">
-                      <div className="admin-sync__player-title">{track.title}</div>
-                      <div className="admin-sync__player-artist">{album.artist}</div>
-                    </div>
-                    <div className="admin-sync__player-controls">
-                      <button
-                        type="button"
-                        onClick={togglePlayPause}
-                        className="admin-sync__player-play-btn"
-                        aria-label={isPlaying ? 'Пауза' : 'Воспроизведение'}
-                      >
-                        {isPlaying ? (
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M5 3h2v10H5V3zm4 0h2v10H9V3z" />
-                          </svg>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M4 3l10 5-10 5V3z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <div className="admin-sync__player-progress-wrapper">
-                      <div className="admin-sync__player-progress-bar">
-                        <input
-                          ref={progressInputRef}
-                          type="range"
-                          value={progress}
-                          min="0"
-                          max="100"
-                          onChange={handleProgressChange}
-                          onInput={handleProgressChange}
-                          onMouseUp={handleSeekEnd}
-                          onTouchEnd={handleSeekEnd}
-                          aria-label="Прогресс воспроизведения"
-                        />
-                      </div>
-                      {/* Время: текущее и оставшееся */}
-                      {/* Используем два отдельных элемента для атомарного обновления через textContent */}
-                      <div className="admin-sync__player-time" ref={timeContainerRef}>
-                        <span ref={currentTimeRef}>{formatTimeCompact(time.current)}</span>
-                        <span ref={remainingTimeRef}>
-                          {formatTimeCompact(time.duration - time.current)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Список строк с тайм-кодами */}
-                <div className="admin-sync__lines">
-                  {isLoading || syncedLines.length === 0 ? (
-                    <div className="admin-sync__loading">
-                      <Loader />
-                    </div>
-                  ) : (
-                    <div className="admin-sync__lines-list">
-                      {syncedLines.map((line, index) => (
-                        <div key={index} className="admin-sync__line">
-                          <div className="admin-sync__line-number">{index + 1}</div>
-                          <div className="admin-sync__line-text">{line.text}</div>
-                          <div className="admin-sync__line-times">
-                            <button
-                              type="button"
-                              onClick={() => setLineTime(index, 'startTime')}
-                              className="admin-sync__time-btn"
-                              disabled={currentTime.current === 0 && !isPlaying}
-                            >
-                              {formatTime(line.startTime)}
-                            </button>
-                            <div className="admin-sync__line-end">
-                              <button
-                                type="button"
-                                onClick={() => setLineTime(index, 'endTime')}
-                                className="admin-sync__time-btn"
-                                disabled={currentTime.current === 0 && !isPlaying}
-                              >
-                                {formatTime(line.endTime ?? 0)}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => clearEndTime(index)}
-                                className="admin-sync__time-btn admin-sync__time-btn--clear"
-                                title="Сбросить конец строки"
-                                disabled={line.endTime === undefined || line.endTime === 0}
-                              >
-                                ✖️
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Кнопка сохранения вынесена за пределы блока строк */}
-                {!isLoading && syncedLines.length > 0 && (
-                  <div className="admin-sync__controls">
+        {/* Список строк с тайм-кодами */}
+        <div className="admin-sync__lines">
+          {isLoading || syncedLines.length === 0 ? (
+            <div className="admin-sync__loading">
+              <Loader />
+            </div>
+          ) : (
+            <div className="admin-sync__lines-list">
+              {syncedLines.map((line, index) => (
+                <div key={index} className="admin-sync__line">
+                  <div className="admin-sync__line-number">{index + 1}</div>
+                  <div className="admin-sync__line-text">{line.text}</div>
+                  <div className="admin-sync__line-times">
                     <button
                       type="button"
-                      onClick={handleSave}
-                      disabled={!isDirty}
-                      className="admin-sync__save-btn"
+                      onClick={() => setLineTime(index, 'startTime')}
+                      className="admin-sync__time-btn"
+                      disabled={currentTime.current === 0 && !isPlaying}
                     >
-                      Сохранить синхронизации
+                      {formatTime(line.startTime)}
                     </button>
-                    {isSaved && (
-                      <span className="admin-sync__saved-indicator">Синхронизации сохранены</span>
-                    )}
-                    {isDirty && (
-                      <span className="admin-sync__dirty-indicator">
-                        Есть несохранённые изменения
-                      </span>
-                    )}
+                    <div className="admin-sync__line-end">
+                      <button
+                        type="button"
+                        onClick={() => setLineTime(index, 'endTime')}
+                        className="admin-sync__time-btn"
+                        disabled={currentTime.current === 0 && !isPlaying}
+                      >
+                        {formatTime(line.endTime ?? 0)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => clearEndTime(index)}
+                        className="admin-sync__time-btn admin-sync__time-btn--clear"
+                        title="Сбросить конец строки"
+                        disabled={line.endTime === undefined || line.endTime === 0}
+                      >
+                        ✖️
+                      </button>
+                    </div>
                   </div>
-                )}
-              </>
-            );
-          }}
-        </DataAwait>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Кнопка сохранения вынесена за пределы блока строк */}
+        {!isLoading && syncedLines.length > 0 && (
+          <div className="admin-sync__controls">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!isDirty}
+              className="admin-sync__save-btn"
+            >
+              Сохранить синхронизации
+            </button>
+            {isSaved && (
+              <span className="admin-sync__saved-indicator">Синхронизации сохранены</span>
+            )}
+            {isDirty && (
+              <span className="admin-sync__dirty-indicator">Есть несохранённые изменения</span>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
