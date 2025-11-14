@@ -36,7 +36,9 @@ export function ArticlePage() {
     return (
       <>
         {title && <h3>{title}</h3>}
-        <div className="uncollapse">{img && <img src={getImageUrl(img)} alt={alt ?? ''} />}</div>
+        <div className="uncollapse">
+          {img && <img src={getImageUrl(img)} alt={alt ?? ''} loading="lazy" decoding="async" />}
+        </div>
         {subtitle && <h4>{subtitle}</h4>}
 
         {typeof content === 'string' ? (

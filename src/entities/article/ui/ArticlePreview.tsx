@@ -12,12 +12,9 @@ export function ArticlePreview({ articleId, img, nameArticle, date }: ArticlePro
   return (
     <article className="articles__card">
       <Link to={`/articles/${articleId}`}>
-        <div
-          className="articles__picture"
-          style={{
-            background: `no-repeat center/cover url(${getImageUrl(img)})`,
-          }}
-        ></div>
+        <div className="articles__picture">
+          <img src={getImageUrl(img)} alt={nameArticle} loading="lazy" decoding="async" />
+        </div>
         <div className="articles__description">
           {nameArticle}
 

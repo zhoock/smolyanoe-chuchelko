@@ -31,7 +31,16 @@
   }
 
   &__picture {
+    position: relative;
     aspect-ratio: 3 / 2;
     border-radius: var(--ms-01);
+    overflow: hidden;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   }
 }
