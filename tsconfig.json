@@ -32,7 +32,7 @@
     },
 
     // 🔽 ДОБАВЛЕНО: типы для глобального API Jest и Node
-    "types": ["jest", "node"]
+    "types": ["jest", "node", "@testing-library/jest-dom"]
     // "experimentalDecorators": true,
     // "emitDecoratorMetadata": true
   },
@@ -42,6 +42,7 @@
     "src",
     "index.d.ts",
     "jest.setup.ts",
+    "src/test-setup.d.ts",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",

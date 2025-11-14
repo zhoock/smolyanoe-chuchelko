@@ -1,5 +1,7 @@
 // eslint.config.mjs
 
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import js from '@eslint/js';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
@@ -8,6 +10,9 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import importPlugin from 'eslint-plugin-import';
 import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import eslintCommentsPlugin from 'eslint-plugin-eslint-comments';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const browserGlobals = {
   window: 'readonly',
@@ -33,7 +38,12 @@ export default [
     files: ['src/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       parser: tsParser,
-      parserOptions: { ecmaVersion: 2020, sourceType: 'module' },
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
+        project: './tsconfig.eslint.json',
+        tsconfigRootDir: __dirname,
+      },
       globals: browserGlobals,
     },
     plugins: {
@@ -128,12 +138,15 @@ export default [
       'storybook-static/**',
       'coverage/**',
       '*.d.ts',
+      '**/*.d.ts',
       'commitlint.config.js',
       'webpack.config.js',
       // 'webpack/**/*.js', // уже описано выше в файлах
       'postcss.config.js',
       'babel.config.js',
       'jest.config.js',
+      'jest.setup.ts',
+      'index.d.ts',
     ],
   },
 ];
