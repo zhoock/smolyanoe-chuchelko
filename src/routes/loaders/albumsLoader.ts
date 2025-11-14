@@ -5,6 +5,7 @@ import { getJSON } from '@shared/api/http';
 import { getStore } from '@shared/model/appStore';
 import { selectCurrentLang } from '@shared/model/lang';
 import { fetchArticles, selectArticlesStatus, selectArticlesData } from '@entities/article';
+import { fetchAlbums, selectAlbumsStatus, selectAlbumsData } from '@entities/album';
 
 export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
@@ -29,7 +30,38 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Альбомы нужны на "/", "/albums*" и "/admin/*" (админ-страницы)
   if (pathname === '/' || pathname.startsWith('/albums') || pathname.startsWith('/admin')) {
-    templateA = getJSON<IAlbums[]>(`albums-${lang}.json`, signal);
+    const status = selectAlbumsStatus(state, lang);
+    if (status === 'succeeded') {
+      templateA = Promise.resolve(selectAlbumsData(state, lang));
+    } else {
+      const fetchThunkPromise = store.dispatch(fetchAlbums({ lang }));
+
+      const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
+
+      if (signal.aborted) {
+        fetchThunkPromise.abort();
+        templateA = createNeverResolvingPromise();
+      } else {
+        const abortHandler = () => {
+          fetchThunkPromise.abort();
+        };
+        signal.addEventListener('abort', abortHandler, { once: true });
+
+        templateA = fetchThunkPromise.unwrap().catch((error) => {
+          if (
+            error === 'AbortError' ||
+            error === 'Aborted' ||
+            (typeof error === 'object' &&
+              error !== null &&
+              'name' in error &&
+              (error as { name?: string }).name === 'AbortError')
+          ) {
+            return createNeverResolvingPromise();
+          }
+          throw error;
+        });
+      }
+    }
   }
 
   // Статьи нужны на "/" (главная) и "/articles*"

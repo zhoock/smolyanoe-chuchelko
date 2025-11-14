@@ -3,14 +3,20 @@
  * Главная страница личного кабинета.
  * Отображает список альбомов с прогрессом синхронизации.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAlbumsData } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@app/providers/lang';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
-import { AlbumCover } from '@entities/album';
+import {
+  AlbumCover,
+  fetchAlbums,
+  selectAlbumsStatus,
+  selectAlbumsError,
+  selectAlbumsData,
+} from '@entities/album';
 import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { IAlbums } from '@models';
@@ -80,31 +86,47 @@ function calculateAlbumStats(album: IAlbums, lang: string): AlbumStats {
 }
 
 export default function Admin() {
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
   const [searchQuery, setSearchQuery] = useState('');
+  const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
+  const error = useAppSelector((state) => selectAlbumsError(state, lang));
+  const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+
+  useEffect(() => {
+    if (status === 'idle' || status === 'failed') {
+      const promise = dispatch(fetchAlbums({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, status]);
 
   const filteredAlbums = useMemo(() => {
-    if (!data) {
-      return Promise.resolve([] as IAlbums[]);
-    }
+    if (!searchQuery.trim()) return albums;
 
-    return data.templateA.then((albums) => {
-      if (!searchQuery.trim()) return albums;
+    const query = searchQuery.toLowerCase();
+    return albums.filter(
+      (album) =>
+        album.album.toLowerCase().includes(query) || album.artist.toLowerCase().includes(query)
+    );
+  }, [albums, searchQuery]);
 
-      const query = searchQuery.toLowerCase();
-      return albums.filter(
-        (album) =>
-          album.album.toLowerCase().includes(query) || album.artist.toLowerCase().includes(query)
-      );
-    });
-  }, [data, searchQuery]);
-
-  if (!data) {
+  if (status === 'loading' || status === 'idle') {
     return (
       <section className="admin main-background" aria-label="Личный кабинет">
         <div className="wrapper">
           <Loader />
+        </div>
+      </section>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <section className="admin main-background" aria-label="Личный кабинет">
+        <div className="wrapper">
+          <ErrorMessage error={error ?? 'Не удалось загрузить альбомы'} />
         </div>
       </section>
     );
@@ -131,75 +153,60 @@ export default function Admin() {
           />
         </div>
 
-        <DataAwait
-          value={filteredAlbums}
-          fallback={<Loader />}
-          error={<ErrorMessage error="Не удалось загрузить альбомы" />}
-        >
-          {(albums) => {
-            if (albums.length === 0) {
+        {filteredAlbums.length === 0 ? (
+          <div className="admin__empty">
+            <p>Альбомы не найдены</p>
+          </div>
+        ) : (
+          <div className="admin__albums">
+            {filteredAlbums.map((album) => {
+              const stats = calculateAlbumStats(album, lang);
+              const progress = stats.total > 0 ? (stats.synced / stats.total) * 100 : 0;
+
               return (
-                <div className="admin__empty">
-                  <p>Альбомы не найдены</p>
-                </div>
-              );
-            }
-
-            return (
-              <div className="admin__albums">
-                {albums.map((album) => {
-                  const stats = calculateAlbumStats(album, lang);
-                  const progress = stats.total > 0 ? (stats.synced / stats.total) * 100 : 0;
-
-                  return (
-                    <Link
-                      key={album.albumId}
-                      to={`/admin/album/${album.albumId}`}
-                      className="admin__album-card"
-                    >
-                      <div className="admin__album-cover">
-                        {album.cover && (
-                          <AlbumCover
-                            {...album.cover}
-                            fullName={`${album.artist} - ${album.album}`}
+                <Link
+                  key={album.albumId}
+                  to={`/admin/album/${album.albumId}`}
+                  className="admin__album-card"
+                >
+                  <div className="admin__album-cover">
+                    {album.cover && (
+                      <AlbumCover {...album.cover} fullName={`${album.artist} - ${album.album}`} />
+                    )}
+                  </div>
+                  <div className="admin__album-info">
+                    <h2 className="admin__album-title">{album.album}</h2>
+                    <p className="admin__album-artist">{album.artist}</p>
+                    <div className="admin__album-stats">
+                      <div className="admin__album-progress">
+                        <div className="admin__album-progress-bar">
+                          <div
+                            className="admin__album-progress-fill"
+                            style={{ width: `${progress}%` }}
                           />
-                        )}
-                      </div>
-                      <div className="admin__album-info">
-                        <h2 className="admin__album-title">{album.album}</h2>
-                        <p className="admin__album-artist">{album.artist}</p>
-                        <div className="admin__album-stats">
-                          <div className="admin__album-progress">
-                            <div className="admin__album-progress-bar">
-                              <div
-                                className="admin__album-progress-fill"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                            <span className="admin__album-progress-text">
-                              {stats.synced} из {stats.total} синхронизировано
-                            </span>
-                          </div>
-                          <div className="admin__album-status">
-                            <span className="admin__album-status-item admin__album-status-item--synced">
-                              ✅ {stats.synced}
-                            </span>
-                            <span className="admin__album-status-item admin__album-status-item--text-only">
-                              ⚠️ {stats.textOnly}
-                            </span>
-                            <span className="admin__album-status-item admin__album-status-item--empty">
-                              ❌ {stats.empty}
-                            </span>
-                          </div>
                         </div>
+                        <span className="admin__album-progress-text">
+                          {stats.synced} из {stats.total} синхронизировано
+                        </span>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            );
-          }}
-        </DataAwait>
+                      <div className="admin__album-status">
+                        <span className="admin__album-status-item admin__album-status-item--synced">
+                          ✅ {stats.synced}
+                        </span>
+                        <span className="admin__album-status-item admin__album-status-item--text-only">
+                          ⚠️ {stats.textOnly}
+                        </span>
+                        <span className="admin__album-status-item admin__album-status-item--empty">
+                          ❌ {stats.empty}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

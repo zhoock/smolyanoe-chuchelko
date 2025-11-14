@@ -3,15 +3,21 @@
  * Страница альбома в личном кабинете.
  * Отображает список треков с их статусами и позволяет перейти к редактированию.
  */
-import { useMemo } from 'react';
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAlbumsData } from '@shared/api/albums';
-import { DataAwait } from '@shared/DataAwait';
 import { useLang } from '@app/providers/lang';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { Breadcrumb } from '@shared/ui/breadcrumb';
-import { AlbumCover } from '@entities/album';
+import {
+  AlbumCover,
+  fetchAlbums,
+  selectAlbumsStatus,
+  selectAlbumsError,
+  selectAlbumById,
+} from '@entities/album';
 import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { TracksProps } from '@models';
@@ -72,11 +78,27 @@ function formatDuration(seconds: number | undefined): string {
 }
 
 export default function AdminAlbum() {
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const data = useAlbumsData(lang);
   const { albumId = '' } = useParams<{ albumId: string }>();
+  const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
+  const error = useAppSelector((state) => selectAlbumsError(state, lang));
+  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
 
-  if (!data) {
+  useEffect(() => {
+    if (!albumId) {
+      return;
+    }
+
+    if (status === 'idle' || status === 'failed') {
+      const promise = dispatch(fetchAlbums({ lang }));
+      return () => {
+        promise.abort();
+      };
+    }
+  }, [dispatch, lang, status, albumId]);
+
+  if (status === 'loading' || status === 'idle') {
     return (
       <section className="admin-album main-background" aria-label="Альбом в личном кабинете">
         <div className="wrapper">
@@ -86,107 +108,102 @@ export default function AdminAlbum() {
     );
   }
 
+  if (status === 'failed') {
+    return (
+      <section className="admin-album main-background" aria-label="Альбом в личном кабинете">
+        <div className="wrapper">
+          <ErrorMessage error={error ?? 'Не удалось загрузить данные альбома'} />
+        </div>
+      </section>
+    );
+  }
+
+  if (!album) {
+    return (
+      <section className="admin-album main-background" aria-label="Альбом в личном кабинете">
+        <div className="wrapper">
+          <ErrorMessage error={`Альбом "${albumId}" не найден`} />
+        </div>
+      </section>
+    );
+  }
+
+  const tracks = album.tracks || [];
+
   return (
     <section className="admin-album main-background" aria-label="Альбом в личном кабинете">
       <div className="wrapper">
-        <DataAwait
-          value={data.templateA}
-          fallback={<Loader />}
-          error={<ErrorMessage error="Не удалось загрузить данные альбома" />}
-        >
-          {(albums) => {
-            const album = albums.find((a) => a.albumId === albumId);
+        <Breadcrumb items={[{ label: 'К альбомам', to: '/admin' }]} />
+        <div className="admin-album__header">
+          <div className="admin-album__info">
+            <div className="admin-album__cover">
+              {album.cover && (
+                <AlbumCover {...album.cover} fullName={`${album.artist} - ${album.album}`} />
+              )}
+            </div>
+            <div className="admin-album__details">
+              <h1 className="admin-album__title">{album.album}</h1>
+              <p className="admin-album__artist">{album.artist}</p>
+            </div>
+          </div>
+          <div className="admin-album__actions">
+            <Link to={`/admin/json/${albumId}`} className="admin-album__json-link">
+              Редактировать JSON →
+            </Link>
+          </div>
+        </div>
 
-            if (!album) {
-              return (
-                <ErrorMessage
-                  error={`Альбом "${albumId}" не найден. Доступные: ${albums.map((a) => a.albumId).join(', ')}`}
-                />
-              );
-            }
+        <div className="admin-album__tracks">
+          <h2 className="admin-album__tracks-title">Треки ({tracks.length})</h2>
+          {tracks.length === 0 ? (
+            <div className="admin-album__empty">
+              <p>В альбоме нет треков</p>
+            </div>
+          ) : (
+            <div className="admin-album__tracks-list">
+              {tracks.map((track, index) => {
+                const trackStatus = getTrackStatus(albumId, track, lang);
+                const statusIcon = getStatusIcon(trackStatus);
+                const statusText = getStatusText(trackStatus);
 
-            const tracks = album.tracks || [];
-
-            return (
-              <>
-                <Breadcrumb items={[{ label: 'К альбомам', to: '/admin' }]} />
-                <div className="admin-album__header">
-                  <div className="admin-album__info">
-                    <div className="admin-album__cover">
-                      {album.cover && (
-                        <AlbumCover
-                          {...album.cover}
-                          fullName={`${album.artist} - ${album.album}`}
-                        />
-                      )}
+                return (
+                  <div key={track.id} className="admin-album__track">
+                    <div className="admin-album__track-number">{index + 1}</div>
+                    <div className="admin-album__track-info">
+                      <div className="admin-album__track-title">{track.title}</div>
+                      <div className="admin-album__track-meta">
+                        <span className="admin-album__track-duration">
+                          {formatDuration(track.duration)}
+                        </span>
+                        <span
+                          className={`admin-album__track-status admin-album__track-status--${trackStatus}`}
+                        >
+                          {statusIcon} {statusText}
+                        </span>
+                      </div>
                     </div>
-                    <div className="admin-album__details">
-                      <h1 className="admin-album__title">{album.album}</h1>
-                      <p className="admin-album__artist">{album.artist}</p>
+                    <div className="admin-album__track-actions">
+                      <Link
+                        to={`/admin/text/${albumId}/${track.id}`}
+                        className="admin-album__track-action"
+                      >
+                        {trackStatus === 'empty' ? 'Добавить текст' : 'Редактировать текст'}
+                      </Link>
+                      <Link
+                        to={`/admin/sync/${albumId}/${track.id}`}
+                        className="admin-album__track-action admin-album__track-action--primary"
+                      >
+                        {trackStatus === 'synced'
+                          ? 'Редактировать синхронизацию'
+                          : 'Синхронизировать'}
+                      </Link>
                     </div>
                   </div>
-                  <div className="admin-album__actions">
-                    <Link to={`/admin/json/${albumId}`} className="admin-album__json-link">
-                      Редактировать JSON →
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="admin-album__tracks">
-                  <h2 className="admin-album__tracks-title">Треки ({tracks.length})</h2>
-                  {tracks.length === 0 ? (
-                    <div className="admin-album__empty">
-                      <p>В альбоме нет треков</p>
-                    </div>
-                  ) : (
-                    <div className="admin-album__tracks-list">
-                      {tracks.map((track, index) => {
-                        const status = getTrackStatus(albumId, track, lang);
-                        const statusIcon = getStatusIcon(status);
-                        const statusText = getStatusText(status);
-
-                        return (
-                          <div key={track.id} className="admin-album__track">
-                            <div className="admin-album__track-number">{index + 1}</div>
-                            <div className="admin-album__track-info">
-                              <div className="admin-album__track-title">{track.title}</div>
-                              <div className="admin-album__track-meta">
-                                <span className="admin-album__track-duration">
-                                  {formatDuration(track.duration)}
-                                </span>
-                                <span
-                                  className={`admin-album__track-status admin-album__track-status--${status}`}
-                                >
-                                  {statusIcon} {statusText}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="admin-album__track-actions">
-                              <Link
-                                to={`/admin/text/${albumId}/${track.id}`}
-                                className="admin-album__track-action"
-                              >
-                                {status === 'empty' ? 'Добавить текст' : 'Редактировать текст'}
-                              </Link>
-                              <Link
-                                to={`/admin/sync/${albumId}/${track.id}`}
-                                className="admin-album__track-action admin-album__track-action--primary"
-                              >
-                                {status === 'synced'
-                                  ? 'Редактировать синхронизацию'
-                                  : 'Синхронизировать'}
-                              </Link>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
-            );
-          }}
-        </DataAwait>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

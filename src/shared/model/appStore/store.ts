@@ -8,6 +8,7 @@ import {
 } from '@features/player/model/middleware/playerListeners';
 import { langReducer, langListenerMiddleware, applyLangSideEffects } from '@shared/model/lang';
 import { articlesReducer } from '@entities/article';
+import { albumsReducer } from '@entities/album';
 
 import type { AppDispatch, AppStore as AppStoreType, RootState } from './types';
 
@@ -16,6 +17,7 @@ const rootReducer = {
   player: playerReducer,
   lang: langReducer,
   articles: articlesReducer,
+  albums: albumsReducer,
 };
 
 let storeInstance: AppStoreType | null = null;
