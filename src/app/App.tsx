@@ -25,6 +25,7 @@ import { Footer } from '@widgets/footer';
 import { Navigation } from '@features/navigation';
 import { Hamburger } from '@shared/ui/hamburger';
 import { PlayerShell } from '@features/player';
+import { ErrorBoundary } from '@shared/ui/error-boundary';
 
 // Lazy loading для страниц - загружаются только при необходимости
 const Album = lazy(() => import('@pages/Album/Album'));
@@ -54,11 +55,13 @@ const router = createBrowserRouter([
 
 export default function App() {
   return (
-    <RouterProvider
-      router={router}
-      future={{ v7_startTransition: true }}
-      fallbackElement={<p>Загрузка...</p>}
-    />
+    <ErrorBoundary>
+      <RouterProvider
+        router={router}
+        future={{ v7_startTransition: true }}
+        fallbackElement={<p>Загрузка...</p>}
+      />
+    </ErrorBoundary>
   );
 }
 
@@ -282,9 +285,11 @@ function Layout() {
       </Helmet>
 
       {shouldHideChrome ? (
-        <main>{notFoundRoutes}</main>
+        <ErrorBoundary>
+          <main>{notFoundRoutes}</main>
+        </ErrorBoundary>
       ) : (
-        <>
+        <ErrorBoundary>
           <Header theme={theme} onToggleTheme={toggleTheme} />
           <main>
             <Hero />
@@ -300,11 +305,11 @@ function Layout() {
               <Hamburger isActive={popup} onToggle={() => dispatch(openPopup())} zIndex="1000" />
             )}
 
-            {standardRoutes}
+            <ErrorBoundary>{standardRoutes}</ErrorBoundary>
           </main>
           <Footer />
           <PlayerShell />
-        </>
+        </ErrorBoundary>
       )}
     </>
   );
