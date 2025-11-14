@@ -12,7 +12,7 @@
       "stream": "stream",
       "show": "show",
       "less": "less",
-      "more": "more",
+      "more": "show more",
       "pause": "pause",
       "drums": "drums",
       "bass": "bass",
@@ -21,7 +21,7 @@
     },
     "titles": {
       "albums": "albums",
-      "theBand": "the band",
+      "theBand": "about the",
       "music": "music",
       "release": "release",
       "albumCover": "album cover",

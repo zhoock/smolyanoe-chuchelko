@@ -4,6 +4,7 @@ import { Hamburger } from '@shared/ui/hamburger';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { selectAlbumsData } from '@entities/album';
 import aboutStyles from './AboutSection.module.scss';
 
 type AboutSectionProps = {
@@ -15,12 +16,12 @@ type AboutSectionProps = {
 export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSectionProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-
-  // UI словарь загружается через loader
+  const albums = useAppSelector((state) => selectAlbumsData(state, lang));
 
   const title = ui?.titles?.theBand ?? '';
-  const theBand = Array.isArray(ui?.theBand) ? (ui.theBand as string[]).filter(Boolean) : [];
-  const previewParagraphs = theBand.slice(0, 1);
+  const artistName = albums[0]?.artist ?? '';
+  const theBand = (ui?.theBand || []).filter(Boolean) as string[];
+  const previewParagraph = theBand[0];
   const showLabel = ui?.buttons?.show ?? '';
 
   return (
@@ -30,15 +31,14 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
       aria-labelledby="home-about-heading"
     >
       <div className="wrapper">
-        <h2 id="home-about-heading">{title}</h2>
+        <h2 id="home-about-heading">
+          {title} {artistName}
+        </h2>
 
-        {previewParagraphs.map(
-          (paragraph, index) =>
-            paragraph && (
-              <Text key={index} className={aboutStyles.aboutText}>
-                {paragraph}
-              </Text>
-            )
+        {previewParagraph && (
+          <Text className={`${aboutStyles.aboutText} ${aboutStyles.aboutTextPreview}`}>
+            {previewParagraph}
+          </Text>
         )}
 
         <button
@@ -60,16 +60,15 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
             />
 
             <div className={aboutStyles.aboutPopupInner}>
-              <h3 id="about-popup-title">{title}</h3>
+              <h3 id="about-popup-title">
+                {title} {artistName}
+              </h3>
 
-              {theBand.map(
-                (paragraph, index) =>
-                  paragraph && (
-                    <Text key={index} className={aboutStyles.aboutText}>
-                      {paragraph}
-                    </Text>
-                  )
-              )}
+              {theBand.map((paragraph, index) => (
+                <Text key={index} className={aboutStyles.aboutText}>
+                  {paragraph}
+                </Text>
+              ))}
             </div>
           </div>
         </Popup>
