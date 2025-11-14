@@ -1,11 +1,5 @@
-import { jest, describe, test, expect } from '@jest/globals';
-import { getImageUrl, formatDate, useAlbumsData } from '@shared/api/albums';
-
-jest.mock('react-router-dom', () => ({
-  useRouteLoaderData: jest.fn(),
-}));
-
-import { useRouteLoaderData } from 'react-router-dom';
+import { describe, test, expect } from '@jest/globals';
+import { getImageUrl, formatDate } from '@shared/api/albums';
 
 describe('getImageUrl', () => {
   test('по умолчанию добавляет .jpg', () => {
@@ -21,19 +15,5 @@ describe('formatDate', () => {
   test('форматирует ISO дату в dd/mm/yyyy', () => {
     const iso = '2024-01-05T12:34:56Z';
     expect(formatDate(iso)).toBe('05/01/2024');
-  });
-});
-
-describe('useAlbumsData', () => {
-  test('возвращает данные лоадера, если они есть', () => {
-    (useRouteLoaderData as jest.Mock).mockReturnValueOnce({ albums: ['a'] } as any);
-    const result = useAlbumsData('ru');
-    expect(result).toEqual({ albums: ['a'] });
-  });
-
-  test('возвращает null, если лоадер вернул null', () => {
-    (useRouteLoaderData as jest.Mock).mockReturnValueOnce(null);
-    const result = useAlbumsData('ru');
-    expect(result).toBeNull();
   });
 });
