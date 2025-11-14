@@ -3,7 +3,13 @@ import { memo, useEffect, useRef } from 'react';
 import type { PopupProps } from 'models';
 import './style.scss';
 
-const PopupComponent = ({ children, isActive, bgColor, onClose }: PopupProps) => {
+const PopupComponent = ({
+  children,
+  isActive,
+  bgColor,
+  onClose,
+  'aria-labelledby': ariaLabelledBy,
+}: PopupProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -12,6 +18,11 @@ const PopupComponent = ({ children, isActive, bgColor, onClose }: PopupProps) =>
 
     if (isActive && !dialog.open) {
       dialog.showModal();
+      // Фокус на первом фокусируемом элементе внутри dialog для доступности
+      const firstFocusable = dialog.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      firstFocusable?.focus();
     } else if (!isActive && dialog.open) {
       dialog.close();
     }
@@ -33,8 +44,13 @@ const PopupComponent = ({ children, isActive, bgColor, onClose }: PopupProps) =>
   }, [onClose]);
 
   return (
-    <dialog ref={dialogRef} style={{ background: bgColor }}>
-      <div className="popup__gradient" style={{ background: bgColor }}></div>
+    <dialog
+      ref={dialogRef}
+      style={{ background: bgColor }}
+      aria-modal="true"
+      aria-labelledby={ariaLabelledBy}
+    >
+      <div className="popup__gradient" style={{ background: bgColor }} aria-hidden="true"></div>
       {children}
     </dialog>
   );

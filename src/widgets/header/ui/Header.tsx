@@ -50,6 +50,7 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
             onClick={() => setLangOpen(!langOpen)}
             aria-haspopup="listbox"
             aria-expanded={langOpen}
+            aria-label={`Выбрать язык. Текущий язык: ${lang === 'ru' ? 'Русский' : 'English'}`}
           >
             {lang.toUpperCase()}
           </button>
@@ -83,6 +84,9 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
               className="theme-toggler__control"
               checked={theme === 'light'}
               onChange={onToggleTheme}
+              aria-label={
+                theme === 'light' ? 'Переключить на тёмную тему' : 'Переключить на светлую тему'
+              }
             />
             <div></div>
           </label>

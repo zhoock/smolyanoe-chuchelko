@@ -18,6 +18,7 @@ export interface HamburgerProps extends NavigationProps {
 
 export interface PopupProps extends HamburgerProps {
   children: React.ReactNode;
+  'aria-labelledby'?: string;
 }
 
 /**

@@ -51,29 +51,41 @@ export function Share() {
   };
 
   return (
-    <ul className="share-list js-share-item">
+    <ul className="share-list js-share-item" role="list" aria-label="Поделиться">
       <li className="share-list__item" onClick={handleToggle}>
-        <a
+        <button
+          type="button"
           className={`share-list__link icon-share ${isOpen ? 'active' : ''}`}
-          href="#"
-          title="Поделиться"
-        ></a>
+          aria-label="Поделиться"
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+        ></button>
       </li>
-      <li className={`share-list__item ${isOpen ? 'show' : ''}`}>
+      <li className={`share-list__item ${isOpen ? 'show' : ''}`} role="none">
         <a
           className="share-list__link icon-facebook1"
           href="#"
-          title="Поделиться на Facebook"
-          onClick={() => handleShare('facebook', 'this')}
-        ></a>
+          aria-label="Поделиться на Facebook"
+          onClick={(e) => {
+            e.preventDefault();
+            handleShare('facebook', 'this');
+          }}
+        >
+          <span className="visually-hidden">Facebook</span>
+        </a>
       </li>
-      <li className={`share-list__item ${isOpen ? 'show' : ''}`}>
+      <li className={`share-list__item ${isOpen ? 'show' : ''}`} role="none">
         <a
           className="share-list__link icon-twitter"
           href="#"
-          title="Поделиться на Twitter"
-          onClick={() => handleShare('twitter', 'this')}
-        ></a>
+          aria-label="Поделиться на Twitter"
+          onClick={(e) => {
+            e.preventDefault();
+            handleShare('twitter', 'this');
+          }}
+        >
+          <span className="visually-hidden">Twitter</span>
+        </a>
       </li>
     </ul>
   );

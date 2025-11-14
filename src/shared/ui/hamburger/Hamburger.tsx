@@ -19,9 +19,9 @@ const HamburgerComponent = ({ isActive, onToggle, zIndex, className }: Hamburger
       style={{ zIndex }}
       type="button"
     >
-      <span className="one"></span>
-      <span className="two"></span>
-      <span className="three"></span>
+      <span className="one" aria-hidden="true"></span>
+      <span className="two" aria-hidden="true"></span>
+      <span className="three" aria-hidden="true"></span>
       <span className="visually-hidden">{!isActive ? 'Открыть меню' : 'Скрыть меню'}</span>
     </button>
   );
