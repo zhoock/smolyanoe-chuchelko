@@ -99,12 +99,11 @@ describe('HomePage integration tests', () => {
       },
     });
 
-    // Проверяем наличие секций (может быть разное имя региона в зависимости от UI словаря)
-    const albumsRegion = screen.queryByRole('region');
-    expect(albumsRegion).toBeInTheDocument();
-    // Проверяем наличие секций Articles и About (могут иметь разные имена)
+    // Проверяем наличие секций (могут быть несколько регионов с разными именами)
     const allRegions = screen.queryAllByRole('region');
     expect(allRegions.length).toBeGreaterThanOrEqual(1);
+    // Проверяем, что хотя бы одна секция присутствует
+    expect(allRegions[0]).toBeInTheDocument();
   });
 
   test('должен открыть модальное окно About при клике на кнопку', async () => {
@@ -302,8 +301,11 @@ describe('HomePage integration tests', () => {
       },
     });
 
+    // Проверяем наличие текста на разных языках
     expect(screen.getByText('Альбомы')).toBeInTheDocument();
     expect(screen.getByText('Статьи')).toBeInTheDocument();
-    expect(screen.getByText('Группа')).toBeInTheDocument();
+    // "Группа" может встречаться несколько раз, проверяем через queryAll
+    const groupTexts = screen.queryAllByText('Группа');
+    expect(groupTexts.length).toBeGreaterThan(0);
   });
 });

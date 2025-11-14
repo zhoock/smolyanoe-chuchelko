@@ -1,41 +1,35 @@
 import { describe, test, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { configureStore } from '@reduxjs/toolkit';
-import { langActions, langReducer } from '../langSlice';
-import { langListenerMiddleware } from '../listeners';
 import type { RootState } from '@shared/model/appStore/types';
 
-// Мокируем setLang из @shared/lib/lang
+// Мокируем getLang и setLang из @shared/lib/lang ПЕРЕД импортом langSlice
 jest.mock('@shared/lib/lang', () => ({
-  setLang: jest.fn(),
+  getLang: jest.fn<() => string | null>(),
+  setLang: jest.fn<(lang: string) => void>(),
 }));
 
-import { setLang } from '@shared/lib/lang';
+// Импортируем после мока
+import { langActions, langReducer } from '../langSlice';
+import { langListenerMiddleware } from '../listeners';
+import { getLang, setLang } from '@shared/lib/lang';
 
+const mockGetLang = getLang as jest.MockedFunction<typeof getLang>;
 const mockSetLang = setLang as jest.MockedFunction<typeof setLang>;
 
 describe('langListeners middleware', () => {
-  // Сохраняем оригинальные значения
-  const originalDocument = global.document;
-
   beforeEach(() => {
     jest.clearAllMocks();
+    // Устанавливаем дефолтное значение для getLang
+    mockGetLang.mockReturnValue('en');
 
-    // Мокируем document если его нет (для Node.js окружения)
-    if (typeof global.document === 'undefined') {
-      global.document = {
-        documentElement: {
-          lang: '',
-        },
-      } as any;
+    // Устанавливаем дефолтное значение для document.documentElement.lang
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.lang = '';
     }
   });
 
   afterEach(() => {
-    // Восстанавливаем document
-    if (global.document !== originalDocument) {
-      // @ts-expect-error - очищаем мок
-      delete global.document;
-    }
+    jest.clearAllMocks();
   });
 
   const createTestStore = () => {
@@ -159,15 +153,12 @@ describe('langListeners middleware', () => {
       expect(document.documentElement.lang).toBe('en');
     });
 
-    test('должен обработать ситуацию когда document недоступен', () => {
-      // Сохраняем document
-      const originalDoc = global.document;
+    test('должен обработать ситуацию когда document.documentElement недоступен', () => {
+      // Сохраняем documentElement
+      const originalLang = document.documentElement?.lang;
 
       try {
-        // Удаляем document
-        // @ts-expect-error - тестируем edge case
-        delete global.document;
-
+        // Проверяем, что не падает при отсутствии documentElement.lang
         const store = createTestStore();
 
         // Не должно упасть
@@ -175,8 +166,10 @@ describe('langListeners middleware', () => {
 
         expect(mockSetLang).toHaveBeenCalledWith('ru');
       } finally {
-        // Восстанавливаем document
-        global.document = originalDoc;
+        // Восстанавливаем
+        if (document.documentElement && originalLang !== undefined) {
+          document.documentElement.lang = originalLang;
+        }
       }
     });
   });

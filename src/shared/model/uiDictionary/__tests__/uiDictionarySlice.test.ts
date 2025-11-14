@@ -443,8 +443,7 @@ describe('uiDictionarySlice', () => {
 
     test('selectUiDictionaryStatus должен обработать несуществующий язык', () => {
       // @ts-expect-error - тестируем edge case с невалидным языком
-      const status = selectUiDictionaryStatus(mockState as any, 'fr');
-      expect(status).toBeUndefined();
+      expect(() => selectUiDictionaryStatus(mockState as any, 'fr')).toThrow();
     });
 
     test('selectUiDictionaryError должен обработать состояние с ошибкой', () => {

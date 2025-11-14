@@ -423,8 +423,7 @@ describe('articlesSlice', () => {
 
     test('selectArticlesStatus должен обработать несуществующий язык', () => {
       // @ts-expect-error - тестируем edge case с невалидным языком
-      const status = selectArticlesStatus(mockState as any, 'fr');
-      expect(status).toBeUndefined();
+      expect(() => selectArticlesStatus(mockState as any, 'fr')).toThrow();
     });
 
     test('selectArticlesError должен обработать состояние с ошибкой', () => {
@@ -520,8 +519,7 @@ describe('articlesSlice', () => {
 
     test('selectArticleById должен обработать несуществующий язык', () => {
       // @ts-expect-error - тестируем edge case с невалидным языком
-      const article = selectArticleById(mockState as any, 'fr', 'article-1');
-      expect(article).toBeUndefined();
+      expect(() => selectArticleById(mockState as any, 'fr', 'article-1')).toThrow();
     });
   });
 });

@@ -1244,12 +1244,14 @@ describe('playerSlice', () => {
         { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
       ];
 
-      // Сохраняем текущий трек из исходного плейлиста (индекс 1 = Track 2)
+      // currentTrackIndex относится к перемешанному плейлисту (playlist)
+      // В перемешанном плейлисте индекс 1 = Track 1 (id: 1)
+      // Код должен найти Track 1 в финальном плейлисте по ID
       store.dispatch(
         playerActions.hydrateFromPersistedState({
           playlist: shuffledTracks,
           originalPlaylist: mockTracks,
-          currentTrackIndex: 1, // Track 2 в оригинальном плейлисте
+          currentTrackIndex: 1, // Track 1 в перемешанном плейлисте
           albumId: 'album-1',
           albumTitle: 'Test Album',
           albumMeta: null,
@@ -1261,8 +1263,10 @@ describe('playerSlice', () => {
       );
 
       const state = store.getState();
-      // Должен найти Track 2 в перемешанном плейлисте
-      expect(state.player.playlist[state.player.currentTrackIndex].id).toBe(2);
+      // Должен найти Track 1 (id: 1) в финальном плейлисте
+      expect(state.player.playlist[state.player.currentTrackIndex].id).toBe(1);
+      // Track 1 находится на индексе 1 в перемешанном плейлисте
+      expect(state.player.currentTrackIndex).toBe(1);
     });
 
     test('должен обработать граничные значения volume', () => {

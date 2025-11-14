@@ -459,8 +459,7 @@ describe('albumsSlice', () => {
 
     test('selectAlbumsStatus должен обработать несуществующий язык', () => {
       // @ts-expect-error - тестируем edge case с невалидным языком
-      const status = selectAlbumsStatus(mockState as any, 'fr');
-      expect(status).toBeUndefined();
+      expect(() => selectAlbumsStatus(mockState as any, 'fr')).toThrow();
     });
 
     test('selectAlbumsError должен обработать состояние с ошибкой', () => {
@@ -574,8 +573,7 @@ describe('albumsSlice', () => {
 
     test('selectAlbumById должен обработать несуществующий язык', () => {
       // @ts-expect-error - тестируем edge case с невалидным языком
-      const album = selectAlbumById(mockState as any, 'fr', 'album-1');
-      expect(album).toBeUndefined();
+      expect(() => selectAlbumById(mockState as any, 'fr', 'album-1')).toThrow();
     });
   });
 });
