@@ -44,7 +44,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'ru' },
+          lang: { current: 'ru' as SupportedLang },
         },
       });
 
@@ -60,7 +60,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
@@ -76,7 +76,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
@@ -92,7 +92,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'ru' },
+          lang: { current: 'ru' as SupportedLang },
         },
       });
 
@@ -126,7 +126,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
@@ -140,7 +140,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'ru' },
+          lang: { current: 'ru' as SupportedLang },
         },
       });
 
@@ -154,7 +154,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
@@ -175,7 +175,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
@@ -195,7 +195,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
@@ -215,7 +215,7 @@ describe('langSlice', () => {
           lang: langReducer,
         },
         preloadedState: {
-          lang: { current: 'en' },
+          lang: { current: 'en' as SupportedLang },
         },
       });
 
