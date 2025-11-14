@@ -210,6 +210,161 @@ describe('uiDictionarySlice', () => {
       expect(selectUiDictionaryData(state, 'en')[0].titles?.albums).toBe('Albums');
       expect(selectUiDictionaryData(state, 'ru')[0].titles?.albums).toBe('Альбомы');
     });
+
+    test('должен обработать пустой массив данных', async () => {
+      mockGetJSON.mockResolvedValueOnce([]);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      expect(result.type).toBe('uiDictionary/fetchByLang/fulfilled');
+      expect(result.payload).toEqual([]);
+
+      const state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('succeeded');
+      expect(selectUiDictionaryData(state, 'en')).toEqual([]);
+      expect(selectUiDictionaryFirst(state, 'en')).toBeNull();
+    });
+
+    test('должен обработать ошибку без Error объекта (null)', async () => {
+      mockGetJSON.mockRejectedValueOnce(null);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      expect(result.type).toBe('uiDictionary/fetchByLang/rejected');
+
+      const state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+      expect(selectUiDictionaryError(state, 'en')).toBe('Unknown error');
+    });
+
+    test('должен обработать ошибку без Error объекта (строка)', async () => {
+      mockGetJSON.mockRejectedValueOnce('String error');
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      expect(result.type).toBe('uiDictionary/fetchByLang/rejected');
+
+      const state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+      expect(selectUiDictionaryError(state, 'en')).toBe('Unknown error');
+    });
+
+    test('должен обработать ошибку без Error объекта (undefined)', async () => {
+      mockGetJSON.mockRejectedValueOnce(undefined);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      expect(result.type).toBe('uiDictionary/fetchByLang/rejected');
+
+      const state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+      expect(selectUiDictionaryError(state, 'en')).toBe('Unknown error');
+    });
+
+    test('должен обработать отмену запроса (abort signal)', async () => {
+      const abortController = new AbortController();
+      mockGetJSON.mockImplementation(() => {
+        abortController.abort();
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      });
+
+      const store = createTestStore();
+      const promise = (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      abortController.abort();
+      await promise.catch(() => {});
+
+      const state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+    });
+
+    test('должен позволить повторную загрузку после ошибки', async () => {
+      // Первая попытка - ошибка
+      mockGetJSON.mockRejectedValueOnce(new Error('Network error'));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      let state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+      expect(selectUiDictionaryError(state, 'en')).toBe('Network error');
+
+      // Вторая попытка - успех
+      mockGetJSON.mockResolvedValueOnce(mockDictionary);
+      await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('succeeded');
+      expect(selectUiDictionaryError(state, 'en')).toBeNull();
+      expect(selectUiDictionaryData(state, 'en')).toEqual(mockDictionary);
+    });
+
+    test('должен обновлять lastUpdated при успешной загрузке', async () => {
+      mockGetJSON.mockResolvedValueOnce(mockDictionary);
+
+      const store = createTestStore();
+      const beforeTime = Date.now();
+
+      await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      const afterTime = Date.now();
+      const state = store.getState();
+      const entry = state.uiDictionary.en;
+
+      expect(entry.lastUpdated).not.toBeNull();
+      expect(entry.lastUpdated).toBeGreaterThanOrEqual(beforeTime);
+      expect(entry.lastUpdated).toBeLessThanOrEqual(afterTime);
+    });
+
+    test('должен очищать ошибку при новой загрузке после ошибки', async () => {
+      // Первая попытка - ошибка
+      mockGetJSON.mockRejectedValueOnce(new Error('First error'));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      let state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+      expect(selectUiDictionaryError(state, 'en')).toBe('First error');
+
+      // Начинаем новую загрузку - ошибка должна быть очищена
+      mockGetJSON.mockImplementation(() => new Promise(() => {}));
+      const promise = (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('loading');
+      expect(selectUiDictionaryError(state, 'en')).toBeNull();
+
+      promise.abort();
+    });
+
+    test('не должен запускать загрузку если статус failed, но уже выполняется другая', async () => {
+      // Сначала создаем ошибку
+      mockGetJSON.mockRejectedValueOnce(new Error('Error'));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      let state = store.getState();
+      expect(selectUiDictionaryStatus(state, 'en')).toBe('failed');
+
+      // Запускаем новую загрузку
+      mockGetJSON.mockImplementation(() => new Promise(() => {}));
+      const promise1 = (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      // Пытаемся запустить еще одну параллельную загрузку
+      const promise2 = (store.dispatch as AppDispatch)(fetchUiDictionary({ lang: 'en' }));
+
+      // Проверяем, что getJSON был вызван только один раз
+      expect(mockGetJSON).toHaveBeenCalledTimes(2); // Первый вызов - ошибка, второй - loading
+
+      promise1.abort();
+      promise2.abort();
+    });
   });
 
   describe('selectors', () => {
@@ -284,6 +439,138 @@ describe('uiDictionarySlice', () => {
     test('selectUiDictionaryFirst должен возвращать null для пустого массива', () => {
       const first = selectUiDictionaryFirst(mockState as any, 'ru');
       expect(first).toBeNull();
+    });
+
+    test('selectUiDictionaryStatus должен обработать несуществующий язык', () => {
+      // @ts-expect-error - тестируем edge case с невалидным языком
+      const status = selectUiDictionaryStatus(mockState as any, 'fr');
+      expect(status).toBeUndefined();
+    });
+
+    test('selectUiDictionaryError должен обработать состояние с ошибкой', () => {
+      const errorState = {
+        ...mockState,
+        uiDictionary: {
+          ...mockState.uiDictionary,
+          en: {
+            ...mockState.uiDictionary.en,
+            status: 'failed' as const,
+            error: 'Test error message',
+          },
+        },
+      };
+
+      expect(selectUiDictionaryError(errorState as any, 'en')).toBe('Test error message');
+    });
+
+    test('selectUiDictionaryData должен обработать очень большой массив данных', () => {
+      const largeData: IInterface[] = Array.from({ length: 1000 }, (_, i) => ({
+        titles: {
+          albums: `Albums ${i}`,
+          articles: `Articles ${i}`,
+        },
+        menu: {
+          stems: `Mixer ${i}`,
+        },
+        buttons: {
+          playButton: `Play ${i}`,
+        },
+        theBand: [],
+      }));
+
+      const largeState = {
+        ...mockState,
+        uiDictionary: {
+          ...mockState.uiDictionary,
+          en: {
+            ...mockState.uiDictionary.en,
+            data: largeData,
+          },
+        },
+      };
+
+      const data = selectUiDictionaryData(largeState as any, 'en');
+      expect(data).toHaveLength(1000);
+      expect(data[0].titles?.albums).toBe('Albums 0');
+      expect(data[999].titles?.albums).toBe('Albums 999');
+    });
+
+    test('selectUiDictionaryFirst должен обработать массив с одним элементом', () => {
+      const singleItemState = {
+        ...mockState,
+        uiDictionary: {
+          ...mockState.uiDictionary,
+          ru: {
+            ...mockState.uiDictionary.ru,
+            status: 'succeeded' as const,
+            data: [
+              {
+                titles: {
+                  albums: 'Single Album',
+                  articles: 'Single Article',
+                },
+                menu: {
+                  stems: 'Single Mixer',
+                },
+                buttons: {
+                  playButton: 'Single Play',
+                },
+                theBand: [],
+              },
+            ],
+          },
+        },
+      };
+
+      const first = selectUiDictionaryFirst(singleItemState as any, 'ru');
+      expect(first).toBeDefined();
+      expect(first?.titles?.albums).toBe('Single Album');
+    });
+
+    test('selectUiDictionaryFirst должен обработать массив с множественными элементами', () => {
+      const multipleItemsState = {
+        ...mockState,
+        uiDictionary: {
+          ...mockState.uiDictionary,
+          en: {
+            ...mockState.uiDictionary.en,
+            data: [
+              {
+                titles: {
+                  albums: 'First Album',
+                  articles: 'First Article',
+                },
+                menu: {
+                  stems: 'First Mixer',
+                },
+                buttons: {
+                  playButton: 'First Play',
+                },
+                theBand: [],
+              },
+              {
+                titles: {
+                  albums: 'Second Album',
+                  articles: 'Second Article',
+                },
+                menu: {
+                  stems: 'Second Mixer',
+                },
+                buttons: {
+                  playButton: 'Second Play',
+                },
+                theBand: [],
+              },
+            ],
+          },
+        },
+      };
+
+      const first = selectUiDictionaryFirst(multipleItemsState as any, 'en');
+      expect(first).toBeDefined();
+      expect(first?.titles?.albums).toBe('First Album');
+      // Проверяем, что возвращается именно первый элемент
+      expect(multipleItemsState.uiDictionary.en.data[1].titles?.albums).toBe('Second Album');
     });
   });
 });

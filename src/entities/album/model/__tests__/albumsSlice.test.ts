@@ -222,6 +222,161 @@ describe('albumsSlice', () => {
       expect(selectAlbumsData(state, 'en')[0].albumId).toBe('album-en');
       expect(selectAlbumsData(state, 'ru')[0].albumId).toBe('album-ru');
     });
+
+    test('должен обработать пустой массив данных', async () => {
+      mockGetJSON.mockResolvedValueOnce([]);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      expect(result.type).toBe('albums/fetchByLang/fulfilled');
+      expect(result.payload).toEqual([]);
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('succeeded');
+      expect(selectAlbumsData(state, 'en')).toEqual([]);
+      expect(selectAlbumById(state, 'en', 'any-id')).toBeUndefined();
+    });
+
+    test('должен обработать ошибку без Error объекта (null)', async () => {
+      mockGetJSON.mockRejectedValueOnce(null);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      expect(result.type).toBe('albums/fetchByLang/rejected');
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+      expect(selectAlbumsError(state, 'en')).toBe('Unknown error');
+    });
+
+    test('должен обработать ошибку без Error объекта (строка)', async () => {
+      mockGetJSON.mockRejectedValueOnce('String error');
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      expect(result.type).toBe('albums/fetchByLang/rejected');
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+      expect(selectAlbumsError(state, 'en')).toBe('Unknown error');
+    });
+
+    test('должен обработать ошибку без Error объекта (undefined)', async () => {
+      mockGetJSON.mockRejectedValueOnce(undefined);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      expect(result.type).toBe('albums/fetchByLang/rejected');
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+      expect(selectAlbumsError(state, 'en')).toBe('Unknown error');
+    });
+
+    test('должен обработать отмену запроса (abort signal)', async () => {
+      const abortController = new AbortController();
+      mockGetJSON.mockImplementation(() => {
+        abortController.abort();
+        return Promise.reject(new DOMException('Aborted', 'AbortError'));
+      });
+
+      const store = createTestStore();
+      const promise = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      abortController.abort();
+      await promise.catch(() => {});
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+    });
+
+    test('должен позволить повторную загрузку после ошибки', async () => {
+      // Первая попытка - ошибка
+      mockGetJSON.mockRejectedValueOnce(new Error('Network error'));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      let state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+      expect(selectAlbumsError(state, 'en')).toBe('Network error');
+
+      // Вторая попытка - успех
+      mockGetJSON.mockResolvedValueOnce(mockAlbums);
+      await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('succeeded');
+      expect(selectAlbumsError(state, 'en')).toBeNull();
+      expect(selectAlbumsData(state, 'en')).toEqual(mockAlbums);
+    });
+
+    test('должен обновлять lastUpdated при успешной загрузке', async () => {
+      mockGetJSON.mockResolvedValueOnce(mockAlbums);
+
+      const store = createTestStore();
+      const beforeTime = Date.now();
+
+      await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      const afterTime = Date.now();
+      const state = store.getState();
+      const entry = state.albums.en;
+
+      expect(entry.lastUpdated).not.toBeNull();
+      expect(entry.lastUpdated).toBeGreaterThanOrEqual(beforeTime);
+      expect(entry.lastUpdated).toBeLessThanOrEqual(afterTime);
+    });
+
+    test('должен очищать ошибку при новой загрузке после ошибки', async () => {
+      // Первая попытка - ошибка
+      mockGetJSON.mockRejectedValueOnce(new Error('First error'));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      let state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+      expect(selectAlbumsError(state, 'en')).toBe('First error');
+
+      // Начинаем новую загрузку - ошибка должна быть очищена
+      mockGetJSON.mockImplementation(() => new Promise(() => {}));
+      const promise = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('loading');
+      expect(selectAlbumsError(state, 'en')).toBeNull();
+
+      promise.abort();
+    });
+
+    test('не должен запускать загрузку если статус failed, но уже выполняется другая', async () => {
+      // Сначала создаем ошибку
+      mockGetJSON.mockRejectedValueOnce(new Error('Error'));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      let state = store.getState();
+      expect(selectAlbumsStatus(state, 'en')).toBe('failed');
+
+      // Запускаем новую загрузку
+      mockGetJSON.mockImplementation(() => new Promise(() => {}));
+      const promise1 = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      // Пытаемся запустить еще одну параллельную загрузку
+      const promise2 = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
+
+      // Проверяем, что getJSON был вызван только один раз
+      expect(mockGetJSON).toHaveBeenCalledTimes(2); // Первый вызов - ошибка, второй - loading
+
+      promise1.abort();
+      promise2.abort();
+    });
   });
 
   describe('selectors', () => {
@@ -299,6 +454,127 @@ describe('albumsSlice', () => {
 
     test('selectAlbumById должен возвращать undefined для несуществующего альбома', () => {
       const album = selectAlbumById(mockState as any, 'en', 'non-existent');
+      expect(album).toBeUndefined();
+    });
+
+    test('selectAlbumsStatus должен обработать несуществующий язык', () => {
+      // @ts-expect-error - тестируем edge case с невалидным языком
+      const status = selectAlbumsStatus(mockState as any, 'fr');
+      expect(status).toBeUndefined();
+    });
+
+    test('selectAlbumsError должен обработать состояние с ошибкой', () => {
+      const errorState = {
+        ...mockState,
+        albums: {
+          ...mockState.albums,
+          en: {
+            ...mockState.albums.en,
+            status: 'failed' as const,
+            error: 'Test error message',
+          },
+        },
+      };
+
+      expect(selectAlbumsError(errorState as any, 'en')).toBe('Test error message');
+    });
+
+    test('selectAlbumsData должен обработать очень большой массив данных', () => {
+      const largeData: IAlbums[] = Array.from({ length: 1000 }, (_, i) => ({
+        albumId: `album-${i}`,
+        album: `Album ${i}`,
+        artist: `Artist ${i}`,
+        fullName: `Artist ${i} — Album ${i}`,
+        description: `Description ${i}`,
+        release: {
+          date: '2024-01-01',
+        },
+        cover: {
+          img: `cover-${i}.jpg`,
+          fullName: `Artist ${i} — Album ${i}`,
+        },
+        tracks: [],
+        buttons: {},
+        details: [],
+      }));
+
+      const largeState = {
+        ...mockState,
+        albums: {
+          ...mockState.albums,
+          en: {
+            ...mockState.albums.en,
+            data: largeData,
+          },
+        },
+      };
+
+      const data = selectAlbumsData(largeState as any, 'en');
+      expect(data).toHaveLength(1000);
+      expect(data[0].albumId).toBe('album-0');
+      expect(data[999].albumId).toBe('album-999');
+    });
+
+    test('selectAlbumById должен найти альбом в большом массиве', () => {
+      const largeData: IAlbums[] = Array.from({ length: 1000 }, (_, i) => ({
+        albumId: `album-${i}`,
+        album: `Album ${i}`,
+        artist: `Artist ${i}`,
+        fullName: `Artist ${i} — Album ${i}`,
+        description: `Description ${i}`,
+        release: {
+          date: '2024-01-01',
+        },
+        cover: {
+          img: `cover-${i}.jpg`,
+          fullName: `Artist ${i} — Album ${i}`,
+        },
+        tracks: [],
+        buttons: {},
+        details: [],
+      }));
+
+      const largeState = {
+        ...mockState,
+        albums: {
+          ...mockState.albums,
+          en: {
+            ...mockState.albums.en,
+            data: largeData,
+          },
+        },
+      };
+
+      const album = selectAlbumById(largeState as any, 'en', 'album-500');
+      expect(album).toBeDefined();
+      expect(album?.albumId).toBe('album-500');
+      expect(album?.album).toBe('Album 500');
+    });
+
+    test('selectAlbumById должен обработать поиск с пустым ID', () => {
+      const album = selectAlbumById(mockState as any, 'en', '');
+      expect(album).toBeUndefined();
+    });
+
+    test('selectAlbumById должен обработать поиск в пустом массиве', () => {
+      const emptyState = {
+        ...mockState,
+        albums: {
+          ...mockState.albums,
+          ru: {
+            ...mockState.albums.ru,
+            data: [],
+          },
+        },
+      };
+
+      const album = selectAlbumById(emptyState as any, 'ru', 'any-id');
+      expect(album).toBeUndefined();
+    });
+
+    test('selectAlbumById должен обработать несуществующий язык', () => {
+      // @ts-expect-error - тестируем edge case с невалидным языком
+      const album = selectAlbumById(mockState as any, 'fr', 'album-1');
       expect(album).toBeUndefined();
     });
   });
