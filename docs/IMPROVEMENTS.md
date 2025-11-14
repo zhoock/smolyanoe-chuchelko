@@ -48,14 +48,29 @@
 
 ### 3. Производительность и оптимизация
 
-#### 3.1 React.memo для компонентов
+#### 3.1 React.memo для компонентов ✅ **ВЫПОЛНЕНО**
 
 **Проблема:** Не все компоненты оптимизированы с помощью `React.memo`.
 
-**Решение:**
+**Решение (реализовано):**
 
-- Обернуть часто ре-рендерящиеся компоненты в `React.memo`
-- Особенно: `Header`, `Footer`, `Navigation`, `AlbumCover` (уже есть `memo`)
+- ✅ Обернуты часто ре-рендерящиеся компоненты в `React.memo`
+- ✅ `Header` - обернут в memo для предотвращения лишних ре-рендеров при изменении родителя
+- ✅ `Footer` - обернут в memo
+- ✅ `Navigation` - обернут в memo
+- ✅ `Hamburger` - обернут в memo
+- ✅ `Popup` - обернут в memo
+- ✅ `AlbumCover` - уже был обернут в memo
+
+**Реализованные изменения:**
+
+- `src/widgets/header/ui/Header.tsx` - добавлен React.memo
+- `src/widgets/footer/ui/Footer.tsx` - добавлен React.memo
+- `src/features/navigation/ui/Navigation.tsx` - добавлен React.memo
+- `src/shared/ui/hamburger/Hamburger.tsx` - добавлен React.memo
+- `src/shared/ui/popup/Popup.tsx` - добавлен React.memo
+
+**Результат:** Компоненты теперь ре-рендерятся только при изменении их props, что улучшает производительность приложения.
 
 #### 3.2 Улучшение code splitting
 

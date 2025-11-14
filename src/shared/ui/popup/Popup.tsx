@@ -1,9 +1,9 @@
 // src/shared/ui/popup/Popup.tsx
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { PopupProps } from 'models';
 import './style.scss';
 
-export const Popup = ({ children, isActive, bgColor, onClose }: PopupProps) => {
+const PopupComponent = ({ children, isActive, bgColor, onClose }: PopupProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -39,3 +39,5 @@ export const Popup = ({ children, isActive, bgColor, onClose }: PopupProps) => {
     </dialog>
   );
 };
+
+export const Popup = memo(PopupComponent);

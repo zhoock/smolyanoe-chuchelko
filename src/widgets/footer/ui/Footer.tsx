@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -12,7 +13,7 @@ const socialNetwork = [
 
 const supportLink = (label: string) => <a href="mailto:feedback@smolyanoechuchelko.ru">{label}</a>;
 
-export function Footer() {
+function FooterComponent() {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
@@ -51,4 +52,5 @@ export function Footer() {
   );
 }
 
+export const Footer = memo(FooterComponent);
 export default Footer;

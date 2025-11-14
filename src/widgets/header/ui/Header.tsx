@@ -1,5 +1,5 @@
 // src/widgets/header/ui/Header.tsx
-import { useEffect, useState, useRef } from 'react';
+import { memo, useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
@@ -16,7 +16,7 @@ type HeaderProps = {
   onToggleTheme: () => void;
 };
 
-export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
+const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
   const { lang, setLang } = useLang(); // язык из контекста
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -91,3 +91,5 @@ export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
     </header>
   );
 };
+
+export const Header = memo(HeaderComponent);

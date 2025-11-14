@@ -1,4 +1,5 @@
 // src/components/Navigation/Navigation.tsx
+import { memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { NavigationProps } from '@models';
@@ -7,7 +8,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './style.scss';
 
-export const Navigation = ({ onToggle }: NavigationProps) => {
+const NavigationComponent = ({ onToggle }: NavigationProps) => {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
@@ -43,3 +44,5 @@ export const Navigation = ({ onToggle }: NavigationProps) => {
     </nav>
   );
 };
+
+export const Navigation = memo(NavigationComponent);

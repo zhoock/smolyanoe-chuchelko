@@ -1,4 +1,5 @@
 // src/components/Hamburger/Hamburger.tsx
+import { memo } from 'react';
 import clsx from 'clsx';
 import { HamburgerProps } from '@/models';
 import './style.scss';
@@ -6,7 +7,7 @@ import './style.scss';
 /**
  * Компонент отображает гамбургер-меню.
  */
-export const Hamburger = ({ isActive, onToggle, zIndex, className }: HamburgerProps) => {
+const HamburgerComponent = ({ isActive, onToggle, zIndex, className }: HamburgerProps) => {
   return (
     <button
       className={clsx(
@@ -25,3 +26,5 @@ export const Hamburger = ({ isActive, onToggle, zIndex, className }: HamburgerPr
     </button>
   );
 };
+
+export const Hamburger = memo(HamburgerComponent);
