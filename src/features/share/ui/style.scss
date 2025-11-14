@@ -19,10 +19,20 @@
   }
 
   &__link {
-    padding: var(--ms-01);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--ms-2);
+    height: var(--ms-2);
     color: var(--link-button-color, #dddddd);
+    font: inherit;
     background: var(--link-button-background-color, #373633);
+    border: 0;
     border-radius: 50%;
+    cursor: pointer;
+    text-decoration: none;
+    appearance: none;
+    aspect-ratio: 1;
 
     &:hover {
       color: var(--link-color-hover, #ffffff);
