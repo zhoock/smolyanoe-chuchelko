@@ -1,5 +1,5 @@
 // src/app/App.tsx
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense, lazy } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -25,16 +25,21 @@ import { Footer } from '@widgets/footer';
 import { Navigation } from '@features/navigation';
 import { Hamburger } from '@shared/ui/hamburger';
 import { PlayerShell } from '@features/player';
-import Album from '@pages/Album/Album';
-import StemsPlayground from '@pages/StemsPlayground/StemsPlayground';
-import Home from '@pages/Home';
-import Admin from '@pages/Admin/Admin';
-import AdminAlbum from '@pages/AdminAlbum/AdminAlbum';
-import AdminSync from '@pages/AdminSync/AdminSync';
-import AdminText from '@pages/AdminText/AdminText';
-import AdminAlbumJson from '@pages/AdminAlbumJson/AdminAlbumJson';
-import AdminAlbumBuilder from '@pages/AdminAlbumBuilder/AdminAlbumBuilder';
-import ArticlePage from '@pages/Article';
+
+// Lazy loading для страниц - загружаются только при необходимости
+const Album = lazy(() => import('@pages/Album/Album'));
+const StemsPlayground = lazy(() => import('@pages/StemsPlayground/StemsPlayground'));
+const Home = lazy(() => import('@pages/Home'));
+const Admin = lazy(() => import('@pages/Admin/Admin'));
+const AdminAlbum = lazy(() => import('@pages/AdminAlbum/AdminAlbum'));
+const AdminSync = lazy(() => import('@pages/AdminSync/AdminSync'));
+const AdminText = lazy(() => import('@pages/AdminText/AdminText'));
+const AdminAlbumJson = lazy(() => import('@pages/AdminAlbumJson/AdminAlbumJson'));
+const AdminAlbumBuilder = lazy(() => import('@pages/AdminAlbumBuilder/AdminAlbumBuilder'));
+const ArticlePage = lazy(() => import('@pages/Article'));
+
+// Компонент для отображения загрузки
+const PageLoader = () => <p>Загрузка...</p>;
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -157,17 +162,87 @@ function Layout() {
   const standardRoutes = (
     <>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/albums/:albumId" element={<Album />} />
-        <Route path="/articles/:articleId" element={<ArticlePage />} />
+        <Route
+          path="/"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Home />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/albums/:albumId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Album />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/articles/:articleId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <ArticlePage />
+            </Suspense>
+          }
+        />
         <Route path="/forms" element={<Form />} />
-        <Route path="/stems" element={<StemsPlayground />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/admin/album/:albumId" element={<AdminAlbum />} />
-        <Route path="/admin/sync/:albumId/:trackId" element={<AdminSync />} />
-        <Route path="/admin/text/:albumId/:trackId" element={<AdminText />} />
-        <Route path="/admin/json/:albumId" element={<AdminAlbumJson />} />
-        <Route path="/admin/builder" element={<AdminAlbumBuilder />} />
+        <Route
+          path="/stems"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <StemsPlayground />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <Admin />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/album/:albumId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminAlbum />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/sync/:albumId/:trackId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminSync />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/text/:albumId/:trackId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminText />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/json/:albumId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminAlbumJson />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/builder"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminAlbumBuilder />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>

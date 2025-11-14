@@ -1,23 +1,44 @@
+/**
+ * Селекторы для получения данных из Redux стейта статей.
+ * Используем createSelector для мемоизации - это предотвращает лишние пересчёты и ре-рендеры.
+ */
+import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@shared/model/appStore/types';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 
 import type { ArticlesEntry } from './types';
 
+// Базовый селектор - получает весь стейт статей
 export const selectArticlesState = (state: RootState): Record<SupportedLang, ArticlesEntry> =>
   state.articles;
 
-export const selectArticlesEntry = (state: RootState, lang: SupportedLang): ArticlesEntry =>
-  selectArticlesState(state)[lang];
+// Мемоизированный селектор для получения записи по языку
+export const selectArticlesEntry = createSelector(
+  [selectArticlesState, (_state: RootState, lang: SupportedLang) => lang],
+  (articles, lang): ArticlesEntry => articles[lang]
+);
 
-export const selectArticlesStatus = (state: RootState, lang: SupportedLang) =>
-  selectArticlesEntry(state, lang).status;
+// Мемоизированный селектор для статуса загрузки
+export const selectArticlesStatus = createSelector(
+  [selectArticlesEntry, (_state: RootState, lang: SupportedLang) => lang],
+  (entry) => entry.status
+);
 
-export const selectArticlesError = (state: RootState, lang: SupportedLang) =>
-  selectArticlesEntry(state, lang).error;
+// Мемоизированный селектор для ошибки
+export const selectArticlesError = createSelector(
+  [selectArticlesEntry, (_state: RootState, lang: SupportedLang) => lang],
+  (entry) => entry.error
+);
 
-export const selectArticlesData = (state: RootState, lang: SupportedLang): IArticles[] =>
-  selectArticlesEntry(state, lang).data;
+// Мемоизированный селектор для данных
+export const selectArticlesData = createSelector(
+  [selectArticlesEntry, (_state: RootState, lang: SupportedLang) => lang],
+  (entry): IArticles[] => entry.data
+);
 
-export const selectArticleById = (state: RootState, lang: SupportedLang, articleId: string) =>
-  selectArticlesData(state, lang).find((article) => article.articleId === articleId);
+// Мемоизированный селектор для поиска статьи по ID
+export const selectArticleById = createSelector(
+  [selectArticlesData, (_state: RootState, _lang: SupportedLang, articleId: string) => articleId],
+  (articles, articleId) => articles.find((article) => article.articleId === articleId)
+);
