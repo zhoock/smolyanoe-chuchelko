@@ -4,6 +4,7 @@ import type { IAlbums, IArticles, IInterface } from '@models';
 import { getJSON } from '@shared/api/http';
 import { getStore } from '@shared/model/appStore';
 import { selectCurrentLang } from '@shared/model/lang';
+import { fetchArticles, selectArticlesStatus, selectArticlesData } from '@entities/article';
 
 export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
@@ -15,7 +16,9 @@ export type AlbumsDeferred = {
 export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<AlbumsDeferred> {
   const { signal, url } = request;
   const { pathname } = new URL(url);
-  const lang = selectCurrentLang(getStore().getState());
+  const store = getStore();
+  const state = store.getState();
+  const lang = selectCurrentLang(state);
 
   // СЛОВАРЬ НУЖЕН ВЕЗДЕ: шапка, меню, футер, aboutus и т.д.
   const templateC = getJSON<IInterface[]>(`${lang}.json`, signal);
@@ -31,7 +34,38 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Статьи нужны на "/" (главная) и "/articles*"
   if (pathname === '/' || pathname.startsWith('/articles')) {
-    templateB = getJSON<IArticles[]>(`articles-${lang}.json`, signal);
+    const status = selectArticlesStatus(state, lang);
+    if (status === 'succeeded') {
+      templateB = Promise.resolve(selectArticlesData(state, lang));
+    } else {
+      const fetchThunkPromise = store.dispatch(fetchArticles({ lang }));
+
+      const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
+
+      if (signal.aborted) {
+        fetchThunkPromise.abort();
+        templateB = createNeverResolvingPromise();
+      } else {
+        const abortHandler = () => {
+          fetchThunkPromise.abort();
+        };
+        signal.addEventListener('abort', abortHandler, { once: true });
+
+        templateB = fetchThunkPromise.unwrap().catch((error) => {
+          if (
+            error === 'AbortError' ||
+            error === 'Aborted' ||
+            (typeof error === 'object' &&
+              error !== null &&
+              'name' in error &&
+              (error as { name?: string }).name === 'AbortError')
+          ) {
+            return createNeverResolvingPromise();
+          }
+          throw error;
+        });
+      }
+    }
   }
 
   return { templateA, templateB, templateC, lang };
