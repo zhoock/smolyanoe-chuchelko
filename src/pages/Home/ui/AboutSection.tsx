@@ -52,18 +52,18 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
 
         <Popup isActive={isAboutModalOpen} onClose={onClose} aria-labelledby="about-popup-title">
           <div className={aboutStyles.aboutPopup}>
-            <Hamburger
-              isActive={isAboutModalOpen}
-              onToggle={onClose}
-              zIndex="1200"
-              className={aboutStyles.aboutPopupHamburger}
-            />
-
-            <div className={aboutStyles.aboutPopupInner}>
+            <div className={aboutStyles.aboutPopupHeader}>
               <h3 id="about-popup-title">
                 {title} {artistName}
               </h3>
+              <Hamburger
+                isActive={isAboutModalOpen}
+                onToggle={onClose}
+                className={aboutStyles.aboutPopupHamburger}
+              />
+            </div>
 
+            <div className={aboutStyles.aboutPopupInner}>
               {theBand.map((paragraph, index) => (
                 <Text key={index} className={aboutStyles.aboutText}>
                   {paragraph}

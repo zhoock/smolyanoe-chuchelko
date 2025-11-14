@@ -30,32 +30,44 @@
 
   &__popup {
     position: relative;
+    inset-block-start: var(--ms-0);
     inline-size: min(680px, 92vw);
-    block-size: auto;
-    display: grid;
+    max-block-size: 90vh;
+    display: flex;
+    flex-direction: column;
     margin: auto;
-    padding: clamp(var(--ms-2), 4vw, var(--ms-4));
     color: var(--text-color, #f3f3f3);
     background: rgb(var(--extra-background-color-rgb, 18 18 18) / 95%);
     border-radius: var(--ms-1);
     box-shadow: 0 18px 42px rgb(0 0 0 / 45%);
     overflow: hidden;
-    grid-template-rows: auto 1fr;
+    padding-block-end: var(--ms-1);
+  }
+
+  &__popupHeader {
+    padding-block: clamp(var(--ms-2), 4vw, var(--ms-4)) var(--ms-1);
+    padding-inline: clamp(var(--ms-2), 4vw, var(--ms-4));
+
+    h3 {
+      margin: 0;
+    }
   }
 
   &__popup-hamburger {
     position: absolute;
-    inset-block-start: var(--ms-1);
-    inset-inline-end: var(--ms-1);
-    z-index: 5;
+    inset-block-start: var(--ms-0);
+    inset-inline-end: var(--ms-0);
+    z-index: 11;
   }
 
   &__popup-inner {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: var(--ms-1);
-    inline-size: 100%;
-    block-size: 100%;
+    padding-block: 0 clamp(var(--ms-2), 4vw, var(--ms-4));
+    padding-inline: clamp(var(--ms-2), 4vw, var(--ms-4));
+    overflow: hidden auto;
   }
 
   &__textPreview {
