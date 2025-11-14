@@ -46,7 +46,6 @@ export default function ErrorI18n({ code, fallback }: { code: ErrorCode; fallbac
   // UI словарь загружается через loader
 
   // Поддержка словаря вида: { errors: { albumsLoadFailed: "..." } }
-  // @ts-ignore — если у тебя в типах нет поля errors, просто читаем опционально
   const localized = (ui?.errors as Record<ErrorCode, string> | undefined)?.[code] ?? def;
 
   return <ErrorMessage error={localized} />;

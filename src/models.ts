@@ -155,6 +155,9 @@ export interface IInterface {
     pageTitle: string;
     notice: string;
   };
+  errors?: {
+    [key: string]: string;
+  };
 }
 
 export interface Tracks {

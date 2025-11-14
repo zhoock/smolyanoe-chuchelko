@@ -22,7 +22,14 @@ export default function Waveform({ src, progress = 0, height = 56, peaksCount = 
     (async () => {
       peaksRef.current = null;
 
-      const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+      // Поддержка префиксных версий AudioContext для старых браузеров
+      const AC =
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) {
+        console.error('AudioContext is not supported');
+        return;
+      }
       const ac = new AC();
 
       const resp = await fetch(src, { cache: 'force-cache' });
