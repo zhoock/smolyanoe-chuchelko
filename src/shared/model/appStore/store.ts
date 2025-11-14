@@ -1,28 +1,44 @@
 import { configureStore } from '@reduxjs/toolkit';
+
 import { popupReducer } from '@features/popupToggle';
 import { playerReducer } from '@features/player';
 import {
   playerListenerMiddleware,
   attachAudioEvents,
 } from '@features/player/model/middleware/playerListeners';
-import type { AppDispatch, RootState } from './types';
+import { langReducer, langListenerMiddleware, applyLangSideEffects } from '@shared/model/lang';
+
+import type { AppDispatch, AppStore as AppStoreType, RootState } from './types';
 
 const rootReducer = {
   popup: popupReducer,
   player: playerReducer,
+  lang: langReducer,
 };
 
-export const createReduxStore = () => {
+let storeInstance: AppStoreType | null = null;
+
+export const createReduxStore = (): AppStoreType => {
+  if (storeInstance) {
+    return storeInstance;
+  }
+
   const store = configureStore({
     reducer: rootReducer,
     devTools: process.env.NODE_ENV !== 'production',
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(playerListenerMiddleware.middleware),
+      getDefaultMiddleware().concat(
+        playerListenerMiddleware.middleware,
+        langListenerMiddleware.middleware
+      ),
   });
 
   attachAudioEvents(store.dispatch as AppDispatch, store.getState as () => RootState);
+  applyLangSideEffects(store.getState().lang.current);
+
+  storeInstance = store;
 
   return store;
 };
 
-export type AppStore = ReturnType<typeof createReduxStore>;
+export const getStore = (): AppStoreType => createReduxStore();

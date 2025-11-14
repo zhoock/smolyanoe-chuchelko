@@ -1,5 +1,12 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+
+set -euo pipefail
 
 echo "[husky] pre-commit running..."
-npx --no -- lint-staged
+
+if [ -x "./node_modules/.bin/lint-staged" ]; then
+  ./node_modules/.bin/lint-staged
+else
+  echo "[husky] lint-staged не найден в node_modules, пропускаю проверки" >&2
+  exit 0
+fi

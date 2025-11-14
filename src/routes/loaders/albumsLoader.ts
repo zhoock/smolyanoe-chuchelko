@@ -1,8 +1,9 @@
 // src/routes/loaders/albumsLoader.ts
 import type { LoaderFunctionArgs } from 'react-router';
 import type { IAlbums, IArticles, IInterface } from '@models';
-import { currentLang } from '@shared/model/lang';
 import { getJSON } from '@shared/api/http';
+import { getStore } from '@shared/model/appStore';
+import { selectCurrentLang } from '@shared/model/lang';
 
 export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
@@ -14,7 +15,7 @@ export type AlbumsDeferred = {
 export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<AlbumsDeferred> {
   const { signal, url } = request;
   const { pathname } = new URL(url);
-  const lang = currentLang;
+  const lang = selectCurrentLang(getStore().getState());
 
   // СЛОВАРЬ НУЖЕН ВЕЗДЕ: шапка, меню, футер, aboutus и т.д.
   const templateC = getJSON<IInterface[]>(`${lang}.json`, signal);

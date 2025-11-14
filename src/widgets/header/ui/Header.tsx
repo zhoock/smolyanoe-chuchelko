@@ -4,7 +4,10 @@ import { Link, useRevalidator } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
 import { useLang } from '@app/providers/lang'; // берём из контекста
+import type { SupportedLang } from '@shared/model/lang';
 import './style.scss';
+
+const LANG_OPTIONS: SupportedLang[] = ['en', 'ru'];
 
 type Theme = 'light' | 'dark';
 
@@ -33,7 +36,7 @@ export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
   }, []);
 
   // Смена языка: контекст → стор для лоадера → revalidate()
-  const changeLang = (newLang: string) => {
+  const changeLang = (newLang: SupportedLang) => {
     if (newLang !== lang) {
       setLang(newLang); // UI-строки + обновляем глобальный стор
       revalidate(); // перезагрузить данные на новом языке
@@ -55,7 +58,7 @@ export const Header = ({ theme, onToggleTheme }: HeaderProps) => {
             {lang.toUpperCase()}
           </button>
           <ul className={clsx('lang-list', { 'is-hidden': !langOpen })} role="listbox">
-            {['en', 'ru'].map((l) => (
+            {LANG_OPTIONS.map((l) => (
               <li key={l}>
                 <button
                   className={clsx('lang-option', { active: lang === l })}
