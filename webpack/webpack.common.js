@@ -155,6 +155,14 @@ module.exports = {
           from: path.resolve(__dirname, '../src/images'), // Путь к фотографиям в src
           to: path.resolve(__dirname, '../dist/images'), // Папка назначения в dist
         },
+        {
+          from: path.resolve(__dirname, '../src/assets'), // Путь к JSON файлам в src/assets
+          to: path.resolve(__dirname, '../dist/assets'), // Папка назначения в dist
+          filter: (resourcePath) => {
+            // Копируем только JSON файлы
+            return resourcePath.endsWith('.json');
+          },
+        },
       ],
     }),
     new HtmlWebpackPlugin({

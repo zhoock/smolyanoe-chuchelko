@@ -111,9 +111,9 @@ export default [
     },
   },
 
-  // --- скрипты для Node.js (update-json-from-export.js) ---
+  // --- скрипты для Node.js (update-json-from-export.js, generate-encryption-key.js) ---
   {
-    files: ['scripts/update-json-from-export.js'],
+    files: ['scripts/update-json-from-export.js', 'scripts/generate-encryption-key.js'],
     languageOptions: {
       globals: {
         require: 'readonly',

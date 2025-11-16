@@ -43,6 +43,7 @@ export const PlayerShell: React.FC = () => {
 
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BG);
   const [miniBottomOffset, setMiniBottomOffset] = useState<number>(getDefaultBottomOffset());
+  const [blurBackgroundHeight, setBlurBackgroundHeight] = useState<number>(0);
 
   const isFullScreen = location.hash === '#player';
   const shouldRenderMini = hasPlaylist && !!albumMeta && !!currentTrack && !isFullScreen;
@@ -195,19 +196,31 @@ export const PlayerShell: React.FC = () => {
 
     if (!playerEl || !footerEl) {
       setMiniBottomOffset(getDefaultBottomOffset());
+      setBlurBackgroundHeight(0);
       return;
     }
 
     const defaultOffset = getDefaultBottomOffset();
     const footerRect = footerEl.getBoundingClientRect();
+    const playerRect = playerEl.getBoundingClientRect();
     const overlap = window.innerHeight - defaultOffset - footerRect.top;
     const extraOffset =
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ms-0')) || 0;
     const nextOffset = defaultOffset + Math.max(0, overlap + extraOffset);
 
+    // Вычисляем высоту заблюренного фона: от нижней границы мини-плеера до верхней границы футера
+    const blurHeight = Math.max(0, footerRect.top - playerRect.bottom);
+
     setMiniBottomOffset((prev) => {
       if (Math.abs(prev - nextOffset) > 1) {
         return nextOffset;
+      }
+      return prev;
+    });
+
+    setBlurBackgroundHeight((prev) => {
+      if (Math.abs(prev - blurHeight) > 1) {
+        return blurHeight;
       }
       return prev;
     });

@@ -1,0 +1,361 @@
+@use '../../../scss/abstracts/mixins' as *;
+
+.payment-settings {
+  margin: 0 auto;
+  padding: var(--ms-4);
+  max-inline-size: 800px;
+
+  &__title {
+    margin: 0 0 var(--ms-4);
+    color: var(--text-color, #ffffff);
+    font-size: 2rem;
+    line-height: 1.2;
+    font-weight: 700;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__loading {
+    padding: var(--ms-4);
+    color: var(--warm-concrete, #9b9b9a);
+    text-align: center;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__error {
+    padding: var(--ms-2);
+    color: #ef4444;
+    font-size: 0.875rem;
+    background: rgba(239 68 68 / 10%);
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    margin-block-end: var(--ms-3);
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__success {
+    padding: var(--ms-2);
+    color: #22c55e;
+    font-size: 0.875rem;
+    background: rgba(34 197 94 / 10%);
+    border: 1px solid #22c55e;
+    border-radius: 8px;
+    margin-block-end: var(--ms-3);
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__provider {
+    padding: var(--ms-4);
+    background: var(--extra-background-color, #1e1e1e);
+    border: 1px solid var(--iron-slate, #3d3c3a);
+    border-radius: 12px;
+    margin-block-end: var(--ms-4);
+  }
+
+  &__provider-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ms-3);
+    margin-block-end: var(--ms-4);
+  }
+
+  &__provider-logo {
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  &__provider-info {
+    flex: 1;
+  }
+
+  &__provider-name {
+    margin: 0 0 var(--ms-2);
+    color: var(--text-color, #ffffff);
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 700;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__provider-description {
+    margin: 0;
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 1rem;
+    line-height: 1.5;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__instructions {
+    padding: var(--ms-3);
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    background: rgba(255 255 255 / 5%);
+    border-radius: 8px;
+    margin-block-end: var(--ms-4);
+    font-family: var(--base-font-family, arial, sans-serif);
+    white-space: pre-line;
+
+    p {
+      margin: 0 0 var(--ms-2);
+
+      &:last-child {
+        margin-block-end: 0;
+      }
+    }
+  }
+
+  &__link {
+    color: var(--accent-color, #998238);
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.7;
+      text-decoration: underline;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover {
+        opacity: 1;
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+    }
+  }
+
+  &__connect-button {
+    padding: var(--ms-2) var(--ms-3);
+    color: var(--text-color, #ffffff);
+    font-size: 1rem;
+    background: var(--iron-slate, #3d3c3a);
+    border: 1px solid var(--iron-slate, #3d3c3a);
+    border-radius: 8px;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+    inline-size: 100%;
+    font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--white, #ffffff);
+      background: var(--accent-color, #998238);
+      border-color: var(--accent-color, #998238);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover:not(:disabled) {
+        background: var(--iron-slate, #3d3c3a);
+        border-color: var(--iron-slate, #3d3c3a);
+      }
+
+      &:active:not(:disabled) {
+        background: var(--accent-color, #998238);
+      }
+    }
+  }
+
+  &__disconnect-button {
+    padding: var(--ms-2) var(--ms-3);
+    color: #ef4444;
+    font-size: 1rem;
+    background: transparent;
+    border: 1px solid var(--iron-slate, #3d3c3a);
+    border-radius: 8px;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+    inline-size: 100%;
+    border-color: #ef4444;
+    font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--white, #ffffff);
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+  }
+
+  &__connected {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-3);
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-2);
+  }
+
+  &__status-badge {
+    display: inline-flex;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    border-radius: 16px;
+    align-items: center;
+    font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &--connected {
+      color: #22c55e;
+      background: rgba(34 197 94 / 20%);
+      border: 1px solid #22c55e;
+    }
+  }
+
+  &__connected-date {
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.875rem;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__shop-id {
+    padding: var(--ms-2);
+    color: var(--text-color, #ffffff);
+    font-size: 0.9375rem;
+    background: rgba(255 255 255 / 5%);
+    border-radius: 8px;
+    font-family: var(--base-font-family, arial, sans-serif);
+
+    strong {
+      font-weight: 600;
+      margin-inline-end: var(--ms-1);
+    }
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-3);
+  }
+
+  &__form-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-1);
+  }
+
+  &__form-label {
+    color: var(--text-color, #ffffff);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__form-input {
+    padding: 12px;
+    color: var(--text-color, #ffffff);
+    font-size: 0.9375rem;
+    background: var(--extra-background-color, #1e1e1e);
+    border: 1px solid var(--iron-slate, #3d3c3a);
+    border-radius: 8px;
+    transition: border-color 0.2s ease;
+    inline-size: 100%;
+    font-family: var(--base-font-family, arial, sans-serif);
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-color, #998238);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &::placeholder {
+      color: var(--warm-concrete, #9b9b9a);
+    }
+  }
+
+  &__form-hint {
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.75rem;
+    font-family: var(--base-font-family, arial, sans-serif);
+  }
+
+  &__form-actions {
+    display: flex;
+    gap: var(--ms-2);
+    margin-block-start: var(--ms-2);
+  }
+
+  &__cancel-button,
+  &__save-button {
+    padding: var(--ms-2) var(--ms-3);
+    color: var(--text-color, #ffffff);
+    font-size: 1rem;
+    background: transparent;
+    border: 1px solid var(--iron-slate, #3d3c3a);
+    border-radius: 8px;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+    flex: 1;
+    font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+    cursor: pointer;
+  }
+
+  &__save-button {
+    color: var(--white, #ffffff);
+    background: var(--accent-color, #998238);
+    border-color: var(--accent-color, #998238);
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--accent-color-hover, #b8a654);
+      border-color: var(--accent-color-hover, #b8a654);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover:not(:disabled) {
+        background: var(--accent-color, #998238);
+      }
+
+      &:active:not(:disabled) {
+        background: var(--accent-color-hover, #b8a654);
+      }
+    }
+  }
+
+  &__cancel-button {
+    &:hover:not(:disabled) {
+      background: rgba(255 255 255 / 5%);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover:not(:disabled) {
+        background: transparent;
+      }
+
+      &:active:not(:disabled) {
+        background: rgba(255 255 255 / 5%);
+      }
+    }
+  }
+}

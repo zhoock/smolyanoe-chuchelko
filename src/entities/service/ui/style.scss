@@ -16,8 +16,18 @@
     border-radius: var(--ms-01);
     place-items: center;
     min-block-size: var(--ms-3);
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
 
     @include adjust-font-size-to($ms-1, 0);
+
+    svg {
+      width: 1.2em;
+      height: 1.2em;
+    }
 
     &:hover {
       background-color: var(--link-button-background-color-hover, #998238);
@@ -25,6 +35,17 @@
 
       @media (hover: none) and (pointer: coarse) {
         background-color: var(--link-button-background-color, #373633);
+      }
+    }
+
+    // Кнопка Download с акцентным фоном
+    &--download {
+      color: var(--text-color, #ffffff);
+      background: var(--accent-color, #998238);
+
+      &:hover {
+        background-color: var(--accent-color-hover, #b8a654);
+        color: var(--text-color, #ffffff);
       }
     }
   }

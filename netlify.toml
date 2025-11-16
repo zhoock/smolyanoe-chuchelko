@@ -18,4 +18,20 @@
   to = "/.netlify/functions/save-synced-lyrics"
   status = 200
 
+# API routes для платежей ЮKassa
+[[redirects]]
+  from = "/api/create-payment"
+  to = "/.netlify/functions/create-payment"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment-webhook"
+  to = "/.netlify/functions/payment-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment-settings"
+  to = "/.netlify/functions/payment-settings"
+  status = 200
+
 

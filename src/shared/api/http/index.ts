@@ -1,4 +1,7 @@
-const BASE_URL = 'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/main/src/assets';
+const BASE_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/main/src/assets'
+    : '/assets';
 
 export async function getJSON<T>(path: string, signal?: AbortSignal): Promise<T> {
   try {

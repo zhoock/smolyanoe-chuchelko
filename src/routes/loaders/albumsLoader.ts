@@ -7,6 +7,11 @@ import { selectCurrentLang } from '@shared/model/lang';
 import { fetchArticles, selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { fetchAlbums, selectAlbumsStatus, selectAlbumsData } from '@entities/album';
 import {
+  fetchHelpArticles,
+  selectHelpArticlesStatus,
+  selectHelpArticlesData,
+} from '@entities/helpArticle';
+import {
   fetchUiDictionary,
   selectUiDictionaryStatus,
   selectUiDictionaryData,
@@ -16,6 +21,7 @@ export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
   templateB: Promise<IArticles[]>; // статьи
   templateC: Promise<IInterface[]>; // UI-словарь – грузим ВСЕГДА
+  templateD: Promise<IArticles[]>; // статьи помощи
   lang: string;
 };
 
@@ -67,6 +73,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   // По умолчанию — пустые промисы, чтобы типы были стабильными
   let templateA: Promise<IAlbums[]> = Promise.resolve([]);
   let templateB: Promise<IArticles[]> = Promise.resolve([]);
+  let templateD: Promise<IArticles[]> = Promise.resolve([]); // help articles
 
   // Альбомы нужны на "/", "/albums*" и "/admin/*" (админ-страницы)
   if (pathname === '/' || pathname.startsWith('/albums') || pathname.startsWith('/admin')) {
@@ -146,5 +153,44 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     }
   }
 
-  return { templateA, templateB, templateC, lang };
+  // Статьи помощи нужны на "/help/articles*"
+  if (pathname.startsWith('/help/articles')) {
+    const status = selectHelpArticlesStatus(state, lang);
+    if (status === 'succeeded') {
+      templateD = Promise.resolve(selectHelpArticlesData(state, lang));
+    } else if (status === 'loading') {
+      // Данные уже загружаются
+      templateD = new Promise<IArticles[]>(() => {});
+    } else {
+      const fetchThunkPromise = store.dispatch(fetchHelpArticles({ lang }));
+
+      const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
+
+      if (signal.aborted) {
+        fetchThunkPromise.abort();
+        templateD = createNeverResolvingPromise();
+      } else {
+        const abortHandler = () => {
+          fetchThunkPromise.abort();
+        };
+        signal.addEventListener('abort', abortHandler, { once: true });
+
+        templateD = fetchThunkPromise.unwrap().catch((error) => {
+          if (
+            error === 'AbortError' ||
+            error === 'Aborted' ||
+            (typeof error === 'object' &&
+              error !== null &&
+              'name' in error &&
+              (error as { name?: string }).name === 'AbortError')
+          ) {
+            return createNeverResolvingPromise();
+          }
+          throw error;
+        });
+      }
+    }
+  }
+
+  return { templateA, templateB, templateC, templateD, lang };
 }

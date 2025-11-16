@@ -38,6 +38,7 @@ const AdminText = lazy(() => import('@pages/AdminText/AdminText'));
 const AdminAlbumJson = lazy(() => import('@pages/AdminAlbumJson/AdminAlbumJson'));
 const AdminAlbumBuilder = lazy(() => import('@pages/AdminAlbumBuilder/AdminAlbumBuilder'));
 const ArticlePage = lazy(() => import('@pages/Article'));
+const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -147,6 +148,7 @@ function Layout() {
     '/',
     '/albums/:albumId',
     '/articles/:articleId',
+    '/help/articles/:articleId',
     '/forms',
     '/stems',
     '/admin',
@@ -186,6 +188,14 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <ArticlePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/help/articles/:articleId"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <HelpArticlePage />
             </Suspense>
           }
         />

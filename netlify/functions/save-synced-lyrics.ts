@@ -38,7 +38,7 @@ interface SaveSyncedLyricsResponse {
 export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
-): Promise<{ statusCode: number; body: string }> => {
+): Promise<{ statusCode: number; headers?: Record<string, string>; body: string }> => {
   // CORS headers для работы с фронтенда
   const headers = {
     'Access-Control-Allow-Origin': '*',

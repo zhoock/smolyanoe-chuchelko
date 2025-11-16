@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { String, IAlbums } from '@models';
 import { GetButton } from './GetButton';
+import { PurchasePopup } from './PurchasePopup';
 import './style.scss';
 
 type ServiceButtonsProps = {
@@ -19,7 +21,31 @@ function ServiceButtonsContent({
   section: string;
   labels: { purchase: string; stream: string };
 }) {
+  const [isPurchasePopupOpen, setIsPurchasePopupOpen] = useState(false);
   const buttons = album?.buttons as String;
+
+  const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    setIsPurchasePopupOpen(true);
+  };
+
+  const handleClosePopup = () => {
+    setIsPurchasePopupOpen(false);
+  };
+
+  const handleRemove = () => {
+    // TODO: Реализовать удаление из корзины
+    setIsPurchasePopupOpen(false);
+  };
+
+  const handleContinueShopping = () => {
+    setIsPurchasePopupOpen(false);
+  };
+
+  const handleRegister = () => {
+    // TODO: Реализовать переход на регистрацию/оформление заказа
+    console.log('Register for checkout');
+  };
 
   return (
     <div className="service-buttons">
@@ -30,6 +56,31 @@ function ServiceButtonsContent({
             className="service-buttons__list"
             aria-label="Блок со ссылками на платные музыкальные агрегаторы"
           >
+            <li className="service-buttons__list-item">
+              <a
+                href="#"
+                className="service-buttons__link service-buttons__link--download"
+                aria-label="Скачать альбом"
+                onClick={handleDownloadClick}
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span className="visually-hidden">Скачать альбом</span>
+              </a>
+            </li>
             <GetButton
               buttonClass="icon-applemusic"
               buttonUrl={buttons?.itunes}
@@ -42,6 +93,15 @@ function ServiceButtonsContent({
             />
             <GetButton buttonClass="icon-amazon" buttonUrl={buttons?.amazon} buttonText="Amazon" />
           </ul>
+
+          <PurchasePopup
+            isOpen={isPurchasePopupOpen}
+            album={album}
+            onClose={handleClosePopup}
+            onRemove={handleRemove}
+            onContinueShopping={handleContinueShopping}
+            onRegister={handleRegister}
+          />
         </>
       )}
 
