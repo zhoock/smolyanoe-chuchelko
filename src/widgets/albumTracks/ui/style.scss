@@ -59,7 +59,7 @@
         $background: var(--main-background-color, #20201d),
         $margin: 0,
         $border-radius: 0,
-        $padding: var(--ms-01) var(--ms-0)
+        $padding: var(--ms-01) var(--ms-02)
       );
 
       &:where(*) {

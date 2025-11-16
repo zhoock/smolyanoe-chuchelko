@@ -83,12 +83,8 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
           >
             <span className="tracks__symbol">
               <span className="tracks__symbol-index">{index + 1}</span>
-              <span className="tracks__symbol-play" aria-hidden>
-                ▶
-              </span>
-              <span className="tracks__symbol-pause" aria-hidden>
-                ❚❚
-              </span>
+              <span className="tracks__symbol-play icon-controller-play" aria-hidden></span>
+              <span className="tracks__symbol-pause icon-controller-pause" aria-hidden></span>
               <span className="tracks__symbol-equalizer" aria-hidden>
                 <span></span>
                 <span></span>
