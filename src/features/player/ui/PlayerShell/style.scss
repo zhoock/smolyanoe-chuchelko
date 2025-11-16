@@ -4,7 +4,7 @@
 .mini-player {
   position: fixed;
   inset-inline: 0;
-  bottom: var(--mini-player-bottom, 24px);
+  bottom: var(--mini-player-bottom, 3vi);
   z-index: 1200;
   margin-inline: auto;
   inline-size: min(94vi, 1000px);

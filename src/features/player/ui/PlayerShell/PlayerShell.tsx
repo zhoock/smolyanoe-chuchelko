@@ -17,7 +17,14 @@ import type { RootState } from '@shared/model/appStore/types';
 import { loadPlayerState, savePlayerState } from '@features/player/model/lib/playerPersist';
 
 const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';
-const DEFAULT_BOTTOM_OFFSET = 24;
+
+// Вычисляем нижний отступ как 3vi (3% ширины viewport), чтобы он соответствовал боковым отступам
+const getDefaultBottomOffset = (): number => {
+  if (typeof window === 'undefined') return 24; // fallback для SSR
+  return window.innerWidth * 0.03; // 3vi = 3% ширины viewport
+};
+
+const DEFAULT_BOTTOM_OFFSET = 24; // Используется только как fallback
 
 export const PlayerShell: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -35,7 +42,7 @@ export const PlayerShell: React.FC = () => {
   const sourceLocation = useAppSelector(playerSelectors.selectSourceLocation);
 
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BG);
-  const [miniBottomOffset, setMiniBottomOffset] = useState<number>(DEFAULT_BOTTOM_OFFSET);
+  const [miniBottomOffset, setMiniBottomOffset] = useState<number>(getDefaultBottomOffset());
 
   const isFullScreen = location.hash === '#player';
   const shouldRenderMini = hasPlaylist && !!albumMeta && !!currentTrack && !isFullScreen;
@@ -187,15 +194,16 @@ export const PlayerShell: React.FC = () => {
     const footerEl = document.querySelector('footer');
 
     if (!playerEl || !footerEl) {
-      setMiniBottomOffset(DEFAULT_BOTTOM_OFFSET);
+      setMiniBottomOffset(getDefaultBottomOffset());
       return;
     }
 
+    const defaultOffset = getDefaultBottomOffset();
     const footerRect = footerEl.getBoundingClientRect();
-    const overlap = window.innerHeight - DEFAULT_BOTTOM_OFFSET - footerRect.top;
+    const overlap = window.innerHeight - defaultOffset - footerRect.top;
     const extraOffset =
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ms-0')) || 0;
-    const nextOffset = DEFAULT_BOTTOM_OFFSET + Math.max(0, overlap + extraOffset);
+    const nextOffset = defaultOffset + Math.max(0, overlap + extraOffset);
 
     setMiniBottomOffset((prev) => {
       if (Math.abs(prev - nextOffset) > 1) {
@@ -207,7 +215,7 @@ export const PlayerShell: React.FC = () => {
 
   useEffect(() => {
     if (!shouldRenderMini) {
-      setMiniBottomOffset(DEFAULT_BOTTOM_OFFSET);
+      setMiniBottomOffset(getDefaultBottomOffset());
       return;
     }
 
@@ -231,7 +239,7 @@ export const PlayerShell: React.FC = () => {
       return;
     }
 
-    setMiniBottomOffset(DEFAULT_BOTTOM_OFFSET);
+    setMiniBottomOffset(getDefaultBottomOffset());
     let frameId = 0;
     let secondFrameId = 0;
     frameId = requestAnimationFrame(() => {
