@@ -26,8 +26,10 @@ postgresql://postgres.jhpvetvfnsklpwswadle:[PASSWORD]@aws-1-ap-south-1.pooler.su
 ### ENCRYPTION_KEY
 
 ```
-MLjc/tUOfSm/J6aQFzuDYP6EE2Ij6r/AVRjD+C+D1lk=
+[YOUR-ENCRYPTION-KEY]
 ```
+
+**Важно:** Замените `[YOUR-ENCRYPTION-KEY]` на ваш ключ шифрования (должен быть длинной строкой в base64).
 
 ## 📋 Настройка в Netlify Dashboard
 
@@ -37,7 +39,7 @@ MLjc/tUOfSm/J6aQFzuDYP6EE2Ij6r/AVRjD+C+D1lk=
    - Production → вставьте строку подключения (с паролем)
    - Local development → вставьте то же значение
 4. Обновите `ENCRYPTION_KEY`:
-   - Production → `MLjc/tUOfSm/J6aQFzuDYP6EE2Ij6r/AVRjD+C+D1lk=`
+   - Production → `[YOUR-ENCRYPTION-KEY]` (замените на ваш ключ шифрования)
    - Local development → то же значение
 5. Нажмите Save
 6. Передеплойте проект

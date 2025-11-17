@@ -47,7 +47,7 @@ postgresql://postgres.jhpvetvfnsklpwswadle:[YOUR-PASSWORD]@aws-0-[REGION].pooler
 2. **Выполните миграцию:**
    ```bash
    export DATABASE_URL="полная_строка_подключения"
-   export ENCRYPTION_KEY="MLjc/tUOfSm/J6aQFzuDYP6EE2Ij6r/AVRjD+C+D1lk="
+   export ENCRYPTION_KEY="[YOUR-ENCRYPTION-KEY]"
    npm run migrate
    ```
 

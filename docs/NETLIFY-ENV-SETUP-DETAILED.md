@@ -44,10 +44,10 @@ DATABASE_URL
 **Value (Значение):**
 
 ```
-postgresql://postgres.jhpvetvfnsklpwswadle:myDsgx5emFHrchW8@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+postgresql://postgres.jhpvetvfnsklpwswadle:[YOUR-PASSWORD]@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
 ```
 
-**⚠️ ВАЖНО:** Это строка подключения к вашей базе данных Supabase. Пароль уже включен в строку.
+**⚠️ ВАЖНО:** Замените `[YOUR-PASSWORD]` на ваш пароль базы данных Supabase.
 
 **Scope (Область применения):**
 
@@ -73,10 +73,10 @@ ENCRYPTION_KEY
 **Value (Значение):**
 
 ```
-MLjc/tUOfSm/J6aQFzuDYP6EE2Ij6r/AVRjD+C+D1lk=
+[YOUR-ENCRYPTION-KEY]
 ```
 
-**⚠️ ВАЖНО:** Это ключ шифрования, который был сгенерирован ранее. Используйте его **как есть**, без изменений.
+**⚠️ ВАЖНО:** Замените `[YOUR-ENCRYPTION-KEY]` на ваш ключ шифрования (должен быть длинной строкой в base64).
 
 **Scope (Область применения):**
 
