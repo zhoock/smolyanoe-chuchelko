@@ -10,31 +10,36 @@
 # API routes должны быть ПЕРЕД общим redirect на index.html
 # API routes для сохранения синхронизаций
 [[redirects]]
-  from = "/api/synced-lyrics"
+  from = "/api/synced-lyrics*"
   to = "/.netlify/functions/synced-lyrics"
   status = 200
+  force = true
 
 # Старый endpoint для обратной совместимости
 [[redirects]]
-  from = "/api/save-synced-lyrics"
+  from = "/api/save-synced-lyrics*"
   to = "/.netlify/functions/synced-lyrics"
   status = 200
+  force = true
 
 # API routes для платежей ЮKassa
 [[redirects]]
-  from = "/api/create-payment"
+  from = "/api/create-payment*"
   to = "/.netlify/functions/create-payment"
   status = 200
+  force = true
 
 [[redirects]]
-  from = "/api/payment-webhook"
+  from = "/api/payment-webhook*"
   to = "/.netlify/functions/payment-webhook"
   status = 200
+  force = true
 
 [[redirects]]
-  from = "/api/payment-settings"
+  from = "/api/payment-settings*"
   to = "/.netlify/functions/payment-settings"
   status = 200
+  force = true
 
 # Общий redirect для SPA - должен быть ПОСЛЕДНИМ
 [[redirects]]
