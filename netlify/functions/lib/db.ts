@@ -22,7 +22,7 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // Увеличено до 10 секунд для стабильности
+      connectionTimeoutMillis: 30000, // Увеличено до 30 секунд для стабильности
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
 
@@ -35,25 +35,62 @@ function getPool(): Pool {
 }
 
 /**
- * Выполняет SQL запрос.
+ * Выполняет SQL запрос с retry логикой.
  */
-export async function query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+export async function query<T = any>(
+  text: string,
+  params?: any[],
+  retries = 2
+): Promise<QueryResult<T>> {
   const pool = getPool();
   const start = Date.now();
 
-  try {
-    const result = await pool.query<T>(text, params);
-    const duration = Date.now() - start;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const result = await pool.query<T>(text, params);
+      const duration = Date.now() - start;
 
-    console.log('✅ Executed query', { text, duration, rows: result.rowCount });
+      if (attempt > 0) {
+        console.log(`✅ Executed query (retry ${attempt})`, {
+          text,
+          duration,
+          rows: result.rowCount,
+        });
+      } else {
+        console.log('✅ Executed query', { text, duration, rows: result.rowCount });
+      }
 
-    return result;
-  } catch (error) {
-    const duration = Date.now() - start;
-    console.error('❌ Query error', { text, duration, error });
+      return result;
+    } catch (error) {
+      const duration = Date.now() - start;
+      const isLastAttempt = attempt === retries;
+      const isConnectionError =
+        error instanceof Error &&
+        (error.message.includes('timeout') ||
+          error.message.includes('Connection terminated') ||
+          error.message.includes('ECONNREFUSED') ||
+          error.message.includes('ENOTFOUND'));
 
-    throw error;
+      if (isConnectionError && !isLastAttempt) {
+        // Ждем перед повторной попыткой (экспоненциальная задержка)
+        const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+        console.warn(
+          `⚠️ Connection error, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
+          {
+            error: error instanceof Error ? error.message : error,
+          }
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      console.error('❌ Query error', { text, duration, error, attempt });
+      throw error;
+    }
   }
+
+  // Этот код не должен выполняться, но TypeScript требует возврата
+  throw new Error('Query failed after all retries');
 }
 
 /**

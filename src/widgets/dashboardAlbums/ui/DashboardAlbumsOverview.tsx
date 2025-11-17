@@ -56,6 +56,23 @@ async function getTrackStatus(
   return 'empty';
 }
 
+/**
+ * Обрабатывает массив элементов батчами для ограничения параллельных запросов
+ */
+async function processInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  processor: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(processor));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 async function calculateAlbumStats(album: IAlbums, lang: string): Promise<AlbumStats> {
   const stats: AlbumStats = {
     total: album.tracks?.length || 0,
@@ -66,28 +83,29 @@ async function calculateAlbumStats(album: IAlbums, lang: string): Promise<AlbumS
 
   if (!album.tracks) return stats;
 
-  await Promise.all(
-    album.tracks.map(async (track) => {
-      const status = await getTrackStatus(
-        album.albumId || '',
-        track.id,
-        lang,
-        !!(track.syncedLyrics && track.syncedLyrics.length > 0)
-      );
+  // Обрабатываем треки батчами по 3, чтобы не перегружать БД
+  const statuses = await processInBatches(album.tracks, 3, async (track) => {
+    return getTrackStatus(
+      album.albumId || '',
+      track.id,
+      lang,
+      !!(track.syncedLyrics && track.syncedLyrics.length > 0)
+    );
+  });
 
-      switch (status) {
-        case 'synced':
-          stats.synced++;
-          break;
-        case 'text-only':
-          stats.textOnly++;
-          break;
-        case 'empty':
-          stats.empty++;
-          break;
-      }
-    })
-  );
+  statuses.forEach((status) => {
+    switch (status) {
+      case 'synced':
+        stats.synced++;
+        break;
+      case 'text-only':
+        stats.textOnly++;
+        break;
+      case 'empty':
+        stats.empty++;
+        break;
+    }
+  });
 
   return stats;
 }
