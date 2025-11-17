@@ -35,12 +35,16 @@ export async function saveSyncedLyrics(
     // Проверяем, что ответ действительно JSON, а не HTML
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      // В dev режиме, если функция не задеплоена на production, просто возвращаем null
+      // В dev режиме, если функция не задеплоена на production, возвращаем ошибку
       if (process.env.NODE_ENV === 'development') {
         console.warn(
           '⚠️ API возвращает HTML вместо JSON. Функция synced-lyrics не задеплоена на production. Нужно задеплоить проект на Netlify.'
         );
-        return null;
+        return {
+          success: false,
+          message:
+            'Функция synced-lyrics не задеплоена на production. Нужно задеплоить проект на Netlify.',
+        };
       }
       const text = await response.text();
       console.error('❌ Ожидался JSON, но получен:', contentType, text.substring(0, 100));
