@@ -7,12 +7,18 @@ interface DashboardTextEditorProps {
   userId?: string;
   albumId: string;
   trackId: string;
+  onSyncOpen?: (albumId: string, trackId: string) => void;
 }
 
-export function DashboardTextEditor({ userId, albumId, trackId }: DashboardTextEditorProps) {
+export function DashboardTextEditor({
+  userId,
+  albumId,
+  trackId,
+  onSyncOpen,
+}: DashboardTextEditorProps) {
   return (
     <div className="dashboard-text-editor">
-      <EditTrackText albumId={albumId} trackId={trackId} />
+      <EditTrackText albumId={albumId} trackId={trackId} onSyncOpen={onSyncOpen} />
     </div>
   );
 }

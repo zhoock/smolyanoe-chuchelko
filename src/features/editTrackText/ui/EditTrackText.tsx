@@ -4,7 +4,7 @@
  * Позволяет вводить и форматировать текст песни перед синхронизацией.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
@@ -23,11 +23,13 @@ import './EditTrackText.style.scss';
 interface EditTrackTextProps {
   albumId?: string; // Опциональный prop для использования без роутинга
   trackId?: string; // Опциональный prop для использования без роутинга
+  onSyncOpen?: (albumId: string, trackId: string) => void; // Callback для переключения на синхронизацию
 }
 
 export default function EditTrackText({
   albumId: propAlbumId,
   trackId: propTrackId,
+  onSyncOpen,
 }: EditTrackTextProps = {}) {
   const { lang } = useLang();
   const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
@@ -250,19 +252,23 @@ export default function EditTrackText({
               <span className="admin-text__saved-indicator">Текст сохранён</span>
             )}
           </div>
-          <Link
-            to={`/dashboard/sync/${albumId}/${trackId}`}
+          <button
+            type="button"
             className={`admin-text__link-to-sync ${!isDirty && text.trim() ? 'admin-text__link-to-sync--active' : 'admin-text__link-to-sync--disabled'}`}
-            onClick={(e) => {
+            onClick={() => {
               if (isDirty || !text.trim()) {
-                e.preventDefault();
                 alert('Сначала сохраните текст перед переходом к синхронизации');
+                return;
+              }
+              if (onSyncOpen && albumId && trackId) {
+                onSyncOpen(albumId, trackId);
               }
             }}
+            disabled={isDirty || !text.trim()}
             title={isDirty || !text.trim() ? 'Сначала сохраните текст' : 'Перейти к синхронизации'}
           >
             Перейти к синхронизации →
-          </Link>
+          </button>
         </div>
       </div>
     </section>

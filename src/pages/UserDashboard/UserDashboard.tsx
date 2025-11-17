@@ -182,6 +182,9 @@ export function UserDashboard() {
             userId={userId}
             albumId={selectedTrack.albumId}
             trackId={selectedTrack.trackId}
+            onSyncOpen={(albumId, trackId) => {
+              setSelectedTrack({ albumId, trackId, type: 'sync' });
+            }}
           />
         );
       }

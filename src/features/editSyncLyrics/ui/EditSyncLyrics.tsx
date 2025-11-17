@@ -4,8 +4,7 @@
  * Позволяет устанавливать тайм-коды для каждой строки текста вручную.
  */
 import { useCallback, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
-import { flushSync } from 'react-dom';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -38,6 +37,7 @@ export default function EditSyncLyrics({
     albumId: string;
     trackId: string;
   }>();
+  const location = useLocation();
   const albumId = propAlbumId || paramAlbumId; // Используем prop или param
   const trackId = propTrackId || paramTrackId; // Используем prop или param
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
@@ -92,13 +92,29 @@ export default function EditSyncLyrics({
           albumTitle: album.album,
         })
       );
+      dispatch(
+        playerActions.setAlbumMeta({
+          albumId: album.albumId || albumId,
+          album: album.album,
+          artist: album.artist,
+          fullName: album.fullName,
+          cover: album.cover,
+        })
+      );
+      dispatch(
+        playerActions.setSourceLocation({
+          pathname: location.pathname,
+          search: location.search || undefined,
+        })
+      );
       // Явно устанавливаем источник трека, чтобы загрузить метаданные
       // Глобальный обработчик loadedmetadata в playerListeners.ts обновит duration автоматически
+      // Устанавливаем autoplay: false, чтобы не запускать автоматически
       if (track.src) {
-        audioController.setSource(track.src);
+        audioController.setSource(track.src, false);
       }
     }
-  }, [album, albumsStatus, albumId, trackId, dispatch]);
+  }, [album, albumsStatus, albumId, trackId, dispatch, location]);
 
   // Отслеживаем изменения текста в localStorage (для обновления при сохранении в другой вкладке)
   useEffect(() => {
@@ -544,12 +560,34 @@ export default function EditSyncLyrics({
   // Ref для контейнера audio элемента
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Прикрепляем audio элемент к DOM при монтировании
+  // Прикрепляем audio элемент к DOM при монтировании и при изменении контейнера
   useEffect(() => {
-    if (audioContainerRef.current && !audioContainerRef.current.contains(audioController.element)) {
-      audioContainerRef.current.appendChild(audioController.element);
+    console.log('🔧 useEffect: прикрепление аудио-элемента', {
+      hasContainer: !!audioContainerRef.current,
+      hasElement: !!audioController.element,
+      elementInDOM: audioController.element.parentNode !== null,
+    });
+
+    if (audioContainerRef.current) {
+      // Если элемент уже прикреплён к другому родителю, перемещаем его
+      if (
+        audioController.element.parentNode &&
+        audioController.element.parentNode !== audioContainerRef.current
+      ) {
+        console.log('🔄 Перемещаем аудио-элемент из другого контейнера');
+        audioController.element.parentNode.removeChild(audioController.element);
+      }
+      // Прикрепляем элемент, если он ещё не прикреплён
+      if (!audioContainerRef.current.contains(audioController.element)) {
+        audioContainerRef.current.appendChild(audioController.element);
+        console.log('✅ Аудио-элемент прикреплён к DOM');
+      } else {
+        console.log('ℹ️ Аудио-элемент уже прикреплён');
+      }
+    } else {
+      console.warn('⚠️ audioContainerRef.current не найден');
     }
-  }, []);
+  }, [album, trackId]); // Переприкрепляем при смене трека
 
   // Duration обновляется автоматически через глобальный обработчик loadedmetadata в playerListeners.ts
   // Не нужно дублировать логику здесь
@@ -568,21 +606,26 @@ export default function EditSyncLyrics({
   const currentTimeRef = useRef<HTMLSpanElement | null>(null);
   const remainingTimeRef = useRef<HTMLSpanElement | null>(null);
 
-  // Используем useLayoutEffect с flushSync для принудительной синхронизации обновлений
-  // Обновляем два отдельных элемента через textContent в одном синхронном блоке
-  // flushSync гарантирует, что оба элемента обновятся синхронно до следующего рендера
+  // Обновляем CSS переменную --progress-width для визуального отображения прогресса
+  // Обновляем только если пользователь НЕ перематывает трек вручную (isSeeking = false)
+  useEffect(() => {
+    if (progressInputRef.current && !isSeeking) {
+      progressInputRef.current.style.setProperty('--progress-width', `${progress}%`);
+    }
+  }, [progress, isSeeking]);
+
+  // Используем useLayoutEffect для синхронного обновления времени
+  // Обновляем два отдельных элемента через textContent напрямую
+  // useLayoutEffect выполняется синхронно до следующего рендера
   useLayoutEffect(() => {
     if (currentTimeRef.current && remainingTimeRef.current) {
       // Вычисляем значения напрямую из time
       const currentValue = formatTimeCompact(time.current);
       const remainingValue = formatTimeCompact(time.duration - time.current);
 
-      // Используем flushSync для принудительной синхронизации обновлений
-      // Это гарантирует, что оба элемента обновятся синхронно до следующего рендера
-      flushSync(() => {
-        currentTimeRef.current!.textContent = currentValue;
-        remainingTimeRef.current!.textContent = remainingValue;
-      });
+      // Обновляем напрямую - useLayoutEffect уже синхронный
+      currentTimeRef.current.textContent = currentValue;
+      remainingTimeRef.current.textContent = remainingValue;
     }
   }, [time, formatTimeCompact]);
 
@@ -593,11 +636,6 @@ export default function EditSyncLyrics({
     const ms = Math.floor((seconds % 1) * 100);
     return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   }, []);
-
-  // Переключение play/pause
-  const togglePlayPause = useCallback(() => {
-    dispatch(playerActions.toggle());
-  }, [dispatch]);
 
   // Обработка изменения прогресс-бара (как в AudioPlayer)
   const handleProgressChange = useCallback(
@@ -623,13 +661,23 @@ export default function EditSyncLyrics({
   );
 
   // Обработчик окончания перемотки (как в AudioPlayer)
-  const handleSeekEnd = useCallback(() => {
+  const handleSeekEnd = useCallback(async () => {
     // Снимаем флаг isSeeking (разрешает автообновление прогресса)
     dispatch(playerActions.setSeeking(false));
     if (isPlaying) {
       dispatch(playerActions.play());
+      try {
+        await audioController.play();
+      } catch (error) {
+        console.error('Ошибка воспроизведения после перемотки:', error);
+      }
     }
   }, [dispatch, isPlaying]);
+
+  // Переключение play/pause - просто как в AudioPlayer
+  const togglePlayPause = useCallback(() => {
+    dispatch(playerActions.toggle());
+  }, [dispatch]);
 
   // Данные загружаются через loader
 
@@ -711,9 +759,19 @@ export default function EditSyncLyrics({
             <div className="admin-sync__player-controls">
               <button
                 type="button"
-                onClick={togglePlayPause}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  togglePlayPause();
+                }}
                 className="admin-sync__player-play-btn"
                 aria-label={isPlaying ? 'Пауза' : 'Воспроизведение'}
+                style={{
+                  cursor: 'pointer',
+                  pointerEvents: 'auto',
+                  zIndex: 1000,
+                  position: 'relative',
+                }}
               >
                 {isPlaying ? (
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
