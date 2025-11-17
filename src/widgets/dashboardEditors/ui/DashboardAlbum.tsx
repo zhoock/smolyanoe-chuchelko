@@ -3,7 +3,7 @@
  * Страница альбома в личном кабинете.
  * Отображает список треков с их статусами и позволяет перейти к редактированию.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -24,9 +24,13 @@ import './DashboardAlbum.style.scss';
 
 type TrackStatus = 'synced' | 'text-only' | 'empty';
 
-function getTrackStatus(albumId: string, track: TracksProps, lang: string): TrackStatus {
+async function getTrackStatus(
+  albumId: string,
+  track: TracksProps,
+  lang: string
+): Promise<TrackStatus> {
   const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-  const storedSync = loadSyncedLyricsFromStorage(albumId, track.id, lang);
+  const storedSync = await loadSyncedLyricsFromStorage(albumId, track.id, lang);
 
   if (track.syncedLyrics && track.syncedLyrics.length > 0) {
     return 'synced';
@@ -92,6 +96,7 @@ export default function DashboardAlbum({
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const [trackStatuses, setTrackStatuses] = useState<Map<string | number, TrackStatus>>(new Map());
 
   useEffect(() => {
     if (!albumId) {
@@ -105,6 +110,25 @@ export default function DashboardAlbum({
       };
     }
   }, [dispatch, lang, status, albumId]);
+
+  // Загружаем статусы треков
+  useEffect(() => {
+    if (!album || !album.tracks) {
+      setTrackStatuses(new Map());
+      return;
+    }
+
+    (async () => {
+      const statusMap = new Map<string | number, TrackStatus>();
+      await Promise.all(
+        album.tracks.map(async (track) => {
+          const status = await getTrackStatus(albumId, track, lang);
+          statusMap.set(track.id, status);
+        })
+      );
+      setTrackStatuses(statusMap);
+    })();
+  }, [album, albumId, lang]);
 
   if (status === 'loading' || status === 'idle') {
     return (
@@ -164,7 +188,7 @@ export default function DashboardAlbum({
           ) : (
             <div className="admin-album__tracks-list">
               {tracks.map((track, index) => {
-                const trackStatus = getTrackStatus(albumId, track, lang);
+                const trackStatus = trackStatuses.get(track.id) || 'empty';
                 const statusIcon = getStatusIcon(trackStatus);
                 const statusText = getStatusText(trackStatus);
 

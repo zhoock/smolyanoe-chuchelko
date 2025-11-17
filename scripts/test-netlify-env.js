@@ -19,6 +19,26 @@
 /* eslint-env node */
 const { Pool } = require('pg');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+// Загружаем переменные из .env файла, если он существует
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const [key, ...valueParts] = trimmedLine.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+}
 
 const colors = {
   reset: '\x1b[0m',
@@ -137,18 +157,30 @@ async function testDatabaseConnection() {
     const result = await client.query('SELECT version()');
     log(`✅ Подключение к БД успешно: ${result.rows[0].version.split(' ')[0]}`, 'green');
 
-    // Проверка существования таблицы
-    const tableCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'user_payment_settings'
-      );
-    `);
+    // Проверка существования таблиц
+    const tablesToCheck = ['user_payment_settings', 'synced_lyrics'];
+    let allTablesExist = true;
 
-    if (tableCheck.rows[0].exists) {
-      log('✅ Таблица user_payment_settings существует', 'green');
-    } else {
-      log('❌ Таблица user_payment_settings не найдена. Запустите миграции!', 'red');
+    for (const tableName of tablesToCheck) {
+      const tableCheck = await client.query(
+        `
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = $1
+        );
+      `,
+        [tableName]
+      );
+
+      if (tableCheck.rows[0].exists) {
+        log(`✅ Таблица ${tableName} существует`, 'green');
+      } else {
+        log(`❌ Таблица ${tableName} не найдена. Запустите миграции!`, 'red');
+        allTablesExist = false;
+      }
+    }
+
+    if (!allTablesExist) {
       client.release();
       await pool.end();
       return false;

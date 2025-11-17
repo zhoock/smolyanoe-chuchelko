@@ -65,15 +65,19 @@ export default function EditTrackText({
 
       // Загружаем сохранённый текст из localStorage (dev mode)
       const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-      const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
 
-      // Используем сохранённый текст или текст из JSON
-      const initialText = storedText || track.content || '';
-      const initialAuthorship = storedAuthorship || track.authorship || '';
+      // Загружаем авторство асинхронно
+      (async () => {
+        const storedAuthorship = await loadAuthorshipFromStorage(albumId, track.id, lang);
 
-      setText(initialText);
-      setAuthorship(initialAuthorship);
-      setIsDirty(false);
+        // Используем сохранённый текст или текст из JSON
+        const initialText = storedText || track.content || '';
+        const initialAuthorship = storedAuthorship || track.authorship || '';
+
+        setText(initialText);
+        setAuthorship(initialAuthorship);
+        setIsDirty(false);
+      })();
     }
   }, [album, albumsStatus, albumId, trackId, lang, currentTrackId]);
 

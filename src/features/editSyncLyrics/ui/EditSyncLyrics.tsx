@@ -121,9 +121,9 @@ export default function EditSyncLyrics({
   useEffect(() => {
     if (!albumId || !trackId || !lang) return;
 
-    const checkTextUpdate = () => {
+    const checkTextUpdate = async () => {
       const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-      const storedAuthorship = loadAuthorshipFromStorage(albumId, trackId, lang);
+      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
       const textToUse = storedText || '';
       const newHash = `${textToUse}-${storedAuthorship || ''}`;
 
@@ -244,19 +244,6 @@ export default function EditSyncLyrics({
       console.log('🔄 Трек изменился или не инициализирован, загружаем данные');
     }
 
-    // Проверяем, изменился ли текст (если lastTextHash установлен)
-    // Если текст изменился, checkTextUpdate уже обновил syncedLines, не сбрасываем их
-    const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-    const storedAuthorship = loadAuthorshipFromStorage(albumId, trackId, lang);
-    const textToUse = storedText || '';
-    const currentTextHash = `${textToUse}-${storedAuthorship || ''}`;
-    const textChanged = lastTextHash !== null && lastTextHash !== currentTextHash;
-
-    // Сбрасываем syncedLines только если трек действительно изменился, а не только текст
-    // Если текст изменился, checkTextUpdate уже обновил syncedLines
-    if (!textChanged) {
-      setSyncedLines([]);
-    }
     setIsDirty(false);
     setIsSaved(false);
     setIsLoading(true); // Показываем лоадер при смене трека
@@ -273,16 +260,17 @@ export default function EditSyncLyrics({
       return;
     }
 
-    // Используем синхронный код вместо промиса
-    (() => {
+    // Используем async функцию для загрузки данных из БД
+    (async () => {
       const currentTrackIdStr = String(track.id);
 
-      // Загружаем авторство
-      const storedAuthorship = loadAuthorshipFromStorage(albumId, track.id, lang);
-      const trackAuthorship = track.authorship || storedAuthorship || '';
+      // Загружаем авторство и синхронизации параллельно
+      const [storedAuthorship, storedSync] = await Promise.all([
+        loadAuthorshipFromStorage(albumId, track.id, lang),
+        loadSyncedLyricsFromStorage(albumId, track.id, lang),
+      ]);
 
-      // Загружаем сохранённые синхронизации
-      const storedSync = loadSyncedLyricsFromStorage(albumId, track.id, lang);
+      const trackAuthorship = track.authorship || storedAuthorship || '';
 
       // Проверяем сохранённый текст из админки текста
       const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
@@ -492,7 +480,7 @@ export default function EditSyncLyrics({
     }
 
     // Загружаем авторство для передачи в сохранение (но не редактируем его здесь)
-    const storedAuthorship = loadAuthorshipFromStorage(albumId, trackId, lang);
+    const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
 
     // Получаем трек для получения авторства из JSON
     let trackAuthorship = '';
@@ -533,9 +521,9 @@ export default function EditSyncLyrics({
     console.log('💾 Результат сохранения:', result);
 
     if (result.success) {
-      // После успешного сохранения перезагружаем синхронизации из localStorage
+      // После успешного сохранения перезагружаем синхронизации из БД
       // чтобы отобразить актуальные сохранённые данные
-      const savedSync = loadSyncedLyricsFromStorage(albumId, trackId, lang);
+      const savedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
       if (savedSync && savedSync.length > 0) {
         // Добавляем авторство в конец, если оно есть
         const updatedLines = [...savedSync];
@@ -554,7 +542,7 @@ export default function EditSyncLyrics({
 
       // Обновляем хэш текста, чтобы предотвратить повторную инициализацию
       const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-      const storedAuthorship = loadAuthorshipFromStorage(albumId, trackId, lang);
+      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
       const textToUse = storedText || '';
       const newHash = `${textToUse}-${storedAuthorship || ''}`;
       setLastTextHash(newHash);

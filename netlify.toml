@@ -14,8 +14,14 @@
 
 # API routes для сохранения синхронизаций
 [[redirects]]
+  from = "/api/synced-lyrics"
+  to = "/.netlify/functions/synced-lyrics"
+  status = 200
+
+# Старый endpoint для обратной совместимости
+[[redirects]]
   from = "/api/save-synced-lyrics"
-  to = "/.netlify/functions/save-synced-lyrics"
+  to = "/.netlify/functions/synced-lyrics"
   status = 200
 
 # API routes для платежей ЮKassa

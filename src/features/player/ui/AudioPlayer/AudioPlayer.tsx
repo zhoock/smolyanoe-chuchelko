@@ -1071,37 +1071,43 @@ export default function AudioPlayer({
     // Вычисляем albumId
     const albumIdComputed = albumId;
 
-    // Загружаем синхронизации из localStorage (dev mode) или используем из JSON
-    const storedSync = loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-    const baseSynced = storedSync || currentTrack.syncedLyrics;
+    // Загружаем синхронизации асинхронно
+    (async () => {
+      const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
+      const baseSynced = storedSync || currentTrack.syncedLyrics;
 
-    if (baseSynced && baseSynced.length > 0) {
-      // Загружаем авторство и добавляем его в конец массива строк, если оно есть
-      const storedAuthorship = loadAuthorshipFromStorage(albumIdComputed, currentTrack.id, lang);
-      const authorship = currentTrack.authorship || storedAuthorship;
+      if (baseSynced && baseSynced.length > 0) {
+        // Загружаем авторство и добавляем его в конец массива строк, если оно есть
+        const storedAuthorship = await loadAuthorshipFromStorage(
+          albumIdComputed,
+          currentTrack.id,
+          lang
+        );
+        const authorship = currentTrack.authorship || storedAuthorship;
 
-      const synced = [...baseSynced];
+        const synced = [...baseSynced];
 
-      // Добавляем авторство в конец, если оно есть и ещё не добавлено
-      if (authorship) {
-        const lastLine = synced[synced.length - 1];
-        // Проверяем, не является ли последняя строка уже авторством
-        if (!lastLine || lastLine.text !== authorship) {
-          synced.push({
-            text: authorship,
-            startTime: time.duration || 0,
-            endTime: undefined,
-          });
+        // Добавляем авторство в конец, если оно есть и ещё не добавлено
+        if (authorship) {
+          const lastLine = synced[synced.length - 1];
+          // Проверяем, не является ли последняя строка уже авторством
+          if (!lastLine || lastLine.text !== authorship) {
+            synced.push({
+              text: authorship,
+              startTime: time.duration || 0,
+              endTime: undefined,
+            });
+          }
         }
-      }
 
-      setSyncedLyrics(synced);
-      setAuthorshipText(authorship || null);
-    } else {
-      setSyncedLyrics(null);
-      setAuthorshipText(null);
-      setCurrentLineIndex(null);
-    }
+        setSyncedLyrics(synced);
+        setAuthorshipText(authorship || null);
+      } else {
+        setSyncedLyrics(null);
+        setAuthorshipText(null);
+        setCurrentLineIndex(null);
+      }
+    })();
   }, [currentTrack, albumId, lang, time.duration]);
 
   /**
@@ -1144,31 +1150,35 @@ export default function AudioPlayer({
     // Проверяем только синхронизированный текст (караоке), не обычный content
     // Используем ту же логику, что и при загрузке синхронизированного текста
     const albumIdComputed = albumId;
-    const storedSync = loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-    const baseSynced = storedSync || currentTrack.syncedLyrics;
 
-    // Проверяем только наличие синхронизированного текста (караоке)
-    // НЕ проверяем currentTrack.content, так как это обычный текст, не караоке
-    const hasSyncedLyrics = baseSynced && baseSynced.length > 0;
+    // Загружаем синхронизации асинхронно
+    (async () => {
+      const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
+      const baseSynced = storedSync || currentTrack.syncedLyrics;
 
-    let hasPlainLyrics = false;
-    if (currentTrack.content && currentTrack.content.trim().length > 0) {
-      hasPlainLyrics = true;
-    } else {
-      const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
-      try {
-        const stored =
-          typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
-        hasPlainLyrics = !!(stored && stored.trim().length > 0);
-      } catch (error) {
-        debugLog('Cannot read stored text content', { error });
+      // Проверяем только наличие синхронизированного текста (караоке)
+      // НЕ проверяем currentTrack.content, так как это обычный текст, не караоке
+      const hasSyncedLyrics = baseSynced && baseSynced.length > 0;
+
+      let hasPlainLyrics = false;
+      if (currentTrack.content && currentTrack.content.trim().length > 0) {
+        hasPlainLyrics = true;
+      } else {
+        const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
+        try {
+          const stored =
+            typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
+          hasPlainLyrics = !!(stored && stored.trim().length > 0);
+        } catch (error) {
+          debugLog('Cannot read stored text content', { error });
+        }
       }
-    }
 
-    // Если трек не добавлен в караоке и нет обычного текста — скрываем блок
-    if (!hasSyncedLyrics && !hasPlainLyrics) {
-      setShowLyrics(false);
-    }
+      // Если трек не добавлен в караоке и нет обычного текста — скрываем блок
+      if (!hasSyncedLyrics && !hasPlainLyrics) {
+        setShowLyrics(false);
+      }
+    })();
   }, [currentTrack, albumId, lang, showControls]);
 
   // Определяем текущую строку на основе времени воспроизведения
@@ -1777,11 +1787,9 @@ export default function AudioPlayer({
       return false;
     }
 
-    const albumIdComputed = albumId;
-    const storedSync = loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-    const baseSynced = storedSync || currentTrack.syncedLyrics;
-
-    return !!(baseSynced && baseSynced.length > 0);
+    // useMemo не может быть async, поэтому возвращаем false
+    // Реальная проверка происходит в useEffect выше
+    return false;
   }, [syncedLyrics, currentTrack, albumId, lang]);
 
   const hasTextToShow = hasSyncedLyricsAvailable || hasPlainLyrics;

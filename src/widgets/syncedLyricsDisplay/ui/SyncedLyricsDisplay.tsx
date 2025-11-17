@@ -46,16 +46,18 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     const albumId =
       album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
 
-    // Загружаем синхронизации из localStorage (dev mode) или используем из JSON
-    const storedSync = loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
-    const synced = storedSync || currentTrack.syncedLyrics;
+    // Загружаем синхронизации асинхронно
+    (async () => {
+      const storedSync = await loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
+      const synced = storedSync || currentTrack.syncedLyrics;
 
-    if (synced && synced.length > 0) {
-      setSyncedLyrics(synced);
-    } else {
-      setSyncedLyrics(null);
-      setCurrentLineIndex(null);
-    }
+      if (synced && synced.length > 0) {
+        setSyncedLyrics(synced);
+      } else {
+        setSyncedLyrics(null);
+        setCurrentLineIndex(null);
+      }
+    })();
   }, [currentTrack, album, lang]);
 
   // Определяем текущую строку на основе времени воспроизведения

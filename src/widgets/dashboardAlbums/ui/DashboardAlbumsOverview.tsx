@@ -3,7 +3,7 @@
  * Главная страница личного кабинета.
  * Отображает список альбомов с прогрессом синхронизации.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -31,14 +31,14 @@ interface AlbumStats {
   empty: number;
 }
 
-function getTrackStatus(
+async function getTrackStatus(
   albumId: string,
   trackId: string | number,
   lang: string,
   hasSyncedLyrics: boolean
-): TrackStatus {
+): Promise<TrackStatus> {
   const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-  const storedSync = loadSyncedLyricsFromStorage(albumId, trackId, lang);
+  const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
 
   if (hasSyncedLyrics || (storedSync && storedSync.length > 0)) {
     return 'synced';
@@ -51,7 +51,7 @@ function getTrackStatus(
   return 'empty';
 }
 
-function calculateAlbumStats(album: IAlbums, lang: string): AlbumStats {
+async function calculateAlbumStats(album: IAlbums, lang: string): Promise<AlbumStats> {
   const stats: AlbumStats = {
     total: album.tracks?.length || 0,
     synced: 0,
@@ -61,26 +61,28 @@ function calculateAlbumStats(album: IAlbums, lang: string): AlbumStats {
 
   if (!album.tracks) return stats;
 
-  album.tracks.forEach((track) => {
-    const status = getTrackStatus(
-      album.albumId || '',
-      track.id,
-      lang,
-      !!(track.syncedLyrics && track.syncedLyrics.length > 0)
-    );
+  await Promise.all(
+    album.tracks.map(async (track) => {
+      const status = await getTrackStatus(
+        album.albumId || '',
+        track.id,
+        lang,
+        !!(track.syncedLyrics && track.syncedLyrics.length > 0)
+      );
 
-    switch (status) {
-      case 'synced':
-        stats.synced++;
-        break;
-      case 'text-only':
-        stats.textOnly++;
-        break;
-      case 'empty':
-        stats.empty++;
-        break;
-    }
-  });
+      switch (status) {
+        case 'synced':
+          stats.synced++;
+          break;
+        case 'text-only':
+          stats.textOnly++;
+          break;
+        case 'empty':
+          stats.empty++;
+          break;
+      }
+    })
+  );
 
   return stats;
 }
@@ -99,6 +101,7 @@ export default function DashboardAlbumsOverview({
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const [albumsStats, setAlbumsStats] = useState<Map<string, AlbumStats>>(new Map());
 
   useEffect(() => {
     if (status === 'idle' || status === 'failed') {
@@ -108,6 +111,27 @@ export default function DashboardAlbumsOverview({
       };
     }
   }, [dispatch, lang, status]);
+
+  // Загружаем статистику для каждого альбома
+  useEffect(() => {
+    if (!albums || albums.length === 0) {
+      setAlbumsStats(new Map());
+      return;
+    }
+
+    (async () => {
+      const statsMap = new Map<string, AlbumStats>();
+      await Promise.all(
+        albums.map(async (album) => {
+          if (album.albumId) {
+            const stats = await calculateAlbumStats(album, lang);
+            statsMap.set(album.albumId, stats);
+          }
+        })
+      );
+      setAlbumsStats(statsMap);
+    })();
+  }, [albums, lang]);
 
   if (status === 'loading' || status === 'idle') {
     return (
@@ -160,7 +184,12 @@ export default function DashboardAlbumsOverview({
         ) : (
           <div className="admin__albums">
             {albums.map((album) => {
-              const stats = calculateAlbumStats(album, lang);
+              const stats = albumsStats.get(album.albumId || '') || {
+                total: album.tracks?.length || 0,
+                synced: 0,
+                textOnly: 0,
+                empty: album.tracks?.length || 0,
+              };
               const progress = stats.total > 0 ? (stats.synced / stats.total) * 100 : 0;
 
               const handleAlbumClick = (e: React.MouseEvent) => {
