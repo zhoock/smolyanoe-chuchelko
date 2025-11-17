@@ -1,4 +1,11 @@
 /robots.txt   /robots.txt   200!
 /sitemap.xml  /sitemap.xml  200!
 
+# API routes должны быть ПЕРЕД общим redirect
+/api/synced-lyrics*    /.netlify/functions/synced-lyrics    200
+/api/save-synced-lyrics*    /.netlify/functions/synced-lyrics    200
+/api/create-payment*    /.netlify/functions/create-payment    200
+/api/payment-webhook*    /.netlify/functions/payment-webhook    200
+/api/payment-settings*    /.netlify/functions/payment-settings    200
+
 /*            /index.html   200
