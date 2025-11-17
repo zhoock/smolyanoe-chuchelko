@@ -34,12 +34,22 @@ export async function saveSyncedLyrics(
       // Пытаемся получить сообщение об ошибке из ответа
       let errorMessage = `HTTP error! status: ${response.status}`;
       try {
-        const errorData = await response.json();
-        if (errorData.error || errorData.message) {
-          errorMessage = errorData.error || errorData.message || errorMessage;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          if (errorData.error || errorData.message) {
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          }
+        } else {
+          // Если ответ не JSON, пытаемся прочитать как текст
+          const text = await response.text();
+          if (text) {
+            errorMessage = text.substring(0, 200); // Ограничиваем длину сообщения
+          }
         }
-      } catch {
-        // Если не удалось распарсить JSON, используем стандартное сообщение
+      } catch (parseError) {
+        // Если не удалось распарсить ответ, используем стандартное сообщение
+        console.warn('⚠️ Не удалось распарсить ответ об ошибке:', parseError);
       }
       throw new Error(errorMessage);
     }
