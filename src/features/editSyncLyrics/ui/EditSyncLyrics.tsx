@@ -62,6 +62,22 @@ export default function EditSyncLyrics({
   const [isLoading, setIsLoading] = useState(true); // флаг загрузки данных
   const [isInteractionLocked, setIsInteractionLocked] = useState(false); // блокировка взаимодействия после завершения
   const initializedRef = useRef<string | null>(null); // ref для отслеживания инициализированного трека
+  const durationRef = useRef<number>(0); // ref для стабильного хранения duration
+  const albumIdRef = useRef<string>(''); // ref для стабильного хранения albumId
+
+  // Обновляем albumIdRef при изменении albumId
+  useEffect(() => {
+    if (albumId && albumId !== albumIdRef.current) {
+      albumIdRef.current = albumId;
+    }
+  }, [albumId]);
+
+  // Обновляем durationRef при изменении currentTime.duration
+  useEffect(() => {
+    if (currentTime.duration && currentTime.duration !== durationRef.current) {
+      durationRef.current = currentTime.duration;
+    }
+  }, [currentTime.duration]);
 
   // Инициализируем плейлист в Redux когда загружаются данные альбома
   // ВАЖНО: При загрузке страницы синхронизации останавливаем воспроизведение и сбрасываем время
@@ -115,7 +131,8 @@ export default function EditSyncLyrics({
         audioController.setSource(currentTrack.src, false);
       }
     }
-  }, [album, albumsStatus, albumId, trackId, dispatch, location]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albumsStatus, albumId, trackId, dispatch, location]); // album используется из замыкания
 
   // Отслеживаем изменения текста в localStorage (для обновления при сохранении в другой вкладке)
   useEffect(() => {
@@ -149,7 +166,7 @@ export default function EditSyncLyrics({
                 return [
                   {
                     text: storedAuthorship,
-                    startTime: currentTime.duration || 0,
+                    startTime: durationRef.current || 0,
                     endTime: undefined,
                   },
                 ];
@@ -181,7 +198,7 @@ export default function EditSyncLyrics({
               // Новое авторство без таймкодов
               newLines.push({
                 text: storedAuthorship,
-                startTime: currentTime.duration || 0,
+                startTime: durationRef.current || 0,
                 endTime: undefined,
               });
             }
@@ -207,7 +224,7 @@ export default function EditSyncLyrics({
     const interval = setInterval(checkTextUpdate, 2000);
 
     return () => clearInterval(interval);
-  }, [albumId, trackId, lang, lastTextHash, currentTime.duration]);
+  }, [albumId, trackId, lang, lastTextHash]); // Убрали currentTime.duration, так как он не влияет на проверку текста
 
   // Инициализация синхронизаций при загрузке данных
   useEffect(() => {
@@ -248,33 +265,34 @@ export default function EditSyncLyrics({
     setIsSaved(false);
     setIsLoading(true); // Показываем лоадер при смене трека
 
-    // Данные загружаются через loader, используем album из Redux
-    if (albumsStatus !== 'succeeded' || !album) {
-      setIsLoading(false);
-      return;
-    }
-
-    const track = album.tracks.find((t) => String(t.id) === trackId);
-    if (!track) {
-      setIsLoading(false);
-      return;
-    }
-
     // Используем async функцию для загрузки данных из БД
     (async () => {
-      const currentTrackIdStr = String(track.id);
+      // Используем текущий album из замыкания
+      const currentAlbum = album;
+      if (!currentAlbum) {
+        setIsLoading(false);
+        return;
+      }
+
+      const currentTrack = currentAlbum.tracks.find((t) => String(t.id) === trackId);
+      if (!currentTrack) {
+        setIsLoading(false);
+        return;
+      }
+
+      const currentTrackIdStr = String(currentTrack.id);
 
       // Загружаем авторство и синхронизации параллельно
       const [storedAuthorship, storedSync] = await Promise.all([
-        loadAuthorshipFromStorage(albumId, track.id, lang),
-        loadSyncedLyricsFromStorage(albumId, track.id, lang),
+        loadAuthorshipFromStorage(albumId, currentTrack.id, lang),
+        loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang),
       ]);
 
-      const trackAuthorship = track.authorship || storedAuthorship || '';
+      const trackAuthorship = currentTrack.authorship || storedAuthorship || '';
 
       // Проверяем сохранённый текст из админки текста
-      const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-      const textToUse = storedText || track.content || '';
+      const storedText = loadTrackTextFromStorage(albumId, currentTrack.id, lang);
+      const textToUse = storedText || currentTrack.content || '';
 
       // Вычисляем хэш текста
       const textHash = `${textToUse}-${trackAuthorship}`;
@@ -283,7 +301,7 @@ export default function EditSyncLyrics({
       if (process.env.NODE_ENV === 'development') {
         console.log('🔄 Инициализация синхронизаций:', {
           albumId,
-          trackId: track.id,
+          trackId: currentTrack.id,
           lang,
           hasStoredSync: !!storedSync,
           storedSyncLength: storedSync?.length || 0,
@@ -295,7 +313,7 @@ export default function EditSyncLyrics({
       const textChanged =
         storedText !== null &&
         storedText !== undefined &&
-        storedText.trim() !== (track.content || '').trim();
+        storedText.trim() !== (currentTrack.content || '').trim();
 
       // Вычисляем хэш текущего текста для сравнения
       const currentTextHash = `${textToUse}-${trackAuthorship}`;
@@ -340,7 +358,7 @@ export default function EditSyncLyrics({
         if (process.env.NODE_ENV === 'development') {
           console.log('📥 Загрузка сохранённых синхронизаций из localStorage:', {
             albumId,
-            trackId: track.id,
+            trackId: currentTrack.id,
             lang,
             linesCount: storedSync.length,
           });
@@ -355,10 +373,12 @@ export default function EditSyncLyrics({
           startTime: 0,
           endTime: undefined,
         }));
-      } else if (track.syncedLyrics && track.syncedLyrics.length > 0) {
+      } else if (currentTrack.syncedLyrics && currentTrack.syncedLyrics.length > 0) {
         // Используем синхронизации из JSON файла (текст не изменился)
-        console.log('📄 Используем синхронизации из JSON файла');
-        linesToDisplay = track.syncedLyrics;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📄 Используем синхронизации из JSON файла');
+        }
+        linesToDisplay = currentTrack.syncedLyrics || [];
       } else {
         // Разбиваем обычный текст на строки
         console.log('📝 Создаём строки из обычного текста');
@@ -377,7 +397,7 @@ export default function EditSyncLyrics({
         if (!lastLine || lastLine.text !== trackAuthorship) {
           linesToDisplay.push({
             text: trackAuthorship,
-            startTime: currentTime.duration || 0,
+            startTime: durationRef.current || 0,
             endTime: undefined,
           });
         }
@@ -393,10 +413,10 @@ export default function EditSyncLyrics({
       // Устанавливаем данные
       setSyncedLines(linesToDisplay);
       setLastTextHash(textHash);
-      setCurrentTrackId(String(track.id));
+      setCurrentTrackId(currentTrackIdStr);
       setIsDirty(false);
       setIsSaved(false);
-      initializedRef.current = String(track.id);
+      initializedRef.current = currentTrackIdStr;
       setIsLoading(false); // Загрузка завершена
 
       if (process.env.NODE_ENV === 'development') {
@@ -407,14 +427,13 @@ export default function EditSyncLyrics({
       }
     })();
   }, [
-    album,
     albumsStatus,
     albumId,
     trackId,
     lang,
-    currentTime.duration,
     currentTrackId,
     lastTextHash,
+    // album используется из замыкания, но не в зависимостях, чтобы избежать бесконечного цикла
   ]);
 
   // Установить тайм-код для конкретной строки
@@ -532,7 +551,7 @@ export default function EditSyncLyrics({
           if (!lastLine || lastLine.text !== trackAuthorship) {
             updatedLines.push({
               text: trackAuthorship,
-              startTime: currentTime.duration || 0,
+              startTime: durationRef.current || 0,
               endTime: undefined,
             });
           }
@@ -554,14 +573,14 @@ export default function EditSyncLyrics({
       dispatch(playerActions.pause());
       dispatch(playerActions.setCurrentTime(0));
       dispatch(playerActions.setProgress(0));
-      dispatch(playerActions.setTime({ current: 0, duration: currentTime.duration }));
+      dispatch(playerActions.setTime({ current: 0, duration: durationRef.current }));
       audioController.pause();
       audioController.setCurrentTime(0);
     } else {
       setIsSaved(false);
       alert(`❌ Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
     }
-  }, [albumId, trackId, lang, syncedLines, album, currentTime.duration, dispatch]);
+  }, [albumId, trackId, lang, syncedLines, dispatch]); // Убрали album и currentTime.duration, чтобы избежать бесконечного цикла
 
   // Ref для контейнера audio элемента
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
@@ -593,7 +612,7 @@ export default function EditSyncLyrics({
     } else {
       console.warn('⚠️ audioContainerRef.current не найден');
     }
-  }, [album, trackId]); // Переприкрепляем при смене трека
+  }, [trackId]); // album используется из замыкания, trackId достаточно для отслеживания смены трека
 
   // Обработчик окончания трека - ставим на паузу, чтобы не переключался на следующий
   useEffect(() => {
