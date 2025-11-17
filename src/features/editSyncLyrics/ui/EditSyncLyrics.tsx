@@ -138,93 +138,116 @@ export default function EditSyncLyrics({
   useEffect(() => {
     if (!albumId || !trackId || !lang) return;
 
-    const checkTextUpdate = async () => {
-      const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
-      const textToUse = storedText || '';
-      const newHash = `${textToUse}-${storedAuthorship || ''}`;
+    let isChecking = false; // Флаг для предотвращения параллельных проверок
 
-      // Обновляем только если текст действительно изменился (не при первой загрузке)
-      // При первой загрузке данные загружаются в основном рендере
-      // Также не обновляем, если данные ещё не инициализированы
-      if (lastTextHash !== null && newHash !== lastTextHash && initializedRef.current !== null) {
-        console.log('🔄 Текст изменился, обновляем синхронизации:', {
-          oldHash: lastTextHash,
-          newHash,
-        });
-        setSyncedLines((prev) => {
-          // Если текст пустой - очищаем все строки (кроме авторства, если оно есть)
-          if (!textToUse || !textToUse.trim()) {
-            // Если есть авторство - оставляем только его
+    const checkTextUpdate = async () => {
+      // Предотвращаем параллельные проверки
+      if (isChecking) return;
+      isChecking = true;
+
+      try {
+        const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
+        const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
+        const textToUse = storedText || '';
+        const newHash = `${textToUse}-${storedAuthorship || ''}`;
+
+        // Получаем текущий lastTextHash из состояния
+        const currentLastTextHash = lastTextHash;
+
+        // Обновляем только если текст действительно изменился (не при первой загрузке)
+        // При первой загрузке данные загружаются в основном рендере
+        // Также не обновляем, если данные ещё не инициализированы
+        if (
+          currentLastTextHash !== null &&
+          newHash !== currentLastTextHash &&
+          initializedRef.current !== null
+        ) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Текст изменился, обновляем синхронизации:', {
+              oldHash: currentLastTextHash,
+              newHash,
+            });
+          }
+          setSyncedLines((prev) => {
+            // Если текст пустой - очищаем все строки (кроме авторства, если оно есть)
+            if (!textToUse || !textToUse.trim()) {
+              // Если есть авторство - оставляем только его
+              if (storedAuthorship) {
+                const existingAuthorship = prev.find((line) => line.text === storedAuthorship);
+                if (existingAuthorship) {
+                  // Сохраняем таймкоды для авторства
+                  return [existingAuthorship];
+                } else {
+                  // Новое авторство без таймкодов
+                  return [
+                    {
+                      text: storedAuthorship,
+                      startTime: durationRef.current || 0,
+                      endTime: undefined,
+                    },
+                  ];
+                }
+              }
+              // Если нет авторства и текст пустой - возвращаем пустой массив
+              return [];
+            }
+
+            // Разбиваем новый текст на строки
+            const contentLines = textToUse.split('\n').filter((line) => line.trim());
+            const textLines = contentLines.map((line) => line.trim());
+
+            // Если текст изменился - обнуляем все таймкоды (создаём новые строки без таймкодов)
+            // Это логично: если пользователь редактирует текст, он хочет заново синхронизировать
+            const newLines: SyncedLyricsLine[] = textLines.map((text) => ({
+              text,
+              startTime: 0,
+              endTime: undefined,
+            }));
+
+            // Добавляем авторство в конец, если оно есть
             if (storedAuthorship) {
               const existingAuthorship = prev.find((line) => line.text === storedAuthorship);
               if (existingAuthorship) {
                 // Сохраняем таймкоды для авторства
-                return [existingAuthorship];
+                newLines.push(existingAuthorship);
               } else {
                 // Новое авторство без таймкодов
-                return [
-                  {
-                    text: storedAuthorship,
-                    startTime: durationRef.current || 0,
-                    endTime: undefined,
-                  },
-                ];
+                newLines.push({
+                  text: storedAuthorship,
+                  startTime: durationRef.current || 0,
+                  endTime: undefined,
+                });
               }
             }
-            // Если нет авторства и текст пустой - возвращаем пустой массив
-            return [];
-          }
 
-          // Разбиваем новый текст на строки
-          const contentLines = textToUse.split('\n').filter((line) => line.trim());
-          const textLines = contentLines.map((line) => line.trim());
-
-          // Если текст изменился - обнуляем все таймкоды (создаём новые строки без таймкодов)
-          // Это логично: если пользователь редактирует текст, он хочет заново синхронизировать
-          const newLines: SyncedLyricsLine[] = textLines.map((text) => ({
-            text,
-            startTime: 0,
-            endTime: undefined,
-          }));
-
-          // Добавляем авторство в конец, если оно есть
-          if (storedAuthorship) {
-            const existingAuthorship = prev.find((line) => line.text === storedAuthorship);
-            if (existingAuthorship) {
-              // Сохраняем таймкоды для авторства
-              newLines.push(existingAuthorship);
-            } else {
-              // Новое авторство без таймкодов
-              newLines.push({
-                text: storedAuthorship,
-                startTime: durationRef.current || 0,
-                endTime: undefined,
-              });
-            }
-          }
-
-          return newLines;
-        });
-        setLastTextHash(newHash);
-        setIsDirty(true); // Помечаем как изменённое, чтобы пользователь мог сохранить
-        // Сбрасываем initializedRef, чтобы основной useEffect перезагрузил данные
-        initializedRef.current = null;
-      } else if (lastTextHash === null) {
-        // При первой загрузке просто устанавливаем хэш, не трогая данные
-        // Данные загружаются в основном рендере
-        setLastTextHash(newHash);
+            return newLines;
+          });
+          setLastTextHash(newHash);
+          setIsDirty(true); // Помечаем как изменённое, чтобы пользователь мог сохранить
+          // Сбрасываем initializedRef, чтобы основной useEffect перезагрузил данные
+          initializedRef.current = null;
+        } else if (currentLastTextHash === null) {
+          // При первой загрузке просто устанавливаем хэш, не трогая данные
+          // Данные загружаются в основном рендере
+          setLastTextHash(newHash);
+        }
+      } catch (error) {
+        console.error('❌ Ошибка при проверке обновления текста:', error);
+      } finally {
+        isChecking = false;
       }
     };
 
-    // Проверяем сразу
+    // Проверяем сразу (только один раз при монтировании)
     checkTextUpdate();
 
-    // Проверяем каждые 2 секунды
-    const interval = setInterval(checkTextUpdate, 2000);
+    // Проверяем каждые 5 секунд (увеличено с 2 до 5, чтобы снизить нагрузку)
+    const interval = setInterval(checkTextUpdate, 5000);
 
     return () => clearInterval(interval);
-  }, [albumId, trackId, lang, lastTextHash]); // Убрали currentTime.duration, так как он не влияет на проверку текста
+    // Убрали lastTextHash из зависимостей, чтобы интервал не пересоздавался при каждом изменении
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albumId, trackId, lang]); // lastTextHash используется внутри функции через замыкание
 
   // Инициализация синхронизаций при загрузке данных
   useEffect(() => {
@@ -266,16 +289,18 @@ export default function EditSyncLyrics({
     setIsLoading(true); // Показываем лоадер при смене трека
 
     // Используем async функцию для загрузки данных из БД
+    let cancelled = false; // Флаг для отмены запроса при размонтировании
+
     (async () => {
       // Используем текущий album из замыкания
       const currentAlbum = album;
-      if (!currentAlbum) {
+      if (!currentAlbum || cancelled) {
         setIsLoading(false);
         return;
       }
 
       const currentTrack = currentAlbum.tracks.find((t) => String(t.id) === trackId);
-      if (!currentTrack) {
+      if (!currentTrack || cancelled) {
         setIsLoading(false);
         return;
       }
@@ -287,6 +312,12 @@ export default function EditSyncLyrics({
         loadAuthorshipFromStorage(albumId, currentTrack.id, lang),
         loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang),
       ]);
+
+      // Проверяем, не был ли запрос отменён после await
+      if (cancelled) {
+        setIsLoading(false);
+        return;
+      }
 
       const trackAuthorship = currentTrack.authorship || storedAuthorship || '';
 
@@ -410,30 +441,36 @@ export default function EditSyncLyrics({
         });
       }
 
-      // Устанавливаем данные
-      setSyncedLines(linesToDisplay);
-      setLastTextHash(textHash);
-      setCurrentTrackId(currentTrackIdStr);
-      setIsDirty(false);
-      setIsSaved(false);
-      initializedRef.current = currentTrackIdStr;
-      setIsLoading(false); // Загрузка завершена
+      // Устанавливаем данные только если запрос не был отменён
+      if (!cancelled) {
+        setSyncedLines(linesToDisplay);
+        setLastTextHash(textHash);
+        setCurrentTrackId(currentTrackIdStr);
+        setIsDirty(false);
+        setIsSaved(false);
+        initializedRef.current = currentTrackIdStr;
+        setIsLoading(false); // Загрузка завершена
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(
-          '✅ Загрузка завершена, syncedLines установлен, linesCount:',
-          linesToDisplay.length
-        );
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            '✅ Загрузка завершена, syncedLines установлен, linesCount:',
+            linesToDisplay.length
+          );
+        }
       }
     })();
+
+    // Cleanup функция для отмены запроса при размонтировании или изменении зависимостей
+    return () => {
+      cancelled = true;
+    };
   }, [
     albumsStatus,
     albumId,
     trackId,
     lang,
-    currentTrackId,
-    lastTextHash,
-    // album используется из замыкания, но не в зависимостях, чтобы избежать бесконечного цикла
+    // Убрали currentTrackId и lastTextHash из зависимостей, чтобы избежать бесконечного цикла
+    // album используется из замыкания, но не в зависимостях
   ]);
 
   // Установить тайм-код для конкретной строки

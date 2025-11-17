@@ -22,7 +22,7 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 10000, // Увеличено до 10 секунд для стабильности
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
 
