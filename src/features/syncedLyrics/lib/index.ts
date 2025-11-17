@@ -31,7 +31,17 @@ export async function saveSyncedLyrics(
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Пытаемся получить сообщение об ошибке из ответа
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error || errorData.message) {
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        }
+      } catch {
+        // Если не удалось распарсить JSON, используем стандартное сообщение
+      }
+      throw new Error(errorMessage);
     }
 
     // Проверяем, что ответ действительно JSON, а не HTML
@@ -70,9 +80,14 @@ export async function saveSyncedLyrics(
     return result;
   } catch (error) {
     console.error('❌ Ошибка сохранения синхронизаций:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // Убираем дублирование префикса "Ошибка сохранения:"
+    const message = errorMessage.startsWith('Ошибка сохранения:')
+      ? errorMessage
+      : `Ошибка сохранения: ${errorMessage}`;
     return {
       success: false,
-      message: `Ошибка сохранения: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message,
     };
   }
 }

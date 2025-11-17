@@ -175,12 +175,14 @@ export const handler: Handler = async (
     };
   } catch (error) {
     console.error('❌ Error in synced-lyrics function:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
+        message: errorMessage, // Добавляем message для совместимости с клиентом
       } as SyncedLyricsResponse),
     };
   }
