@@ -1,4 +1,4 @@
-// src/pages/AdminAlbum/AdminAlbum.tsx
+// src/pages/DashboardAlbum/DashboardAlbum.tsx
 /**
  * Страница альбома в личном кабинете.
  * Отображает список треков с их статусами и позволяет перейти к редактированию.
@@ -10,7 +10,6 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
-import { Breadcrumb } from '@shared/ui/breadcrumb';
 import {
   AlbumCover,
   fetchAlbums,
@@ -21,7 +20,7 @@ import {
 import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { TracksProps } from '@models';
-import './style.scss';
+import './DashboardAlbum.style.scss';
 
 type TrackStatus = 'synced' | 'text-only' | 'empty';
 
@@ -77,12 +76,15 @@ function formatDuration(seconds: number | undefined): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-interface AdminAlbumProps {
+interface DashboardAlbumProps {
   albumId?: string; // Опциональный prop для использования без роутинга
   onTrackSelect?: (albumId: string, trackId: string, type: 'sync' | 'text') => void; // Callback для выбора трека
 }
 
-export default function AdminAlbum({ albumId: propAlbumId, onTrackSelect }: AdminAlbumProps = {}) {
+export default function DashboardAlbum({
+  albumId: propAlbumId,
+  onTrackSelect,
+}: DashboardAlbumProps = {}) {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
   const { albumId: paramAlbumId = '' } = useParams<{ albumId: string }>();
@@ -139,7 +141,6 @@ export default function AdminAlbum({ albumId: propAlbumId, onTrackSelect }: Admi
   return (
     <section className="admin-album main-background" aria-label="Альбом в личном кабинете">
       <div className="wrapper">
-        <Breadcrumb items={[{ label: 'К альбомам', to: '/dashboard/albums' }]} />
         <div className="admin-album__header">
           <div className="admin-album__info">
             <div className="admin-album__cover">
@@ -151,11 +152,6 @@ export default function AdminAlbum({ albumId: propAlbumId, onTrackSelect }: Admi
               <h1 className="admin-album__title">{album.album}</h1>
               <p className="admin-album__artist">{album.artist}</p>
             </div>
-          </div>
-          <div className="admin-album__actions">
-            <Link to={`/admin/json/${albumId}`} className="admin-album__json-link">
-              Редактировать JSON →
-            </Link>
           </div>
         </div>
 
@@ -219,13 +215,13 @@ export default function AdminAlbum({ albumId: propAlbumId, onTrackSelect }: Admi
                       ) : (
                         <>
                           <Link
-                            to={`/admin/text/${albumId}/${track.id}`}
+                            to={`/dashboard/text/${albumId}/${track.id}`}
                             className="admin-album__track-action"
                           >
                             {trackStatus === 'empty' ? 'Добавить текст' : 'Редактировать текст'}
                           </Link>
                           <Link
-                            to={`/admin/sync/${albumId}/${track.id}`}
+                            to={`/dashboard/sync/${albumId}/${track.id}`}
                             className="admin-album__track-action admin-album__track-action--primary"
                           >
                             {trackStatus === 'synced'

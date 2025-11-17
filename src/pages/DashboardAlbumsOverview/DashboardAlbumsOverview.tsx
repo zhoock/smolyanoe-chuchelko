@@ -1,4 +1,4 @@
-// src/pages/Admin/Admin.tsx
+// src/pages/DashboardAlbumsOverview/DashboardAlbumsOverview.tsx
 /**
  * Главная страница личного кабинета.
  * Отображает список альбомов с прогрессом синхронизации.
@@ -20,7 +20,7 @@ import {
 import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { IAlbums } from '@models';
-import './style.scss';
+import './DashboardAlbumsOverview.style.scss';
 
 type TrackStatus = 'synced' | 'text-only' | 'empty';
 
@@ -85,11 +85,15 @@ function calculateAlbumStats(album: IAlbums, lang: string): AlbumStats {
   return stats;
 }
 
-interface AdminProps {
+interface DashboardAlbumsOverviewProps {
   onAlbumSelect?: (albumId: string) => void; // Callback для выбора альбома (вместо роутинга)
+  onBuilderOpen?: () => void; // Callback для открытия builder
 }
 
-export default function Admin({ onAlbumSelect }: AdminProps = {}) {
+export default function DashboardAlbumsOverview({
+  onAlbumSelect,
+  onBuilderOpen,
+}: DashboardAlbumsOverviewProps) {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
@@ -129,10 +133,24 @@ export default function Admin({ onAlbumSelect }: AdminProps = {}) {
     <section className="admin main-background" aria-label="Личный кабинет">
       <div className="admin-container">
         <div className="admin__actions">
-          <Link to="/admin/builder" className="admin__create-button">
-            <span className="admin__create-button-icon">+</span>
-            <span className="admin__create-button-text">Добавить альбом</span>
-          </Link>
+          {onBuilderOpen ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onBuilderOpen();
+              }}
+              className="admin__create-button"
+            >
+              <span className="admin__create-button-icon">+</span>
+              <span className="admin__create-button-text">Добавить альбом</span>
+            </button>
+          ) : (
+            <Link to="/dashboard/albums/new" className="admin__create-button">
+              <span className="admin__create-button-icon">+</span>
+              <span className="admin__create-button-text">Добавить альбом</span>
+            </Link>
+          )}
         </div>
 
         {!albums || albums.length === 0 ? (
@@ -151,7 +169,7 @@ export default function Admin({ onAlbumSelect }: AdminProps = {}) {
                   onAlbumSelect(album.albumId);
                 } else if (album.albumId) {
                   // Fallback на роутинг, если callback не передан
-                  window.location.href = `/admin/album/${album.albumId}`;
+                  window.location.href = `/dashboard/albums/${album.albumId}`;
                 }
               };
 

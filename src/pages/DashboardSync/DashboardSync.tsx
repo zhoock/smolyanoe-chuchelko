@@ -1,4 +1,4 @@
-// src/pages/AdminSync/AdminSync.tsx
+// src/pages/DashboardSync/DashboardSync.tsx
 /**
  * Админ-страница для синхронизации текста песни с музыкой.
  * Позволяет устанавливать тайм-коды для каждой строки текста вручную.
@@ -9,7 +9,6 @@ import { useParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
-import { Breadcrumb } from '@shared/ui/breadcrumb';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { playerActions, playerSelectors } from '@features/player';
@@ -23,17 +22,17 @@ import {
   loadAuthorshipFromStorage,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
-import './style.scss';
+import './DashboardSync.style.scss';
 
-interface AdminSyncProps {
+interface DashboardSyncProps {
   albumId?: string; // Опциональный prop для использования без роутинга
   trackId?: string; // Опциональный prop для использования без роутинга
 }
 
-export default function AdminSync({
+export default function DashboardSync({
   albumId: propAlbumId,
   trackId: propTrackId,
-}: AdminSyncProps = {}) {
+}: DashboardSyncProps = {}) {
   const { lang } = useLang();
   const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
     albumId: string;
@@ -681,7 +680,6 @@ export default function AdminSync({
   return (
     <section className="admin-sync main-background" aria-label="Синхронизация текста">
       <div className="wrapper">
-        <Breadcrumb items={[{ label: 'К альбомам' }, { label: album.album }]} />
         <div className="admin-sync__header">
           <h1>Синхронизация текста</h1>
           <p className="admin-sync__description">

@@ -5,10 +5,11 @@ import { useLang } from '@app/providers/lang';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { PaymentSettings } from './PaymentSettings';
-import { AdminWrapper } from './AdminWrapper';
-import { AdminAlbumWrapper } from './AdminAlbumWrapper';
-import { AdminSyncWrapper } from './AdminSyncWrapper';
-import { AdminTextWrapper } from './AdminTextWrapper';
+import { DashboardAlbumsRoot } from './DashboardAlbumsRoot';
+import { DashboardAlbumEditor } from './DashboardAlbumEditor';
+import { DashboardSyncEditor } from './DashboardSyncEditor';
+import { DashboardTextEditor } from './DashboardTextEditor';
+import { DashboardAlbumBuilder } from './DashboardAlbumBuilder';
 import './UserDashboard.style.scss';
 
 type DashboardTab = 'albums' | 'payments' | string; // Расширяемый тип для будущих вкладок
@@ -40,7 +41,7 @@ export function UserDashboard() {
         ru: 'Альбомы',
       },
       icon: '💿',
-      component: AdminWrapper,
+      component: DashboardAlbumsRoot,
     },
     {
       id: 'payments',
@@ -73,16 +74,25 @@ export function UserDashboard() {
     type: 'sync' | 'text';
   } | null>(null);
 
+  // Состояние для открытия builder (создание нового альбома)
+  const [isBuilderOpen, setIsBuilderOpen] = useState<boolean>(false);
+
   // Определяем, открыт ли альбом или детальный вид (для скрытия навигации)
-  const isDetailViewOpen = selectedAlbumId !== null || selectedTrack !== null;
+  const isDetailViewOpen = selectedAlbumId !== null || selectedTrack !== null || isBuilderOpen;
 
   // Определяем активную вкладку из URL
   const getActiveTabFromPath = (path: string): DashboardTab => {
-    // Проверяем все вкладки
-    for (const tab of tabs) {
-      if (path.includes(`/${tab.id}`) && !path.includes(`/${tab.id}/`)) {
-        return tab.id;
+    // Проверяем точное совпадение с /dashboard/:tab
+    const match = path.match(/^\/dashboard\/([^/]+)$/);
+    if (match) {
+      const tabId = match[1];
+      if (tabs.some((tab) => tab.id === tabId)) {
+        return tabId as DashboardTab;
       }
+    }
+    // Проверяем /dashboard/albums (может быть как таб, так и начало пути для альбомов)
+    if (path === '/dashboard/albums') {
+      return 'albums';
     }
     // По умолчанию показываем первую вкладку
     return tabs[0]?.id || 'albums';
@@ -117,7 +127,10 @@ export function UserDashboard() {
   };
 
   const handleBack = () => {
-    if (selectedTrack) {
+    if (isBuilderOpen) {
+      // Если открыт builder, возвращаемся к списку
+      setIsBuilderOpen(false);
+    } else if (selectedTrack) {
       // Если открыта синхронизация или редактирование текста, возвращаемся к альбому
       setSelectedTrack(null);
       if (selectedTrack.albumId) {
@@ -132,18 +145,30 @@ export function UserDashboard() {
   const handleAlbumSelect = (albumId: string) => {
     setSelectedAlbumId(albumId);
     setSelectedTrack(null); // Сбрасываем выбранный трек
+    setIsBuilderOpen(false); // Закрываем builder если открыт
   };
 
   const handleTrackSelect = (albumId: string, trackId: string, type: 'sync' | 'text') => {
     setSelectedTrack({ albumId, trackId, type });
   };
 
+  const handleBuilderOpen = () => {
+    setIsBuilderOpen(true);
+    setSelectedAlbumId(null);
+    setSelectedTrack(null);
+  };
+
   const renderContent = () => {
+    // Если открыт builder, показываем DashboardAlbumBuilder
+    if (isBuilderOpen) {
+      return <DashboardAlbumBuilder userId={userId} onBack={handleBack} />;
+    }
+
     // Если открыта синхронизация или редактирование текста
     if (selectedTrack) {
       if (selectedTrack.type === 'sync') {
         return (
-          <AdminSyncWrapper
+          <DashboardSyncEditor
             userId={userId}
             albumId={selectedTrack.albumId}
             trackId={selectedTrack.trackId}
@@ -151,7 +176,7 @@ export function UserDashboard() {
         );
       } else if (selectedTrack.type === 'text') {
         return (
-          <AdminTextWrapper
+          <DashboardTextEditor
             userId={userId}
             albumId={selectedTrack.albumId}
             trackId={selectedTrack.trackId}
@@ -160,10 +185,10 @@ export function UserDashboard() {
       }
     }
 
-    // Если открыт альбом, показываем AdminAlbumWrapper
+    // Если открыт альбом, показываем DashboardAlbumEditor
     if (selectedAlbumId) {
       return (
-        <AdminAlbumWrapper
+        <DashboardAlbumEditor
           userId={userId}
           albumId={selectedAlbumId}
           onTrackSelect={handleTrackSelect}
@@ -188,10 +213,17 @@ export function UserDashboard() {
       const Component = currentTab.component as React.ComponentType<{
         userId?: string;
         onAlbumSelect?: (albumId: string) => void;
+        onBuilderOpen?: () => void;
       }>;
-      // Передаём callback для выбора альбома только для вкладки albums
+      // Передаём callback для выбора альбома и открытия builder только для вкладки albums
       if (currentTab.id === 'albums') {
-        return <Component userId={userId} onAlbumSelect={handleAlbumSelect} />;
+        return (
+          <Component
+            userId={userId}
+            onAlbumSelect={handleAlbumSelect}
+            onBuilderOpen={handleBuilderOpen}
+          />
+        );
       }
       return <Component userId={userId} />;
     }

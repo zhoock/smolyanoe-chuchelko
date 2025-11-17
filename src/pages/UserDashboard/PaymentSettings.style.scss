@@ -1,4 +1,5 @@
 @use '../../scss/abstracts/mixins' as *;
+@use './formStyles' as form;
 
 .payment-settings {
   margin: 0;
@@ -138,84 +139,28 @@
   }
 
   &__connect-button {
-    padding: 10px 20px;
-    color: var(--text-color, #ffffff);
-    font-size: 0.9375rem;
-    background: var(--accent-color, #998238);
-    border: 1px solid var(--accent-color, #998238);
-    border-radius: 8px;
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease,
-      color 0.2s ease;
+    @include form.button('primary');
+
     inline-size: auto;
     align-self: flex-start;
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
-    cursor: pointer;
     margin-block-start: 8px;
 
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
-
-    &:hover:not(:disabled) {
-      background: var(--accent-color-hover, #b8a654);
-      border-color: var(--accent-color-hover, #b8a654);
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover:not(:disabled) {
-        background: var(--accent-color, #998238);
-        border-color: var(--accent-color, #998238);
-      }
-
-      &:active:not(:disabled) {
-        background: var(--accent-color-hover, #b8a654);
-      }
-    }
   }
 
   &__disconnect-button {
-    padding: 10px 20px;
-    color: #ef4444;
-    font-size: 0.9375rem;
-    background: transparent;
-    border: 1px solid #ef4444;
-    border-radius: 8px;
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease,
-      color 0.2s ease;
+    @include form.button('danger');
+
     inline-size: auto;
     align-self: flex-start;
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
-    cursor: pointer;
     margin-block-start: 16px;
 
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    &:hover:not(:disabled) {
-      color: var(--text-color, #ffffff);
-      background: #ef4444;
-      border-color: #ef4444;
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover:not(:disabled) {
-        background: transparent;
-        border-color: #ef4444;
-      }
-
-      &:active:not(:disabled) {
-        color: var(--text-color, #ffffff);
-        background: #ef4444;
-      }
     }
   }
 
@@ -275,49 +220,32 @@
   }
 
   &__form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    @include form.wrapper;
+
     margin-block-start: 8px;
   }
 
   &__form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    @include form.group;
   }
 
   &__form-label {
-    color: var(--text-color, #ffffff);
+    @include form.label;
+
     font-size: 0.9375rem;
     font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__form-input {
-    padding: 10px 12px;
-    color: var(--text-color, #ffffff);
-    font-size: 0.9375rem;
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
-    transition: border-color 0.2s ease;
-    inline-size: 100%;
-    font-family: var(--base-font-family, arial, sans-serif);
+    @include form.input;
 
-    &:focus {
-      outline: none;
-      border-color: var(--accent-color, #998238);
-      box-shadow: 0 0 0 3px rgba(153 130 56 / 10%);
+    &:focus-visible {
+      box-shadow: 0 0 0 3px rgb(153 130 56 / 10%);
     }
 
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    &::placeholder {
-      color: var(--warm-concrete, #9b9b9a);
     }
   }
 
@@ -335,60 +263,17 @@
 
   &__cancel-button,
   &__save-button {
-    padding: 10px 20px;
-    color: var(--text-color, #ffffff);
-    font-size: 0.9375rem;
-    background: transparent;
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease;
+    @include form.button;
+
     flex: 1;
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
-    cursor: pointer;
   }
 
   &__save-button {
-    color: var(--text-color, #ffffff);
-    background: var(--accent-color, #998238);
-    border-color: var(--accent-color, #998238);
+    @include form.button('primary');
 
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-    }
-
-    &:hover:not(:disabled) {
-      background: var(--accent-color-hover, #b8a654);
-      border-color: var(--accent-color-hover, #b8a654);
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover:not(:disabled) {
-        background: var(--accent-color, #998238);
-      }
-
-      &:active:not(:disabled) {
-        background: var(--accent-color-hover, #b8a654);
-      }
-    }
-  }
-
-  &__cancel-button {
-    &:hover:not(:disabled) {
-      background: var(--iron-slate, #3d3c3a);
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover:not(:disabled) {
-        background: transparent;
-      }
-
-      &:active:not(:disabled) {
-        background: var(--iron-slate, #3d3c3a);
-      }
     }
   }
 }

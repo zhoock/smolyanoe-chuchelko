@@ -31,12 +31,6 @@ import { ErrorBoundary } from '@shared/ui/error-boundary';
 const Album = lazy(() => import('@pages/Album/Album'));
 const StemsPlayground = lazy(() => import('@pages/StemsPlayground/StemsPlayground'));
 const Home = lazy(() => import('@pages/Home'));
-const Admin = lazy(() => import('@pages/Admin/Admin'));
-const AdminAlbum = lazy(() => import('@pages/AdminAlbum/AdminAlbum'));
-const AdminSync = lazy(() => import('@pages/AdminSync/AdminSync'));
-const AdminText = lazy(() => import('@pages/AdminText/AdminText'));
-const AdminAlbumJson = lazy(() => import('@pages/AdminAlbumJson/AdminAlbumJson'));
-const AdminAlbumBuilder = lazy(() => import('@pages/AdminAlbumBuilder/AdminAlbumBuilder'));
 const ArticlePage = lazy(() => import('@pages/Article'));
 const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
 const UserDashboard = lazy(() => import('@pages/UserDashboard'));
@@ -154,13 +148,6 @@ function Layout() {
     '/stems',
     '/dashboard',
     '/dashboard/:tab',
-    '/dashboard/albums/:albumId',
-    '/admin',
-    '/admin/album/:albumId',
-    '/admin/sync/:albumId/:trackId',
-    '/admin/text/:albumId/:trackId',
-    '/admin/json/:albumId',
-    '/admin/builder',
   ];
 
   const isKnownRoute = knownRoutes.some((pattern) =>
@@ -225,54 +212,6 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <StemsPlayground />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <Admin />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/admin/album/:albumId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AdminAlbum />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/admin/sync/:albumId/:trackId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AdminSync />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/admin/text/:albumId/:trackId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AdminText />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/admin/json/:albumId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AdminAlbumJson />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/admin/builder"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AdminAlbumBuilder />
             </Suspense>
           }
         />

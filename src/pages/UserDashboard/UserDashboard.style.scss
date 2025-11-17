@@ -23,7 +23,7 @@
   background: var(--extra-background-color, #1e1e1e);
   border: 1px solid var(--iron-slate, #3d3c3a);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: hidden auto;
   box-sizing: border-box;
   transition: grid-template-columns 0.3s ease;
 
@@ -178,6 +178,7 @@
     padding: 0;
     background: var(--extra-background-color, #1e1e1e);
     box-sizing: border-box;
+    max-block-size: 100%;
   }
 
   &__content-placeholder {

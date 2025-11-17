@@ -1,4 +1,4 @@
-// src/pages/AdminText/AdminText.tsx
+// src/pages/DashboardText/DashboardText.tsx
 /**
  * Админ-страница для редактирования текста песни.
  * Позволяет вводить и форматировать текст песни перед синхронизацией.
@@ -10,7 +10,6 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
-import { Breadcrumb } from '@shared/ui/breadcrumb';
 import {
   saveTrackText,
   loadTrackTextFromStorage,
@@ -19,17 +18,17 @@ import {
   countLines,
 } from '@entities/track/lib';
 import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
-import './style.scss';
+import './DashboardText.style.scss';
 
-interface AdminTextProps {
+interface DashboardTextProps {
   albumId?: string; // Опциональный prop для использования без роутинга
   trackId?: string; // Опциональный prop для использования без роутинга
 }
 
-export default function AdminText({
+export default function DashboardText({
   albumId: propAlbumId,
   trackId: propTrackId,
-}: AdminTextProps = {}) {
+}: DashboardTextProps = {}) {
   const { lang } = useLang();
   const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
     albumId: string;
@@ -167,7 +166,6 @@ export default function AdminText({
   return (
     <section className="admin-text main-background" aria-label="Редактирование текста">
       <div className="wrapper">
-        <Breadcrumb items={[{ label: 'К альбомам' }, { label: album.album }]} />
         <div className="admin-text__header">
           <h1>Редактирование текста</h1>
           <h4>{track.title}</h4>
@@ -253,7 +251,7 @@ export default function AdminText({
             )}
           </div>
           <Link
-            to={`/admin/sync/${albumId}/${trackId}`}
+            to={`/dashboard/sync/${albumId}/${trackId}`}
             className={`admin-text__link-to-sync ${!isDirty && text.trim() ? 'admin-text__link-to-sync--active' : 'admin-text__link-to-sync--disabled'}`}
             onClick={(e) => {
               if (isDirty || !text.trim()) {
