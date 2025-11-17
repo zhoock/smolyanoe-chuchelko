@@ -3,7 +3,7 @@
  * Страница альбома в личном кабинете.
  * Отображает список треков с их статусами и позволяет перейти к редактированию.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -29,7 +29,6 @@ async function getTrackStatus(
   track: TracksProps,
   lang: string
 ): Promise<TrackStatus> {
-  const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
   const storedSync = await loadSyncedLyricsFromStorage(albumId, track.id, lang);
 
   if (track.syncedLyrics && track.syncedLyrics.length > 0) {
@@ -40,8 +39,12 @@ async function getTrackStatus(
     return 'synced';
   }
 
-  if (storedText !== null && storedText !== undefined) {
-    return 'text-only';
+  // Проверяем текст только в dev режиме (в production loadTrackTextFromStorage всегда null)
+  if (process.env.NODE_ENV === 'development') {
+    const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
+    if (storedText !== null && storedText !== undefined) {
+      return 'text-only';
+    }
   }
 
   if (track.content) {
@@ -98,6 +101,12 @@ export default function DashboardAlbum({
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
   const [trackStatuses, setTrackStatuses] = useState<Map<string | number, TrackStatus>>(new Map());
 
+  // Создаем стабильный ключ для треков, чтобы избежать бесконечного цикла
+  const tracksKey = useMemo(
+    () => album?.tracks?.map((t) => `${t.id}`).join(',') || '',
+    [album?.tracks]
+  );
+
   useEffect(() => {
     if (!albumId) {
       return;
@@ -118,17 +127,32 @@ export default function DashboardAlbum({
       return;
     }
 
+    let cancelled = false;
+
     (async () => {
       const statusMap = new Map<string | number, TrackStatus>();
+      // Используем текущий album из замыкания
+      const currentAlbum = album;
       await Promise.all(
-        album.tracks.map(async (track) => {
-          const status = await getTrackStatus(albumId, track, lang);
-          statusMap.set(track.id, status);
+        currentAlbum.tracks.map(async (track) => {
+          if (!cancelled) {
+            const status = await getTrackStatus(albumId, track, lang);
+            if (!cancelled) {
+              statusMap.set(track.id, status);
+            }
+          }
         })
       );
-      setTrackStatuses(statusMap);
+      if (!cancelled) {
+        setTrackStatuses(statusMap);
+      }
     })();
-  }, [album, albumId, lang]);
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albumId, lang, tracksKey]); // Используем стабильный ключ вместо массива, album используется из замыкания
 
   if (status === 'loading' || status === 'idle') {
     return (
