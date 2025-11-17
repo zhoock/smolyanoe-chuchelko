@@ -64,6 +64,8 @@ export default function EditSyncLyrics({
   const initializedRef = useRef<string | null>(null); // ref для отслеживания инициализированного трека
   const durationRef = useRef<number>(0); // ref для стабильного хранения duration
   const albumIdRef = useRef<string>(''); // ref для стабильного хранения albumId
+  const loadingRef = useRef<boolean>(false); // ref для предотвращения параллельных загрузок
+  const lastRequestKeyRef = useRef<string>(''); // ref для отслеживания последнего запроса
 
   // Обновляем albumIdRef при изменении albumId
   useEffect(() => {
@@ -143,10 +145,17 @@ export default function EditSyncLyrics({
     const checkTextUpdate = async () => {
       // Предотвращаем параллельные проверки
       if (isChecking) return;
+      // Не проверяем, если идет основная загрузка
+      if (loadingRef.current) return;
       isChecking = true;
 
       try {
         const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
+        // Делаем запрос только если данные уже инициализированы
+        if (initializedRef.current === null) {
+          isChecking = false;
+          return;
+        }
         const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
         const textToUse = storedText || '';
         const newHash = `${textToUse}-${storedAuthorship || ''}`;
@@ -269,6 +278,7 @@ export default function EditSyncLyrics({
 
     // Проверяем, изменился ли трек, используя initializedRef
     const trackIdStr = trackId;
+    const requestKey = `${albumId}-${trackId}-${lang}`;
 
     // Если трек уже инициализирован - не загружаем заново
     if (initializedRef.current === trackIdStr) {
@@ -276,6 +286,14 @@ export default function EditSyncLyrics({
         console.log('✅ Трек уже инициализирован, пропускаем загрузку');
       }
       setIsLoading(false);
+      return;
+    }
+
+    // Если уже идет загрузка с теми же параметрами - пропускаем
+    if (loadingRef.current && lastRequestKeyRef.current === requestKey) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⏳ Загрузка уже идет, пропускаем повторный запрос');
+      }
       return;
     }
 
@@ -287,6 +305,8 @@ export default function EditSyncLyrics({
     setIsDirty(false);
     setIsSaved(false);
     setIsLoading(true); // Показываем лоадер при смене трека
+    loadingRef.current = true; // Устанавливаем флаг загрузки
+    lastRequestKeyRef.current = requestKey; // Сохраняем ключ запроса
 
     // Используем async функцию для загрузки данных из БД
     let cancelled = false; // Флаг для отмены запроса при размонтировании
@@ -450,6 +470,7 @@ export default function EditSyncLyrics({
         setIsSaved(false);
         initializedRef.current = currentTrackIdStr;
         setIsLoading(false); // Загрузка завершена
+        loadingRef.current = false; // Сбрасываем флаг загрузки
 
         if (process.env.NODE_ENV === 'development') {
           console.log(
@@ -457,12 +478,15 @@ export default function EditSyncLyrics({
             linesToDisplay.length
           );
         }
+      } else {
+        loadingRef.current = false; // Сбрасываем флаг загрузки при отмене
       }
     })();
 
     // Cleanup функция для отмены запроса при размонтировании или изменении зависимостей
     return () => {
       cancelled = true;
+      loadingRef.current = false; // Сбрасываем флаг загрузки при cleanup
     };
   }, [
     albumsStatus,
