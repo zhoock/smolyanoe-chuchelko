@@ -56,7 +56,7 @@ function ServiceButtonsContent({
             className="service-buttons__list"
             aria-label="Блок со ссылками на платные музыкальные агрегаторы"
           >
-            <li className="service-buttons__list-item">
+            {/* <li className="service-buttons__list-item">
               <a
                 href="#"
                 className="service-buttons__link service-buttons__link--download"
@@ -80,7 +80,7 @@ function ServiceButtonsContent({
                 </svg>
                 <span className="visually-hidden">Скачать альбом</span>
               </a>
-            </li>
+            </li> */}
             <GetButton
               buttonClass="icon-applemusic"
               buttonUrl={buttons?.itunes}
