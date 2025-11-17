@@ -178,6 +178,7 @@ module.exports = {
     //Плагин позволяет установить переменные окружения, можно переопределить переменную из блока script файла package.json
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'development', // значение по умолчанию 'development', если переменная process.env.NODE_ENV не передана при вызове сборки
+      NETLIFY_SITE_URL: '', // URL Netlify сайта для API запросов в dev режиме (опционально)
     }),
   ],
 

@@ -1074,7 +1074,8 @@ export default function AudioPlayer({
     // Загружаем синхронизации асинхронно
     (async () => {
       const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-      const baseSynced = storedSync || currentTrack.syncedLyrics;
+      const baseSynced: SyncedLyricsLine[] | null | undefined =
+        storedSync || currentTrack.syncedLyrics;
 
       if (baseSynced && baseSynced.length > 0) {
         // Загружаем авторство и добавляем его в конец массива строк, если оно есть
@@ -1154,7 +1155,8 @@ export default function AudioPlayer({
     // Загружаем синхронизации асинхронно
     (async () => {
       const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-      const baseSynced = storedSync || currentTrack.syncedLyrics;
+      const baseSynced: SyncedLyricsLine[] | null | undefined =
+        storedSync || currentTrack.syncedLyrics;
 
       // Проверяем только наличие синхронизированного текста (караоке)
       // НЕ проверяем currentTrack.content, так как это обычный текст, не караоке
@@ -1790,7 +1792,7 @@ export default function AudioPlayer({
     // useMemo не может быть async, поэтому возвращаем false
     // Реальная проверка происходит в useEffect выше
     return false;
-  }, [syncedLyrics, currentTrack, albumId, lang]);
+  }, [syncedLyrics, currentTrack]);
 
   const hasTextToShow = hasSyncedLyricsAvailable || hasPlainLyrics;
 

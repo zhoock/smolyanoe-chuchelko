@@ -4,14 +4,10 @@
 [dev]
   command = "npm start" # команда для запуска вашего dev-сервера (например, React Dev Server)
   framework = "custom" # кастомная сборка
-  targetPort = 3000 # порт, на котором работает ваш dev-сервер (обычно React работает на 3000)
+  targetPort = 8080 # порт, на котором работает ваш webpack dev server
   port = 8888 # порт, на котором Netlify будет проксировать запросы
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
+# API routes должны быть ПЕРЕД общим redirect на index.html
 # API routes для сохранения синхронизаций
 [[redirects]]
   from = "/api/synced-lyrics"
@@ -38,6 +34,12 @@
 [[redirects]]
   from = "/api/payment-settings"
   to = "/.netlify/functions/payment-settings"
+  status = 200
+
+# Общий redirect для SPA - должен быть ПОСЛЕДНИМ
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 
