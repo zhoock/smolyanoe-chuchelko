@@ -304,8 +304,8 @@ describe('HomePage integration tests', () => {
     // Проверяем наличие текста на разных языках
     expect(screen.getByText('Альбомы')).toBeInTheDocument();
     expect(screen.getByText('Статьи')).toBeInTheDocument();
-    // "Группа" может встречаться несколько раз, проверяем через queryAll
-    const groupTexts = screen.queryAllByText('Группа');
+    // "Группа" входит в состав заголовка "Группа Artist 1", может встречаться несколько раз
+    const groupTexts = screen.getAllByText(/Группа/);
     expect(groupTexts.length).toBeGreaterThan(0);
   });
 });
