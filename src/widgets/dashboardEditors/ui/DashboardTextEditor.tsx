@@ -1,7 +1,7 @@
 // Редактор текстов внутри личного кабинета
 import React from 'react';
-import DashboardText from '@pages/DashboardText/DashboardText';
-import './dashboardModalWrappers.style.scss';
+import { EditTrackText } from '@features/editTrackText';
+import '../styles/dashboardModalWrappers.style.scss';
 
 interface DashboardTextEditorProps {
   userId?: string;
@@ -12,7 +12,7 @@ interface DashboardTextEditorProps {
 export function DashboardTextEditor({ userId, albumId, trackId }: DashboardTextEditorProps) {
   return (
     <div className="dashboard-text-editor">
-      <DashboardText albumId={albumId} trackId={trackId} />
+      <EditTrackText albumId={albumId} trackId={trackId} />
     </div>
   );
 }

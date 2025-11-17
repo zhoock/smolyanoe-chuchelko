@@ -2,11 +2,7 @@ import { ReactNode, useCallback } from 'react';
 
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  langActions,
-  selectCurrentLang,
-  type SupportedLang,
-} from '@shared/model/lang';
+import { langActions, selectCurrentLang, type SupportedLang } from '@shared/model/lang';
 
 export function LangProvider({ children }: { children: ReactNode }) {
   return <>{children}</>;

@@ -1,6 +1,6 @@
-// src/pages/AdminAlbumBuilder/style.scss
-@use '../../scss/abstracts/mixins' as *;
-@use '../UserDashboard/formStyles' as form;
+// src/features/createAlbum/ui/CreateAlbum.style.scss
+@use '../../../scss/abstracts/mixins' as *;
+@use '../../../shared/lib/styles/formStyles' as form;
 
 .album-builder {
   padding: 0;

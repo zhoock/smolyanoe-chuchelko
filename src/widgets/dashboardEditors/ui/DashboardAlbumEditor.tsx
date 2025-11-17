@@ -1,7 +1,7 @@
 // Редактор выбранного альбома внутри личного кабинета
 import React from 'react';
-import DashboardAlbum from '@pages/DashboardAlbum/DashboardAlbum';
-import './dashboardModalWrappers.style.scss';
+import DashboardAlbum from './DashboardAlbum';
+import '../styles/dashboardModalWrappers.style.scss';
 
 interface DashboardAlbumEditorProps {
   userId?: string;

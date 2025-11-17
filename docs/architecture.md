@@ -22,6 +22,44 @@
 - `@shared/model/appStore/types` — типы `RootState`, `AppDispatch`.
 - `@shared/model/lang` — глобальный стор языка (`currentLang`, `setCurrentLang`).
 - `@shared/api/http` — fetch-клиент (`getJSON`).
+- `@shared/api/albums` — хуки и утилиты для работы с альбомами (`useAlbumsData`, `getImageUrl`, `formatDate`).
+- `@shared/lib/analytics` — аналитика (`gaEvent`).
+- `@shared/lib/lang` — утилиты языка (`getLang`, `setLang`).
+- `@shared/lib/styles/formStyles` — общие стили для форм.
+
+### Примеры модулей по слоям
+
+**Features (бизнес-действия):**
+
+- `@features/player` — аудиоплеер с управлением воспроизведением.
+- `@features/navigation` — навигационное меню.
+- `@features/popupToggle` — управление попапами.
+- `@features/paymentSettings` — настройки платежей (UI + бизнес-логика).
+- `@features/editSyncLyrics` — синхронизация текста с музыкой.
+- `@features/editTrackText` — редактирование текста трека.
+- `@features/createAlbum` — создание нового альбома.
+
+**Widgets (UI-композиции):**
+
+- `@widgets/header` — шапка сайта.
+- `@widgets/footer` — подвал сайта.
+- `@widgets/form` — форма обратной связи.
+- `@widgets/hero` — главный баннер.
+- `@widgets/notFound` — страница 404.
+- `@widgets/dashboardAlbums` — список альбомов в личном кабинете.
+- `@widgets/dashboardEditors` — обёртки редакторов для личного кабинета.
+
+**Entities (доменные сущности):**
+
+- `@entities/album` — альбомы (компоненты, селекторы, слайсы).
+- `@entities/article` — статьи.
+- `@entities/track` — треки (компоненты, утилиты для работы с текстом).
+- `@entities/service` — сервисы (кнопки покупки/стриминга).
+
+**Shared (переиспользуемые примитивы):**
+
+- `@shared/ui/*` — UI-компоненты (loader, popup, error-message, hamburger и др.).
+- `@shared/lib/hooks` — хуки (`useAppDispatch`, `useAppSelector`).
 
 ### Правила зависимостей
 

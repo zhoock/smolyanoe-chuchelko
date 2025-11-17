@@ -1,6 +1,7 @@
 const LANG_KEY = 'lang';
 
-const hasStorage = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+const hasStorage = () =>
+  typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
 export function getLang(): string {
   if (!hasStorage()) {

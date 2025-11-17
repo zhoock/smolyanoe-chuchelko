@@ -2,7 +2,7 @@
 import React from 'react';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
-import DashboardAlbumsOverview from '@pages/DashboardAlbumsOverview/DashboardAlbumsOverview';
+import DashboardAlbumsOverview from './DashboardAlbumsOverview';
 import './DashboardAlbumsRoot.style.scss';
 
 interface DashboardAlbumsRootProps {

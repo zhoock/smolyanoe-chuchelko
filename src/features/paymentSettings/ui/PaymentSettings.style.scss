@@ -1,5 +1,5 @@
-@use '../../scss/abstracts/mixins' as *;
-@use './formStyles' as form;
+@use '../../../scss/abstracts/mixins' as *;
+@use '../../../shared/lib/styles/formStyles' as form;
 
 .payment-settings {
   margin: 0;

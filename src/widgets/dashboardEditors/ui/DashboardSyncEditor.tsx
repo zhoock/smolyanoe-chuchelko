@@ -1,7 +1,7 @@
 // Редактор синхронизации текста и аудио внутри личного кабинета
 import React from 'react';
-import DashboardSync from '@pages/DashboardSync/DashboardSync';
-import './dashboardModalWrappers.style.scss';
+import { EditSyncLyrics } from '@features/editSyncLyrics';
+import '../styles/dashboardModalWrappers.style.scss';
 
 interface DashboardSyncEditorProps {
   userId?: string;
@@ -12,7 +12,7 @@ interface DashboardSyncEditorProps {
 export function DashboardSyncEditor({ userId, albumId, trackId }: DashboardSyncEditorProps) {
   return (
     <div className="dashboard-sync-editor">
-      <DashboardSync albumId={albumId} trackId={trackId} />
+      <EditSyncLyrics albumId={albumId} trackId={trackId} />
     </div>
   );
 }

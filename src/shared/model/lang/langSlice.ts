@@ -30,4 +30,3 @@ const langSlice = createSlice({
 });
 
 export const { actions: langActions, reducer: langReducer } = langSlice;
-

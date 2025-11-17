@@ -4,12 +4,14 @@ import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
-import { PaymentSettings } from './PaymentSettings';
-import { DashboardAlbumsRoot } from './DashboardAlbumsRoot';
-import { DashboardAlbumEditor } from './DashboardAlbumEditor';
-import { DashboardSyncEditor } from './DashboardSyncEditor';
-import { DashboardTextEditor } from './DashboardTextEditor';
-import { DashboardAlbumBuilder } from './DashboardAlbumBuilder';
+import { PaymentSettings } from '@features/paymentSettings';
+import { DashboardAlbumsRoot } from '@widgets/dashboardAlbums';
+import {
+  DashboardAlbumEditor,
+  DashboardSyncEditor,
+  DashboardTextEditor,
+  DashboardAlbumBuilder,
+} from '@widgets/dashboardEditors';
 import './UserDashboard.style.scss';
 
 type DashboardTab = 'albums' | 'payments' | string; // Расширяемый тип для будущих вкладок

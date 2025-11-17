@@ -1,6 +1,6 @@
-// src/pages/DashboardText/DashboardText.tsx
+// src/features/editTrackText/ui/EditTrackText.tsx
 /**
- * Админ-страница для редактирования текста песни.
+ * Фича для редактирования текста песни.
  * Позволяет вводить и форматировать текст песни перед синхронизацией.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,17 +18,17 @@ import {
   countLines,
 } from '@entities/track/lib';
 import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
-import './DashboardText.style.scss';
+import './EditTrackText.style.scss';
 
-interface DashboardTextProps {
+interface EditTrackTextProps {
   albumId?: string; // Опциональный prop для использования без роутинга
   trackId?: string; // Опциональный prop для использования без роутинга
 }
 
-export default function DashboardText({
+export default function EditTrackText({
   albumId: propAlbumId,
   trackId: propTrackId,
-}: DashboardTextProps = {}) {
+}: EditTrackTextProps = {}) {
   const { lang } = useLang();
   const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
     albumId: string;

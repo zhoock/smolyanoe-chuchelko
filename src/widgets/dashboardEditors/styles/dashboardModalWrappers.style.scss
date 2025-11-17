@@ -1,4 +1,4 @@
-@use '../../scss/abstracts/mixins' as *;
+@use '../../../scss/abstracts/mixins' as *;
 
 @mixin dashboard-modal-global($component-selector, $inner-selector) {
   :global {

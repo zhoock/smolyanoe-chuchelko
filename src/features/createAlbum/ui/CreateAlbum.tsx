@@ -1,12 +1,13 @@
-// src/pages/DashboardAlbumBuilderPage/DashboardAlbumBuilderPage.tsx
+// src/features/createAlbum/ui/CreateAlbum.tsx
 /**
- * Простая админка-конструктор, позволяющая вручную заполнить данные альбома и добавить треки.
+ * Фича для создания нового альбома.
+ * Позволяет вручную заполнить данные альбома и добавить треки.
  */
 
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { IAlbums, TracksProps } from '@models';
-import './DashboardAlbumBuilderPage.style.scss';
+import './CreateAlbum.style.scss';
 interface TrackDraft {
   id: string;
   title: string;
@@ -318,11 +319,11 @@ const validateDraft = (draft: AlbumDraft): string[] => {
   return issues;
 };
 
-interface DashboardAlbumBuilderPageProps {
+interface CreateAlbumProps {
   onBack?: () => void; // Callback для возврата назад (вместо роутинга)
 }
 
-export default function DashboardAlbumBuilderPage({ onBack }: DashboardAlbumBuilderPageProps = {}) {
+export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
   const [draft, setDraft] = useState<AlbumDraft>(emptyAlbum);
 
   const handleAlbumChange = useCallback((field: AlbumBaseField, value: string) => {

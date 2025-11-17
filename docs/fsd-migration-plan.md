@@ -51,6 +51,34 @@
 | `useLang`        | Хук текущего языка       | ✅ `@app/providers/lang`                                       |
 | `langStore.ts`   | Глобальный стор языка    | ✅ перенесено → `@shared/model/lang/store`                     |
 
+### `src/pages/UserDashboard` (Личный кабинет)
+
+| Элемент                     | Назначение                       | Статус / итоговое расположение                                        |
+| --------------------------- | -------------------------------- | --------------------------------------------------------------------- |
+| `PaymentSettings`           | Настройки платежей (UI + логика) | ✅ перенесено → `@features/paymentSettings`                           |
+| `DashboardAlbumsRoot`       | Список альбомов в кабинете       | ✅ перенесено → `@widgets/dashboardAlbums`                            |
+| `DashboardAlbumsOverview`   | Компонент списка альбомов        | ✅ перенесено → `@widgets/dashboardAlbums/ui/DashboardAlbumsOverview` |
+| `DashboardAlbumEditor`      | Редактор альбома (обёртка)       | ✅ перенесено → `@widgets/dashboardEditors/ui/DashboardAlbumEditor`   |
+| `DashboardAlbum`            | Компонент редактирования альбома | ✅ перенесено → `@widgets/dashboardEditors/ui/DashboardAlbum`         |
+| `DashboardSyncEditor`       | Редактор синхронизации (обёртка) | ✅ перенесено → `@widgets/dashboardEditors/ui/DashboardSyncEditor`    |
+| `DashboardSync`             | Компонент синхронизации          | ✅ перенесено → `@features/editSyncLyrics` (фича)                     |
+| `DashboardTextEditor`       | Редактор текста (обёртка)        | ✅ перенесено → `@widgets/dashboardEditors/ui/DashboardTextEditor`    |
+| `DashboardText`             | Компонент редактирования текста  | ✅ перенесено → `@features/editTrackText` (фича)                      |
+| `DashboardAlbumBuilder`     | Создание альбома (обёртка)       | ✅ перенесено → `@widgets/dashboardEditors/ui/DashboardAlbumBuilder`  |
+| `DashboardAlbumBuilderPage` | Компонент создания альбома       | ✅ перенесено → `@features/createAlbum` (фича)                        |
+| `dashboardModalWrappers`    | Общие стили для редакторов       | ✅ перенесено → `@widgets/dashboardEditors/styles/`                   |
+| `formStyles`                | Стили форм (общие)               | ✅ перенесено → `@shared/lib/styles/formStyles`                       |
+
+**Структура после рефакторинга:**
+
+- `pages/UserDashboard/` — содержит только основную страницу (`UserDashboard.tsx`, стили, `index.ts`)
+- `features/paymentSettings/` — настройки платежей с бизнес-логикой (`ui/`, `model/`, `lib/`)
+- `features/editSyncLyrics/` — синхронизация текста с музыкой (фича с бизнес-логикой)
+- `features/editTrackText/` — редактирование текста трека (фича с бизнес-логикой)
+- `features/createAlbum/` — создание нового альбома (фича с бизнес-логикой)
+- `widgets/dashboardAlbums/` — список альбомов (`ui/DashboardAlbumsRoot`, `ui/DashboardAlbumsOverview`)
+- `widgets/dashboardEditors/` — обёртки редакторов (`ui/` с обёртками, `styles/`)
+
 ### Дополнительные действия
 
 - Сверить `widgets` и `features` на предмет дублирования с компонентами.

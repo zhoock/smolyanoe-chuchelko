@@ -1,6 +1,6 @@
-// src/pages/DashboardSync/DashboardSync.tsx
+// src/features/editSyncLyrics/ui/EditSyncLyrics.tsx
 /**
- * Админ-страница для синхронизации текста песни с музыкой.
+ * Фича для синхронизации текста песни с музыкой.
  * Позволяет устанавливать тайм-коды для каждой строки текста вручную.
  */
 import { useCallback, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
@@ -22,17 +22,17 @@ import {
   loadAuthorshipFromStorage,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromStorage } from '@entities/track/lib';
-import './DashboardSync.style.scss';
+import './EditSyncLyrics.style.scss';
 
-interface DashboardSyncProps {
+interface EditSyncLyricsProps {
   albumId?: string; // Опциональный prop для использования без роутинга
   trackId?: string; // Опциональный prop для использования без роутинга
 }
 
-export default function DashboardSync({
+export default function EditSyncLyrics({
   albumId: propAlbumId,
   trackId: propTrackId,
-}: DashboardSyncProps = {}) {
+}: EditSyncLyricsProps = {}) {
   const { lang } = useLang();
   const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
     albumId: string;
