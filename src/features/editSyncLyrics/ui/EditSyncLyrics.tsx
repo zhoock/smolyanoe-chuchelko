@@ -60,6 +60,7 @@ export default function EditSyncLyrics({
   const [lastTextHash, setLastTextHash] = useState<string | null>(null); // хэш текста для отслеживания изменений
   const [isSaved, setIsSaved] = useState(false); // флаг успешного сохранения
   const [isLoading, setIsLoading] = useState(true); // флаг загрузки данных
+  const [isInteractionLocked, setIsInteractionLocked] = useState(false); // блокировка взаимодействия после завершения
   const initializedRef = useRef<string | null>(null); // ref для отслеживания инициализированного трека
 
   // Инициализируем плейлист в Redux когда загружаются данные альбома
@@ -79,13 +80,13 @@ export default function EditSyncLyrics({
     dispatch(playerActions.setProgress(0));
     audioController.setCurrentTime(0);
 
-    // Устанавливаем плейлист и текущий трек
-    dispatch(playerActions.setPlaylist(album.tracks || []));
-
-    // Находим индекс текущего трека в плейлисте
-    const trackIndex = album.tracks.findIndex((t) => String(t.id) === trackId);
-    if (trackIndex >= 0) {
-      dispatch(playerActions.setCurrentTrackIndex(trackIndex));
+    // Устанавливаем плейлист только с одним треком (текущим)
+    // Это предотвращает автоматическое переключение на следующий трек
+    const currentTrack = album.tracks.find((t) => String(t.id) === trackId);
+    if (currentTrack) {
+      setIsInteractionLocked(false);
+      dispatch(playerActions.setPlaylist([currentTrack]));
+      dispatch(playerActions.setCurrentTrackIndex(0)); // Всегда индекс 0, так как в плейлисте только один трек
       dispatch(
         playerActions.setAlbumInfo({
           albumId: album.albumId || albumId,
@@ -110,8 +111,8 @@ export default function EditSyncLyrics({
       // Явно устанавливаем источник трека, чтобы загрузить метаданные
       // Глобальный обработчик loadedmetadata в playerListeners.ts обновит duration автоматически
       // Устанавливаем autoplay: false, чтобы не запускать автоматически
-      if (track.src) {
-        audioController.setSource(track.src, false);
+      if (currentTrack.src) {
+        audioController.setSource(currentTrack.src, false);
       }
     }
   }, [album, albumsStatus, albumId, trackId, dispatch, location]);
@@ -431,6 +432,9 @@ export default function EditSyncLyrics({
   // Установить тайм-код для конкретной строки
   const setLineTime = useCallback(
     (lineIndex: number, field: 'startTime' | 'endTime') => {
+      if (isInteractionLocked) {
+        return;
+      }
       const time = field === 'startTime' ? currentTime.current : currentTime.current;
 
       setSyncedLines((prev) => {
@@ -457,22 +461,28 @@ export default function EditSyncLyrics({
         return newLines;
       });
     },
-    [currentTime]
+    [currentTime, isInteractionLocked]
   );
 
   // Сбросить endTime для конкретной строки
-  const clearEndTime = useCallback((lineIndex: number) => {
-    setSyncedLines((prev) => {
-      const newLines = [...prev];
-      if (!newLines[lineIndex]) return prev;
+  const clearEndTime = useCallback(
+    (lineIndex: number) => {
+      if (isInteractionLocked) {
+        return;
+      }
+      setSyncedLines((prev) => {
+        const newLines = [...prev];
+        if (!newLines[lineIndex]) return prev;
 
-      const { endTime, ...rest } = newLines[lineIndex];
-      newLines[lineIndex] = rest;
+        const { endTime, ...rest } = newLines[lineIndex];
+        newLines[lineIndex] = rest;
 
-      setIsDirty(true);
-      return newLines;
-    });
-  }, []);
+        setIsDirty(true);
+        return newLines;
+      });
+    },
+    [isInteractionLocked]
+  );
 
   // Сохранить синхронизации
   const handleSave = useCallback(async () => {
@@ -551,11 +561,19 @@ export default function EditSyncLyrics({
 
       setIsDirty(false);
       setIsSaved(true);
+      setIsInteractionLocked(true);
+      // Обнуляем плеер: сбрасываем время на 0 и ставим на паузу
+      dispatch(playerActions.pause());
+      dispatch(playerActions.setCurrentTime(0));
+      dispatch(playerActions.setProgress(0));
+      dispatch(playerActions.setTime({ current: 0, duration: currentTime.duration }));
+      audioController.pause();
+      audioController.setCurrentTime(0);
     } else {
       setIsSaved(false);
       alert(`❌ Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
     }
-  }, [albumId, trackId, lang, syncedLines, album, currentTime.duration]);
+  }, [albumId, trackId, lang, syncedLines, album, currentTime.duration, dispatch]);
 
   // Ref для контейнера audio элемента
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
@@ -588,6 +606,24 @@ export default function EditSyncLyrics({
       console.warn('⚠️ audioContainerRef.current не найден');
     }
   }, [album, trackId]); // Переприкрепляем при смене трека
+
+  // Обработчик окончания трека - ставим на паузу, чтобы не переключался на следующий
+  useEffect(() => {
+    const audioElement = audioController.element;
+
+    const handleEnded = () => {
+      // Ставим на паузу при окончании трека и блокируем взаимодействие
+      dispatch(playerActions.pause());
+      audioController.pause();
+      setIsInteractionLocked(true);
+    };
+
+    audioElement.addEventListener('ended', handleEnded);
+
+    return () => {
+      audioElement.removeEventListener('ended', handleEnded);
+    };
+  }, [dispatch]);
 
   // Duration обновляется автоматически через глобальный обработчик loadedmetadata в playerListeners.ts
   // Не нужно дублировать логику здесь
@@ -640,6 +676,9 @@ export default function EditSyncLyrics({
   // Обработка изменения прогресс-бара (как в AudioPlayer)
   const handleProgressChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (isInteractionLocked) {
+        return;
+      }
       const duration = time.duration;
       if (!Number.isFinite(duration) || duration <= 0) return;
 
@@ -657,11 +696,14 @@ export default function EditSyncLyrics({
         progressInputRef.current.style.setProperty('--progress-width', `${value}%`);
       }
     },
-    [dispatch, time.duration]
+    [dispatch, time.duration, isInteractionLocked]
   );
 
   // Обработчик окончания перемотки (как в AudioPlayer)
   const handleSeekEnd = useCallback(async () => {
+    if (isInteractionLocked) {
+      return;
+    }
     // Снимаем флаг isSeeking (разрешает автообновление прогресса)
     dispatch(playerActions.setSeeking(false));
     if (isPlaying) {
@@ -672,12 +714,18 @@ export default function EditSyncLyrics({
         console.error('Ошибка воспроизведения после перемотки:', error);
       }
     }
-  }, [dispatch, isPlaying]);
+  }, [dispatch, isPlaying, isInteractionLocked]);
 
   // Переключение play/pause - просто как в AudioPlayer
   const togglePlayPause = useCallback(() => {
+    if (isInteractionLocked && !isPlaying) {
+      setIsInteractionLocked(false);
+      dispatch(playerActions.setCurrentTime(0));
+      dispatch(playerActions.setProgress(0));
+      audioController.setCurrentTime(0);
+    }
     dispatch(playerActions.toggle());
-  }, [dispatch]);
+  }, [dispatch, isInteractionLocked, isPlaying]);
 
   // Данные загружаются через loader
 
@@ -796,6 +844,7 @@ export default function EditSyncLyrics({
                   onInput={handleProgressChange}
                   onMouseUp={handleSeekEnd}
                   onTouchEnd={handleSeekEnd}
+                  disabled={isInteractionLocked}
                   aria-label="Прогресс воспроизведения"
                 />
               </div>
@@ -828,7 +877,7 @@ export default function EditSyncLyrics({
                       type="button"
                       onClick={() => setLineTime(index, 'startTime')}
                       className="admin-sync__time-btn"
-                      disabled={currentTime.current === 0 && !isPlaying}
+                      disabled={isInteractionLocked || (currentTime.current === 0 && !isPlaying)}
                     >
                       {formatTime(line.startTime)}
                     </button>
@@ -837,7 +886,7 @@ export default function EditSyncLyrics({
                         type="button"
                         onClick={() => setLineTime(index, 'endTime')}
                         className="admin-sync__time-btn"
-                        disabled={currentTime.current === 0 && !isPlaying}
+                        disabled={isInteractionLocked || (currentTime.current === 0 && !isPlaying)}
                       >
                         {formatTime(line.endTime ?? 0)}
                       </button>
@@ -846,7 +895,9 @@ export default function EditSyncLyrics({
                         onClick={() => clearEndTime(index)}
                         className="admin-sync__time-btn admin-sync__time-btn--clear"
                         title="Сбросить конец строки"
-                        disabled={line.endTime === undefined || line.endTime === 0}
+                        disabled={
+                          isInteractionLocked || line.endTime === undefined || line.endTime === 0
+                        }
                       >
                         ✖️
                       </button>
