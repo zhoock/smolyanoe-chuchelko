@@ -46,23 +46,47 @@ export async function saveTrackText(data: SaveTrackTextRequest): Promise<SaveTra
   try {
     const response = await fetch('/api/save-track-text', {
       method: 'POST',
+      cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Пытаемся получить сообщение об ошибке из ответа
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } else {
+          const text = await response.text();
+          if (text) {
+            errorMessage = text.substring(0, 200);
+          }
+        }
+      } catch {
+        // Если не удалось распарсить ответ, используем стандартное сообщение
+      }
+      throw new Error(errorMessage);
     }
 
     const result: SaveTrackTextResponse = await response.json();
     return result;
   } catch (error) {
     console.error('❌ Ошибка сохранения текста:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const message = errorMessage.startsWith('Ошибка сохранения:')
+      ? errorMessage
+      : `Ошибка сохранения: ${errorMessage}`;
     return {
       success: false,
-      message: `Ошибка сохранения: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message,
     };
   }
 }
