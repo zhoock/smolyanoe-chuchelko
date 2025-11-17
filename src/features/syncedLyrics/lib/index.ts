@@ -22,8 +22,10 @@ export async function saveSyncedLyrics(
   try {
     const response = await fetch('/api/synced-lyrics', {
       method: 'POST',
+      cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
       },
       body: JSON.stringify(data),
     });
@@ -88,7 +90,12 @@ export async function loadSyncedLyricsFromStorage(
       lang,
     });
 
-    const response = await fetch(`/api/synced-lyrics?${params.toString()}`);
+    const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
+      cache: 'no-cache',
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -140,7 +147,12 @@ export async function loadAuthorshipFromStorage(
       lang,
     });
 
-    const response = await fetch(`/api/synced-lyrics?${params.toString()}`);
+    const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
+      cache: 'no-cache',
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
 
     if (!response.ok) {
       if (response.status === 404) {
