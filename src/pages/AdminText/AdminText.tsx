@@ -21,9 +21,22 @@ import {
 import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import './style.scss';
 
-export default function AdminText() {
+interface AdminTextProps {
+  albumId?: string; // Опциональный prop для использования без роутинга
+  trackId?: string; // Опциональный prop для использования без роутинга
+}
+
+export default function AdminText({
+  albumId: propAlbumId,
+  trackId: propTrackId,
+}: AdminTextProps = {}) {
   const { lang } = useLang();
-  const { albumId = '', trackId = '' } = useParams<{ albumId: string; trackId: string }>();
+  const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
+    albumId: string;
+    trackId: string;
+  }>();
+  const albumId = propAlbumId || paramAlbumId; // Используем prop или param
+  const trackId = propTrackId || paramTrackId; // Используем prop или param
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
@@ -154,12 +167,7 @@ export default function AdminText() {
   return (
     <section className="admin-text main-background" aria-label="Редактирование текста">
       <div className="wrapper">
-        <Breadcrumb
-          items={[
-            { label: 'К альбомам', to: '/admin' },
-            { label: album.album, to: `/admin/album/${albumId}` },
-          ]}
-        />
+        <Breadcrumb items={[{ label: 'К альбомам' }, { label: album.album }]} />
         <div className="admin-text__header">
           <h1>Редактирование текста</h1>
           <h4>{track.title}</h4>

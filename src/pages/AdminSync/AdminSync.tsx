@@ -25,9 +25,22 @@ import {
 import { loadTrackTextFromStorage } from '@entities/track/lib';
 import './style.scss';
 
-export default function AdminSync() {
+interface AdminSyncProps {
+  albumId?: string; // Опциональный prop для использования без роутинга
+  trackId?: string; // Опциональный prop для использования без роутинга
+}
+
+export default function AdminSync({
+  albumId: propAlbumId,
+  trackId: propTrackId,
+}: AdminSyncProps = {}) {
   const { lang } = useLang();
-  const { albumId = '', trackId = '' } = useParams<{ albumId: string; trackId: string }>();
+  const { albumId: paramAlbumId = '', trackId: paramTrackId = '' } = useParams<{
+    albumId: string;
+    trackId: string;
+  }>();
+  const albumId = propAlbumId || paramAlbumId; // Используем prop или param
+  const trackId = propTrackId || paramTrackId; // Используем prop или param
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
@@ -668,12 +681,7 @@ export default function AdminSync() {
   return (
     <section className="admin-sync main-background" aria-label="Синхронизация текста">
       <div className="wrapper">
-        <Breadcrumb
-          items={[
-            { label: 'К альбомам', to: '/admin' },
-            { label: album.album, to: `/admin/album/${albumId}` },
-          ]}
-        />
+        <Breadcrumb items={[{ label: 'К альбомам' }, { label: album.album }]} />
         <div className="admin-sync__header">
           <h1>Синхронизация текста</h1>
           <p className="admin-sync__description">

@@ -77,10 +77,16 @@ function formatDuration(seconds: number | undefined): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-export default function AdminAlbum() {
+interface AdminAlbumProps {
+  albumId?: string; // Опциональный prop для использования без роутинга
+  onTrackSelect?: (albumId: string, trackId: string, type: 'sync' | 'text') => void; // Callback для выбора трека
+}
+
+export default function AdminAlbum({ albumId: propAlbumId, onTrackSelect }: AdminAlbumProps = {}) {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const { albumId = '' } = useParams<{ albumId: string }>();
+  const { albumId: paramAlbumId = '' } = useParams<{ albumId: string }>();
+  const albumId = propAlbumId || paramAlbumId; // Используем prop или param
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
@@ -133,7 +139,7 @@ export default function AdminAlbum() {
   return (
     <section className="admin-album main-background" aria-label="Альбом в личном кабинете">
       <div className="wrapper">
-        <Breadcrumb items={[{ label: 'К альбомам', to: '/admin' }]} />
+        <Breadcrumb items={[{ label: 'К альбомам', to: '/dashboard/albums' }]} />
         <div className="admin-album__header">
           <div className="admin-album__info">
             <div className="admin-album__cover">
@@ -183,20 +189,51 @@ export default function AdminAlbum() {
                       </div>
                     </div>
                     <div className="admin-album__track-actions">
-                      <Link
-                        to={`/admin/text/${albumId}/${track.id}`}
-                        className="admin-album__track-action"
-                      >
-                        {trackStatus === 'empty' ? 'Добавить текст' : 'Редактировать текст'}
-                      </Link>
-                      <Link
-                        to={`/admin/sync/${albumId}/${track.id}`}
-                        className="admin-album__track-action admin-album__track-action--primary"
-                      >
-                        {trackStatus === 'synced'
-                          ? 'Редактировать синхронизацию'
-                          : 'Синхронизировать'}
-                      </Link>
+                      {onTrackSelect ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (albumId && track.id) {
+                                onTrackSelect(albumId, String(track.id), 'text');
+                              }
+                            }}
+                            className="admin-album__track-action"
+                          >
+                            {trackStatus === 'empty' ? 'Добавить текст' : 'Редактировать текст'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (albumId && track.id) {
+                                onTrackSelect(albumId, String(track.id), 'sync');
+                              }
+                            }}
+                            className="admin-album__track-action admin-album__track-action--primary"
+                          >
+                            {trackStatus === 'synced'
+                              ? 'Редактировать синхронизацию'
+                              : 'Синхронизировать'}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            to={`/admin/text/${albumId}/${track.id}`}
+                            className="admin-album__track-action"
+                          >
+                            {trackStatus === 'empty' ? 'Добавить текст' : 'Редактировать текст'}
+                          </Link>
+                          <Link
+                            to={`/admin/sync/${albumId}/${track.id}`}
+                            className="admin-album__track-action admin-album__track-action--primary"
+                          >
+                            {trackStatus === 'synced'
+                              ? 'Редактировать синхронизацию'
+                              : 'Синхронизировать'}
+                          </Link>
+                        </>
+                      )}
                     </div>
                   </div>
                 );

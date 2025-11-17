@@ -39,6 +39,7 @@ const AdminAlbumJson = lazy(() => import('@pages/AdminAlbumJson/AdminAlbumJson')
 const AdminAlbumBuilder = lazy(() => import('@pages/AdminAlbumBuilder/AdminAlbumBuilder'));
 const ArticlePage = lazy(() => import('@pages/Article'));
 const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
+const UserDashboard = lazy(() => import('@pages/UserDashboard'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -151,6 +152,9 @@ function Layout() {
     '/help/articles/:articleId',
     '/forms',
     '/stems',
+    '/dashboard',
+    '/dashboard/:tab',
+    '/dashboard/albums/:albumId',
     '/admin',
     '/admin/album/:albumId',
     '/admin/sync/:albumId/:trackId',
@@ -196,6 +200,22 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <HelpArticlePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <UserDashboard />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard/:tab"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <UserDashboard />
             </Suspense>
           }
         />

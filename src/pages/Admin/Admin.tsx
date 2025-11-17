@@ -3,7 +3,7 @@
  * Главная страница личного кабинета.
  * Отображает список альбомов с прогрессом синхронизации.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -85,10 +85,13 @@ function calculateAlbumStats(album: IAlbums, lang: string): AlbumStats {
   return stats;
 }
 
-export default function Admin() {
+interface AdminProps {
+  onAlbumSelect?: (albumId: string) => void; // Callback для выбора альбома (вместо роутинга)
+}
+
+export default function Admin({ onAlbumSelect }: AdminProps = {}) {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const [searchQuery, setSearchQuery] = useState('');
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
@@ -102,20 +105,10 @@ export default function Admin() {
     }
   }, [dispatch, lang, status]);
 
-  const filteredAlbums = useMemo(() => {
-    if (!searchQuery.trim()) return albums;
-
-    const query = searchQuery.toLowerCase();
-    return albums.filter(
-      (album) =>
-        album.album.toLowerCase().includes(query) || album.artist.toLowerCase().includes(query)
-    );
-  }, [albums, searchQuery]);
-
   if (status === 'loading' || status === 'idle') {
     return (
       <section className="admin main-background" aria-label="Личный кабинет">
-        <div className="wrapper">
+        <div className="admin-container">
           <Loader />
         </div>
       </section>
@@ -125,7 +118,7 @@ export default function Admin() {
   if (status === 'failed') {
     return (
       <section className="admin main-background" aria-label="Личный кабинет">
-        <div className="wrapper">
+        <div className="admin-container">
           <ErrorMessage error={error ?? 'Не удалось загрузить альбомы'} />
         </div>
       </section>
@@ -134,40 +127,40 @@ export default function Admin() {
 
   return (
     <section className="admin main-background" aria-label="Личный кабинет">
-      <div className="wrapper">
-        <div className="admin__header">
-          <h1>Личный кабинет</h1>
-          <p className="admin__subtitle">Управление альбомами и синхронизацией текстов</p>
-          <Link to="/admin/builder" className="admin__builder-link">
-            Создать новый альбом →
+      <div className="admin-container">
+        <div className="admin__actions">
+          <Link to="/admin/builder" className="admin__create-button">
+            <span className="admin__create-button-icon">+</span>
+            <span className="admin__create-button-text">Добавить альбом</span>
           </Link>
         </div>
 
-        <div className="admin__search">
-          <input
-            type="text"
-            placeholder="Поиск альбомов..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="admin__search-input"
-          />
-        </div>
-
-        {filteredAlbums.length === 0 ? (
+        {!albums || albums.length === 0 ? (
           <div className="admin__empty">
             <p>Альбомы не найдены</p>
           </div>
         ) : (
           <div className="admin__albums">
-            {filteredAlbums.map((album) => {
+            {albums.map((album) => {
               const stats = calculateAlbumStats(album, lang);
               const progress = stats.total > 0 ? (stats.synced / stats.total) * 100 : 0;
 
+              const handleAlbumClick = (e: React.MouseEvent) => {
+                e.preventDefault();
+                if (onAlbumSelect && album.albumId) {
+                  onAlbumSelect(album.albumId);
+                } else if (album.albumId) {
+                  // Fallback на роутинг, если callback не передан
+                  window.location.href = `/admin/album/${album.albumId}`;
+                }
+              };
+
               return (
-                <Link
+                <button
                   key={album.albumId}
-                  to={`/admin/album/${album.albumId}`}
-                  className="admin__album-card"
+                  type="button"
+                  onClick={handleAlbumClick}
+                  className="admin__album-card admin__album-card--button"
                 >
                   <div className="admin__album-cover">
                     {album.cover && (
@@ -202,7 +195,7 @@ export default function Admin() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </button>
               );
             })}
           </div>

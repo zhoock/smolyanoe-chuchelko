@@ -11,6 +11,12 @@
     "function-url-quotes": "always",
     "length-zero-no-unit": true,
     "selector-class-pattern": null,
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": ["global"]
+      }
+    ],
 
     "order/order": ["custom-properties", "declarations"],
     "order/properties-order": [

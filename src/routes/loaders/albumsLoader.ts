@@ -75,8 +75,13 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   let templateB: Promise<IArticles[]> = Promise.resolve([]);
   let templateD: Promise<IArticles[]> = Promise.resolve([]); // help articles
 
-  // Альбомы нужны на "/", "/albums*" и "/admin/*" (админ-страницы)
-  if (pathname === '/' || pathname.startsWith('/albums') || pathname.startsWith('/admin')) {
+  // Альбомы нужны на "/", "/albums*", "/admin/*" и "/dashboard/*" (админ-страницы и дашборд)
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/albums') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/dashboard')
+  ) {
     const status = selectAlbumsStatus(state, lang);
     if (status === 'succeeded') {
       templateA = Promise.resolve(selectAlbumsData(state, lang));

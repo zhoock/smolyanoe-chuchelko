@@ -2,93 +2,150 @@
 @use '../../scss/abstracts/mixins' as *;
 
 .admin {
-  &__header {
-    margin-block-end: var(--ms-2);
-    text-align: center;
-
-    h1 {
-      margin: 0;
-      margin-block-end: var(--ms-01);
-      color: var(--text-color, #ffffff);
-      font-size: var(--ms-2);
-      font-weight: 700;
-    }
-  }
-
-  &__subtitle {
+  &-container {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
     margin: 0;
-    color: var(--time-color, #9b9b9a);
-    font-size: var(--ms-0);
+    padding: 24px;
+    box-sizing: border-box;
+
+    @include breakpoint(tablet) {
+      padding: 32px;
+    }
   }
 
-  &__search {
-    margin-block-end: var(--ms-2);
+  &__actions {
+    margin-block-end: 16px;
+    display: flex;
+    justify-content: flex-start;
+  }
 
-    &-input {
-      width: 100%;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--text-color, #ffffff);
-      font-size: var(--ms-0);
-      background: var(--main-background-color, #20201d);
-      border: 1px solid var(--hr-color, #3d3c3a);
-      border-radius: var(--ms-01);
-      font-family: inherit;
+  &__create-button {
+    display: inline-flex;
+    padding: 8px 16px;
+    color: var(--text-color, #ffffff);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    background: var(--accent-color, #998238);
+    border: 1px solid var(--accent-color, #998238);
+    border-radius: 6px;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    font-family: var(--base-font-family, arial, sans-serif);
+    text-decoration: none;
+    cursor: pointer;
 
-      &::placeholder {
-        color: var(--time-color, #9b9b9a);
+    &:hover {
+      background: var(--accent-color-hover, #b8a654);
+      border-color: var(--accent-color-hover, #b8a654);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover {
+        background: var(--accent-color, #998238);
+        border-color: var(--accent-color, #998238);
       }
 
-      &:focus {
-        outline: none;
-        border-color: var(--button-background-color-hover, #998238);
+      &:active {
+        background: var(--accent-color-hover, #b8a654);
+        border-color: var(--accent-color-hover, #b8a654);
       }
     }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-color, #998238);
+      outline-offset: 2px;
+    }
+  }
+
+  &__create-button-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 18px;
+    block-size: 18px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  &__create-button-text {
+    line-height: 1.5;
   }
 
   &__albums {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--ms-2);
+    grid-template-columns: 1fr;
+    gap: 12px;
 
-    @include breakpoint(mobile) {
-      grid-template-columns: 1fr;
+    @include breakpoint(tablet) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
     }
   }
 
   &__album-card {
     display: flex;
-    padding: var(--ms-1);
+    padding: 16px;
     color: inherit;
-    background: var(--main-background-color, #20201d);
-    border: 1px solid var(--hr-color, #3d3c3a);
-    border-radius: var(--ms-01);
+    background: var(--extra-background-color, #1e1e1e);
+    border: 1px solid var(--iron-slate, #3d3c3a);
+    border-radius: 8px;
     transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease,
-      transform 0.2s ease;
+      background-color 0.15s ease,
+      border-color 0.15s ease;
     flex-direction: column;
     text-decoration: none;
+    min-inline-size: 0;
 
-    &:hover {
-      background: var(--button-background-color, transparent);
-      border-color: var(--button-background-color-hover, #998238);
-      transform: translateY(-2px);
+    // Стили для кнопки (когда используется как button вместо Link)
+    &--button {
+      text-align: start;
+      background: var(--extra-background-color, #1e1e1e);
+      border: 1px solid var(--iron-slate, #3d3c3a);
+      cursor: pointer;
+      inline-size: 100%;
+      min-inline-size: 0;
+      font-family: inherit;
+    }
+
+    &:hover,
+    &--button:hover {
+      background: rgba(255 255 255 / 3%);
+      border-color: var(--iron-slate, #3d3c3a);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      &:hover,
+      &--button:hover {
+        background: var(--extra-background-color, #1e1e1e);
+      }
+
+      &:active,
+      &--button:active {
+        background: rgba(255 255 255 / 5%);
+      }
     }
   }
 
   &__album-cover {
-    margin-block-end: var(--ms-1);
+    margin-block-end: 12px;
     text-align: center;
 
     .album-cover {
       display: inline-block;
-      max-width: 200px;
+      max-width: 120px;
       width: 100%;
 
       &__image {
         width: 100%;
         height: auto;
-        border-radius: var(--ms-01);
+        border-radius: 6px;
       }
     }
   }
@@ -97,112 +154,97 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 8px;
   }
 
   &__album-title {
     margin: 0;
-    margin-block-end: var(--ms-01);
     color: var(--text-color, #ffffff);
-    font-size: var(--ms-1);
+    font-size: 0.9375rem;
     font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+    line-height: 1.4;
   }
 
   &__album-artist {
     margin: 0;
-    margin-block-end: var(--ms-1);
-    color: var(--time-color, #9b9b9a);
-    font-size: var(--ms-0);
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.8125rem;
+    font-family: var(--base-font-family, arial, sans-serif);
+    line-height: 1.4;
   }
 
   &__album-stats {
-    margin-block-start: auto;
+    margin-block-start: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   &__album-progress {
-    margin-block-end: var(--ms-01);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   &__album-progress-bar {
     width: 100%;
-    height: 8px;
-    background: var(--hr-color, #3d3c3a);
-    border-radius: var(--ms-01);
+    height: 4px;
+    background: rgba(255 255 255 / 8%);
+    border-radius: 2px;
     overflow: hidden;
-    margin-block-end: var(--ms-01);
   }
 
   &__album-progress-fill {
     height: 100%;
-    background: var(--button-background-color-hover, #998238);
-    transition: width 0.3s ease;
+    background: var(--accent-color, #998238);
+    transition: width 0.2s ease;
   }
 
   &__album-progress-text {
     display: block;
-    color: var(--time-color, #9b9b9a);
-    font-size: var(--ms-0);
-    text-align: center;
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.75rem;
+    font-family: var(--base-font-family, arial, sans-serif);
+    line-height: 1.4;
   }
 
   &__album-status {
     display: flex;
-    justify-content: space-around;
-    gap: var(--ms-01);
+    gap: 6px;
   }
 
   &__album-status-item {
-    padding: var(--ms-01);
-    font-size: var(--ms-0);
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    line-height: 1.4;
     text-align: center;
-    background: var(--hr-color, #3d3c3a);
-    border-radius: var(--ms-01);
+    background: rgba(255 255 255 / 5%);
+    border-radius: 4px;
+    font-family: var(--base-font-family, arial, sans-serif);
     flex: 1;
 
     &--synced {
-      color: #4caf50;
+      color: #22c55e;
+      background: rgba(34 197 94 / 10%);
     }
 
     &--text-only {
-      color: #ff9800;
+      color: #f59e0b;
+      background: rgba(245 158 11 / 10%);
     }
 
     &--empty {
-      color: var(--time-color, #9b9b9a);
+      color: var(--warm-concrete, #9b9b9a);
     }
   }
 
   &__empty {
-    padding: var(--ms-3);
-    color: var(--time-color, #9b9b9a);
-    font-size: var(--ms-1);
+    padding: 32px;
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.9375rem;
+    line-height: 1.5;
     text-align: center;
-  }
-}
-
-.admin__builder-link {
-  display: inline-flex;
-  padding: 0.65rem 1rem;
-  color: var(--white, #ffffff);
-  font-size: 0.9rem;
-  background: rgb(255 255 255 / 6%);
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: var(--ms-02);
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-  align-items: center;
-  gap: 0.4rem;
-  margin-block-start: var(--ms-2);
-  text-decoration: none;
-
-  &:hover {
-    background: rgb(255 255 255 / 12%);
-    border-color: rgb(255 255 255 / 28%);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--accent-color, #998238);
-    outline-offset: 2px;
+    font-family: var(--base-font-family, arial, sans-serif);
   }
 }

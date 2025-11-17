@@ -37,12 +37,30 @@ export async function getPaymentSettings(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json().catch(() => ({
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        }));
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}`,
+        };
+      } else {
+        return {
+          success: false,
+          error:
+            'Сервер вернул неверный формат данных. Убедитесь, что Netlify Functions запущены (netlify dev).',
+        };
+      }
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
       return {
         success: false,
-        error: errorData.error || `HTTP ${response.status}`,
+        error:
+          'Сервер вернул неверный формат данных. Убедитесь, что Netlify Functions запущены (netlify dev).',
       };
     }
 
@@ -73,13 +91,31 @@ export async function savePaymentSettings(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json().catch(() => ({
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        }));
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}`,
+          message: errorData.message,
+        };
+      } else {
+        return {
+          success: false,
+          error:
+            'Сервер вернул неверный формат данных. Убедитесь, что Netlify Functions запущены (netlify dev).',
+        };
+      }
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
       return {
         success: false,
-        error: errorData.error || `HTTP ${response.status}`,
-        message: errorData.message,
+        error:
+          'Сервер вернул неверный формат данных. Убедитесь, что Netlify Functions запущены (netlify dev).',
       };
     }
 
@@ -115,13 +151,31 @@ export async function disconnectPaymentProvider(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json().catch(() => ({
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        }));
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}`,
+          message: errorData.message,
+        };
+      } else {
+        return {
+          success: false,
+          error:
+            'Сервер вернул неверный формат данных. Убедитесь, что Netlify Functions запущены (netlify dev).',
+        };
+      }
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
       return {
         success: false,
-        error: errorData.error || `HTTP ${response.status}`,
-        message: errorData.message,
+        error:
+          'Сервер вернул неверный формат данных. Убедитесь, что Netlify Functions запущены (netlify dev).',
       };
     }
 

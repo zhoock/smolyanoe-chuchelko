@@ -1,0 +1,26 @@
+@use '../../scss/abstracts/mixins' as *;
+
+.admin-text-wrapper {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow-y: auto;
+  padding: 0;
+
+  // Переопределяем стили AdminText для работы внутри дашборда
+  :global {
+    .admin-text {
+      padding-block: 0;
+      background: transparent;
+
+      .wrapper {
+        max-inline-size: 100%;
+        padding: 24px;
+
+        @include breakpoint(tablet) {
+          padding: 32px;
+        }
+      }
+    }
+  }
+}
