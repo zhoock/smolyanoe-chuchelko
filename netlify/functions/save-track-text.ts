@@ -60,20 +60,27 @@ export const handler: Handler = async (
       }
 
       // Сохраняем текст в БД
-      // Используем таблицу synced_lyrics, но сохраняем только текст и авторство
-      // Если синхронизаций нет, synced_lyrics будет пустым массивом
+      // Преобразуем текст в массив строк для хранения в synced_lyrics
+      // Каждая строка текста становится элементом массива без тайм-кодов
+      const textLines = data.content
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((text) => ({ text, startTime: 0 })); // Без тайм-кодов, startTime = 0
+
       await query(
         `INSERT INTO synced_lyrics (album_id, track_id, lang, synced_lyrics, authorship, updated_at)
          VALUES ($1, $2, $3, $4::jsonb, $5, NOW())
          ON CONFLICT (album_id, track_id, lang)
          DO UPDATE SET 
+           synced_lyrics = $4::jsonb,
            authorship = $5,
            updated_at = NOW()`,
         [
           data.albumId,
           String(data.trackId),
           data.lang,
-          JSON.stringify([]), // Пустой массив синхронизаций, так как сохраняем только текст
+          JSON.stringify(textLines), // Массив строк текста
           data.authorship || null,
         ]
       );
