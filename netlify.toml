@@ -3,7 +3,6 @@
 
 [dev]
   command = "npm start" # команда для запуска вашего dev-сервера (например, React Dev Server)
-  framework = "custom" # кастомная сборка
   targetPort = 8080 # порт, на котором работает ваш webpack dev server
   port = 8888 # порт, на котором Netlify будет проксировать запросы
 
