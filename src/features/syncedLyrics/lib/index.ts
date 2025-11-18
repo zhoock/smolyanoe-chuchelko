@@ -1,5 +1,38 @@
 import type { SyncedLyricsLine } from '@models';
 
+// Простой in-memory кэш для синхронизаций (TTL: 5 минут)
+interface CacheEntry {
+  data: SyncedLyricsLine[] | null;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут в миллисекундах
+
+function getCacheKey(albumId: string, trackId: string | number, lang: string): string {
+  return `${albumId}-${trackId}-${lang}`;
+}
+
+function getCachedData(key: string): SyncedLyricsLine[] | null | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+
+  const now = Date.now();
+  if (now - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return undefined;
+  }
+
+  return entry.data;
+}
+
+function setCachedData(key: string, data: SyncedLyricsLine[] | null): void {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+  });
+}
+
 export interface SaveSyncedLyricsRequest {
   albumId: string;
   trackId: string | number;
@@ -85,6 +118,8 @@ export async function saveSyncedLyrics(
         linesCount: data.syncedLyrics.length,
         hasAuthorship: data.authorship !== undefined,
       });
+      // Очищаем кэш для этого трека, чтобы при следующей загрузке получить актуальные данные
+      clearSyncedLyricsCache(data.albumId, data.trackId, data.lang);
     }
 
     return result;
@@ -107,6 +142,13 @@ export async function loadSyncedLyricsFromStorage(
   trackId: string | number,
   lang: string
 ): Promise<SyncedLyricsLine[] | null> {
+  // Проверяем кэш
+  const cacheKey = getCacheKey(albumId, trackId, lang);
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData !== undefined) {
+    return cachedData;
+  }
+
   // Загружаем из БД через API
   try {
     const params = new URLSearchParams({
@@ -163,11 +205,15 @@ export async function loadSyncedLyricsFromStorage(
 
       const result = await response.json();
 
+      let syncedLyrics: SyncedLyricsLine[] | null = null;
       if (result.success && result.data && result.data.syncedLyrics) {
-        return result.data.syncedLyrics as SyncedLyricsLine[];
+        syncedLyrics = result.data.syncedLyrics as SyncedLyricsLine[];
       }
 
-      return null;
+      // Сохраняем в кэш (включая null для 404)
+      setCachedData(cacheKey, syncedLyrics);
+
+      return syncedLyrics;
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
