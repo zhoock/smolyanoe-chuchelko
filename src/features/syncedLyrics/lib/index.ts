@@ -9,6 +9,54 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 минут в миллисекундах
 
+// Глобальная очередь запросов для ограничения параллелизма
+// Это предотвращает перегрузку Supabase pooler множественными одновременными запросами
+interface QueuedRequest {
+  resolve: (value: SyncedLyricsLine[] | null) => void;
+  reject: (error: Error) => void;
+  execute: () => Promise<SyncedLyricsLine[] | null>;
+}
+
+const requestQueue: QueuedRequest[] = [];
+let isProcessingQueue = false;
+const MAX_CONCURRENT_REQUESTS = 1; // Только 1 запрос одновременно
+
+async function processQueue(): Promise<void> {
+  if (isProcessingQueue || requestQueue.length === 0) {
+    return;
+  }
+
+  isProcessingQueue = true;
+
+  while (requestQueue.length > 0) {
+    const request = requestQueue.shift();
+    if (!request) break;
+
+    try {
+      const result = await request.execute();
+      request.resolve(result);
+    } catch (error) {
+      request.reject(error instanceof Error ? error : new Error('Unknown error'));
+    }
+
+    // Задержка между запросами для снижения нагрузки на pooler
+    if (requestQueue.length > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  isProcessingQueue = false;
+}
+
+function queueRequest(
+  execute: () => Promise<SyncedLyricsLine[] | null>
+): Promise<SyncedLyricsLine[] | null> {
+  return new Promise((resolve, reject) => {
+    requestQueue.push({ resolve, reject, execute });
+    processQueue();
+  });
+}
+
 function getCacheKey(albumId: string, trackId: string | number, lang: string): string {
   return `${albumId}-${trackId}-${lang}`;
 }
@@ -168,182 +216,198 @@ export async function loadSyncedLyricsFromStorage(
     return cachedData;
   }
 
-  // Загружаем из БД через API
-  try {
-    const params = new URLSearchParams({
-      albumId,
-      trackId: String(trackId),
-      lang,
-    });
-
-    // Добавляем таймаут для запроса (10 секунд)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    // Если передан signal извне, объединяем его с таймаутом
-    // Используем внешний signal, если он есть, иначе используем controller
-    const finalSignal = signal || controller.signal;
-
-    // Если передан внешний signal, отменяем наш controller при его отмене
-    if (signal) {
-      signal.addEventListener('abort', () => {
-        controller.abort();
-        clearTimeout(timeoutId);
-      });
-    }
-
+  // Добавляем запрос в очередь для ограничения параллелизма
+  return queueRequest(async () => {
+    // Загружаем из БД через API
     try {
-      const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
-        cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-        signal: finalSignal,
+      const params = new URLSearchParams({
+        albumId,
+        trackId: String(trackId),
+        lang,
       });
-      clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null; // Синхронизации не найдены
+      // Добавляем таймаут для запроса (10 секунд)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      // Если передан signal извне, объединяем его с таймаутом
+      // Используем внешний signal, если он есть, иначе используем controller
+      const finalSignal = signal || controller.signal;
+
+      // Если передан внешний signal, отменяем наш controller при его отмене
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          controller.abort();
+          clearTimeout(timeoutId);
+        });
+      }
+
+      try {
+        const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+          signal: finalSignal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            return null; // Синхронизации не найдены
+          }
+          // Для 500 ошибок не бросаем исключение, просто возвращаем null
+          // чтобы не вызывать бесконечные повторные запросы
+          if (response.status === 500) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('⚠️ Сервер вернул ошибку 500, пропускаем загрузку синхронизаций');
+            }
+            return null;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        // Для 500 ошибок не бросаем исключение, просто возвращаем null
-        // чтобы не вызывать бесконечные повторные запросы
-        if (response.status === 500) {
+
+        // Проверяем, что ответ действительно JSON, а не HTML
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          // В dev режиме, если функция не задеплоена на production, просто возвращаем null
           if (process.env.NODE_ENV === 'development') {
-            console.warn('⚠️ Сервер вернул ошибку 500, пропускаем загрузку синхронизаций');
+            console.warn(
+              '⚠️ API возвращает HTML вместо JSON. Функция synced-lyrics не задеплоена на production. Нужно задеплоить проект на Netlify.'
+            );
+            return null;
+          }
+          const text = await response.text();
+          console.error('❌ Ожидался JSON, но получен:', contentType, text.substring(0, 100));
+          throw new Error(
+            `Invalid content type: ${contentType}. Возможно, прокси не работает правильно.`
+          );
+        }
+
+        const result = await response.json();
+
+        let syncedLyrics: SyncedLyricsLine[] | null = null;
+        if (result.success && result.data && result.data.syncedLyrics) {
+          syncedLyrics = result.data.syncedLyrics as SyncedLyricsLine[];
+        }
+
+        // Сохраняем в кэш (включая null для 404)
+        setCachedData(cacheKey, syncedLyrics);
+
+        return syncedLyrics;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ Запрос синхронизаций превысил таймаут');
           }
           return null;
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw fetchError;
       }
-
-      // Проверяем, что ответ действительно JSON, а не HTML
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // В dev режиме, если функция не задеплоена на production, просто возвращаем null
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(
-            '⚠️ API возвращает HTML вместо JSON. Функция synced-lyrics не задеплоена на production. Нужно задеплоить проект на Netlify.'
-          );
-          return null;
-        }
-        const text = await response.text();
-        console.error('❌ Ожидался JSON, но получен:', contentType, text.substring(0, 100));
-        throw new Error(
-          `Invalid content type: ${contentType}. Возможно, прокси не работает правильно.`
-        );
+    } catch (error) {
+      // Не логируем ошибки как критические, чтобы не засорять консоль
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ Ошибка загрузки синхронизаций из БД:', error);
       }
-
-      const result = await response.json();
-
-      let syncedLyrics: SyncedLyricsLine[] | null = null;
-      if (result.success && result.data && result.data.syncedLyrics) {
-        syncedLyrics = result.data.syncedLyrics as SyncedLyricsLine[];
-      }
-
-      // Сохраняем в кэш (включая null для 404)
-      setCachedData(cacheKey, syncedLyrics);
-
-      return syncedLyrics;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('⚠️ Запрос синхронизаций превысил таймаут');
-        }
-        return null;
-      }
-      throw fetchError;
+      return null;
     }
-  } catch (error) {
-    // Не логируем ошибки как критические, чтобы не засорять консоль
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ Ошибка загрузки синхронизаций из БД:', error);
-    }
-    return null;
-  }
+  });
 }
 
 export async function loadAuthorshipFromStorage(
   albumId: string,
   trackId: string | number,
-  lang: string
+  lang: string,
+  signal?: AbortSignal
 ): Promise<string | null> {
-  // Загружаем из БД через API
-  try {
-    const params = new URLSearchParams({
-      albumId,
-      trackId: String(trackId),
-      lang,
-    });
-
-    // Добавляем таймаут для запроса (10 секунд)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+  // Добавляем запрос в очередь для ограничения параллелизма
+  return queueRequest(async () => {
+    // Загружаем из БД через API
     try {
-      const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
-        cache: 'no-cache',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-        signal: controller.signal,
+      const params = new URLSearchParams({
+        albumId,
+        trackId: String(trackId),
+        lang,
       });
-      clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null; // Синхронизации не найдены
+      // Добавляем таймаут для запроса (10 секунд)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      // Если передан signal извне, объединяем его с таймаутом
+      const finalSignal = signal || controller.signal;
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          controller.abort();
+          clearTimeout(timeoutId);
+        });
+      }
+
+      try {
+        const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+          signal: finalSignal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            return null; // Синхронизации не найдены
+          }
+          // Для 500 ошибок не бросаем исключение, просто возвращаем null
+          if (response.status === 500) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('⚠️ Сервер вернул ошибку 500, пропускаем загрузку авторства');
+            }
+            return null;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        // Для 500 ошибок не бросаем исключение, просто возвращаем null
-        if (response.status === 500) {
+
+        // Проверяем, что ответ действительно JSON, а не HTML
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          // В dev режиме, если функция не задеплоена на production, просто возвращаем null
           if (process.env.NODE_ENV === 'development') {
-            console.warn('⚠️ Сервер вернул ошибку 500, пропускаем загрузку авторства');
+            console.warn(
+              '⚠️ API возвращает HTML вместо JSON. Функция synced-lyrics не задеплоена на production. Нужно задеплоить проект на Netlify.'
+            );
+            return null;
+          }
+          const text = await response.text();
+          console.error('❌ Ожидался JSON, но получен:', contentType, text.substring(0, 100));
+          throw new Error(
+            `Invalid content type: ${contentType}. Возможно, прокси не работает правильно.`
+          );
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.authorship) {
+          return result.data.authorship;
+        }
+
+        return null;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ Запрос авторства превысил таймаут');
           }
           return null;
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw fetchError;
       }
-
-      // Проверяем, что ответ действительно JSON, а не HTML
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // В dev режиме, если функция не задеплоена на production, просто возвращаем null
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(
-            '⚠️ API возвращает HTML вместо JSON. Функция synced-lyrics не задеплоена на production. Нужно задеплоить проект на Netlify.'
-          );
-          return null;
-        }
-        const text = await response.text();
-        console.error('❌ Ожидался JSON, но получен:', contentType, text.substring(0, 100));
-        throw new Error(
-          `Invalid content type: ${contentType}. Возможно, прокси не работает правильно.`
-        );
+    } catch (error) {
+      // Не логируем ошибки как критические, чтобы не засорять консоль
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ Ошибка загрузки авторства из БД:', error);
       }
-
-      const result = await response.json();
-
-      if (result.success && result.data && result.data.authorship) {
-        return result.data.authorship;
-      }
-
       return null;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('⚠️ Запрос авторства превысил таймаут');
-        }
-        return null;
-      }
-      throw fetchError;
     }
-  } catch (error) {
-    // Не логируем ошибки как критические, чтобы не засорять консоль
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ Ошибка загрузки авторства из БД:', error);
-    }
-    return null;
-  }
+  }).then((result) => (typeof result === 'string' ? result : null));
 }
