@@ -173,16 +173,20 @@ export default function DashboardAlbumsOverview({
       const statsMap = new Map<string, AlbumStats>();
       // Используем текущий albums из замыкания
       const currentAlbums = albums;
-      await Promise.all(
-        currentAlbums.map(async (album) => {
-          if (album.albumId && !cancelled && !abortController.signal.aborted) {
-            const stats = await calculateAlbumStats(album, lang, abortController.signal);
-            if (!cancelled && !abortController.signal.aborted) {
-              statsMap.set(album.albumId, stats);
-            }
+      // Обрабатываем альбомы последовательно, чтобы не перегружать Supabase pooler
+      // Каждый альбом обрабатывает треки последовательно, но альбомы тоже обрабатываем последовательно
+      for (const album of currentAlbums) {
+        if (album.albumId && !cancelled && !abortController.signal.aborted) {
+          const stats = await calculateAlbumStats(album, lang, abortController.signal);
+          if (!cancelled && !abortController.signal.aborted) {
+            statsMap.set(album.albumId, stats);
           }
-        })
-      );
+          // Задержка между альбомами для снижения нагрузки
+          if (!cancelled && !abortController.signal.aborted) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        }
+      }
       if (!cancelled && !abortController.signal.aborted) {
         setAlbumsStats(statsMap);
       }
