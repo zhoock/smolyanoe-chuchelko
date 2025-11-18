@@ -105,6 +105,7 @@ export const handler: Handler = async (
       }
 
       // Получаем публичные статьи или статьи текущего пользователя
+      // Публичные статьи имеют user_id = NULL и is_public = true
       const articlesResult = await query<ArticleRow>(
         `SELECT 
           article_id,
@@ -116,9 +117,12 @@ export const handler: Handler = async (
           lang
         FROM articles
         WHERE lang = $1
-          AND (is_public = true OR user_id = $2)
+          AND (
+            (user_id IS NULL AND is_public = true)
+            OR (user_id IS NOT NULL AND user_id = $2)
+          )
         ORDER BY date DESC`,
-        [lang, userId],
+        [lang, userId || null],
         0
       );
 
