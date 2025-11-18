@@ -13,7 +13,6 @@ import {
   DashboardAlbumBuilder,
 } from '@widgets/dashboardEditors';
 import { isAuthenticated, getUser, logout } from '@shared/lib/auth';
-import { claimUserData } from '@entities/user/lib';
 import './UserDashboard.style.scss';
 
 type DashboardTab = 'albums' | 'payments' | string; // Расширяемый тип для будущих вкладок
@@ -45,11 +44,6 @@ export function UserDashboard() {
 
   // Состояние для открытия builder (создание нового альбома)
   const [isBuilderOpen, setIsBuilderOpen] = useState<boolean>(false);
-  const [isClaimingData, setIsClaimingData] = useState(false);
-  const [hasClaimedData, setHasClaimedData] = useState(false);
-  const [claimFeedback, setClaimFeedback] = useState<{ message: string; isError?: boolean } | null>(
-    null
-  );
 
   // Конфигурация вкладок - легко расширяется добавлением новых объектов
   const tabs: TabConfig[] = [
@@ -173,92 +167,6 @@ export function UserDashboard() {
     setSelectedTrack(null);
   };
 
-  const handleClaimData = useCallback(async () => {
-    if (typeof window !== 'undefined') {
-      const confirmMessage =
-        lang === 'en'
-          ? 'Make all current albums, tracks, synced lyrics and articles private for your account?'
-          : 'Сделать текущие альбомы, треки, синхронизации и статьи приватными для вашего аккаунта?';
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
-    }
-
-    setIsClaimingData(true);
-    setClaimFeedback(null);
-
-    try {
-      const result = await claimUserData({ makePrivate: true });
-      if (result.success) {
-        const updated = result.updated || { albums: 0, tracks: 0, syncedLyrics: 0, articles: 0 };
-        const totalUpdated =
-          updated.albums + updated.tracks + updated.syncedLyrics + updated.articles;
-
-        if (totalUpdated > 0) {
-          // Данные были успешно привязаны
-          const summary =
-            lang === 'en'
-              ? `Albums: ${updated.albums}, Tracks: ${updated.tracks}, Synced lyrics: ${updated.syncedLyrics}, Articles: ${updated.articles}`
-              : `Альбомы: ${updated.albums}, Треки: ${updated.tracks}, Синхронизации: ${updated.syncedLyrics}, Статьи: ${updated.articles}`;
-          setClaimFeedback({
-            message:
-              (result.message ||
-                (lang === 'en'
-                  ? 'Data has been linked to your account.'
-                  : 'Данные привязаны к вашему аккаунту.')) + ` ${summary}`,
-          });
-          setHasClaimedData(true);
-          // Перезагружаем страницу через 2 секунды для обновления данных
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        } else {
-          // Данных для привязки нет (уже все привязано)
-          setClaimFeedback({
-            message:
-              result.message ||
-              (lang === 'en'
-                ? 'All data is already linked to your account.'
-                : 'Все данные уже привязаны к вашему аккаунту.'),
-            isError: false,
-          });
-          setHasClaimedData(true);
-          // Автоматически скрываем сообщение через 5 секунд
-          setTimeout(() => {
-            setClaimFeedback(null);
-          }, 5000);
-        }
-      } else {
-        setClaimFeedback({
-          message:
-            result.error ||
-            (lang === 'en'
-              ? 'Unable to claim data for the current user.'
-              : 'Не удалось привязать данные к текущему пользователю.'),
-          isError: true,
-        });
-        // Автоматически скрываем сообщение об ошибке через 7 секунд
-        setTimeout(() => {
-          setClaimFeedback(null);
-        }, 7000);
-      }
-    } catch (error) {
-      setClaimFeedback({
-        message:
-          lang === 'en'
-            ? `Error: ${(error as Error).message}`
-            : `Ошибка: ${(error as Error).message}`,
-        isError: true,
-      });
-      // Автоматически скрываем сообщение об ошибке через 7 секунд
-      setTimeout(() => {
-        setClaimFeedback(null);
-      }, 7000);
-    } finally {
-      setIsClaimingData(false);
-    }
-  }, [lang]);
-
   const isDetailViewOpen = selectedAlbumId !== null || selectedTrack !== null || isBuilderOpen;
 
   if (!isUserAuthenticated || !userId) {
@@ -375,31 +283,6 @@ export function UserDashboard() {
             <div className="user-dashboard__header-actions">
               <button
                 type="button"
-                className="user-dashboard__claim-button"
-                onClick={handleClaimData}
-                disabled={isClaimingData || hasClaimedData}
-                title={
-                  hasClaimedData
-                    ? lang === 'en'
-                      ? 'Data already claimed'
-                      : 'Данные уже привязаны'
-                    : undefined
-                }
-              >
-                {isClaimingData
-                  ? lang === 'en'
-                    ? 'Processing...'
-                    : 'Обработка...'
-                  : hasClaimedData
-                    ? lang === 'en'
-                      ? 'Already claimed'
-                      : 'Уже привязано'
-                    : lang === 'en'
-                      ? 'Make private'
-                      : 'Сделать приватным'}
-              </button>
-              <button
-                type="button"
                 className="user-dashboard__logout-button"
                 onClick={() => {
                   logout();
@@ -415,17 +298,6 @@ export function UserDashboard() {
                 className="user-dashboard__close"
               />
             </div>
-
-            {claimFeedback && (
-              <div
-                className={`user-dashboard__notice ${
-                  claimFeedback.isError ? 'user-dashboard__notice--error' : ''
-                }`}
-                role="status"
-              >
-                {claimFeedback.message}
-              </div>
-            )}
 
             {/* Кнопка "Назад" - показывается только когда открыт альбом или синхронизация */}
             {isDetailViewOpen && (

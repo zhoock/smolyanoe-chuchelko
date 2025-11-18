@@ -14,18 +14,6 @@ export interface UserProfileResponse {
   error?: string;
 }
 
-export interface ClaimUserDataResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-  updated?: {
-    albums: number;
-    tracks: number;
-    syncedLyrics: number;
-    articles: number;
-  };
-}
-
 /**
  * Загружает описание группы (theBand) из БД для текущего пользователя
  */
@@ -117,66 +105,6 @@ export async function saveTheBandToDatabase(
     }
 
     const result = await response.json();
-    return result;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-}
-
-/**
- * Привязывает все публичные данные к текущему пользователю
- */
-export async function claimUserData(options?: {
-  makePrivate?: boolean;
-}): Promise<ClaimUserDataResponse> {
-  try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
-
-    const response = await fetch('/api/claim-user-data', {
-      method: 'POST',
-      cache: 'no-cache',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        ...authHeader,
-      },
-      body: JSON.stringify({
-        makePrivate: options?.makePrivate ?? true,
-      }),
-    });
-
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-      try {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          if (errorData.error || errorData.message) {
-            errorMessage = errorData.error || errorData.message || errorMessage;
-          }
-        } else {
-          const text = await response.text();
-          if (text) {
-            errorMessage = text.substring(0, 200);
-          }
-        }
-      } catch (parseError) {
-        console.warn('⚠️ Не удалось распарсить ответ об ошибке (claim-user-data):', parseError);
-      }
-      throw new Error(errorMessage);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Invalid content type: expected JSON');
-    }
-
-    const result: ClaimUserDataResponse = await response.json();
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
