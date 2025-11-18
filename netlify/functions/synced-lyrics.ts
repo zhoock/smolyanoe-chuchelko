@@ -50,6 +50,11 @@ export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
+  // Устанавливаем таймаут для функции (9 секунд, чтобы уложиться в лимит Netlify)
+  const functionTimeout = setTimeout(() => {
+    console.error('⚠️ Function timeout - returning 504');
+  }, 9000);
+
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -83,9 +88,11 @@ export const handler: Handler = async (
         };
       }
 
+      // Добавляем LIMIT 1 для оптимизации запроса
       const result = await query<SyncedLyricsRow>(
-        'SELECT synced_lyrics, authorship FROM synced_lyrics WHERE album_id = $1 AND track_id = $2 AND lang = $3',
-        [albumId, String(trackId), lang]
+        'SELECT synced_lyrics, authorship FROM synced_lyrics WHERE album_id = $1 AND track_id = $2 AND lang = $3 LIMIT 1',
+        [albumId, String(trackId), lang],
+        0 // Без retry для GET запросов - они должны быть быстрыми
       );
 
       if (result.rows.length === 0) {
@@ -130,6 +137,7 @@ export const handler: Handler = async (
       }
 
       // Сохраняем в БД (UPSERT)
+      // Без retry для POST - они должны быть быстрыми или упасть сразу
       await query(
         `INSERT INTO synced_lyrics (album_id, track_id, lang, synced_lyrics, authorship, updated_at)
          VALUES ($1, $2, $3, $4::jsonb, $5, NOW())
@@ -144,7 +152,8 @@ export const handler: Handler = async (
           data.lang,
           JSON.stringify(data.syncedLyrics),
           data.authorship || null,
-        ]
+        ],
+        0 // Без retry для POST запросов
       );
 
       console.log('✅ Synced lyrics saved to database:', {
@@ -174,10 +183,16 @@ export const handler: Handler = async (
       } as SyncedLyricsResponse),
     };
   } catch (error) {
+    clearTimeout(functionTimeout);
     console.error('❌ Error in synced-lyrics function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    // Проверяем, не таймаут ли это
+    const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('terminated');
+    const statusCode = isTimeout ? 504 : 500;
+
     return {
-      statusCode: 500,
+      statusCode,
       headers,
       body: JSON.stringify({
         success: false,
@@ -185,5 +200,7 @@ export const handler: Handler = async (
         message: errorMessage, // Добавляем message для совместимости с клиентом
       } as SyncedLyricsResponse),
     };
+  } finally {
+    clearTimeout(functionTimeout);
   }
 };

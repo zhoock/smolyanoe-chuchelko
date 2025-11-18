@@ -22,7 +22,7 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 30000, // Увеличено до 30 секунд для стабильности
+      connectionTimeoutMillis: 5000, // Уменьшено до 5 секунд, так как Netlify Functions имеют лимит 10-26 секунд
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
 
@@ -40,24 +40,35 @@ function getPool(): Pool {
 export async function query<T = any>(
   text: string,
   params?: any[],
-  retries = 2
+  retries = 1 // Уменьшено количество retry для скорости
 ): Promise<QueryResult<T>> {
   const pool = getPool();
   const start = Date.now();
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const result = await pool.query<T>(text, params);
+      // Используем Promise.race для таймаута запроса (7 секунд)
+      // Это гарантирует, что запрос не будет выполняться дольше
+      const queryPromise = pool.query<T>(text, params);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Query timeout after 7 seconds')), 7000);
+      });
+
+      const result = await Promise.race([queryPromise, timeoutPromise]);
       const duration = Date.now() - start;
 
       if (attempt > 0) {
         console.log(`✅ Executed query (retry ${attempt})`, {
-          text,
+          text: text.substring(0, 100), // Ограничиваем длину лога
           duration,
           rows: result.rowCount,
         });
       } else {
-        console.log('✅ Executed query', { text, duration, rows: result.rowCount });
+        console.log('✅ Executed query', {
+          text: text.substring(0, 100),
+          duration,
+          rows: result.rowCount,
+        });
       }
 
       return result;
@@ -72,8 +83,8 @@ export async function query<T = any>(
           error.message.includes('ENOTFOUND'));
 
       if (isConnectionError && !isLastAttempt) {
-        // Ждем перед повторной попыткой (экспоненциальная задержка)
-        const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+        // Уменьшенная задержка для retry (без экспоненциального роста)
+        const delay = 500; // Всего 500мс задержка
         console.warn(
           `⚠️ Connection error, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
           {
@@ -84,7 +95,12 @@ export async function query<T = any>(
         continue;
       }
 
-      console.error('❌ Query error', { text, duration, error, attempt });
+      console.error('❌ Query error', {
+        text: text.substring(0, 100),
+        duration,
+        error: error instanceof Error ? error.message : error,
+        attempt,
+      });
       throw error;
     }
   }
