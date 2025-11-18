@@ -11,7 +11,7 @@ let pool: Pool | null = null;
  */
 function getPool(): Pool {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL;
+    let connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {
       console.error('❌ DATABASE_URL is not set!');
@@ -20,10 +20,22 @@ function getPool(): Pool {
 
     console.log('🔌 Initializing database pool...');
 
-    // Логируем информацию о подключении (без пароля!)
+    // Конвертируем pooler connection string в прямой для Supabase
+    // Pooler имеет лимиты на одновременные соединения, что вызывает таймауты
+    // Прямое соединение более надежно для serverless функций
     try {
       const url = new URL(connectionString);
       const isSupabase = url.hostname.includes('supabase.com');
+      const isPooler = url.hostname.includes('.pooler.');
+
+      // Если это Supabase pooler, конвертируем в прямое соединение
+      if (isSupabase && isPooler) {
+        // Заменяем .pooler.supabase.com на .supabase.co
+        url.hostname = url.hostname.replace('.pooler.supabase.com', '.supabase.co');
+        connectionString = url.toString();
+        console.log('🔄 Converted pooler connection to direct connection for Supabase');
+      }
+
       // Supabase всегда требует SSL
       const useSSL = isSupabase || process.env.NODE_ENV === 'production';
 
@@ -34,6 +46,7 @@ function getPool(): Pool {
         user: url.username,
         hasPassword: !!url.password,
         isSupabase,
+        wasPooler: isPooler,
         ssl: useSSL ? 'required' : 'disabled',
       });
     } catch (urlError) {
@@ -43,7 +56,8 @@ function getPool(): Pool {
     // Определяем, нужен ли SSL
     // Supabase всегда требует SSL, даже в development
     const connectionUrl = connectionString.toLowerCase();
-    const isSupabase = connectionUrl.includes('supabase.com');
+    const isSupabase =
+      connectionUrl.includes('supabase.com') || connectionUrl.includes('supabase.co');
     const useSSL = isSupabase || process.env.NODE_ENV === 'production';
 
     pool = new Pool({
@@ -51,7 +65,7 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000, // Уменьшено до 5 секунд - быстрее получаем ошибку и освобождаем слоты
+      connectionTimeoutMillis: 10000, // Увеличено до 10 секунд для прямого соединения
       ssl: useSSL ? { rejectUnauthorized: false } : false,
     });
 
