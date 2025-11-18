@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import { getJSON } from '@shared/api/http';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IAlbums } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
@@ -27,55 +26,52 @@ export const fetchAlbums = createAsyncThunk<
   'albums/fetchByLang',
   async ({ lang }, { signal, rejectWithValue }) => {
     try {
-      // Сначала пытаемся загрузить из БД через API
-      try {
-        const response = await fetch(`/api/albums?lang=${lang}`, {
-          signal,
-          cache: 'no-cache',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        });
+      // Загружаем из БД через API
+      const response = await fetch(`/api/albums?lang=${lang}`, {
+        signal,
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
 
-        if (response.ok) {
-          const result = await response.json();
-          if (
-            result.success &&
-            result.data &&
-            Array.isArray(result.data) &&
-            result.data.length > 0
-          ) {
-            // Преобразуем данные из API в формат IAlbums
-            const albums: IAlbums[] = result.data.map((album: any) => ({
-              albumId: album.albumId,
-              artist: album.artist,
-              album: album.album,
-              fullName: album.fullName,
-              description: album.description,
-              cover: album.cover,
-              release: album.release,
-              buttons: album.buttons,
-              details: album.details,
-              tracks: album.tracks.map((track: any) => ({
-                id: track.id,
-                title: track.title,
-                duration: track.duration,
-                src: track.src,
-                content: track.content,
-                authorship: track.authorship,
-                syncedLyrics: track.syncedLyrics,
-              })),
-            }));
-            return albums;
-          }
-        }
-      } catch (apiError) {
-        // Если API недоступен, используем fallback на JSON
-        console.warn('⚠️ API недоступен, используем JSON fallback:', apiError);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch albums. Status: ${response.status}`);
       }
 
-      // Fallback: загружаем из JSON (для обратной совместимости)
-      const albums = await getJSON<IAlbums[]>(`albums-${lang}.json`, signal);
+      const result = await response.json();
+
+      if (!result.success || !result.data || !Array.isArray(result.data)) {
+        throw new Error('Invalid response from API');
+      }
+
+      // Если данных нет, возвращаем пустой массив
+      if (result.data.length === 0) {
+        return [];
+      }
+
+      // Преобразуем данные из API в формат IAlbums
+      const albums: IAlbums[] = result.data.map((album: any) => ({
+        albumId: album.albumId,
+        artist: album.artist,
+        album: album.album,
+        fullName: album.fullName,
+        description: album.description,
+        cover: album.cover,
+        release: album.release,
+        buttons: album.buttons,
+        details: album.details,
+        tracks: album.tracks.map((track: any) => ({
+          id: track.id,
+          title: track.title,
+          duration: track.duration,
+          src: track.src,
+          content: track.content,
+          authorship: track.authorship,
+          syncedLyrics: track.syncedLyrics,
+        })),
+      }));
+
       return albums;
     } catch (error) {
       if (error instanceof Error) {
