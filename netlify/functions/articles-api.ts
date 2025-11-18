@@ -106,8 +106,9 @@ export const handler: Handler = async (
 
       // Получаем публичные статьи или статьи текущего пользователя
       // Публичные статьи имеют user_id = NULL и is_public = true
+      // Важно: используем DISTINCT ON для исключения дубликатов по article_id
       const articlesResult = await query<ArticleRow>(
-        `SELECT 
+        `SELECT DISTINCT ON (article_id)
           article_id,
           name_article,
           description,
@@ -121,7 +122,7 @@ export const handler: Handler = async (
             (user_id IS NULL AND is_public = true)
             OR (user_id IS NOT NULL AND user_id = $2)
           )
-        ORDER BY date DESC`,
+        ORDER BY article_id, user_id NULLS LAST, date DESC`,
         [lang, userId || null],
         0
       );

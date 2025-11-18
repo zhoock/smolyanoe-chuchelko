@@ -180,6 +180,27 @@ WHERE id IN (
 );
 `;
 
+const MIGRATION_009 = `
+-- Миграция: Удаление дубликатов статей
+-- Оставляет только одну запись для каждого article_id + lang
+-- Приоритет: публичные статьи (user_id IS NULL)
+DELETE FROM articles
+WHERE id IN (
+  SELECT id
+  FROM (
+    SELECT id,
+           ROW_NUMBER() OVER (
+             PARTITION BY article_id, lang 
+             ORDER BY 
+               CASE WHEN user_id IS NULL THEN 0 ELSE 1 END,
+               created_at ASC
+           ) as rn
+    FROM articles
+  ) t
+  WHERE rn > 1
+);
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -187,6 +208,7 @@ const MIGRATIONS: Record<string, string> = {
   '006_create_articles.sql': MIGRATION_006,
   '007_alter_articles_user_id_nullable.sql': MIGRATION_007,
   '008_remove_duplicate_albums.sql': MIGRATION_008,
+  '009_remove_duplicate_articles.sql': MIGRATION_009,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -320,6 +342,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '006_create_articles.sql',
       '007_alter_articles_user_id_nullable.sql',
       '008_remove_duplicate_albums.sql',
+      '009_remove_duplicate_articles.sql',
     ];
 
     const results: MigrationResult[] = [];
