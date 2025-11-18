@@ -104,14 +104,18 @@ export const handler: Handler = async (
       const userId = extractUserIdFromToken(event.headers.authorization);
 
       // Загружаем публичные альбомы (user_id IS NULL, is_public = true) и альбомы пользователя
+      // Важно: используем DISTINCT ON для исключения дубликатов по album_id
       const albumsResult = await query<AlbumRow>(
-        `SELECT 
+        `SELECT DISTINCT ON (a.album_id) 
           a.*
         FROM albums a
         WHERE a.lang = $1 
-          AND (a.is_public = true OR a.user_id = $2)
-        ORDER BY a.created_at DESC`,
-        [lang, userId]
+          AND (
+            (a.user_id IS NULL AND a.is_public = true)
+            OR (a.user_id IS NOT NULL AND a.user_id = $2)
+          )
+        ORDER BY a.album_id, a.user_id NULLS LAST, a.created_at DESC`,
+        [lang, userId || null]
       );
 
       // Загружаем треки для каждого альбома
