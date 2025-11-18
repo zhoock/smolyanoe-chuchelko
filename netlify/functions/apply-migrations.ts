@@ -201,6 +201,70 @@ WHERE id IN (
 );
 `;
 
+const MIGRATION_010 = `
+-- Миграция: Привязка всех публичных данных к владельцу сайта
+-- Владелец: zhoock@zhoock.ru
+-- Все публичные данные (user_id IS NULL) привязываются к этому пользователю
+-- Новые пользователи получат пустой сайт
+
+DO $$
+DECLARE
+  owner_user_id UUID;
+  albums_updated INTEGER;
+  tracks_updated INTEGER;
+  synced_lyrics_updated INTEGER;
+  articles_updated INTEGER;
+BEGIN
+  -- Находим ID пользователя-владельца по email
+  SELECT id INTO owner_user_id
+  FROM users
+  WHERE email = 'zhoock@zhoock.ru'
+  LIMIT 1;
+
+  -- Если пользователь не найден, создаём его
+  IF owner_user_id IS NULL THEN
+    INSERT INTO users (email, name, is_active)
+    VALUES ('zhoock@zhoock.ru', 'Site Owner', true)
+    RETURNING id INTO owner_user_id;
+  END IF;
+
+  -- Привязываем все публичные альбомы к владельцу и делаем их приватными
+  UPDATE albums
+  SET user_id = owner_user_id,
+      is_public = false,
+      updated_at = NOW()
+  WHERE user_id IS NULL;
+
+  GET DIAGNOSTICS albums_updated = ROW_COUNT;
+
+  -- Обновляем треки для привязанных альбомов
+  UPDATE tracks
+  SET updated_at = NOW()
+  WHERE album_id IN (
+    SELECT id FROM albums WHERE user_id = owner_user_id
+  );
+
+  GET DIAGNOSTICS tracks_updated = ROW_COUNT;
+
+  -- Привязываем все публичные синхронизации к владельцу
+  UPDATE synced_lyrics
+  SET user_id = owner_user_id,
+      updated_at = NOW()
+  WHERE user_id IS NULL;
+
+  GET DIAGNOSTICS synced_lyrics_updated = ROW_COUNT;
+
+  -- Привязываем все публичные статьи к владельцу и делаем их приватными
+  UPDATE articles
+  SET user_id = owner_user_id,
+      is_public = false,
+      updated_at = NOW()
+  WHERE user_id IS NULL;
+
+  GET DIAGNOSTICS articles_updated = ROW_COUNT;
+END $$;
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -209,6 +273,7 @@ const MIGRATIONS: Record<string, string> = {
   '007_alter_articles_user_id_nullable.sql': MIGRATION_007,
   '008_remove_duplicate_albums.sql': MIGRATION_008,
   '009_remove_duplicate_articles.sql': MIGRATION_009,
+  '010_claim_public_data_to_owner.sql': MIGRATION_010,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -343,6 +408,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '007_alter_articles_user_id_nullable.sql',
       '008_remove_duplicate_albums.sql',
       '009_remove_duplicate_articles.sql',
+      '010_claim_public_data_to_owner.sql',
     ];
 
     const results: MigrationResult[] = [];
