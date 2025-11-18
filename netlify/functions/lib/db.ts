@@ -20,22 +20,14 @@ function getPool(): Pool {
 
     console.log('🔌 Initializing database pool...');
 
-    // Конвертируем pooler connection string в прямой для Supabase
-    // Pooler имеет лимиты на одновременные соединения, что вызывает таймауты
-    // Прямое соединение более надежно для serverless функций
+    // Логируем информацию о подключении (без пароля!)
+    // НЕ конвертируем pooler → direct, так как правильный формат hostname неизвестен
+    // Используем DATABASE_URL как есть из Netlify env
     try {
       const url = new URL(connectionString);
-      const isSupabase = url.hostname.includes('supabase.com');
+      const isSupabase =
+        url.hostname.includes('supabase.com') || url.hostname.includes('supabase.co');
       const isPooler = url.hostname.includes('.pooler.');
-
-      // Если это Supabase pooler, конвертируем в прямое соединение
-      if (isSupabase && isPooler) {
-        // Заменяем .pooler.supabase.com на .supabase.com (убираем .pooler.)
-        url.hostname = url.hostname.replace('.pooler.supabase.com', '.supabase.com');
-        connectionString = url.toString();
-        console.log('🔄 Converted pooler connection to direct connection for Supabase');
-      }
-
       // Supabase всегда требует SSL
       const useSSL = isSupabase || process.env.NODE_ENV === 'production';
 
@@ -46,7 +38,7 @@ function getPool(): Pool {
         user: url.username,
         hasPassword: !!url.password,
         isSupabase,
-        wasPooler: isPooler,
+        isPooler,
         ssl: useSSL ? 'required' : 'disabled',
       });
     } catch (urlError) {
@@ -96,8 +88,9 @@ export async function query<T = any>(
     const pool = getPool();
     const start = Date.now();
     console.log('📊 Executing query:', {
-      text: text.substring(0, 100),
-      params: params?.length || 0,
+      text: text.substring(0, 200), // Увеличено до 200 символов, чтобы видеть полный запрос
+      params: params || [],
+      paramsCount: params?.length || 0,
     });
 
     for (let attempt = 0; attempt <= retries; attempt++) {
