@@ -20,6 +20,21 @@ function getPool(): Pool {
 
     console.log('🔌 Initializing database pool...');
 
+    // Логируем информацию о подключении (без пароля!)
+    try {
+      const url = new URL(connectionString);
+      console.log('🔌 Connecting to database:', {
+        host: url.hostname,
+        port: url.port || '5432',
+        database: url.pathname.replace('/', ''),
+        user: url.username,
+        hasPassword: !!url.password,
+        ssl: process.env.NODE_ENV === 'production' ? 'required' : 'disabled',
+      });
+    } catch (urlError) {
+      console.warn('⚠️ Could not parse DATABASE_URL:', urlError);
+    }
+
     pool = new Pool({
       connectionString,
       // Настройки для serverless environments
@@ -33,9 +48,27 @@ function getPool(): Pool {
       console.error('❌ Unexpected error on idle PostgreSQL client', err);
     });
 
-    pool.on('connect', () => {
+    pool.on('connect', (client) => {
       console.log('✅ Database connection established');
     });
+
+    // Пытаемся проверить соединение сразу
+    pool
+      .connect()
+      .then((client) => {
+        console.log('✅ Test connection successful');
+        client.release();
+      })
+      .catch((err) => {
+        console.error('❌ Test connection failed:', err.message);
+        console.error('❌ Connection error details:', {
+          code: err.code,
+          errno: err.errno,
+          syscall: err.syscall,
+          address: err.address,
+          port: err.port,
+        });
+      });
   }
 
   return pool;
