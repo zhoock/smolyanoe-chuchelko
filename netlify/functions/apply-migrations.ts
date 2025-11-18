@@ -156,14 +156,14 @@ async function applyMigration(migrationName: string, sql: string): Promise<Migra
       }
     }
 
-    console.log(`  ✅ Миграция ${fileName} применена успешно`);
-    return { success: true, migration: fileName };
+    console.log(`  ✅ Миграция ${migrationName} применена успешно`);
+    return { success: true, migration: migrationName };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`  ❌ Ошибка применения миграции ${fileName}:`, errorMessage);
+    console.error(`  ❌ Ошибка применения миграции ${migrationName}:`, errorMessage);
     return {
       success: false,
-      migration: fileName,
+      migration: migrationName,
       error: errorMessage,
     };
   }
