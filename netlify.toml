@@ -29,6 +29,13 @@
   status = 200
   force = true
 
+# API route для применения миграций БД (только для админов)
+[[redirects]]
+  from = "/api/apply-migrations*"
+  to = "/.netlify/functions/apply-migrations"
+  status = 200
+  force = true
+
 # API route для миграции JSON в БД (только для админов)
 [[redirects]]
   from = "/api/migrate-json-to-db*"
