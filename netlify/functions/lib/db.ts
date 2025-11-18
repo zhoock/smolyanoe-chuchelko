@@ -30,8 +30,8 @@ function getPool(): Pool {
 
       // Если это Supabase pooler, конвертируем в прямое соединение
       if (isSupabase && isPooler) {
-        // Заменяем .pooler.supabase.com на .supabase.co
-        url.hostname = url.hostname.replace('.pooler.supabase.com', '.supabase.co');
+        // Заменяем .pooler.supabase.com на .supabase.com (убираем .pooler.)
+        url.hostname = url.hostname.replace('.pooler.supabase.com', '.supabase.com');
         connectionString = url.toString();
         console.log('🔄 Converted pooler connection to direct connection for Supabase');
       }
