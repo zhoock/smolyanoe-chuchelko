@@ -23,17 +23,28 @@ function getPool(): Pool {
     // Логируем информацию о подключении (без пароля!)
     try {
       const url = new URL(connectionString);
+      const isSupabase = url.hostname.includes('supabase.com');
+      // Supabase всегда требует SSL
+      const useSSL = isSupabase || process.env.NODE_ENV === 'production';
+
       console.log('🔌 Connecting to database:', {
         host: url.hostname,
         port: url.port || '5432',
         database: url.pathname.replace('/', ''),
         user: url.username,
         hasPassword: !!url.password,
-        ssl: process.env.NODE_ENV === 'production' ? 'required' : 'disabled',
+        isSupabase,
+        ssl: useSSL ? 'required' : 'disabled',
       });
     } catch (urlError) {
       console.warn('⚠️ Could not parse DATABASE_URL:', urlError);
     }
+
+    // Определяем, нужен ли SSL
+    // Supabase всегда требует SSL, даже в development
+    const connectionUrl = connectionString.toLowerCase();
+    const isSupabase = connectionUrl.includes('supabase.com');
+    const useSSL = isSupabase || process.env.NODE_ENV === 'production';
 
     pool = new Pool({
       connectionString,
@@ -41,7 +52,7 @@ function getPool(): Pool {
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000, // Увеличено до 15 секунд для холодного старта и медленных соединений
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: useSSL ? { rejectUnauthorized: false } : false,
     });
 
     pool.on('error', (err) => {
@@ -91,19 +102,11 @@ export async function query<T = any>(
     });
 
     for (let attempt = 0; attempt <= retries; attempt++) {
-      let timeoutId: NodeJS.Timeout | null = null;
       try {
-        // Используем Promise.race для таймаута запроса (8 секунд для выполнения)
-        // Увеличено до 8 секунд, чтобы дать время на установление соединения (connectionTimeoutMillis = 10s)
-        const queryPromise = pool.query<T>(text, params);
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(new Error('Query timeout after 8 seconds'));
-          }, 8000);
-        });
-
-        const result = await Promise.race([queryPromise, timeoutPromise]);
-        if (timeoutId) clearTimeout(timeoutId);
+        // Убираем Promise.race - он мешает установлению соединения
+        // connectionTimeoutMillis уже управляет таймаутом подключения
+        // Даем запросу больше времени на выполнение (включая время на подключение)
+        const result = await pool.query<T>(text, params);
         const duration = Date.now() - start;
 
         if (attempt > 0) {
@@ -122,7 +125,6 @@ export async function query<T = any>(
 
         return result;
       } catch (error) {
-        if (timeoutId) clearTimeout(timeoutId);
         const duration = Date.now() - start;
         const isLastAttempt = attempt === retries;
         const isConnectionError =
