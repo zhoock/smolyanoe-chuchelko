@@ -40,7 +40,7 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // Увеличено до 10 секунд для холодного старта
+      connectionTimeoutMillis: 15000, // Увеличено до 15 секунд для холодного старта и медленных соединений
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
 
@@ -93,13 +93,13 @@ export async function query<T = any>(
     for (let attempt = 0; attempt <= retries; attempt++) {
       let timeoutId: NodeJS.Timeout | null = null;
       try {
-        // Используем Promise.race для таймаута запроса (5 секунд для выполнения)
-        // Это гарантирует, что запрос не будет выполняться дольше
+        // Используем Promise.race для таймаута запроса (8 секунд для выполнения)
+        // Увеличено до 8 секунд, чтобы дать время на установление соединения (connectionTimeoutMillis = 10s)
         const queryPromise = pool.query<T>(text, params);
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(() => {
-            reject(new Error('Query timeout after 5 seconds'));
-          }, 5000);
+            reject(new Error('Query timeout after 8 seconds'));
+          }, 8000);
         });
 
         const result = await Promise.race([queryPromise, timeoutPromise]);
