@@ -50,6 +50,20 @@
   status = 200
   force = true
 
+# API route для работы с профилем пользователя (theBand)
+[[redirects]]
+  from = "/api/user-profile*"
+  to = "/.netlify/functions/user-profile"
+  status = 200
+  force = true
+
+# API route для работы со статьями пользователей
+[[redirects]]
+  from = "/api/articles-api*"
+  to = "/.netlify/functions/articles-api"
+  status = 200
+  force = true
+
 # API routes для платежей ЮKassa
 [[redirects]]
   from = "/api/create-payment*"

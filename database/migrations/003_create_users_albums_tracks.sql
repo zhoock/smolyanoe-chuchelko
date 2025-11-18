@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255),
   password_hash TEXT, -- для будущей аутентификации
+  the_band JSONB, -- описание группы (массив строк) для индивидуального пользователя
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -21,6 +22,7 @@ COMMENT ON TABLE users IS 'Пользователи системы';
 COMMENT ON COLUMN users.id IS 'Уникальный идентификатор пользователя';
 COMMENT ON COLUMN users.email IS 'Email пользователя (уникальный)';
 COMMENT ON COLUMN users.name IS 'Имя пользователя';
+COMMENT ON COLUMN users.the_band IS 'Описание группы (массив строк) для индивидуального пользователя';
 COMMENT ON COLUMN users.is_active IS 'Активен ли пользователь';
 
 -- 2. Таблица альбомов

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255),
   password_hash TEXT,
+  the_band JSONB,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -105,23 +106,57 @@ ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE;
 
 CREATE INDEX IF NOT EXISTS idx_synced_lyrics_user_id ON synced_lyrics(user_id);
 
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_indexes 
-    WHERE indexname = 'synced_lyrics_album_id_track_id_lang_key'
-  ) THEN
-    DROP INDEX synced_lyrics_album_id_track_id_lang_key;
-  END IF;
-END $$;
+-- Удаляем старый constraint (CASCADE автоматически удалит связанный индекс)
+ALTER TABLE synced_lyrics 
+DROP CONSTRAINT IF EXISTS synced_lyrics_album_id_track_id_lang_key CASCADE;
 
-CREATE UNIQUE INDEX IF NOT EXISTS synced_lyrics_user_album_track_lang_unique 
-ON synced_lyrics(user_id, album_id, track_id, lang);
+ALTER TABLE synced_lyrics
+ADD CONSTRAINT synced_lyrics_user_album_track_lang_unique 
+UNIQUE (user_id, album_id, track_id, lang);
+`;
+
+const MIGRATION_005 = `
+-- Миграция: Добавление поля the_band в таблицу users
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS the_band JSONB;
+`;
+
+const MIGRATION_006 = `
+-- Миграция: Создание таблицы articles для пользовательских статей
+CREATE TABLE IF NOT EXISTS articles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  article_id VARCHAR(255) NOT NULL,
+  name_article VARCHAR(500) NOT NULL,
+  description TEXT,
+  img VARCHAR(500),
+  date DATE NOT NULL,
+  details JSONB NOT NULL,
+  lang VARCHAR(10) NOT NULL,
+  is_public BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, article_id, lang)
+);
+
+CREATE INDEX IF NOT EXISTS idx_articles_user_id ON articles(user_id);
+CREATE INDEX IF NOT EXISTS idx_articles_article_id ON articles(article_id);
+CREATE INDEX IF NOT EXISTS idx_articles_lang ON articles(lang);
+CREATE INDEX IF NOT EXISTS idx_articles_is_public ON articles(is_public);
+CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(date DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_user_article_lang ON articles(user_id, article_id, lang);
+
+CREATE TRIGGER update_articles_updated_at
+  BEFORE UPDATE ON articles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 `;
 
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
+  '005_add_the_band_to_users.sql': MIGRATION_005,
+  '006_create_articles.sql': MIGRATION_006,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -251,6 +286,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const migrationFiles = [
       '003_create_users_albums_tracks.sql',
       '004_add_user_id_to_synced_lyrics.sql',
+      '005_add_the_band_to_users.sql',
+      '006_create_articles.sql',
     ];
 
     const results: MigrationResult[] = [];

@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import { getJSON } from '@shared/api/http';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
@@ -27,7 +26,42 @@ export const fetchArticles = createAsyncThunk<
   'articles/fetchByLang',
   async ({ lang }, { signal, rejectWithValue }) => {
     try {
-      const articles = await getJSON<IArticles[]>(`articles-${lang}.json`, signal);
+      // Загружаем из БД через API
+      const response = await fetch(`/api/articles-api?lang=${lang}`, {
+        signal,
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          // TODO: Добавить Authorization header когда будет реализована аутентификация
+          // 'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch articles. Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success || !result.data || !Array.isArray(result.data)) {
+        throw new Error('Invalid response from API');
+      }
+
+      // Если данных нет, возвращаем пустой массив
+      if (result.data.length === 0) {
+        return [];
+      }
+
+      // Преобразуем данные из API в формат IArticles
+      const articles: IArticles[] = result.data.map((article: any) => ({
+        articleId: article.articleId,
+        nameArticle: article.nameArticle,
+        img: article.img,
+        date: article.date,
+        details: article.details || [],
+        description: article.description || '',
+      }));
+
       return articles;
     } catch (error) {
       if (error instanceof Error) {
