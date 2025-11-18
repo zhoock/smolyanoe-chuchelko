@@ -50,10 +50,13 @@ export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
-  // Устанавливаем таймаут для функции (9 секунд, чтобы уложиться в лимит Netlify)
-  const functionTimeout = setTimeout(() => {
-    console.error('⚠️ Function timeout - returning 504');
-  }, 9000);
+  const startTime = Date.now();
+
+  // Используем context.remainingTimeInMillis для Netlify Functions (если доступно)
+  // Оставляем запас в 2 секунды для обработки ответа
+  const maxExecutionTime = context.remainingTimeInMillis
+    ? context.remainingTimeInMillis - 2000
+    : 8000; // Fallback: 8 секунд
 
   // CORS headers
   const headers = {
@@ -183,12 +186,20 @@ export const handler: Handler = async (
       } as SyncedLyricsResponse),
     };
   } catch (error) {
-    clearTimeout(functionTimeout);
-    console.error('❌ Error in synced-lyrics function:', error);
+    const executionTime = Date.now() - startTime;
+    console.error('❌ Error in synced-lyrics function:', {
+      error: error instanceof Error ? error.message : error,
+      executionTime,
+      method: event.httpMethod,
+    });
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
     // Проверяем, не таймаут ли это
-    const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('terminated');
+    const isTimeout =
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('terminated') ||
+      executionTime >= maxExecutionTime;
     const statusCode = isTimeout ? 504 : 500;
 
     return {
@@ -200,7 +211,5 @@ export const handler: Handler = async (
         message: errorMessage, // Добавляем message для совместимости с клиентом
       } as SyncedLyricsResponse),
     };
-  } finally {
-    clearTimeout(functionTimeout);
   }
 };

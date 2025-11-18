@@ -14,20 +14,27 @@ function getPool(): Pool {
     const connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {
+      console.error('❌ DATABASE_URL is not set!');
       throw new Error('DATABASE_URL environment variable is not set');
     }
+
+    console.log('🔌 Initializing database pool...');
 
     pool = new Pool({
       connectionString,
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000, // Уменьшено до 5 секунд, так как Netlify Functions имеют лимит 10-26 секунд
+      connectionTimeoutMillis: 10000, // Увеличено до 10 секунд для холодного старта
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
 
     pool.on('error', (err) => {
       console.error('❌ Unexpected error on idle PostgreSQL client', err);
+    });
+
+    pool.on('connect', () => {
+      console.log('✅ Database connection established');
     });
   }
 
@@ -42,71 +49,88 @@ export async function query<T = any>(
   params?: any[],
   retries = 1 // Уменьшено количество retry для скорости
 ): Promise<QueryResult<T>> {
-  const pool = getPool();
-  const start = Date.now();
+  try {
+    const pool = getPool();
+    const start = Date.now();
+    console.log('📊 Executing query:', {
+      text: text.substring(0, 100),
+      params: params?.length || 0,
+    });
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      // Используем Promise.race для таймаута запроса (7 секунд)
-      // Это гарантирует, что запрос не будет выполняться дольше
-      const queryPromise = pool.query<T>(text, params);
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout after 7 seconds')), 7000);
-      });
-
-      const result = await Promise.race([queryPromise, timeoutPromise]);
-      const duration = Date.now() - start;
-
-      if (attempt > 0) {
-        console.log(`✅ Executed query (retry ${attempt})`, {
-          text: text.substring(0, 100), // Ограничиваем длину лога
-          duration,
-          rows: result.rowCount,
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      let timeoutId: NodeJS.Timeout | null = null;
+      try {
+        // Используем Promise.race для таймаута запроса (5 секунд для выполнения)
+        // Это гарантирует, что запрос не будет выполняться дольше
+        const queryPromise = pool.query<T>(text, params);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Query timeout after 5 seconds'));
+          }, 5000);
         });
-      } else {
-        console.log('✅ Executed query', {
+
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        if (timeoutId) clearTimeout(timeoutId);
+        const duration = Date.now() - start;
+
+        if (attempt > 0) {
+          console.log(`✅ Executed query (retry ${attempt})`, {
+            text: text.substring(0, 100), // Ограничиваем длину лога
+            duration,
+            rows: result.rowCount,
+          });
+        } else {
+          console.log('✅ Executed query', {
+            text: text.substring(0, 100),
+            duration,
+            rows: result.rowCount,
+          });
+        }
+
+        return result;
+      } catch (error) {
+        if (timeoutId) clearTimeout(timeoutId);
+        const duration = Date.now() - start;
+        const isLastAttempt = attempt === retries;
+        const isConnectionError =
+          error instanceof Error &&
+          (error.message.includes('timeout') ||
+            error.message.includes('Connection terminated') ||
+            error.message.includes('ECONNREFUSED') ||
+            error.message.includes('ENOTFOUND') ||
+            error.message.includes('getaddrinfo ENOTFOUND'));
+
+        if (isConnectionError && !isLastAttempt) {
+          // Уменьшенная задержка для retry (без экспоненциального роста)
+          const delay = 500; // Всего 500мс задержка
+          console.warn(
+            `⚠️ Connection error, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
+            {
+              error: error instanceof Error ? error.message : error,
+              duration,
+            }
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.error('❌ Query error', {
           text: text.substring(0, 100),
           duration,
-          rows: result.rowCount,
+          error: error instanceof Error ? error.message : error,
+          errorStack: error instanceof Error ? error.stack : undefined,
+          attempt,
         });
+        throw error;
       }
-
-      return result;
-    } catch (error) {
-      const duration = Date.now() - start;
-      const isLastAttempt = attempt === retries;
-      const isConnectionError =
-        error instanceof Error &&
-        (error.message.includes('timeout') ||
-          error.message.includes('Connection terminated') ||
-          error.message.includes('ECONNREFUSED') ||
-          error.message.includes('ENOTFOUND'));
-
-      if (isConnectionError && !isLastAttempt) {
-        // Уменьшенная задержка для retry (без экспоненциального роста)
-        const delay = 500; // Всего 500мс задержка
-        console.warn(
-          `⚠️ Connection error, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
-          {
-            error: error instanceof Error ? error.message : error,
-          }
-        );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        continue;
-      }
-
-      console.error('❌ Query error', {
-        text: text.substring(0, 100),
-        duration,
-        error: error instanceof Error ? error.message : error,
-        attempt,
-      });
-      throw error;
     }
-  }
 
-  // Этот код не должен выполняться, но TypeScript требует возврата
-  throw new Error('Query failed after all retries');
+    // Этот код не должен выполняться, но TypeScript требует возврата
+    throw new Error('Query failed after all retries');
+  } catch (poolError) {
+    console.error('❌ Failed to get database pool:', poolError);
+    throw poolError;
+  }
 }
 
 /**
