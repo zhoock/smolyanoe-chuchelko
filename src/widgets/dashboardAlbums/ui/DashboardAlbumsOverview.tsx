@@ -94,10 +94,11 @@ async function calculateAlbumStats(
 
   if (!album.tracks) return stats;
 
-  // Обрабатываем треки батчами по 2 с задержкой между батчами, чтобы не перегружать Supabase pooler
+  // Обрабатываем треки последовательно (по 1) с задержкой, чтобы не перегружать Supabase pooler
+  // Pooler имеет лимиты на одновременные соединения, поэтому делаем запросы последовательно
   const statuses = await processInBatches(
     album.tracks,
-    2,
+    1,
     async (track) => {
       // Проверяем, не был ли запрос отменён перед каждой итерацией
       if (signal?.aborted) {
@@ -111,8 +112,8 @@ async function calculateAlbumStats(
         signal
       );
     },
-    200
-  ); // Задержка 200мс между батчами
+    300
+  ); // Задержка 300мс между запросами
 
   statuses.forEach((status) => {
     switch (status) {
