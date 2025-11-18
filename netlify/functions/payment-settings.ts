@@ -81,18 +81,34 @@ async function savePaymentSettings(
     // Шифруем секретный ключ перед сохранением
     const encryptedSecretKey = encrypt(data.secretKey);
 
-    const result = await query<PaymentSettingsRow>(
-      `INSERT INTO user_payment_settings (user_id, provider, shop_id, secret_key_encrypted, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       ON CONFLICT (user_id, provider)
-       DO UPDATE SET 
-         shop_id = $3, 
-         secret_key_encrypted = $4, 
-         is_active = $5, 
-         updated_at = NOW()
-       RETURNING *`,
-      [data.userId, data.provider, data.shopId || null, encryptedSecretKey, data.isActive ?? true]
+    // Сначала проверяем, существует ли запись
+    const existing = await query<PaymentSettingsRow>(
+      'SELECT * FROM user_payment_settings WHERE user_id = $1 AND provider = $2',
+      [data.userId, data.provider]
     );
+
+    let result;
+    if (existing.rows.length > 0) {
+      // Обновляем существующую запись
+      result = await query<PaymentSettingsRow>(
+        `UPDATE user_payment_settings
+         SET shop_id = $3,
+             secret_key_encrypted = $4,
+             is_active = $5,
+             updated_at = NOW()
+         WHERE user_id = $1 AND provider = $2
+         RETURNING *`,
+        [data.userId, data.provider, data.shopId || null, encryptedSecretKey, data.isActive ?? true]
+      );
+    } else {
+      // Создаём новую запись
+      result = await query<PaymentSettingsRow>(
+        `INSERT INTO user_payment_settings (user_id, provider, shop_id, secret_key_encrypted, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         RETURNING *`,
+        [data.userId, data.provider, data.shopId || null, encryptedSecretKey, data.isActive ?? true]
+      );
+    }
 
     const row = result.rows[0];
 
@@ -358,12 +374,25 @@ export const handler: Handler = async (
     };
   } catch (error) {
     console.error('❌ Error processing payment settings:', error);
+
+    // Обрабатываем ошибки дубликатов и других constraint violations
+    let errorMessage = 'Unknown error occurred';
+    if (error instanceof Error) {
+      const errorMsg = error.message.toLowerCase();
+      if (errorMsg.includes('duplicate key') || errorMsg.includes('unique constraint')) {
+        errorMessage =
+          'This payment provider is already configured for your account. Please use the update option instead.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: errorMessage,
       } as PaymentSettingsResponse),
     };
   }
