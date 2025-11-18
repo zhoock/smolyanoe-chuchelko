@@ -109,6 +109,62 @@ export function loadTrackTextFromStorage(
   }
 }
 
+/**
+ * Загружает текст трека из базы данных через API.
+ * Текст хранится в synced_lyrics как массив строк с startTime: 0.
+ */
+export async function loadTrackTextFromDatabase(
+  albumId: string,
+  trackId: string | number,
+  lang: string
+): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({
+      albumId,
+      trackId: String(trackId),
+      lang,
+    });
+
+    const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
+      cache: 'no-cache',
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null; // Текст не найден
+      }
+      return null; // При ошибке возвращаем null
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return null;
+    }
+
+    const result = await response.json();
+    if (result.success && result.data && result.data.syncedLyrics) {
+      const syncedLyrics = result.data.syncedLyrics as Array<{ text: string; startTime: number }>;
+
+      // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
+      // Объединяем все строки в один текст
+      const isPlainText = syncedLyrics.every((line) => line.startTime === 0);
+      if (isPlainText && syncedLyrics.length > 0) {
+        return syncedLyrics.map((line) => line.text).join('\n');
+      }
+    }
+
+    return null;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Ошибка загрузки текста из БД:', error);
+    }
+    return null;
+  }
+}
+
 export function formatTrackText(text: string): string {
   let formatted = text.replace(/\t/g, ' ');
 

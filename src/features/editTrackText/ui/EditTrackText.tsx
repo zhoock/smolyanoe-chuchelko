@@ -13,6 +13,7 @@ import { ErrorMessage } from '@shared/ui/error-message';
 import {
   saveTrackText,
   loadTrackTextFromStorage,
+  loadTrackTextFromDatabase,
   formatTrackText,
   splitTextIntoLines,
   countLines,
@@ -63,15 +64,18 @@ export default function EditTrackText({
     if (currentTrackId !== String(track.id)) {
       setCurrentTrackId(String(track.id));
 
-      // Загружаем сохранённый текст из localStorage (dev mode)
+      // Загружаем сохранённый текст из localStorage (dev mode) или из БД (production)
       const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
 
-      // Загружаем авторство асинхронно
+      // Загружаем текст из БД и авторство асинхронно
       (async () => {
-        const storedAuthorship = await loadAuthorshipFromStorage(albumId, track.id, lang);
+        const [storedTextFromDb, storedAuthorship] = await Promise.all([
+          loadTrackTextFromDatabase(albumId, track.id, lang),
+          loadAuthorshipFromStorage(albumId, track.id, lang),
+        ]);
 
-        // Используем сохранённый текст или текст из JSON
-        const initialText = storedText || track.content || '';
+        // Используем сохранённый текст из localStorage (dev), БД (production) или текст из JSON
+        const initialText = storedText || storedTextFromDb || track.content || '';
         const initialAuthorship = storedAuthorship || track.authorship || '';
 
         setText(initialText);
