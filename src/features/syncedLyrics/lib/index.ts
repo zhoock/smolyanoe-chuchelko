@@ -33,6 +33,24 @@ function setCachedData(key: string, data: SyncedLyricsLine[] | null): void {
   });
 }
 
+/**
+ * Очищает кэш синхронизаций для конкретного трека или всех данных.
+ * Вызывайте после сохранения синхронизаций, чтобы обновить данные.
+ */
+export function clearSyncedLyricsCache(
+  albumId?: string,
+  trackId?: string | number,
+  lang?: string
+): void {
+  if (albumId && trackId && lang) {
+    const key = getCacheKey(albumId, trackId, lang);
+    cache.delete(key);
+  } else {
+    // Очищаем весь кэш
+    cache.clear();
+  }
+}
+
 export interface SaveSyncedLyricsRequest {
   albumId: string;
   trackId: string | number;
