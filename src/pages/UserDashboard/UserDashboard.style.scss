@@ -27,11 +27,35 @@
   box-sizing: border-box;
   transition: grid-template-columns 0.3s ease;
 
-  &__close {
+  &__header-actions {
     position: absolute;
     top: var(--ms-2);
     right: var(--ms-2);
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: var(--ms-1);
+  }
+
+  &__logout-button {
+    padding: 8px 16px;
+    color: var(--text-color, #ffffff);
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--hr-color, #3d3c3a);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: var(--extra-background-color, #2e2e2e);
+      border-color: var(--accent-color, #d6a22c);
+    }
+  }
+
+  &__close {
+    // Кнопка закрытия теперь внутри header-actions
   }
 
   &__back-button {

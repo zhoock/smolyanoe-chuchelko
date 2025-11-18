@@ -64,6 +64,13 @@
   status = 200
   force = true
 
+# API route для аутентификации
+[[redirects]]
+  from = "/api/auth/*"
+  to = "/.netlify/functions/auth"
+  status = 200
+  force = true
+
 # API routes для платежей ЮKassa
 [[redirects]]
   from = "/api/create-payment*"

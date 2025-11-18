@@ -21,12 +21,15 @@ export interface UserProfileResponse {
  */
 export async function loadTheBandFromDatabase(lang: string): Promise<string[] | null> {
   try {
+    // Импортируем динамически, чтобы избежать циклических зависимостей
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
     const response = await fetch(`/api/user-profile?lang=${lang}`, {
       cache: 'no-cache',
       headers: {
         'Cache-Control': 'no-cache',
-        // TODO: Добавить Authorization header когда будет реализована аутентификация
-        // 'Authorization': `Bearer ${token}`,
+        ...authHeader,
       },
     });
 

@@ -12,6 +12,7 @@ import {
   DashboardTextEditor,
   DashboardAlbumBuilder,
 } from '@widgets/dashboardEditors';
+import { isAuthenticated, getUser, logout } from '@shared/lib/auth';
 import './UserDashboard.style.scss';
 
 type DashboardTab = 'albums' | 'payments' | string; // Расширяемый тип для будущих вкладок
@@ -31,8 +32,18 @@ export function UserDashboard() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Получаем userId из URL или используем тестовый (в реальном приложении - из auth)
-  const { userId = 'current-user' } = useParams<{ userId?: string }>();
+  // Состояние для выбранного альбома (вместо роутинга)
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
+
+  // Состояние для выбранного трека (синхронизация или редактирование текста)
+  const [selectedTrack, setSelectedTrack] = useState<{
+    albumId: string;
+    trackId: string;
+    type: 'sync' | 'text';
+  } | null>(null);
+
+  // Состояние для открытия builder (создание нового альбома)
+  const [isBuilderOpen, setIsBuilderOpen] = useState<boolean>(false);
 
   // Конфигурация вкладок - легко расширяется добавлением новых объектов
   const tabs: TabConfig[] = [
@@ -66,22 +77,6 @@ export function UserDashboard() {
     // },
   ];
 
-  // Состояние для выбранного альбома (вместо роутинга)
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
-
-  // Состояние для выбранного трека (синхронизация или редактирование текста)
-  const [selectedTrack, setSelectedTrack] = useState<{
-    albumId: string;
-    trackId: string;
-    type: 'sync' | 'text';
-  } | null>(null);
-
-  // Состояние для открытия builder (создание нового альбома)
-  const [isBuilderOpen, setIsBuilderOpen] = useState<boolean>(false);
-
-  // Определяем, открыт ли альбом или детальный вид (для скрытия навигации)
-  const isDetailViewOpen = selectedAlbumId !== null || selectedTrack !== null || isBuilderOpen;
-
   // Определяем активную вкладку из URL
   const getActiveTabFromPath = (path: string): DashboardTab => {
     // Проверяем точное совпадение с /dashboard/:tab
@@ -103,6 +98,14 @@ export function UserDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
     return getActiveTabFromPath(location.pathname);
   });
+
+  // Проверяем авторизацию (после всех хуков)
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+  }, [navigate]);
 
   // Редирект на первую вкладку если просто /dashboard
   useEffect(() => {
@@ -267,11 +270,24 @@ export function UserDashboard() {
           <div
             className={`user-dashboard ${isDetailViewOpen ? 'user-dashboard--detail-open' : ''}`}
           >
-            <Hamburger
-              isActive={true}
-              onToggle={() => navigate('/')}
-              className="user-dashboard__close"
-            />
+            <div className="user-dashboard__header-actions">
+              <button
+                type="button"
+                className="user-dashboard__logout-button"
+                onClick={() => {
+                  logout();
+                  navigate('/auth');
+                }}
+                title={lang === 'en' ? 'Logout' : 'Выйти'}
+              >
+                {lang === 'en' ? 'Logout' : 'Выйти'}
+              </button>
+              <Hamburger
+                isActive={true}
+                onToggle={() => navigate('/')}
+                className="user-dashboard__close"
+              />
+            </div>
 
             {/* Кнопка "Назад" - показывается только когда открыт альбом или синхронизация */}
             {isDetailViewOpen && (

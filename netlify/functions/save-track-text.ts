@@ -7,6 +7,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
+import { extractUserIdFromToken } from './lib/jwt';
 
 interface SaveTrackTextRequest {
   albumId: string;
@@ -28,7 +29,7 @@ export const handler: Handler = async (
   // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json',
   };
@@ -59,6 +60,20 @@ export const handler: Handler = async (
         };
       }
 
+      // Извлекаем user_id из токена (обязательно для сохранения)
+      const userId = extractUserIdFromToken(event.headers.authorization);
+
+      if (!userId) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message: 'Unauthorized. Authentication required.',
+          } as SaveTrackTextResponse),
+        };
+      }
+
       // Сохраняем текст в БД
       // Преобразуем текст в массив строк для хранения в synced_lyrics
       // Каждая строка текста становится элементом массива без тайм-кодов
@@ -69,14 +84,15 @@ export const handler: Handler = async (
         .map((text) => ({ text, startTime: 0 })); // Без тайм-кодов, startTime = 0
 
       await query(
-        `INSERT INTO synced_lyrics (album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-         VALUES ($1, $2, $3, $4::jsonb, $5, NOW())
-         ON CONFLICT (album_id, track_id, lang)
+        `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+         ON CONFLICT (user_id, album_id, track_id, lang)
          DO UPDATE SET 
-           synced_lyrics = $4::jsonb,
-           authorship = $5,
+           synced_lyrics = $5::jsonb,
+           authorship = $6,
            updated_at = NOW()`,
         [
+          userId,
           data.albumId,
           String(data.trackId),
           data.lang,

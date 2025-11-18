@@ -31,11 +31,7 @@ interface SaveUserProfileResponse {
   error?: string;
 }
 
-function extractUserIdFromToken(authHeader: string | undefined): string | null {
-  // TODO: Реализовать извлечение user_id из JWT токена
-  // Пока возвращаем null (для публичного доступа)
-  return null;
-}
+import { extractUserIdFromToken } from './lib/jwt';
 
 export const handler: Handler = async (
   event: HandlerEvent

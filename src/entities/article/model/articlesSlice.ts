@@ -27,13 +27,16 @@ export const fetchArticles = createAsyncThunk<
   async ({ lang }, { signal, rejectWithValue }) => {
     try {
       // Загружаем из БД через API
+      // Импортируем динамически, чтобы избежать циклических зависимостей
+      const { getAuthHeader } = await import('@shared/lib/auth');
+      const authHeader = getAuthHeader();
+
       const response = await fetch(`/api/articles-api?lang=${lang}`, {
         signal,
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache',
-          // TODO: Добавить Authorization header когда будет реализована аутентификация
-          // 'Authorization': `Bearer ${token}`,
+          ...authHeader,
         },
       });
 

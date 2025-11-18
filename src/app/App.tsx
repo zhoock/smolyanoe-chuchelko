@@ -34,6 +34,7 @@ const Home = lazy(() => import('@pages/Home'));
 const ArticlePage = lazy(() => import('@pages/Article'));
 const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
 const UserDashboard = lazy(() => import('@pages/UserDashboard'));
+const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -148,6 +149,7 @@ function Layout() {
     '/stems',
     '/dashboard',
     '/dashboard/:tab',
+    '/auth',
   ];
 
   const isKnownRoute = knownRoutes.some((pattern) =>
@@ -203,6 +205,14 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <UserDashboard />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/auth"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AuthPage />
             </Suspense>
           }
         />

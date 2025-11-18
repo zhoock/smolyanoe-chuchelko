@@ -71,10 +71,7 @@ interface UpdateArticleRequest {
   isPublic?: boolean;
 }
 
-function extractUserIdFromToken(authHeader: string | undefined): string | null {
-  // TODO: Реализовать извлечение user_id из JWT токена
-  return null;
-}
+import { extractUserIdFromToken } from './lib/jwt';
 
 export const handler: Handler = async (
   event: HandlerEvent

@@ -119,12 +119,16 @@ export async function saveSyncedLyrics(
   // В dev режиме запросы проксируются через webpack dev server на production
   // В production используются относительные пути через redirects в netlify.toml
   try {
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
     const response = await fetch('/api/synced-lyrics', {
       method: 'POST',
       cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
+        ...authHeader,
       },
       body: JSON.stringify(data),
     });
@@ -243,10 +247,15 @@ export async function loadSyncedLyricsFromStorage(
       }
 
       try {
+        // Импортируем динамически, чтобы избежать циклических зависимостей
+        const { getAuthHeader } = await import('@shared/lib/auth');
+        const authHeader = getAuthHeader();
+
         const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
           cache: 'no-cache',
           headers: {
             'Cache-Control': 'no-cache',
+            ...authHeader,
           },
           signal: finalSignal,
         });
@@ -345,10 +354,15 @@ export async function loadAuthorshipFromStorage(
       }
 
       try {
+        // Импортируем динамически, чтобы избежать циклических зависимостей
+        const { getAuthHeader } = await import('@shared/lib/auth');
+        const authHeader = getAuthHeader();
+
         const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
           cache: 'no-cache',
           headers: {
             'Cache-Control': 'no-cache',
+            ...authHeader,
           },
           signal: finalSignal,
         });

@@ -67,19 +67,7 @@ interface AlbumsResponse {
   message?: string;
 }
 
-/**
- * Извлекает user_id из токена авторизации
- * TODO: Реализовать реальную проверку JWT токена
- */
-function extractUserIdFromToken(authHeader: string | undefined): string | null {
-  if (!authHeader) {
-    return null;
-  }
-
-  // TODO: Реализовать извлечение user_id из JWT токена
-  // Пока возвращаем null (публичный доступ)
-  return null;
-}
+import { extractUserIdFromToken } from './lib/jwt';
 
 export const handler: Handler = async (
   event: HandlerEvent

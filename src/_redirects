@@ -10,6 +10,7 @@
 /api/albums*    /.netlify/functions/albums    200
 /api/user-profile*    /.netlify/functions/user-profile    200
 /api/articles-api*    /.netlify/functions/articles-api    200
+/api/auth/*    /.netlify/functions/auth    200
 /api/create-payment*    /.netlify/functions/create-payment    200
 /api/payment-webhook*    /.netlify/functions/payment-webhook    200
 /api/payment-settings*    /.netlify/functions/payment-settings    200

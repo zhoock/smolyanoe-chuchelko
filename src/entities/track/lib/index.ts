@@ -44,10 +44,15 @@ export async function saveTrackText(data: SaveTrackTextRequest): Promise<SaveTra
   }
 
   try {
+    // Импортируем динамически, чтобы избежать циклических зависимостей
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
     const response = await fetch('/api/save-track-text', {
       method: 'POST',
       cache: 'no-cache',
       headers: {
+        ...authHeader,
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
       },
@@ -125,10 +130,15 @@ export async function loadTrackTextFromDatabase(
       lang,
     });
 
+    // Импортируем динамически, чтобы избежать циклических зависимостей
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
     const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
       cache: 'no-cache',
       headers: {
         'Cache-Control': 'no-cache',
+        ...authHeader,
       },
     });
 
