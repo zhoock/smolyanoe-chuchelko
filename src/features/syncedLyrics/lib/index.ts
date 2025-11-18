@@ -158,7 +158,8 @@ export async function saveSyncedLyrics(
 export async function loadSyncedLyricsFromStorage(
   albumId: string,
   trackId: string | number,
-  lang: string
+  lang: string,
+  signal?: AbortSignal
 ): Promise<SyncedLyricsLine[] | null> {
   // Проверяем кэш
   const cacheKey = getCacheKey(albumId, trackId, lang);
@@ -179,13 +180,25 @@ export async function loadSyncedLyricsFromStorage(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+    // Если передан signal извне, объединяем его с таймаутом
+    // Используем внешний signal, если он есть, иначе используем controller
+    const finalSignal = signal || controller.signal;
+
+    // Если передан внешний signal, отменяем наш controller при его отмене
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        controller.abort();
+        clearTimeout(timeoutId);
+      });
+    }
+
     try {
       const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache',
         },
-        signal: controller.signal,
+        signal: finalSignal,
       });
       clearTimeout(timeoutId);
 

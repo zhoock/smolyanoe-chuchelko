@@ -27,9 +27,10 @@ type TrackStatus = 'synced' | 'text-only' | 'empty';
 async function getTrackStatus(
   albumId: string,
   track: TracksProps,
-  lang: string
+  lang: string,
+  signal?: AbortSignal
 ): Promise<TrackStatus> {
-  const storedSync = await loadSyncedLyricsFromStorage(albumId, track.id, lang);
+  const storedSync = await loadSyncedLyricsFromStorage(albumId, track.id, lang, signal);
 
   if (track.syncedLyrics && track.syncedLyrics.length > 0) {
     return 'synced';
@@ -127,6 +128,7 @@ export default function DashboardAlbum({
       return;
     }
 
+    const abortController = new AbortController();
     let cancelled = false;
 
     (async () => {
@@ -135,21 +137,22 @@ export default function DashboardAlbum({
       const currentAlbum = album;
       await Promise.all(
         currentAlbum.tracks.map(async (track) => {
-          if (!cancelled) {
-            const status = await getTrackStatus(albumId, track, lang);
-            if (!cancelled) {
+          if (!cancelled && !abortController.signal.aborted) {
+            const status = await getTrackStatus(albumId, track, lang, abortController.signal);
+            if (!cancelled && !abortController.signal.aborted) {
               statusMap.set(track.id, status);
             }
           }
         })
       );
-      if (!cancelled) {
+      if (!cancelled && !abortController.signal.aborted) {
         setTrackStatuses(statusMap);
       }
     })();
 
     return () => {
       cancelled = true;
+      abortController.abort(); // Отменяем все запросы при размонтировании
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [albumId, lang, tracksKey]); // Используем стабильный ключ вместо массива, album используется из замыкания

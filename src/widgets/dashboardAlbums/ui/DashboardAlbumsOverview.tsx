@@ -35,11 +35,12 @@ async function getTrackStatus(
   albumId: string,
   trackId: string | number,
   lang: string,
-  hasSyncedLyrics: boolean
+  hasSyncedLyrics: boolean,
+  signal?: AbortSignal
 ): Promise<TrackStatus> {
   // В production loadTrackTextFromStorage всегда возвращает null
   // Поэтому полагаемся только на API
-  const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
+  const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang, signal);
 
   if (hasSyncedLyrics || (storedSync && storedSync.length > 0)) {
     return 'synced';
@@ -73,7 +74,11 @@ async function processInBatches<T, R>(
   return results;
 }
 
-async function calculateAlbumStats(album: IAlbums, lang: string): Promise<AlbumStats> {
+async function calculateAlbumStats(
+  album: IAlbums,
+  lang: string,
+  signal?: AbortSignal
+): Promise<AlbumStats> {
   const stats: AlbumStats = {
     total: album.tracks?.length || 0,
     synced: 0,
@@ -85,11 +90,16 @@ async function calculateAlbumStats(album: IAlbums, lang: string): Promise<AlbumS
 
   // Обрабатываем треки батчами по 3, чтобы не перегружать БД
   const statuses = await processInBatches(album.tracks, 3, async (track) => {
+    // Проверяем, не был ли запрос отменён перед каждой итерацией
+    if (signal?.aborted) {
+      return 'empty' as TrackStatus; // Возвращаем дефолтный статус при отмене
+    }
     return getTrackStatus(
       album.albumId || '',
       track.id,
       lang,
-      !!(track.syncedLyrics && track.syncedLyrics.length > 0)
+      !!(track.syncedLyrics && track.syncedLyrics.length > 0),
+      signal
     );
   });
 
@@ -145,6 +155,7 @@ export default function DashboardAlbumsOverview({
       return;
     }
 
+    const abortController = new AbortController();
     let cancelled = false;
 
     (async () => {
@@ -153,21 +164,22 @@ export default function DashboardAlbumsOverview({
       const currentAlbums = albums;
       await Promise.all(
         currentAlbums.map(async (album) => {
-          if (album.albumId && !cancelled) {
-            const stats = await calculateAlbumStats(album, lang);
-            if (!cancelled) {
+          if (album.albumId && !cancelled && !abortController.signal.aborted) {
+            const stats = await calculateAlbumStats(album, lang, abortController.signal);
+            if (!cancelled && !abortController.signal.aborted) {
               statsMap.set(album.albumId, stats);
             }
           }
         })
       );
-      if (!cancelled) {
+      if (!cancelled && !abortController.signal.aborted) {
         setAlbumsStats(statsMap);
       }
     })();
 
     return () => {
       cancelled = true;
+      abortController.abort(); // Отменяем все запросы при размонтировании
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [albumsKey, lang]); // Используем стабильный ключ вместо массива, albums используется из замыкания
