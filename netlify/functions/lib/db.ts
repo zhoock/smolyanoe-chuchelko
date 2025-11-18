@@ -63,23 +63,9 @@ function getPool(): Pool {
       console.log('✅ Database connection established');
     });
 
-    // Пытаемся проверить соединение сразу
-    pool
-      .connect()
-      .then((client) => {
-        console.log('✅ Test connection successful');
-        client.release();
-      })
-      .catch((err) => {
-        console.error('❌ Test connection failed:', err.message);
-        console.error('❌ Connection error details:', {
-          code: err.code,
-          errno: err.errno,
-          syscall: err.syscall,
-          address: err.address,
-          port: err.port,
-        });
-      });
+    // НЕ делаем тестовое подключение при инициализации
+    // Это создает лишние соединения и может привести к лимитам Supabase pooler
+    // Соединение установится автоматически при первом запросе
   }
 
   return pool;
