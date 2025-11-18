@@ -51,7 +51,7 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 15000, // Увеличено до 15 секунд для холодного старта и медленных соединений
+      connectionTimeoutMillis: 5000, // Уменьшено до 5 секунд - быстрее получаем ошибку и освобождаем слоты
       ssl: useSSL ? { rejectUnauthorized: false } : false,
     });
 
@@ -122,7 +122,23 @@ export async function query<T = any>(
             error.message.includes('getaddrinfo ENOTFOUND'));
 
         if (isConnectionError && !isLastAttempt) {
-          // Уменьшенная задержка для retry (без экспоненциального роста)
+          // Для Supabase pooler - не делаем retry при таймауте подключения
+          // Это означает, что pooler перегружен, retry только усугубит ситуацию
+          const isConnectionTimeout =
+            error instanceof Error &&
+            (error.message.includes('connection timeout') ||
+              error.message.includes('timeout exceeded when trying to connect'));
+
+          if (isConnectionTimeout) {
+            console.warn(`⚠️ Connection timeout - pooler may be overloaded. Skipping retry.`, {
+              error: error instanceof Error ? error.message : error,
+              duration,
+            });
+            // Не делаем retry для таймаутов подключения
+            throw error;
+          }
+
+          // Для других ошибок подключения - делаем retry с задержкой
           const delay = 500; // Всего 500мс задержка
           console.warn(
             `⚠️ Connection error, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
