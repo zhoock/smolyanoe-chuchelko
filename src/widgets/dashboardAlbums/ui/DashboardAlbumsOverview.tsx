@@ -63,13 +63,19 @@ async function getTrackStatus(
 async function processInBatches<T, R>(
   items: T[],
   batchSize: number,
-  processor: (item: T) => Promise<R>
+  processor: (item: T) => Promise<R>,
+  delayBetweenBatches: number = 0
 ): Promise<R[]> {
   const results: R[] = [];
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.all(batch.map(processor));
     results.push(...batchResults);
+
+    // Задержка между батчами для снижения нагрузки на Supabase pooler
+    if (delayBetweenBatches > 0 && i + batchSize < items.length) {
+      await new Promise((resolve) => setTimeout(resolve, delayBetweenBatches));
+    }
   }
   return results;
 }
@@ -88,20 +94,25 @@ async function calculateAlbumStats(
 
   if (!album.tracks) return stats;
 
-  // Обрабатываем треки батчами по 3, чтобы не перегружать БД
-  const statuses = await processInBatches(album.tracks, 3, async (track) => {
-    // Проверяем, не был ли запрос отменён перед каждой итерацией
-    if (signal?.aborted) {
-      return 'empty' as TrackStatus; // Возвращаем дефолтный статус при отмене
-    }
-    return getTrackStatus(
-      album.albumId || '',
-      track.id,
-      lang,
-      !!(track.syncedLyrics && track.syncedLyrics.length > 0),
-      signal
-    );
-  });
+  // Обрабатываем треки батчами по 2 с задержкой между батчами, чтобы не перегружать Supabase pooler
+  const statuses = await processInBatches(
+    album.tracks,
+    2,
+    async (track) => {
+      // Проверяем, не был ли запрос отменён перед каждой итерацией
+      if (signal?.aborted) {
+        return 'empty' as TrackStatus; // Возвращаем дефолтный статус при отмене
+      }
+      return getTrackStatus(
+        album.albumId || '',
+        track.id,
+        lang,
+        !!(track.syncedLyrics && track.syncedLyrics.length > 0),
+        signal
+      );
+    },
+    200
+  ); // Задержка 200мс между батчами
 
   statuses.forEach((status) => {
     switch (status) {
