@@ -18,6 +18,7 @@ const albumsEnPath = './src/assets/albums-en.json';
 interface MigrationResult {
   albumsCreated: number;
   tracksCreated: number;
+  articlesCreated: number;
   errors: string[];
 }
 
@@ -46,6 +47,15 @@ interface AlbumData {
   }>;
 }
 
+interface ArticleData {
+  articleId: string;
+  nameArticle: string;
+  description?: string;
+  img?: string;
+  date: string;
+  details: any[];
+}
+
 async function migrateAlbumsToDb(
   albums: AlbumData[],
   lang: 'en' | 'ru',
@@ -54,6 +64,7 @@ async function migrateAlbumsToDb(
   const result: MigrationResult = {
     albumsCreated: 0,
     tracksCreated: 0,
+    articlesCreated: 0,
     errors: [],
   };
 
@@ -154,6 +165,56 @@ async function migrateAlbumsToDb(
   return result;
 }
 
+async function migrateArticlesToDb(
+  articles: ArticleData[],
+  lang: 'en' | 'ru',
+  userId: string | null = null
+): Promise<{ articlesCreated: number; errors: string[] }> {
+  const result = {
+    articlesCreated: 0,
+    errors: [] as string[],
+  };
+
+  for (const article of articles) {
+    try {
+      await query(
+        `INSERT INTO articles (
+          user_id, article_id, name_article, description, img, date, details, lang, is_public
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+        ON CONFLICT (user_id, article_id, lang)
+        DO UPDATE SET
+          name_article = EXCLUDED.name_article,
+          description = EXCLUDED.description,
+          img = EXCLUDED.img,
+          date = EXCLUDED.date,
+          details = EXCLUDED.details,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id`,
+        [
+          userId,
+          article.articleId,
+          article.nameArticle,
+          article.description || null,
+          article.img || null,
+          article.date,
+          JSON.stringify(article.details || []),
+          lang,
+          userId === null, // публичный, если user_id NULL
+        ]
+      );
+      result.articlesCreated++;
+    } catch (error) {
+      const errorMsg = `Article ${article.articleId}: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      result.errors.push(errorMsg);
+      console.error('❌', errorMsg);
+    }
+  }
+
+  return result;
+}
+
 // Основная функция миграции
 export async function migrateJsonToDatabase(): Promise<void> {
   console.log('🚀 Начинаем миграцию JSON → БД...');
@@ -163,11 +224,15 @@ export async function migrateJsonToDatabase(): Promise<void> {
     // В Node.js окружении используем require или fs
     let albumsRu: AlbumData[];
     let albumsEn: AlbumData[];
+    let articlesRu: ArticleData[];
+    let articlesEn: ArticleData[];
 
     if (typeof require !== 'undefined') {
       // Node.js окружение
       albumsRu = require('../../src/assets/albums-ru.json');
       albumsEn = require('../../src/assets/albums-en.json');
+      articlesRu = require('../../src/assets/articles-ru.json');
+      articlesEn = require('../../src/assets/articles-en.json');
     } else {
       // Для браузерного окружения или если require недоступен
       // Нужно будет загружать через fetch или другой способ
@@ -192,8 +257,29 @@ export async function migrateJsonToDatabase(): Promise<void> {
       errors: enResult.errors.length,
     });
 
+    // Мигрируем русские статьи (публичные, user_id = NULL)
+    console.log('📰 Мигрируем русские статьи...');
+    const articlesRuResult = await migrateArticlesToDb(articlesRu, 'ru', null);
+    console.log('✅ Статьи RU:', {
+      articles: articlesRuResult.articlesCreated,
+      errors: articlesRuResult.errors.length,
+    });
+
+    // Мигрируем английские статьи (публичные, user_id = NULL)
+    console.log('📰 Мигрируем английские статьи...');
+    const articlesEnResult = await migrateArticlesToDb(articlesEn, 'en', null);
+    console.log('✅ Статьи EN:', {
+      articles: articlesEnResult.articlesCreated,
+      errors: articlesEnResult.errors.length,
+    });
+
     // Выводим ошибки, если есть
-    const allErrors = [...ruResult.errors, ...enResult.errors];
+    const allErrors = [
+      ...ruResult.errors,
+      ...enResult.errors,
+      ...articlesRuResult.errors,
+      ...articlesEnResult.errors,
+    ];
     if (allErrors.length > 0) {
       console.warn('⚠️ Обнаружены ошибки:');
       allErrors.forEach((error) => console.warn('  -', error));
@@ -205,6 +291,8 @@ export async function migrateJsonToDatabase(): Promise<void> {
     console.log(`  - Треки RU: ${ruResult.tracksCreated}`);
     console.log(`  - Альбомы EN: ${enResult.albumsCreated}`);
     console.log(`  - Треки EN: ${enResult.tracksCreated}`);
+    console.log(`  - Статьи RU: ${articlesRuResult.articlesCreated}`);
+    console.log(`  - Статьи EN: ${articlesEnResult.articlesCreated}`);
     console.log(`  - Ошибок: ${allErrors.length}`);
   } catch (error) {
     console.error('❌ Критическая ошибка миграции:', error);

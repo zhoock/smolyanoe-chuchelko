@@ -10,12 +10,11 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
-import * as fs from 'fs';
-import * as path from 'path';
 
 interface MigrationResult {
   albumsCreated: number;
   tracksCreated: number;
+  articlesCreated: number;
   errors: string[];
 }
 
@@ -42,6 +41,15 @@ interface AlbumData {
       endTime?: number;
     }>;
   }>;
+}
+
+interface ArticleData {
+  articleId: string;
+  nameArticle: string;
+  description?: string;
+  img?: string;
+  date: string;
+  details: any[];
 }
 
 async function migrateAlbumsToDb(
@@ -152,6 +160,56 @@ async function migrateAlbumsToDb(
   return result;
 }
 
+async function migrateArticlesToDb(
+  articles: ArticleData[],
+  lang: 'en' | 'ru',
+  userId: string | null = null
+): Promise<{ articlesCreated: number; errors: string[] }> {
+  const result = {
+    articlesCreated: 0,
+    errors: [] as string[],
+  };
+
+  for (const article of articles) {
+    try {
+      await query(
+        `INSERT INTO articles (
+          user_id, article_id, name_article, description, img, date, details, lang, is_public
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+        ON CONFLICT (user_id, article_id, lang)
+        DO UPDATE SET
+          name_article = EXCLUDED.name_article,
+          description = EXCLUDED.description,
+          img = EXCLUDED.img,
+          date = EXCLUDED.date,
+          details = EXCLUDED.details,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id`,
+        [
+          userId,
+          article.articleId,
+          article.nameArticle,
+          article.description || null,
+          article.img || null,
+          article.date,
+          JSON.stringify(article.details || []),
+          lang,
+          userId === null, // публичный, если user_id NULL
+        ]
+      );
+      result.articlesCreated++;
+    } catch (error) {
+      const errorMsg = `Article ${article.articleId}: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      result.errors.push(errorMsg);
+      console.error('❌', errorMsg);
+    }
+  }
+
+  return result;
+}
+
 export const handler: Handler = async (event: HandlerEvent) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -191,6 +249,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     let albumsRu: AlbumData[];
     let albumsEn: AlbumData[];
+    let articlesRu: ArticleData[];
+    let articlesEn: ArticleData[];
 
     try {
       console.log('📥 Загружаем albums-ru.json из GitHub...');
@@ -232,6 +292,46 @@ export const handler: Handler = async (event: HandlerEvent) => {
       };
     }
 
+    try {
+      console.log('📥 Загружаем articles-ru.json из GitHub...');
+      const articlesRuResponse = await fetch(`${BASE_URL}/articles-ru.json`);
+      if (!articlesRuResponse.ok) {
+        throw new Error(`HTTP ${articlesRuResponse.status}: ${articlesRuResponse.statusText}`);
+      }
+      articlesRu = await articlesRuResponse.json();
+      console.log(`✅ Загружено ${articlesRu.length} русских статей`);
+    } catch (error) {
+      console.error('❌ Ошибка загрузки articles-ru.json:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: `Failed to load articles-ru.json: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      };
+    }
+
+    try {
+      console.log('📥 Загружаем articles-en.json из GitHub...');
+      const articlesEnResponse = await fetch(`${BASE_URL}/articles-en.json`);
+      if (!articlesEnResponse.ok) {
+        throw new Error(`HTTP ${articlesEnResponse.status}: ${articlesEnResponse.statusText}`);
+      }
+      articlesEn = await articlesEnResponse.json();
+      console.log(`✅ Загружено ${articlesEn.length} английских статей`);
+    } catch (error) {
+      console.error('❌ Ошибка загрузки articles-en.json:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: `Failed to load articles-en.json: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      };
+    }
+
     // Мигрируем русские альбомы (публичные, user_id = NULL)
     console.log('📦 Мигрируем русские альбомы...');
     const ruResult = await migrateAlbumsToDb(albumsRu, 'ru', null);
@@ -250,8 +350,29 @@ export const handler: Handler = async (event: HandlerEvent) => {
       errors: enResult.errors.length,
     });
 
+    // Мигрируем русские статьи (публичные, user_id = NULL)
+    console.log('📰 Мигрируем русские статьи...');
+    const articlesRuResult = await migrateArticlesToDb(articlesRu, 'ru', null);
+    console.log('✅ Статьи RU:', {
+      articles: articlesRuResult.articlesCreated,
+      errors: articlesRuResult.errors.length,
+    });
+
+    // Мигрируем английские статьи (публичные, user_id = NULL)
+    console.log('📰 Мигрируем английские статьи...');
+    const articlesEnResult = await migrateArticlesToDb(articlesEn, 'en', null);
+    console.log('✅ Статьи EN:', {
+      articles: articlesEnResult.articlesCreated,
+      errors: articlesEnResult.errors.length,
+    });
+
     // Выводим ошибки, если есть
-    const allErrors = [...ruResult.errors, ...enResult.errors];
+    const allErrors = [
+      ...ruResult.errors,
+      ...enResult.errors,
+      ...articlesRuResult.errors,
+      ...articlesEnResult.errors,
+    ];
 
     const summary = {
       success: true,
@@ -260,16 +381,19 @@ export const handler: Handler = async (event: HandlerEvent) => {
         ru: {
           albums: ruResult.albumsCreated,
           tracks: ruResult.tracksCreated,
-          errors: ruResult.errors.length,
+          articles: articlesRuResult.articlesCreated,
+          errors: ruResult.errors.length + articlesRuResult.errors.length,
         },
         en: {
           albums: enResult.albumsCreated,
           tracks: enResult.tracksCreated,
-          errors: enResult.errors.length,
+          articles: articlesEnResult.articlesCreated,
+          errors: enResult.errors.length + articlesEnResult.errors.length,
         },
         total: {
           albums: ruResult.albumsCreated + enResult.albumsCreated,
           tracks: ruResult.tracksCreated + enResult.tracksCreated,
+          articles: articlesRuResult.articlesCreated + articlesEnResult.articlesCreated,
           errors: allErrors.length,
         },
       },

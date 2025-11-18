@@ -19,39 +19,32 @@ module.exports = {
     static: path.resolve(__dirname, '../dist'), // путь, куда "смотрит" режим разработчика
     // compress: true, // это ускорит загрузку в режиме разработки
     port: 8080, // порт, чтобы открывать сайт по адресу localhost:8080, но можно поменять порт
-    open: true, // сайт будет открываться сам при запуске npm run dev
+    open: false, // Netlify Dev сам откроет браузер на порту 8888
     hot: true,
-    // Проксируем запросы к Netlify функциям на реальный сайт
-    // Используйте переменную окружения NETLIFY_SITE_URL для указания URL вашего сайта
-    // Например: NETLIFY_SITE_URL=https://smolyanoechuchelko.ru npm start
-    proxy: process.env.NETLIFY_SITE_URL
-      ? [
-          {
-            // Простая настройка - проксируем все запросы к /api/*
-            context: ['/api'],
-            target: process.env.NETLIFY_SITE_URL,
-            changeOrigin: true,
-            secure: true,
-            logLevel: 'debug',
-            // Убеждаемся, что прокси работает
-            onProxyReq: (proxyReq, req) => {
-              console.log(
-                '[HPM] Проксируем:',
-                req.method,
-                req.url,
-                '->',
-                process.env.NETLIFY_SITE_URL + req.url
-              );
-            },
-            onProxyRes: (proxyRes, req) => {
-              console.log('[HPM] Ответ прокси:', proxyRes.statusCode, req.url);
-            },
-            onError: (err) => {
-              console.error('[HPM] Ошибка прокси:', err.message);
-            },
-          },
-        ]
-      : [],
+    // Проксируем запросы к Netlify функциям
+    // Если NETLIFY_SITE_URL установлен - проксируем на прод
+    // Если нет - проксируем на локальный Netlify Dev (порт 8888)
+    proxy: [
+      {
+        // Простая настройка - проксируем все запросы к /api/*
+        context: ['/api'],
+        target: process.env.NETLIFY_SITE_URL || 'http://localhost:8888',
+        changeOrigin: true,
+        secure: process.env.NETLIFY_SITE_URL ? true : false,
+        logLevel: 'debug',
+        // Убеждаемся, что прокси работает
+        onProxyReq: (proxyReq, req) => {
+          const target = process.env.NETLIFY_SITE_URL || 'http://localhost:8888';
+          console.log('[HPM] Проксируем:', req.method, req.url, '->', target + req.url);
+        },
+        onProxyRes: (proxyRes, req) => {
+          console.log('[HPM] Ответ прокси:', proxyRes.statusCode, req.url);
+        },
+        onError: (err) => {
+          console.error('[HPM] Ошибка прокси:', err.message);
+        },
+      },
+    ],
   },
   plugins: [new ReactRefreshWebpackPlugin()],
 };
