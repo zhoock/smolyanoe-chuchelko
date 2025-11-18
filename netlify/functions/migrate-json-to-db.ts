@@ -186,17 +186,20 @@ export const handler: Handler = async (event: HandlerEvent) => {
   try {
     console.log('🚀 Начинаем миграцию JSON → БД...');
 
-    // Загружаем JSON файлы
-    // В Netlify Functions файлы находятся в корне проекта
-    const albumsRuPath = path.join(process.cwd(), 'src', 'assets', 'albums-ru.json');
-    const albumsEnPath = path.join(process.cwd(), 'src', 'assets', 'albums-en.json');
+    // Загружаем JSON файлы из GitHub (как в клиентском коде)
+    const BASE_URL = 'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/main/src/assets';
 
     let albumsRu: AlbumData[];
     let albumsEn: AlbumData[];
 
     try {
-      const ruContent = fs.readFileSync(albumsRuPath, 'utf-8');
-      albumsRu = JSON.parse(ruContent);
+      console.log('📥 Загружаем albums-ru.json из GitHub...');
+      const ruResponse = await fetch(`${BASE_URL}/albums-ru.json`);
+      if (!ruResponse.ok) {
+        throw new Error(`HTTP ${ruResponse.status}: ${ruResponse.statusText}`);
+      }
+      albumsRu = await ruResponse.json();
+      console.log(`✅ Загружено ${albumsRu.length} русских альбомов`);
     } catch (error) {
       console.error('❌ Ошибка загрузки albums-ru.json:', error);
       return {
@@ -210,8 +213,13 @@ export const handler: Handler = async (event: HandlerEvent) => {
     }
 
     try {
-      const enContent = fs.readFileSync(albumsEnPath, 'utf-8');
-      albumsEn = JSON.parse(enContent);
+      console.log('📥 Загружаем albums-en.json из GitHub...');
+      const enResponse = await fetch(`${BASE_URL}/albums-en.json`);
+      if (!enResponse.ok) {
+        throw new Error(`HTTP ${enResponse.status}: ${enResponse.statusText}`);
+      }
+      albumsEn = await enResponse.json();
+      console.log(`✅ Загружено ${albumsEn.length} английских альбомов`);
     } catch (error) {
       console.error('❌ Ошибка загрузки albums-en.json:', error);
       return {

@@ -21,13 +21,113 @@ interface MigrationResult {
   error?: string;
 }
 
-async function applyMigration(filePath: string): Promise<MigrationResult> {
-  const fileName = path.basename(filePath);
-  console.log(`📝 Применяем миграцию: ${fileName}...`);
+// Встроенные SQL миграции (чтобы не зависеть от файловой системы в Netlify Functions)
+const MIGRATION_003 = `
+-- Миграция: Создание таблиц для мультипользовательской системы
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255),
+  password_hash TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+
+CREATE TABLE IF NOT EXISTS albums (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  album_id VARCHAR(255) NOT NULL,
+  artist VARCHAR(255) NOT NULL,
+  album VARCHAR(255) NOT NULL,
+  full_name VARCHAR(500),
+  description TEXT,
+  cover JSONB,
+  release JSONB,
+  buttons JSONB,
+  details JSONB,
+  lang VARCHAR(10) NOT NULL,
+  is_public BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, album_id, lang)
+);
+
+CREATE INDEX IF NOT EXISTS idx_albums_user_id ON albums(user_id);
+CREATE INDEX IF NOT EXISTS idx_albums_album_id ON albums(album_id);
+CREATE INDEX IF NOT EXISTS idx_albums_lang ON albums(lang);
+CREATE INDEX IF NOT EXISTS idx_albums_is_public ON albums(is_public);
+CREATE INDEX IF NOT EXISTS idx_albums_user_album_lang ON albums(user_id, album_id, lang);
+
+CREATE TABLE IF NOT EXISTS tracks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  album_id UUID REFERENCES albums(id) ON DELETE CASCADE,
+  track_id VARCHAR(255) NOT NULL,
+  title VARCHAR(500) NOT NULL,
+  duration DECIMAL(10, 2),
+  src VARCHAR(500),
+  content TEXT,
+  authorship TEXT,
+  synced_lyrics JSONB,
+  order_index INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(album_id, track_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tracks_album_id ON tracks(album_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_track_id ON tracks(track_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_order_index ON tracks(album_id, order_index);
+
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_albums_updated_at
+  BEFORE UPDATE ON albums
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tracks_updated_at
+  BEFORE UPDATE ON tracks
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+`;
+
+const MIGRATION_004 = `
+-- Миграция: Добавление user_id в synced_lyrics
+ALTER TABLE synced_lyrics 
+ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_synced_lyrics_user_id ON synced_lyrics(user_id);
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_indexes 
+    WHERE indexname = 'synced_lyrics_album_id_track_id_lang_key'
+  ) THEN
+    DROP INDEX synced_lyrics_album_id_track_id_lang_key;
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS synced_lyrics_user_album_track_lang_unique 
+ON synced_lyrics(user_id, album_id, track_id, lang);
+`;
+
+const MIGRATIONS: Record<string, string> = {
+  '003_create_users_albums_tracks.sql': MIGRATION_003,
+  '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
+};
+
+async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
+  console.log(`📝 Применяем миграцию: ${migrationName}...`);
 
   try {
-    const sql = fs.readFileSync(filePath, 'utf-8');
-
     // Разбиваем SQL на отдельные запросы (разделитель: ;)
     // Убираем комментарии и пустые строки
     const queries = sql
@@ -103,7 +203,6 @@ export const handler: Handler = async (event: HandlerEvent) => {
   try {
     console.log('🚀 Начинаем применение миграций БД...\n');
 
-    const migrationsDir = path.join(process.cwd(), 'database', 'migrations');
     const migrationFiles = [
       '003_create_users_albums_tracks.sql',
       '004_add_user_id_to_synced_lyrics.sql',
@@ -112,19 +211,19 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const results: MigrationResult[] = [];
 
     for (const migrationFile of migrationFiles) {
-      const filePath = path.join(migrationsDir, migrationFile);
+      const sql = MIGRATIONS[migrationFile];
 
-      if (!fs.existsSync(filePath)) {
-        console.error(`❌ Файл миграции не найден: ${filePath}`);
+      if (!sql) {
+        console.error(`❌ Миграция не найдена: ${migrationFile}`);
         results.push({
           success: false,
           migration: migrationFile,
-          error: 'File not found',
+          error: 'Migration not found in code',
         });
         continue;
       }
 
-      const result = await applyMigration(filePath);
+      const result = await applyMigration(migrationFile, sql);
       results.push(result);
       console.log(''); // Пустая строка для читаемости
     }
