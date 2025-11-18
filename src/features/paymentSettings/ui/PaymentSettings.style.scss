@@ -60,7 +60,7 @@
 
   &__provider-logo {
     margin: 0;
-    color: var(--text-color, #ffffff);
+    color: #ffffff !important;
     font-size: 1.5rem;
     font-weight: 700;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -68,33 +68,34 @@
   }
 
   &__provider-heading {
-    margin: 0;
-    color: var(--text-color, #ffffff);
-    font-size: 1rem;
+    margin: 0 0 16px;
+    color: #ffffff !important;
+    font-size: 1.25rem;
     line-height: 1.5;
-    font-weight: 400;
+    font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__provider-details {
-    margin: 0;
-    color: var(--warm-concrete, #9b9b9a);
-    font-size: 0.9375rem;
-    line-height: 1.6;
+    margin: 0 0 24px;
+    color: #e0e0e0 !important;
+    font-size: 1rem;
+    line-height: 1.7;
     font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__instructions {
     margin: 0;
     padding: 0;
-    color: var(--warm-concrete, #9b9b9a);
-    font-size: 0.9375rem;
-    line-height: 1.6;
+    color: #e0e0e0 !important;
+    font-size: 1rem;
+    line-height: 1.7;
     font-family: var(--base-font-family, arial, sans-serif);
 
     p {
       margin: 0 0 16px;
-      color: var(--text-color, #ffffff);
+      color: #ffffff !important;
+      font-size: 1rem;
 
       &:last-child {
         margin-block-end: 0;
@@ -106,8 +107,10 @@
       padding-inline-start: 24px;
 
       li {
-        margin: 0 0 8px;
-        color: var(--warm-concrete, #9b9b9a);
+        margin: 0 0 12px;
+        color: #e0e0e0 !important;
+        font-size: 1rem;
+        line-height: 1.6;
 
         &:last-child {
           margin-block-end: 0;
