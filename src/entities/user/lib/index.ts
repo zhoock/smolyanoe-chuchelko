@@ -1,5 +1,5 @@
 /**
- * Утилиты для работы с профилем пользователя
+ * Утилиты для работы с профилем пользователя и данными текущего пользователя
  */
 
 export interface UserProfile {
@@ -14,14 +14,23 @@ export interface UserProfileResponse {
   error?: string;
 }
 
+export interface ClaimUserDataResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  updated?: {
+    albums: number;
+    tracks: number;
+    syncedLyrics: number;
+    articles: number;
+  };
+}
+
 /**
  * Загружает описание группы (theBand) из БД для текущего пользователя
- * @param lang - язык интерфейса
- * @returns массив строк с описанием группы или null, если пользователь не авторизован или данных нет
  */
 export async function loadTheBandFromDatabase(lang: string): Promise<string[] | null> {
   try {
-    // Импортируем динамически, чтобы избежать циклических зависимостей
     const { getAuthHeader } = await import('@shared/lib/auth');
     const authHeader = getAuthHeader();
 
@@ -35,9 +44,9 @@ export async function loadTheBandFromDatabase(lang: string): Promise<string[] | 
 
     if (!response.ok) {
       if (response.status === 404) {
-        return null; // Пользователь не найден
+        return null;
       }
-      return null; // При ошибке возвращаем null (будет использован JSON fallback)
+      return null;
     }
 
     const contentType = response.headers.get('content-type');
@@ -51,7 +60,6 @@ export async function loadTheBandFromDatabase(lang: string): Promise<string[] | 
       return result.data.theBand;
     }
 
-    // Если данных нет (result.data === null), возвращаем null для использования JSON fallback
     return null;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
@@ -63,21 +71,21 @@ export async function loadTheBandFromDatabase(lang: string): Promise<string[] | 
 
 /**
  * Сохраняет описание группы (theBand) в БД для текущего пользователя
- * @param theBand - массив строк с описанием группы
- * @returns результат сохранения
  */
 export async function saveTheBandToDatabase(
   theBand: string[]
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
     const response = await fetch('/api/user-profile', {
       method: 'POST',
       cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
-        // TODO: Добавить Authorization header когда будет реализована аутентификация
-        // 'Authorization': `Bearer ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify({ theBand }),
     });
@@ -109,6 +117,66 @@ export async function saveTheBandToDatabase(
     }
 
     const result = await response.json();
+    return result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Привязывает все публичные данные к текущему пользователю
+ */
+export async function claimUserData(options?: {
+  makePrivate?: boolean;
+}): Promise<ClaimUserDataResponse> {
+  try {
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
+    const response = await fetch('/api/claim-user-data', {
+      method: 'POST',
+      cache: 'no-cache',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        ...authHeader,
+      },
+      body: JSON.stringify({
+        makePrivate: options?.makePrivate ?? true,
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          if (errorData.error || errorData.message) {
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          }
+        } else {
+          const text = await response.text();
+          if (text) {
+            errorMessage = text.substring(0, 200);
+          }
+        }
+      } catch (parseError) {
+        console.warn('⚠️ Не удалось распарсить ответ об ошибке (claim-user-data):', parseError);
+      }
+      throw new Error(errorMessage);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid content type: expected JSON');
+    }
+
+    const result: ClaimUserDataResponse = await response.json();
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

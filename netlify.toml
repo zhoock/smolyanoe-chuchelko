@@ -57,6 +57,13 @@
   status = 200
   force = true
 
+# API route для привязки публичных данных к текущему пользователю
+[[redirects]]
+  from = "/api/claim-user-data*"
+  to = "/.netlify/functions/claim-user-data"
+  status = 200
+  force = true
+
 # API route для работы со статьями пользователей
 [[redirects]]
   from = "/api/articles-api*"
