@@ -52,7 +52,19 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
       const synced = storedSync || currentTrack.syncedLyrics;
 
       if (synced && synced.length > 0) {
-        setSyncedLyrics(synced);
+        // Проверяем, действительно ли текст синхронизирован
+        // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
+        const isActuallySynced = synced.some((line) => line.startTime > 0);
+
+        if (isActuallySynced) {
+          // Текст действительно синхронизирован - показываем его
+          setSyncedLyrics(synced);
+        } else {
+          // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем
+          // Он будет отображаться как обычный текст через другой компонент
+          setSyncedLyrics(null);
+          setCurrentLineIndex(null);
+        }
       } else {
         setSyncedLyrics(null);
         setCurrentLineIndex(null);
