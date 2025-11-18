@@ -201,6 +201,10 @@ export function UserDashboard() {
                 ? 'Data has been linked to your account.'
                 : 'Данные привязаны к вашему аккаунту.')) + ` ${summary}`,
         });
+        // Автоматически скрываем сообщение через 5 секунд
+        setTimeout(() => {
+          setClaimFeedback(null);
+        }, 5000);
       } else {
         setClaimFeedback({
           message:
@@ -210,6 +214,10 @@ export function UserDashboard() {
               : 'Не удалось привязать данные к текущему пользователю.'),
           isError: true,
         });
+        // Автоматически скрываем сообщение об ошибке через 7 секунд
+        setTimeout(() => {
+          setClaimFeedback(null);
+        }, 7000);
       }
     } catch (error) {
       setClaimFeedback({
@@ -219,6 +227,10 @@ export function UserDashboard() {
             : `Ошибка: ${(error as Error).message}`,
         isError: true,
       });
+      // Автоматически скрываем сообщение об ошибке через 7 секунд
+      setTimeout(() => {
+        setClaimFeedback(null);
+      }, 7000);
     } finally {
       setIsClaimingData(false);
     }
@@ -338,6 +350,16 @@ export function UserDashboard() {
             className={`user-dashboard ${isDetailViewOpen ? 'user-dashboard--detail-open' : ''}`}
           >
             <div className="user-dashboard__header-actions">
+              {claimFeedback && (
+                <div
+                  className={`user-dashboard__notice ${
+                    claimFeedback.isError ? 'user-dashboard__notice--error' : ''
+                  }`}
+                  role="status"
+                >
+                  {claimFeedback.message}
+                </div>
+              )}
               <button
                 type="button"
                 className="user-dashboard__claim-button"
@@ -369,17 +391,6 @@ export function UserDashboard() {
                 className="user-dashboard__close"
               />
             </div>
-
-            {claimFeedback && (
-              <div
-                className={`user-dashboard__notice ${
-                  claimFeedback.isError ? 'user-dashboard__notice--error' : ''
-                }`}
-                role="status"
-              >
-                {claimFeedback.message}
-              </div>
-            )}
 
             {/* Кнопка "Назад" - показывается только когда открыт альбом или синхронизация */}
             {isDetailViewOpen && (
