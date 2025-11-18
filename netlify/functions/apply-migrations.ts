@@ -125,7 +125,7 @@ const MIGRATION_006 = `
 -- Миграция: Создание таблицы articles для пользовательских статей
 CREATE TABLE IF NOT EXISTS articles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   article_id VARCHAR(255) NOT NULL,
   name_article VARCHAR(500) NOT NULL,
   description TEXT,
@@ -152,11 +152,19 @@ CREATE TRIGGER update_articles_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 `;
 
+const MIGRATION_007 = `
+-- Миграция: Разрешение NULL для user_id в таблице articles
+-- Позволяет создавать публичные статьи (user_id = NULL)
+ALTER TABLE articles
+ALTER COLUMN user_id DROP NOT NULL;
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
   '005_add_the_band_to_users.sql': MIGRATION_005,
   '006_create_articles.sql': MIGRATION_006,
+  '007_alter_articles_user_id_nullable.sql': MIGRATION_007,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -288,6 +296,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '004_add_user_id_to_synced_lyrics.sql',
       '005_add_the_band_to_users.sql',
       '006_create_articles.sql',
+      '007_alter_articles_user_id_nullable.sql',
     ];
 
     const results: MigrationResult[] = [];

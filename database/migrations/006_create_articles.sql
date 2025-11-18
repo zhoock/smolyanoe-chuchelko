@@ -4,7 +4,7 @@
 -- Таблица статей
 CREATE TABLE IF NOT EXISTS articles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL, -- все статьи принадлежат пользователю
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- NULL для публичных статей
   article_id VARCHAR(255) NOT NULL, -- уникальный идентификатор статьи (например, "1", "2", "6")
   name_article VARCHAR(500) NOT NULL, -- название статьи
   description TEXT, -- краткое описание
