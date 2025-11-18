@@ -56,8 +56,7 @@ function getPool(): Pool {
     // Определяем, нужен ли SSL
     // Supabase всегда требует SSL, даже в development
     const connectionUrl = connectionString.toLowerCase();
-    const isSupabase =
-      connectionUrl.includes('supabase.com') || connectionUrl.includes('supabase.co');
+    const isSupabase = connectionUrl.includes('supabase.com');
     const useSSL = isSupabase || process.env.NODE_ENV === 'production';
 
     pool = new Pool({
