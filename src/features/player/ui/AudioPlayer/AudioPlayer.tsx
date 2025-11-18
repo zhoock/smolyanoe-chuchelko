@@ -16,6 +16,7 @@ import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
 import { clearImageColorCache } from '@shared/lib/hooks/useImageColor';
 import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
+import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import { useLang } from '@app/providers/lang';
 
 // Helper для debug-логов только в development
@@ -82,6 +83,7 @@ export default function AudioPlayer({
   const [syncedLyrics, setSyncedLyrics] = useState<SyncedLyricsLine[] | null>(null);
   const [authorshipText, setAuthorshipText] = useState<string | null>(null); // текст авторства
   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
+  const [plainLyricsContent, setPlainLyricsContent] = useState<string | null>(null); // обычный текст (не синхронизированный)
   const globalShowLyrics = useAppSelector(playerSelectors.selectShowLyrics);
   const globalControlsVisible = useAppSelector(playerSelectors.selectControlsVisible);
   const [controlsVisible, setControlsVisible] = useState<boolean>(globalControlsVisible);
@@ -1078,31 +1080,43 @@ export default function AudioPlayer({
         storedSync || currentTrack.syncedLyrics;
 
       if (baseSynced && baseSynced.length > 0) {
-        // Загружаем авторство и добавляем его в конец массива строк, если оно есть
-        const storedAuthorship = await loadAuthorshipFromStorage(
-          albumIdComputed,
-          currentTrack.id,
-          lang
-        );
-        const authorship = currentTrack.authorship || storedAuthorship;
+        // Проверяем, действительно ли текст синхронизирован
+        // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
+        const isActuallySynced = baseSynced.some((line) => line.startTime > 0);
 
-        const synced = [...baseSynced];
+        if (isActuallySynced) {
+          // Текст действительно синхронизирован - загружаем авторство и добавляем его в конец
+          const storedAuthorship = await loadAuthorshipFromStorage(
+            albumIdComputed,
+            currentTrack.id,
+            lang
+          );
+          const authorship = currentTrack.authorship || storedAuthorship;
 
-        // Добавляем авторство в конец, если оно есть и ещё не добавлено
-        if (authorship) {
-          const lastLine = synced[synced.length - 1];
-          // Проверяем, не является ли последняя строка уже авторством
-          if (!lastLine || lastLine.text !== authorship) {
-            synced.push({
-              text: authorship,
-              startTime: time.duration || 0,
-              endTime: undefined,
-            });
+          const synced = [...baseSynced];
+
+          // Добавляем авторство в конец, если оно есть и ещё не добавлено
+          if (authorship) {
+            const lastLine = synced[synced.length - 1];
+            // Проверяем, не является ли последняя строка уже авторством
+            if (!lastLine || lastLine.text !== authorship) {
+              synced.push({
+                text: authorship,
+                startTime: time.duration || 0,
+                endTime: undefined,
+              });
+            }
           }
-        }
 
-        setSyncedLyrics(synced);
-        setAuthorshipText(authorship || null);
+          setSyncedLyrics(synced);
+          setAuthorshipText(authorship || null);
+        } else {
+          // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем как синхронизированный
+          // Он будет отображаться как обычный текст через plainLyricsContent
+          setSyncedLyrics(null);
+          setAuthorshipText(null);
+          setCurrentLineIndex(null);
+        }
       } else {
         setSyncedLyrics(null);
         setAuthorshipText(null);
@@ -1110,6 +1124,47 @@ export default function AudioPlayer({
       }
     })();
   }, [currentTrack, albumId, lang, time.duration]);
+
+  // Загружаем обычный текст (не синхронизированный) из БД или JSON
+  useEffect(() => {
+    if (!currentTrack) {
+      setPlainLyricsContent(null);
+      return;
+    }
+
+    const normalize = (text: string) => text.replace(/\r\n/g, '\n').trim();
+
+    // Сначала проверяем текст из JSON
+    if (currentTrack.content && currentTrack.content.trim().length > 0) {
+      setPlainLyricsContent(normalize(currentTrack.content));
+      return;
+    }
+
+    // Затем проверяем localStorage (dev mode)
+    const albumIdComputed = albumId;
+    const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
+
+    try {
+      const stored =
+        typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
+      if (stored && stored.trim().length > 0) {
+        setPlainLyricsContent(normalize(stored));
+        return;
+      }
+    } catch (error) {
+      debugLog('Cannot read stored text content', { error });
+    }
+
+    // Если текст не найден в JSON и localStorage, загружаем из БД
+    (async () => {
+      const textFromDb = await loadTrackTextFromDatabase(albumIdComputed, currentTrack.id, lang);
+      if (textFromDb && textFromDb.trim().length > 0) {
+        setPlainLyricsContent(normalize(textFromDb));
+      } else {
+        setPlainLyricsContent(null);
+      }
+    })();
+  }, [currentTrack, albumId, lang]);
 
   /**
    * Автоматически скрываем текст при смене трека, если трек не добавлен в караоке.
@@ -1750,33 +1805,6 @@ export default function AudioPlayer({
   const toggleRepeat = useCallback(() => {
     dispatch(playerActions.toggleRepeat());
   }, [dispatch]);
-
-  const plainLyricsContent = useMemo(() => {
-    if (!currentTrack) {
-      return null;
-    }
-
-    const normalize = (text: string) => text.replace(/\r\n/g, '\n').trim();
-
-    if (currentTrack.content && currentTrack.content.trim().length > 0) {
-      return normalize(currentTrack.content);
-    }
-
-    const albumIdComputed = albumId;
-    const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
-
-    try {
-      const stored =
-        typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
-      if (stored && stored.trim().length > 0) {
-        return normalize(stored);
-      }
-    } catch (error) {
-      debugLog('Cannot read stored text content', { error });
-    }
-
-    return null;
-  }, [currentTrack, albumId, lang]);
 
   const hasPlainLyrics = !!plainLyricsContent;
 
