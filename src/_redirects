@@ -5,6 +5,8 @@
 /api/synced-lyrics*    /.netlify/functions/synced-lyrics    200
 /api/save-synced-lyrics*    /.netlify/functions/synced-lyrics    200
 /api/save-track-text*    /.netlify/functions/save-track-text    200
+/api/migrate-json-to-db*    /.netlify/functions/migrate-json-to-db    200
+/api/albums*    /.netlify/functions/albums    200
 /api/create-payment*    /.netlify/functions/create-payment    200
 /api/payment-webhook*    /.netlify/functions/payment-webhook    200
 /api/payment-settings*    /.netlify/functions/payment-settings    200

@@ -29,6 +29,20 @@
   status = 200
   force = true
 
+# API route для миграции JSON в БД (только для админов)
+[[redirects]]
+  from = "/api/migrate-json-to-db*"
+  to = "/.netlify/functions/migrate-json-to-db"
+  status = 200
+  force = true
+
+# API route для работы с альбомами
+[[redirects]]
+  from = "/api/albums*"
+  to = "/.netlify/functions/albums"
+  status = 200
+  force = true
+
 # API routes для платежей ЮKassa
 [[redirects]]
   from = "/api/create-payment*"

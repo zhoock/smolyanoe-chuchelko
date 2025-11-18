@@ -27,6 +27,54 @@ export const fetchAlbums = createAsyncThunk<
   'albums/fetchByLang',
   async ({ lang }, { signal, rejectWithValue }) => {
     try {
+      // Сначала пытаемся загрузить из БД через API
+      try {
+        const response = await fetch(`/api/albums?lang=${lang}`, {
+          signal,
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (
+            result.success &&
+            result.data &&
+            Array.isArray(result.data) &&
+            result.data.length > 0
+          ) {
+            // Преобразуем данные из API в формат IAlbums
+            const albums: IAlbums[] = result.data.map((album: any) => ({
+              albumId: album.albumId,
+              artist: album.artist,
+              album: album.album,
+              fullName: album.fullName,
+              description: album.description,
+              cover: album.cover,
+              release: album.release,
+              buttons: album.buttons,
+              details: album.details,
+              tracks: album.tracks.map((track: any) => ({
+                id: track.id,
+                title: track.title,
+                duration: track.duration,
+                src: track.src,
+                content: track.content,
+                authorship: track.authorship,
+                syncedLyrics: track.syncedLyrics,
+              })),
+            }));
+            return albums;
+          }
+        }
+      } catch (apiError) {
+        // Если API недоступен, используем fallback на JSON
+        console.warn('⚠️ API недоступен, используем JSON fallback:', apiError);
+      }
+
+      // Fallback: загружаем из JSON (для обратной совместимости)
       const albums = await getJSON<IAlbums[]>(`albums-${lang}.json`, signal);
       return albums;
     } catch (error) {
