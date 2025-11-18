@@ -128,12 +128,57 @@ async function applyMigration(migrationName: string, sql: string): Promise<Migra
   console.log(`📝 Применяем миграцию: ${migrationName}...`);
 
   try {
-    // Разбиваем SQL на отдельные запросы (разделитель: ;)
-    // Убираем комментарии и пустые строки
-    const queries = sql
-      .split(';')
-      .map((q) => q.trim())
-      .filter((q) => q.length > 0 && !q.startsWith('--'));
+    // Разбиваем SQL на отдельные запросы
+    // Учитываем блоки DO $$ ... END $$; которые содержат вложенные ;
+    const queries: string[] = [];
+    let currentQuery = '';
+    let inDoBlock = false;
+    let dollarTag = '';
+
+    const lines = sql.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Пропускаем комментарии
+      if (trimmed.startsWith('--') || trimmed.length === 0) {
+        continue;
+      }
+
+      currentQuery += line + '\n';
+
+      // Проверяем начало блока DO $$
+      if (trimmed.match(/^DO\s+\$\$/)) {
+        inDoBlock = true;
+        const match = trimmed.match(/\$\$(\w*)/);
+        dollarTag = match ? match[1] : '';
+        continue;
+      }
+
+      // Проверяем конец блока DO $$ ... END $$;
+      if (inDoBlock && trimmed.match(new RegExp(`END\\s+\\$\\$${dollarTag}\\s*;?`))) {
+        inDoBlock = false;
+        dollarTag = '';
+        // Блок завершён, добавляем запрос
+        if (currentQuery.trim().length > 0) {
+          queries.push(currentQuery.trim());
+        }
+        currentQuery = '';
+        continue;
+      }
+
+      // Если не в блоке DO, проверяем обычные запросы
+      if (!inDoBlock && trimmed.endsWith(';')) {
+        if (currentQuery.trim().length > 0) {
+          queries.push(currentQuery.trim());
+        }
+        currentQuery = '';
+      }
+    }
+
+    // Добавляем последний запрос, если он есть
+    if (currentQuery.trim().length > 0) {
+      queries.push(currentQuery.trim());
+    }
 
     // Выполняем каждый запрос
     for (const queryText of queries) {
