@@ -77,6 +77,10 @@ export function UserDashboard() {
     // },
   ];
 
+  const isUserAuthenticated = isAuthenticated();
+  const user = getUser();
+  const userId = user?.id || null;
+
   // Определяем активную вкладку из URL
   const getActiveTabFromPath = (path: string): DashboardTab => {
     // Проверяем точное совпадение с /dashboard/:tab
@@ -101,11 +105,11 @@ export function UserDashboard() {
 
   // Проверяем авторизацию (после всех хуков)
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (!isUserAuthenticated) {
       navigate('/auth', { replace: true });
       return;
     }
-  }, [navigate]);
+  }, [navigate, isUserAuthenticated]);
 
   // Редирект на первую вкладку если просто /dashboard
   useEffect(() => {
@@ -162,6 +166,12 @@ export function UserDashboard() {
     setSelectedAlbumId(null);
     setSelectedTrack(null);
   };
+
+  const isDetailViewOpen = selectedAlbumId !== null || selectedTrack !== null || isBuilderOpen;
+
+  if (!isUserAuthenticated || !userId) {
+    return null;
+  }
 
   const renderContent = () => {
     // Если открыт builder, показываем DashboardAlbumBuilder

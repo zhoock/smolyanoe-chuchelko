@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAuthenticated } from '@shared/lib/auth';
 import { LoginForm } from './LoginForm';
@@ -11,9 +11,14 @@ export function AuthPage() {
   const [mode, setMode] = useState<AuthMode>('login');
   const navigate = useNavigate();
 
-  // Если уже авторизован, перенаправляем в dashboard
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/dashboard/albums', { replace: true });
+    }
+  }, [navigate]);
+
+  // Если уже авторизован, ничего не рендерим (редирект произойдёт через useEffect)
   if (isAuthenticated()) {
-    navigate('/dashboard/albums');
     return null;
   }
 
@@ -33,3 +38,5 @@ export function AuthPage() {
     </div>
   );
 }
+
+export default AuthPage;
