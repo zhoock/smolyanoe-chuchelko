@@ -21,7 +21,6 @@ interface MiniPlayerProps {
   onToggle: () => void;
   onExpand: () => void;
   forwardHandlers: ForwardHandlers;
-  bottomOffset: number;
   containerRef?: React.Ref<HTMLDivElement>;
 }
 
@@ -32,7 +31,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   onToggle,
   onExpand,
   forwardHandlers,
-  bottomOffset,
   containerRef,
 }) => {
   return (
@@ -49,11 +47,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           onExpand();
         }
       }}
-      style={
-        {
-          '--mini-player-bottom': `${bottomOffset}px`,
-        } as React.CSSProperties
-      }
     >
       <div className="mini-player__cover">
         {cover ? (

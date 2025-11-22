@@ -24,8 +24,6 @@ const getDefaultBottomOffset = (): number => {
   return window.innerWidth * 0.03; // 3vi = 3% ширины viewport
 };
 
-const DEFAULT_BOTTOM_OFFSET = 24; // Используется только как fallback
-
 export const PlayerShell: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
@@ -42,8 +40,6 @@ export const PlayerShell: React.FC = () => {
   const sourceLocation = useAppSelector(playerSelectors.selectSourceLocation);
 
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BG);
-  const [miniBottomOffset, setMiniBottomOffset] = useState<number>(getDefaultBottomOffset());
-  const [blurBackgroundHeight, setBlurBackgroundHeight] = useState<number>(0);
 
   const isFullScreen = location.hash === '#player';
   const shouldRenderMini = hasPlaylist && !!albumMeta && !!currentTrack && !isFullScreen;
@@ -190,82 +186,58 @@ export const PlayerShell: React.FC = () => {
     isSeekingRef.current = isSeeking;
   }, [isSeeking]);
 
-  const updateMiniPlayerPosition = useCallback(() => {
-    const playerEl = miniPlayerRef.current;
-    const footerEl = document.querySelector('footer');
-
-    if (!playerEl || !footerEl) {
-      setMiniBottomOffset(getDefaultBottomOffset());
-      setBlurBackgroundHeight(0);
-      return;
-    }
-
-    const defaultOffset = getDefaultBottomOffset();
-    const footerRect = footerEl.getBoundingClientRect();
-    const playerRect = playerEl.getBoundingClientRect();
-    const overlap = window.innerHeight - defaultOffset - footerRect.top;
-    const extraOffset =
-      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ms-0')) || 0;
-    const nextOffset = defaultOffset + Math.max(0, overlap + extraOffset);
-
-    // Вычисляем высоту заблюренного фона: от нижней границы мини-плеера до верхней границы футера
-    const blurHeight = Math.max(0, footerRect.top - playerRect.bottom);
-
-    setMiniBottomOffset((prev) => {
-      if (Math.abs(prev - nextOffset) > 1) {
-        return nextOffset;
-      }
-      return prev;
-    });
-
-    setBlurBackgroundHeight((prev) => {
-      if (Math.abs(prev - blurHeight) > 1) {
-        return blurHeight;
-      }
-      return prev;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!shouldRenderMini) {
-      setMiniBottomOffset(getDefaultBottomOffset());
-      return;
-    }
-
-    const handle = () => {
-      updateMiniPlayerPosition();
-    };
-
-    handle();
-
-    window.addEventListener('scroll', handle, { passive: true });
-    window.addEventListener('resize', handle);
-
-    return () => {
-      window.removeEventListener('scroll', handle);
-      window.removeEventListener('resize', handle);
-    };
-  }, [shouldRenderMini, updateMiniPlayerPosition]);
-
+  // Добавляем padding-bottom к footer, когда мини-плеер отображается
   useLayoutEffect(() => {
     if (!shouldRenderMini) {
+      const footerEl = document.querySelector('footer');
+      if (footerEl) {
+        (footerEl as HTMLElement).style.paddingBottom = '';
+      }
       return;
     }
 
-    setMiniBottomOffset(getDefaultBottomOffset());
-    let frameId = 0;
-    let secondFrameId = 0;
-    frameId = requestAnimationFrame(() => {
-      secondFrameId = requestAnimationFrame(() => {
-        updateMiniPlayerPosition();
-      });
+    const updateFooterPadding = () => {
+      const footerEl = document.querySelector('footer');
+      const playerEl = miniPlayerRef.current;
+
+      if (!footerEl || !playerEl) return;
+
+      // Используем только высоту плеера, так как отступ снизу (3vi) уже учтён в позиционировании
+      const playerHeight = playerEl.offsetHeight;
+      (footerEl as HTMLElement).style.paddingBottom = `${playerHeight}px`;
+    };
+
+    // Обновляем после рендера
+    const frameId = requestAnimationFrame(() => {
+      updateFooterPadding();
     });
+
+    // Обновляем при изменении размера окна
+    const handleResize = () => {
+      updateFooterPadding();
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateFooterPadding();
+    });
+
+    const playerEl = miniPlayerRef.current;
+    if (playerEl) {
+      resizeObserver.observe(playerEl);
+    }
+
+    window.addEventListener('resize', handleResize);
 
     return () => {
       cancelAnimationFrame(frameId);
-      cancelAnimationFrame(secondFrameId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+      const footerEl = document.querySelector('footer');
+      if (footerEl) {
+        (footerEl as HTMLElement).style.paddingBottom = '';
+      }
     };
-  }, [location.pathname, location.search, updateMiniPlayerPosition, shouldRenderMini]);
+  }, [shouldRenderMini]);
 
   const albumForPlayer = useMemo<IAlbums | null>(() => {
     if (!albumMeta) {
@@ -485,7 +457,6 @@ export const PlayerShell: React.FC = () => {
           onToggle={handleToggle}
           onExpand={handleExpand}
           forwardHandlers={forwardHandlers}
-          bottomOffset={miniBottomOffset}
           containerRef={miniPlayerRef}
         />
       )}

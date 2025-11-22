@@ -70,7 +70,7 @@ body {
     grid-template:
       'header' calc(1.618rem * 2)
       'main' auto
-      'footer' 165px / 1fr;
+      'footer' auto / 1fr;
 
     .main-background {
       background: var(--main-background-color, #20201d);
@@ -96,8 +96,6 @@ body {
     main {
       display: grid;
       grid-area: main;
-      padding-block-end: var(--ms-4);
-      background: var(--main-background-color, #ffffff);
 
       @include breakpoint(old-phones) {
         grid-template-rows: 190px auto;
