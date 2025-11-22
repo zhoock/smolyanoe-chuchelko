@@ -89,6 +89,39 @@
   status = 200
   force = true
 
+# Исключаем статические файлы из redirect на index.html
+# Эти redirects должны быть ПЕРЕД общим redirect для SPA
+# В dev режиме Netlify Dev автоматически проксирует их на webpack dev server (порт 8080)
+[[redirects]]
+  from = "/scripts/*"
+  to = "/scripts/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/styles/*"
+  to = "/styles/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/images/*"
+  to = "/images/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/audio/*"
+  to = "/audio/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
+
 # Общий redirect для SPA - должен быть ПОСЛЕДНИМ
 [[redirects]]
   from = "/*"

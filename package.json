@@ -22,7 +22,9 @@
     "generate-encryption-key": "node scripts/generate-encryption-key.js",
     "test-db": "tsx scripts/test-database-connection.ts",
     "test-netlify-env": "node scripts/test-netlify-env.js",
-    "load-env": "echo '⚠️  Используйте: source scripts/load-netlify-env.sh' && bash scripts/load-netlify-env.sh"
+    "load-env": "echo '⚠️  Используйте: source scripts/load-netlify-env.sh' && bash scripts/load-netlify-env.sh",
+    "dev": "netlify dev",
+    "dev:local": "npm start"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
