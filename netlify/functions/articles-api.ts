@@ -9,6 +9,18 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
+import {
+  createOptionsResponse,
+  createErrorResponse,
+  createSuccessResponse,
+  createSuccessMessageResponse,
+  validateLang,
+  getUserIdFromEvent,
+  requireAuth,
+  parseJsonBody,
+  handleError,
+} from './lib/api-helpers';
+import type { ApiResponse, SupportedLang } from './lib/types';
 
 interface ArticleRow {
   id: string;
@@ -18,37 +30,20 @@ interface ArticleRow {
   description: string;
   img: string;
   date: Date;
-  details: any; // JSONB
+  details: unknown[];
   lang: string;
   is_public: boolean;
   created_at: Date;
   updated_at: Date;
 }
 
-interface ArticlesResponse {
-  success: boolean;
-  data?: Array<{
-    articleId: string;
-    nameArticle: string;
-    img: string;
-    date: string;
-    details: any[];
-    description: string;
-  }>;
-  error?: string;
-}
-
-interface ArticleResponse {
-  success: boolean;
-  data?: {
-    articleId: string;
-    nameArticle: string;
-    img: string;
-    date: string;
-    details: any[];
-    description: string;
-  };
-  error?: string;
+interface ArticleData {
+  articleId: string;
+  nameArticle: string;
+  img: string;
+  date: string;
+  details: unknown[];
+  description: string;
 }
 
 interface CreateArticleRequest {
@@ -57,8 +52,8 @@ interface CreateArticleRequest {
   description?: string;
   img?: string;
   date: string;
-  details: any[];
-  lang: string;
+  details: unknown[];
+  lang: SupportedLang;
   isPublic?: boolean;
 }
 
@@ -67,41 +62,41 @@ interface UpdateArticleRequest {
   description?: string;
   img?: string;
   date?: string;
-  details?: any[];
+  details?: unknown[];
   isPublic?: boolean;
 }
 
-import { extractUserIdFromToken } from './lib/jwt';
+type ArticlesResponse = ApiResponse<ArticleData[]>;
+
+/**
+ * Преобразует данные статьи из БД в формат API
+ */
+function mapArticleToApiFormat(article: ArticleRow): ArticleData {
+  return {
+    articleId: article.article_id,
+    nameArticle: article.name_article,
+    img: article.img || '',
+    date: article.date.toISOString().split('T')[0], // YYYY-MM-DD
+    details: (article.details as unknown[]) || [],
+    description: article.description || '',
+  };
+}
 
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return createOptionsResponse();
   }
 
   try {
-    const userId = extractUserIdFromToken(event.headers.authorization);
+    const userId = getUserIdFromEvent(event);
 
     if (event.httpMethod === 'GET') {
       const { lang } = event.queryStringParameters || {};
 
-      if (!lang || !['en', 'ru'].includes(lang)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Invalid lang parameter. Must be "en" or "ru".',
-          } as ArticlesResponse),
-        };
+      if (!validateLang(lang)) {
+        return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
       // Получаем публичные статьи или статьи текущего пользователя
@@ -127,42 +122,30 @@ export const handler: Handler = async (
         0
       );
 
-      const articles = articlesResult.rows.map((article) => ({
-        articleId: article.article_id,
-        nameArticle: article.name_article,
-        img: article.img || '',
-        date: article.date.toISOString().split('T')[0], // YYYY-MM-DD
-        details: article.details || [],
-        description: article.description || '',
-      }));
+      const articles = articlesResult.rows.map(mapArticleToApiFormat);
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, data: articles } as ArticlesResponse),
-      };
+      return createSuccessResponse(articles);
     }
 
     if (event.httpMethod === 'POST') {
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({ success: false, error: 'Unauthorized' }),
-        };
+        return createErrorResponse(401, 'Unauthorized');
       }
 
-      const data: CreateArticleRequest = JSON.parse(event.body || '{}');
+      const data = parseJsonBody<CreateArticleRequest>(event.body, {} as CreateArticleRequest);
 
-      if (!data.articleId || !data.nameArticle || !data.date || !data.lang || !data.details) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Invalid request data. Required: articleId, nameArticle, date, lang, details',
-          }),
-        };
+      if (
+        !data.articleId ||
+        !data.nameArticle ||
+        !data.date ||
+        !data.lang ||
+        !data.details ||
+        !validateLang(data.lang)
+      ) {
+        return createErrorResponse(
+          400,
+          'Invalid request data. Required: articleId, nameArticle, date, lang (must be "en" or "ru"), details'
+        );
       }
 
       await query(
@@ -182,43 +165,22 @@ export const handler: Handler = async (
         0
       );
 
-      console.log('✅ Article created:', {
-        userId,
-        articleId: data.articleId,
-        lang: data.lang,
-      });
-
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify({ success: true, message: 'Article created successfully' }),
-      };
+      return createSuccessMessageResponse('Article created successfully', 201);
     }
 
     if (event.httpMethod === 'PUT') {
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({ success: false, error: 'Unauthorized' }),
-        };
+        return createErrorResponse(401, 'Unauthorized');
       }
 
       const { id } = event.queryStringParameters || {};
       const articleId = id;
 
       if (!articleId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Article ID is required (query parameter: id)',
-          }),
-        };
+        return createErrorResponse(400, 'Article ID is required (query parameter: id)');
       }
 
-      const data: UpdateArticleRequest = JSON.parse(event.body || '{}');
+      const data = parseJsonBody<UpdateArticleRequest>(event.body, {} as UpdateArticleRequest);
 
       // Проверяем, что статья принадлежит пользователю
       const checkResult = await query<ArticleRow>(
@@ -266,11 +228,7 @@ export const handler: Handler = async (
       }
 
       if (updates.length === 0) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ success: false, error: 'No fields to update' }),
-        };
+        return createErrorResponse(400, 'No fields to update');
       }
 
       updates.push(`updated_at = NOW()`);
@@ -284,36 +242,19 @@ export const handler: Handler = async (
         0
       );
 
-      console.log('✅ Article updated:', { userId, articleId });
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, message: 'Article updated successfully' }),
-      };
+      return createSuccessMessageResponse('Article updated successfully');
     }
 
     if (event.httpMethod === 'DELETE') {
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({ success: false, error: 'Unauthorized' }),
-        };
+        return createErrorResponse(401, 'Unauthorized');
       }
 
       const { id } = event.queryStringParameters || {};
       const articleId = id;
 
       if (!articleId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Article ID is required (query parameter: id)',
-          }),
-        };
+        return createErrorResponse(400, 'Article ID is required (query parameter: id)');
       }
 
       // Проверяем, что статья принадлежит пользователю
@@ -324,38 +265,16 @@ export const handler: Handler = async (
       );
 
       if (checkResult.rows.length === 0) {
-        return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({ success: false, error: 'Article not found or access denied' }),
-        };
+        return createErrorResponse(404, 'Article not found or access denied');
       }
 
       await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [articleId, userId], 0);
 
-      console.log('✅ Article deleted:', { userId, articleId });
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, message: 'Article deleted successfully' }),
-      };
+      return createSuccessMessageResponse('Article deleted successfully');
     }
 
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-    };
+    return createErrorResponse(405, 'Method not allowed');
   } catch (error) {
-    console.error('❌ Error in articles-api function:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-    };
+    return handleError(error, 'articles-api function');
   }
 };

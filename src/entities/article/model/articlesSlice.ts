@@ -3,20 +3,11 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
+import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 
-import type { ArticlesEntry, ArticlesState } from './types';
+import type { ArticlesState } from './types';
 
-const createInitialEntry = (): ArticlesEntry => ({
-  status: 'idle',
-  error: null,
-  data: [],
-  lastUpdated: null,
-});
-
-const initialState: ArticlesState = {
-  en: createInitialEntry(),
-  ru: createInitialEntry(),
-};
+const initialState: ArticlesState = createInitialLangState<IArticles[]>([]);
 
 export const fetchArticles = createAsyncThunk<
   IArticles[],
@@ -56,14 +47,23 @@ export const fetchArticles = createAsyncThunk<
       }
 
       // Преобразуем данные из API в формат IArticles
-      const articles: IArticles[] = result.data.map((article: any) => ({
-        articleId: article.articleId,
-        nameArticle: article.nameArticle,
-        img: article.img,
-        date: article.date,
-        details: article.details || [],
-        description: article.description || '',
-      }));
+      const articles: IArticles[] = result.data.map(
+        (article: {
+          articleId: string;
+          nameArticle: string;
+          img: string;
+          date: string;
+          details?: unknown[];
+          description?: string;
+        }) => ({
+          articleId: article.articleId,
+          nameArticle: article.nameArticle,
+          img: article.img,
+          date: article.date,
+          details: article.details || [],
+          description: article.description || '',
+        })
+      );
 
       return articles;
     } catch (error) {
@@ -90,29 +90,7 @@ const articlesSlice = createSlice({
   name: 'articles',
   initialState,
   reducers: {},
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchArticles.pending, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'loading';
-        entry.error = null;
-      })
-      .addCase(fetchArticles.fulfilled, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.data = action.payload;
-        entry.status = 'succeeded';
-        entry.error = null;
-        entry.lastUpdated = Date.now();
-      })
-      .addCase(fetchArticles.rejected, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'failed';
-        entry.error = action.payload ?? action.error.message ?? 'Failed to fetch articles';
-      });
-  },
+  extraReducers: createLangExtraReducers(fetchArticles, 'Failed to fetch articles'),
 });
 
 export const articlesReducer = articlesSlice.reducer;

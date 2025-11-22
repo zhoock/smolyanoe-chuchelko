@@ -17,72 +17,14 @@ import {
   selectAlbumsError,
   selectAlbumById,
 } from '@entities/album';
-import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
-import { loadTrackTextFromStorage } from '@entities/track/lib';
 import type { TracksProps } from '@models';
+import { getTrackStatus, type TrackStatus } from '@widgets/dashboard/lib/trackStatus';
+import {
+  getStatusIcon,
+  getStatusText,
+  formatDuration,
+} from '@widgets/dashboard/lib/trackStatusUtils';
 import './DashboardAlbum.style.scss';
-
-type TrackStatus = 'synced' | 'text-only' | 'empty';
-
-async function getTrackStatus(
-  albumId: string,
-  track: TracksProps,
-  lang: string,
-  signal?: AbortSignal
-): Promise<TrackStatus> {
-  const storedSync = await loadSyncedLyricsFromStorage(albumId, track.id, lang, signal);
-
-  if (track.syncedLyrics && track.syncedLyrics.length > 0) {
-    return 'synced';
-  }
-
-  if (storedSync && storedSync.length > 0) {
-    return 'synced';
-  }
-
-  // Проверяем текст только в dev режиме (в production loadTrackTextFromStorage всегда null)
-  if (process.env.NODE_ENV === 'development') {
-    const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-    if (storedText !== null && storedText !== undefined) {
-      return 'text-only';
-    }
-  }
-
-  if (track.content) {
-    return 'text-only';
-  }
-
-  return 'empty';
-}
-
-function getStatusIcon(status: TrackStatus): string {
-  switch (status) {
-    case 'synced':
-      return '✅';
-    case 'text-only':
-      return '⚠️';
-    case 'empty':
-      return '❌';
-  }
-}
-
-function getStatusText(status: TrackStatus): string {
-  switch (status) {
-    case 'synced':
-      return 'Синхронизирован';
-    case 'text-only':
-      return 'Текст добавлен';
-    case 'empty':
-      return 'Пусто';
-  }
-}
-
-function formatDuration(seconds: number | undefined): string {
-  if (!seconds || !Number.isFinite(seconds)) return '--:--';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 interface DashboardAlbumProps {
   albumId?: string; // Опциональный prop для использования без роутинга
@@ -138,7 +80,13 @@ export default function DashboardAlbum({
       // Обрабатываем треки последовательно, чтобы не перегружать Supabase pooler
       for (const track of currentAlbum.tracks) {
         if (!cancelled && !abortController.signal.aborted) {
-          const status = await getTrackStatus(albumId, track, lang, abortController.signal);
+          const status = await getTrackStatus(
+            albumId,
+            track.id,
+            lang,
+            !!(track.syncedLyrics && track.syncedLyrics.length > 0),
+            abortController.signal
+          );
           if (!cancelled && !abortController.signal.aborted) {
             statusMap.set(track.id, status);
           }

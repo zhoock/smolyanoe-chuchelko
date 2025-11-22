@@ -4,20 +4,11 @@ import { getJSON } from '@shared/api/http';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IInterface } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
+import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 
-import type { UiDictionaryEntry, UiDictionaryState } from './types';
+import type { UiDictionaryState } from './types';
 
-const createInitialEntry = (): UiDictionaryEntry => ({
-  status: 'idle',
-  error: null,
-  data: [],
-  lastUpdated: null,
-});
-
-const initialState: UiDictionaryState = {
-  en: createInitialEntry(),
-  ru: createInitialEntry(),
-};
+const initialState: UiDictionaryState = createInitialLangState<IInterface[]>([]);
 
 export const fetchUiDictionary = createAsyncThunk<
   IInterface[],
@@ -53,29 +44,7 @@ const uiDictionarySlice = createSlice({
   name: 'uiDictionary',
   initialState,
   reducers: {},
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchUiDictionary.pending, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'loading';
-        entry.error = null;
-      })
-      .addCase(fetchUiDictionary.fulfilled, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.data = action.payload;
-        entry.status = 'succeeded';
-        entry.error = null;
-        entry.lastUpdated = Date.now();
-      })
-      .addCase(fetchUiDictionary.rejected, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'failed';
-        entry.error = action.payload ?? action.error.message ?? 'Failed to fetch UI dictionary';
-      });
-  },
+  extraReducers: createLangExtraReducers(fetchUiDictionary, 'Failed to fetch UI dictionary'),
 });
 
 export const uiDictionaryReducer = uiDictionarySlice.reducer;

@@ -4,20 +4,11 @@ import { getJSON } from '@shared/api/http';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
+import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 
-import type { HelpArticleEntry, HelpArticlesState } from './types';
+import type { HelpArticlesState } from './types';
 
-const createInitialEntry = (): HelpArticleEntry => ({
-  status: 'idle',
-  error: null,
-  data: [],
-  lastUpdated: null,
-});
-
-const initialState: HelpArticlesState = {
-  en: createInitialEntry(),
-  ru: createInitialEntry(),
-};
+const initialState: HelpArticlesState = createInitialLangState<IArticles[]>([]);
 
 export const fetchHelpArticles = createAsyncThunk<
   IArticles[],
@@ -53,29 +44,7 @@ const helpArticlesSlice = createSlice({
   name: 'helpArticles',
   initialState,
   reducers: {},
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchHelpArticles.pending, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'loading';
-        entry.error = null;
-      })
-      .addCase(fetchHelpArticles.fulfilled, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.data = action.payload;
-        entry.status = 'succeeded';
-        entry.error = null;
-        entry.lastUpdated = Date.now();
-      })
-      .addCase(fetchHelpArticles.rejected, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'failed';
-        entry.error = action.payload ?? action.error.message ?? 'Failed to fetch help articles';
-      });
-  },
+  extraReducers: createLangExtraReducers(fetchHelpArticles, 'Failed to fetch help articles'),
 });
 
 export const helpArticlesReducer = helpArticlesSlice.reducer;

@@ -9,6 +9,14 @@ import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { generateToken } from './lib/jwt';
 import * as bcrypt from 'bcryptjs';
+import {
+  createOptionsResponse,
+  createErrorResponse,
+  createSuccessResponse,
+  parseJsonBody,
+  handleError,
+} from './lib/api-helpers';
+import type { ApiResponse } from './lib/types';
 
 interface UserRow {
   id: string;
@@ -29,40 +37,26 @@ interface LoginRequest {
   password: string;
 }
 
-interface AuthResponse {
-  success: boolean;
-  data?: {
-    token: string;
-    user: {
-      id: string;
-      email: string;
-      name: string | null;
-    };
+interface AuthData {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
   };
-  error?: string;
-  message?: string;
 }
+
+type AuthResponse = ApiResponse<AuthData>;
 
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return createOptionsResponse();
   }
 
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-    };
+    return createErrorResponse(405, 'Method not allowed');
   }
 
   try {
@@ -70,17 +64,10 @@ export const handler: Handler = async (
 
     // Регистрация
     if (path === '/register' || path.endsWith('/register')) {
-      const data: RegisterRequest = JSON.parse(event.body || '{}');
+      const data = parseJsonBody<RegisterRequest>(event.body, {} as RegisterRequest);
 
       if (!data.email || !data.password) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Email and password are required',
-          } as AuthResponse),
-        };
+        return createErrorResponse(400, 'Email and password are required');
       }
 
       // Проверяем, существует ли пользователь
@@ -91,14 +78,7 @@ export const handler: Handler = async (
       );
 
       if (existingUser.rows.length > 0) {
-        return {
-          statusCode: 409,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'User with this email already exists',
-          } as AuthResponse),
-        };
+        return createErrorResponse(409, 'User with this email already exists');
       }
 
       // Хешируем пароль
@@ -118,38 +98,25 @@ export const handler: Handler = async (
       // Генерируем JWT токен
       const token = generateToken(user.id, user.email);
 
-      console.log('✅ User registered:', { userId: user.id, email: user.email });
-
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          data: {
-            token,
-            user: {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-            },
+      return createSuccessResponse(
+        {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
           },
-        } as AuthResponse),
-      };
+        },
+        201
+      );
     }
 
     // Вход
     if (path === '/login' || path.endsWith('/login')) {
-      const data: LoginRequest = JSON.parse(event.body || '{}');
+      const data = parseJsonBody<LoginRequest>(event.body, {} as LoginRequest);
 
       if (!data.email || !data.password) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Email and password are required',
-          } as AuthResponse),
-        };
+        return createErrorResponse(400, 'Email and password are required');
       }
 
       // Ищем пользователя
@@ -162,79 +129,37 @@ export const handler: Handler = async (
       );
 
       if (result.rows.length === 0) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Invalid email or password',
-          } as AuthResponse),
-        };
+        return createErrorResponse(401, 'Invalid email or password');
       }
 
       const user = result.rows[0];
 
       if (!user.is_active) {
-        return {
-          statusCode: 403,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'User account is disabled',
-          } as AuthResponse),
-        };
+        return createErrorResponse(403, 'User account is disabled');
       }
 
       // Проверяем пароль
       const isPasswordValid = await bcrypt.compare(data.password, user.password_hash);
 
       if (!isPasswordValid) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Invalid email or password',
-          } as AuthResponse),
-        };
+        return createErrorResponse(401, 'Invalid email or password');
       }
 
       // Генерируем JWT токен
       const token = generateToken(user.id, user.email);
 
-      console.log('✅ User logged in:', { userId: user.id, email: user.email });
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          data: {
-            token,
-            user: {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-            },
-          },
-        } as AuthResponse),
-      };
+      return createSuccessResponse({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      });
     }
 
-    return {
-      statusCode: 404,
-      headers,
-      body: JSON.stringify({ success: false, error: 'Endpoint not found' }),
-    };
+    return createErrorResponse(404, 'Endpoint not found');
   } catch (error) {
-    console.error('❌ Error in auth function:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-    };
+    return handleError(error, 'auth function');
   }
 };

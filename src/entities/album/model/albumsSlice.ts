@@ -3,20 +3,11 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IAlbums } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
+import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 
-import type { AlbumsEntry, AlbumsState } from './types';
+import type { AlbumsState } from './types';
 
-const createInitialEntry = (): AlbumsEntry => ({
-  status: 'idle',
-  error: null,
-  data: [],
-  lastUpdated: null,
-});
-
-const initialState: AlbumsState = {
-  en: createInitialEntry(),
-  ru: createInitialEntry(),
-};
+const initialState: AlbumsState = createInitialLangState<IAlbums[]>([]);
 
 export const fetchAlbums = createAsyncThunk<
   IAlbums[],
@@ -51,26 +42,47 @@ export const fetchAlbums = createAsyncThunk<
       }
 
       // Преобразуем данные из API в формат IAlbums
-      const albums: IAlbums[] = result.data.map((album: any) => ({
-        albumId: album.albumId,
-        artist: album.artist,
-        album: album.album,
-        fullName: album.fullName,
-        description: album.description,
-        cover: album.cover,
-        release: album.release,
-        buttons: album.buttons,
-        details: album.details,
-        tracks: album.tracks.map((track: any) => ({
-          id: track.id,
-          title: track.title,
-          duration: track.duration,
-          src: track.src,
-          content: track.content,
-          authorship: track.authorship,
-          syncedLyrics: track.syncedLyrics,
-        })),
-      }));
+      const albums: IAlbums[] = result.data.map(
+        (album: {
+          albumId: string;
+          artist: string;
+          album: string;
+          fullName: string;
+          description: string;
+          cover: unknown;
+          release: unknown;
+          buttons: unknown;
+          details: unknown;
+          tracks: Array<{
+            id: string;
+            title: string;
+            duration?: number;
+            src?: string;
+            content?: string;
+            authorship?: string;
+            syncedLyrics?: unknown;
+          }>;
+        }) => ({
+          albumId: album.albumId,
+          artist: album.artist,
+          album: album.album,
+          fullName: album.fullName,
+          description: album.description,
+          cover: album.cover,
+          release: album.release,
+          buttons: album.buttons,
+          details: album.details,
+          tracks: album.tracks.map((track) => ({
+            id: track.id,
+            title: track.title,
+            duration: track.duration,
+            src: track.src,
+            content: track.content,
+            authorship: track.authorship,
+            syncedLyrics: track.syncedLyrics,
+          })),
+        })
+      );
 
       return albums;
     } catch (error) {
@@ -97,29 +109,7 @@ const albumsSlice = createSlice({
   name: 'albums',
   initialState,
   reducers: {},
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchAlbums.pending, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'loading';
-        entry.error = null;
-      })
-      .addCase(fetchAlbums.fulfilled, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.data = action.payload;
-        entry.status = 'succeeded';
-        entry.error = null;
-        entry.lastUpdated = Date.now();
-      })
-      .addCase(fetchAlbums.rejected, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'failed';
-        entry.error = action.payload ?? action.error.message ?? 'Failed to fetch albums';
-      });
-  },
+  extraReducers: createLangExtraReducers(fetchAlbums, 'Failed to fetch albums'),
 });
 
 export const albumsReducer = albumsSlice.reducer;

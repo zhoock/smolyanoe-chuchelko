@@ -9,6 +9,18 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
+import {
+  createOptionsResponse,
+  createErrorResponse,
+  createSuccessResponse,
+  CORS_HEADERS,
+  validateLang,
+  getUserIdFromEvent,
+  requireAuth,
+  parseJsonBody,
+  handleError,
+} from './lib/api-helpers';
+import type { ApiResponse, SupportedLang } from './lib/types';
 
 interface AlbumRow {
   id: string;
@@ -18,10 +30,10 @@ interface AlbumRow {
   album: string;
   full_name: string;
   description: string;
-  cover: any;
-  release: any;
-  buttons: any;
-  details: any;
+  cover: Record<string, unknown>;
+  release: Record<string, unknown>;
+  buttons: Record<string, unknown>;
+  details: unknown[];
   lang: string;
   is_public: boolean;
   created_at: Date;
@@ -36,52 +48,83 @@ interface TrackRow {
   src: string | null;
   content: string | null;
   authorship: string | null;
-  synced_lyrics: any | null;
+  synced_lyrics: unknown | null;
   order_index: number;
 }
 
-interface AlbumsResponse {
-  success: boolean;
-  data?: Array<{
-    albumId: string;
-    artist: string;
-    album: string;
-    fullName: string;
-    description: string;
-    cover: any;
-    release: any;
-    buttons: any;
-    details: any;
-    lang: string;
-    tracks: Array<{
-      id: string;
-      title: string;
-      duration?: number;
-      src?: string;
-      content?: string;
-      authorship?: string;
-      syncedLyrics?: any;
-    }>;
-  }>;
-  error?: string;
-  message?: string;
+interface AlbumData {
+  albumId: string;
+  artist: string;
+  album: string;
+  fullName: string;
+  description: string;
+  cover: Record<string, unknown>;
+  release: Record<string, unknown>;
+  buttons: Record<string, unknown>;
+  details: unknown[];
+  lang: string;
+  tracks: TrackData[];
 }
 
-import { extractUserIdFromToken } from './lib/jwt';
+interface TrackData {
+  id: string;
+  title: string;
+  duration?: number;
+  src?: string;
+  content?: string;
+  authorship?: string;
+  syncedLyrics?: unknown;
+}
+
+interface CreateAlbumRequest {
+  albumId: string;
+  artist: string;
+  album: string;
+  fullName?: string;
+  description?: string;
+  cover?: Record<string, unknown>;
+  release?: Record<string, unknown>;
+  buttons?: Record<string, unknown>;
+  details?: unknown[];
+  lang: SupportedLang;
+  isPublic?: boolean;
+}
+
+type AlbumsResponse = ApiResponse<AlbumData[]>;
+
+/**
+ * Преобразует данные альбома из БД в формат API
+ */
+function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
+  return {
+    albumId: album.album_id,
+    artist: album.artist,
+    album: album.album,
+    fullName: album.full_name,
+    description: album.description,
+    cover: album.cover as Record<string, unknown>,
+    release: album.release as Record<string, unknown>,
+    buttons: album.buttons as Record<string, unknown>,
+    details: album.details as unknown[],
+    lang: album.lang,
+    tracks: tracks.map((track) => ({
+      id: track.track_id,
+      title: track.title,
+      duration: track.duration || undefined,
+      src: track.src || undefined,
+      content: track.content || undefined,
+      authorship: track.authorship || undefined,
+      syncedLyrics: track.synced_lyrics || undefined,
+    })),
+  };
+}
 
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
   // Обработка preflight запроса
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return createOptionsResponse();
   }
 
   try {
@@ -89,19 +132,12 @@ export const handler: Handler = async (
     if (event.httpMethod === 'GET') {
       const { lang } = event.queryStringParameters || {};
 
-      if (!lang || !['en', 'ru'].includes(lang)) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Invalid lang parameter. Must be "en" or "ru".',
-          } as AlbumsResponse),
-        };
+      if (!validateLang(lang)) {
+        return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
       // Извлекаем user_id из токена (если есть)
-      const userId = extractUserIdFromToken(event.headers.authorization);
+      const userId = getUserIdFromEvent(event);
 
       // Загружаем публичные альбомы (user_id IS NULL, is_public = true) и альбомы пользователя
       // Важно: используем DISTINCT ON для исключения дубликатов по album_id
@@ -136,67 +172,29 @@ export const handler: Handler = async (
             [album.id]
           );
 
-          return {
-            albumId: album.album_id,
-            artist: album.artist,
-            album: album.album,
-            fullName: album.full_name,
-            description: album.description,
-            cover: album.cover,
-            release: album.release,
-            buttons: album.buttons,
-            details: album.details,
-            lang: album.lang,
-            tracks: tracksResult.rows.map((track) => ({
-              id: track.track_id,
-              title: track.title,
-              duration: track.duration || undefined,
-              src: track.src || undefined,
-              content: track.content || undefined,
-              authorship: track.authorship || undefined,
-              syncedLyrics: track.synced_lyrics || undefined,
-            })),
-          };
+          return mapAlbumToApiFormat(album, tracksResult.rows);
         })
       );
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          data: albumsWithTracks,
-        } as AlbumsResponse),
-      };
+      return createSuccessResponse(albumsWithTracks);
     }
 
     // POST: создание альбома (требует авторизации)
     if (event.httpMethod === 'POST') {
-      const userId = extractUserIdFromToken(event.headers.authorization);
+      const userId = requireAuth(event);
 
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Unauthorized. Authentication required.',
-          } as AlbumsResponse),
-        };
+        return createErrorResponse(401, 'Unauthorized. Authentication required.');
       }
 
-      const data = JSON.parse(event.body || '{}');
+      const data = parseJsonBody<CreateAlbumRequest>(event.body, {} as CreateAlbumRequest);
 
       // Валидация данных
-      if (!data.albumId || !data.artist || !data.album || !data.lang) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Missing required fields: albumId, artist, album, lang',
-          } as AlbumsResponse),
-        };
+      if (!data.albumId || !data.artist || !data.album || !data.lang || !validateLang(data.lang)) {
+        return createErrorResponse(
+          400,
+          'Missing required fields: albumId, artist, album, lang (must be "en" or "ru")'
+        );
       }
 
       // Создаём альбом
@@ -233,49 +231,22 @@ export const handler: Handler = async (
         ]
       );
 
+      const createdAlbum = mapAlbumToApiFormat(albumResult.rows[0], []);
+
       return {
-        statusCode: 200,
-        headers,
+        statusCode: 201,
+        headers: CORS_HEADERS,
         body: JSON.stringify({
           success: true,
           message: 'Album created successfully',
-          data: [
-            {
-              albumId: albumResult.rows[0].album_id,
-              artist: albumResult.rows[0].artist,
-              album: albumResult.rows[0].album,
-              fullName: albumResult.rows[0].full_name,
-              description: albumResult.rows[0].description,
-              cover: albumResult.rows[0].cover,
-              release: albumResult.rows[0].release,
-              buttons: albumResult.rows[0].buttons,
-              details: albumResult.rows[0].details,
-              lang: albumResult.rows[0].lang,
-              tracks: [],
-            },
-          ],
-        } as AlbumsResponse),
+          data: [createdAlbum],
+        }),
       };
     }
 
     // Неподдерживаемый метод
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: 'Method not allowed. Use GET or POST.',
-      } as AlbumsResponse),
-    };
+    return createErrorResponse(405, 'Method not allowed. Use GET or POST.');
   } catch (error) {
-    console.error('❌ Error in albums function:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      } as AlbumsResponse),
-    };
+    return handleError(error, 'albums function');
   }
 };
