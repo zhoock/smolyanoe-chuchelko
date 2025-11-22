@@ -38,8 +38,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   if (uiStatus === 'succeeded') {
     templateC = Promise.resolve(selectUiDictionaryData(state, lang));
   } else if (uiStatus === 'loading') {
-    // Данные уже загружаются, создаем промис, который будет разрешен когда загрузка завершится
-    templateC = new Promise<IInterface[]>(() => {}); // Никогда не разрешается, чтобы не блокировать
+    // Данные уже загружаются - возвращаем текущие данные или пустой массив
+    // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
+    const currentData = selectUiDictionaryData(state, lang);
+    templateC = Promise.resolve(currentData || []);
   } else {
     const fetchThunkPromise = store.dispatch(fetchUiDictionary({ lang }));
 
@@ -81,8 +83,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     if (status === 'succeeded') {
       templateA = Promise.resolve(selectAlbumsData(state, lang));
     } else if (status === 'loading') {
-      // Данные уже загружаются
-      templateA = new Promise<IAlbums[]>(() => {});
+      // Данные уже загружаются - возвращаем текущие данные или пустой массив
+      // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
+      const currentData = selectAlbumsData(state, lang);
+      templateA = Promise.resolve(currentData || []);
     } else {
       const fetchThunkPromise = store.dispatch(fetchAlbums({ lang }));
 
@@ -120,8 +124,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     if (status === 'succeeded') {
       templateB = Promise.resolve(selectArticlesData(state, lang));
     } else if (status === 'loading') {
-      // Данные уже загружаются
-      templateB = new Promise<IArticles[]>(() => {});
+      // Данные уже загружаются - возвращаем текущие данные или пустой массив
+      // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
+      const currentData = selectArticlesData(state, lang);
+      templateB = Promise.resolve(currentData || []);
     } else {
       const fetchThunkPromise = store.dispatch(fetchArticles({ lang }));
 
@@ -159,8 +165,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     if (status === 'succeeded') {
       templateD = Promise.resolve(selectHelpArticlesData(state, lang));
     } else if (status === 'loading') {
-      // Данные уже загружаются
-      templateD = new Promise<IArticles[]>(() => {});
+      // Данные уже загружаются - возвращаем текущие данные или пустой массив
+      // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
+      const currentData = selectHelpArticlesData(state, lang);
+      templateD = Promise.resolve(currentData || []);
     } else {
       const fetchThunkPromise = store.dispatch(fetchHelpArticles({ lang }));
 
