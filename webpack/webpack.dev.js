@@ -11,12 +11,25 @@ module.exports = {
     // Важно: прокси обрабатывается ПЕРЕД historyApiFallback, но нужно явно исключить /api
     historyApiFallback: {
       disableDotRule: true,
+      // Исключаем статические файлы из fallback - они обрабатываются через static директории
       rewrites: [
         // Для всех остальных - fallback на index.html
-        { from: /./, to: '/index.html' },
+        { from: /^(?!\/(audio|images|scripts|styles|assets)\/).*$/, to: '/index.html' },
       ],
     },
-    static: path.resolve(__dirname, '../dist'), // путь, куда "смотрит" режим разработчика
+    static: [
+      {
+        directory: path.resolve(__dirname, '../dist'), // путь, куда "смотрит" режим разработчика
+      },
+      {
+        directory: path.resolve(__dirname, '../src/audio'), // аудиофайлы из src для dev режима
+        publicPath: '/audio', // путь, по которому будут доступны файлы
+      },
+      {
+        directory: path.resolve(__dirname, '../src/images'), // изображения из src для dev режима
+        publicPath: '/images', // путь, по которому будут доступны файлы
+      },
+    ],
     // compress: true, // это ускорит загрузку в режиме разработки
     port: 8080, // порт, чтобы открывать сайт по адресу localhost:8080, но можно поменять порт
     open: false, // Netlify Dev сам откроет браузер на порту 8888
