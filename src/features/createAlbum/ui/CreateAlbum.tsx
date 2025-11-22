@@ -4,9 +4,10 @@
  * Позволяет вручную заполнить данные альбома и добавить треки.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { IAlbums, TracksProps } from '@models';
+import { getAudioDuration } from '@shared/lib/audio/getAudioDuration';
 import './CreateAlbum.style.scss';
 interface TrackDraft {
   id: string;
@@ -282,9 +283,7 @@ const validateDraft = (draft: AlbumDraft): string[] => {
     if (!track.title.trim()) {
       issues.push(`Трек №${index + 1}: поле «Название» обязательно.`);
     }
-    if (track.duration.trim() && Number.isNaN(formatDuration(track.duration))) {
-      issues.push(`Трек №${index + 1}: значение длительности не удаётся преобразовать в число.`);
-    }
+    // Длительность определяется автоматически из метаданных аудиофайла, валидация не требуется
   });
 
   const ids = draft.tracks.map((track) => track.id.trim() || track.title.trim());
@@ -346,6 +345,55 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
       };
     });
   }, []);
+
+  // Автоматически определяем длительность при изменении src
+  useEffect(() => {
+    const loadDurations = async () => {
+      const updates: Array<{ index: number; duration: string }> = [];
+
+      for (let i = 0; i < draft.tracks.length; i++) {
+        const track = draft.tracks[i];
+        // Определяем длительность только если указан src и duration еще не заполнен
+        if (track.src && track.src.trim() && (!track.duration || track.duration.trim() === '')) {
+          try {
+            const duration = await getAudioDuration(track.src);
+            if (duration !== null && Number.isFinite(duration) && duration > 0) {
+              updates.push({ index: i, duration: duration.toFixed(2) });
+            }
+          } catch (error) {
+            console.warn(`Failed to get duration for track ${i}:`, error);
+          }
+        }
+      }
+
+      // Применяем все обновления одним обновлением состояния
+      if (updates.length > 0) {
+        setDraft((prev) => {
+          const tracks = [...prev.tracks];
+          updates.forEach(({ index, duration }) => {
+            // Проверяем, что src не изменился пока мы загружали длительность
+            if (tracks[index].src === draft.tracks[index].src) {
+              tracks[index] = {
+                ...tracks[index],
+                duration,
+              };
+            }
+          });
+          return {
+            ...prev,
+            tracks,
+          };
+        });
+      }
+    };
+
+    // Используем debounce для избежания множественных запросов
+    const timeoutId = setTimeout(() => {
+      loadDurations();
+    }, 500); // Ждем 500мс после последнего изменения
+
+    return () => clearTimeout(timeoutId);
+  }, [draft.tracks.map((t, i) => `${i}:${t.src}`).join('|')]); // Зависимость от src каждого трека с индексом
 
   const addTrack = useCallback(() => {
     setDraft((prev) => ({
@@ -557,27 +605,27 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
                       placeholder="Фиджийская русалка Барнума"
                     />
                   </div>
-                  <div className="album-builder__field album-builder__field--inline">
-                    <div>
-                      <label htmlFor={`track-duration-${index}`}>Длительность (минуты)</label>
-                      <input
-                        id={`track-duration-${index}`}
-                        value={track.duration}
-                        onChange={(event) =>
-                          updateTrackField(index, 'duration', event.target.value)
-                        }
-                        placeholder="3.28"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor={`track-src-${index}`}>Путь к файлу</label>
-                      <input
-                        id={`track-src-${index}`}
-                        value={track.src}
-                        onChange={(event) => updateTrackField(index, 'src', event.target.value)}
-                        placeholder="/audio/..."
-                      />
-                    </div>
+                  <div className="album-builder__field">
+                    <label htmlFor={`track-src-${index}`}>
+                      Путь к файлу
+                      {track.duration && (
+                        <span className="album-builder__duration-hint">
+                          {' '}
+                          (длительность: {track.duration} мин)
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      id={`track-src-${index}`}
+                      value={track.src}
+                      onChange={(event) => updateTrackField(index, 'src', event.target.value)}
+                      placeholder="/audio/album/track.mp3"
+                    />
+                    {track.src && !track.duration && (
+                      <small className="album-builder__loading-hint">
+                        Загрузка метаданных для определения длительности...
+                      </small>
+                    )}
                   </div>
                   <div className="album-builder__field">
                     <label htmlFor={`track-authorship-${index}`}>Авторство</label>

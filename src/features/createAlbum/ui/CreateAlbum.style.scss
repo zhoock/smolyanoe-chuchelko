@@ -239,4 +239,18 @@
     width: fit-content;
     margin-block-start: var(--ms-1);
   }
+
+  &__duration-hint {
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.875rem;
+    font-weight: normal;
+  }
+
+  &__loading-hint {
+    display: block;
+    margin-block-start: 4px;
+    color: var(--warm-concrete, #9b9b9a);
+    font-size: 0.8125rem;
+    font-style: italic;
+  }
 }

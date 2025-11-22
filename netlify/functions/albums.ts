@@ -110,7 +110,8 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
     tracks: tracks.map((track) => ({
       id: track.track_id,
       title: track.title,
-      duration: track.duration || undefined,
+      // PostgreSQL DECIMAL возвращается как строка, конвертируем в число
+      duration: track.duration != null ? Number(track.duration) : undefined,
       src: track.src || undefined,
       content: track.content || undefined,
       authorship: track.authorship || undefined,

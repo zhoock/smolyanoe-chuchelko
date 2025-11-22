@@ -11,9 +11,9 @@ export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
   // Подгружаем функции для выбранного языка
   const { endForTracks, endForMinutes } = functionsMap[lang];
 
-  const duration: number = album?.tracks
-    .map((item) => item.duration)
-    .reduce((sum, current) => sum + current);
+  // Суммируем длительность всех треков из БД (в минутах)
+  const durationInMinutes: number =
+    album?.tracks?.reduce((sum, track) => sum + (track.duration ?? 0), 0) ?? 0;
 
   function Block({ date, UPC }: String) {
     return (
@@ -26,8 +26,10 @@ export default function AlbumDetailsReleased({ album }: { album: IAlbums }) {
         </div>
         <div>
           <small>
-            {album?.tracks.length} {endForTracks(album?.tracks.length)}, {Math.ceil(duration)}{' '}
-            {endForMinutes(duration)}
+            {album?.tracks.length} {endForTracks(album?.tracks.length)},{' '}
+            {Number.isFinite(durationInMinutes) && durationInMinutes > 0
+              ? `${Math.ceil(durationInMinutes)} ${endForMinutes(Math.ceil(durationInMinutes))}`
+              : `0 ${endForMinutes(0)}`}
           </small>
         </div>
       </>
