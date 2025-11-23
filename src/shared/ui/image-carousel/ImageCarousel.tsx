@@ -9,37 +9,54 @@ interface ImageCarouselProps {
 
 export function ImageCarousel({ images, alt }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showCounter, setShowCounter] = useState(true);
+  const [showCounter, setShowCounter] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isVisibleRef = useRef(false);
+  const isScrollingProgrammaticallyRef = useRef(false);
 
   const goToSlide = (index: number) => {
     if (!containerRef.current) return;
     const slide = containerRef.current.children[index] as HTMLElement;
-    slide?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+    // Устанавливаем флаг, что прокрутка программная
+    isScrollingProgrammaticallyRef.current = true;
     setCurrentIndex(index);
+
+    slide?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+    // Сбрасываем флаг после завершения анимации прокрутки
+    setTimeout(() => {
+      isScrollingProgrammaticallyRef.current = false;
+    }, 500); // Время анимации прокрутки
   };
 
   const goToPrevious = () => {
     const newIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
     goToSlide(newIndex);
+    showCounterWithTimeout();
   };
 
   const goToNext = () => {
     const newIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
     goToSlide(newIndex);
+    showCounterWithTimeout();
   };
 
   // Функция для показа счетчика и сброса таймера скрытия
   const showCounterWithTimeout = useCallback(() => {
-    setShowCounter(true);
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
+    // Показываем счетчик только если карусель видна
+    if (isVisibleRef.current) {
+      setShowCounter(true);
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+      // Скрываем через 4 секунды бездействия
+      hideTimeoutRef.current = setTimeout(() => {
+        setShowCounter(false);
+      }, 4000);
     }
-    // Скрываем через 3 секунды бездействия
-    hideTimeoutRef.current = setTimeout(() => {
-      setShowCounter(false);
-    }, 3000);
   }, []);
 
   // Отслеживаем текущий слайд при скролле
@@ -48,11 +65,14 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
     if (!container) return;
 
     const handleScroll = () => {
-      const scrollLeft = container.scrollLeft;
-      const slideWidth = container.offsetWidth;
-      const newIndex = Math.round(scrollLeft / slideWidth);
-      if (newIndex !== currentIndex) {
-        setCurrentIndex(newIndex);
+      // Игнорируем обновление индекса во время программной прокрутки (через кнопки)
+      if (!isScrollingProgrammaticallyRef.current) {
+        const scrollLeft = container.scrollLeft;
+        const slideWidth = container.offsetWidth;
+        const newIndex = Math.round(scrollLeft / slideWidth);
+        if (newIndex !== currentIndex) {
+          setCurrentIndex(newIndex);
+        }
       }
       showCounterWithTimeout();
     };
@@ -60,6 +80,51 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [currentIndex, showCounterWithTimeout]);
+
+  // Отслеживаем видимость карусели в viewport (как в Instagram)
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const isVisible = entry.isIntersecting;
+          isVisibleRef.current = isVisible;
+
+          if (isVisible) {
+            // Карусель видна - показываем счетчик
+            setShowCounter(true);
+            // Скрываем через 4 секунды бездействия
+            if (hideTimeoutRef.current) {
+              clearTimeout(hideTimeoutRef.current);
+            }
+            hideTimeoutRef.current = setTimeout(() => {
+              setShowCounter(false);
+            }, 4000);
+          } else {
+            // Карусель не видна - скрываем счетчик
+            setShowCounter(false);
+            if (hideTimeoutRef.current) {
+              clearTimeout(hideTimeoutRef.current);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.1, // Считаем видимым, если видно хотя бы 10%
+      }
+    );
+
+    observer.observe(carousel);
+
+    return () => {
+      observer.disconnect();
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Показываем счетчик при взаимодействии
   useEffect(() => {
@@ -76,9 +141,6 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
 
     container.addEventListener('mousemove', handleMouseMove);
     container.addEventListener('touchstart', handleTouchStart);
-
-    // Показываем счетчик при первом рендере
-    showCounterWithTimeout();
 
     return () => {
       container.removeEventListener('mousemove', handleMouseMove);
@@ -117,6 +179,7 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
 
   return (
     <div
+      ref={carouselRef}
       className={`image-carousel ${showCounter ? 'image-carousel--controls-visible' : ''}`}
       role="region"
       aria-label="Image carousel"
