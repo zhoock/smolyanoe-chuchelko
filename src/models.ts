@@ -123,7 +123,7 @@ export type IArticles = {
 export interface ArticledetailsProps {
   id: number;
   title?: string;
-  img?: string;
+  img?: string | string[]; // single image or array for carousel
   subtitle?: string;
   strong?: string;
   content?: string | string[]; // union type

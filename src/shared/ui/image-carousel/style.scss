@@ -1,0 +1,155 @@
+@use '../../../scss/abstracts/mixins' as *;
+
+.image-carousel {
+  position: relative;
+  width: 100%;
+  user-select: none;
+}
+
+.image-carousel__container {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+
+  @extend %hide-scrollbar;
+}
+
+.image-carousel__slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+.image-carousel__button {
+  display: none;
+
+  @include breakpoint(tablet) {
+    position: absolute;
+    top: 50%;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--white);
+    background: rgb(var(--black-rgb) / 60%);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      opacity 0.3s ease;
+    transform: translateY(-50%);
+    opacity: 0;
+    backdrop-filter: blur(4px);
+
+    &:hover {
+      background: rgb(var(--black-rgb) / 80%);
+    }
+
+    &:active {
+      background: rgb(var(--black-rgb) / 90%);
+    }
+
+    &:focus {
+      opacity: 1;
+      outline: 2px solid var(--white);
+      outline-offset: 2px;
+    }
+
+    .image-carousel--controls-visible & {
+      opacity: 1;
+    }
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    &--prev {
+      left: 16px;
+    }
+
+    &--next {
+      right: 16px;
+    }
+  }
+}
+
+.image-carousel__counter {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 12px;
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  background: rgb(var(--black-rgb) / 60%);
+  border-radius: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(8px);
+
+  &--visible {
+    opacity: 1;
+  }
+}
+
+.image-carousel__indicators {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgb(var(--black-rgb) / 40%);
+  border-radius: 20px;
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.image-carousel__indicator {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  background: rgb(var(--white-rgb) / 50%);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    background: rgb(var(--white-rgb) / 70%);
+    transform: scale(1.2);
+  }
+
+  &--active {
+    background: var(--white);
+    transform: scale(1.3);
+  }
+
+  &:focus {
+    outline: 2px solid var(--white);
+    outline-offset: 2px;
+  }
+}

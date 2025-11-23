@@ -6,6 +6,7 @@ import { getImageUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
+import { ImageCarousel } from '@shared/ui/image-carousel';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -350,14 +351,17 @@ function ArticleContent({
       <>
         {details.title && <h3 id={titleId}>{details.title}</h3>}
         <div className="uncollapse">
-          {details.img && (
-            <img
-              src={getImageUrl(details.img)}
-              alt={details.alt ?? ''}
-              loading="lazy"
-              decoding="async"
-            />
-          )}
+          {details.img &&
+            (Array.isArray(details.img) ? (
+              <ImageCarousel images={details.img} alt={details.alt ?? ''} />
+            ) : (
+              <img
+                src={getImageUrl(details.img)}
+                alt={details.alt ?? ''}
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
         </div>
         {details.subtitle && <h4 id={subtitleId}>{details.subtitle}</h4>}
 

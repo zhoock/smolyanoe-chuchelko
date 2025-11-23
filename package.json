@@ -19,6 +19,7 @@
     "release": "standard-version",
     "test": "jest --verbose",
     "migrate": "tsx scripts/migrate-database.ts",
+    "update-articles": "tsx scripts/update-articles-from-json.ts",
     "generate-encryption-key": "node scripts/generate-encryption-key.js",
     "test-db": "tsx scripts/test-database-connection.ts",
     "test-netlify-env": "node scripts/test-netlify-env.js",

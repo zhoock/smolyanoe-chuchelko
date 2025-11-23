@@ -6,6 +6,7 @@ import { getImageUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
+import { ImageCarousel } from '@shared/ui/image-carousel';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { formatDateInWords, type LocaleKey } from '@entities/article/lib/formatDate';
@@ -37,7 +38,12 @@ export function ArticlePage() {
       <>
         {title && <h3>{title}</h3>}
         <div className="uncollapse">
-          {img && <img src={getImageUrl(img)} alt={alt ?? ''} loading="lazy" decoding="async" />}
+          {img &&
+            (Array.isArray(img) ? (
+              <ImageCarousel images={img} alt={alt ?? ''} />
+            ) : (
+              <img src={getImageUrl(img)} alt={alt ?? ''} loading="lazy" decoding="async" />
+            ))}
         </div>
         {subtitle && <h4>{subtitle}</h4>}
 
