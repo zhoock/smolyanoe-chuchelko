@@ -6,7 +6,7 @@
   grid-area: header;
   position: fixed;
   inset: 0 0 auto;
-  z-index: 1;
+  z-index: 3;
   background: rgb(var(--extra-background-color-rgb) / 80%);
   backdrop-filter: blur(20px) saturate(0.8%);
   font-family: 'Oswald', sans-serif;
