@@ -27,7 +27,7 @@
   img {
     display: block;
     max-width: 100%;
-    max-height: 80vh;
+    max-height: 76.244vh;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -43,8 +43,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: var(--ms-2);
+    height: var(--ms-2);
     transition: opacity 0.3s ease;
     transform: translateY(-50%) scale(1);
     opacity: 0;
@@ -94,32 +94,32 @@
     }
 
     svg {
-      width: 24px;
-      height: 24px;
+      width: var(--ms-1);
+      height: var(--ms-1);
     }
 
     &--prev {
-      left: 16px;
+      left: var(--ms-0);
     }
 
     &--next {
-      right: 16px;
+      right: var(--ms-0);
     }
   }
 }
 
 .image-carousel__counter {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2; // Выше контейнера со слайдами, чтобы быть поверх изображений на мобилке
-  padding: 6px 12px;
+  top: var(--ms-0);
+  right: var(--ms-0);
+  z-index: 2;
+  padding: var(--ms-02) var(--ms-01);
   color: var(--white);
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
   background: rgb(var(--black-rgb) / 60%);
-  border-radius: 16px;
+  border-radius: var(--ms-0);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -132,32 +132,38 @@
 
 .image-carousel__indicators {
   position: absolute;
-  bottom: 16px;
+  bottom: var(--ms-0);
   left: 50%;
   display: flex;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--ms-02);
+  padding: var(--ms-02) var(--ms-01);
   background: rgb(var(--black-rgb) / 40%);
-  border-radius: 20px;
+  border-radius: var(--ms-0);
   transform: translateX(-50%);
   backdrop-filter: blur(8px);
 }
 
 .image-carousel__indicator {
-  width: 8px;
-  height: 8px;
-  padding: 0;
-  background: rgb(var(--white-rgb) / 50%);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
+  width: var(--ms-02);
+  height: var(--ms-02);
   transition:
     background-color 0.2s ease,
     transform 0.2s ease;
 
-  &:hover {
-    background: rgb(var(--white-rgb) / 70%);
-    transform: scale(1.2);
+  @include button-variant(
+    $color: transparent,
+    $background: rgb(var(--white-rgb) / 50%),
+    $hover-color: transparent,
+    $hover-background: rgb(var(--white-rgb) / 70%),
+    $margin: 0,
+    $padding: 0,
+    $border-radius: 50%
+  );
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: scale(1.2);
+    }
   }
 
   &--active {
