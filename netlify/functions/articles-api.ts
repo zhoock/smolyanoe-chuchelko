@@ -190,11 +190,7 @@ export const handler: Handler = async (
       );
 
       if (checkResult.rows.length === 0) {
-        return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({ success: false, error: 'Article not found or access denied' }),
-        };
+        return createErrorResponse(404, 'Article not found or access denied');
       }
 
       // Формируем динамический UPDATE запрос

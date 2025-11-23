@@ -199,7 +199,7 @@
       },
       {
         "id": 13,
-        "img": "drum_recording_album_session_23",
+        "img": ["drum_recording_album_session_23", "drum_recording_album_session_23_2"],
         "alt": "запись барабанов, сессия альбома 23.",
         "subtitle": "Оверхеды",
         "content": ["Стереопара COLES 4038 + моно GoodFly 251"]
