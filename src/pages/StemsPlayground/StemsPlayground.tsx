@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
 import { useLang } from '@app/providers/lang';
-import { getImageUrl } from '@shared/api/albums';
+import { getUserImageUrl } from '@shared/api/albums';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -34,10 +34,10 @@ const SONGS: Song[] = [
       vocal: '/audio/EP_Mixer/01_PPB_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
-      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
-      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
-      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+      drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/EP/EP_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/EP/EP_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/EP/EP_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -51,10 +51,10 @@ const SONGS: Song[] = [
       vocal: '/audio/EP_Mixer/02_VV_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
-      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
-      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
-      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+      drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/EP/EP_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/EP/EP_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/EP/EP_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -68,10 +68,10 @@ const SONGS: Song[] = [
       vocal: '/audio/EP_Mixer/03_RM_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
-      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
-      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
-      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+      drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/EP/EP_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/EP/EP_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/EP/EP_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -85,10 +85,10 @@ const SONGS: Song[] = [
       vocal: '/audio/EP_Mixer/04_BIS_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
-      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
-      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
-      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+      drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/EP/EP_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/EP/EP_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/EP/EP_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -102,10 +102,10 @@ const SONGS: Song[] = [
       vocal: '/audio/EP_Mixer/05_PK_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/EP/EP_drummer', '.png'),
-      bass: getImageUrl('stems/EP/EP_bassist', '.png'),
-      guitar: getImageUrl('stems/EP/EP_guitarist', '.png'),
-      vocal: getImageUrl('stems/EP/EP_vocalist', '.png'),
+      drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/EP/EP_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/EP/EP_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/EP/EP_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -119,10 +119,10 @@ const SONGS: Song[] = [
       vocal: '/audio/23_Mixer/01_FRB_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/23/23_drummer', '.png'),
-      bass: getImageUrl('stems/23/23_bassist', '.png'),
-      guitar: getImageUrl('stems/23/23_guitarist', '.png'),
-      vocal: getImageUrl('stems/23/23_vocalist', '.png'),
+      drums: getUserImageUrl('stems/23/23_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/23/23_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/23/23_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/23/23_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -136,10 +136,10 @@ const SONGS: Song[] = [
       vocal: '/audio/23_Mixer/02_SL_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/23/23_drummer', '.png'),
-      bass: getImageUrl('stems/23/23_bassist', '.png'),
-      guitar: getImageUrl('stems/23/23_guitarist', '.png'),
-      vocal: getImageUrl('stems/23/23_vocalist', '.png'),
+      drums: getUserImageUrl('stems/23/23_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/23/23_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/23/23_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/23/23_vocalist', 'stems', '.png'),
     },
   },
   {
@@ -153,10 +153,10 @@ const SONGS: Song[] = [
       vocal: '/audio/23_Mixer/03_SH_vocals.mp3',
     },
     portraits: {
-      drums: getImageUrl('stems/23/23_drummer', '.png'),
-      bass: getImageUrl('stems/23/23_bassist', '.png'),
-      guitar: getImageUrl('stems/23/23_guitarist', '.png'),
-      vocal: getImageUrl('stems/23/23_vocalist', '.png'),
+      drums: getUserImageUrl('stems/23/23_drummer', 'stems', '.png'),
+      bass: getUserImageUrl('stems/23/23_bassist', 'stems', '.png'),
+      guitar: getUserImageUrl('stems/23/23_guitarist', 'stems', '.png'),
+      vocal: getUserImageUrl('stems/23/23_vocalist', 'stems', '.png'),
     },
   },
 ];

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { getImageUrl } from '@shared/api/albums';
+import { getUserImageUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -350,19 +350,20 @@ function ArticleContent({
     return (
       <>
         {details.title && <h3 id={titleId}>{details.title}</h3>}
-        <div className="uncollapse">
-          {details.img &&
-            (Array.isArray(details.img) ? (
-              <ImageCarousel images={details.img} alt={details.alt ?? ''} />
+        {details.img && (
+          <div className="uncollapse">
+            {Array.isArray(details.img) ? (
+              <ImageCarousel images={details.img} alt={details.alt ?? ''} category="articles" />
             ) : (
               <img
-                src={getImageUrl(details.img)}
+                src={getUserImageUrl(details.img, 'articles')}
                 alt={details.alt ?? ''}
                 loading="lazy"
                 decoding="async"
               />
-            ))}
-        </div>
+            )}
+          </div>
+        )}
         {details.subtitle && <h4 id={subtitleId}>{details.subtitle}</h4>}
 
         {typeof details.content === 'string' ? (

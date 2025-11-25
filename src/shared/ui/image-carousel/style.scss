@@ -21,17 +21,14 @@
   align-items: center;
   justify-content: center;
   min-width: 100%;
-  width: 100%;
-  min-height: 50vh;
-  background: var(--main-background-color, #000000);
   scroll-snap-align: center;
   scroll-snap-stop: always;
 
   img {
     display: block;
-    width: 100%;
+    max-width: 100%;
+    width: auto;
     height: auto;
-    max-height: 100vh; // 76.244vh;
     object-fit: contain;
   }
 }

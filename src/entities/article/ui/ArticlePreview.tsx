@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
-import { getImageUrl } from '@shared/api/albums';
+import { getUserImageUrl } from '@shared/api/albums';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import './style.scss';
@@ -13,7 +13,12 @@ export function ArticlePreview({ articleId, img, nameArticle, date }: ArticlePro
     <article className="articles__card">
       <Link to={`/articles/${articleId}`}>
         <div className="articles__picture">
-          <img src={getImageUrl(img)} alt={nameArticle} loading="lazy" decoding="async" />
+          <img
+            src={getUserImageUrl(img, 'articles')}
+            alt={nameArticle}
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <div className="articles__description">
           {nameArticle}

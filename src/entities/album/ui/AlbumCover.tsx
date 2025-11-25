@@ -1,6 +1,6 @@
 // src/entities/album/ui/AlbumCover.tsx
 import { memo, useMemo } from 'react';
-import { getImageUrl } from '@shared/api/albums';
+import { getUserImageUrl } from '@shared/api/albums';
 import type { CoverProps } from 'models';
 import { useImageColor } from '@shared/lib/hooks/useImageColor';
 
@@ -42,7 +42,7 @@ const buildSrcSet = ({
       if (!suffix) {
         return null;
       }
-      return `${getImageUrl(img, suffix)} ${formatDescriptor(density)}`;
+      return `${getUserImageUrl(img, 'albums', suffix)} ${formatDescriptor(density)}`;
     })
     .filter(Boolean)
     .join(', ');
@@ -84,7 +84,9 @@ function AlbumCover({
 
   const fallbackSrc = useMemo(() => {
     const primarySuffix = DENSITY_SUFFIX.jpg[1]?.(effectiveBaseSize);
-    return primarySuffix ? getImageUrl(img, primarySuffix) : getImageUrl(img);
+    return primarySuffix
+      ? getUserImageUrl(img, 'albums', primarySuffix)
+      : getUserImageUrl(img, 'albums');
   }, [img, effectiveBaseSize]);
 
   const resolvedSizes =

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { getImageUrl } from '@shared/api/albums';
+import { getUserImageUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -37,14 +37,20 @@ export function ArticlePage() {
     return (
       <>
         {title && <h3>{title}</h3>}
-        <div className="uncollapse">
-          {img &&
-            (Array.isArray(img) ? (
-              <ImageCarousel images={img} alt={alt ?? ''} />
+        {img && (
+          <div className="uncollapse">
+            {Array.isArray(img) ? (
+              <ImageCarousel images={img} alt={alt ?? ''} category="articles" />
             ) : (
-              <img src={getImageUrl(img)} alt={alt ?? ''} loading="lazy" decoding="async" />
-            ))}
-        </div>
+              <img
+                src={getUserImageUrl(img, 'articles')}
+                alt={alt ?? ''}
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+          </div>
+        )}
         {subtitle && <h4>{subtitle}</h4>}
 
         {typeof content === 'string' ? (

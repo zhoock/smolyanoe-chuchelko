@@ -29,7 +29,11 @@ module.exports = {
 
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'], // Указываем файлы, с которыми будет работать webpack
-    plugins: [new TsconfigPathsPlugin()], // Поддержка путей из tsconfig.json
+    plugins: [
+      new TsconfigPathsPlugin({
+        configFile: path.resolve(__dirname, '../tsconfig.json'),
+      }),
+    ], // Поддержка путей из tsconfig.json
     alias: {
       // Псевдонимы для путей
       '@': path.resolve(__dirname, '../src'),
@@ -42,6 +46,7 @@ module.exports = {
       '@routes': path.resolve(__dirname, '../src/routes'),
       '@audio': path.resolve(__dirname, '../src/audio'),
       '@models': path.resolve(__dirname, '../src/models'),
+      '@config': path.resolve(__dirname, '../src/config'),
     },
   },
 
