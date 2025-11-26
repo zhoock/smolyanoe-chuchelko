@@ -21,6 +21,13 @@
   status = 200
   force = true
 
+# API route для загрузки файлов в Supabase Storage
+[[redirects]]
+  from = "/api/upload-file*"
+  to = "/.netlify/functions/upload-file"
+  status = 200
+  force = true
+
 # API route для сохранения текста трека
 [[redirects]]
   from = "/api/save-track-text*"
@@ -67,6 +74,13 @@
 [[redirects]]
   from = "/api/auth/*"
   to = "/.netlify/functions/auth"
+  status = 200
+  force = true
+
+# API route для загрузки файлов в Supabase Storage
+[[redirects]]
+  from = "/api/upload-file*"
+  to = "/.netlify/functions/upload-file"
   status = 200
   force = true
 

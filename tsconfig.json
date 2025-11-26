@@ -34,7 +34,8 @@
     },
 
     // 🔽 ДОБАВЛЕНО: типы для глобального API Jest и Node
-    "types": ["jest", "node", "@testing-library/jest-dom"]
+    "types": ["jest", "node", "@testing-library/jest-dom"],
+    "typeRoots": ["./node_modules/@types", "./src"]
     // "experimentalDecorators": true,
     // "emitDecoratorMetadata": true
   },
@@ -42,6 +43,7 @@
   // 🔽 ДОБАВЛЕНО: чтобы тесты и setup точно попали в проект TS
   "include": [
     "src",
+    "src/custom.d.ts",
     "index.d.ts",
     "jest.setup.ts",
     "src/test-setup.d.ts",

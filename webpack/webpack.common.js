@@ -185,6 +185,18 @@ module.exports = {
       NODE_ENV: 'development', // значение по умолчанию 'development', если переменная process.env.NODE_ENV не передана при вызове сборки
       NETLIFY_SITE_URL: '', // URL Netlify сайта для API запросов в dev режиме (опционально)
     }),
+
+    // Поддержка Vite-стиля переменных окружения (import.meta.env)
+    // Преобразует process.env.VITE_* в import.meta.env.VITE_*
+    new webpack.DefinePlugin({
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || ''),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(
+        process.env.VITE_SUPABASE_ANON_KEY || ''
+      ),
+      'import.meta.env.VITE_USE_SUPABASE_STORAGE': JSON.stringify(
+        process.env.VITE_USE_SUPABASE_STORAGE || 'false'
+      ),
+    }),
   ],
 
   // optimization: {

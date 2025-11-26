@@ -106,6 +106,8 @@ const config: Config = {
     '^@audio/(.*)$': '<rootDir>/src/audio/$1',
     '^@models$': '<rootDir>/src/models',
     '^@models/(.*)$': '<rootDir>/src/models/$1',
+    '^@config$': '<rootDir>/src/config',
+    '^@config/(.*)$': '<rootDir>/src/config/$1',
   },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
