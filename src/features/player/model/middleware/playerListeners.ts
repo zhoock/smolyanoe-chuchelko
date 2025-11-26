@@ -111,19 +111,6 @@ playerListenerMiddleware.startListening({
 });
 
 /**
- * Нормализует URL для сравнения (убирает query params, trailing slash)
- */
-const normalizeUrlForComparison = (url: string): string => {
-  if (!url) return '';
-  try {
-    const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : '');
-    return urlObj.pathname.replace(/\/$/, '');
-  } catch {
-    return url.split('?')[0].split('#')[0].replace(/\/$/, '');
-  }
-};
-
-/**
  * Слушатель для смены текущего трека (по индексу).
  * Загружает новый трек в аудио-элемент, но НЕ запускает его автоматически.
  * Используется когда пользователь просто выбирает трек (например, кликает в списке).
@@ -133,20 +120,12 @@ playerListenerMiddleware.startListening({
   effect: (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
-    const el = audioController.element;
 
     resetProgress(api);
 
-    // Проверяем, нужно ли менять источник (нормализуем URL для корректного сравнения)
+    // setSource сам проверит, нужно ли загружать файл
     if (track?.src) {
-      const normalizedTrackSrc = normalizeUrlForComparison(track.src);
-      const normalizedCurrentSrc = normalizeUrlForComparison(el.src || '');
-
-      // Вызываем setSource только если источники действительно разные
-      // setSource сам проверит это ещё раз, но здесь мы избегаем лишнего вызова
-      if (normalizedCurrentSrc !== normalizedTrackSrc) {
-        audioController.setSource(track.src, state.player.isPlaying);
-      }
+      audioController.setSource(track.src, state.player.isPlaying);
     }
   },
 });
@@ -205,11 +184,8 @@ playerListenerMiddleware.startListening({
     if (!track?.src) return;
 
     // Убеждаемся что источник установлен (если еще не установлен)
-    // Используем isSourceSet для проверки перед вызовом setSource
-    // Это предотвращает множественные вызовы setSource при синхронных диспатчах
-    if (!audioController.isSourceSet(track.src)) {
-      audioController.setSource(track.src, true);
-    }
+    // setSource сам проверит, нужно ли загружать файл
+    audioController.setSource(track.src, true);
 
     // Ждём загрузки метаданных если они еще не загружены
     // readyState: 0 = HAVE_NOTHING, 1 = HAVE_METADATA, 2 = HAVE_CURRENT_DATA, 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA

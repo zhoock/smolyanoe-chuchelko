@@ -6,7 +6,7 @@
  */
 class AudioController {
   private audio: HTMLAudioElement;
-  private pendingSrc: string | null = null; // Отслеживаем источник, который только что установили
+  private currentSrc: string = ''; // Отслеживаем установленный источник
 
   constructor() {
     // Создаём один глобальный audio элемент
@@ -24,36 +24,16 @@ class AudioController {
   }
 
   /**
-   * Нормализует URL для сравнения (убирает query params, trailing slash, нормализует протокол)
+   * Нормализует URL для сравнения (извлекает путь без query params)
    */
   private normalizeUrl(url: string): string {
     if (!url) return '';
     try {
-      const urlObj = new URL(url, window.location.origin);
-      // Убираем query params, hash, trailing slash
-      return urlObj.pathname.replace(/\/$/, '');
+      const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : '');
+      return urlObj.pathname;
     } catch {
-      // Если не валидный URL, возвращаем как есть
-      return url.split('?')[0].split('#')[0].replace(/\/$/, '');
+      return url.split('?')[0].split('#')[0];
     }
-  }
-
-  /**
-   * Проверяет, совпадает ли источник с текущим или ожидаемым
-   */
-  isSourceSet(src: string | undefined): boolean {
-    const newSrc = src || '';
-    if (!newSrc) return false;
-
-    const normalizedNewSrc = this.normalizeUrl(newSrc);
-    const normalizedCurrentSrc = this.normalizeUrl(this.audio.src || '');
-    const normalizedPendingSrc = this.pendingSrc ? this.normalizeUrl(this.pendingSrc) : '';
-
-    // Проверяем как текущий источник, так и ожидаемый
-    return (
-      (!!normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc) ||
-      (!!normalizedPendingSrc && normalizedPendingSrc === normalizedNewSrc)
-    );
   }
 
   /**
@@ -64,37 +44,22 @@ class AudioController {
    */
   setSource(src: string | undefined, autoplay: boolean = true) {
     const newSrc = src || '';
-    const currentSrc = this.audio.src || '';
-
-    // Нормализуем URL для корректного сравнения
     const normalizedNewSrc = this.normalizeUrl(newSrc);
-    const normalizedCurrentSrc = this.normalizeUrl(currentSrc);
-    const normalizedPendingSrc = this.pendingSrc ? this.normalizeUrl(this.pendingSrc) : '';
+    const normalizedCurrentSrc = this.normalizeUrl(this.currentSrc);
 
-    // Предотвращаем повторную загрузку того же файла
-    // Проверяем как текущий источник, так и ожидаемый (pending)
-    if (
-      (normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc) ||
-      (normalizedPendingSrc && normalizedPendingSrc === normalizedNewSrc)
-    ) {
-      // Источник уже установлен или устанавливается, только управляем воспроизведением
+    // Проверяем, не установлен ли уже тот же источник
+    if (normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc && this.audio.src) {
+      // Источник уже установлен, только управляем воспроизведением
       if (!autoplay) {
         this.audio.pause();
       }
       return;
     }
 
-    // Устанавливаем флаг ожидаемого источника
-    this.pendingSrc = newSrc;
+    // Устанавливаем новый источник
+    this.currentSrc = newSrc;
     this.audio.src = newSrc;
     this.audio.load();
-
-    // Сбрасываем флаг после небольшой задержки (когда браузер обновит audio.src)
-    setTimeout(() => {
-      if (this.pendingSrc === newSrc) {
-        this.pendingSrc = null;
-      }
-    }, 100);
 
     if (!autoplay) {
       this.audio.pause();
