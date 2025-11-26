@@ -7,8 +7,6 @@
 class AudioController {
   private audio: HTMLAudioElement;
   private currentSrc: string = ''; // Отслеживаем установленный источник
-  private isLoading: boolean = false; // Флаг, что загрузка уже началась
-  private loadTimeoutId: NodeJS.Timeout | null = null; // Таймаут для сброса флага загрузки
 
   constructor() {
     // Создаём один глобальный audio элемент
@@ -58,33 +56,10 @@ class AudioController {
       return;
     }
 
-    // Если уже идет загрузка того же файла, не перезагружаем
-    if (this.isLoading && normalizedCurrentSrc === normalizedNewSrc) {
-      if (!autoplay) {
-        this.audio.pause();
-      }
-      return;
-    }
-
-    // Очищаем предыдущий таймаут, если есть
-    if (this.loadTimeoutId) {
-      clearTimeout(this.loadTimeoutId);
-      this.loadTimeoutId = null;
-    }
-
-    // Устанавливаем флаг загрузки
-    this.isLoading = true;
-
     // Устанавливаем новый источник
     this.currentSrc = newSrc;
     this.audio.src = newSrc;
     this.audio.load();
-
-    // Сбрасываем флаг загрузки через 200ms (достаточно для предотвращения повторных вызовов)
-    this.loadTimeoutId = setTimeout(() => {
-      this.isLoading = false;
-      this.loadTimeoutId = null;
-    }, 200);
 
     if (!autoplay) {
       this.audio.pause();
