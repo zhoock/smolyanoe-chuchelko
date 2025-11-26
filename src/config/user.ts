@@ -7,4 +7,4 @@ export const CURRENT_USER_CONFIG = {
   username: 'yaroslav_zhoock',
 } as const;
 
-export type ImageCategory = 'albums' | 'articles' | 'profile' | 'uploads' | 'stems';
+export type ImageCategory = 'albums' | 'articles' | 'profile' | 'uploads' | 'stems' | 'audio';
