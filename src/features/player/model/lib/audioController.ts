@@ -24,10 +24,24 @@ class AudioController {
 
   /**
    * Устанавливает источник аудио (URL трека) и загружает его.
+   * Предотвращает повторную загрузку того же файла.
    * @param src - путь к аудиофайлу
+   * @param autoplay - автоматически запускать воспроизведение
    */
   setSource(src: string | undefined, autoplay: boolean = true) {
-    this.audio.src = src || '';
+    const newSrc = src || '';
+    const currentSrc = this.audio.src || '';
+
+    // Предотвращаем повторную загрузку того же файла
+    if (currentSrc === newSrc) {
+      // Источник уже установлен, только управляем воспроизведением
+      if (!autoplay) {
+        this.audio.pause();
+      }
+      return;
+    }
+
+    this.audio.src = newSrc;
     this.audio.load();
     if (!autoplay) {
       this.audio.pause();

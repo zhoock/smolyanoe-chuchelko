@@ -120,8 +120,16 @@ playerListenerMiddleware.startListening({
   effect: (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
-    resetProgress(api);
-    audioController.setSource(track?.src, state.player.isPlaying);
+    const el = audioController.element;
+
+    // Проверяем, нужно ли менять источник
+    if (track?.src && el.src !== track.src) {
+      resetProgress(api);
+      audioController.setSource(track.src, state.player.isPlaying);
+    } else {
+      // Источник уже правильный, только сбрасываем прогресс
+      resetProgress(api);
+    }
   },
 });
 
