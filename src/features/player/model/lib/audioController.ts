@@ -7,8 +7,6 @@
 class AudioController {
   private audio: HTMLAudioElement;
   private currentSrc: string = ''; // Отслеживаем установленный источник
-  private lastLoadTime: number = 0; // Время последнего вызова load()
-  private readonly LOAD_DEBOUNCE_MS = 100; // Минимальный интервал между вызовами load()
 
   constructor() {
     // Создаём один глобальный audio элемент
@@ -26,19 +24,6 @@ class AudioController {
   }
 
   /**
-   * Нормализует URL для сравнения (извлекает путь без query params)
-   */
-  private normalizeUrl(url: string): string {
-    if (!url) return '';
-    try {
-      const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : '');
-      return urlObj.pathname;
-    } catch {
-      return url.split('?')[0].split('#')[0];
-    }
-  }
-
-  /**
    * Устанавливает источник аудио (URL трека) и загружает его.
    * Предотвращает повторную загрузку того же файла.
    * @param src - путь к аудиофайлу
@@ -46,33 +31,9 @@ class AudioController {
    */
   setSource(src: string | undefined, autoplay: boolean = true) {
     const newSrc = src || '';
-    if (!newSrc) return;
 
-    const normalizedNewSrc = this.normalizeUrl(newSrc);
-    const normalizedCurrentSrc = this.normalizeUrl(this.currentSrc);
-    const normalizedAudioSrc = this.normalizeUrl(this.audio.src || '');
-
-    // Проверяем, не установлен ли уже тот же источник
-    // Сравниваем и с currentSrc, и с audio.src (на случай если они не синхронизированы)
-    if (
-      normalizedNewSrc &&
-      ((normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc) ||
-        (normalizedAudioSrc && normalizedAudioSrc === normalizedNewSrc))
-    ) {
-      // Источник уже установлен, только управляем воспроизведением
-      if (!autoplay) {
-        this.audio.pause();
-      }
-      return;
-    }
-
-    // Защита от повторных вызовов load() в течение короткого времени
-    const now = Date.now();
-    if (
-      now - this.lastLoadTime < this.LOAD_DEBOUNCE_MS &&
-      normalizedCurrentSrc === normalizedNewSrc
-    ) {
-      // Недавно уже вызывали load() для этого источника
+    // Простая проверка: если источник уже установлен, не перезагружаем
+    if (this.currentSrc === newSrc && this.audio.src) {
       if (!autoplay) {
         this.audio.pause();
       }
@@ -83,7 +44,6 @@ class AudioController {
     this.currentSrc = newSrc;
     this.audio.src = newSrc;
     this.audio.load();
-    this.lastLoadTime = now;
 
     if (!autoplay) {
       this.audio.pause();

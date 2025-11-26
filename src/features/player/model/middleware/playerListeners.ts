@@ -121,36 +121,12 @@ playerListenerMiddleware.startListening({
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
 
-    if (!track?.src) {
-      resetProgress(api);
-      return;
-    }
-
-    // Проверяем, не установлен ли уже этот источник
-    const el = audioController.element;
-    const normalizeUrl = (url: string): string => {
-      if (!url) return '';
-      try {
-        const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : '');
-        return urlObj.pathname;
-      } catch {
-        return url.split('?')[0].split('#')[0];
-      }
-    };
-
-    const normalizedTrackSrc = normalizeUrl(track.src);
-    const normalizedAudioSrc = normalizeUrl(el.src || '');
-
-    // Если источник уже установлен, только сбрасываем прогресс
-    if (normalizedAudioSrc && normalizedAudioSrc === normalizedTrackSrc) {
-      resetProgress(api);
-      return;
-    }
-
     resetProgress(api);
 
     // setSource сам проверит, нужно ли загружать файл
-    audioController.setSource(track.src, state.player.isPlaying);
+    if (track?.src) {
+      audioController.setSource(track.src, state.player.isPlaying);
+    }
   },
 });
 
