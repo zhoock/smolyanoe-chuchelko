@@ -7,6 +7,8 @@
 class AudioController {
   private audio: HTMLAudioElement;
   private currentSrc: string = ''; // Отслеживаем установленный источник
+  private lastLoadTime: number = 0; // Время последнего вызова load()
+  private readonly LOAD_DEBOUNCE_MS = 100; // Минимальный интервал между вызовами load()
 
   constructor() {
     // Создаём один глобальный audio элемент
@@ -64,10 +66,24 @@ class AudioController {
       return;
     }
 
+    // Защита от повторных вызовов load() в течение короткого времени
+    const now = Date.now();
+    if (
+      now - this.lastLoadTime < this.LOAD_DEBOUNCE_MS &&
+      normalizedCurrentSrc === normalizedNewSrc
+    ) {
+      // Недавно уже вызывали load() для этого источника
+      if (!autoplay) {
+        this.audio.pause();
+      }
+      return;
+    }
+
     // Устанавливаем новый источник
     this.currentSrc = newSrc;
     this.audio.src = newSrc;
     this.audio.load();
+    this.lastLoadTime = now;
 
     if (!autoplay) {
       this.audio.pause();
