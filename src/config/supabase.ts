@@ -14,8 +14,8 @@ const getSupabaseUrl = (): string => {
     // Клиентская часть - используем import.meta.env (поддерживается через webpack DefinePlugin)
     return import.meta.env.VITE_SUPABASE_URL || '';
   }
-  // Серверная часть (Netlify Functions)
-  return process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  // Серверная часть (Netlify Functions) - используем VITE_ переменные
+  return process.env.VITE_SUPABASE_URL || '';
 };
 
 const getSupabaseAnonKey = (): string => {
@@ -23,8 +23,8 @@ const getSupabaseAnonKey = (): string => {
     // Клиентская часть - используем import.meta.env (поддерживается через webpack DefinePlugin)
     return import.meta.env.VITE_SUPABASE_ANON_KEY || '';
   }
-  // Серверная часть (Netlify Functions)
-  return process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+  // Серверная часть (Netlify Functions) - используем VITE_ переменные
+  return process.env.VITE_SUPABASE_ANON_KEY || '';
 };
 
 /**
