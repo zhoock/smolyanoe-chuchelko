@@ -85,9 +85,7 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
 
   const supabase = createSupabaseClient();
   if (!supabase) {
-    console.error(
-      'Supabase client is not available. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-    );
+    console.error('Supabase client is not available. Please set required environment variables.');
     // Возвращаем пустую строку, если клиент недоступен
     return '';
   }

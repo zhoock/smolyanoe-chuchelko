@@ -5,7 +5,7 @@ async function testStorage() {
 
   if (!supabase) {
     console.error(
-      '❌ Supabase client is not available. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+      '❌ Supabase client is not available. Please set required environment variables.'
     );
     return;
   }
