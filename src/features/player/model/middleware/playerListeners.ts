@@ -183,13 +183,29 @@ playerListenerMiddleware.startListening({
 
     if (!track?.src) return;
 
+    const el = audioController.element;
+    // Проверяем, установлен ли уже источник (сравниваем нормализованные URL)
+    const normalizeUrl = (url: string): string => {
+      if (!url) return '';
+      try {
+        const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : '');
+        return urlObj.pathname;
+      } catch {
+        return url.split('?')[0].split('#')[0];
+      }
+    };
+
+    const normalizedTrackSrc = normalizeUrl(track.src);
+    const normalizedCurrentSrc = normalizeUrl(el.src || '');
+
     // Убеждаемся что источник установлен (если еще не установлен)
-    // setSource сам проверит, нужно ли загружать файл
-    audioController.setSource(track.src, true);
+    // setSource сам проверит, нужно ли загружать файл, но здесь мы избегаем лишнего вызова
+    if (normalizedCurrentSrc !== normalizedTrackSrc) {
+      audioController.setSource(track.src, true);
+    }
 
     // Ждём загрузки метаданных если они еще не загружены
     // readyState: 0 = HAVE_NOTHING, 1 = HAVE_METADATA, 2 = HAVE_CURRENT_DATA, 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA
-    const el = audioController.element;
     if (el.readyState < 2) {
       // Ждём загрузки метаданных или хотя бы части данных
       await new Promise<void>((resolve) => {
