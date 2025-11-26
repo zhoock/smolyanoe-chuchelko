@@ -1,13 +1,7 @@
 /**
  * Конфигурация Supabase клиента
  *
- * Для работы нужны переменные окружения:
- * - VITE_SUPABASE_URL (или NEXT_PUBLIC_SUPABASE_URL для Next.js)
- * - VITE_SUPABASE_ANON_KEY (или NEXT_PUBLIC_SUPABASE_ANON_KEY)
- *
- * В Netlify Functions используйте:
- * - SUPABASE_URL
- * - SUPABASE_ANON_KEY
+ * Для работы нужны переменные окружения (см. документацию)
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -45,9 +39,7 @@ export function createSupabaseClient(options?: { authToken?: string }): Supabase
   // Проверяем наличие переменных окружения
   if (!supabaseUrl || !supabaseAnonKey) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(
-        '⚠️ Supabase credentials not found. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
-      );
+      console.warn('⚠️ Supabase credentials not found. Please set required environment variables.');
     }
     // Возвращаем null вместо создания клиента с пустыми значениями
     return null;

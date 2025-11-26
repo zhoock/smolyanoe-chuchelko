@@ -46,9 +46,7 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
 
     const supabase = createSupabaseClient();
     if (!supabase) {
-      console.error(
-        'Supabase client is not available. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-      );
+      console.error('Supabase client is not available. Please set required environment variables.');
       return null;
     }
 
@@ -113,9 +111,7 @@ export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<s
 
     const supabase = createSupabaseClient();
     if (!supabase) {
-      console.error(
-        'Supabase client is not available. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-      );
+      console.error('Supabase client is not available. Please set required environment variables.');
       return null;
     }
 
@@ -152,9 +148,7 @@ export async function deleteStorageFile(
   try {
     const supabase = createSupabaseClient();
     if (!supabase) {
-      console.error(
-        'Supabase client is not available. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-      );
+      console.error('Supabase client is not available. Please set required environment variables.');
       return false;
     }
 
@@ -187,9 +181,7 @@ export async function listStorageFiles(
   try {
     const supabase = createSupabaseClient();
     if (!supabase) {
-      console.error(
-        'Supabase client is not available. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
-      );
+      console.error('Supabase client is not available. Please set required environment variables.');
       return null;
     }
 
