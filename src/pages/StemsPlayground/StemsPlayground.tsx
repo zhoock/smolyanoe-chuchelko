@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
 import { useLang } from '@app/providers/lang';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getUserImageUrl, getUserAudioUrl } from '@shared/api/albums';
 import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -26,12 +26,12 @@ const SONGS: Song[] = [
   {
     id: 'song-1',
     title: 'Последний поршневый бомбардировщик',
-    mix: '/audio/Smolyanoe-chuchelko/01-The-last-piston-bomber-1644.wav',
+    mix: getUserAudioUrl('Smolyanoe-chuchelko/01-The-last-piston-bomber-1644.wav'),
     stems: {
-      drums: '/audio/EP_Mixer/01_PPB_drums.mp3',
-      bass: '/audio/EP_Mixer/01_PPB_bass.mp3',
-      guitar: '/audio/EP_Mixer/01_PPB_guitars.mp3',
-      vocal: '/audio/EP_Mixer/01_PPB_vocals.mp3',
+      drums: getUserAudioUrl('EP_Mixer/01_PPB_drums.mp3'),
+      bass: getUserAudioUrl('EP_Mixer/01_PPB_bass.mp3'),
+      guitar: getUserAudioUrl('EP_Mixer/01_PPB_guitars.mp3'),
+      vocal: getUserAudioUrl('EP_Mixer/01_PPB_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
@@ -43,12 +43,12 @@ const SONGS: Song[] = [
   {
     id: 'song-2',
     title: 'Водянистая влага',
-    mix: '/audio/Smolyanoe-chuchelko/02-Watery-moisture-1644.wav',
+    mix: getUserAudioUrl('Smolyanoe-chuchelko/02-Watery-moisture-1644.wav'),
     stems: {
-      drums: '/audio/EP_Mixer/02_VV_drums.mp3',
-      bass: '/audio/EP_Mixer/02_VV_bass.mp3',
-      guitar: '/audio/EP_Mixer/02_VV_guitars.mp3',
-      vocal: '/audio/EP_Mixer/02_VV_vocals.mp3',
+      drums: getUserAudioUrl('EP_Mixer/02_VV_drums.mp3'),
+      bass: getUserAudioUrl('EP_Mixer/02_VV_bass.mp3'),
+      guitar: getUserAudioUrl('EP_Mixer/02_VV_guitars.mp3'),
+      vocal: getUserAudioUrl('EP_Mixer/02_VV_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
@@ -60,12 +60,12 @@ const SONGS: Song[] = [
   {
     id: 'song-3',
     title: 'Рулевой мёртв',
-    mix: '/audio/Smolyanoe-chuchelko/03-Helmsman-is-dead-1644.wav',
+    mix: getUserAudioUrl('Smolyanoe-chuchelko/03-Helmsman-is-dead-1644.wav'),
     stems: {
-      drums: '/audio/EP_Mixer/03_RM_drums.mp3',
-      bass: '/audio/EP_Mixer/03_RM_bass.mp3',
-      guitar: '/audio/EP_Mixer/03_RM_guitars.mp3',
-      vocal: '/audio/EP_Mixer/03_RM_vocals.mp3',
+      drums: getUserAudioUrl('EP_Mixer/03_RM_drums.mp3'),
+      bass: getUserAudioUrl('EP_Mixer/03_RM_bass.mp3'),
+      guitar: getUserAudioUrl('EP_Mixer/03_RM_guitars.mp3'),
+      vocal: getUserAudioUrl('EP_Mixer/03_RM_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
@@ -77,12 +77,12 @@ const SONGS: Song[] = [
   {
     id: 'song-4',
     title: 'Бром и сталь',
-    mix: '/audio/Smolyanoe-chuchelko/04-Bromine-and-steel-1644.wav',
+    mix: getUserAudioUrl('Smolyanoe-chuchelko/04-Bromine-and-steel-1644.wav'),
     stems: {
-      drums: '/audio/EP_Mixer/04_BIS_drums.mp3',
-      bass: '/audio/EP_Mixer/04_BIS_bass.mp3',
-      guitar: '/audio/EP_Mixer/04_BIS_guitars.mp3',
-      vocal: '/audio/EP_Mixer/04_BIS_vocals.mp3',
+      drums: getUserAudioUrl('EP_Mixer/04_BIS_drums.mp3'),
+      bass: getUserAudioUrl('EP_Mixer/04_BIS_bass.mp3'),
+      guitar: getUserAudioUrl('EP_Mixer/04_BIS_guitars.mp3'),
+      vocal: getUserAudioUrl('EP_Mixer/04_BIS_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
@@ -94,12 +94,12 @@ const SONGS: Song[] = [
   {
     id: 'song-5',
     title: 'Падение кита',
-    mix: '/audio/Smolyanoe-chuchelko/05-Whale-falling-1644.wav',
+    mix: getUserAudioUrl('Smolyanoe-chuchelko/05-Whale-falling-1644.wav'),
     stems: {
-      drums: '/audio/EP_Mixer/05_PK_drums.mp3',
-      bass: '/audio/EP_Mixer/05_PK_bass.mp3',
-      guitar: '/audio/EP_Mixer/05_PK_guitars.mp3',
-      vocal: '/audio/EP_Mixer/05_PK_vocals.mp3',
+      drums: getUserAudioUrl('EP_Mixer/05_PK_drums.mp3'),
+      bass: getUserAudioUrl('EP_Mixer/05_PK_bass.mp3'),
+      guitar: getUserAudioUrl('EP_Mixer/05_PK_guitars.mp3'),
+      vocal: getUserAudioUrl('EP_Mixer/05_PK_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/EP/EP_drummer', 'stems', '.png'),
@@ -111,12 +111,12 @@ const SONGS: Song[] = [
   {
     id: 'song-6',
     title: 'Фиджийская русалка Барнума',
-    mix: '/audio/23/01-Barnums-Fijian-Mermaid-1644.wav',
+    mix: getUserAudioUrl('23/01-Barnums-Fijian-Mermaid-1644.wav'),
     stems: {
-      drums: '/audio/23_Mixer/01_FRB_drums.mp3',
-      bass: '/audio/23_Mixer/01_FRB_bass.mp3',
-      guitar: '/audio/23_Mixer/01_FRB_guitars.mp3',
-      vocal: '/audio/23_Mixer/01_FRB_vocals.mp3',
+      drums: getUserAudioUrl('23_Mixer/01_FRB_drums.mp3'),
+      bass: getUserAudioUrl('23_Mixer/01_FRB_bass.mp3'),
+      guitar: getUserAudioUrl('23_Mixer/01_FRB_guitars.mp3'),
+      vocal: getUserAudioUrl('23_Mixer/01_FRB_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/23/23_drummer', 'stems', '.png'),
@@ -128,12 +128,12 @@ const SONGS: Song[] = [
   {
     id: 'song-7',
     title: 'Слипер',
-    mix: '/audio/23/02-Sleeper-1644.wav',
+    mix: getUserAudioUrl('23/02-Sleeper-1644.wav'),
     stems: {
-      drums: '/audio/23_Mixer/02_SL_drums.mp3',
-      bass: '/audio/23_Mixer/02_SL_bass.mp3',
-      guitar: '/audio/23_Mixer/02_SL_guitars.mp3',
-      vocal: '/audio/23_Mixer/02_SL_vocals.mp3',
+      drums: getUserAudioUrl('23_Mixer/02_SL_drums.mp3'),
+      bass: getUserAudioUrl('23_Mixer/02_SL_bass.mp3'),
+      guitar: getUserAudioUrl('23_Mixer/02_SL_guitars.mp3'),
+      vocal: getUserAudioUrl('23_Mixer/02_SL_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/23/23_drummer', 'stems', '.png'),
@@ -145,12 +145,12 @@ const SONGS: Song[] = [
   {
     id: 'song-8',
     title: 'Швайс',
-    mix: '/audio/23/03-Schweiz-1644.wav',
+    mix: getUserAudioUrl('23/03-Schweiz-1644.wav'),
     stems: {
-      drums: '/audio/23_Mixer/03_SH_drums.mp3',
-      bass: '/audio/23_Mixer/03_SH_bass.mp3',
-      guitar: '/audio/23_Mixer/03_SH_guitars.mp3',
-      vocal: '/audio/23_Mixer/03_SH_vocals.mp3',
+      drums: getUserAudioUrl('23_Mixer/03_SH_drums.mp3'),
+      bass: getUserAudioUrl('23_Mixer/03_SH_bass.mp3'),
+      guitar: getUserAudioUrl('23_Mixer/03_SH_guitars.mp3'),
+      vocal: getUserAudioUrl('23_Mixer/03_SH_vocals.mp3'),
     },
     portraits: {
       drums: getUserImageUrl('stems/23/23_drummer', 'stems', '.png'),
