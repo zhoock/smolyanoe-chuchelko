@@ -44,11 +44,19 @@ class AudioController {
    */
   setSource(src: string | undefined, autoplay: boolean = true) {
     const newSrc = src || '';
+    if (!newSrc) return;
+
     const normalizedNewSrc = this.normalizeUrl(newSrc);
     const normalizedCurrentSrc = this.normalizeUrl(this.currentSrc);
+    const normalizedAudioSrc = this.normalizeUrl(this.audio.src || '');
 
     // Проверяем, не установлен ли уже тот же источник
-    if (normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc && this.audio.src) {
+    // Сравниваем и с currentSrc, и с audio.src (на случай если они не синхронизированы)
+    if (
+      normalizedNewSrc &&
+      ((normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc) ||
+        (normalizedAudioSrc && normalizedAudioSrc === normalizedNewSrc))
+    ) {
       // Источник уже установлен, только управляем воспроизведением
       if (!autoplay) {
         this.audio.pause();

@@ -162,8 +162,11 @@ export const PlayerShell: React.FC = () => {
     );
 
     audioController.setVolume(savedState.volume ?? 50);
-    audioController.setSource(playlist[safeIndex]?.src, savedState.isPlaying ?? false);
-    audioController.setCurrentTime(playbackTime.current ?? 0);
+    // НЕ вызываем setSource здесь - он уже установлен через setCurrentTrackIndex listener
+    // Просто устанавливаем время, если нужно
+    if (playbackTime.current && playbackTime.current > 0) {
+      audioController.setCurrentTime(playbackTime.current);
+    }
 
     if (savedState.isPlaying) {
       dispatch(playerActions.play());
