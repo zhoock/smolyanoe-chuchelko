@@ -82,6 +82,36 @@ export function createSupabaseClient(options?: { authToken?: string }): Supabase
 export const supabase = createSupabaseClient();
 
 /**
+ * Создает Supabase клиент с service role key (обходит RLS политики)
+ * ⚠️ ВАЖНО: Использовать ТОЛЬКО на сервере/в скриптах, НИКОГДА на клиенте!
+ * @returns Supabase клиент с service role key или null, если переменные не установлены
+ */
+export function createSupabaseAdminClient(): SupabaseClient | null {
+  const supabaseUrl = getSupabaseUrl();
+  const serviceRoleKey =
+    typeof window !== 'undefined'
+      ? import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
+      : process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        '⚠️ Supabase service role key not found. Please set VITE_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY environment variable.'
+      );
+    }
+    return null;
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
+/**
  * Имя бакета для хранения медиа-файлов пользователей (изображения и аудио)
  */
 export const STORAGE_BUCKET_NAME = 'user-media';

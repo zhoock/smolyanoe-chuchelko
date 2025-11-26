@@ -2,7 +2,11 @@
  * API для работы с Supabase Storage
  */
 
-import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import {
+  createSupabaseClient,
+  createSupabaseAdminClient,
+  STORAGE_BUCKET_NAME,
+} from '@config/supabase';
 import { CURRENT_USER_CONFIG, type ImageCategory } from '@config/user';
 
 export interface UploadFileOptions {
@@ -71,6 +75,56 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
     return urlData.publicUrl;
   } catch (error) {
     console.error('Error in uploadFile:', error);
+    return null;
+  }
+}
+
+/**
+ * Загрузить файл в Supabase Storage используя service role key (обходит RLS)
+ * ⚠️ ВАЖНО: Использовать ТОЛЬКО в серверных скриптах/функциях, НИКОГДА на клиенте!
+ * @param options - опции загрузки
+ * @returns URL загруженного файла или null в случае ошибки
+ */
+export async function uploadFileAdmin(options: UploadFileOptions): Promise<string | null> {
+  try {
+    const {
+      userId = CURRENT_USER_CONFIG.userId,
+      category,
+      file,
+      fileName,
+      contentType,
+      upsert = false,
+    } = options;
+
+    const supabase = createSupabaseAdminClient();
+    if (!supabase) {
+      console.error(
+        'Supabase admin client is not available. Please set SUPABASE_SERVICE_ROLE_KEY environment variable.'
+      );
+      return null;
+    }
+
+    const storagePath = getStoragePath(userId, category, fileName);
+
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET_NAME)
+      .upload(storagePath, file, {
+        contentType: contentType || (file instanceof File ? file.type : 'image/jpeg'),
+        upsert,
+        cacheControl: '3600', // Кеш на 1 час
+      });
+
+    if (error) {
+      console.error('Error uploading file to Supabase Storage:', error);
+      return null;
+    }
+
+    // Получаем публичный URL файла
+    const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadFileAdmin:', error);
     return null;
   }
 }

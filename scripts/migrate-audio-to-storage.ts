@@ -1,6 +1,39 @@
+// Загружаем переменные окружения из .env.local если файл существует
+import { readFileSync, existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const envPath = resolve(__dirname, '../.env.local');
+if (existsSync(envPath)) {
+  const envFile = readFileSync(envPath, 'utf-8');
+  envFile.split('\n').forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const match = trimmedLine.match(/^([^#=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let value = match[2].trim();
+        // Убираем кавычки если есть
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+}
+
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { uploadFile } from '../src/shared/api/storage';
+import { uploadFileAdmin } from '../src/shared/api/storage';
 import { CURRENT_USER_CONFIG } from '../src/config/user';
 
 /**
@@ -93,7 +126,7 @@ async function migrateAudioFilesToStorage() {
       const fileSizeMB = (stats.size / 1024 / 1024).toFixed(2);
       console.log(`   📤 Загрузка: ${storageFileName} (${fileSizeMB} MB)...`);
 
-      const url = await uploadFile({
+      const url = await uploadFileAdmin({
         category: 'audio',
         file: fileBlob,
         fileName: storageFileName,
