@@ -45,9 +45,9 @@ async function testStorage() {
     console.error('   3. RLS политики не настроены для чтения');
     console.error('   4. Неверный anon ключ');
     console.error('\n📋 Что проверить в Supabase Dashboard:');
-    console.error('   - Storage → Buckets → "user-images" должен быть Public');
+    console.error('   - Storage → Buckets → "user-media" должен быть Public');
     console.error(
-      '   - Storage → Buckets → "user-images" → Policies → должна быть политика "Public read access"'
+      '   - Storage → Buckets → "user-media" → Policies → должна быть политика "Public read access"'
     );
     return;
   }

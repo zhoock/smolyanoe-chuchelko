@@ -82,6 +82,6 @@ export function createSupabaseClient(options?: { authToken?: string }): Supabase
 export const supabase = createSupabaseClient();
 
 /**
- * Имя бакета для хранения изображений пользователей
+ * Имя бакета для хранения медиа-файлов пользователей (изображения и аудио)
  */
-export const STORAGE_BUCKET_NAME = 'user-images';
+export const STORAGE_BUCKET_NAME = 'user-media';

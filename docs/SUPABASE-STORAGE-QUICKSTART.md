@@ -6,7 +6,7 @@
 
 1. Откройте [Supabase Dashboard](https://supabase.com/dashboard/project/jhpvetvfnsklpwswadle)
 2. **Storage** → **New bucket**
-3. Название: `user-images`
+3. Название: `user-media`
 4. ✅ **Public bucket** (включите)
 5. **Create bucket**
 

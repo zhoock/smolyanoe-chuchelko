@@ -14,7 +14,7 @@
 2. В левом меню выберите **Storage**
 3. Нажмите **"New bucket"**
 4. Заполните форму:
-   - **Name**: `user-images`
+   - **Name**: `user-media`
    - **Public bucket**: ✅ Включите (чтобы файлы были доступны публично)
    - **File size limit**: Установите максимальный размер (например, 10 MB)
    - **Allowed MIME types**: Оставьте пустым или укажите `image/*,audio/*`
@@ -24,7 +24,7 @@
 
 Для безопасности нужно настроить Row Level Security (RLS) политики:
 
-1. В Storage выберите bucket `user-images`
+1. В Storage выберите bucket `user-media`
 2. Перейдите на вкладку **"Policies"**
 3. Создайте политики:
 
@@ -34,7 +34,7 @@
 -- Название: Public read access
 -- Операция: SELECT
 -- Определение:
-bucket_id = 'user-images'
+bucket_id = 'user-media'
 ```
 
 ### Политика 2: Пользователи могут загружать свои файлы
@@ -43,7 +43,7 @@ bucket_id = 'user-images'
 -- Название: Users can upload their own files
 -- Операция: INSERT
 -- Определение:
-bucket_id = 'user-images' AND
+bucket_id = 'user-media' AND
 (auth.uid()::text = (storage.foldername(name))[1])
 ```
 
@@ -53,7 +53,7 @@ bucket_id = 'user-images' AND
 -- Название: Users can delete their own files
 -- Операция: DELETE
 -- Определение:
-bucket_id = 'user-images' AND
+bucket_id = 'user-media' AND
 (auth.uid()::text = (storage.foldername(name))[1])
 ```
 
@@ -65,7 +65,7 @@ bucket_id = 'user-images' AND
 -- Название: Anonymous upload to public bucket
 -- Операция: INSERT
 -- Определение:
-bucket_id = 'user-images'
+bucket_id = 'user-media'
 ```
 
 **Примечание:**
@@ -73,7 +73,7 @@ bucket_id = 'user-images'
 - Эта политика разрешает загрузку любому анонимному пользователю
 - Если нужна большая безопасность, можно ограничить только папками пользователей:
   ```sql
-  bucket_id = 'user-images' AND
+  bucket_id = 'user-media' AND
   (storage.foldername(name))[1] = 'users'
   ```
 - Для продакшена рекомендуется использовать авторизацию и политики 2 и 3 вместо этой
@@ -198,7 +198,7 @@ async function testUpload() {
 После настройки файлы будут храниться в следующей структуре:
 
 ```
-user-images/
+user-media/
   users/
     zhoock/
       albums/
@@ -304,7 +304,7 @@ migrateLocalFilesToStorage();
 
 ### Ошибка: "Bucket not found"
 
-- Убедитесь, что bucket `user-images` создан и публичен
+- Убедитесь, что bucket `user-media` создан и публичен
 - Проверьте название bucket в `src/config/supabase.ts`
 
 ### Ошибка: "Invalid API key"

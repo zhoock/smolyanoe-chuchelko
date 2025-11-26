@@ -42,7 +42,7 @@ function shouldUseSupabaseStorage(options?: ImageUrlOptions): boolean {
  *
  * // Новый способ с Supabase Storage
  * getImageUrl('album_cover', '.jpg', { userId: 'zhoock', category: 'albums', useSupabaseStorage: true })
- * // 'https://[project].supabase.co/storage/v1/object/public/user-images/users/zhoock/albums/album_cover.jpg'
+ * // 'https://[project].supabase.co/storage/v1/object/public/user-media/users/zhoock/albums/album_cover.jpg'
  */
 export function getImageUrl(
   img: string,
