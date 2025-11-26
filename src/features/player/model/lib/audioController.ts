@@ -51,8 +51,8 @@ class AudioController {
 
     // Проверяем как текущий источник, так и ожидаемый
     return (
-      (normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc) ||
-      (normalizedPendingSrc && normalizedPendingSrc === normalizedNewSrc)
+      (!!normalizedCurrentSrc && normalizedCurrentSrc === normalizedNewSrc) ||
+      (!!normalizedPendingSrc && normalizedPendingSrc === normalizedNewSrc)
     );
   }
 

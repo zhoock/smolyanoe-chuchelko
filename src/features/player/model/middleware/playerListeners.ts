@@ -213,6 +213,7 @@ playerListenerMiddleware.startListening({
 
     // Ждём загрузки метаданных если они еще не загружены
     // readyState: 0 = HAVE_NOTHING, 1 = HAVE_METADATA, 2 = HAVE_CURRENT_DATA, 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA
+    const el = audioController.element;
     if (el.readyState < 2) {
       // Ждём загрузки метаданных или хотя бы части данных
       await new Promise<void>((resolve) => {
