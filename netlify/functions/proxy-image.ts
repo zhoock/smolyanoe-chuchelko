@@ -17,6 +17,12 @@ export const handler: Handler = async (
     'Access-Control-Expose-Headers': '*',
   };
 
+  console.log('[proxy-image] Request:', {
+    method: event.httpMethod,
+    path: event.path,
+    queryString: event.queryStringParameters,
+  });
+
   // Обработка preflight запроса
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -28,6 +34,7 @@ export const handler: Handler = async (
 
   // Проверяем метод запроса
   if (event.httpMethod !== 'GET') {
+    console.error('[proxy-image] Invalid method:', event.httpMethod);
     return {
       statusCode: 405,
       headers: corsHeaders,
@@ -39,6 +46,7 @@ export const handler: Handler = async (
     // Получаем путь к изображению из query параметра
     const imagePath = event.queryStringParameters?.path;
     if (!imagePath) {
+      console.error('[proxy-image] Missing path parameter');
       return {
         statusCode: 400,
         headers: corsHeaders,
@@ -47,10 +55,12 @@ export const handler: Handler = async (
     }
 
     // Получаем URL Supabase Storage из переменных окружения
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+    // В Netlify Functions переменные окружения доступны без VITE_ префикса
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
     const bucketName = 'user-media';
 
     if (!supabaseUrl) {
+      console.error('[proxy-image] Supabase URL not configured');
       return {
         statusCode: 500,
         headers: corsHeaders,
@@ -58,17 +68,28 @@ export const handler: Handler = async (
       };
     }
 
+    // Декодируем путь (на случай если он был закодирован дважды)
+    const decodedPath = decodeURIComponent(imagePath);
+
     // Формируем полный URL к изображению в Supabase Storage
-    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${imagePath}`;
+    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${decodedPath}`;
+
+    console.log('[proxy-image] Fetching image from:', imageUrl);
 
     // Загружаем изображение из Supabase
     const response = await fetch(imageUrl);
 
     if (!response.ok) {
+      console.error('[proxy-image] Failed to fetch image:', response.status, response.statusText);
       return {
         statusCode: response.status,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Failed to fetch image from Supabase' }),
+        body: JSON.stringify({
+          error: 'Failed to fetch image from Supabase',
+          status: response.status,
+          statusText: response.statusText,
+          url: imageUrl,
+        }),
       };
     }
 

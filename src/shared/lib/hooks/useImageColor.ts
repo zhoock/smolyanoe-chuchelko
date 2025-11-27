@@ -151,11 +151,26 @@ export function useImageColor(
             if (urlMatch) {
               const imagePath = urlMatch[1];
               // Используем прокси для обхода CORS
-              actualImgSrc = `/api/proxy-image?path=${encodeURIComponent(imagePath)}`;
+              // В production используем полный URL, в development - относительный
+              const isProduction =
+                window.location.hostname !== 'localhost' &&
+                !window.location.hostname.includes('127.0.0.1');
+              const proxyUrl = isProduction
+                ? `https://${window.location.hostname}/api/proxy-image?path=${encodeURIComponent(imagePath)}`
+                : `/api/proxy-image?path=${encodeURIComponent(imagePath)}`;
+
+              console.log('[useImageColor] Используем прокси для изображения:', {
+                originalUrl: actualImgSrc,
+                imagePath,
+                proxyUrl,
+                isProduction,
+                hostname: window.location.hostname,
+              });
+
               // Создаем новый Image элемент для загрузки через прокси
               const proxyImg = new Image();
               proxyImg.crossOrigin = 'anonymous';
-              proxyImg.src = actualImgSrc;
+              proxyImg.src = proxyUrl;
 
               proxyImg.onload = () => {
                 // Когда прокси-изображение загрузилось, используем его для извлечения цветов
@@ -164,9 +179,7 @@ export function useImageColor(
                   const palette = colorThief.getPalette(proxyImg, 10);
 
                   processedImagesCache.add(imgSrc);
-                  if (actualImgSrc !== imgSrc) {
-                    processedImagesCache.add(actualImgSrc);
-                  }
+                  processedImagesCache.add(proxyUrl);
 
                   const colors = {
                     dominant: `rgb(${dominantColor.join(',')})`,
@@ -179,8 +192,29 @@ export function useImageColor(
                 }
               };
 
-              proxyImg.onerror = () => {
-                console.error('Ошибка загрузки прокси-изображения:', actualImgSrc);
+              proxyImg.onerror = (e) => {
+                console.error('Ошибка загрузки прокси-изображения:', {
+                  proxyUrl,
+                  originalUrl: (img as HTMLImageElement).currentSrc || img.src,
+                  error: e,
+                });
+                // Пробуем использовать оригинальное изображение как fallback
+                // (скорее всего это не сработает из-за CORS, но попробуем)
+                try {
+                  const dominantColor = colorThief.getColor(img);
+                  const palette = colorThief.getPalette(img, 10);
+
+                  processedImagesCache.add(imgSrc);
+
+                  const colors = {
+                    dominant: `rgb(${dominantColor.join(',')})`,
+                    palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
+                  };
+
+                  onColorsExtractedRef.current?.(colors);
+                } catch (fallbackError) {
+                  console.error('Fallback также не сработал (CORS проблема):', fallbackError);
+                }
               };
 
               return; // Выходим, так как используем асинхронную загрузку через прокси
