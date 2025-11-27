@@ -203,12 +203,48 @@ export function useImageColor(
                 try {
                   console.log('[useImageColor] Пробуем загрузить через fetch:', proxyUrl);
                   const fetchResponse = await fetch(proxyUrl);
+                  
+                  const contentType = fetchResponse.headers.get('content-type') || '';
+                  console.log('[useImageColor] Fetch response:', {
+                    ok: fetchResponse.ok,
+                    status: fetchResponse.status,
+                    statusText: fetchResponse.statusText,
+                    contentType,
+                    headers: Object.fromEntries(fetchResponse.headers.entries()),
+                  });
+                  
                   if (!fetchResponse.ok) {
+                    // Клонируем response для чтения текста ошибки
+                    const errorResponse = fetchResponse.clone();
+                    const errorText = await errorResponse.text();
+                    console.error('[useImageColor] Fetch error response:', errorText);
                     throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+                  }
+                  
+                  // Проверяем, что получили изображение, а не HTML
+                  if (!contentType.startsWith('image/')) {
+                    // Клонируем response для чтения текста
+                    const textResponse = fetchResponse.clone();
+                    const responseText = await textResponse.text();
+                    console.error('[useImageColor] Expected image but got:', {
+                      contentType,
+                      responsePreview: responseText.substring(0, 200),
+                    });
+                    throw new Error(`Expected image content-type, got: ${contentType}`);
                   }
 
                   const blob = await fetchResponse.blob();
+                  console.log('[useImageColor] Blob created:', {
+                    size: blob.size,
+                    type: blob.type,
+                  });
+                  
+                  if (blob.size === 0) {
+                    throw new Error('Blob is empty');
+                  }
+                  
                   const dataUrl = URL.createObjectURL(blob);
+                  console.log('[useImageColor] Data URL created:', dataUrl.substring(0, 50) + '...');
 
                   const dataUrlImg = new Image();
                   dataUrlImg.crossOrigin = 'anonymous';
