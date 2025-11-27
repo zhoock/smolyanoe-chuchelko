@@ -192,28 +192,72 @@ export function useImageColor(
                 }
               };
 
-              proxyImg.onerror = (e) => {
+              proxyImg.onerror = async (e) => {
                 console.error('Ошибка загрузки прокси-изображения:', {
                   proxyUrl,
                   originalUrl: (img as HTMLImageElement).currentSrc || img.src,
                   error: e,
                 });
-                // Пробуем использовать оригинальное изображение как fallback
-                // (скорее всего это не сработает из-за CORS, но попробуем)
+
+                // Пробуем загрузить изображение через fetch и создать data URL
                 try {
-                  const dominantColor = colorThief.getColor(img);
-                  const palette = colorThief.getPalette(img, 10);
+                  console.log('[useImageColor] Пробуем загрузить через fetch:', proxyUrl);
+                  const fetchResponse = await fetch(proxyUrl);
+                  if (!fetchResponse.ok) {
+                    throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+                  }
 
-                  processedImagesCache.add(imgSrc);
+                  const blob = await fetchResponse.blob();
+                  const dataUrl = URL.createObjectURL(blob);
 
-                  const colors = {
-                    dominant: `rgb(${dominantColor.join(',')})`,
-                    palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
+                  const dataUrlImg = new Image();
+                  dataUrlImg.crossOrigin = 'anonymous';
+                  dataUrlImg.src = dataUrl;
+
+                  dataUrlImg.onload = () => {
+                    try {
+                      const dominantColor = colorThief.getColor(dataUrlImg);
+                      const palette = colorThief.getPalette(dataUrlImg, 10);
+
+                      processedImagesCache.add(imgSrc);
+                      processedImagesCache.add(proxyUrl);
+                      processedImagesCache.add(dataUrl);
+
+                      const colors = {
+                        dominant: `rgb(${dominantColor.join(',')})`,
+                        palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
+                      };
+
+                      URL.revokeObjectURL(dataUrl); // Освобождаем память
+                      onColorsExtractedRef.current?.(colors);
+                    } catch (colorError) {
+                      console.error('Ошибка при извлечении цветов из data URL:', colorError);
+                      URL.revokeObjectURL(dataUrl);
+                    }
                   };
 
-                  onColorsExtractedRef.current?.(colors);
-                } catch (fallbackError) {
-                  console.error('Fallback также не сработал (CORS проблема):', fallbackError);
+                  dataUrlImg.onerror = () => {
+                    console.error('Ошибка загрузки data URL изображения');
+                    URL.revokeObjectURL(dataUrl);
+                  };
+                } catch (fetchError) {
+                  console.error('Ошибка при загрузке через fetch:', fetchError);
+                  // Пробуем использовать оригинальное изображение как последний fallback
+                  try {
+                    const dominantColor = colorThief.getColor(img);
+                    const palette = colorThief.getPalette(img, 10);
+
+                    processedImagesCache.add(imgSrc);
+
+                    const colors = {
+                      dominant: `rgb(${dominantColor.join(',')})`,
+                      palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
+                    };
+
+                    onColorsExtractedRef.current?.(colors);
+                  } catch (fallbackError) {
+                    console.error('Fallback также не сработал (CORS проблема):', fallbackError);
+                  }
                 }
               };
 
