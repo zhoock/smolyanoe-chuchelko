@@ -80,18 +80,6 @@ export default function AudioPlayer({
     dispatch(playerActions.setControlsVisible(controlsVisible));
   }, [controlsVisible, dispatch]);
 
-  // Устанавливаем флаг восстановления ДО изменения showLyrics
-  useLayoutEffect(() => {
-    if (globalShowLyrics && savedScrollTopRef.current > 0) {
-      const container = lyricsContainerRef.current;
-      if (container) {
-        (container as any).__isRestoringScroll = true;
-        justRestoredScrollRef.current = true;
-        userScrollTimestampRef.current = Date.now();
-      }
-    }
-  }, [globalShowLyrics]);
-
   useEffect(() => {
     setShowLyrics(globalShowLyrics);
   }, [globalShowLyrics]);
@@ -865,10 +853,6 @@ export default function AudioPlayer({
   const { toggleLyrics, toggleShuffle, toggleRepeat } = usePlayerToggles({
     showLyrics,
     setShowLyrics,
-    savedScrollTopRef,
-    lyricsContainerRef,
-    justRestoredScrollRef,
-    userScrollTimestampRef,
     suppressScrollHandlingUntilRef,
     ignoreActivityUntilRef,
   });

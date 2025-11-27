@@ -78,7 +78,7 @@ export function useLyricsScrollRestore({
             setTimeout(() => {
               justRestoredScrollRef.current = false;
               debugLog('✅ Scroll restoration completed');
-            }, 1000); // Увеличено время блокировки автоскролла
+            }, 1000);
           }, 100);
         });
       });
