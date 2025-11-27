@@ -70,6 +70,13 @@
   status = 200
   force = true
 
+# API route для проксирования изображений из Supabase Storage (для работы ColorThief)
+[[redirects]]
+  from = "/api/proxy-image*"
+  to = "/.netlify/functions/proxy-image"
+  status = 200
+  force = true
+
 # API route для аутентификации
 [[redirects]]
   from = "/api/auth/*"

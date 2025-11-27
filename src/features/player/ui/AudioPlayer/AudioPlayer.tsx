@@ -1014,10 +1014,13 @@ export default function AudioPlayer({
    */
   const handleColorsExtracted = useCallback(
     ({ dominant, palette }: { dominant: string; palette: string[] }) => {
-      if (bgColorSetForAlbumRef.current === albumId) return;
+      if (bgColorSetForAlbumRef.current === albumId) {
+        return;
+      }
 
       bgColorSetForAlbumRef.current = albumId;
-      setBgColor(`linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`);
+      const gradientColor = `linear-gradient(var(--rotate, 132deg), ${dominant}, ${palette[6] || dominant})`;
+      setBgColor(gradientColor);
     },
     [albumId, setBgColor]
   );

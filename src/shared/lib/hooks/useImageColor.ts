@@ -19,9 +19,30 @@ const processedImagesCache = new Set<string>();
 /**
  * Очищает кеш обработанных изображений для указанного пути.
  * Используется при смене альбома, чтобы принудительно переизвлечь цвета.
+ * Очищает как базовый путь, так и все пути, которые содержат базовый путь
+ * (на случай если изображение загружается по разным URL).
  */
 export function clearImageColorCache(imgSrc: string): void {
+  // Извлекаем базовое имя файла из пути для более точного сопоставления
+  const baseFileName = imgSrc.split('/').pop()?.split('.')[0] || imgSrc;
+
   processedImagesCache.delete(imgSrc);
+
+  // Очищаем все пути, которые содержат базовое имя файла
+  // Это работает как для локальных путей, так и для полных URL (Supabase Storage)
+  const pathsToDelete: string[] = [];
+  processedImagesCache.forEach((cachedPath) => {
+    // Проверяем по базовому пути и по имени файла
+    if (
+      cachedPath === imgSrc ||
+      cachedPath.includes(imgSrc) ||
+      imgSrc.includes(cachedPath) ||
+      cachedPath.includes(baseFileName)
+    ) {
+      pathsToDelete.push(cachedPath);
+    }
+  });
+  pathsToDelete.forEach((path) => processedImagesCache.delete(path));
 }
 
 /* Этот хук useImageColor предназначен для извлечения доминантного цвета
@@ -30,23 +51,23 @@ export function clearImageColorCache(imgSrc: string): void {
  * и передаёт полученные цвета в onColorsExtracted.
  * */
 export function useImageColor(
-  // Путь к изображению.
   imgSrc: string,
-  // Колбэк-функция, которая вызывается при успешном извлечении цветов.
   onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void
 ) {
   // Создание ref для изображения. Используется для хранения ссылки на изображение, с которого будет браться цвет.
   const imgRef = useRef<HTMLImageElement | null>(null);
+  // Храним последнюю версию колбэка в ref, чтобы избежать бесконечных циклов
+  const onColorsExtractedRef = useRef(onColorsExtracted);
 
-  // Хук useEffect используется для выполнения побочных эффектов.
-  // В данном случае он загружает Color Thief и извлекает цвета из изображения.
+  // Обновляем ref при изменении колбэка
   useEffect(() => {
-    if (!onColorsExtracted) return; // если нет onColorsExtracted, выход из эффекта
+    onColorsExtractedRef.current = onColorsExtracted;
+  }, [onColorsExtracted]);
 
-    // Проверяем кеш - если для этого изображения уже извлекались цвета, не делаем ничего
-    // Кеш может быть очищен извне через clearImageColorCache при смене альбома
-    if (processedImagesCache.has(imgSrc)) {
-      return; // Цвета уже извлечены для этого изображения
+  useEffect(() => {
+    const callback = onColorsExtractedRef.current;
+    if (!callback) {
+      return;
     }
 
     // Проверяет, загружен ли уже Color Thief.
@@ -89,7 +110,11 @@ export function useImageColor(
       // Берёт изображение из useRef.
       const colorThief = new window.ColorThief();
       const img = imgRef.current;
-      if (!img) return;
+      if (!img) {
+        return;
+      }
+
+      let lastActualImgSrc = imgSrc;
 
       // Извлечение цветов
       const getColors = () => {
@@ -111,20 +136,86 @@ export function useImageColor(
             return;
           }
 
+          // Получаем реальный путь к изображению для кеша
+          // Для <picture> с <source> элементами нужно использовать currentSrc
+          // currentSrc возвращает реальный URL, который браузер выбрал из <source> элементов
+          let actualImgSrc = (img as HTMLImageElement).currentSrc || img.src || imgSrc;
+          lastActualImgSrc = actualImgSrc;
+
+          // Если изображение загружается с Supabase Storage (cross-origin), используем прокси
+          // для обхода CORS ограничений при извлечении цветов
+          if (actualImgSrc.includes('supabase.co/storage')) {
+            // Извлекаем путь к изображению из Supabase URL
+            // Формат: https://xxx.supabase.co/storage/v1/object/public/user-media/users/.../albums/...
+            const urlMatch = actualImgSrc.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
+            if (urlMatch) {
+              const imagePath = urlMatch[1];
+              // Используем прокси для обхода CORS
+              actualImgSrc = `/api/proxy-image?path=${encodeURIComponent(imagePath)}`;
+              // Создаем новый Image элемент для загрузки через прокси
+              const proxyImg = new Image();
+              proxyImg.crossOrigin = 'anonymous';
+              proxyImg.src = actualImgSrc;
+
+              proxyImg.onload = () => {
+                // Когда прокси-изображение загрузилось, используем его для извлечения цветов
+                try {
+                  const dominantColor = colorThief.getColor(proxyImg);
+                  const palette = colorThief.getPalette(proxyImg, 10);
+
+                  processedImagesCache.add(imgSrc);
+                  if (actualImgSrc !== imgSrc) {
+                    processedImagesCache.add(actualImgSrc);
+                  }
+
+                  const colors = {
+                    dominant: `rgb(${dominantColor.join(',')})`,
+                    palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
+                  };
+
+                  onColorsExtractedRef.current?.(colors);
+                } catch (error) {
+                  console.error('Ошибка при извлечении цветов из прокси-изображения:', error);
+                }
+              };
+
+              proxyImg.onerror = () => {
+                console.error('Ошибка загрузки прокси-изображения:', actualImgSrc);
+              };
+
+              return; // Выходим, так как используем асинхронную загрузку через прокси
+            }
+          }
+
+          // Проверяем кеш с реальным путем
+          // Если изображение уже обработано, не извлекаем цвета повторно
+          if (processedImagesCache.has(actualImgSrc) || processedImagesCache.has(imgSrc)) {
+            // Если цвета уже извлечены, но колбэк еще не был вызван (например, при перемонтировании),
+            // нужно вызвать колбэк с уже извлеченными цветами
+            // Но мы не храним цвета в кеше, поэтому просто выходим
+            return;
+          }
+
           // Получает основной цвет.
           const dominantColor = colorThief.getColor(img);
           // Получает палитру из 10 цветов.
           const palette = colorThief.getPalette(img, 10);
 
           // Помечаем изображение как обработанное ПЕРЕД вызовом колбэка
+          // Добавляем в кеш и базовый путь, и реальный путь для надежности
           processedImagesCache.add(imgSrc);
+          if (actualImgSrc !== imgSrc) {
+            processedImagesCache.add(actualImgSrc);
+          }
 
           // Преобразует массив [r, g, b] в строку "rgb(r, g, b)".
-          // Вызывает onColorsExtracted.
-          onColorsExtracted?.({
+          const colors = {
             dominant: `rgb(${dominantColor.join(',')})`,
             palette: palette.map((color: number[]) => `rgb(${color.join(',')})`),
-          });
+          };
+
+          // Вызывает onColorsExtracted через ref, чтобы избежать проблем с зависимостями
+          onColorsExtractedRef.current?.(colors);
         } catch (error) {
           console.error('Ошибка при извлечении цветов:', error);
           // При ошибке не добавляем в кеш, чтобы можно было повторить попытку
@@ -156,9 +247,10 @@ export function useImageColor(
     };
 
     // Запуск скрипта.
-    // Вызывает loadScript при каждом изменении imgSrc или onColorsExtracted.
+    // Вызывает loadScript при каждом изменении imgSrc.
+    // onColorsExtracted не в зависимостях, используем ref для доступа к последней версии
     loadScript();
-  }, [imgSrc, onColorsExtracted]);
+  }, [imgSrc]);
 
   // Возвращаемый результат.
   // Хук возвращает ref, который нужно прикрепить к <img>,

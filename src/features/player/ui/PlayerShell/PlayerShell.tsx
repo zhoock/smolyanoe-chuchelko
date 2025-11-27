@@ -175,11 +175,19 @@ export const PlayerShell: React.FC = () => {
     }
   }, [dispatch, location.hash, location.pathname, location.search, store]);
 
+  // Сбрасываем цвет фона только при смене альбома (по albumId)
+  // Это нужно для начальной установки дефолтного цвета, который затем будет заменён
+  // цветами из обложки альбома через setBgColor из AudioPlayer
+  // Используем useRef для отслеживания предыдущего albumId, чтобы сбрасывать цвет только при реальной смене альбома
+  const prevAlbumIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (albumMeta) {
+    const currentAlbumId = albumMeta?.albumId;
+    // Сбрасываем цвет только если альбом действительно изменился
+    if (currentAlbumId && prevAlbumIdRef.current !== currentAlbumId) {
+      prevAlbumIdRef.current = currentAlbumId;
       setBgColor(DEFAULT_BG);
     }
-  }, [albumMeta]);
+  }, [albumMeta?.albumId]);
 
   useEffect(() => {
     timeRef.current = time;
