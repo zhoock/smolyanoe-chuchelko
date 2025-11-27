@@ -161,13 +161,6 @@ export function useImageColor(
                 ? `https://${window.location.hostname}/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`
                 : `/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`;
 
-              console.log('[useImageColor] Используем прокси для изображения:', {
-                originalUrl: actualImgSrc,
-                imagePath,
-                proxyUrl,
-                isProduction,
-                hostname: window.location.hostname,
-              });
 
               // Создаем новый Image элемент для загрузки через прокси
               const proxyImg = new Image();
@@ -203,26 +196,10 @@ export function useImageColor(
 
                 // Пробуем загрузить изображение через fetch и создать data URL
                 try {
-                  console.log('[useImageColor] Пробуем загрузить через fetch:', proxyUrl);
                   const fetchResponse = await fetch(proxyUrl);
-                  
                   const contentType = fetchResponse.headers.get('content-type') || '';
-                  // Создаем объект с заголовками вручную
-                  const headersObj: Record<string, string> = {};
-                  fetchResponse.headers.forEach((value, key) => {
-                    headersObj[key] = value;
-                  });
-                  
-                  console.log('[useImageColor] Fetch response:', {
-                    ok: fetchResponse.ok,
-                    status: fetchResponse.status,
-                    statusText: fetchResponse.statusText,
-                    contentType,
-                    headers: headersObj,
-                  });
                   
                   if (!fetchResponse.ok) {
-                    // Клонируем response для чтения текста ошибки
                     const errorResponse = fetchResponse.clone();
                     const errorText = await errorResponse.text();
                     console.error('[useImageColor] Fetch error response:', errorText);
@@ -231,7 +208,6 @@ export function useImageColor(
                   
                   // Проверяем, что получили изображение, а не HTML
                   if (!contentType.startsWith('image/')) {
-                    // Клонируем response для чтения текста
                     const textResponse = fetchResponse.clone();
                     const responseText = await textResponse.text();
                     console.error('[useImageColor] Expected image but got:', {
@@ -242,17 +218,12 @@ export function useImageColor(
                   }
 
                   const blob = await fetchResponse.blob();
-                  console.log('[useImageColor] Blob created:', {
-                    size: blob.size,
-                    type: blob.type,
-                  });
                   
                   if (blob.size === 0) {
                     throw new Error('Blob is empty');
                   }
                   
                   const dataUrl = URL.createObjectURL(blob);
-                  console.log('[useImageColor] Data URL created:', dataUrl.substring(0, 50) + '...');
 
                   const dataUrlImg = new Image();
                   dataUrlImg.crossOrigin = 'anonymous';

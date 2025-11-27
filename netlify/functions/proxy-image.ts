@@ -17,14 +17,6 @@ export const handler: Handler = async (
     'Access-Control-Expose-Headers': '*',
   };
 
-  console.log('[proxy-image] ===== FUNCTION CALLED =====');
-  console.log('[proxy-image] Request:', {
-    method: event.httpMethod,
-    path: event.path,
-    queryString: event.queryStringParameters,
-    rawUrl: event.rawUrl,
-    rawQuery: event.rawQuery,
-  });
 
   // Обработка preflight запроса
   if (event.httpMethod === 'OPTIONS') {
@@ -77,7 +69,6 @@ export const handler: Handler = async (
     // Формируем полный URL к изображению в Supabase Storage
     const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${decodedPath}`;
 
-    console.log('[proxy-image] Fetching image from:', imageUrl);
 
     // Загружаем изображение из Supabase
     const response = await fetch(imageUrl);
