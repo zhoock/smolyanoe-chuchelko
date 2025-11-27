@@ -72,7 +72,7 @@
 
 # API route для проксирования изображений из Supabase Storage (для работы ColorThief)
 [[redirects]]
-  from = "/api/proxy-image"
+  from = "/api/proxy-image*"
   to = "/.netlify/functions/proxy-image"
   status = 200
   force = true
