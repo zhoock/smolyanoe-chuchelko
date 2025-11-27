@@ -27,8 +27,13 @@ const getSupabaseAnonKey = (): string => {
   return process.env.VITE_SUPABASE_ANON_KEY || '';
 };
 
+// Кеш для клиентов Supabase (singleton pattern)
+// Ключ - это строка, представляющая конфигурацию клиента (URL + ключ + authToken)
+const clientCache = new Map<string, SupabaseClient>();
+
 /**
  * Создает и возвращает Supabase клиент
+ * Использует singleton pattern для предотвращения создания множественных экземпляров
  * @param options - опции для создания клиента (например, auth token)
  * @returns Supabase клиент или null, если переменные окружения не установлены
  */
@@ -43,6 +48,18 @@ export function createSupabaseClient(options?: { authToken?: string }): Supabase
     }
     // Возвращаем null вместо создания клиента с пустыми значениями
     return null;
+  }
+
+  // Создаем ключ для кеша на основе конфигурации
+  // Для клиентов с authToken создаем отдельные экземпляры
+  const cacheKey = options?.authToken
+    ? `${supabaseUrl}:${supabaseAnonKey}:token:${options.authToken}`
+    : `${supabaseUrl}:${supabaseAnonKey}:default`;
+
+  // Проверяем, есть ли уже клиент в кеше
+  const cachedClient = clientCache.get(cacheKey);
+  if (cachedClient) {
+    return cachedClient;
   }
 
   const clientOptions: {
@@ -71,6 +88,9 @@ export function createSupabaseClient(options?: { authToken?: string }): Supabase
       refresh_token: '',
     });
   }
+
+  // Сохраняем клиент в кеш
+  clientCache.set(cacheKey, client);
 
   return client;
 }

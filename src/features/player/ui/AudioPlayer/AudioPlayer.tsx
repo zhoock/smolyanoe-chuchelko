@@ -32,9 +32,11 @@ const trackDebug = (label: string, data: Record<string, unknown> = {}) => {
     (window as any).__playerDebug ??= [];
     (window as any).__playerDebug.push(entry);
   }
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[player-debug]', entry);
-  }
+  // Debug логи отключены для чистоты консоли
+  // Раскомментируйте следующую строку для включения debug логов:
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('[player-debug]', entry);
+  // }
 };
 
 const formatTimerValue = (value: number): string => {
@@ -1334,17 +1336,13 @@ export default function AudioPlayer({
   useEffect(() => {
     // Ждем, пока контейнер будет готов (showLyrics может быть false при первом рендере)
     if (!showLyrics) {
-      debugLog('⚠️ showLyrics is false, skipping scroll listener setup');
       return;
     }
 
     const container = lyricsContainerRef.current;
     if (!container) {
-      debugLog('⚠️ Container not found, skipping scroll listener setup');
       return;
     }
-
-    debugLog('✅ Scroll listener setup for container:', container);
 
     // Инициализируем начальные значения
     lastScrollTopRef.current = container.scrollTop;
