@@ -19,37 +19,19 @@ import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@feature
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import { useLang } from '@app/providers/lang';
 
-// Helper для debug-логов только в development
-const debugLog = (...args: any[]) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(...args);
-  }
-};
-
-const trackDebug = (label: string, data: Record<string, unknown> = {}) => {
-  const entry = { t: Date.now(), label, ...data };
-  if (typeof window !== 'undefined') {
-    (window as any).__playerDebug ??= [];
-    (window as any).__playerDebug.push(entry);
-  }
-  // Debug логи отключены для чистоты консоли
-  // Раскомментируйте следующую строку для включения debug логов:
-  // if (process.env.NODE_ENV === 'development') {
-  //   console.log('[player-debug]', entry);
-  // }
-};
-
-const formatTimerValue = (value: number): string => {
-  if (!Number.isFinite(value)) {
-    return '--:--';
-  }
-
-  const safeSeconds = Math.max(0, Math.floor(value));
-  const minutes = Math.floor(safeSeconds / 60);
-  const seconds = safeSeconds % 60;
-
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-};
+import { debugLog, trackDebug } from './utils/debug';
+import { formatTimerValue } from './utils/formatTime';
+import { useLyricsScrollRestore } from './hooks/useLyricsScrollRestore';
+import { useLyricsManualScroll } from './hooks/useLyricsManualScroll';
+import { useLyricsAutoScroll } from './hooks/useLyricsAutoScroll';
+import { useLyricsContent } from './hooks/useLyricsContent';
+import { useRewind } from './hooks/useRewind';
+import { useCurrentLineIndex } from './hooks/useCurrentLineIndex';
+import { useSeek } from './hooks/useSeek';
+import { usePlayerControls } from './hooks/usePlayerControls';
+import { useTimeDisplay } from './hooks/useTimeDisplay';
+import { useTrackNavigation } from './hooks/useTrackNavigation';
+import { usePlayerToggles } from './hooks/usePlayerToggles';
 
 export default function AudioPlayer({
   album,
@@ -98,6 +80,18 @@ export default function AudioPlayer({
     dispatch(playerActions.setControlsVisible(controlsVisible));
   }, [controlsVisible, dispatch]);
 
+  // Устанавливаем флаг восстановления ДО изменения showLyrics
+  useLayoutEffect(() => {
+    if (globalShowLyrics && savedScrollTopRef.current > 0) {
+      const container = lyricsContainerRef.current;
+      if (container) {
+        (container as any).__isRestoringScroll = true;
+        justRestoredScrollRef.current = true;
+        userScrollTimestampRef.current = Date.now();
+      }
+    }
+  }, [globalShowLyrics]);
+
   useEffect(() => {
     setShowLyrics(globalShowLyrics);
   }, [globalShowLyrics]);
@@ -125,6 +119,13 @@ export default function AudioPlayer({
   const lastResetTimestampRef = useRef<number>(0);
   const lastMouseMoveTimestampRef = useRef<number>(0);
   const ignoreActivityUntilRef = useRef<number>(0);
+  // Ref для сохранения позиции прокрутки при скрытии текста
+  const savedScrollTopRef = useRef<number>(0);
+  // Флаг, указывающий что мы только что восстановили позицию прокрутки
+  const justRestoredScrollRef = useRef<boolean>(false);
+  // Флаг для блокировки обработки событий scroll сразу после добавления обработчика
+  // Это предотвращает синхронный вызов setState при первом переключении
+  const scrollListenerJustAddedRef = useRef<boolean>(false);
   // Состояние режима прозрачности текста: 'normal' | 'user-scrolling' | 'seeking'
   const [lyricsOpacityMode, setLyricsOpacityMode] = useState<
     'normal' | 'user-scrolling' | 'seeking'
@@ -332,6 +333,10 @@ export default function AudioPlayer({
   // Функция плавного скролла (как в Apple Music) - только для iOS
   const smoothScrollTo = useCallback(
     (container: HTMLElement, targetScrollTop: number, duration: number = 600) => {
+      // Если мы только что восстановили позицию, полностью блокируем автоскролл
+      if (justRestoredScrollRef.current || (container as any).__isRestoringScroll) {
+        return;
+      }
       // На десктопе используем нативный smooth scroll
       if (!isIOSDevice) {
         container.scrollTo({
@@ -542,334 +547,37 @@ export default function AudioPlayer({
     return formatTimerValue(time);
   }, []);
 
-  const scheduleControlsHide = useCallback(() => {
-    if (isCoarsePointerDevice) {
-      setControlsVisible(true);
-      controlsVisibleRef.current = true;
-      trackDebug('scheduleControlsHide:coarse');
-      return;
-    }
+  // Управление контролами плеера
+  const { showControls, scheduleControlsHide, resetInactivityTimer } = usePlayerControls({
+    isCoarsePointerDevice,
+    showLyrics,
+    isPlaying,
+    globalShowLyrics,
+    setControlsVisible,
+    controlsVisibleRef,
+    inactivityTimerRef,
+    suppressScrollHandlingUntilRef,
+    controlsVisibilityCooldownUntilRef,
+    lastResetTimestampRef,
+    INACTIVITY_TIMEOUT,
+  });
 
-    // Очищаем предыдущий таймер перед созданием нового
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
-    }
+  // Навигация по трекам
+  const { togglePlayPause, nextTrack, prevTrack } = useTrackNavigation({
+    playlist,
+    time,
+    resetInactivityTimer,
+  });
 
-    if (showLyrics && isPlaying) {
-      inactivityTimerRef.current = setTimeout(() => {
-        // Проверяем, что состояние не изменилось за время ожидания
-        if (showLyrics && isPlaying && controlsVisibleRef.current) {
-          suppressScrollHandlingUntilRef.current = Date.now() + 400;
-          controlsVisibleRef.current = false;
-          setControlsVisible(false);
-          trackDebug('controls-hidden:timer', { showLyrics, isPlaying });
-        }
-        inactivityTimerRef.current = null;
-      }, INACTIVITY_TIMEOUT);
-      trackDebug('scheduleControlsHide:set', {
-        showLyrics,
-        isPlaying,
-        timeout: INACTIVITY_TIMEOUT,
-      });
-    } else {
-      trackDebug('scheduleControlsHide:skip', { showLyrics, isPlaying });
-    }
-  }, [showLyrics, isPlaying, isCoarsePointerDevice]);
-
-  const showControls = useCallback(() => {
-    // Очищаем таймер скрытия при показе контроллеров
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = null;
-      trackDebug('showControls:clear-timer');
-    }
-
-    const now = Date.now();
-    suppressScrollHandlingUntilRef.current = now + 400;
-    controlsVisibleRef.current = true;
-    setControlsVisible(true);
-    controlsVisibilityCooldownUntilRef.current = now + (isCoarsePointerDevice ? 900 : 400);
-    trackDebug('showControls', { now, cooldown: controlsVisibilityCooldownUntilRef.current });
-    scheduleControlsHide();
-  }, [scheduleControlsHide, isCoarsePointerDevice]);
-
-  useEffect(() => {
-    controlsVisibleRef.current = true;
-    setControlsVisible(true);
-    showControls();
-  }, [globalShowLyrics, showControls]);
-
-  // Функция для сброса таймера бездействия и показа контролов
-  // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
-  const resetInactivityTimer = useCallback(() => {
-    const now = Date.now();
-    if (now - lastResetTimestampRef.current < 200) {
-      trackDebug('resetInactivityTimer:throttled', { delta: now - lastResetTimestampRef.current });
-      return;
-    }
-    lastResetTimestampRef.current = now;
-    trackDebug('resetInactivityTimer');
-    showControls();
-  }, [showControls]);
-
-  /**
-   * Переключает воспроизведение (play ↔ pause).
-   * Мемоизируем чтобы не создавать функцию заново и не вызывать лишние ре-рендеры дочерних компонентов.
-   */
-  const togglePlayPause = useCallback(() => {
-    dispatch(playerActions.toggle());
-  }, [dispatch]);
-
-  // Флаг для предотвращения повторных вызовов nextTrack из компонента
-  // Проблема: при клике на кнопку одновременно срабатывают onClick и onMouseUp,
-  // что вызывает nextTrack дважды. Эта защита блокирует повторные вызовы.
-  const nextTrackCallRef = useRef<string | null>(null);
-
-  /**
-   * Переключает на следующий трек в плейлисте.
-   * Проверяем что плейлист не пуст перед переключением.
-   * ВАЖНО: Защита от повторных вызовов - если уже был вызов в течение последних 500мс, игнорируем.
-   */
-  const nextTrack = useCallback(() => {
-    if (playlist.length === 0) return;
-
-    // Генерируем уникальный ID для этого вызова
-    const callId = `${Date.now()}-${Math.random()}`;
-
-    // Проверяем, не был ли уже вызов в течение последних 500мс
-    if (nextTrackCallRef.current !== null) {
-      return;
-    }
-
-    // Сохраняем ID вызова
-    nextTrackCallRef.current = callId;
-
-    dispatch(playerActions.nextTrack(playlist.length));
-
-    // Сбрасываем ID через 500мс
-    setTimeout(() => {
-      if (nextTrackCallRef.current === callId) {
-        nextTrackCallRef.current = null;
-      }
-    }, 500);
-  }, [dispatch, playlist.length]);
-
-  // Флаг для предотвращения повторных вызовов prevTrack из компонента
-  // Аналогично nextTrack, защита от одновременных вызовов onClick и onMouseUp
-  const prevTrackCallRef = useRef<string | null>(null);
-
-  /**
-   * Переключает на предыдущий трек в плейлисте или начинает текущий трек с начала.
-   * Логика:
-   * - Если трек проигрывается меньше 3 секунд → переключает на предыдущий трек
-   * - Если трек проигрывается 3 секунды и больше → начинает текущий трек с начала
-   * ВАЖНО: Защита от повторных вызовов - если уже был вызов в течение последних 500мс, игнорируем.
-   */
-  const prevTrack = useCallback(() => {
-    if (playlist.length === 0) return;
-
-    // Генерируем уникальный ID для этого вызова
-    const callId = `${Date.now()}-${Math.random()}`;
-
-    // Проверяем, не был ли уже вызов в течение последних 500мс
-    if (prevTrackCallRef.current !== null) {
-      return;
-    }
-
-    // Сохраняем ID вызова
-    prevTrackCallRef.current = callId;
-
-    // Порог времени: если трек проигрывается меньше 3 секунд, переключаем на предыдущий
-    const TIME_THRESHOLD = 3; // секунды
-    const currentTimeValue = time.current;
-
-    if (currentTimeValue < TIME_THRESHOLD) {
-      // Трек только начал проигрываться → переключаем на предыдущий трек
-      dispatch(playerActions.prevTrack(playlist.length));
-    } else {
-      // Трек уже проигрывается какое-то время → начинаем с начала
-      dispatch(playerActions.setCurrentTime(0));
-      audioController.setCurrentTime(0);
-      dispatch(playerActions.setProgress(0));
-    }
-
-    // Сбрасываем ID через 500мс
-    setTimeout(() => {
-      if (prevTrackCallRef.current === callId) {
-        prevTrackCallRef.current = null;
-      }
-    }, 500);
-  }, [dispatch, playlist.length, time]);
-
-  // Refs для перемотки при удержании кнопок
-  const rewindIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pressStartTimeRef = useRef<number | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // отдельный ref для таймера долгого нажатия
-  const isLongPressRef = useRef(false);
-  const wasRewindingRef = useRef(false); // флаг: была ли перемотка (чтобы предотвратить переключение трека после)
-  const hasLongPressTimerRef = useRef(false); // флаг: запущен ли таймер долгого нажатия (чтобы предотвратить переключение трека даже если таймер ещё не сработал)
-  const shouldBlockTrackSwitchRef = useRef(false); // флаг: блокировать ли переключение трека (устанавливается при начале перемотки)
-  const timeRef = useRef(time); // ref для актуальных значений времени в setInterval
-
-  // Обновляем ref при изменении time
-  useEffect(() => {
-    timeRef.current = time;
-  }, [time]);
-
-  /**
-   * Обработчик начала нажатия на кнопку перемотки (backward/forward).
-   * Различает короткое нажатие (переключение трека) и долгое удержание (перемотка внутри трека).
-   */
-  const handleRewindStart = useCallback(
-    (direction: 'backward' | 'forward') => {
-      showControls();
-
-      const startTime = Date.now();
-      pressStartTimeRef.current = startTime;
-      isLongPressRef.current = false;
-      wasRewindingRef.current = false; // сбрасываем флаг перемотки
-      hasLongPressTimerRef.current = false; // сбрасываем флаг запуска таймера
-      shouldBlockTrackSwitchRef.current = false; // сбрасываем флаг блокировки (будет установлен при начале перемотки)
-
-      // Очищаем предыдущий таймер, если он есть
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-
-      // Помечаем, что таймер запущен (даже до его срабатывания)
-      // Это предотвратит переключение трека при коротких нажатиях
-      hasLongPressTimerRef.current = true;
-
-      // Через 200мс начинаем перемотку, если кнопка всё ещё удерживается
-      // Уменьшили время до 200мс для более быстрой реакции
-      longPressTimerRef.current = setTimeout(() => {
-        if (pressStartTimeRef.current === startTime) {
-          // Это долгое нажатие - начинаем перемотку
-          isLongPressRef.current = true;
-          wasRewindingRef.current = true; // устанавливаем флаг что была перемотка
-          shouldBlockTrackSwitchRef.current = true; // БЛОКИРУЕМ переключение трека раз и навсегда
-          isSeekingRef.current = true;
-          seekProtectionUntilRef.current = Date.now() + 2000;
-          showControls();
-          const step = direction === 'backward' ? -5 : 5; // перемотка на 5 секунд
-
-          rewindIntervalRef.current = setInterval(() => {
-            // Используем актуальные значения из ref
-            const currentTime = timeRef.current.current || 0;
-            const duration = timeRef.current.duration || 0;
-            let newTime = currentTime + step;
-
-            // Ограничиваем в пределах 0 - duration
-            newTime = Math.max(0, Math.min(duration, newTime));
-
-            const progress = (newTime / duration) * 100;
-
-            dispatch(playerActions.setSeeking(true));
-            seekProtectionUntilRef.current = Date.now() + 2000;
-            dispatch(playerActions.setCurrentTime(newTime));
-            dispatch(playerActions.setTime({ current: newTime, duration }));
-            dispatch(playerActions.setProgress(progress));
-
-            // Обновляем CSS переменную для синхронизации со слайдером
-            if (progressInputRef.current) {
-              progressInputRef.current.style.setProperty('--progress-width', `${progress}%`);
-            }
-          }, 200); // каждые 200мс
-        }
-      }, 200); // задержка перед началом перемотки (уменьшили с 300мс до 200мс)
-    },
-    [dispatch, showControls]
-  );
-
-  /**
-   * Обработчик окончания нажатия на кнопку перемотки.
-   * Если это было короткое нажатие - переключаем трек, если долгое - останавливаем перемотку.
-   */
-  const handleRewindEnd = useCallback(
-    (direction: 'backward' | 'forward', originalHandler: () => void) => {
-      const pressDuration = pressStartTimeRef.current ? Date.now() - pressStartTimeRef.current : 0;
-
-      // КРИТИЧЕСКИ ВАЖНО: Сохраняем значение флага блокировки СРАЗУ, ДО всех операций
-      // Это единственный источник правды - если он установлен, перемотка РАБОТАЛА
-      const isRewindingActive = shouldBlockTrackSwitchRef.current;
-
-      // Останавливаем таймер долгого нажатия
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-
-      // Останавливаем перемотку
-      if (rewindIntervalRef.current) {
-        clearInterval(rewindIntervalRef.current);
-        rewindIntervalRef.current = null;
-        dispatch(playerActions.setSeeking(false));
-        isSeekingRef.current = false;
-        seekProtectionUntilRef.current = Date.now() + 1500;
-        showControls();
-        // Если трек играл, продолжаем воспроизведение
-        if (isPlaying) {
-          dispatch(playerActions.play());
-        }
-      }
-
-      // ПРОСТАЯ ЛОГИКА: Если перемотка работала (флаг блокировки был установлен) - НЕ переключаем трек
-      // Флаг устанавливается ТОЛЬКО когда перемотка реально началась (таймер сработал и интервал запущен)
-      if (isRewindingActive) {
-        // Перемотка работала - трек НЕ переключаем
-        // Сбрасываем флаги и выходим
-        setTimeout(() => {
-          pressStartTimeRef.current = null;
-          isLongPressRef.current = false;
-          hasLongPressTimerRef.current = false;
-          wasRewindingRef.current = false;
-          // Сбрасываем флаг блокировки после всех проверок (даём время onClick проверить)
-          setTimeout(() => {
-            shouldBlockTrackSwitchRef.current = false;
-          }, 300);
-        }, 150);
-        return;
-      }
-
-      // Если перемотка НЕ работала - проверяем, был ли это короткий клик
-      // Переключаем трек ТОЛЬКО если нажатие было очень коротким (< 150мс)
-      // Если нажатие >= 180мс, таймер мог сработать, поэтому не переключаем
-      if (pressDuration > 0 && pressDuration < 150) {
-        // Очень короткое нажатие - переключаем трек
-        originalHandler();
-      } else if (pressDuration >= 180) {
-        // Нажатие было достаточно долгим - таймер мог сработать, не переключаем трек
-        // Это дополнительная защита на случай гонки условий
-      }
-      // Средние нажатия (150-180мс) тоже не переключаем трек (на всякий случай)
-
-      // Сбрасываем флаги с задержкой, чтобы onClick успел проверить
-      setTimeout(() => {
-        pressStartTimeRef.current = null;
-        isLongPressRef.current = false;
-        hasLongPressTimerRef.current = false;
-        wasRewindingRef.current = false;
-      }, 150);
-    },
-    [dispatch, isPlaying, showControls]
-  );
-
-  /**
-   * Обработчик клика на кнопку перемотки (для обычного клика без долгого удержания).
-   * Используется только если не было долгого нажатия и перемотки.
-   */
-  const handleRewindClick = useCallback(
-    (direction: 'backward' | 'forward', originalHandler: () => void) => {
-      // ПРОСТАЯ ЛОГИКА: Если перемотка работает (флаг блокировки установлен) - НЕ переключаем трек
-      if (shouldBlockTrackSwitchRef.current) {
-        return;
-      }
-      // Если перемотка НЕ работает - переключаем трек
-      originalHandler();
-    },
-    []
-  );
+  // Обработка перемотки при удержании кнопок
+  const { handleRewindStart, handleRewindEnd, handleRewindClick, isRewindingActive } = useRewind({
+    isPlaying,
+    time,
+    progressInputRef,
+    isSeekingRef,
+    seekProtectionUntilRef,
+    showControls,
+  });
 
   /**
    * Обработчик изменения позиции слайдера прогресса (перемотка трека).
@@ -881,112 +589,19 @@ export default function AudioPlayer({
    * 3. Обновляет текущее время в стейте
    * 4. Обновляет CSS переменную для визуального отображения
    */
-  // Обработчик клика на строку текста для перемотки трека
-  const handleLineClick = useCallback(
-    (startTime: number) => {
-      if (!time.duration || time.duration <= 0) return;
-
-      suppressActiveLineRef.current = false;
-
-      const newTime = Math.max(0, Math.min(time.duration, startTime));
-      const progress = (newTime / time.duration) * 100;
-      const shouldResumePlayback = !isPlaying;
-
-      dispatch(playerActions.setSeeking(true));
-      isSeekingRef.current = true;
-      seekProtectionUntilRef.current = Date.now() + 2000;
-      dispatch(playerActions.setCurrentTime(newTime));
-      dispatch(playerActions.setTime({ current: newTime, duration: time.duration }));
-      dispatch(playerActions.setProgress(progress));
-
-      // Обновляем CSS переменную для синхронизации со слайдером
-      if (progressInputRef.current) {
-        progressInputRef.current.style.setProperty('--progress-width', `${progress}%`);
-      }
-
-      // Снимаем флаг isSeeking после перемотки
-      // Если трек играл, продолжаем воспроизведение
-      setTimeout(() => {
-        dispatch(playerActions.setSeeking(false));
-        isSeekingRef.current = false;
-        seekProtectionUntilRef.current = Date.now() + 1500;
-        if (isPlaying || shouldResumePlayback) {
-          dispatch(playerActions.play());
-        }
-      }, 100);
-    },
-    [dispatch, time.duration, isPlaying]
-  );
-
-  const handleProgressChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const duration = time.duration;
-      if (!Number.isFinite(duration) || duration <= 0) return;
-
-      suppressActiveLineRef.current = false;
-
-      const value = Number(event.target.value);
-      const newTime = (value / 100) * duration;
-
-      dispatch(playerActions.setSeeking(true));
-      // ЯВНО устанавливаем время в audio элементе сразу, не дожидаясь middleware
-      // Это гарантирует, что аудио перематывается немедленно при клике на слайдер
-      audioController.setCurrentTime(newTime);
-      dispatch(playerActions.setCurrentTime(newTime));
-      dispatch(playerActions.setTime({ current: newTime, duration }));
-      dispatch(playerActions.setProgress(value));
-      event.target.style.setProperty('--progress-width', `${value}%`);
-
-      // Сбрасываем флаг ручной прокрутки при клике на прогрессбар,
-      // чтобы автоскролл сработал немедленно и прокрутил текст к нужной позиции
-      userScrollTimestampRef.current = 0;
-      isUserScrollingRef.current = false;
-      // Устанавливаем режим прозрачности для перетаскивания прогресс-бара
-      setLyricsOpacityMode((prevMode) => {
-        debugLog('🔍 Seeking started, prev mode:', prevMode, '-> seeking');
-        return 'seeking';
-      });
-      // Сбрасываем таймер бездействия при взаимодействии с прогресс-баром
-      resetInactivityTimer();
-      isSeekingRef.current = true;
-      seekProtectionUntilRef.current = Date.now() + 2000;
-    },
-    [dispatch, time.duration, resetInactivityTimer]
-  );
-
-  /**
-   * Обработчик окончания перемотки (когда пользователь отпустил слайдер).
-   * Вызывается когда пользователь отпускает мышь/палец после перемотки.
-   *
-   * Что делает:
-   * 1. Снимает флаг isSeeking (разрешает автообновление прогресса)
-   * 2. Если трек играл, запускает его снова (может остановиться во время перемотки)
-   *
-   * Используем небольшую задержку, чтобы дать Redux время обновиться после handleProgressChange
-   */
-  const handleSeekEnd = useCallback(() => {
-    // Сразу снимаем флаг isSeeking (разрешает автообновление прогресса)
-    dispatch(playerActions.setSeeking(false));
-    isSeekingRef.current = false;
-    if (isPlaying) {
-      dispatch(playerActions.play());
-    }
-    seekProtectionUntilRef.current = Date.now() + 1500;
-    // Возвращаем режим прозрачности к нормальному сразу после окончания перетаскивания
-    // Только если пользователь не прокручивает вручную
-    const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
-    if (timeSinceUserScroll >= 2000) {
-      setLyricsOpacityMode((prevMode) => {
-        // Не сбрасываем, если пользователь активно прокручивает
-        if (prevMode === 'user-scrolling') {
-          debugLog('⚠️ handleSeekEnd: keeping user-scrolling mode');
-          return prevMode;
-        }
-        debugLog('🔍 handleSeekEnd: resetting to normal');
-        return 'normal';
-      });
-    }
-  }, [dispatch, isPlaying]);
+  // Обработка перемотки трека (seek)
+  const { handleLineClick, handleProgressChange, handleSeekEnd } = useSeek({
+    isPlaying,
+    time,
+    progressInputRef,
+    isSeekingRef,
+    seekProtectionUntilRef,
+    suppressActiveLineRef,
+    userScrollTimestampRef,
+    isUserScrollingRef,
+    setLyricsOpacityMode,
+    resetInactivityTimer,
+  });
 
   /**
    * Обработчик изменения громкости.
@@ -1067,109 +682,17 @@ export default function AudioPlayer({
     bgColorSetForAlbumRef.current = null;
   }, [albumId]);
 
-  // Загружаем синхронизации для текущего трека
-  useEffect(() => {
-    if (!currentTrack) {
-      setSyncedLyrics(null);
-      setCurrentLineIndex(null);
-      return;
-    }
-
-    // Вычисляем albumId
-    const albumIdComputed = albumId;
-
-    // Загружаем синхронизации асинхронно
-    (async () => {
-      const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-      const baseSynced: SyncedLyricsLine[] | null | undefined =
-        storedSync || currentTrack.syncedLyrics;
-
-      if (baseSynced && baseSynced.length > 0) {
-        // Проверяем, действительно ли текст синхронизирован
-        // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
-        const isActuallySynced = baseSynced.some((line) => line.startTime > 0);
-
-        if (isActuallySynced) {
-          // Текст действительно синхронизирован - загружаем авторство и добавляем его в конец
-          const storedAuthorship = await loadAuthorshipFromStorage(
-            albumIdComputed,
-            currentTrack.id,
-            lang
-          );
-          const authorship = currentTrack.authorship || storedAuthorship;
-
-          const synced = [...baseSynced];
-
-          // Добавляем авторство в конец, если оно есть и ещё не добавлено
-          if (authorship) {
-            const lastLine = synced[synced.length - 1];
-            // Проверяем, не является ли последняя строка уже авторством
-            if (!lastLine || lastLine.text !== authorship) {
-              synced.push({
-                text: authorship,
-                startTime: time.duration || 0,
-                endTime: undefined,
-              });
-            }
-          }
-
-          setSyncedLyrics(synced);
-          setAuthorshipText(authorship || null);
-        } else {
-          // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем как синхронизированный
-          // Он будет отображаться как обычный текст через plainLyricsContent
-          setSyncedLyrics(null);
-          setAuthorshipText(null);
-          setCurrentLineIndex(null);
-        }
-      } else {
-        setSyncedLyrics(null);
-        setAuthorshipText(null);
-        setCurrentLineIndex(null);
-      }
-    })();
-  }, [currentTrack, albumId, lang, time.duration]);
-
-  // Загружаем обычный текст (не синхронизированный) из БД или JSON
-  useEffect(() => {
-    if (!currentTrack) {
-      setPlainLyricsContent(null);
-      return;
-    }
-
-    const normalize = (text: string) => text.replace(/\r\n/g, '\n').trim();
-
-    // Сначала проверяем текст из JSON
-    if (currentTrack.content && currentTrack.content.trim().length > 0) {
-      setPlainLyricsContent(normalize(currentTrack.content));
-      return;
-    }
-
-    // Затем проверяем localStorage (dev mode)
-    const albumIdComputed = albumId;
-    const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
-
-    try {
-      const stored =
-        typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
-      if (stored && stored.trim().length > 0) {
-        setPlainLyricsContent(normalize(stored));
-        return;
-      }
-    } catch (error) {
-      debugLog('Cannot read stored text content', { error });
-    }
-
-    // Если текст не найден в JSON и localStorage, загружаем из БД
-    (async () => {
-      const textFromDb = await loadTrackTextFromDatabase(albumIdComputed, currentTrack.id, lang);
-      if (textFromDb && textFromDb.trim().length > 0) {
-        setPlainLyricsContent(normalize(textFromDb));
-      } else {
-        setPlainLyricsContent(null);
-      }
-    })();
-  }, [currentTrack, albumId, lang]);
+  // Загружаем контент lyrics (синхронизированный текст, обычный текст, авторство)
+  useLyricsContent({
+    currentTrack,
+    albumId,
+    lang,
+    duration: time.duration,
+    setSyncedLyrics,
+    setPlainLyricsContent,
+    setAuthorshipText,
+    setCurrentLineIndex,
+  });
 
   /**
    * Автоматически скрываем текст при смене трека, если трек не добавлен в караоке.
@@ -1204,6 +727,10 @@ export default function AudioPlayer({
       debugLog('🔍 Track changed, resetting opacity mode from:', prevMode);
       return 'normal';
     });
+    // Сбрасываем сохраненную позицию прокрутки при смене трека (только при реальной смене трека)
+    savedScrollTopRef.current = 0;
+    // Сбрасываем флаг восстановления позиции при смене трека
+    justRestoredScrollRef.current = false;
     // Сбрасываем флаг прокрутки до конца при смене трека
     userScrolledToEndRef.current = false;
     showControls();
@@ -1244,528 +771,83 @@ export default function AudioPlayer({
   }, [currentTrack, albumId, lang, showControls]);
 
   // Определяем текущую строку на основе времени воспроизведения
-  // Используем useMemo для синхронного вычисления при каждом изменении времени
-  const currentLineIndexComputed = useMemo(() => {
-    if (!syncedLyrics || syncedLyrics.length === 0) {
-      return null;
-    }
-
-    if (suppressActiveLineRef.current) {
-      return null;
-    }
-
-    const timeValue = time.current;
-    const lines = syncedLyrics;
-    const firstLineStart = lines[0]?.startTime ?? 0;
-
-    if (!isPlaying && timeValue <= firstLineStart + 0.05) {
-      return null;
-    }
-
-    // Находим текущую строку: ищем строку, где time >= startTime и time < endTime
-    let activeIndex: number | null = null;
-
-    // Если время меньше startTime первой строки - нет активной строки (промежуток без текста в начале)
-    if (lines.length > 0 && timeValue < lines[0].startTime) {
-      activeIndex = null;
-    } else {
-      // Ищем активную строку среди всех строк
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const nextLine = lines[i + 1];
-
-        // Определяем границу окончания строки
-        // Если endTime задан - используем его, иначе используем startTime следующей строки (или Infinity для последней)
-        const lineEndTime =
-          line.endTime !== undefined ? line.endTime : nextLine ? nextLine.startTime : Infinity;
-
-        // Если время попадает в диапазон текущей строки
-        // ВАЖНО: если endTime === startTime следующей строки, в момент t = endTime активна должна быть следующая строка
-        // Поэтому для текущей строки используем строгое < для endTime
-        if (timeValue >= line.startTime && timeValue < lineEndTime) {
-          activeIndex = i;
-          break;
-        }
-
-        // Специальная обработка: если endTime текущей строки === startTime следующей,
-        // и время равно этому значению, то активна должна быть следующая строка
-        // (это обработается на следующей итерации цикла)
-
-        // Если это последняя строка
-        if (!nextLine) {
-          // Если время больше startTime последней строки - оставляем её активной
-          // (даже если время прошло endTime - показываем последнюю строку до конца трека)
-          if (timeValue >= line.startTime) {
-            activeIndex = i;
-            break;
-          }
-          // Если время меньше startTime последней строки - не устанавливаем активную строку
-          break;
-        }
-
-        // Если есть следующая строка и время между текущей и следующей
-        if (
-          line.endTime !== undefined &&
-          timeValue >= line.endTime &&
-          timeValue < nextLine.startTime
-        ) {
-          // Промежуток между строками - показываем предыдущую (если она была и время в её диапазоне)
-          if (i > 0) {
-            const prevLine = lines[i - 1];
-            if (
-              timeValue >= prevLine.startTime &&
-              (prevLine.endTime === undefined || timeValue < prevLine.endTime)
-            ) {
-              activeIndex = i - 1;
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    return activeIndex;
-  }, [syncedLyrics, time, isPlaying]);
+  const currentLineIndexComputed = useCurrentLineIndex({
+    syncedLyrics,
+    time,
+    isPlaying,
+    suppressActiveLineRef,
+  });
 
   // Синхронизируем вычисленное значение с состоянием для совместимости
   useEffect(() => {
     setCurrentLineIndex(currentLineIndexComputed);
   }, [currentLineIndexComputed]);
 
-  // Отслеживание ручной прокрутки пользователя
-  useEffect(() => {
-    // Ждем, пока контейнер будет готов (showLyrics может быть false при первом рендере)
-    if (!showLyrics) {
-      return;
-    }
+  // Сохранение и восстановление позиции прокрутки при переключении режима отображения
+  useLyricsScrollRestore({
+    showLyrics,
+    lyricsContainerRef,
+    savedScrollTopRef,
+    justRestoredScrollRef,
+    userScrollTimestampRef,
+    lastScrollTopRef,
+    pendingScrollTopRef,
+    time,
+  });
 
-    const container = lyricsContainerRef.current;
-    if (!container) {
-      return;
-    }
-
-    // Инициализируем начальные значения
-    lastScrollTopRef.current = container.scrollTop;
-    pendingScrollTopRef.current = container.scrollTop;
-    lastScrollDirectionRef.current = null;
-    manualScrollRafRef.current = null;
-
-    let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
-    let directionTimeout: ReturnType<typeof setTimeout> | null = null;
-    let isProgrammaticScroll = false; // Флаг для отслеживания программного скролла
-    let scrollStartPosition = container.scrollTop;
-    const IMMEDIATE_DIRECTION_THRESHOLD = 2;
-    const STICKY_END_THRESHOLD = 24;
-
-    const applyDirectionChange = (direction: 'up' | 'down') => {
-      const now = Date.now();
-      if (now < controlsVisibilityCooldownUntilRef.current) {
-        trackDebug('applyDirectionChange:suppressed', { direction });
-        return;
-      }
-      const isSeekProtectionActive = now < seekProtectionUntilRef.current;
-      if (direction === 'down' && (isSeekingRef.current || isSeekProtectionActive)) {
-        trackDebug('applyDirectionChange:seek-suppressed', {
-          direction,
-          isSeeking: isSeekingRef.current,
-          isSeekProtectionActive,
-        });
-        return;
-      }
-      if (direction === 'down') {
-        if (isCoarsePointerDevice) {
-          trackDebug('applyDirectionChange:down-skipped', { reason: 'coarse-pointer' });
-          return;
-        }
-        const suppressionWindow = isCoarsePointerDevice ? 1200 : 500;
-        suppressScrollHandlingUntilRef.current = now + suppressionWindow;
-        // Синхронизируем состояние: сначала обновляем ref, потом state
-        if (controlsVisibleRef.current) {
-          controlsVisibleRef.current = false;
-          // Очищаем таймер перед скрытием
-          if (inactivityTimerRef.current) {
-            clearTimeout(inactivityTimerRef.current);
-            inactivityTimerRef.current = null;
-            trackDebug('applyDirectionChange:clear-timer', { direction });
-          }
-          setControlsVisible(false);
-        }
-        controlsVisibilityCooldownUntilRef.current = now + suppressionWindow;
-        trackDebug('applyDirectionChange:down', { suppressionWindow });
-      } else {
-        suppressScrollHandlingUntilRef.current = now + 400;
-        // Синхронизируем состояние: сначала обновляем ref, потом state
-        if (!controlsVisibleRef.current) {
-          controlsVisibleRef.current = true;
-          setControlsVisible(true);
-        }
-        showControls();
-        controlsVisibilityCooldownUntilRef.current = now + 400;
-        trackDebug('applyDirectionChange:up');
-      }
-    };
-
-    const processScroll = (currentScrollTop: number) => {
-      const now = Date.now();
-      if (now < suppressScrollHandlingUntilRef.current) {
-        lastScrollTopRef.current = currentScrollTop;
-        return;
-      }
-      const isSeekProtectionActive = now < seekProtectionUntilRef.current;
-      if (isSeekingRef.current || isSeekProtectionActive) {
-        lastScrollTopRef.current = currentScrollTop;
-        return;
-      }
-      debugLog('✅ Manual scroll detected!');
-      trackDebug('scroll:manual', { currentScrollTop });
-
-      if (isCoarsePointerDevice) {
-        resetInactivityTimer();
-      }
-
-      // Отменяем любую активную анимацию скролла при ручной прокрутке
-      if (smoothScrollAnimationRef.current !== null) {
-        cancelAnimationFrame(smoothScrollAnimationRef.current);
-        smoothScrollAnimationRef.current = null;
-      }
-
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const isAtEnd = currentScrollTop + clientHeight >= scrollHeight - 10; // 10px допуск
-      const distanceFromBottom = Math.max(0, scrollHeight - clientHeight - currentScrollTop);
-      const isNearStickyEnd = distanceFromBottom <= STICKY_END_THRESHOLD;
-      const previousScrollTop = lastScrollTopRef.current;
-      const scrollDelta = currentScrollTop - previousScrollTop;
-
-      // Помечаем, что пользователь прокручивает вручную
-      userScrollTimestampRef.current = Date.now();
-      isUserScrollingRef.current = true;
-
-      // Если пользователь прокрутил до конца, устанавливаем флаг
-      if (isAtEnd) {
-        userScrolledToEndRef.current = true;
-        debugLog('📍 User scrolled to end');
-      } else if (userScrolledToEndRef.current && distanceFromBottom > STICKY_END_THRESHOLD) {
-        userScrolledToEndRef.current = false;
-        debugLog('📍 User left end zone, reset flag');
-      }
-
-      // Устанавливаем режим прозрачности для ручной прокрутки
-      setLyricsOpacityMode((prevMode) => {
-        debugLog('🔍 User scrolling detected, prev mode:', prevMode, '-> user-scrolling');
-        return 'user-scrolling';
-      });
-
-      if (!isCoarsePointerDevice && Math.abs(scrollDelta) > IMMEDIATE_DIRECTION_THRESHOLD) {
-        const direction = scrollDelta > 0 ? 'down' : 'up';
-        let shouldReactImmediately =
-          lastScrollDirectionRef.current !== direction ||
-          (direction === 'down' && controlsVisibleRef.current) ||
-          (direction === 'up' && !controlsVisibleRef.current);
-
-        if (direction === 'up' && isNearStickyEnd) {
-          shouldReactImmediately = false;
-        }
-        if (shouldReactImmediately) {
-          applyDirectionChange(direction);
-          lastScrollDirectionRef.current = direction;
-        }
-      }
-
-      // Обновляем предыдущее значение scrollTop после обработки
-      lastScrollTopRef.current = currentScrollTop;
-
-      // Сбрасываем таймеры
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-      if (directionTimeout) {
-        clearTimeout(directionTimeout);
-        directionTimeout = null;
-      }
-
-      scrollStartPosition = currentScrollTop;
-
-      // Определяем направление только ПОСЛЕ окончания прокрутки (200мс после последнего события)
-      // Это предотвращает зацикливание и дёргание анимации
-      directionTimeout = setTimeout(() => {
-        const finalScrollTop = container.scrollTop;
-        const totalDelta = finalScrollTop - scrollStartPosition;
-        const finalDistanceFromBottom = Math.max(0, scrollHeight - clientHeight - finalScrollTop);
-        const finalIsNearStickyEnd = finalDistanceFromBottom <= STICKY_END_THRESHOLD;
-
-        if (!isCoarsePointerDevice && Math.abs(totalDelta) > 30) {
-          if (isSeekingRef.current && totalDelta > 0) {
-            scrollStartPosition = finalScrollTop;
-            directionTimeout = null;
-            return;
-          }
-          const finalDirection = totalDelta > 0 ? 'down' : 'up';
-          let shouldReactFinal =
-            lastScrollDirectionRef.current !== finalDirection ||
-            (finalDirection === 'down' && controlsVisibleRef.current) ||
-            (finalDirection === 'up' && !controlsVisibleRef.current);
-
-          if (finalDirection === 'up' && finalIsNearStickyEnd) {
-            shouldReactFinal = false;
-          }
-          if (shouldReactFinal) {
-            applyDirectionChange(finalDirection);
-            lastScrollDirectionRef.current = finalDirection;
-            trackDebug('scroll:direction-final', {
-              direction: finalDirection,
-              totalDelta,
-              finalDistanceFromBottom,
-            });
-          }
-        }
-
-        // Обновляем начальную позицию для следующей прокрутки
-        scrollStartPosition = finalScrollTop;
-        directionTimeout = null;
-      }, 200); // Определяем направление 200мс после последнего scroll события
-
-      // Устанавливаем таймер для возврата к нормальному режиму через 2 секунды после последнего скролла
-      scrollTimeout = setTimeout(() => {
-        setLyricsOpacityMode((prevMode) => {
-          if (prevMode === 'user-scrolling') {
-            isUserScrollingRef.current = false;
-            debugLog('🔍 Scroll timeout, opacity mode reset to: normal');
-            return 'normal';
-          }
-          return prevMode;
-        });
-      }, 2000);
-    };
-
-    const handleScroll = () => {
-      // Если это программный скролл - игнорируем
-      if (isProgrammaticScroll) {
-        return;
-      }
-
-      if (isCoarsePointerDevice) {
-        processScroll(container.scrollTop);
-        return;
-      }
-
-      pendingScrollTopRef.current = container.scrollTop;
-
-      if (manualScrollRafRef.current !== null) {
-        return;
-      }
-
-      manualScrollRafRef.current = requestAnimationFrame(() => {
-        manualScrollRafRef.current = null;
-        processScroll(pendingScrollTopRef.current);
-      });
-    };
-
-    // Перехватываем программный скролл
-    const originalScrollTo = container.scrollTo.bind(container);
-    container.scrollTo = function (optionsOrX?: ScrollToOptions | number, y?: number) {
-      isProgrammaticScroll = true;
-
-      if (typeof optionsOrX === 'number' && typeof y === 'number') {
-        originalScrollTo(optionsOrX, y);
-      } else if (optionsOrX !== undefined) {
-        originalScrollTo(optionsOrX as ScrollToOptions);
-      } else {
-        originalScrollTo();
-      }
-
-      // Сбрасываем флаг и обновляем начальную позицию после завершения скролла
-      // Используем задержку, чтобы дождаться завершения smooth scroll
-      setTimeout(() => {
-        isProgrammaticScroll = false;
-        // Обновляем начальную позицию для отслеживания направления прокрутки
-        scrollStartPosition = container.scrollTop;
-      }, 300);
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    debugLog('✅ Scroll event listener added');
-
-    return () => {
-      debugLog('🧹 Cleaning up scroll listener');
-      container.removeEventListener('scroll', handleScroll);
-      container.scrollTo = originalScrollTo;
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-      if (directionTimeout) {
-        clearTimeout(directionTimeout);
-        directionTimeout = null;
-      }
-      if (manualScrollRafRef.current !== null) {
-        cancelAnimationFrame(manualScrollRafRef.current);
-        manualScrollRafRef.current = null;
-      }
-    };
-  }, [showLyrics, resetInactivityTimer, isCoarsePointerDevice, showControls, scheduleControlsHide]); // Добавляем зависимости
+  // Обработка ручной прокрутки пользователя
+  useLyricsManualScroll({
+    showLyrics,
+    lyricsContainerRef,
+    isCoarsePointerDevice,
+    savedScrollTopRef,
+    justRestoredScrollRef,
+    userScrollTimestampRef,
+    lastScrollTopRef,
+    pendingScrollTopRef,
+    lastScrollDirectionRef,
+    manualScrollRafRef,
+    userScrolledToEndRef,
+    isUserScrollingRef,
+    suppressScrollHandlingUntilRef,
+    controlsVisibilityCooldownUntilRef,
+    seekProtectionUntilRef,
+    isSeekingRef,
+    smoothScrollAnimationRef,
+    controlsVisibleRef,
+    inactivityTimerRef,
+    scrollListenerJustAddedRef,
+    setLyricsOpacityMode,
+    setControlsVisible,
+    showControls,
+    resetInactivityTimer,
+    scheduleControlsHide,
+  });
 
   // Автоскролл к активной строке
-  // Не скроллим, если пользователь недавно прокручивал вручную (в течение 2 секунд)
-  // ВАЖНО: при резком изменении времени (клик на прогрессбар) нужно прокрутить к нужной позиции
-  // Используем плавный скролл с easing функцией для максимальной плавности (как в Apple Music)
-  useEffect(() => {
-    const container = lyricsContainerRef.current;
-    if (!container || !syncedLyrics || syncedLyrics.length === 0) return;
-
-    // Throttling: разный для iOS и десктопа
-    const now = Date.now();
-    const timeSinceLastScroll = now - lastAutoScrollTimeRef.current;
-    const SCROLL_THROTTLE = isIOSDevice ? 50 : 50; // мс (уменьшили для iOS чтобы успевать за сменой строк)
-
-    // Если currentLineIndex === null, проверяем, почему:
-    // 1. Время до начала текста - прокручиваем к началу
-    // 2. Время в промежутке между строками - не прокручиваем к началу, оставляем текущую позицию
-    if (currentLineIndexComputed === null) {
-      const timeValue = time.current;
-      const firstLine = syncedLyrics[0];
-
-      // Если время до начала первой строки - прокручиваем к началу
-      if (timeValue < firstLine.startTime) {
-        // Проверяем, не прокручивал ли пользователь вручную недавно
-        const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
-        const USER_SCROLL_TIMEOUT = 2000; // 2 секунды
-
-        // Если пользователь прокручивал вручную недавно - не вмешиваемся
-        if (timeSinceUserScroll < USER_SCROLL_TIMEOUT) {
-          return;
-        }
-
-        // Throttling для скролла к началу
-        if (timeSinceLastScroll < SCROLL_THROTTLE) {
-          return;
-        }
-
-        // Используем плавный скролл
-        smoothScrollTo(container, 0, isIOSDevice ? 300 : 300);
-      }
-      // Если время в промежутке между строками - не прокручиваем, оставляем текущую позицию
-      // (заглушка будет показана, но прокрутка не изменится)
-      return;
-    }
-
-    const lineElement = lineRefs.current.get(currentLineIndexComputed);
-    if (!lineElement) return;
-
-    // Проверяем, не прокручивал ли пользователь вручную недавно
-    const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;
-    const USER_SCROLL_TIMEOUT = 2000; // 2 секунды
-    const USER_SCROLL_RETURN_DELAY = 3500; // 3.5 секунды - после этого возвращаемся к активной строке даже если пользователь прокручивал далеко
-
-    // Если пользователь прокручивал вручную недавно - не вмешиваемся
-    if (timeSinceUserScroll < USER_SCROLL_TIMEOUT) {
-      return;
-    }
-
-    // Если пользователь прокрутил до конца, проверяем, дошел ли трек до конца
-    if (userScrolledToEndRef.current) {
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-      const scrollTop = container.scrollTop;
-      const isStillAtEnd = scrollTop + clientHeight >= scrollHeight - 10;
-
-      // Если пользователь все еще в конце, проверяем, является ли текущая строка последней
-      if (isStillAtEnd) {
-        const isLastLine = currentLineIndexComputed === syncedLyrics.length - 1;
-        const timeValue = time.current;
-        const lastLine = syncedLyrics[syncedLyrics.length - 1];
-        const lastLineEndTime = lastLine.endTime !== undefined ? lastLine.endTime : Infinity;
-
-        // Если трек еще не дошел до конца последней строки - не возвращаемся к автоскроллу
-        if (timeValue < lastLineEndTime) {
-          if (timeSinceUserScroll < USER_SCROLL_RETURN_DELAY) {
-            debugLog('📍 User at end (grace period), skipping auto-scroll');
-            return;
-          }
-        }
-        // Трек дошел до конца или истек период ожидания - разрешаем автоскролл
-        userScrolledToEndRef.current = false;
-        debugLog('📍 Allowing auto-scroll after user reached end');
-      } else {
-        // Пользователь больше не в конце - сбрасываем флаг
-        userScrolledToEndRef.current = false;
-      }
-    }
-
-    // Throttling: пропускаем если прошло мало времени с последнего скролла
-    if (timeSinceLastScroll < SCROLL_THROTTLE) {
-      return;
-    }
-
-    // НЕ сбрасываем режим прозрачности здесь - это делается в handleScroll через таймер
-    // Просто сбрасываем флаг для логики автоскролла
-    if (isUserScrollingRef.current && timeSinceUserScroll >= USER_SCROLL_TIMEOUT) {
-      isUserScrollingRef.current = false;
-    }
-
-    const lineTop = lineElement.offsetTop;
-    const lineHeight = lineElement.offsetHeight;
-    const containerHeight = container.clientHeight;
-    const scrollTop = container.scrollTop;
-
-    // Увеличенный отступ сверху, чтобы активная строка была выше (примерно 25-30% высоты контейнера)
-    const topOffset = Math.min(containerHeight * 0.25, 120);
-    // Отступ снизу (минимальный)
-    const bottomOffset = Math.min(containerHeight * 0.1, 40);
-
-    // Вычисляем желаемую позицию скролла (чтобы строка была на 25% от верха)
-    const desiredScrollTop = Math.max(0, lineTop - topOffset);
-    const currentLineTopRelative = lineTop - scrollTop;
-
-    // Проверяем, находится ли строка в правильной позиции (около 25% от верха)
-    const isInCorrectPosition = Math.abs(currentLineTopRelative - topOffset) <= 20;
-
-    // Проверяем, полностью ли видна строка (не обрезана снизу)
-    const isFullyVisibleBottom = lineTop + lineHeight <= scrollTop + containerHeight - bottomOffset;
-
-    // ВАЖНО: Если пользователь прокрутил дальше текущей активной строки, не пытаемся прокрутить обратно
-    // Это предотвращает конфликт и зацикливание анимации
-    const userScrolledAhead = scrollTop > desiredScrollTop + 50; // 50px допуск
-
-    if (userScrolledAhead) {
-      if (timeSinceUserScroll < USER_SCROLL_RETURN_DELAY) {
-        debugLog('📍 User ahead (grace period), skipping auto-scroll');
-        return;
-      }
-      debugLog('📍 Grace period elapsed, auto-scrolling back to active line');
-    }
-
-    // Если строка не в правильной позиции или обрезана - скроллим
-    if (!isInCorrectPosition || !isFullyVisibleBottom) {
-      // Используем плавный скролл с разной длительностью для iOS и десктопа
-      smoothScrollTo(container, desiredScrollTop, isIOSDevice ? 300 : 300);
-    }
-
-    return () => {
-      // Очищаем анимацию при размонтировании или изменении зависимостей
-      if (smoothScrollAnimationRef.current !== null) {
-        cancelAnimationFrame(smoothScrollAnimationRef.current);
-        smoothScrollAnimationRef.current = null;
-      }
-      if (autoScrollRafRef.current !== null) {
-        cancelAnimationFrame(autoScrollRafRef.current);
-        autoScrollRafRef.current = null;
-      }
-    };
-  }, [currentLineIndexComputed, smoothScrollTo, isIOSDevice, syncedLyrics, time]);
+  useLyricsAutoScroll({
+    showLyrics,
+    syncedLyrics,
+    lyricsContainerRef,
+    currentLineIndexComputed,
+    lineRefs,
+    justRestoredScrollRef,
+    userScrollTimestampRef,
+    userScrolledToEndRef,
+    isUserScrollingRef,
+    lastAutoScrollTimeRef,
+    smoothScrollAnimationRef,
+    autoScrollRafRef,
+    isIOSDevice,
+    time,
+    smoothScrollTo,
+  });
 
   /**
-   * Очищаем таймеры перемотки при размонтировании компонента.
+   * Очищаем таймеры при размонтировании компонента.
    */
   useEffect(() => {
     return () => {
-      if (rewindIntervalRef.current) {
-        clearInterval(rewindIntervalRef.current);
-        rewindIntervalRef.current = null;
-      }
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
       // Очищаем анимацию плавного скролла
       if (smoothScrollAnimationRef.current !== null) {
         cancelAnimationFrame(smoothScrollAnimationRef.current);
@@ -1775,37 +857,21 @@ export default function AudioPlayer({
         cancelAnimationFrame(autoScrollRafRef.current);
         autoScrollRafRef.current = null;
       }
-      // Сбрасываем флаги при размонтировании
-      hasLongPressTimerRef.current = false;
-      isLongPressRef.current = false;
-      wasRewindingRef.current = false;
-      pressStartTimeRef.current = null;
       userScrolledToEndRef.current = false;
     };
   }, []);
 
-  // Переключатель показа/скрытия текста
-  const toggleLyrics = useCallback(() => {
-    trackDebug('toggleLyrics');
-    setShowLyrics((prev) => {
-      const next = !prev;
-      trackDebug('toggleLyrics:result', { next });
-      suppressScrollHandlingUntilRef.current = Date.now() + 1200;
-      ignoreActivityUntilRef.current = Date.now() + 600;
-      dispatch(playerActions.setShowLyrics(next));
-      return next;
-    });
-  }, [dispatch]);
-
-  // Переключатель режима перемешивания треков
-  const toggleShuffle = useCallback(() => {
-    dispatch(playerActions.toggleShuffle());
-  }, [dispatch]);
-
-  // Переключатель режима зацикливания треков
-  const toggleRepeat = useCallback(() => {
-    dispatch(playerActions.toggleRepeat());
-  }, [dispatch]);
+  // Переключатели режимов плеера
+  const { toggleLyrics, toggleShuffle, toggleRepeat } = usePlayerToggles({
+    showLyrics,
+    setShowLyrics,
+    savedScrollTopRef,
+    lyricsContainerRef,
+    justRestoredScrollRef,
+    userScrollTimestampRef,
+    suppressScrollHandlingUntilRef,
+    ignoreActivityUntilRef,
+  });
 
   const hasPlainLyrics = !!plainLyricsContent;
 
@@ -1828,80 +894,12 @@ export default function AudioPlayer({
   // Ref для прямого доступа к элементу отображения времени
   const timeDisplayRef = useRef<HTMLDivElement | null>(null);
 
-  const renderTimeDisplay = useCallback(
-    (currentSeconds: number, durationSeconds: number) => {
-      const container = timeDisplayRef.current;
-      if (!container) {
-        return;
-      }
-
-      const normalizedCurrent = Number.isFinite(currentSeconds)
-        ? Math.max(0, Math.floor(currentSeconds))
-        : 0;
-      const hasDuration = Number.isFinite(durationSeconds) && durationSeconds > 0;
-      const normalizedDuration = hasDuration ? Math.max(0, Math.floor(durationSeconds)) : 0;
-      const elapsed = hasDuration
-        ? Math.min(normalizedCurrent, normalizedDuration)
-        : normalizedCurrent;
-      const remaining = hasDuration ? Math.max(normalizedDuration - elapsed, 0) : NaN;
-
-      const fragment = document.createDocumentFragment();
-
-      const currentSpan = document.createElement('span');
-      currentSpan.className = 'player__time-current';
-      currentSpan.textContent = formatTime(elapsed);
-
-      const remainingSpan = document.createElement('span');
-      remainingSpan.className = 'player__time-remaining';
-      remainingSpan.textContent = hasDuration ? `-${formatTime(remaining)}` : formatTime(remaining);
-
-      fragment.appendChild(currentSpan);
-      fragment.appendChild(remainingSpan);
-      container.replaceChildren(fragment);
-    },
-    [formatTime]
-  );
-
-  // ПОЛНОСТЬЮ ОБХОДИМ REDUX для обновления таймеров!
-  // Подписываемся напрямую на audio элемент и обновляем ОДИН текстовый узел
-  useEffect(() => {
-    const element = timeDisplayRef.current;
-    if (!element) return;
-
-    const audioElement = audioController.element;
-
-    // Throttling для оптимизации
-    let lastUpdate = 0;
-    const UPDATE_INTERVAL = 100; // 100мс = 10 обновлений в секунду
-
-    const updateDisplay = () => {
-      const now = Date.now();
-      if (now - lastUpdate < UPDATE_INTERVAL) return;
-      lastUpdate = now;
-
-      renderTimeDisplay(audioElement.currentTime, audioElement.duration);
-    };
-
-    // Подписываемся на событие timeupdate напрямую
-    audioElement.addEventListener('timeupdate', updateDisplay);
-    // Также обновляем при загрузке метаданных
-    audioElement.addEventListener('loadedmetadata', updateDisplay);
-    // И при изменении длительности
-    audioElement.addEventListener('durationchange', updateDisplay);
-
-    // Первоначальное обновление
-    updateDisplay();
-
-    return () => {
-      audioElement.removeEventListener('timeupdate', updateDisplay);
-      audioElement.removeEventListener('loadedmetadata', updateDisplay);
-      audioElement.removeEventListener('durationchange', updateDisplay);
-    };
-  }, [renderTimeDisplay]);
-
-  useEffect(() => {
-    renderTimeDisplay(time.current, time.duration);
-  }, [time, renderTimeDisplay]);
+  // Управление отображением времени трека
+  const { renderTimeDisplay } = useTimeDisplay({
+    time,
+    timeDisplayRef,
+    formatTime,
+  });
 
   // Отслеживание активности пользователя (мышь, клавиатура, тач)
   // ВАЖНО: таймер работает только в режиме показа текста И только при воспроизведении
@@ -2278,7 +1276,7 @@ export default function AudioPlayer({
           onClick={(e) => {
             // ПРОСТАЯ ЛОГИКА: Если перемотка работает (флаг блокировки установлен) - блокируем клик
             // Проверяем ДО вызова handleRewindClick
-            if (shouldBlockTrackSwitchRef.current) {
+            if (isRewindingActive()) {
               e.preventDefault();
               e.stopPropagation();
               return;
@@ -2315,7 +1313,7 @@ export default function AudioPlayer({
           onClick={(e) => {
             // ПРОСТАЯ ЛОГИКА: Если перемотка работает (флаг блокировки установлен) - блокируем клик
             // Проверяем ДО вызова handleRewindClick
-            if (shouldBlockTrackSwitchRef.current) {
+            if (isRewindingActive()) {
               e.preventDefault();
               e.stopPropagation();
               return;
