@@ -17,10 +17,13 @@ export const handler: Handler = async (
     'Access-Control-Expose-Headers': '*',
   };
 
+  console.log('[proxy-image] ===== FUNCTION CALLED =====');
   console.log('[proxy-image] Request:', {
     method: event.httpMethod,
     path: event.path,
     queryString: event.queryStringParameters,
+    rawUrl: event.rawUrl,
+    rawQuery: event.rawQuery,
   });
 
   // Обработка preflight запроса
