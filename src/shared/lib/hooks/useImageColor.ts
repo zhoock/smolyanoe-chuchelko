@@ -155,9 +155,11 @@ export function useImageColor(
               const isProduction =
                 window.location.hostname !== 'localhost' &&
                 !window.location.hostname.includes('127.0.0.1');
+              // Используем прямой путь к функции вместо redirect
+              // Это более надежно, так как не зависит от redirect конфигурации
               const proxyUrl = isProduction
-                ? `https://${window.location.hostname}/api/proxy-image?path=${encodeURIComponent(imagePath)}`
-                : `/api/proxy-image?path=${encodeURIComponent(imagePath)}`;
+                ? `https://${window.location.hostname}/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`
+                : `/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`;
 
               console.log('[useImageColor] Используем прокси для изображения:', {
                 originalUrl: actualImgSrc,
