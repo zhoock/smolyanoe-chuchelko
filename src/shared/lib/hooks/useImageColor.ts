@@ -205,12 +205,18 @@ export function useImageColor(
                   const fetchResponse = await fetch(proxyUrl);
                   
                   const contentType = fetchResponse.headers.get('content-type') || '';
+                  // Создаем объект с заголовками вручную
+                  const headersObj: Record<string, string> = {};
+                  fetchResponse.headers.forEach((value, key) => {
+                    headersObj[key] = value;
+                  });
+                  
                   console.log('[useImageColor] Fetch response:', {
                     ok: fetchResponse.ok,
                     status: fetchResponse.status,
                     statusText: fetchResponse.statusText,
                     contentType,
-                    headers: Object.fromEntries(fetchResponse.headers.entries()),
+                    headers: headersObj,
                   });
                   
                   if (!fetchResponse.ok) {
