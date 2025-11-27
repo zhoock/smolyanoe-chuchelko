@@ -193,8 +193,31 @@
       }
 
       &--playing {
+        position: relative;
+        overflow: hidden;
         color: var(--link-color-hover, #ffffff);
-        background: rgb(255 255 255 / 6%);
+
+        // Прогресс-бар в виде фона
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          z-index: 0;
+          width: var(--progress, 0%);
+          height: 100%;
+          background: rgb(255 255 255 / 12%);
+          transition: width 0.1s linear;
+          pointer-events: none;
+        }
+
+        // Контент должен быть поверх прогресс-бара
+        .tracks__symbol,
+        .tracks__title,
+        .tracks__duration {
+          position: relative;
+          z-index: 1;
+        }
 
         .tracks__symbol-index,
         .tracks__symbol-play {
@@ -213,6 +236,10 @@
         @media (hover: hover) and (pointer: fine) {
           &:hover,
           &:focus-visible {
+            &::before {
+              background: rgb(255 255 255 / 18%);
+            }
+
             .tracks__symbol-equalizer {
               opacity: 0;
               transform: scale(0.75);

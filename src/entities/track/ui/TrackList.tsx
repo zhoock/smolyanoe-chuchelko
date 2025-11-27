@@ -34,6 +34,7 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
   const [currentAlbumId, setCurrentAlbumId] = React.useState<string | null>(
     (store.getState() as RootState).player.albumId ?? null
   );
+  const [progress, setProgress] = React.useState((store.getState() as RootState).player.progress);
 
   const albumUniqueId = useMemo(
     () => album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-'),
@@ -47,6 +48,7 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
       setIsPlaying(playerState.isPlaying);
       setCurrentAlbumId(playerState.albumId ?? null);
       setCurrentTrackId(playerState.playlist[playerState.currentTrackIndex]?.id ?? null);
+      setProgress(playerState.progress);
     });
     const currentState = store.getState() as RootState;
     setActiveIndex(currentState.player.currentTrackIndex);
@@ -55,6 +57,7 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
     setCurrentTrackId(
       currentState.player.playlist[currentState.player.currentTrackIndex]?.id ?? null
     );
+    setProgress(currentState.player.progress);
     return unsubscribe;
   }, [store]);
 
@@ -73,6 +76,13 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
               active: isActive,
               'tracks__btn--playing': isPlayingNow,
             })}
+            style={
+              isPlayingNow
+                ? {
+                    ['--progress' as string]: `${progress}%`,
+                  }
+                : undefined
+            }
             aria-label="Кнопка с названием песни"
             aria-description={
               isPlayingNow
