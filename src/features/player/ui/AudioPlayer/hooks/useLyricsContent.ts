@@ -13,6 +13,31 @@ interface UseLyricsContentParams {
   setPlainLyricsContent: React.Dispatch<React.SetStateAction<string | null>>;
   setAuthorshipText: React.Dispatch<React.SetStateAction<string | null>>;
   setCurrentLineIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  setIsLoadingSyncedLyrics: React.Dispatch<React.SetStateAction<boolean>>;
+  setHasSyncedLyricsAvailable: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+/**
+ * Проверяет синхронно наличие синхронизированного текста
+ */
+function checkSyncedLyricsAvailableSync(
+  currentTrack: TracksProps | null,
+  albumId: string,
+  lang: string
+): boolean {
+  if (!currentTrack) {
+    return false;
+  }
+
+  // Проверяем синхронно наличие в currentTrack
+  if (currentTrack.syncedLyrics && currentTrack.syncedLyrics.length > 0) {
+    const isActuallySynced = currentTrack.syncedLyrics.some((line) => line.startTime > 0);
+    if (isActuallySynced) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -27,66 +52,86 @@ export function useLyricsContent({
   setPlainLyricsContent,
   setAuthorshipText,
   setCurrentLineIndex,
+  setIsLoadingSyncedLyrics,
+  setHasSyncedLyricsAvailable,
 }: UseLyricsContentParams) {
+  // Синхронно проверяем наличие синхронизированного текста
+  useEffect(() => {
+    const hasSynced = checkSyncedLyricsAvailableSync(currentTrack, albumId, lang);
+    setHasSyncedLyricsAvailable(hasSynced);
+  }, [currentTrack, albumId, lang, setHasSyncedLyricsAvailable]);
+
   // Загружаем синхронизации для текущего трека
   useEffect(() => {
     if (!currentTrack) {
       setSyncedLyrics(null);
       setCurrentLineIndex(null);
+      setIsLoadingSyncedLyrics(false);
       return;
     }
 
     // Вычисляем albumId
     const albumIdComputed = albumId;
 
+    // Устанавливаем состояние загрузки
+    setIsLoadingSyncedLyrics(true);
+
     // Загружаем синхронизации асинхронно
     (async () => {
-      const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-      const baseSynced: SyncedLyricsLine[] | null | undefined =
-        storedSync || currentTrack.syncedLyrics;
+      try {
+        const storedSync = await loadSyncedLyricsFromStorage(
+          albumIdComputed,
+          currentTrack.id,
+          lang
+        );
+        const baseSynced: SyncedLyricsLine[] | null | undefined =
+          storedSync || currentTrack.syncedLyrics;
 
-      if (baseSynced && baseSynced.length > 0) {
-        // Проверяем, действительно ли текст синхронизирован
-        // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
-        const isActuallySynced = baseSynced.some((line) => line.startTime > 0);
+        if (baseSynced && baseSynced.length > 0) {
+          // Проверяем, действительно ли текст синхронизирован
+          // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
+          const isActuallySynced = baseSynced.some((line) => line.startTime > 0);
 
-        if (isActuallySynced) {
-          // Текст действительно синхронизирован - загружаем авторство и добавляем его в конец
-          const storedAuthorship = await loadAuthorshipFromStorage(
-            albumIdComputed,
-            currentTrack.id,
-            lang
-          );
-          const authorship = currentTrack.authorship || storedAuthorship;
+          if (isActuallySynced) {
+            // Текст действительно синхронизирован - загружаем авторство и добавляем его в конец
+            const storedAuthorship = await loadAuthorshipFromStorage(
+              albumIdComputed,
+              currentTrack.id,
+              lang
+            );
+            const authorship = currentTrack.authorship || storedAuthorship;
 
-          const synced = [...baseSynced];
+            const synced = [...baseSynced];
 
-          // Добавляем авторство в конец, если оно есть и ещё не добавлено
-          if (authorship) {
-            const lastLine = synced[synced.length - 1];
-            // Проверяем, не является ли последняя строка уже авторством
-            if (!lastLine || lastLine.text !== authorship) {
-              synced.push({
-                text: authorship,
-                startTime: duration || 0,
-                endTime: undefined,
-              });
+            // Добавляем авторство в конец, если оно есть и ещё не добавлено
+            if (authorship) {
+              const lastLine = synced[synced.length - 1];
+              // Проверяем, не является ли последняя строка уже авторством
+              if (!lastLine || lastLine.text !== authorship) {
+                synced.push({
+                  text: authorship,
+                  startTime: duration || 0,
+                  endTime: undefined,
+                });
+              }
             }
-          }
 
-          setSyncedLyrics(synced);
-          setAuthorshipText(authorship || null);
+            setSyncedLyrics(synced);
+            setAuthorshipText(authorship || null);
+          } else {
+            // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем как синхронизированный
+            // Он будет отображаться как обычный текст через plainLyricsContent
+            setSyncedLyrics(null);
+            setAuthorshipText(null);
+            setCurrentLineIndex(null);
+          }
         } else {
-          // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем как синхронизированный
-          // Он будет отображаться как обычный текст через plainLyricsContent
           setSyncedLyrics(null);
           setAuthorshipText(null);
           setCurrentLineIndex(null);
         }
-      } else {
-        setSyncedLyrics(null);
-        setAuthorshipText(null);
-        setCurrentLineIndex(null);
+      } finally {
+        setIsLoadingSyncedLyrics(false);
       }
     })();
   }, [
@@ -97,6 +142,7 @@ export function useLyricsContent({
     setSyncedLyrics,
     setAuthorshipText,
     setCurrentLineIndex,
+    setIsLoadingSyncedLyrics,
   ]);
 
   // Загружаем обычный текст (не синхронизированный) из БД или JSON

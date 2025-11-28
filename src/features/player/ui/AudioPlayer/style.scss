@@ -919,6 +919,38 @@
     text-align: start;
     white-space: pre-line;
   }
+
+  .player__lyrics-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-1);
+    padding-block-start: var(--ms-2);
+    padding-inline: var(--ms-1);
+  }
+
+  .player__lyrics-skeleton-line {
+    height: 1.6em;
+    background: linear-gradient(
+      90deg,
+      rgb(255 255 255 / 10%) 0%,
+      rgb(255 255 255 / 20%) 50%,
+      rgb(255 255 255 / 10%) 100%
+    );
+    background-size: 200% 100%;
+    border-radius: 4px;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    animation-delay: var(--skeleton-delay, 0s);
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
 }
 
 // Блок авторства - такой же как обычные строки, но с префиксом "Авторство: "

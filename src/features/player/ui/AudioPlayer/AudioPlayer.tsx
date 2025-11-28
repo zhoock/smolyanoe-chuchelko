@@ -68,6 +68,8 @@ export default function AudioPlayer({
   const [authorshipText, setAuthorshipText] = useState<string | null>(null); // текст авторства
   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
   const [plainLyricsContent, setPlainLyricsContent] = useState<string | null>(null); // обычный текст (не синхронизированный)
+  const [isLoadingSyncedLyrics, setIsLoadingSyncedLyrics] = useState<boolean>(false);
+  const [hasSyncedLyricsAvailable, setHasSyncedLyricsAvailable] = useState<boolean>(false);
   const globalShowLyrics = useAppSelector(playerSelectors.selectShowLyrics);
   const globalControlsVisible = useAppSelector(playerSelectors.selectControlsVisible);
   const [controlsVisible, setControlsVisible] = useState<boolean>(globalControlsVisible);
@@ -680,6 +682,8 @@ export default function AudioPlayer({
     setPlainLyricsContent,
     setAuthorshipText,
     setCurrentLineIndex,
+    setIsLoadingSyncedLyrics,
+    setHasSyncedLyricsAvailable,
   });
 
   /**
@@ -859,20 +863,6 @@ export default function AudioPlayer({
 
   const hasPlainLyrics = !!plainLyricsContent;
 
-  const hasSyncedLyricsAvailable = useMemo(() => {
-    if (syncedLyrics && syncedLyrics.length > 0) {
-      return true;
-    }
-
-    if (!currentTrack) {
-      return false;
-    }
-
-    // useMemo не может быть async, поэтому возвращаем false
-    // Реальная проверка происходит в useEffect выше
-    return false;
-  }, [syncedLyrics, currentTrack]);
-
   const hasTextToShow = hasSyncedLyricsAvailable || hasPlainLyrics;
 
   // Ref для прямого доступа к элементу отображения времени
@@ -1002,7 +992,16 @@ export default function AudioPlayer({
     .join(' ');
 
   const shouldRenderSyncedLyrics = showLyrics && !!(syncedLyrics && syncedLyrics.length > 0);
-  const shouldRenderPlainLyrics = showLyrics && !shouldRenderSyncedLyrics && !!plainLyricsContent;
+  // Показываем обычный текст только если нет синхронизированной версии (даже если она еще загружается)
+  // Если синхронизированная версия существует, показываем скелетон вместо обычного текста
+  const shouldRenderPlainLyrics =
+    showLyrics &&
+    !shouldRenderSyncedLyrics &&
+    !hasSyncedLyricsAvailable &&
+    !isLoadingSyncedLyrics &&
+    !!plainLyricsContent;
+  const shouldRenderSkeleton =
+    showLyrics && !shouldRenderSyncedLyrics && (hasSyncedLyricsAvailable || isLoadingSyncedLyrics);
 
   useEffect(() => {
     if (!isFullScreenPlayer) {
@@ -1057,160 +1056,175 @@ export default function AudioPlayer({
       </div>
 
       {/* Текст песни */}
-      {showLyrics && (shouldRenderSyncedLyrics || shouldRenderPlainLyrics) && (
-        <div
-          className={`player__synced-lyrics${shouldRenderSyncedLyrics ? '' : ' player__synced-lyrics--plain'}`}
-          ref={lyricsContainerRef}
-          data-opacity-mode={shouldRenderSyncedLyrics ? lyricsOpacityMode : undefined}
-          data-platform={shouldRenderSyncedLyrics ? (isIOSDevice ? 'ios' : 'default') : undefined}
-        >
-          {shouldRenderSyncedLyrics && syncedLyrics ? (
-            <>
-              {syncedLyrics.map((line: SyncedLyricsLine, index: number) => {
-                const isActive = currentLineIndexComputed === index;
-                const distance =
-                  currentLineIndexComputed !== null
-                    ? Math.abs(index - currentLineIndexComputed)
-                    : null;
+      {showLyrics &&
+        (shouldRenderSyncedLyrics || shouldRenderPlainLyrics || shouldRenderSkeleton) && (
+          <div
+            className={`player__synced-lyrics${shouldRenderSyncedLyrics ? '' : ' player__synced-lyrics--plain'}`}
+            ref={lyricsContainerRef}
+            data-opacity-mode={shouldRenderSyncedLyrics ? lyricsOpacityMode : undefined}
+            data-platform={shouldRenderSyncedLyrics ? (isIOSDevice ? 'ios' : 'default') : undefined}
+          >
+            {shouldRenderSyncedLyrics && syncedLyrics ? (
+              <>
+                {syncedLyrics.map((line: SyncedLyricsLine, index: number) => {
+                  const isActive = currentLineIndexComputed === index;
+                  const distance =
+                    currentLineIndexComputed !== null
+                      ? Math.abs(index - currentLineIndexComputed)
+                      : null;
 
-                const placeholderData = (() => {
-                  const timeValue = time.current;
-                  const firstLine = syncedLyrics[0];
+                  const placeholderData = (() => {
+                    const timeValue = time.current;
+                    const firstLine = syncedLyrics[0];
 
-                  if (index === 0 && firstLine.startTime > 0) {
-                    if (timeValue < firstLine.startTime) {
-                      const normalizedTime = Math.max(0, timeValue);
-                      const progress = Math.max(
-                        0,
-                        Math.min(1, normalizedTime / firstLine.startTime)
-                      );
-                      return { show: true, progress };
-                    }
-                    return { show: false, progress: 0 };
-                  }
-
-                  if (index > 0) {
-                    const prevLine = syncedLyrics[index - 1];
-                    if (prevLine.endTime !== undefined) {
-                      if (prevLine.endTime === line.startTime) {
-                        return { show: false, progress: 0 };
-                      }
-
-                      if (timeValue >= prevLine.endTime - 0.5 && timeValue < line.startTime) {
-                        const intervalDuration = line.startTime - prevLine.endTime;
-                        const elapsed = Math.max(0, timeValue - prevLine.endTime);
-                        const progress =
-                          intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
+                    if (index === 0 && firstLine.startTime > 0) {
+                      if (timeValue < firstLine.startTime) {
+                        const normalizedTime = Math.max(0, timeValue);
+                        const progress = Math.max(
+                          0,
+                          Math.min(1, normalizedTime / firstLine.startTime)
+                        );
                         return { show: true, progress };
                       }
+                      return { show: false, progress: 0 };
                     }
-                  }
 
-                  return { show: false, progress: 0 };
-                })();
-
-                return (
-                  <React.Fragment key={`line-fragment-${index}`}>
-                    {placeholderData.show && (
-                      <div
-                        key={`placeholder-${index}`}
-                        className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
-                        style={
-                          {
-                            '--placeholder-progress': placeholderData.progress,
-                          } as React.CSSProperties
+                    if (index > 0) {
+                      const prevLine = syncedLyrics[index - 1];
+                      if (prevLine.endTime !== undefined) {
+                        if (prevLine.endTime === line.startTime) {
+                          return { show: false, progress: 0 };
                         }
-                      >
-                        <span className="player__lyrics-placeholder-dot" data-dot-index="0">
-                          ·
-                        </span>
-                        <span className="player__lyrics-placeholder-dot" data-dot-index="1">
-                          ·
-                        </span>
-                        <span className="player__lyrics-placeholder-dot" data-dot-index="2">
-                          ·
-                        </span>
-                      </div>
-                    )}
 
-                    <div
-                      key={index}
-                      ref={(el) => {
-                        if (el) {
-                          lineRefs.current.set(index, el);
-                        } else {
-                          lineRefs.current.delete(index);
+                        if (timeValue >= prevLine.endTime - 0.5 && timeValue < line.startTime) {
+                          const intervalDuration = line.startTime - prevLine.endTime;
+                          const elapsed = Math.max(0, timeValue - prevLine.endTime);
+                          const progress =
+                            intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
+                          return { show: true, progress };
                         }
-                      }}
-                      className={`player__synced-lyrics-line ${isActive ? 'player__synced-lyrics-line--active' : ''} ${authorshipText && line.text === authorshipText ? 'player__synced-lyrics-line--authorship' : ''}`}
-                      data-distance={
-                        distance !== null && !isActive ? Math.min(distance, 10) : undefined
                       }
-                      onClick={() => {
-                        handleLineClick(line.startTime);
-                        resetInactivityTimer();
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                    }
+
+                    return { show: false, progress: 0 };
+                  })();
+
+                  return (
+                    <React.Fragment key={`line-fragment-${index}`}>
+                      {placeholderData.show && (
+                        <div
+                          key={`placeholder-${index}`}
+                          className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
+                          style={
+                            {
+                              '--placeholder-progress': placeholderData.progress,
+                            } as React.CSSProperties
+                          }
+                        >
+                          <span className="player__lyrics-placeholder-dot" data-dot-index="0">
+                            ·
+                          </span>
+                          <span className="player__lyrics-placeholder-dot" data-dot-index="1">
+                            ·
+                          </span>
+                          <span className="player__lyrics-placeholder-dot" data-dot-index="2">
+                            ·
+                          </span>
+                        </div>
+                      )}
+
+                      <div
+                        key={index}
+                        ref={(el) => {
+                          if (el) {
+                            lineRefs.current.set(index, el);
+                          } else {
+                            lineRefs.current.delete(index);
+                          }
+                        }}
+                        className={`player__synced-lyrics-line ${isActive ? 'player__synced-lyrics-line--active' : ''} ${authorshipText && line.text === authorshipText ? 'player__synced-lyrics-line--authorship' : ''}`}
+                        data-distance={
+                          distance !== null && !isActive ? Math.min(distance, 10) : undefined
+                        }
+                        onClick={() => {
                           handleLineClick(line.startTime);
                           resetInactivityTimer();
-                        }
-                      }}
-                      aria-label={`Перемотать к ${line.text}`}
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleLineClick(line.startTime);
+                            resetInactivityTimer();
+                          }
+                        }}
+                        aria-label={`Перемотать к ${line.text}`}
+                      >
+                        {authorshipText && line.text === authorshipText
+                          ? `Авторство: ${line.text}`
+                          : line.text}
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+
+                {(() => {
+                  const timeValue = time.current;
+                  const lastLine = syncedLyrics[syncedLyrics.length - 1];
+                  const showPlaceholderAfter =
+                    lastLine.endTime !== undefined &&
+                    timeValue >= lastLine.endTime - 0.5 &&
+                    timeValue < time.duration;
+
+                  if (!showPlaceholderAfter || lastLine.endTime === undefined) return null;
+
+                  const intervalDuration = time.duration - lastLine.endTime;
+                  const elapsed = Math.max(0, timeValue - lastLine.endTime);
+                  const progress =
+                    intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
+
+                  return (
+                    <div
+                      key="placeholder-after"
+                      className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
+                      style={
+                        {
+                          '--placeholder-progress': progress,
+                        } as React.CSSProperties
+                      }
                     >
-                      {authorshipText && line.text === authorshipText
-                        ? `Авторство: ${line.text}`
-                        : line.text}
+                      <span className="player__lyrics-placeholder-dot" data-dot-index="0">
+                        ·
+                      </span>
+                      <span className="player__lyrics-placeholder-dot" data-dot-index="1">
+                        ·
+                      </span>
+                      <span className="player__lyrics-placeholder-dot" data-dot-index="2">
+                        ·
+                      </span>
                     </div>
-                  </React.Fragment>
-                );
-              })}
-
-              {(() => {
-                const timeValue = time.current;
-                const lastLine = syncedLyrics[syncedLyrics.length - 1];
-                const showPlaceholderAfter =
-                  lastLine.endTime !== undefined &&
-                  timeValue >= lastLine.endTime - 0.5 &&
-                  timeValue < time.duration;
-
-                if (!showPlaceholderAfter || lastLine.endTime === undefined) return null;
-
-                const intervalDuration = time.duration - lastLine.endTime;
-                const elapsed = Math.max(0, timeValue - lastLine.endTime);
-                const progress = intervalDuration > 0 ? Math.min(1, elapsed / intervalDuration) : 0;
-
-                return (
+                  );
+                })()}
+              </>
+            ) : shouldRenderSkeleton ? (
+              <div className="player__lyrics-skeleton">
+                {Array.from({ length: 12 }).map((_, index) => (
                   <div
-                    key="placeholder-after"
-                    className="player__synced-lyrics-line player__synced-lyrics-line--placeholder"
-                    style={
-                      {
-                        '--placeholder-progress': progress,
-                      } as React.CSSProperties
-                    }
-                  >
-                    <span className="player__lyrics-placeholder-dot" data-dot-index="0">
-                      ·
-                    </span>
-                    <span className="player__lyrics-placeholder-dot" data-dot-index="1">
-                      ·
-                    </span>
-                    <span className="player__lyrics-placeholder-dot" data-dot-index="2">
-                      ·
-                    </span>
-                  </div>
-                );
-              })()}
-            </>
-          ) : (
-            <div className="player__plain-lyrics">{plainLyricsContent ?? ''}</div>
-          )}
-        </div>
-      )}
+                    key={index}
+                    className="player__lyrics-skeleton-line"
+                    style={{
+                      width: `${Math.random() * 30 + 60}%`,
+                      animationDelay: `${index * 0.1}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="player__plain-lyrics">{plainLyricsContent ?? ''}</div>
+            )}
+          </div>
+        )}
 
       {/* Прогресс воспроизведения: слайдер и время */}
       <div
