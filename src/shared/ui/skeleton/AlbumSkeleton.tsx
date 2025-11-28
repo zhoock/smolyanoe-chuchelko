@@ -2,15 +2,9 @@ import './skeleton.scss';
 
 interface AlbumSkeletonProps {
   tracksCount?: number;
-  buyButtons?: number;
-  listenButtons?: number;
 }
 
-export function AlbumSkeleton({
-  tracksCount = 4,
-  buyButtons = 2,
-  listenButtons = 3,
-}: AlbumSkeletonProps) {
+export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
   return (
     <section className="album main-background" aria-label="Скелетон альбома">
       <div className="wrapper album__wrapper album-skeleton">
@@ -22,13 +16,13 @@ export function AlbumSkeleton({
           <div className="album-skeleton__cover">
             <div className="skeleton skeleton--album-cover" />
           </div>
-          <div className="album-skeleton__share">
-            <div className="skeleton skeleton--pill" />
-          </div>
         </div>
 
         <div className="item album-skeleton__tracks">
-          <div className="skeleton skeleton--text skeleton--section-title" />
+          <div className="skeleton skeleton--play-button-horizontal">
+            <div className="skeleton skeleton--play-icon" />
+            <div className="skeleton skeleton--play-text" />
+          </div>
           <div className="album-skeleton__track-list">
             {Array.from({ length: tracksCount }).map((_, index) => (
               <div
@@ -36,54 +30,13 @@ export function AlbumSkeleton({
                 className="album-skeleton__track"
                 style={{ '--skeleton-index': index } as React.CSSProperties}
               >
-                <div className="skeleton skeleton--circle" />
-                <div className="skeleton skeleton--text skeleton--full-width" />
+                <div className="skeleton skeleton--track-number" />
+                <div className="album-skeleton__track-content">
+                  <div className="skeleton skeleton--text skeleton--track-title" />
+                  <div className="skeleton skeleton--text skeleton--track-duration" />
+                  <div className="skeleton skeleton--text skeleton--track-extra" />
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="item album-skeleton__services">
-          <div className="skeleton skeleton--text skeleton--section-title" />
-          <div className="service-buttons__list">
-            {Array.from({ length: buyButtons }).map((_, index) => (
-              <div
-                key={`buy-${index}`}
-                className="service-buttons__list-item"
-                style={{ '--skeleton-index': index } as React.CSSProperties}
-              >
-                <div className="skeleton skeleton--service-button" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="item album-skeleton__services">
-          <div className="skeleton skeleton--text skeleton--section-title" />
-          <div className="service-buttons__list">
-            {Array.from({ length: listenButtons }).map((_, index) => (
-              <div
-                key={`listen-${index}`}
-                className="service-buttons__list-item"
-                style={{ '--skeleton-index': index } as React.CSSProperties}
-              >
-                <div className="skeleton skeleton--service-button" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="album-skeleton__details">
-        <div className="wrapper">
-          <div className="skeleton skeleton--text skeleton--section-title" />
-          <div className="album-skeleton__paragraphs">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={`paragraph-${index}`}
-                className="skeleton skeleton--text skeleton--paragraph"
-                style={{ '--skeleton-index': index } as React.CSSProperties}
-              />
             ))}
           </div>
         </div>

@@ -57,28 +57,70 @@
       block-size: 16px;
     }
 
-    &--paragraph {
-      inline-size: 100%;
-      block-size: 1.2em;
+    &--track-title {
+      inline-size: 40%;
+      block-size: 1em;
+    }
+
+    &--track-duration {
+      inline-size: 20%;
+      block-size: 1em;
+    }
+
+    &--track-extra {
+      inline-size: 15%;
+      block-size: 1em;
     }
   }
 
-  &--service-button {
+  &--play-button-horizontal {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-01);
     inline-size: 100%;
     block-size: 48px;
+    background: transparent;
     border-radius: var(--ms-01);
+    animation: none;
+    margin-block-end: var(--ms-1);
+
+    @include breakpoint(tablet) {
+      inline-size: 50%;
+    }
   }
 
-  &--pill {
-    inline-size: 120px;
-    block-size: 36px;
-    border-radius: 24px;
-  }
-
-  &--circle {
-    inline-size: 12px;
-    block-size: 12px;
+  &--play-icon {
+    position: relative;
+    background: var(--accent-color, #998238);
     border-radius: 50%;
+    inline-size: 48px;
+    block-size: 48px;
+    flex-shrink: 0;
+    animation: none;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 50%;
+      transform: translate(-40%, -50%);
+      inline-size: 0;
+      block-size: 0;
+      border-inline-start: 12px solid white;
+      border-block-start: 8px solid transparent;
+      border-block-end: 8px solid transparent;
+    }
+  }
+
+  &--play-text {
+    flex: 1;
+    block-size: 1.2em;
+    border-radius: 4px;
+  }
+
+  &--track-number {
+    inline-size: var(--ms-0);
+    block-size: var(--ms-0);
+    border-radius: 4px;
   }
 }
 
@@ -105,12 +147,6 @@
     max-inline-size: 520px;
   }
 
-  &__share {
-    position: absolute;
-    inset-block-start: var(--ms-1);
-    inset-inline-end: var(--ms-1);
-  }
-
   &__tracks {
     display: grid;
     gap: var(--ms-02);
@@ -118,7 +154,7 @@
 
   &__track-list {
     display: grid;
-    gap: var(--ms-02);
+    gap: 0;
   }
 
   &__track {
@@ -126,34 +162,23 @@
     grid-template-columns: auto 1fr;
     align-items: center;
     gap: var(--ms-02);
+    padding-block: var(--ms-01);
+    border-block-end: 1px solid var(--hr-color, #3d3c3a);
+
+    &:last-child {
+      border-block-end: none;
+    }
 
     .skeleton {
       animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
     }
   }
 
-  &__services {
-    display: grid;
-    gap: var(--ms-02);
-
-    .service-buttons__list {
-      display: grid;
-      gap: var(--ms-02);
-    }
-  }
-
-  &__details {
-    padding-block: var(--ms-1) var(--ms-2);
-
-    .wrapper {
-      display: grid;
-      gap: var(--ms-02);
-    }
-  }
-
-  &__paragraphs {
-    display: grid;
-    gap: var(--ms-02);
+  &__track-content {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-01);
+    flex: 1;
   }
 }
 
