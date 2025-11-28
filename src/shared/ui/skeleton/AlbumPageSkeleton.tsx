@@ -12,7 +12,7 @@ export function AlbumPageSkeleton() {
           </ul>
         </nav>
 
-        <div className="item">
+        <div className="item" style={{ position: 'relative' }}>
           <div className="skeleton skeleton--album-cover" />
           <div className="skeleton skeleton--album-number" />
           <div className="skeleton skeleton--share-button" />

@@ -64,11 +64,12 @@
   }
 
   &--album-number {
+    position: absolute;
+    border-radius: 50%;
     inline-size: 40px;
     block-size: 40px;
-    border-radius: 50%;
-    margin-block-start: var(--ms-01);
-    margin-inline-start: auto;
+    inset-block-start: 0;
+    inset-inline-start: calc(100% + var(--ms-01));
   }
 
   &--share-button {
