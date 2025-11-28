@@ -222,12 +222,6 @@
       }
     }
 
-    .tracks__symbol {
-      .skeleton {
-        // Квадрат слева уже настроен через &--track-number
-      }
-    }
-
     .tracks__title {
       flex: 1;
       min-inline-size: 0;
