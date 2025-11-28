@@ -47,9 +47,6 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
                 <div className="tracks__title">
                   <div className="skeleton skeleton--text skeleton--track-title" />
                 </div>
-                <div className="tracks__duration">
-                  <div className="skeleton skeleton--text skeleton--track-duration" />
-                </div>
               </div>
             ))}
           </div>
