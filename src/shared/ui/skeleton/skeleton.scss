@@ -52,18 +52,21 @@
     }
 
     &--track-title {
-      inline-size: 40%;
+      inline-size: 50%;
       block-size: 1.2em;
+      min-inline-size: 100px;
     }
 
     &--track-duration {
-      inline-size: 20%;
+      inline-size: 30%;
       block-size: 1.2em;
+      min-inline-size: 60px;
     }
 
     &--track-extra {
-      inline-size: 15%;
+      inline-size: 20%;
       block-size: 1.2em;
+      min-inline-size: 40px;
     }
 
     &--section-title {
