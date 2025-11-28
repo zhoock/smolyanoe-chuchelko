@@ -28,31 +28,19 @@ export function AlbumPageSkeleton() {
               <div className="tracks__symbol">
                 <div className="skeleton skeleton--track-number" />
               </div>
-              <div style={{ display: 'flex', gap: 'var(--ms-01)', flex: 1, alignItems: 'center' }}>
-                <div className="skeleton skeleton--text skeleton--track-title" />
-                <div className="skeleton skeleton--text skeleton--track-duration" />
-                <div className="skeleton skeleton--text skeleton--track-extra" />
-              </div>
+              <div className="skeleton skeleton--track-content" />
             </div>
             <div className="tracks__btn">
               <div className="tracks__symbol">
                 <div className="skeleton skeleton--track-number" />
               </div>
-              <div style={{ display: 'flex', gap: 'var(--ms-01)', flex: 1, alignItems: 'center' }}>
-                <div className="skeleton skeleton--text skeleton--track-title" />
-                <div className="skeleton skeleton--text skeleton--track-duration" />
-                <div className="skeleton skeleton--text skeleton--track-extra" />
-              </div>
+              <div className="skeleton skeleton--track-content" />
             </div>
             <div className="tracks__btn">
               <div className="tracks__symbol">
                 <div className="skeleton skeleton--track-number" />
               </div>
-              <div style={{ display: 'flex', gap: 'var(--ms-01)', flex: 1, alignItems: 'center' }}>
-                <div className="skeleton skeleton--text skeleton--track-title" />
-                <div className="skeleton skeleton--text skeleton--track-duration" />
-                <div className="skeleton skeleton--text skeleton--track-extra" />
-              </div>
+              <div className="skeleton skeleton--track-content" />
             </div>
           </div>
         </div>

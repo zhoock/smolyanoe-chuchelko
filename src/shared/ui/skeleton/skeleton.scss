@@ -51,22 +51,23 @@
       margin-block-end: var(--ms-1);
     }
 
-    &--track-title {
-      inline-size: 50%;
+    &--track-content {
+      flex: 1;
       block-size: 1.2em;
-      min-inline-size: 100px;
-    }
-
-    &--track-duration {
-      inline-size: 30%;
-      block-size: 1.2em;
-      min-inline-size: 60px;
-    }
-
-    &--track-extra {
-      inline-size: 20%;
-      block-size: 1.2em;
-      min-inline-size: 40px;
+      inline-size: 100%;
+      background: linear-gradient(
+        90deg,
+        rgb(255 255 255 / 10%) 0%,
+        rgb(255 255 255 / 10%) 30%,
+        rgb(255 255 255 / 20%) 30%,
+        rgb(255 255 255 / 20%) 60%,
+        rgb(255 255 255 / 10%) 60%,
+        rgb(255 255 255 / 10%) 80%,
+        rgb(255 255 255 / 20%) 80%,
+        rgb(255 255 255 / 20%) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
     }
 
     &--section-title {
