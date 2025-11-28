@@ -13,9 +13,6 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
             <li>
               <div className="skeleton skeleton--text skeleton--breadcrumb skeleton--breadcrumb-top" />
             </li>
-            <li>
-              <div className="skeleton skeleton--text skeleton--breadcrumb skeleton--breadcrumb-bottom" />
-            </li>
           </ul>
         </nav>
 
