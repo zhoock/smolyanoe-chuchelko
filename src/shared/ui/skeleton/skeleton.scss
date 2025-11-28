@@ -26,60 +26,46 @@
   &--text {
     block-size: 1em;
     border-radius: 4px;
+  }
 
-    &--title {
-      inline-size: 80%;
-      margin-block-end: var(--ms-02);
+  &--title {
+    inline-size: 80%;
+    margin-block-end: var(--ms-02);
+  }
 
-      &--full-width {
-        inline-size: 100%;
-      }
-    }
+  &--full-width {
+    inline-size: 100%;
+  }
 
-    &--date {
-      inline-size: 40%;
-    }
+  &--date {
+    inline-size: 40%;
+  }
 
-    &--album-title {
-      inline-size: 70%;
-      block-size: 2em;
-      margin-block-end: var(--ms-1);
-    }
+  &--album-title {
+    inline-size: 70%;
+    block-size: 2em;
+    margin-block-end: var(--ms-1);
+  }
 
-    &--section-title {
-      inline-size: 50%;
-      block-size: 1.5em;
-      margin-block-end: var(--ms-01);
-    }
+  &--section-title {
+    inline-size: 50%;
+    block-size: 1.5em;
+    margin-block-end: var(--ms-01);
+  }
 
-    &--breadcrumb {
-      block-size: 16px;
-      border-radius: 8px;
+  &--track-title {
+    inline-size: 40%;
+    block-size: 1em;
+  }
 
-      &-top {
-        inline-size: 140px;
-        margin-block-end: var(--ms-01);
-      }
+  &--track-duration {
+    inline-size: 20%;
+    block-size: 1em;
+  }
 
-      &-bottom {
-        inline-size: 100px;
-      }
-    }
-
-    &--track-title {
-      inline-size: 40%;
-      block-size: 1em;
-    }
-
-    &--track-duration {
-      inline-size: 20%;
-      block-size: 1em;
-    }
-
-    &--track-extra {
-      inline-size: 15%;
-      block-size: 1em;
-    }
+  &--track-extra {
+    inline-size: 15%;
+    block-size: 1em;
   }
 
   &--play-button-horizontal {
@@ -130,6 +116,20 @@
     inline-size: var(--ms-0);
     block-size: var(--ms-0);
     border-radius: 4px;
+  }
+
+  &--breadcrumb {
+    block-size: 16px;
+    border-radius: 8px;
+  }
+
+  &--breadcrumb-top {
+    inline-size: 140px;
+    margin-block-end: var(--ms-01);
+  }
+
+  &--breadcrumb-bottom {
+    inline-size: 100px;
   }
 }
 
