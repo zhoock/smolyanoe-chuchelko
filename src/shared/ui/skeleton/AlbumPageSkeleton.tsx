@@ -19,25 +19,40 @@ export function AlbumPageSkeleton() {
         </div>
 
         <div className="item">
-          <div className="skeleton skeleton--play-button" />
+          <div className="skeleton skeleton--play-button-horizontal">
+            <div className="skeleton skeleton--play-icon" />
+            <div className="skeleton skeleton--play-text" />
+          </div>
           <div className="tracks">
             <div className="tracks__btn">
               <div className="tracks__symbol">
                 <div className="skeleton skeleton--track-number" />
               </div>
-              <div className="skeleton skeleton--text skeleton--track-title" />
+              <div style={{ display: 'flex', gap: 'var(--ms-01)', flex: 1, alignItems: 'center' }}>
+                <div className="skeleton skeleton--text skeleton--track-title" />
+                <div className="skeleton skeleton--text skeleton--track-duration" />
+                <div className="skeleton skeleton--text skeleton--track-extra" />
+              </div>
             </div>
             <div className="tracks__btn">
               <div className="tracks__symbol">
                 <div className="skeleton skeleton--track-number" />
               </div>
-              <div className="skeleton skeleton--text skeleton--track-title" />
+              <div style={{ display: 'flex', gap: 'var(--ms-01)', flex: 1, alignItems: 'center' }}>
+                <div className="skeleton skeleton--text skeleton--track-title" />
+                <div className="skeleton skeleton--text skeleton--track-duration" />
+                <div className="skeleton skeleton--text skeleton--track-extra" />
+              </div>
             </div>
             <div className="tracks__btn">
               <div className="tracks__symbol">
                 <div className="skeleton skeleton--track-number" />
               </div>
-              <div className="skeleton skeleton--text skeleton--track-title" />
+              <div style={{ display: 'flex', gap: 'var(--ms-01)', flex: 1, alignItems: 'center' }}>
+                <div className="skeleton skeleton--text skeleton--track-title" />
+                <div className="skeleton skeleton--text skeleton--track-duration" />
+                <div className="skeleton skeleton--text skeleton--track-extra" />
+              </div>
             </div>
           </div>
         </div>
