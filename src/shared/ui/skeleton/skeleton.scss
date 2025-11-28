@@ -40,34 +40,10 @@
       inline-size: 40%;
     }
 
-    &--breadcrumb {
-      inline-size: 60px;
-      block-size: 1.2em;
-    }
-
     &--album-title {
       inline-size: 70%;
       block-size: 2em;
       margin-block-end: var(--ms-1);
-    }
-
-    &--track-content {
-      flex: 1;
-      block-size: 1.2em;
-      inline-size: 100%;
-      background: linear-gradient(
-        90deg,
-        rgb(255 255 255 / 10%) 0%,
-        rgb(255 255 255 / 10%) 30%,
-        rgb(255 255 255 / 20%) 30%,
-        rgb(255 255 255 / 20%) 60%,
-        rgb(255 255 255 / 10%) 60%,
-        rgb(255 255 255 / 10%) 80%,
-        rgb(255 255 255 / 20%) 80%,
-        rgb(255 255 255 / 20%) 100%
-      );
-      background-size: 200% 100%;
-      animation: skeleton-shimmer 1.5s ease-in-out infinite;
     }
 
     &--section-title {
@@ -75,72 +51,6 @@
       block-size: 1.5em;
       margin-block-end: var(--ms-01);
     }
-  }
-
-  &--album-number {
-    position: absolute;
-    border-radius: 50%;
-    inline-size: 40px;
-    block-size: 40px;
-    inset-block-start: 0;
-    inset-inline-start: calc(100% + var(--ms-01));
-  }
-
-  &--share-button {
-    inline-size: 40px;
-    block-size: 40px;
-    border-radius: 50%;
-    margin-block-start: var(--ms-01);
-  }
-
-  &--play-button-horizontal {
-    display: flex;
-    background: transparent;
-    border-radius: var(--ms-01);
-    align-items: center;
-    gap: var(--ms-01);
-    inline-size: 100%;
-    block-size: 48px;
-    animation: none;
-    margin-block-end: var(--ms-1);
-
-    @include breakpoint(tablet) {
-      inline-size: 50%;
-    }
-  }
-
-  &--play-icon {
-    position: relative;
-    background: var(--accent-color, #998238);
-    border-radius: 50%;
-    inline-size: 48px;
-    block-size: 48px;
-    flex-shrink: 0;
-    animation: none;
-
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 50%;
-      transform: translate(-40%, -50%);
-      inline-size: 0;
-      block-size: 0;
-      border-inline-start: 12px solid white;
-      border-block-start: 8px solid transparent;
-      border-block-end: 8px solid transparent;
-    }
-  }
-
-  &--play-text {
-    flex: 1;
-    block-size: 1.2em;
-    border-radius: 4px;
-  }
-
-  &--track-number {
-    inline-size: var(--ms-0);
-    block-size: var(--ms-0);
-    border-radius: 50%;
   }
 
   &--service-button {

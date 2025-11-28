@@ -9,7 +9,6 @@ import { AlbumTracks } from '@widgets/albumTracks';
 import { Share } from '@features/share';
 import { ServiceButtons } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { AlbumPageSkeleton } from '@shared/ui/skeleton/AlbumPageSkeleton';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
@@ -30,7 +29,7 @@ export default function Album() {
   // Данные загружаются через loader
 
   if (albumsStatus === 'loading' || albumsStatus === 'idle') {
-    return <AlbumPageSkeleton />;
+    return null;
   }
 
   if (albumsStatus === 'failed') {
