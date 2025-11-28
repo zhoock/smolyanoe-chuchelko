@@ -79,9 +79,23 @@
   }
 
   &--play-button {
+    position: relative;
+    background: var(--accent-color, #998238);
+    border-radius: 50%;
     inline-size: 48px;
     block-size: 48px;
-    border-radius: 50%;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 50%;
+      transform: translate(-40%, -50%);
+      inline-size: 0;
+      block-size: 0;
+      border-inline-start: 12px solid white;
+      border-block-start: 8px solid transparent;
+      border-block-end: 8px solid transparent;
+    }
   }
 
   &--track-number {
