@@ -26,7 +26,7 @@ export function AlbumPageSkeleton() {
             <div className="skeleton skeleton--play-button" />
           </div>
           <div className="tracks">
-            {Array.from({ length: 8 }).map((_, index) => (
+            {Array.from({ length: 3 }).map((_, index) => (
               <div
                 key={index}
                 className="tracks__btn"
