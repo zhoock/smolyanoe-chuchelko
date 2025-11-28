@@ -22,9 +22,6 @@ export function AlbumPageSkeleton() {
         {/* Album tracks skeleton */}
         <div className="item">
           <div className="skeleton skeleton--text skeleton--album-title" />
-          <div className="wrapper-album-play">
-            <div className="skeleton skeleton--play-button" />
-          </div>
           <div className="tracks">
             {Array.from({ length: 8 }).map((_, index) => (
               <div
@@ -32,9 +29,6 @@ export function AlbumPageSkeleton() {
                 className="tracks__btn"
                 style={{ '--skeleton-index': index } as React.CSSProperties}
               >
-                <div className="tracks__symbol">
-                  <div className="skeleton skeleton--track-number" />
-                </div>
                 <div className="skeleton skeleton--text skeleton--track-title" />
               </div>
             ))}
@@ -45,17 +39,6 @@ export function AlbumPageSkeleton() {
         <div className="item">
           <div className="service-buttons">
             <div className="skeleton skeleton--text skeleton--section-title" />
-            <ul className="service-buttons__list">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <li
-                  key={index}
-                  className="service-buttons__list-item"
-                  style={{ '--skeleton-index': index } as React.CSSProperties}
-                >
-                  <div className="skeleton skeleton--service-button" />
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
 
@@ -63,17 +46,6 @@ export function AlbumPageSkeleton() {
         <div className="item">
           <div className="service-buttons">
             <div className="skeleton skeleton--text skeleton--section-title" />
-            <ul className="service-buttons__list">
-              {Array.from({ length: 7 }).map((_, index) => (
-                <li
-                  key={index}
-                  className="service-buttons__list-item"
-                  style={{ '--skeleton-index': index } as React.CSSProperties}
-                >
-                  <div className="skeleton skeleton--service-button" />
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </div>
