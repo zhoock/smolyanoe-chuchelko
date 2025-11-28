@@ -21,6 +21,9 @@ export function AlbumPageSkeleton() {
         {/* Album tracks skeleton */}
         <div className="item">
           <div className="skeleton skeleton--text skeleton--album-title" />
+          <div className="wrapper-album-play">
+            <div className="skeleton skeleton--play-button" />
+          </div>
           <div className="tracks">
             {Array.from({ length: 8 }).map((_, index) => (
               <div
