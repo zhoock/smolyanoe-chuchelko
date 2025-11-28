@@ -79,13 +79,9 @@
   }
 
   &--play-button {
-    inline-size: 100%;
+    inline-size: 48px;
     block-size: 48px;
-    border-radius: var(--ms-01);
-
-    @include breakpoint(tablet) {
-      inline-size: 50%;
-    }
+    border-radius: 50%;
   }
 
   &--track-number {
