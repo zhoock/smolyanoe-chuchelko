@@ -263,6 +263,16 @@
         inline-size: 100%;
       }
     }
+
+    .tracks__duration {
+      flex: 0 0 auto;
+      color: var(--time-color, #9b9b9a);
+      font-variant-numeric: tabular-nums;
+
+      .skeleton {
+        inline-size: 60px;
+      }
+    }
   }
 }
 
