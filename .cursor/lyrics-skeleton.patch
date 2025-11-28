@@ -1,0 +1,71 @@
+--- a/src/features/player/ui/AudioPlayer/AudioPlayer.tsx
++++ b/src/features/player/ui/AudioPlayer/AudioPlayer.tsx
+@@ -67,6 +67,8 @@ export default function AudioPlayer({
+   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
+   const [plainLyricsContent, setPlainLyricsContent] = useState<string | null>(null); // обычный текст (не синхронизированный)
++  const [isLoadingSyncedLyrics, setIsLoadingSyncedLyrics] = useState<boolean>(false);
++  const [hasSyncedLyricsAvailable, setHasSyncedLyricsAvailable] = useState<boolean>(false);
+   const globalShowLyrics = useAppSelector(playerSelectors.selectShowLyrics);
+   const globalControlsVisible = useAppSelector(playerSelectors.selectControlsVisible);
+   const [controlsVisible, setControlsVisible] = useState<boolean>(globalControlsVisible);
+@@ -673,6 +675,8 @@ export default function AudioPlayer({
+     setPlainLyricsContent,
+     setAuthorshipText,
+     setCurrentLineIndex,
++    setIsLoadingSyncedLyrics,
++    setHasSyncedLyricsAvailable,
+   });
+ 
+   /**
+@@ -1004,7 +1008,15 @@ export default function AudioPlayer({
+     .join(' ');
+ 
+   const shouldRenderSyncedLyrics = showLyrics && !!(syncedLyrics && syncedLyrics.length > 0);
+-  const shouldRenderPlainLyrics = showLyrics && !shouldRenderSyncedLyrics && !!plainLyricsContent;
++  // Показываем обычный текст только если нет синхронизированной версии (даже если она еще загружается)
++  // Если синхронизированная версия существует, показываем скелетон вместо обычного текста
++  const shouldRenderPlainLyrics =
++    showLyrics &&
++    !shouldRenderSyncedLyrics &&
++    !hasSyncedLyricsAvailable &&
++    !isLoadingSyncedLyrics &&
++    !!plainLyricsContent;
++  const shouldRenderSkeleton =
++    showLyrics &&
++    !shouldRenderSyncedLyrics &&
++    (hasSyncedLyricsAvailable || isLoadingSyncedLyrics);
+ 
+   useEffect(() => {
+@@ -1059,7 +1071,7 @@ export default function AudioPlayer({
+       </div>
+ 
+       {/* Текст песни */}
+-      {showLyrics && (shouldRenderSyncedLyrics || shouldRenderPlainLyrics) && (
++      {showLyrics && (shouldRenderSyncedLyrics || shouldRenderPlainLyrics || shouldRenderSkeleton) && (
+         <div
+           className={`player__synced-lyrics${shouldRenderSyncedLyrics ? '' : ' player__synced-lyrics--plain'}`}
+           ref={lyricsContainerRef}
+@@ -1209,6 +1221,20 @@ export default function AudioPlayer({
+               })()}
+             </>
+           ) : (
++            shouldRenderSkeleton ? (
++              <div className="player__lyrics-skeleton">
++                {Array.from({ length: 12 }).map((_, index) => (
++                  <div
++                    key={index}
++                    className="player__lyrics-skeleton-line"
++                    style={{
++                      width: `${Math.random() * 30 + 60}%`,
++                      animationDelay: `${index * 0.1}s`,
++                    }}
++                  />
++                ))}
++              </div>
++            ) : (
+             <div className="player__plain-lyrics">{plainLyricsContent ?? ''}</div>
++            )
+           )}
+         </div>
+       )}
+

@@ -1,6 +1,6 @@
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
-import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
+import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumsData } from '@entities/album';
@@ -21,7 +21,7 @@ export function AlbumsSection() {
         <h2 id="home-albums-heading">{ui?.titles?.albums ?? '…'}</h2>
 
         {albumsStatus === 'loading' || albumsStatus === 'idle' ? (
-          <Loader />
+          <AlbumsSkeleton />
         ) : albumsStatus === 'failed' ? (
           <ErrorI18n code="albumsLoadFailed" />
         ) : (

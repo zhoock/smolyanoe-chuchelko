@@ -1,5 +1,5 @@
-import { Loader } from '@shared/ui/loader';
 import { ErrorI18n } from '@shared/ui/error-message';
+import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
 import { ArticlePreview } from '@entities/article';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
@@ -25,7 +25,7 @@ export function ArticlesSection() {
         <h2 id="home-articles-heading">{ui?.titles?.articles ?? '…'}</h2>
 
         {articlesStatus === 'loading' || articlesStatus === 'idle' ? (
-          <Loader />
+          <ArticlesSkeleton />
         ) : articlesStatus === 'failed' ? (
           <ErrorI18n code="articlesLoadFailed" />
         ) : (
