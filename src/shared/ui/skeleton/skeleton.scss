@@ -60,6 +60,13 @@
     border-radius: var(--ms-01);
   }
 
+  &--track-duration {
+    inline-size: 60px;
+    block-size: 1em;
+    border-radius: var(--ms-01);
+    flex-shrink: 0;
+  }
+
   &--track-extra {
     inline-size: 15%;
     block-size: 1em;
@@ -105,21 +112,10 @@
   }
 
   &--play-progress {
-    position: relative;
     background: rgb(255 255 255 / 30%);
     border-radius: 4px;
     flex: 1;
     block-size: 8px;
-    overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      inline-size: 30%;
-      background: rgb(255 255 255 / 50%);
-      border-radius: 4px;
-    }
   }
 
   &--track-number {
@@ -221,9 +217,17 @@
 
   .tracks {
     .tracks__btn {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+
       .skeleton {
         animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
       }
+    }
+
+    .tracks__symbol {
+      flex-shrink: 0;
     }
 
     .tracks__title {
