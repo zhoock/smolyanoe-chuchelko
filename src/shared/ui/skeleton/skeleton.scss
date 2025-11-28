@@ -77,7 +77,6 @@
     background: transparent;
     border-radius: var(--ms-01);
     animation: none;
-    margin-block-end: var(--ms-1);
 
     @include breakpoint(tablet) {
       inline-size: 50%;
@@ -140,6 +139,19 @@
   }
 }
 
+// Стили для скелетона service buttons
+.service-buttons__list-item {
+  .skeleton {
+    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+  }
+}
+
+.skeleton-card {
+  .skeleton {
+    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+  }
+}
+
 .album-skeleton {
   display: grid;
   gap: var(--ms-1);
@@ -162,51 +174,41 @@
     max-inline-size: 520px;
   }
 
-  &__tracks {
-    display: grid;
-    gap: var(--ms-02);
-  }
-
-  &__track-list {
-    display: grid;
-    gap: 0;
-  }
-
-  &__track {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: var(--ms-02);
-    padding-block: var(--ms-01);
-    border-block-end: 1px solid var(--hr-color, #3d3c3a);
-
-    &:last-child {
-      border-block-end: none;
-    }
-
+  // Стили для скелетона применяются к реальным классам из AlbumTracks
+  .album-title {
     .skeleton {
-      animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+      margin-block: 0;
     }
   }
 
-  &__track-content {
-    display: flex;
-    align-items: center;
-    gap: var(--ms-01);
-    flex: 1;
-  }
-}
+  .wrapper-album-play {
+    .skeleton--play-button-horizontal {
+      grid-column: 1 / 3;
 
-// Стили для скелетона service buttons
-.service-buttons__list-item {
-  .skeleton {
-    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+      @include breakpoint(tablet) {
+        grid-column: 1 / 2;
+      }
+    }
   }
-}
 
-.skeleton-card {
-  .skeleton {
-    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+  .tracks {
+    .tracks__btn {
+      .skeleton {
+        animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+      }
+    }
+
+    .tracks__title {
+      .skeleton {
+        inline-size: 100%;
+      }
+    }
+
+    .tracks__duration {
+      .skeleton {
+        inline-size: 40px;
+      }
+    }
   }
 }
 

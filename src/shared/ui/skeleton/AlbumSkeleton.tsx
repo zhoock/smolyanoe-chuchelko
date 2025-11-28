@@ -21,23 +21,33 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
           </div>
         </div>
 
-        <div className="item album-skeleton__tracks">
-          <div className="skeleton skeleton--play-button-horizontal">
-            <div className="skeleton skeleton--play-icon" />
-            <div className="skeleton skeleton--play-text" />
+        <div className="item">
+          <h2 className="album-title">
+            <div className="skeleton skeleton--text skeleton--album-title" />
+          </h2>
+
+          <div className="wrapper-album-play">
+            <div className="skeleton skeleton--play-button-horizontal">
+              <div className="skeleton skeleton--play-icon" />
+              <div className="skeleton skeleton--play-text" />
+            </div>
           </div>
-          <div className="album-skeleton__track-list">
+
+          <div className="tracks">
             {Array.from({ length: tracksCount }).map((_, index) => (
               <div
                 key={`track-${index}`}
-                className="album-skeleton__track"
+                className="tracks__btn"
                 style={{ '--skeleton-index': index } as React.CSSProperties}
               >
-                <div className="skeleton skeleton--track-number" />
-                <div className="album-skeleton__track-content">
+                <div className="tracks__symbol">
+                  <div className="skeleton skeleton--track-number" />
+                </div>
+                <div className="tracks__title">
                   <div className="skeleton skeleton--text skeleton--track-title" />
+                </div>
+                <div className="tracks__duration">
                   <div className="skeleton skeleton--text skeleton--track-duration" />
-                  <div className="skeleton skeleton--text skeleton--track-extra" />
                 </div>
               </div>
             ))}
