@@ -216,10 +216,28 @@
   }
 
   .tracks {
+    display: grid;
+    margin-block-end: var(--ms-1);
+
     .tracks__btn {
+      position: relative;
       display: flex;
+      margin: 0;
+      padding: var(--ms-01) var(--ms-01);
+      text-align: inherit;
+      background: var(--main-background-color, #20201d);
+      border: 0;
+      border-radius: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       align-items: center;
       gap: var(--ms-01);
+      border-block-start: 1px solid var(--hr-color, #3d3c3a);
+
+      &:last-child {
+        border-block-end: 1px solid var(--hr-color, #3d3c3a);
+      }
 
       .skeleton {
         animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
@@ -227,11 +245,18 @@
     }
 
     .tracks__symbol {
+      position: relative;
+      display: grid;
+      place-items: center;
+      inline-size: var(--ms-0);
+      min-inline-size: var(--ms-0);
       flex-shrink: 0;
     }
 
     .tracks__title {
-      flex: 1;
+      flex: 1 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
       min-inline-size: 0;
 
       .skeleton {
