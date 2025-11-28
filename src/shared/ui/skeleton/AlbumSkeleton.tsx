@@ -30,7 +30,7 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
           <div className="wrapper-album-play">
             <div className="skeleton skeleton--play-button-horizontal">
               <div className="skeleton skeleton--play-icon" />
-              <div className="skeleton skeleton--play-text" />
+              <div className="skeleton skeleton--play-progress" />
             </div>
           </div>
 

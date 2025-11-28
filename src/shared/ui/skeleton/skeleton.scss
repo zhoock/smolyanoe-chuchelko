@@ -43,7 +43,7 @@
 
   &--album-title {
     inline-size: 70%;
-    block-size: 2em;
+    block-size: 47.117px;
     margin-block-end: var(--ms-1);
     border-radius: var(--ms-01);
   }
@@ -75,9 +75,10 @@
     gap: var(--ms-01);
     inline-size: 100%;
     block-size: 48px;
-    background: transparent;
+    background: var(--button-background-color-hover, #998238);
     border-radius: var(--ms-01);
     animation: none;
+    padding-inline: var(--ms-01);
 
     @include breakpoint(tablet) {
       inline-size: 50%;
@@ -106,10 +107,11 @@
     }
   }
 
-  &--play-text {
-    flex: 1;
-    block-size: 1.2em;
+  &--play-progress {
+    background: rgb(255 255 255 / 30%);
     border-radius: 4px;
+    flex: 1;
+    block-size: 8px;
   }
 
   &--track-number {
@@ -196,6 +198,9 @@
   }
 
   .wrapper-album-play {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
     .skeleton--play-button-horizontal {
       grid-column: 1 / 3;
 
