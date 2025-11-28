@@ -30,6 +30,10 @@
     &--title {
       inline-size: 80%;
       margin-block-end: var(--ms-02);
+
+      &--full-width {
+        inline-size: 100%;
+      }
     }
 
     &--date {

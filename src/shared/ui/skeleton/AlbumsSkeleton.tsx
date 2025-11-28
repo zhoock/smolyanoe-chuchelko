@@ -15,8 +15,7 @@ export function AlbumsSkeleton({ count = 6 }: AlbumsSkeletonProps) {
         >
           <div className="skeleton skeleton--album-cover" />
           <div className="albums__description">
-            <div className="skeleton skeleton--text skeleton--title" />
-            <div className="skeleton skeleton--text skeleton--date" />
+            <div className="skeleton skeleton--text skeleton--title skeleton--full-width" />
           </div>
         </div>
       ))}
