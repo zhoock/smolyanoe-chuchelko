@@ -63,6 +63,14 @@
     }
   }
 
+  &--album-number {
+    inline-size: 40px;
+    block-size: 40px;
+    border-radius: 50%;
+    margin-block-start: var(--ms-01);
+    margin-inline-start: auto;
+  }
+
   &--share-button {
     inline-size: 40px;
     block-size: 40px;
