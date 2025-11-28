@@ -13,10 +13,9 @@ export function AlbumPageSkeleton() {
           </ul>
         </nav>
 
-        {/* Album cover and share skeleton */}
+        {/* Album cover skeleton */}
         <div className="item">
           <div className="skeleton skeleton--album-cover" />
-          <div className="skeleton skeleton--share-button" />
         </div>
 
         {/* Album tracks skeleton */}
