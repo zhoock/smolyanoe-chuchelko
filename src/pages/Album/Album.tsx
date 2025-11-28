@@ -9,7 +9,7 @@ import { AlbumTracks } from '@widgets/albumTracks';
 import { Share } from '@features/share';
 import { ServiceButtons } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
-import { Loader } from '@shared/ui/loader';
+import { AlbumPageSkeleton } from '@shared/ui/skeleton/AlbumPageSkeleton';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
@@ -30,13 +30,7 @@ export default function Album() {
   // Данные загружаются через loader
 
   if (albumsStatus === 'loading' || albumsStatus === 'idle') {
-    return (
-      <section className="album main-background" aria-label="Блок c альбомом">
-        <div className="wrapper album__wrapper">
-          <Loader />
-        </div>
-      </section>
-    );
+    return <AlbumPageSkeleton />;
   }
 
   if (albumsStatus === 'failed') {

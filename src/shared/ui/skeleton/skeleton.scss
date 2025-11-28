@@ -35,6 +35,71 @@
     &--date {
       inline-size: 40%;
     }
+
+    &--breadcrumb {
+      inline-size: 60px;
+      block-size: 1.2em;
+    }
+
+    &--album-title {
+      inline-size: 70%;
+      block-size: 2em;
+      margin-block-end: var(--ms-1);
+    }
+
+    &--track-title {
+      inline-size: 60%;
+      block-size: 1.2em;
+    }
+
+    &--section-title {
+      inline-size: 50%;
+      block-size: 1.5em;
+      margin-block-end: var(--ms-01);
+    }
+  }
+
+  &--share-button {
+    inline-size: 40px;
+    block-size: 40px;
+    border-radius: 50%;
+    margin-block-start: var(--ms-01);
+  }
+
+  &--play-button {
+    inline-size: 100%;
+    block-size: 48px;
+    border-radius: var(--ms-01);
+
+    @include breakpoint(tablet) {
+      inline-size: 50%;
+    }
+  }
+
+  &--track-number {
+    inline-size: var(--ms-0);
+    block-size: var(--ms-0);
+    border-radius: 50%;
+  }
+
+  &--service-button {
+    inline-size: 100%;
+    block-size: 48px;
+    border-radius: var(--ms-01);
+  }
+}
+
+// Стили для скелетона треков
+.tracks {
+  .skeleton {
+    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
+  }
+}
+
+// Стили для скелетона service buttons
+.service-buttons__list-item {
+  .skeleton {
+    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
   }
 }
 
