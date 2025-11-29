@@ -40,9 +40,9 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
                 className="tracks__btn"
                 style={{ '--skeleton-index': index } as React.CSSProperties}
               >
-                <div className="tracks__symbol skeleton skeleton--track-number" />
-                <div className="tracks__title skeleton skeleton--text skeleton--track-title" />
-                <div className="tracks__duration skeleton skeleton--text skeleton--track-duration" />
+                <div className="tracks__symbol skeleton" />
+                <div className="tracks__title skeleton" />
+                <div className="tracks__duration skeleton" />
               </div>
             ))}
           </div>

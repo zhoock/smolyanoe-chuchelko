@@ -15,19 +15,6 @@
     block-size: 47.117px;
   }
 
-  &--track-title {
-    inline-size: 100%;
-    block-size: 1em;
-    border-radius: var(--ms-01);
-  }
-
-  &--track-duration {
-    inline-size: 60px;
-    block-size: 1em;
-    border-radius: var(--ms-01);
-    flex-shrink: 0;
-  }
-
   &--play-button-horizontal {
     display: flex;
     align-items: center;
@@ -80,12 +67,6 @@
     flex-shrink: 0;
     background: transparent;
     animation: none;
-  }
-
-  &--track-number {
-    inline-size: var(--ms-0);
-    block-size: var(--ms-0);
-    min-inline-size: var(--ms-0);
   }
 
   &--breadcrumb {
@@ -161,6 +142,11 @@
       inline-size: var(--ms-0);
       min-inline-size: var(--ms-0);
       flex-shrink: 0;
+
+      &.skeleton {
+        block-size: var(--ms-0);
+        border-radius: 50%;
+      }
     }
 
     .tracks__title {
@@ -168,14 +154,25 @@
       overflow: hidden;
       text-overflow: ellipsis;
       min-inline-size: 0;
-      inline-size: 100%;
+
+      &.skeleton {
+        inline-size: 100%;
+        block-size: 1em;
+        border-radius: var(--ms-01);
+      }
     }
 
     .tracks__duration {
       flex: 0 0 auto;
       color: var(--time-color, #9b9b9a);
       font-variant-numeric: tabular-nums;
-      inline-size: 60px;
+
+      &.skeleton {
+        inline-size: 60px;
+        block-size: 1em;
+        border-radius: var(--ms-01);
+        flex-shrink: 0;
+      }
     }
   }
 }
