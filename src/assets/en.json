@@ -16,7 +16,9 @@
       "drums": "drums",
       "bass": "bass",
       "guitar": "guitar",
-      "vocals": "vocals"
+      "vocals": "vocals",
+      "viewAllAlbums": "View all albums ({count})",
+      "viewAllArticles": "View all articles ({count})"
     },
     "titles": {
       "albums": "albums",

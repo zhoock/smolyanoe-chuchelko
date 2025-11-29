@@ -13,7 +13,7 @@ import './ArticlesSection.scss';
 const getInitialCount = () => {
   if (typeof window === 'undefined') return 12;
   if (window.innerWidth >= 1024) return 3; // десктоп (уменьшено для тестирования)
-  if (window.innerWidth >= 768) return 12; // планшет
+  if (window.innerWidth >= 768) return 3; // планшет
   return 6; // мобильный
 };
 
@@ -64,9 +64,8 @@ export function ArticlesSection() {
             {hasMore && (
               <div className="articles__more">
                 <Link to="/articles" className="articles__more-button">
-                  {lang === 'en'
-                    ? `View all articles (${allArticles.length})`
-                    : `Все статьи (${allArticles.length})`}
+                  {ui?.buttons?.viewAllArticles?.replace('{count}', String(allArticles.length)) ??
+                    `Все статьи (${allArticles.length})`}
                 </Link>
               </div>
             )}

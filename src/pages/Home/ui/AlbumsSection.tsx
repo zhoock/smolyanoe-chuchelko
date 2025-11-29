@@ -63,9 +63,8 @@ export function AlbumsSection() {
             {hasMore && (
               <div className="albums__more">
                 <Link to="/albums" className="albums__more-button">
-                  {lang === 'en'
-                    ? `View all albums (${allAlbums.length})`
-                    : `Все альбомы (${allAlbums.length})`}
+                  {ui?.buttons?.viewAllAlbums?.replace('{count}', String(allAlbums.length)) ??
+                    `Все альбомы (${allAlbums.length})`}
                 </Link>
               </div>
             )}

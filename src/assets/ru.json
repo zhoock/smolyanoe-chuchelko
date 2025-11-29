@@ -16,7 +16,9 @@
       "drums": "барабаны",
       "bass": "бас",
       "guitar": "гитара",
-      "vocals": "вокал"
+      "vocals": "вокал",
+      "viewAllAlbums": "Все альбомы ({count})",
+      "viewAllArticles": "Все статьи ({count})"
     },
     "titles": {
       "albums": "альбомы",
