@@ -80,6 +80,41 @@
 }
 
 // ============================================================================
+// Стили для светлой темы - базовые
+// ============================================================================
+html.theme-light .skeleton {
+  &--play-button-horizontal {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 0%,
+      rgb(var(--mango-sorbet-rgb, 250 229 155) / 100%) 50%,
+      rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 100%
+    );
+  }
+
+  &--play-progress {
+    background: rgb(var(--charcoal-rgb, 39 39 39) / 30%);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  html .skeleton {
+    &--play-button-horizontal {
+      background: linear-gradient(
+        90deg,
+        rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 0%,
+        rgb(var(--mango-sorbet-rgb, 250 229 155) / 100%) 50%,
+        rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 100%
+      );
+    }
+
+    &--play-progress {
+      background: rgb(var(--charcoal-rgb, 39 39 39) / 30%);
+    }
+  }
+}
+
+// ============================================================================
 // AlbumSkeleton - основные стили
 // ============================================================================
 .album-skeleton {
@@ -165,6 +200,37 @@
     .tracks__duration {
       inline-size: 60px;
       block-size: 1em;
+    }
+  }
+}
+
+// ============================================================================
+// Стили для светлой темы - AlbumSkeleton
+// ============================================================================
+html.theme-light .album-skeleton {
+  .tracks {
+    .tracks__btn {
+      background: var(--main-background-color, #ffffff);
+      border-block-start-color: var(--hr-color, #e6e6e6);
+
+      &:last-child {
+        border-block-end-color: var(--hr-color, #e6e6e6);
+      }
+    }
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  html .album-skeleton {
+    .tracks {
+      .tracks__btn {
+        background: var(--main-background-color, #ffffff);
+        border-block-start-color: var(--hr-color, #e6e6e6);
+
+        &:last-child {
+          border-block-end-color: var(--hr-color, #e6e6e6);
+        }
+      }
     }
   }
 }
