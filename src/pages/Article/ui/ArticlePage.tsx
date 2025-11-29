@@ -75,7 +75,21 @@ export function ArticlePage() {
       <div className="wrapper">
         <nav aria-label="Breadcrumb" className="breadcrumb">
           <ul>
-            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
+            {ui?.links?.home && (
+              <li>
+                <Link to="/">{ui.links.home}</Link>
+              </li>
+            )}
+            {ui?.titles?.articles && (
+              <li>
+                <Link to="/articles">{ui.titles.articles}</Link>
+              </li>
+            )}
+            {article && (
+              <li className="breadcrumb__item--no-arrow">
+                <span>{article.nameArticle}</span>
+              </li>
+            )}
           </ul>
         </nav>
 

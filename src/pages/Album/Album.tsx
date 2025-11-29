@@ -77,7 +77,19 @@ export default function Album() {
       <div className="wrapper album__wrapper">
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
-            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
+            {ui?.links?.home && (
+              <li>
+                <Link to="/">{ui.links.home}</Link>
+              </li>
+            )}
+            {ui?.titles?.albums && (
+              <li>
+                <Link to="/albums">{ui.titles.albums}</Link>
+              </li>
+            )}
+            <li className="breadcrumb__item--no-arrow">
+              <span>{album.fullName}</span>
+            </li>
           </ul>
         </nav>
 
