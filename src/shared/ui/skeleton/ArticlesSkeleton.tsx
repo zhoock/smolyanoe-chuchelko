@@ -8,11 +8,7 @@ export function ArticlesSkeleton({ count = 6 }: ArticlesSkeletonProps) {
   return (
     <div className="articles__list">
       {Array.from({ length: count }).map((_, index) => (
-        <article
-          key={index}
-          className="articles__card"
-          style={{ '--skeleton-index': index } as React.CSSProperties}
-        >
+        <article key={index} className="articles__card">
           <div className="articles__picture">
             <div className="skeleton skeleton--article-image" />
           </div>
