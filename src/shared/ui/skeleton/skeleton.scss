@@ -7,9 +7,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgb(var(--white-rgb, 255 255 255) / 10%) 0%,
-    rgb(var(--white-rgb, 255 255 255) / 20%) 50%,
-    rgb(var(--white-rgb, 255 255 255) / 10%) 100%
+    rgb(var(--skeleton-base-rgb, 255 255 255) / 10%) 0%,
+    rgb(var(--skeleton-base-rgb, 255 255 255) / 20%) 50%,
+    rgb(var(--skeleton-base-rgb, 255 255 255) / 10%) 100%
   );
   background-size: 200% 100%;
   border-radius: var(--ms-01);
@@ -24,29 +24,6 @@
   &--title {
     inline-size: 80%;
     margin-block-end: var(--ms-02);
-  }
-}
-
-// ============================================================================
-// Стили для светлой темы
-// ============================================================================
-html.theme-light .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgb(var(--graphite-green-rgb, 55 54 51) / 10%) 0%,
-    rgb(var(--graphite-green-rgb, 55 54 51) / 20%) 50%,
-    rgb(var(--graphite-green-rgb, 55 54 51) / 10%) 100%
-  );
-}
-
-@media (prefers-color-scheme: light) {
-  html .skeleton {
-    background: linear-gradient(
-      90deg,
-      rgb(var(--graphite-green-rgb, 55 54 51) / 10%) 0%,
-      rgb(var(--graphite-green-rgb, 55 54 51) / 20%) 50%,
-      rgb(var(--graphite-green-rgb, 55 54 51) / 10%) 100%
-    );
   }
 }
 

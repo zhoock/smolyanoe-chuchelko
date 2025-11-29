@@ -23,9 +23,9 @@
     block-size: 51.38px;
     background: linear-gradient(
       90deg,
-      rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 80%) 0%,
-      rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 100%) 50%,
-      rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 80%) 100%
+      rgb(var(--skeleton-play-button-rgb, 153 130 56) / 80%) 0%,
+      rgb(var(--skeleton-play-button-rgb, 153 130 56) / 100%) 50%,
+      rgb(var(--skeleton-play-button-rgb, 153 130 56) / 80%) 100%
     );
     background-size: 200% 100%;
     border-radius: var(--ms-1);
@@ -58,7 +58,7 @@
   &--play-progress {
     flex: 1;
     block-size: 1em;
-    background: rgb(var(--white-rgb, 255 255 255) / 30%);
+    background: rgb(var(--skeleton-progress-rgb, 255 255 255) / 30%);
     border-radius: var(--ms-01);
   }
 
@@ -76,41 +76,6 @@
 
   &--breadcrumb-top {
     inline-size: 140px;
-  }
-}
-
-// ============================================================================
-// Стили для светлой темы - базовые
-// ============================================================================
-html.theme-light .skeleton {
-  &--play-button-horizontal {
-    background: linear-gradient(
-      90deg,
-      rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 0%,
-      rgb(var(--mango-sorbet-rgb, 250 229 155) / 100%) 50%,
-      rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 100%
-    );
-  }
-
-  &--play-progress {
-    background: rgb(var(--charcoal-rgb, 39 39 39) / 30%);
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  html .skeleton {
-    &--play-button-horizontal {
-      background: linear-gradient(
-        90deg,
-        rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 0%,
-        rgb(var(--mango-sorbet-rgb, 250 229 155) / 100%) 50%,
-        rgb(var(--mango-sorbet-rgb, 250 229 155) / 80%) 100%
-      );
-    }
-
-    &--play-progress {
-      background: rgb(var(--charcoal-rgb, 39 39 39) / 30%);
-    }
   }
 }
 
@@ -200,37 +165,6 @@ html.theme-light .skeleton {
     .tracks__duration {
       inline-size: 60px;
       block-size: 1em;
-    }
-  }
-}
-
-// ============================================================================
-// Стили для светлой темы - AlbumSkeleton
-// ============================================================================
-html.theme-light .album-skeleton {
-  .tracks {
-    .tracks__btn {
-      background: var(--main-background-color, #ffffff);
-      border-block-start-color: var(--hr-color, #e6e6e6);
-
-      &:last-child {
-        border-block-end-color: var(--hr-color, #e6e6e6);
-      }
-    }
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  html .album-skeleton {
-    .tracks {
-      .tracks__btn {
-        background: var(--main-background-color, #ffffff);
-        border-block-start-color: var(--hr-color, #e6e6e6);
-
-        &:last-child {
-          border-block-end-color: var(--hr-color, #e6e6e6);
-        }
-      }
     }
   }
 }

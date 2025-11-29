@@ -271,4 +271,9 @@ $desktops: 'width >= 1024px';
   --mini-player-background: var(--white-color-rgb, 255 255 255);
   --mini-player-text: var(--black, #000000);
   --mini-player-button: var(--black, #000000);
+
+  // Скелетон
+  --skeleton-base-rgb: var(--charcoal-rgb, 39 39 39);
+  --skeleton-play-button-rgb: var(--mango-sorbet-rgb, 250 229 155);
+  --skeleton-progress-rgb: var(--charcoal-rgb, 39 39 39);
 }

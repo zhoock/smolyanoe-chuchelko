@@ -58,4 +58,9 @@ html.theme-dark {
   --mini-player-background: var(--graphite-green-rgb, 55 54 51);
   --mini-player-text: var(--white, #ffffff);
   --mini-player-button: var(--white, #ffffff);
+
+  // Скелетон
+  --skeleton-base-rgb: var(--white-rgb, 255 255 255);
+  --skeleton-play-button-rgb: var(--dark-greenish-yellow-rgb, 153 130 56);
+  --skeleton-progress-rgb: var(--white-rgb, 255 255 255);
 }
