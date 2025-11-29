@@ -1,6 +1,7 @@
 // src/pages/AllAlbums/ui/AllAlbumsPage.tsx
 
 import { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -79,7 +80,13 @@ export function AllAlbumsPage() {
       </Helmet>
 
       <div className="wrapper">
-        <h1>{ui?.titles?.albums ?? seoTitle}</h1>
+        <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
+          <ul>
+            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
+          </ul>
+        </nav>
+
+        <h2>{ui?.titles?.albums ?? seoTitle}</h2>
 
         {albumsStatus === 'loading' || albumsStatus === 'idle' ? (
           <AlbumsSkeleton count={BATCH_SIZE} />
