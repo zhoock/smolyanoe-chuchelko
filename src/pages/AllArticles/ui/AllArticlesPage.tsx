@@ -81,42 +81,44 @@ export function AllArticlesPage() {
         <meta name="description" content={seoDesc} />
       </Helmet>
 
-      <div className="wrapper articles__wrapper">
+      <div className="wrapper">
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
             <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
           </ul>
         </nav>
 
-        <h1>{ui?.titles?.articles ?? seoTitle}</h1>
+        <h2>{ui?.titles?.articles ?? seoTitle}</h2>
 
-        {articlesStatus === 'loading' || articlesStatus === 'idle' ? (
-          <ArticlesSkeleton count={BATCH_SIZE} />
-        ) : articlesStatus === 'failed' ? (
-          <ErrorI18n code="articlesLoadFailed" />
-        ) : (
-          <>
-            <div className="articles__list">
-              {displayedArticles.map((article) => (
-                <ArticlePreview key={article.articleId} {...article} />
-              ))}
-            </div>
-
-            {/* Элемент для отслеживания скролла */}
-            {hasMore && (
-              <div ref={loadMoreRef} className="all-articles__load-more" aria-hidden="true">
-                <ArticlesSkeleton count={4} />
+        <div className="articles__wrapper">
+          {articlesStatus === 'loading' || articlesStatus === 'idle' ? (
+            <ArticlesSkeleton count={BATCH_SIZE} />
+          ) : articlesStatus === 'failed' ? (
+            <ErrorI18n code="articlesLoadFailed" />
+          ) : (
+            <>
+              <div className="articles__list">
+                {displayedArticles.map((article) => (
+                  <ArticlePreview key={article.articleId} {...article} />
+                ))}
               </div>
-            )}
 
-            {/* Индикатор конца списка */}
-            {!hasMore && allArticles.length > 0 && (
-              <p className="all-articles__end">
-                {lang === 'en' ? 'All articles loaded' : 'Все статьи загружены'}
-              </p>
-            )}
-          </>
-        )}
+              {/* Элемент для отслеживания скролла */}
+              {hasMore && (
+                <div ref={loadMoreRef} className="all-articles__load-more" aria-hidden="true">
+                  <ArticlesSkeleton count={4} />
+                </div>
+              )}
+
+              {/* Индикатор конца списка */}
+              {!hasMore && allArticles.length > 0 && (
+                <p className="all-articles__end">
+                  {lang === 'en' ? 'All articles loaded' : 'Все статьи загружены'}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </section>
   );
