@@ -4,7 +4,7 @@
  */
 
 import { loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
-import { loadTrackTextFromStorage } from '@entities/track/lib';
+import { loadTrackTextFromDatabase } from '@entities/track/lib';
 
 export type TrackStatus = 'synced' | 'text-only' | 'empty';
 
@@ -18,20 +18,16 @@ export async function getTrackStatus(
   hasSyncedLyrics: boolean,
   signal?: AbortSignal
 ): Promise<TrackStatus> {
-  // В production loadTrackTextFromStorage всегда возвращает null
-  // Поэтому полагаемся только на API
   const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang, signal);
 
   if (hasSyncedLyrics || (storedSync && storedSync.length > 0)) {
     return 'synced';
   }
 
-  // Проверяем текст только в dev режиме
-  if (process.env.NODE_ENV === 'development') {
-    const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-    if (storedText !== null) {
-      return 'text-only';
-    }
+  // Проверяем текст из БД
+  const storedText = await loadTrackTextFromDatabase(albumId, trackId, lang);
+  if (storedText !== null && storedText.trim() !== '') {
+    return 'text-only';
   }
 
   return 'empty';

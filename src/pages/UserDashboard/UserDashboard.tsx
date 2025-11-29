@@ -283,6 +283,17 @@ export function UserDashboard() {
             <div className="user-dashboard__header-actions">
               <button
                 type="button"
+                className="user-dashboard__switch-button"
+                onClick={() => {
+                  localStorage.setItem('useNewDashboard', 'true');
+                  window.location.reload();
+                }}
+                title={lang === 'en' ? 'Try new design' : 'Попробовать новый дизайн'}
+              >
+                {lang === 'en' ? '✨ New Design' : '✨ Новый дизайн'}
+              </button>
+              <button
+                type="button"
                 className="user-dashboard__logout-button"
                 onClick={() => {
                   logout();

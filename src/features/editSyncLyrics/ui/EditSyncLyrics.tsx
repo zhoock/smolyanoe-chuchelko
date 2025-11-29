@@ -20,7 +20,7 @@ import {
   loadSyncedLyricsFromStorage,
   loadAuthorshipFromStorage,
 } from '@features/syncedLyrics/lib';
-import { loadTrackTextFromStorage } from '@entities/track/lib';
+import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import './EditSyncLyrics.style.scss';
 
 interface EditSyncLyricsProps {
@@ -150,13 +150,15 @@ export default function EditSyncLyrics({
       isChecking = true;
 
       try {
-        const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
         // Делаем запрос только если данные уже инициализированы
         if (initializedRef.current === null) {
           isChecking = false;
           return;
         }
-        const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
+        const [storedText, storedAuthorship] = await Promise.all([
+          loadTrackTextFromDatabase(albumId, trackId, lang),
+          loadAuthorshipFromStorage(albumId, trackId, lang),
+        ]);
         const textToUse = storedText || '';
         const newHash = `${textToUse}-${storedAuthorship || ''}`;
 
@@ -341,8 +343,8 @@ export default function EditSyncLyrics({
 
       const trackAuthorship = currentTrack.authorship || storedAuthorship || '';
 
-      // Проверяем сохранённый текст из админки текста
-      const storedText = loadTrackTextFromStorage(albumId, currentTrack.id, lang);
+      // Загружаем сохранённый текст из БД
+      const storedText = await loadTrackTextFromDatabase(albumId, currentTrack.id, lang);
       const textToUse = storedText || currentTrack.content || '';
 
       // Вычисляем хэш текста
@@ -364,6 +366,7 @@ export default function EditSyncLyrics({
       const textChanged =
         storedText !== null &&
         storedText !== undefined &&
+        storedText !== '' &&
         storedText.trim() !== (currentTrack.content || '').trim();
 
       // Вычисляем хэш текущего текста для сравнения
@@ -622,8 +625,10 @@ export default function EditSyncLyrics({
       }
 
       // Обновляем хэш текста, чтобы предотвратить повторную инициализацию
-      const storedText = loadTrackTextFromStorage(albumId, trackId, lang);
-      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
+      const [storedText, storedAuthorship] = await Promise.all([
+        loadTrackTextFromDatabase(albumId, trackId, lang),
+        loadAuthorshipFromStorage(albumId, trackId, lang),
+      ]);
       const textToUse = storedText || '';
       const newHash = `${textToUse}-${storedAuthorship || ''}`;
       setLastTextHash(newHash);

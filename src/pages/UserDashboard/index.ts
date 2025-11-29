@@ -1,2 +1,3 @@
 export { UserDashboard } from './UserDashboard';
-export { default } from './UserDashboard';
+export { UserDashboardV2 } from './UserDashboardV2';
+export { default } from './UserDashboardWrapper';

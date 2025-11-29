@@ -12,7 +12,6 @@ import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import {
   saveTrackText,
-  loadTrackTextFromStorage,
   loadTrackTextFromDatabase,
   formatTrackText,
   splitTextIntoLines,
@@ -64,19 +63,17 @@ export default function EditTrackText({
     if (currentTrackId !== String(track.id)) {
       setCurrentTrackId(String(track.id));
 
-      // Загружаем сохранённый текст из localStorage (dev mode) или из БД (production)
-      const storedText = loadTrackTextFromStorage(albumId, track.id, lang);
-
       // Загружаем текст из БД и авторство асинхронно
       (async () => {
-        const [storedTextFromDb, storedAuthorship] = await Promise.all([
+        const [storedTextFromDb, storedAuthorshipFromDb] = await Promise.all([
           loadTrackTextFromDatabase(albumId, track.id, lang),
           loadAuthorshipFromStorage(albumId, track.id, lang),
         ]);
 
-        // Используем сохранённый текст из localStorage (dev), БД (production) или текст из JSON
-        const initialText = storedText || storedTextFromDb || track.content || '';
-        const initialAuthorship = storedAuthorship || track.authorship || '';
+        // Используем текст из БД или текст из JSON (fallback)
+        const initialText = storedTextFromDb || track.content || '';
+        // Используем авторство из БД или из трека (fallback)
+        const initialAuthorship = storedAuthorshipFromDb || track.authorship || '';
 
         setText(initialText);
         setAuthorship(initialAuthorship);
@@ -111,16 +108,19 @@ export default function EditTrackText({
       return;
     }
 
+    const trimmedAuthorship = authorship.trim();
     const result = await saveTrackText({
       albumId,
       trackId,
       lang,
       content: formattedText,
-      authorship: authorship.trim() || undefined,
+      authorship: trimmedAuthorship || undefined,
     });
 
     if (result.success) {
       setIsDirty(false);
+      // Обновляем локальное состояние авторства, чтобы оно соответствовало сохранённому значению
+      setAuthorship(trimmedAuthorship);
       alert('Текст успешно сохранён!');
     } else {
       alert(`Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);

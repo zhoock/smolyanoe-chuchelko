@@ -36,6 +36,7 @@ const Home = lazy(() => import('@pages/Home'));
 const ArticlePage = lazy(() => import('@pages/Article'));
 const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
 const UserDashboard = lazy(() => import('@pages/UserDashboard'));
+const UserDashboardV2Simple = lazy(() => import('@pages/UserDashboard/UserDashboardV2Simple'));
 const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
 
 // Компонент для отображения загрузки
@@ -183,6 +184,7 @@ function Layout() {
     '/stems',
     '/dashboard',
     '/dashboard/:tab',
+    '/dashboard-new',
     '/auth',
   ];
 
@@ -239,6 +241,14 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <HelpArticlePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard-new"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <UserDashboardV2Simple />
             </Suspense>
           }
         />
