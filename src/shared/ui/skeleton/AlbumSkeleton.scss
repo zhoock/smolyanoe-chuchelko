@@ -8,11 +8,13 @@
 .skeleton {
   &--album-cover {
     aspect-ratio: 1 / 1;
+    margin-block-end: var(--ms-1);
   }
 
   &--album-title {
     inline-size: 70%;
     block-size: 47.117px;
+    border-radius: var(--ms-01);
   }
 
   &--play-button-horizontal {
@@ -131,6 +133,9 @@
   }
 
   .tracks {
+    display: grid;
+    margin-block-end: var(--ms-1);
+
     .tracks__btn {
       display: flex;
       align-items: center;
@@ -151,6 +156,7 @@
     .tracks__symbol {
       inline-size: var(--ms-0);
       block-size: var(--ms-0);
+      border-radius: var(--ms-02);
     }
 
     .tracks__title {

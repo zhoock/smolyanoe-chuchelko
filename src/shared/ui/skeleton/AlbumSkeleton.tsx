@@ -11,7 +11,7 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
             <li>
-              <div className="skeleton skeleton--text skeleton--breadcrumb skeleton--breadcrumb-top" />
+              <div className="skeleton skeleton--breadcrumb skeleton--breadcrumb-top" />
             </li>
           </ul>
         </nav>
@@ -20,14 +20,14 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
           <div className="skeleton skeleton--album-cover" />
           <ul className="share-list" role="list" aria-label="Скелетон кнопок поделиться">
             <li className="share-list__item">
-              <div className="share-list__link skeleton skeleton--share-button" />
+              <div className="share-list__link skeleton" />
             </li>
           </ul>
         </div>
 
         <div className="item">
           <h2 className="album-title">
-            <div className="skeleton skeleton--text skeleton--album-title" />
+            <div className="skeleton skeleton--album-title" />
           </h2>
 
           <div className="wrapper-album-play">
