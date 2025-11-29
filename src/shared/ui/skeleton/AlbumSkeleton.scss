@@ -12,9 +12,7 @@
   }
 
   &--album-title {
-    inline-size: 70%;
     block-size: 47.117px;
-    border-radius: var(--ms-01);
   }
 
   &--play-button-horizontal {
@@ -73,7 +71,7 @@
 
   &--breadcrumb {
     block-size: 29.125px;
-    border-radius: var(--ms-01);
+    border-radius: var(--ms-0);
   }
 
   &--breadcrumb-top {

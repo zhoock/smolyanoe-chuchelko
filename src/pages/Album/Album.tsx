@@ -29,12 +29,6 @@ export default function Album() {
 
   // Данные загружаются через loader
 
-  // TODO: ВРЕМЕННО для отладки - всегда показывать скелетон
-  // Удалить этот блок после отладки
-  return <AlbumSkeleton />;
-
-  // Закомментировано для отладки скелетона
-  /*
   if (albumsStatus === 'loading' || albumsStatus === 'idle') {
     return <AlbumSkeleton />;
   }
@@ -108,5 +102,4 @@ export default function Album() {
       <AlbumDetails album={album} />
     </section>
   );
-  */
 }
