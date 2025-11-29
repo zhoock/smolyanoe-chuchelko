@@ -56,10 +56,10 @@
   }
 
   &--play-progress {
-    background: rgb(var(--white-rgb, 255 255 255) / 30%);
-    border-radius: var(--ms-01);
     flex: 1;
     block-size: 1em;
+    background: rgb(var(--white-rgb, 255 255 255) / 30%);
+    border-radius: var(--ms-01);
   }
 
   &--play-spacer {
@@ -120,11 +120,11 @@
 
     .tracks__btn {
       display: flex;
+      align-items: center;
+      gap: var(--ms-01);
       block-size: 52.38px;
       background: var(--main-background-color, #20201d);
-      gap: var(--ms-01);
       border-block-start: 1px solid var(--hr-color, #3d3c3a);
-      align-items: center;
 
       &:last-child {
         border-block-end: 1px solid var(--hr-color, #3d3c3a);
@@ -135,44 +135,20 @@
       }
     }
 
-    .tracks__symbol {
-      position: relative;
-      display: grid;
-      place-items: center;
+    .tracks__symbol.skeleton {
       inline-size: var(--ms-0);
-      min-inline-size: var(--ms-0);
+      block-size: var(--ms-0);
       flex-shrink: 0;
-
-      &.skeleton {
-        block-size: var(--ms-0);
-        border-radius: 50%;
-      }
     }
 
-    .tracks__title {
+    .tracks__title.skeleton {
       flex: 1 1 auto;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      min-inline-size: 0;
-
-      &.skeleton {
-        inline-size: 100%;
-        block-size: 1em;
-        border-radius: var(--ms-01);
-      }
+      block-size: 1em;
     }
 
-    .tracks__duration {
-      flex: 0 0 auto;
-      color: var(--time-color, #9b9b9a);
-      font-variant-numeric: tabular-nums;
-
-      &.skeleton {
-        inline-size: 60px;
-        block-size: 1em;
-        border-radius: var(--ms-01);
-        flex-shrink: 0;
-      }
+    .tracks__duration.skeleton {
+      inline-size: 60px;
+      block-size: 1em;
     }
   }
 }
