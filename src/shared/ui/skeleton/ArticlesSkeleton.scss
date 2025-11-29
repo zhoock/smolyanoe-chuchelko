@@ -1,0 +1,18 @@
+@use '../../../scss/abstracts/mixins' as *;
+@use './skeleton' as *;
+
+// ============================================================================
+// ArticlesSkeleton - стили
+// ============================================================================
+
+.skeleton {
+  &--article-image {
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: var(--ms-01);
+  }
+
+  &--date {
+    inline-size: 40%;
+  }
+}

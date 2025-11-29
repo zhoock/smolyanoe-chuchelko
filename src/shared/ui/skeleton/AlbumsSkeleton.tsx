@@ -1,4 +1,4 @@
-import './skeleton.scss';
+import './AlbumsSkeleton.scss';
 
 interface AlbumsSkeletonProps {
   count?: number;

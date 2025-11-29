@@ -1,4 +1,4 @@
-import './skeleton.scss';
+import './ArticlesSkeleton.scss';
 
 interface ArticlesSkeletonProps {
   count?: number;
