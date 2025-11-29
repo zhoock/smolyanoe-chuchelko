@@ -33,7 +33,11 @@
       "support": "support",
       "articles": "articles",
       "tracks": "tracks",
-      "stems": "mixer"
+      "stems": "mixer",
+      "allAlbumsPageTitle": "All Albums",
+      "allAlbumsPageDesc": "Browse all albums and releases",
+      "allArticlesPageTitle": "All Articles",
+      "allArticlesPageDesc": "Browse all articles and posts"
     },
     "links": {
       "home": "home"

@@ -33,7 +33,11 @@
       "support": "поддержка",
       "articles": "статьи",
       "tracks": "треки",
-      "stems": "миксер"
+      "stems": "миксер",
+      "allAlbumsPageTitle": "Все альбомы",
+      "allAlbumsPageDesc": "Просмотр всех альбомов и релизов",
+      "allArticlesPageTitle": "Все статьи",
+      "allArticlesPageDesc": "Просмотр всех статей и публикаций"
     },
     "links": {
       "home": "главная"

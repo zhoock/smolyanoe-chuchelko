@@ -66,9 +66,8 @@ export function AllArticlesPage() {
   const hasMore = displayedCount < allArticles.length;
 
   // SEO
-  const seoTitle = lang === 'en' ? 'All Articles' : 'Все статьи';
-  const seoDesc =
-    lang === 'en' ? 'Browse all articles and posts' : 'Просмотр всех статей и публикаций';
+  const seoTitle = ui?.titles?.allArticlesPageTitle ?? 'Все статьи';
+  const seoDesc = ui?.titles?.allArticlesPageDesc ?? 'Просмотр всех статей и публикаций';
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
