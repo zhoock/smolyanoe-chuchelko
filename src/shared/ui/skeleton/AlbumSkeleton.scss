@@ -87,6 +87,26 @@
     position: relative;
   }
 
+  .share-list {
+    display: grid;
+    grid-template-columns: repeat(3, min-content);
+    gap: var(--ms-01);
+
+    &__item {
+      display: block;
+
+      &:not(:first-child) {
+        display: none;
+      }
+    }
+
+    &__link.skeleton {
+      inline-size: var(--ms-2);
+      block-size: var(--ms-2);
+      border-radius: 50%;
+    }
+  }
+
   .album-title {
     margin-block: 0;
     text-align: center;
@@ -94,10 +114,6 @@
     @include breakpoint(tablet) {
       text-align: left;
       margin-block-end: var(--ms-1);
-    }
-
-    .skeleton {
-      margin-block: 0;
     }
   }
 
@@ -115,9 +131,6 @@
   }
 
   .tracks {
-    display: grid;
-    margin-block-end: var(--ms-1);
-
     .tracks__btn {
       display: flex;
       align-items: center;
