@@ -8,7 +8,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectArticlesStatus, selectArticlesError, selectArticlesData } from '@entities/article';
+import { selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/article/ui/style.scss';
 import './style.scss';
@@ -19,7 +19,6 @@ const BATCH_SIZE = 16;
 export function AllArticlesPage() {
   const { lang } = useLang();
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
-  const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 

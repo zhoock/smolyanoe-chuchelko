@@ -7,7 +7,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumsData } from '@entities/album';
+import { selectAlbumsStatus, selectAlbumsData } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/album/ui/style.scss';
 import './style.scss';
@@ -18,7 +18,6 @@ const BATCH_SIZE = 16;
 export function AllAlbumsPage() {
   const { lang } = useLang();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const allAlbums = useAppSelector((state) => selectAlbumsData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
