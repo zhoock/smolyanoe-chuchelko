@@ -98,6 +98,8 @@
   &--play-icon {
     position: relative;
     inline-size: 48px;
+    block-size: 48px;
+    flex-shrink: 0;
     animation: none;
 
     &::after {
@@ -120,11 +122,19 @@
     block-size: 8px;
   }
 
+  &--play-spacer {
+    inline-size: 48px;
+    flex-shrink: 0;
+    background: transparent;
+    animation: none;
+  }
+
   &--track-number {
     inline-size: var(--ms-0);
     block-size: var(--ms-0);
     min-inline-size: var(--ms-0);
-    border-radius: 50%;
+
+    // border-radius: 50%;
   }
 
   &--breadcrumb {
