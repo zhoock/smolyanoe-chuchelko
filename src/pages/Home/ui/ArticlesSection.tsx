@@ -5,7 +5,7 @@ import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
 import { ArticlePreview } from '@entities/article';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectArticlesStatus, selectArticlesError, selectArticlesData } from '@entities/article';
+import { selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './ArticlesSection.scss';
 
@@ -20,7 +20,6 @@ const getInitialCount = () => {
 export function ArticlesSection() {
   const { lang } = useLang();
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
-  const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
