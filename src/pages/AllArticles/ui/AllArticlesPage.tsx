@@ -1,6 +1,7 @@
 // src/pages/AllArticles/ui/AllArticlesPage.tsx
 
 import { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArticlePreview } from '@entities/article';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -80,7 +81,13 @@ export function AllArticlesPage() {
         <meta name="description" content={seoDesc} />
       </Helmet>
 
-      <div className="wrapper">
+      <div className="wrapper articles__wrapper">
+        <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
+          <ul>
+            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
+          </ul>
+        </nav>
+
         <h1>{ui?.titles?.articles ?? seoTitle}</h1>
 
         {articlesStatus === 'loading' || articlesStatus === 'idle' ? (
