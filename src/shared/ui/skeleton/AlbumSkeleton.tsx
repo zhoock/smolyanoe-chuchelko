@@ -31,6 +31,7 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
             <div className="skeleton skeleton--play-button-horizontal">
               <div className="skeleton skeleton--play-icon" />
               <div className="skeleton skeleton--play-progress" />
+              <div className="skeleton skeleton--play-spacer" />
             </div>
           </div>
 

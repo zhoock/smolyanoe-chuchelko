@@ -85,7 +85,7 @@
       rgb(153 130 56 / 80%) 100%
     );
     background-size: 200% 100%;
-    border-radius: var(--ms-01);
+    border-radius: var(--ms-1);
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
     padding-inline: var(--ms-01);
     margin-block: var(--ms-1);
@@ -97,11 +97,7 @@
 
   &--play-icon {
     position: relative;
-    background: var(--accent-color, #998238);
-    border-radius: 50%;
     inline-size: 48px;
-    block-size: 48px;
-    flex-shrink: 0;
     animation: none;
 
     &::after {
@@ -119,7 +115,7 @@
 
   &--play-progress {
     background: rgb(255 255 255 / 30%);
-    border-radius: 4px;
+    border-radius: var(--ms-01);
     flex: 1;
     block-size: 8px;
   }
