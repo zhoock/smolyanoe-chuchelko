@@ -30,6 +30,7 @@ import { ErrorBoundary } from '@shared/ui/error-boundary';
 // Lazy loading для страниц - загружаются только при необходимости
 const Album = lazy(() => import('@pages/Album/Album'));
 const AllAlbums = lazy(() => import('@pages/AllAlbums'));
+const AllArticles = lazy(() => import('@pages/AllArticles'));
 const StemsPlayground = lazy(() => import('@pages/StemsPlayground/StemsPlayground'));
 const Home = lazy(() => import('@pages/Home'));
 const ArticlePage = lazy(() => import('@pages/Article'));
@@ -145,6 +146,7 @@ function Layout() {
     '/',
     '/albums',
     '/albums/:albumId',
+    '/articles',
     '/articles/:articleId',
     '/help/articles/:articleId',
     '/forms',
@@ -183,6 +185,14 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <Album />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/articles"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AllArticles />
             </Suspense>
           }
         />
