@@ -114,11 +114,6 @@ export function ArticlePage() {
                 <Link to="/articles">{ui.titles.articles}</Link>
               </li>
             )}
-            {article && (
-              <li className="breadcrumb__item--no-arrow">
-                <span>{article.nameArticle}</span>
-              </li>
-            )}
           </ul>
         </nav>
 

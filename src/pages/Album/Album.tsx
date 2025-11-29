@@ -116,9 +116,6 @@ export default function Album() {
                 <Link to="/albums">{ui.titles.albums}</Link>
               </li>
             )}
-            <li className="breadcrumb__item--no-arrow">
-              <span>{album.fullName}</span>
-            </li>
           </ul>
         </nav>
 
