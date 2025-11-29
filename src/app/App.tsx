@@ -1,5 +1,5 @@
 // src/app/App.tsx
-import { useEffect, useRef, useState, Suspense, lazy } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, Suspense, lazy } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -73,22 +73,33 @@ function Layout() {
   const { revalidate } = useRevalidator();
 
   // Отслеживаем предыдущий путь для умных breadcrumbs
-  const previousPathRef = useRef<string | null>(null);
-  const isFirstRenderRef = useRef(true);
-
+  // Сохраняем текущий путь в sessionStorage при клике на ссылку (до навигации)
   useEffect(() => {
-    // При первой загрузке просто инициализируем ref, не сохраняем в sessionStorage
-    if (isFirstRenderRef.current) {
-      previousPathRef.current = location.pathname;
-      isFirstRenderRef.current = false;
-      return;
-    }
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Ищем ближайший элемент <a> или родителя, который является ссылкой
+      const link = target.closest('a[href]');
+      if (link && link.getAttribute('href')?.startsWith('/')) {
+        // Сохраняем текущий путь перед навигацией
+        sessionStorage.setItem('previousPath', location.pathname);
+      }
+    };
 
-    // При последующих изменениях сохраняем предыдущий путь в sessionStorage
-    if (previousPathRef.current !== null && previousPathRef.current !== location.pathname) {
-      sessionStorage.setItem('previousPath', previousPathRef.current);
+    document.addEventListener('click', handleClick, true); // Используем capture phase для раннего перехвата
+
+    return () => {
+      document.removeEventListener('click', handleClick, true);
+    };
+  }, [location.pathname]);
+
+  // Также сохраняем путь при изменении location (fallback для программной навигации)
+  useLayoutEffect(() => {
+    const previousPath = sessionStorage.getItem('previousPath');
+    // Если previousPath не установлен, сохраняем текущий путь
+    // Это нужно для случаев, когда навигация происходит программно (не через клик)
+    if (!previousPath && location.pathname !== '/') {
+      sessionStorage.setItem('previousPath', location.pathname);
     }
-    previousPathRef.current = location.pathname;
   }, [location.pathname]);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') {
