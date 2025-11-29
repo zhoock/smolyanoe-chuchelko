@@ -111,9 +111,7 @@ export function AllArticlesPage() {
 
               {/* Индикатор конца списка */}
               {!hasMore && allArticles.length > 0 && (
-                <p className="all-articles__end">
-                  {ui?.buttons?.allArticlesLoaded ?? 'Все статьи загружены'}
-                </p>
+                <p className="all-articles__end">{ui?.buttons?.allArticlesLoaded ?? ''}</p>
               )}
             </>
           )}
