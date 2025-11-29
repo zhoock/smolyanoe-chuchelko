@@ -15,6 +15,22 @@ export function ArticlesSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
+  // TODO: ВРЕМЕННО для отладки - всегда показывать скелетон
+  // Удалить этот блок после отладки
+  return (
+    <section
+      id="articles"
+      className="articles main-background"
+      aria-labelledby="home-articles-heading"
+    >
+      <div className="wrapper articles__wrapper">
+        <h2 id="home-articles-heading">{ui?.titles?.articles ?? '…'}</h2>
+        <ArticlesSkeleton />
+      </div>
+    </section>
+  );
+
+  /*
   return (
     <section
       id="articles"
@@ -38,4 +54,5 @@ export function ArticlesSection() {
       </div>
     </section>
   );
+  */
 }

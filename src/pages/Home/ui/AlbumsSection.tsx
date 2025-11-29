@@ -15,6 +15,18 @@ export function AlbumsSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
+  // TODO: ВРЕМЕННО для отладки - всегда показывать скелетон
+  // Удалить этот блок после отладки
+  return (
+    <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">
+      <div className="wrapper">
+        <h2 id="home-albums-heading">{ui?.titles?.albums ?? '…'}</h2>
+        <AlbumsSkeleton />
+      </div>
+    </section>
+  );
+
+  /*
   return (
     <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">
       <div className="wrapper">
@@ -36,4 +48,5 @@ export function AlbumsSection() {
       </div>
     </section>
   );
+  */
 }
