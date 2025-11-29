@@ -12,7 +12,7 @@ import './ArticlesSection.scss';
 // Адаптивное количество статей для отображения на главной
 const getInitialCount = () => {
   if (typeof window === 'undefined') return 12;
-  if (window.innerWidth >= 1024) return 16; // десктоп
+  if (window.innerWidth >= 1024) return 13; // десктоп (уменьшено для тестирования)
   if (window.innerWidth >= 768) return 12; // планшет
   return 6; // мобильный
 };
