@@ -107,7 +107,7 @@ export function AllAlbumsPage() {
             {/* Индикатор конца списка */}
             {!hasMore && allAlbums.length > 0 && (
               <p className="all-albums__end">
-                {lang === 'en' ? 'All albums loaded' : 'Все альбомы загружены'}
+                {ui?.buttons?.allAlbumsLoaded ?? 'Все альбомы загружены'}
               </p>
             )}
           </>

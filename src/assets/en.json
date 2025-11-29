@@ -18,7 +18,9 @@
       "guitar": "guitar",
       "vocals": "vocals",
       "viewAllAlbums": "View all albums ({count})",
-      "viewAllArticles": "View all articles ({count})"
+      "viewAllArticles": "View all articles ({count})",
+      "allAlbumsLoaded": "All albums loaded",
+      "allArticlesLoaded": "All articles loaded"
     },
     "titles": {
       "albums": "albums",

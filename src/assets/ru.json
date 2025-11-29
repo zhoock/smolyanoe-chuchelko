@@ -18,7 +18,9 @@
       "guitar": "гитара",
       "vocals": "вокал",
       "viewAllAlbums": "Все альбомы ({count})",
-      "viewAllArticles": "Все статьи ({count})"
+      "viewAllArticles": "Все статьи ({count})",
+      "allAlbumsLoaded": "Все альбомы загружены",
+      "allArticlesLoaded": "Все статьи загружены"
     },
     "titles": {
       "albums": "альбомы",
