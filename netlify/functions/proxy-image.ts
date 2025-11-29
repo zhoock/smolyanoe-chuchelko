@@ -17,7 +17,6 @@ export const handler: Handler = async (
     'Access-Control-Expose-Headers': '*',
   };
 
-
   // Обработка preflight запроса
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -68,7 +67,6 @@ export const handler: Handler = async (
 
     // Формируем полный URL к изображению в Supabase Storage
     const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${decodedPath}`;
-
 
     // Загружаем изображение из Supabase
     const response = await fetch(imageUrl);

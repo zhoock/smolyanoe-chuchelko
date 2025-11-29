@@ -161,7 +161,6 @@ export function useImageColor(
                 ? `https://${window.location.hostname}/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`
                 : `/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`;
 
-
               // Создаем новый Image элемент для загрузки через прокси
               const proxyImg = new Image();
               proxyImg.crossOrigin = 'anonymous';
@@ -198,14 +197,14 @@ export function useImageColor(
                 try {
                   const fetchResponse = await fetch(proxyUrl);
                   const contentType = fetchResponse.headers.get('content-type') || '';
-                  
+
                   if (!fetchResponse.ok) {
                     const errorResponse = fetchResponse.clone();
                     const errorText = await errorResponse.text();
                     console.error('[useImageColor] Fetch error response:', errorText);
                     throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
                   }
-                  
+
                   // Проверяем, что получили изображение, а не HTML
                   if (!contentType.startsWith('image/')) {
                     const textResponse = fetchResponse.clone();
@@ -218,11 +217,11 @@ export function useImageColor(
                   }
 
                   const blob = await fetchResponse.blob();
-                  
+
                   if (blob.size === 0) {
                     throw new Error('Blob is empty');
                   }
-                  
+
                   const dataUrl = URL.createObjectURL(blob);
 
                   const dataUrlImg = new Image();

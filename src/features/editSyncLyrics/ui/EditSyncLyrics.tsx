@@ -488,12 +488,13 @@ export default function EditSyncLyrics({
       cancelled = true;
       loadingRef.current = false; // Сбрасываем флаг загрузки при cleanup
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     albumsStatus,
     albumId,
     trackId,
     lang,
-    // Убрали currentTrackId и lastTextHash из зависимостей, чтобы избежать бесконечного цикла
+    // currentTrackId и lastTextHash убраны из зависимостей, чтобы избежать бесконечного цикла
     // album используется из замыкания, но не в зависимостях
   ]);
 
@@ -641,7 +642,8 @@ export default function EditSyncLyrics({
       setIsSaved(false);
       alert(`❌ Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
     }
-  }, [albumId, trackId, lang, syncedLines, dispatch]); // Убрали album и currentTime.duration, чтобы избежать бесконечного цикла
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albumId, trackId, lang, syncedLines, dispatch]); // album убран из зависимостей, чтобы избежать бесконечного цикла
 
   // Ref для контейнера audio элемента
   const audioContainerRef = useRef<HTMLDivElement | null>(null);

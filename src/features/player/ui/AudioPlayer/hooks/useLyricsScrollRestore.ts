@@ -37,7 +37,8 @@ export function useLyricsScrollRestore({
         (container as any).__isRestoringScroll = false;
       }
     }
-  }, [showLyrics, time.current, lyricsContainerRef, savedScrollTopRef, justRestoredScrollRef]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLyrics]); // time.current - это ref, не должен быть в зависимостях
 
   // Восстановление позиции прокрутки при показе текста
   useEffect(() => {

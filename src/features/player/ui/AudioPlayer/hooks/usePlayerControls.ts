@@ -100,13 +100,12 @@ export function usePlayerControls({
     controlsVisibilityCooldownUntilRef.current = now + (isCoarsePointerDevice ? 900 : 400);
     trackDebug('showControls', { now, cooldown: controlsVisibilityCooldownUntilRef.current });
     scheduleControlsHide();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     scheduleControlsHide,
     isCoarsePointerDevice,
     setControlsVisible,
-    controlsVisibleRef,
-    suppressScrollHandlingUntilRef,
-    controlsVisibilityCooldownUntilRef,
+    // inactivityTimerRef - это ref, не должен быть в зависимостях
   ]);
 
   useEffect(() => {

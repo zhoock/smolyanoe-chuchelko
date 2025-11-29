@@ -354,6 +354,9 @@ export function useLyricsManualScroll({
       }, 300);
     };
 
+    // Сохраняем ссылку на контейнер в переменную в начале эффекта для cleanup функции
+    const currentContainer = lyricsContainerRef.current;
+
     // Устанавливаем флаг ДО добавления обработчика, чтобы заблокировать события scroll
     scrollListenerJustAddedRef.current = true;
 
@@ -370,7 +373,6 @@ export function useLyricsManualScroll({
     return () => {
       debugLog('🧹 Cleaning up scroll listener');
       // Очищаем timeout при размонтировании
-      const currentContainer = lyricsContainerRef.current;
       if (currentContainer && (currentContainer as any).__restoreTimeoutId) {
         clearTimeout((currentContainer as any).__restoreTimeoutId);
         delete (currentContainer as any).__restoreTimeoutId;

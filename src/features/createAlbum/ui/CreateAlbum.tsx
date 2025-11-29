@@ -393,7 +393,7 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
     }, 500); // Ждем 500мс после последнего изменения
 
     return () => clearTimeout(timeoutId);
-  }, [draft.tracks.map((t, i) => `${i}:${t.src}`).join('|')]); // Зависимость от src каждого трека с индексом
+  }, [draft.tracks]); // Зависимость от tracks массива
 
   const addTrack = useCallback(() => {
     setDraft((prev) => ({
