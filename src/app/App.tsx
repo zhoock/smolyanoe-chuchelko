@@ -71,6 +71,25 @@ function Layout() {
 
   const { lang } = useLang() as { lang: 'ru' | 'en' };
   const { revalidate } = useRevalidator();
+
+  // Отслеживаем предыдущий путь для умных breadcrumbs
+  const previousPathRef = useRef<string | null>(null);
+  const isFirstRenderRef = useRef(true);
+
+  useEffect(() => {
+    // При первой загрузке просто инициализируем ref, не сохраняем в sessionStorage
+    if (isFirstRenderRef.current) {
+      previousPathRef.current = location.pathname;
+      isFirstRenderRef.current = false;
+      return;
+    }
+
+    // При последующих изменениях сохраняем предыдущий путь в sessionStorage
+    if (previousPathRef.current !== null && previousPathRef.current !== location.pathname) {
+      sessionStorage.setItem('previousPath', previousPathRef.current);
+    }
+    previousPathRef.current = location.pathname;
+  }, [location.pathname]);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') {
       return 'dark';

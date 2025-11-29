@@ -36,22 +36,27 @@ export function ArticlePage() {
   // Определяем, пришли ли мы со страницы списка статей
   const cameFromArticlesPage = useMemo(() => {
     if (typeof window === 'undefined') return false;
+
+    // Проверяем sessionStorage для предыдущего пути (работает при клиентской навигации)
+    const previousPath = sessionStorage.getItem('previousPath');
+    if (previousPath) {
+      // Проверяем, что предыдущий путь - это страница списка статей
+      return previousPath === '/articles' || previousPath === '/en/articles';
+    }
+
+    // Fallback: проверяем document.referrer (работает при полной перезагрузке страницы)
     const referrer = document.referrer;
     if (!referrer) return false;
 
     try {
-      // Проверяем, что referrer содержит наш домен и путь /articles (но не /articles/articleId)
       const origin = window.location.origin;
       const referrerUrl = new URL(referrer);
 
-      // Если referrer с другого домена, не показываем промежуточный breadcrumb
       if (referrerUrl.origin !== origin) return false;
 
-      // Проверяем, что путь точно /articles или /en/articles (страница списка, не конкретная статья)
       const pathname = referrerUrl.pathname;
       return pathname === '/articles' || pathname === '/en/articles';
     } catch {
-      // Если не удалось распарсить URL, считаем что не пришли со страницы списка
       return false;
     }
   }, []);

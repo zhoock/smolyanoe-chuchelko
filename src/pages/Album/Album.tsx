@@ -26,22 +26,27 @@ export default function Album() {
   // Определяем, пришли ли мы со страницы списка альбомов
   const cameFromAlbumsPage = useMemo(() => {
     if (typeof window === 'undefined') return false;
+
+    // Проверяем sessionStorage для предыдущего пути (работает при клиентской навигации)
+    const previousPath = sessionStorage.getItem('previousPath');
+    if (previousPath) {
+      // Проверяем, что предыдущий путь - это страница списка альбомов
+      return previousPath === '/albums' || previousPath === '/en/albums';
+    }
+
+    // Fallback: проверяем document.referrer (работает при полной перезагрузке страницы)
     const referrer = document.referrer;
     if (!referrer) return false;
 
     try {
-      // Проверяем, что referrer содержит наш домен и путь /albums (но не /albums/albumId)
       const origin = window.location.origin;
       const referrerUrl = new URL(referrer);
 
-      // Если referrer с другого домена, не показываем промежуточный breadcrumb
       if (referrerUrl.origin !== origin) return false;
 
-      // Проверяем, что путь точно /albums или /en/albums (страница списка, не конкретный альбом)
       const pathname = referrerUrl.pathname;
       return pathname === '/albums' || pathname === '/en/albums';
     } catch {
-      // Если не удалось распарсить URL, считаем что не пришли со страницы списка
       return false;
     }
   }, []);
