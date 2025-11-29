@@ -15,9 +15,9 @@
       align-items: center;
 
       &::after {
-        display: inline-flex;
-        align-items: center;
-        margin-inline-start: 0.25em;
+        // display: inline-flex;
+        // align-items: center;
+        margin-inline: var(--ms-02);
         font-family: 'icomoon', sans-serif !important;
         content: '\ea50';
         rotate: 0.25turn;
