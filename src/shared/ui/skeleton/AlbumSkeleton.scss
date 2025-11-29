@@ -13,14 +13,6 @@
   &--album-title {
     inline-size: 70%;
     block-size: 47.117px;
-    margin-block-end: var(--ms-1);
-    border-radius: var(--ms-01);
-  }
-
-  &--section-title {
-    inline-size: 50%;
-    block-size: 1.5em;
-    margin-block-end: var(--ms-01);
   }
 
   &--track-title {
@@ -34,11 +26,6 @@
     block-size: 1em;
     border-radius: var(--ms-01);
     flex-shrink: 0;
-  }
-
-  &--track-extra {
-    inline-size: 15%;
-    block-size: 1em;
   }
 
   &--play-button-horizontal {
