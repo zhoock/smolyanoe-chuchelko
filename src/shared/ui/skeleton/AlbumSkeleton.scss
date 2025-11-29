@@ -135,18 +135,17 @@
       }
     }
 
-    .tracks__symbol.skeleton {
+    .tracks__symbol {
       inline-size: var(--ms-0);
       block-size: var(--ms-0);
-      flex-shrink: 0;
     }
 
-    .tracks__title.skeleton {
+    .tracks__title {
       flex: 1 1 auto;
       block-size: 1em;
     }
 
-    .tracks__duration.skeleton {
+    .tracks__duration {
       inline-size: 60px;
       block-size: 1em;
     }
