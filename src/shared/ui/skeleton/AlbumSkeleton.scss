@@ -98,14 +98,9 @@
   }
 }
 
-// Стили для треков
-.tracks {
-  .skeleton {
-    animation-delay: calc(var(--skeleton-index, 0) * 0.1s);
-  }
-}
-
-// Основные стили AlbumSkeleton
+// ============================================================================
+// AlbumSkeleton - основные стили
+// ============================================================================
 .album-skeleton {
   &__cover-block {
     position: relative;
