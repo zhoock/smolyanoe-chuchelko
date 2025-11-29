@@ -33,6 +33,29 @@ export function ArticlePage() {
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
 
+  // Определяем, пришли ли мы со страницы списка статей
+  const cameFromArticlesPage = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const referrer = document.referrer;
+    if (!referrer) return false;
+
+    try {
+      // Проверяем, что referrer содержит наш домен и путь /articles (но не /articles/articleId)
+      const origin = window.location.origin;
+      const referrerUrl = new URL(referrer);
+
+      // Если referrer с другого домена, не показываем промежуточный breadcrumb
+      if (referrerUrl.origin !== origin) return false;
+
+      // Проверяем, что путь точно /articles или /en/articles (страница списка, не конкретная статья)
+      const pathname = referrerUrl.pathname;
+      return pathname === '/articles' || pathname === '/en/articles';
+    } catch {
+      // Если не удалось распарсить URL, считаем что не пришли со страницы списка
+      return false;
+    }
+  }, []);
+
   function Block({ title, subtitle, strong, content, img, alt }: ArticledetailsProps) {
     return (
       <>
@@ -80,7 +103,8 @@ export function ArticlePage() {
                 <Link to="/">{ui.links.home}</Link>
               </li>
             )}
-            {ui?.titles?.articles && (
+            {/* Показываем "Все статьи" только если пришли со страницы списка */}
+            {cameFromArticlesPage && ui?.titles?.articles && (
               <li>
                 <Link to="/articles">{ui.titles.articles}</Link>
               </li>

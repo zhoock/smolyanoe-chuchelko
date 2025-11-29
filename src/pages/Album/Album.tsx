@@ -1,6 +1,6 @@
 // src/pages/Album/Album.tsx
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
@@ -22,6 +22,29 @@ export default function Album() {
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+
+  // Определяем, пришли ли мы со страницы списка альбомов
+  const cameFromAlbumsPage = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const referrer = document.referrer;
+    if (!referrer) return false;
+
+    try {
+      // Проверяем, что referrer содержит наш домен и путь /albums (но не /albums/albumId)
+      const origin = window.location.origin;
+      const referrerUrl = new URL(referrer);
+
+      // Если referrer с другого домена, не показываем промежуточный breadcrumb
+      if (referrerUrl.origin !== origin) return false;
+
+      // Проверяем, что путь точно /albums или /en/albums (страница списка, не конкретный альбом)
+      const pathname = referrerUrl.pathname;
+      return pathname === '/albums' || pathname === '/en/albums';
+    } catch {
+      // Если не удалось распарсить URL, считаем что не пришли со страницы списка
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -82,7 +105,8 @@ export default function Album() {
                 <Link to="/">{ui.links.home}</Link>
               </li>
             )}
-            {ui?.titles?.albums && (
+            {/* Показываем "Все альбомы" только если пришли со страницы списка */}
+            {cameFromAlbumsPage && ui?.titles?.albums && (
               <li>
                 <Link to="/albums">{ui.titles.albums}</Link>
               </li>
