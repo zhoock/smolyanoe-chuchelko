@@ -10,7 +10,7 @@ export function AlbumsSkeleton({ count = 6 }: AlbumsSkeletonProps) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="albums__card skeleton-card"
+          className="albums__card"
           style={{ '--skeleton-index': index } as React.CSSProperties}
         >
           <div className="skeleton skeleton--album-cover" />

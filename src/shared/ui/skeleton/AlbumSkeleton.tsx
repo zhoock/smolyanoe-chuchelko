@@ -17,9 +17,7 @@ export function AlbumSkeleton({ tracksCount = 3 }: AlbumSkeletonProps) {
         </nav>
 
         <div className="item album-skeleton__cover-block">
-          <div className="album-skeleton__cover">
-            <div className="skeleton skeleton--album-cover" />
-          </div>
+          <div className="skeleton skeleton--album-cover" />
         </div>
 
         <div className="item">
