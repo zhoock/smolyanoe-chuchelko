@@ -65,8 +65,8 @@ export function AllAlbumsPage() {
   const hasMore = displayedCount < allAlbums.length;
 
   // SEO
-  const seoTitle = ui?.titles?.allAlbumsPageTitle ?? 'Все альбомы';
-  const seoDesc = ui?.titles?.allAlbumsPageDesc ?? 'Просмотр всех альбомов и релизов';
+  const seoTitle = ui?.titles?.allAlbumsPageTitle ?? '';
+  const seoDesc = ui?.titles?.allAlbumsPageDesc ?? '';
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
