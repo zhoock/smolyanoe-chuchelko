@@ -159,6 +159,47 @@ export interface IInterface {
   errors?: {
     [key: string]: string;
   };
+  dashboard?: {
+    title: string;
+    tabs: {
+      albums: string;
+      posts: string;
+    };
+    profile: string;
+    logout: string;
+    profileFields: {
+      name: string;
+      username: string;
+      email: string;
+      location: string;
+    };
+    uploadNewAlbum: string;
+    editAlbum: string;
+    writeAndPublishArticles: string;
+    newPost: string;
+    dropTracksHere: string;
+    chooseFiles: string;
+    lyrics: string;
+    track: string;
+    status: string;
+    actions: string;
+    addedSynced: string;
+    addedNoSync: string;
+    noLyrics: string;
+    edit: string;
+    sync: string;
+    add: string;
+    prev: string;
+    addLyrics: string;
+    editLyrics: string;
+    insertLyricsHere: string;
+    cancel: string;
+    save: string;
+    preview: string;
+    previewLyrics: string;
+    close: string;
+    instrumental: string;
+  };
 }
 
 export interface Tracks {

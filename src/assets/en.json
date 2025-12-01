@@ -50,7 +50,48 @@
     "stems": {
       "pageTitle": "Mixer",
       "text": "Mixer: turn on/off parts, rewind and listen to the song in layers.",
-      "notice": "For now, I don’t have access to the original stems, so I’m temporarily using tracks extracted from the master with AI. This is solely for testing and demonstrating the mixer, so the audio quality may differ from the final version. Once the original stems are available, I’ll update the audio."
+      "notice": "For now, I don't have access to the original stems, so I'm temporarily using tracks extracted from the master with AI. This is solely for testing and demonstrating the mixer, so the audio quality may differ from the final version. Once the original stems are available, I'll update the audio."
+    },
+    "dashboard": {
+      "title": "User Dashboard",
+      "tabs": {
+        "albums": "Albums",
+        "posts": "Posts"
+      },
+      "profile": "Profile",
+      "logout": "Logout",
+      "profileFields": {
+        "name": "Name",
+        "username": "Username",
+        "email": "Email",
+        "location": "Location"
+      },
+      "uploadNewAlbum": "Upload New Album",
+      "editAlbum": "Edit Album",
+      "writeAndPublishArticles": "Write and publish articles",
+      "newPost": "New Post",
+      "dropTracksHere": "Drop tracks here or",
+      "chooseFiles": "Choose files",
+      "lyrics": "Lyrics",
+      "track": "Track",
+      "status": "Status",
+      "actions": "Actions",
+      "addedSynced": "Added, synced",
+      "addedNoSync": "Added, no sync",
+      "noLyrics": "No lyrics",
+      "edit": "Edit",
+      "sync": "Sync",
+      "add": "Add",
+      "prev": "Prev",
+      "addLyrics": "Add Lyrics",
+      "editLyrics": "Edit Lyrics",
+      "insertLyricsHere": "Insert lyrics here…",
+      "cancel": "Cancel",
+      "save": "Save",
+      "preview": "Preview",
+      "previewLyrics": "Preview Lyrics",
+      "close": "Close",
+      "instrumental": "Instrumental"
     }
   }
 ]

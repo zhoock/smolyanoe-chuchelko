@@ -18,6 +18,7 @@ dialog {
       width: 100%;
       max-width: 1200px;
       min-height: 600px;
+      max-height: 90vh;
       overflow: hidden;
       background: var(--deep-black);
       border: 1px solid var(--iron-slate);
@@ -136,7 +137,7 @@ dialog {
       gap: var(--ms-01);
 
       label {
-        color: var(--quiet-gray);
+        color: var(--white);
       }
 
       input {
@@ -177,6 +178,7 @@ dialog {
     &__section {
       border: 1px solid var(--iron-slate);
       border-radius: var(--ms-01);
+      overflow: hidden;
     }
 
     &__section-title {
@@ -196,9 +198,14 @@ dialog {
       gap: var(--ms-0);
       padding: var(--ms-0);
       cursor: pointer;
+      transition: background-color 0.2s;
 
       &:hover {
-        opacity: 0.7;
+        background: var(--iron-slate);
+      }
+
+      &:focus {
+        outline: none;
       }
     }
 
@@ -206,7 +213,7 @@ dialog {
       width: calc(var(--ms-1) * 2.7);
       height: calc(var(--ms-1) * 2.7);
       flex-shrink: 0;
-      border-radius: 0;
+      border-radius: var(--ms-02);
       overflow: hidden;
 
       img {
@@ -233,16 +240,201 @@ dialog {
     }
 
     &__album-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--ms-1);
+      height: var(--ms-1);
+      padding: 0;
       color: var(--warm-concrete);
       font-size: var(--ms-1);
       font-weight: 300;
       margin-left: auto;
       flex-shrink: 0;
+      transition: transform 0.2s;
+      pointer-events: none;
+
+      &--expanded {
+        transform: rotate(180deg);
+      }
+    }
+
+    &__album-item--expanded {
+      background: var(--iron-slate);
+    }
+
+    &__album-date {
+      color: var(--warm-concrete);
+    }
+
+    &__album-expanded {
+      padding: var(--ms-0);
+      background: var(--deep-black);
+      border-top: 1px solid var(--iron-slate);
+    }
+
+    &__edit-album-button {
+      margin-bottom: var(--ms-0);
+
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--deep-black),
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0 0 var(--ms-0) 0,
+        $padding: var(--ms-01) var(--ms-0),
+        $border: 1px solid var(--iron-slate),
+        $border-radius: var(--ms-01)
+      );
+    }
+
+    &__track-upload {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--ms-0);
+      padding: var(--ms-1);
+      color: var(--light-grey);
+      font-size: var(--ms-0);
+      background: var(--deep-black);
+      border: 2px dashed var(--iron-slate);
+      border-radius: var(--ms-01);
+      margin-bottom: var(--ms-0);
+    }
+
+    &__track-upload-text {
+      text-align: center;
+    }
+
+    &__choose-files-button {
+      white-space: nowrap;
+
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--iron-slate),
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0,
+        $padding: var(--ms-01) var(--ms-0),
+        $border: 1px solid var(--iron-slate),
+        $border-radius: var(--ms-01)
+      );
+    }
+
+    &__tracks-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+      margin-bottom: var(--ms-0);
+    }
+
+    &__track-item {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-0);
+      padding: var(--ms-01) 0;
+      color: var(--white);
+    }
+
+    &__track-number {
+      color: var(--warm-concrete);
+      min-width: calc(var(--ms-0) * 2);
+    }
+
+    &__track-title {
+      flex: 1;
+      font-size: var(--ms-0);
+    }
+
+    &__track-duration {
+      color: var(--warm-concrete);
+      font-variant-numeric: tabular-nums;
     }
 
     &__album-divider {
       height: 1px;
       background: var(--iron-slate);
+    }
+
+    &__lyrics-section {
+      margin-top: var(--ms-1);
+      padding-top: var(--ms-0);
+      border-top: 1px solid var(--iron-slate);
+    }
+
+    &__lyrics-title {
+      margin: 0 0 var(--ms-0) 0 !important;
+      padding: 0 !important;
+      color: var(--white) !important;
+      font-size: var(--ms-1) !important;
+      font-weight: 700 !important;
+      line-height: 1.2 !important;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+    }
+
+    &__lyrics-table {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    &__lyrics-header {
+      display: grid;
+      grid-template-columns: 2fr 2fr 2fr;
+      gap: var(--ms-0);
+      padding: var(--ms-0);
+      border-bottom: 1px solid var(--iron-slate);
+    }
+
+    &__lyrics-header-cell {
+      color: var(--warm-concrete);
+      font-size: var(--ms-01);
+      font-weight: 500;
+      text-transform: uppercase;
+
+      &:last-child {
+        text-align: right;
+      }
+    }
+
+    &__lyrics-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 2fr;
+      gap: var(--ms-0);
+      padding: var(--ms-0);
+      border-bottom: 1px solid var(--iron-slate);
+    }
+
+    &__lyrics-cell {
+      display: flex;
+      align-items: center;
+      color: var(--white);
+      font-size: var(--ms-0);
+
+      &--actions {
+        display: flex;
+        gap: var(--ms-01);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+    }
+
+    &__lyrics-action-button {
+      font-size: var(--ms-01);
+      white-space: nowrap;
+
+      @include button-variant(
+        $color: var(--white),
+        $background: transparent,
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0,
+        $padding: var(--ms-02) var(--ms-01),
+        $border: 1px solid var(--iron-slate),
+        $border-radius: var(--ms-02)
+      );
     }
 
     &__upload-button {
@@ -265,10 +457,6 @@ dialog {
         $border: 1px solid var(--iron-slate),
         $border-radius: 0 0 var(--ms-01) var(--ms-01)
       );
-
-      &:hover {
-        border-color: var(--dark-greenish-yellow);
-      }
 
       span:first-child {
         color: var(--white);
@@ -301,11 +489,12 @@ dialog {
     &__new-post-button {
       @include button-variant(
         $color: var(--white),
-        $background: var(--dark-greenish-yellow),
+        $background: var(--graphite-green),
         $hover-color: var(--white),
+        $hover-background: var(--iron-slate),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-1),
-        $border: none,
+        $border: 1px solid var(--iron-slate),
         $border-radius: var(--ms-01)
       );
     }
