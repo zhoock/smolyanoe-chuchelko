@@ -158,22 +158,28 @@ export const handler: Handler = async (
       // Загружаем треки для каждого альбома
       const albumsWithTracks = await Promise.all(
         albumsResult.rows.map(async (album) => {
-          const tracksResult = await query<TrackRow>(
-            `SELECT 
-              t.track_id,
-              t.title,
-              t.duration,
-              t.src,
-              t.content,
-              t.authorship,
-              t.synced_lyrics
-            FROM tracks t
-            WHERE t.album_id = $1
-            ORDER BY t.order_index ASC`,
-            [album.id]
-          );
+          try {
+            const tracksResult = await query<TrackRow>(
+              `SELECT 
+                t.track_id,
+                t.title,
+                t.duration,
+                t.src,
+                t.content,
+                t.authorship,
+                t.synced_lyrics
+              FROM tracks t
+              WHERE t.album_id = $1
+              ORDER BY t.order_index ASC`,
+              [album.id]
+            );
 
-          return mapAlbumToApiFormat(album, tracksResult.rows);
+            const mapped = mapAlbumToApiFormat(album, tracksResult.rows);
+
+            return mapped;
+          } catch (trackError) {
+            throw trackError;
+          }
         })
       );
 

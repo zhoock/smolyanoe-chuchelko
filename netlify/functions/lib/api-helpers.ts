@@ -130,5 +130,19 @@ export function handleError(
   const errorMessage = error instanceof Error ? error.message : defaultMessage;
   console.error(`❌ Error in ${context}:`, error);
 
-  return createErrorResponse(500, errorMessage);
+  // Проверяем, является ли ошибка проблемой сетевого подключения
+  const isNetworkError =
+    errorMessage.includes('ETIMEDOUT') ||
+    errorMessage.includes('timeout') ||
+    errorMessage.includes('Connection terminated') ||
+    errorMessage.includes('ECONNREFUSED') ||
+    errorMessage.includes('ENOTFOUND') ||
+    errorMessage.includes('MaxClientsInSessionMode');
+
+  // Если это сетевая ошибка, возвращаем более понятное сообщение
+  const userMessage = isNetworkError
+    ? 'Database connection failed. This may be due to network restrictions. Please try using a VPN or check your network settings.'
+    : errorMessage;
+
+  return createErrorResponse(500, userMessage);
 }

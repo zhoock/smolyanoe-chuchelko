@@ -56,7 +56,9 @@ function getPool(): Pool {
       // Настройки для serverless environments
       max: 1, // Минимум соединений для Netlify Functions
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000, // Увеличено до 10 секунд для прямого соединения
+      connectionTimeoutMillis: 60000, // Увеличено до 60 секунд для обхода блокировок и медленных подключений
+      keepAlive: true, // Поддержание соединения активным
+      keepAliveInitialDelayMillis: 10000, // Начальная задержка перед keepAlive
       ssl: useSSL ? { rejectUnauthorized: false } : false,
     });
 
@@ -82,7 +84,7 @@ function getPool(): Pool {
 export async function query<T = any>(
   text: string,
   params?: any[],
-  retries = 1 // Уменьшено количество retry для скорости
+  retries = 2 // Увеличено количество retry для надежности при блокировках
 ): Promise<QueryResult<T>> {
   try {
     const pool = getPool();
@@ -122,10 +124,38 @@ export async function query<T = any>(
         const isConnectionError =
           error instanceof Error &&
           (error.message.includes('timeout') ||
+            error.message.includes('ETIMEDOUT') ||
             error.message.includes('Connection terminated') ||
             error.message.includes('ECONNREFUSED') ||
             error.message.includes('ENOTFOUND') ||
             error.message.includes('getaddrinfo ENOTFOUND'));
+
+        // Проверяем ошибку MaxClientsInSessionMode - может приходить как Error или как объект с code
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorCode = (error as any)?.code || (error as any)?.name || '';
+        const errorString = String(error);
+        const isMaxClientsError =
+          errorMessage.includes('MaxClientsInSessionMode') ||
+          errorMessage.includes('max clients reached') ||
+          errorCode.includes('MaxClients') ||
+          errorString.includes('MaxClientsInSessionMode') ||
+          errorString.includes('max clients reached');
+
+        // Обработка ошибки превышения лимита клиентов Supabase
+        if (isMaxClientsError && !isLastAttempt) {
+          // При превышении лимита клиентов делаем retry с увеличенной задержкой
+          // Это дает время другим подключениям освободиться
+          const delay = 2000 * (attempt + 1); // Увеличиваем задержку: 2s, 4s, 6s
+          console.warn(
+            `⚠️ Max clients reached, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
+            {
+              error: error instanceof Error ? error.message : error,
+              duration,
+            }
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
 
         if (isConnectionError && !isLastAttempt) {
           // Для Supabase pooler - не делаем retry при таймауте подключения
@@ -133,14 +163,30 @@ export async function query<T = any>(
           const isConnectionTimeout =
             error instanceof Error &&
             (error.message.includes('connection timeout') ||
-              error.message.includes('timeout exceeded when trying to connect'));
+              error.message.includes('timeout exceeded when trying to connect') ||
+              error.message.includes('ETIMEDOUT') ||
+              error.message.toLowerCase().includes('read etimedout'));
+
+          if (isConnectionTimeout && attempt < retries) {
+            // При таймауте подключения делаем retry с увеличенной задержкой
+            // Это помогает при временных блокировках ISP
+            const delay = 1000 * (attempt + 1); // Увеличиваем задержку с каждой попыткой
+            console.warn(
+              `⚠️ Connection timeout, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`,
+              {
+                error: error instanceof Error ? error.message : error,
+                duration,
+              }
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          }
 
           if (isConnectionTimeout) {
-            console.warn(`⚠️ Connection timeout - pooler may be overloaded. Skipping retry.`, {
+            console.error(`❌ Connection timeout after ${retries + 1} attempts`, {
               error: error instanceof Error ? error.message : error,
               duration,
             });
-            // Не делаем retry для таймаутов подключения
             throw error;
           }
 

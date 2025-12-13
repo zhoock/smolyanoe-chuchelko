@@ -118,8 +118,7 @@ export const handler: Handler = async (
             OR (user_id IS NOT NULL AND user_id = $2)
           )
         ORDER BY article_id, user_id NULLS LAST, date DESC`,
-        [lang, userId || null],
-        0
+        [lang, userId || null]
       );
 
       const articles = articlesResult.rows.map(mapArticleToApiFormat);
@@ -161,8 +160,7 @@ export const handler: Handler = async (
           JSON.stringify(data.details),
           data.lang,
           data.isPublic || false,
-        ],
-        0
+        ]
       );
 
       return createSuccessMessageResponse('Article created successfully', 201);
@@ -185,8 +183,7 @@ export const handler: Handler = async (
       // Проверяем, что статья принадлежит пользователю
       const checkResult = await query<ArticleRow>(
         `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
-        [articleId, userId],
-        0
+        [articleId, userId]
       );
 
       if (checkResult.rows.length === 0) {
@@ -234,8 +231,7 @@ export const handler: Handler = async (
         `UPDATE articles 
          SET ${updates.join(', ')}
          WHERE id = $${paramIndex++} AND user_id = $${paramIndex++}`,
-        values,
-        0
+        values
       );
 
       return createSuccessMessageResponse('Article updated successfully');
@@ -256,15 +252,14 @@ export const handler: Handler = async (
       // Проверяем, что статья принадлежит пользователю
       const checkResult = await query<ArticleRow>(
         `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
-        [articleId, userId],
-        0
+        [articleId, userId]
       );
 
       if (checkResult.rows.length === 0) {
         return createErrorResponse(404, 'Article not found or access denied');
       }
 
-      await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [articleId, userId], 0);
+      await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [articleId, userId]);
 
       return createSuccessMessageResponse('Article deleted successfully');
     }
