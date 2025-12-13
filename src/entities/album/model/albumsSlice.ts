@@ -42,6 +42,19 @@ export const fetchAlbums = createAsyncThunk<
       );
 
     try {
+      // 1) Быстрый фолбэк на статику (без запроса к API)
+      try {
+        const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
+        if (fallback.ok) {
+          const data = await fallback.json();
+          if (Array.isArray(data)) {
+            return normalize(data);
+          }
+        }
+      } catch {
+        // игнорируем и пробуем API
+      }
+
       // Загружаем из БД через API
       const response = await fetch(`/api/albums?lang=${lang}`, {
         signal,
@@ -69,19 +82,7 @@ export const fetchAlbums = createAsyncThunk<
       // Преобразуем данные из API в формат IAlbums
       return normalize(result.data);
     } catch (error) {
-      // Фолбэк на статический JSON, если API недоступен (e.g. Supabase заблокирован/превышены квоты)
-      try {
-        const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
-        if (fallback.ok) {
-          const data = await fallback.json();
-          if (Array.isArray(data)) {
-            return normalize(data);
-          }
-        }
-      } catch {
-        // игнорируем, пойдём в rejectWithValue
-      }
-
+      // Если статический фолбэк тоже недоступен – отдаём ошибку
       if (error instanceof Error) {
         return rejectWithValue(error.message);
       }

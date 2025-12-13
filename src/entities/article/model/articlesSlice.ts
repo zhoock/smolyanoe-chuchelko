@@ -30,6 +30,19 @@ export const fetchArticles = createAsyncThunk<
       );
 
     try {
+      // 1) Быстрый фолбэк на статику (без запроса к API)
+      try {
+        const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
+        if (fallback.ok) {
+          const data = await fallback.json();
+          if (Array.isArray(data)) {
+            return normalize(data);
+          }
+        }
+      } catch {
+        // игнорируем и пробуем API
+      }
+
       // Загружаем из БД через API
       // Импортируем динамически, чтобы избежать циклических зависимостей
       const { getAuthHeader } = await import('@shared/lib/auth');
@@ -62,19 +75,7 @@ export const fetchArticles = createAsyncThunk<
       // Преобразуем данные из API в формат IArticles
       return normalize(result.data);
     } catch (error) {
-      // Фолбэк на статический JSON, если API недоступен
-      try {
-        const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
-        if (fallback.ok) {
-          const data = await fallback.json();
-          if (Array.isArray(data)) {
-            return normalize(data);
-          }
-        }
-      } catch {
-        // игнорируем и падаем в reject
-      }
-
+      // Если статический фолбэк тоже недоступен – отдаём ошибку
       if (error instanceof Error) {
         return rejectWithValue(error.message);
       }
