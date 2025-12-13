@@ -16,6 +16,19 @@ export const fetchArticles = createAsyncThunk<
 >(
   'articles/fetchByLang',
   async ({ lang }, { signal, rejectWithValue }) => {
+    const normalize = (data: any[]): IArticles[] =>
+      data.map(
+        (article: any) =>
+          ({
+            articleId: article.articleId,
+            nameArticle: article.nameArticle,
+            img: article.img,
+            date: article.date,
+            details: article.details || [],
+            description: article.description || '',
+          }) as IArticles
+      );
+
     try {
       // Загружаем из БД через API
       // Импортируем динамически, чтобы избежать циклических зависимостей
@@ -47,26 +60,21 @@ export const fetchArticles = createAsyncThunk<
       }
 
       // Преобразуем данные из API в формат IArticles
-      const articles: IArticles[] = result.data.map(
-        (article: {
-          articleId: string;
-          nameArticle: string;
-          img: string;
-          date: string;
-          details?: unknown[];
-          description?: string;
-        }) => ({
-          articleId: article.articleId,
-          nameArticle: article.nameArticle,
-          img: article.img,
-          date: article.date,
-          details: article.details || [],
-          description: article.description || '',
-        })
-      );
-
-      return articles;
+      return normalize(result.data);
     } catch (error) {
+      // Фолбэк на статический JSON, если API недоступен
+      try {
+        const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
+        if (fallback.ok) {
+          const data = await fallback.json();
+          if (Array.isArray(data)) {
+            return normalize(data);
+          }
+        }
+      } catch {
+        // игнорируем и падаем в reject
+      }
+
       if (error instanceof Error) {
         return rejectWithValue(error.message);
       }
