@@ -16,6 +16,31 @@ export const fetchAlbums = createAsyncThunk<
 >(
   'albums/fetchByLang',
   async ({ lang }, { signal, rejectWithValue }) => {
+    const normalize = (data: any[]): IAlbums[] =>
+      data.map(
+        (album: any) =>
+          ({
+            albumId: album.albumId,
+            artist: album.artist,
+            album: album.album,
+            fullName: album.fullName,
+            description: album.description,
+            cover: album.cover,
+            release: album.release,
+            buttons: album.buttons,
+            details: album.details,
+            tracks: (album.tracks ?? []).map((track: any) => ({
+              id: track.id,
+              title: track.title,
+              duration: track.duration,
+              src: track.src,
+              content: track.content,
+              authorship: track.authorship,
+              syncedLyrics: track.syncedLyrics,
+            })),
+          }) as IAlbums
+      );
+
     try {
       // Загружаем из БД через API
       const response = await fetch(`/api/albums?lang=${lang}`, {
@@ -42,50 +67,21 @@ export const fetchAlbums = createAsyncThunk<
       }
 
       // Преобразуем данные из API в формат IAlbums
-      const albums: IAlbums[] = result.data.map(
-        (album: {
-          albumId: string;
-          artist: string;
-          album: string;
-          fullName: string;
-          description: string;
-          cover: unknown;
-          release: unknown;
-          buttons: unknown;
-          details: unknown;
-          tracks: Array<{
-            id: string;
-            title: string;
-            duration?: number;
-            src?: string;
-            content?: string;
-            authorship?: string;
-            syncedLyrics?: unknown;
-          }>;
-        }) => ({
-          albumId: album.albumId,
-          artist: album.artist,
-          album: album.album,
-          fullName: album.fullName,
-          description: album.description,
-          cover: album.cover,
-          release: album.release,
-          buttons: album.buttons,
-          details: album.details,
-          tracks: album.tracks.map((track) => ({
-            id: track.id,
-            title: track.title,
-            duration: track.duration,
-            src: track.src,
-            content: track.content,
-            authorship: track.authorship,
-            syncedLyrics: track.syncedLyrics,
-          })),
-        })
-      );
-
-      return albums;
+      return normalize(result.data);
     } catch (error) {
+      // Фолбэк на статический JSON, если API недоступен (e.g. Supabase заблокирован/превышены квоты)
+      try {
+        const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
+        if (fallback.ok) {
+          const data = await fallback.json();
+          if (Array.isArray(data)) {
+            return normalize(data);
+          }
+        }
+      } catch {
+        // игнорируем, пойдём в rejectWithValue
+      }
+
       if (error instanceof Error) {
         return rejectWithValue(error.message);
       }
