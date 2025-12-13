@@ -1,5 +1,10 @@
 /**
  * API для работы с Supabase Storage
+ *
+ * ВАЖНО: Для обхода блокировок российских операторов:
+ * - getStorageFileUrl и getStorageSignedUrl используют прокси через Netlify Functions
+ * - uploadFile, deleteStorageFile, listStorageFiles все еще делают прямые запросы к Supabase
+ *   (можно переделать на Netlify Functions при необходимости)
  */
 
 import {
@@ -131,54 +136,44 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
 
 /**
  * Получить публичный URL файла из Supabase Storage
+ * Использует прокси через Netlify Functions для обхода блокировок российских операторов
  * @param options - опции для получения URL
- * @returns Публичный URL файла
+ * @returns Публичный URL файла через прокси
  */
 export function getStorageFileUrl(options: GetFileUrlOptions): string {
   const { userId = CURRENT_USER_CONFIG.userId, category, fileName } = options;
 
-  const supabase = createSupabaseClient();
-  if (!supabase) {
-    console.error('Supabase client is not available. Please set required environment variables.');
-    // Возвращаем пустую строку, если клиент недоступен
-    return '';
-  }
-
   const storagePath = getStoragePath(userId, category, fileName);
 
-  const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+  // Используем прокси через Netlify Functions вместо прямого URL Supabase
+  // Это позволяет обойти блокировки российских операторов
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : 'https://smolyanoechuchelko.ru';
+  const proxyUrl = `${origin}/api/proxy-image?path=${encodeURIComponent(storagePath)}`;
 
-  return data.publicUrl;
+  return proxyUrl;
 }
 
 /**
  * Получить временную (signed) URL файла из Supabase Storage
  * Используется для приватных файлов
+ * Использует прокси через Netlify Functions для обхода блокировок российских операторов
  * @param options - опции для получения URL
- * @returns Временный URL файла или null в случае ошибки
+ * @returns Временный URL файла через прокси или null в случае ошибки
  */
 export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<string | null> {
   try {
-    const { userId = CURRENT_USER_CONFIG.userId, category, fileName, expiresIn = 3600 } = options;
+    const { userId = CURRENT_USER_CONFIG.userId, category, fileName } = options;
 
-    const supabase = createSupabaseClient();
-    if (!supabase) {
-      console.error('Supabase client is not available. Please set required environment variables.');
-      return null;
-    }
-
+    // Для приватных файлов также используем прокси
+    // Прокси будет делать запрос с service role key на сервере
     const storagePath = getStoragePath(userId, category, fileName);
 
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET_NAME)
-      .createSignedUrl(storagePath, expiresIn);
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : 'https://smolyanoechuchelko.ru';
+    const proxyUrl = `${origin}/api/proxy-image?path=${encodeURIComponent(storagePath)}`;
 
-    if (error) {
-      console.error('Error creating signed URL:', error);
-      return null;
-    }
-
-    return data.signedUrl;
+    return proxyUrl;
   } catch (error) {
     console.error('Error in getStorageSignedUrl:', error);
     return null;
