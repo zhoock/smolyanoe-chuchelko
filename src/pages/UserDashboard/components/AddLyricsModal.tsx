@@ -10,7 +10,7 @@ interface AddLyricsModalProps {
   isOpen: boolean;
   trackTitle: string;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (lyrics: string, authorship?: string) => void;
   onPreview?: () => void;
 }
 
@@ -24,14 +24,17 @@ export function AddLyricsModal({
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [lyricsText, setLyricsText] = useState('');
+  const [authorship, setAuthorship] = useState('');
 
   const handleSave = () => {
-    onSave();
+    onSave(lyricsText, authorship.trim() || undefined);
     setLyricsText('');
+    setAuthorship('');
   };
 
   const handleClose = () => {
     setLyricsText('');
+    setAuthorship('');
     onClose();
   };
 
@@ -63,6 +66,35 @@ export function AddLyricsModal({
             value={lyricsText}
             onChange={(e) => setLyricsText(e.target.value)}
           />
+          <div className="add-lyrics-modal__divider"></div>
+          <div className="add-lyrics-modal__field">
+            <label className="add-lyrics-modal__label">Авторство:</label>
+            <input
+              type="text"
+              className="add-lyrics-modal__input"
+              name="authorship"
+              id="authorship"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-gramm="false"
+              data-lpignore="true"
+              data-form-type="other"
+              inputMode="text"
+              aria-autocomplete="none"
+              placeholder="Например: Ярослав Жук — слова и музыка"
+              value={authorship}
+              onChange={(e) => setAuthorship(e.target.value)}
+              onFocus={(e) => e.stopPropagation()}
+              onBlur={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
+              onKeyPress={(e) => e.stopPropagation()}
+              onInput={(e) => e.stopPropagation()}
+            />
+          </div>
           <div className="add-lyrics-modal__divider"></div>
           <div className="add-lyrics-modal__actions">
             <button

@@ -20,6 +20,7 @@ interface SyncLyricsModalProps {
   trackTitle: string;
   trackSrc?: string;
   lyricsText?: string;
+  authorship?: string;
   onClose: () => void;
 }
 
@@ -47,6 +48,7 @@ export function SyncLyricsModal({
   trackTitle,
   trackSrc,
   lyricsText: propLyricsText,
+  authorship: propAuthorship,
   onClose,
 }: SyncLyricsModalProps) {
   const { lang } = useLang();
@@ -166,11 +168,13 @@ export function SyncLyricsModal({
             new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 2000)),
           ]);
 
-          if (storedAuthorship) {
+          const authorshipToUse = storedAuthorship || propAuthorship || null;
+
+          if (authorshipToUse) {
             const lastLine = linesToDisplay[linesToDisplay.length - 1];
-            if (!lastLine || lastLine.text !== storedAuthorship) {
+            if (!lastLine || lastLine.text !== authorshipToUse) {
               linesToDisplay.push({
-                text: storedAuthorship,
+                text: authorshipToUse,
                 startTime: duration || 0,
                 endTime: undefined,
               });
@@ -258,7 +262,7 @@ export function SyncLyricsModal({
     try {
       // Загружаем авторство
       const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
-      const trackAuthorship = storedAuthorship || '';
+      const trackAuthorship = storedAuthorship || propAuthorship || '';
 
       // Фильтруем строки авторства из syncedLines перед сохранением
       const linesToSave = syncedLines.filter((line, index) => {
@@ -296,7 +300,7 @@ export function SyncLyricsModal({
     } finally {
       setIsSaving(false);
     }
-  }, [albumId, trackId, lang, syncedLines]);
+  }, [albumId, trackId, lang, syncedLines, propAuthorship]);
 
   // Переключение play/pause
   const togglePlayPause = useCallback(() => {
@@ -313,32 +317,21 @@ export function SyncLyricsModal({
     }
   }, [isPlaying]);
 
-  // Обработка изменения прогресс-бара
-  const handleProgressChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!audioRef.current) return;
-      const value = Number(e.target.value);
-      const newTime = (value / 100) * duration;
+  // Обработка клика по прогресс-бару
+  const handleProgressClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!audioRef.current || !duration) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = x / rect.width;
+      const newTime = percentage * duration;
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
-      // Обновляем CSS переменную для визуального отображения прогресса
-      const progressBar = e.target.parentElement;
-      if (progressBar) {
-        progressBar.style.setProperty('--progress-width', `${value}%`);
-      }
     },
     [duration]
   );
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
-  // Обновляем CSS переменную для прогресс-бара
-  useEffect(() => {
-    const progressBar = document.querySelector('.sync-lyrics-modal__player-progress-bar');
-    if (progressBar) {
-      (progressBar as HTMLElement).style.setProperty('--progress-width', `${progress}%`);
-    }
-  }, [progress]);
 
   return (
     <Popup isActive={isOpen} onClose={onClose}>
@@ -359,50 +352,54 @@ export function SyncLyricsModal({
           <div className="sync-lyrics-modal__divider"></div>
 
           {/* Проигрыватель */}
-          {trackSrc && (
-            <div className="sync-lyrics-modal__player">
-              <div className="sync-lyrics-modal__player-info">
-                <div className="sync-lyrics-modal__player-title">{trackTitle}</div>
-              </div>
-              <div className="sync-lyrics-modal__player-controls">
-                <button
-                  type="button"
-                  onClick={togglePlayPause}
-                  className="sync-lyrics-modal__player-play-btn"
-                  aria-label={isPlaying ? 'Пауза' : 'Воспроизведение'}
+          <div className="sync-lyrics-modal__player">
+            <button
+              type="button"
+              onClick={togglePlayPause}
+              className="sync-lyrics-modal__play-button"
+              aria-label={isPlaying ? 'Пауза' : 'Воспроизведение'}
+              disabled={!trackSrc}
+            >
+              {isPlaying ? (
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  {isPlaying ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M5 3h2v10H5V3zm4 0h2v10H9V3z" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M4 3l10 5-10 5V3z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              <div className="sync-lyrics-modal__player-progress-wrapper">
-                <div className="sync-lyrics-modal__player-progress-bar">
-                  <input
-                    type="range"
-                    value={progress}
-                    min="0"
-                    max="100"
-                    onChange={handleProgressChange}
-                    aria-label="Прогресс воспроизведения"
-                  />
-                </div>
-                <div className="sync-lyrics-modal__player-time">
-                  <span>{formatTimeCompact(currentTime)}</span>
-                  <span>{formatTimeCompact(duration - currentTime)}</span>
-                </div>
-              </div>
+                  <rect x="6" y="4" width="4" height="16" />
+                  <rect x="14" y="4" width="4" height="16" />
+                </svg>
+              ) : (
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              )}
+            </button>
+            <div className="sync-lyrics-modal__time">{formatTimeCompact(currentTime)}</div>
+            <div className="sync-lyrics-modal__progress-bar" onClick={handleProgressClick}>
+              <div className="sync-lyrics-modal__progress-fill" style={{ width: `${progress}%` }} />
             </div>
-          )}
+            <div className="sync-lyrics-modal__duration">{formatTimeCompact(duration)}</div>
+          </div>
 
-          {/* Список строк с тайм-кодами */}
-          <div className="sync-lyrics-modal__lines">
+          <div className="sync-lyrics-modal__divider"></div>
+
+          {/* Таблица строк с тайм-кодами */}
+          <div className="sync-lyrics-modal__content">
             {isLoading ? (
               <div className="sync-lyrics-modal__loading">Загрузка...</div>
             ) : syncedLines.length === 0 ? (
@@ -410,74 +407,124 @@ export function SyncLyricsModal({
                 {ui?.dashboard?.noLyrics ?? 'Нет текста для синхронизации'}
               </div>
             ) : (
-              <div className="sync-lyrics-modal__lines-list">
-                {syncedLines.map((line, index) => (
-                  <div key={index} className="sync-lyrics-modal__line">
-                    <div className="sync-lyrics-modal__line-number">{index + 1}</div>
-                    <div className="sync-lyrics-modal__line-text">{line.text}</div>
-                    <div className="sync-lyrics-modal__line-times">
-                      <button
-                        type="button"
-                        onClick={() => setLineTime(index, 'startTime')}
-                        className="sync-lyrics-modal__time-btn"
-                        disabled={currentTime === 0 && !isPlaying}
-                      >
-                        {formatTime(line.startTime)}
-                      </button>
-                      <div className="sync-lyrics-modal__line-end">
+              <div className="sync-lyrics-modal__table">
+                <div className="sync-lyrics-modal__table-header">
+                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--number">
+                    #
+                  </div>
+                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--lyrics">
+                    Lyrics
+                  </div>
+                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--start">
+                    Start
+                  </div>
+                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
+                    End
+                  </div>
+                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--remove"></div>
+                </div>
+                <div className="sync-lyrics-modal__table-body">
+                  {syncedLines.map((line, index) => (
+                    <div key={index} className="sync-lyrics-modal__table-row">
+                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--number">
+                        {index + 1}
+                      </div>
+                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--lyrics">
+                        {line.text}
+                      </div>
+                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--start">
                         <button
                           type="button"
-                          onClick={() => setLineTime(index, 'endTime')}
+                          onClick={() => setLineTime(index, 'startTime')}
                           className="sync-lyrics-modal__time-btn"
                           disabled={currentTime === 0 && !isPlaying}
                         >
-                          {formatTime(line.endTime ?? 0)}
+                          {formatTime(line.startTime)}
                         </button>
+                      </div>
+                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
+                        {line.endTime !== undefined && line.endTime > 0 ? (
+                          <div className="sync-lyrics-modal__end-time-wrapper">
+                            <button
+                              type="button"
+                              onClick={() => setLineTime(index, 'endTime')}
+                              className="sync-lyrics-modal__time-btn"
+                              disabled={currentTime === 0 && !isPlaying}
+                            >
+                              {formatTime(line.endTime)}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => clearEndTime(index)}
+                              className="sync-lyrics-modal__clear-btn"
+                              title="Сбросить конец строки"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setLineTime(index, 'endTime')}
+                            className="sync-lyrics-modal__time-btn sync-lyrics-modal__time-btn--set"
+                            disabled={currentTime === 0 && !isPlaying}
+                          >
+                            Set end
+                          </button>
+                        )}
+                      </div>
+                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--remove">
                         <button
                           type="button"
-                          onClick={() => clearEndTime(index)}
-                          className="sync-lyrics-modal__time-btn sync-lyrics-modal__time-btn--clear"
-                          title="Сбросить конец строки"
-                          disabled={line.endTime === undefined || line.endTime === 0}
+                          onClick={() => removeLine(index)}
+                          className="sync-lyrics-modal__remove-btn"
+                          aria-label="Удалить строку"
+                          title="Удалить строку"
                         >
                           ×
                         </button>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeLine(index)}
-                      className="sync-lyrics-modal__line-remove"
-                      aria-label="Удалить строку"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Кнопка сохранения */}
+          {/* Кнопки действий */}
           {!isLoading && syncedLines.length > 0 && (
-            <div className="sync-lyrics-modal__controls">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!isDirty || isSaving}
-                className="sync-lyrics-modal__save-btn"
-              >
-                {isSaving ? 'Сохранение...' : 'Сохранить синхронизации'}
-              </button>
-              {isSaved && (
-                <span className="sync-lyrics-modal__saved-indicator">Синхронизации сохранены</span>
-              )}
-              {isDirty && !isSaved && (
-                <span className="sync-lyrics-modal__dirty-indicator">
-                  Есть несохранённые изменения
-                </span>
-              )}
-            </div>
+            <>
+              <div className="sync-lyrics-modal__divider"></div>
+              <div className="sync-lyrics-modal__actions">
+                <button
+                  type="button"
+                  className="sync-lyrics-modal__button sync-lyrics-modal__button--cancel"
+                  onClick={onClose}
+                >
+                  {ui?.dashboard?.cancel ?? 'Cancel'}
+                </button>
+                <div className="sync-lyrics-modal__actions-right">
+                  {isSaved && (
+                    <span className="sync-lyrics-modal__saved-indicator">
+                      Синхронизации сохранены
+                    </span>
+                  )}
+                  {isDirty && !isSaved && (
+                    <span className="sync-lyrics-modal__dirty-indicator">
+                      Есть несохранённые изменения
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!isDirty || isSaving}
+                    className="sync-lyrics-modal__button sync-lyrics-modal__button--primary"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Sync'}
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

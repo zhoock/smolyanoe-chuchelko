@@ -35,8 +35,7 @@ const StemsPlayground = lazy(() => import('@pages/StemsPlayground/StemsPlaygroun
 const Home = lazy(() => import('@pages/Home'));
 const ArticlePage = lazy(() => import('@pages/Article'));
 const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
-const UserDashboard = lazy(() => import('@pages/UserDashboard'));
-const UserDashboardV2Simple = lazy(() => import('@pages/UserDashboard/UserDashboardV2Simple'));
+const UserDashboard = lazy(() => import('@pages/UserDashboard/UserDashboard'));
 const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
 
 // Компонент для отображения загрузки
@@ -248,7 +247,7 @@ function Layout() {
           path="/dashboard-new"
           element={
             <Suspense fallback={<PageLoader />}>
-              <UserDashboardV2Simple />
+              <UserDashboard />
             </Suspense>
           }
         />

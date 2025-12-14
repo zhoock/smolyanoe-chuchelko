@@ -3,7 +3,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { selectAlbumsData } from '@entities/album';
 import { useLang } from '@app/providers/lang';
+import { getToken } from '@shared/lib/auth';
+import type { IAlbums } from '@models';
 import './EditAlbumModal.style.scss';
 
 interface EditAlbumModalProps {
@@ -19,7 +22,7 @@ export interface BandMember {
 }
 
 export interface ProducingCredits {
-  [creditType: string]: string[];
+  [creditType: string]: BandMember[];
 }
 
 export interface StreamingLink {
@@ -43,6 +46,7 @@ export interface AlbumFormData {
   albumCoverPhotographer: string;
   albumCoverDesigner: string;
   bandMembers: BandMember[];
+  sessionMusicians: BandMember[];
   producingCredits: ProducingCredits;
   purchaseLinks: StreamingLink[];
   streamingLinks: StreamingLink[];
@@ -83,10 +87,17 @@ const STREAMING_SERVICES = [
   { id: 'googleplay', name: 'Google Play', icon: 'icon-googleplay' },
 ];
 
-export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumModalProps) {
+export function EditAlbumModal({
+  isOpen,
+  albumId,
+  onClose,
+  onNext,
+}: EditAlbumModalProps): JSX.Element | null {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<AlbumFormData>({
     title: '',
     releaseDate: '',
@@ -103,14 +114,322 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
     albumCoverPhotographer: '',
     albumCoverDesigner: '',
     bandMembers: [],
+    sessionMusicians: [],
     producingCredits: {
       Producer: [],
       'Recording/Mixing': [],
       Mastering: [],
-    },
+    } as ProducingCredits,
     purchaseLinks: [],
     streamingLinks: [],
   });
+
+  // Загружаем данные альбома при открытии модального окна
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (!albumId) {
+      console.warn('⚠️ EditAlbumModal: albumId is missing');
+      return;
+    }
+
+    if (!albumsFromStore || !Array.isArray(albumsFromStore)) {
+      console.warn('⚠️ EditAlbumModal: albumsFromStore is not available or not an array');
+      return;
+    }
+
+    try {
+      const album = albumsFromStore.find((a: IAlbums) => a && a.albumId === albumId);
+      if (!album) {
+        console.warn(`⚠️ EditAlbumModal: Album with id "${albumId}" not found`);
+        return;
+      }
+      // Парсим данные о членах группы из details
+      const bandMembers: BandMember[] = [];
+      const bandMembersDetail = Array.isArray(album.details)
+        ? album.details.find(
+            (detail) =>
+              detail &&
+              (detail.title === 'Band members' ||
+                detail.title === 'Участники группы' ||
+                detail.title === 'Исполнители')
+          )
+        : null;
+
+      if (bandMembersDetail && bandMembersDetail.content) {
+        for (const item of bandMembersDetail.content) {
+          // Пропускаем пустые строки
+          if (typeof item === 'string' && item.trim() === '') {
+            continue;
+          }
+
+          // Обрабатываем объекты с text и link
+          if (typeof item === 'object' && item.text && Array.isArray(item.text)) {
+            // Объединяем все части текста
+            const fullText = item.text.join('');
+
+            // Парсим строку вида "Yaroslav Zhuk — lead vocals, backing vocals, words and music."
+            // или "Ярослав Жук — вокал, бэк-вокал, слова и музыка."
+            const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+            if (match) {
+              const name = match[1].trim();
+              const role = match[2].trim();
+              if (name && role) {
+                bandMembers.push({ name, role });
+              }
+            } else if (fullText.trim()) {
+              // Если нет разделителя "—", используем весь текст как имя
+              bandMembers.push({ name: fullText.trim(), role: '' });
+            }
+          } else if (typeof item === 'string' && item.trim()) {
+            // Обрабатываем простые строки
+            const match = item.match(/^(.+?)\s*—\s*(.+)$/);
+            if (match) {
+              const name = match[1].trim();
+              const role = match[2].trim();
+              if (name && role) {
+                bandMembers.push({ name, role });
+              }
+            } else {
+              bandMembers.push({ name: item.trim(), role: '' });
+            }
+          }
+        }
+      }
+
+      // Парсим данные о сессионных музыкантах из details
+      const sessionMusicians: BandMember[] = [];
+      const sessionMusiciansDetail = Array.isArray(album.details)
+        ? album.details.find(
+            (detail) =>
+              detail &&
+              (detail.title === 'Session musicians' ||
+                detail.title === 'Сессионные музыканты' ||
+                detail.title === 'Session Musicians')
+          )
+        : null;
+
+      if (sessionMusiciansDetail && sessionMusiciansDetail.content) {
+        for (const item of sessionMusiciansDetail.content) {
+          // Пропускаем пустые строки
+          if (typeof item === 'string' && item.trim() === '') {
+            continue;
+          }
+
+          // Обрабатываем объекты с text и link
+          if (typeof item === 'object' && item.text && Array.isArray(item.text)) {
+            // Объединяем все части текста
+            const fullText = item.text.join('');
+
+            // Парсим строку вида "Name — role."
+            const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+            if (match) {
+              const name = match[1].trim();
+              const role = match[2].trim();
+              if (name && role) {
+                sessionMusicians.push({ name, role });
+              }
+            } else if (fullText.trim()) {
+              // Если нет разделителя "—", используем весь текст как имя
+              sessionMusicians.push({ name: fullText.trim(), role: '' });
+            }
+          } else if (typeof item === 'string' && item.trim()) {
+            // Обрабатываем простые строки
+            const match = item.match(/^(.+?)\s*—\s*(.+)$/);
+            if (match) {
+              const name = match[1].trim();
+              const role = match[2].trim();
+              if (name && role) {
+                sessionMusicians.push({ name, role });
+              }
+            } else {
+              sessionMusicians.push({ name: item.trim(), role: '' });
+            }
+          }
+        }
+      }
+
+      // Парсим данные о продюсировании из details
+      const producingCredits: ProducingCredits = {
+        Producer: [],
+        'Recording/Mixing': [],
+        Mastering: [],
+      };
+      const producingDetail = Array.isArray(album.details)
+        ? album.details.find(
+            (detail) =>
+              detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
+          )
+        : null;
+
+      if (producingDetail && producingDetail.content) {
+        // Маппинг русских названий на английские ключи
+        const creditTypeMap: Record<string, string> = {
+          продюсер: 'Producer',
+          producer: 'Producer',
+          'запись/сведение': 'Recording/Mixing',
+          'recording/mixing': 'Recording/Mixing',
+          запись: 'Recording/Mixing',
+          сведение: 'Recording/Mixing',
+          мастеринг: 'Mastering',
+          mastering: 'Mastering',
+        };
+
+        for (const item of producingDetail.content) {
+          // Пропускаем пустые строки
+          if (typeof item === 'string' && item.trim() === '') {
+            continue;
+          }
+
+          let fullText = '';
+          if (typeof item === 'object' && item.text && Array.isArray(item.text)) {
+            fullText = item.text.join('');
+          } else if (typeof item === 'string') {
+            fullText = item;
+          }
+
+          if (fullText.trim()) {
+            // Парсим строку вида "Ярослав Жук — продюсер." или "Илья Marvel Горохводацкий — запись/сведение."
+            const match = fullText.match(/^(.+?)\s*—\s*(.+?)(?:\.|$)/);
+            if (match) {
+              const name = match[1].trim();
+              const roleText = match[2].trim().toLowerCase();
+
+              // Определяем тип кредита по роли
+              let creditType = 'Producer'; // По умолчанию
+              for (const [key, value] of Object.entries(creditTypeMap)) {
+                if (roleText.includes(key)) {
+                  creditType = value;
+                  break;
+                }
+              }
+
+              // Добавляем имя и роль в соответствующий массив
+              if (!producingCredits[creditType]) {
+                producingCredits[creditType] = [];
+              }
+
+              // Сохраняем оригинальную роль (без точки в конце)
+              const role = match[2].trim().replace(/\.$/, '');
+
+              // Проверяем, нет ли уже такого имени с такой же ролью
+              const existingIndex = producingCredits[creditType].findIndex(
+                (member) => member.name === name && member.role === role
+              );
+              if (existingIndex === -1) {
+                producingCredits[creditType].push({ name, role });
+              }
+            }
+          }
+        }
+      }
+
+      // Заполняем поля из данных альбома
+      setFormData((prev) => {
+        const release = album.release && typeof album.release === 'object' ? album.release : {};
+        const releaseDate = release.date || '';
+        const upc = release.UPC || '';
+
+        return {
+          ...prev,
+          title: album.album || prev.title,
+          releaseDate: releaseDate || prev.releaseDate,
+          upcEan: upc || prev.upcEan,
+          description: album.description || prev.description,
+          albumCoverPhotographer: release.photographer || prev.albumCoverPhotographer,
+          albumCoverDesigner: release.designer || prev.albumCoverDesigner,
+          bandMembers: bandMembers.length > 0 ? bandMembers : prev.bandMembers,
+          sessionMusicians: sessionMusicians.length > 0 ? sessionMusicians : prev.sessionMusicians,
+          producingCredits: Object.keys(producingCredits).some(
+            (key) => producingCredits[key].length > 0
+          )
+            ? producingCredits
+            : prev.producingCredits,
+          // Парсим ссылки из buttons
+          purchaseLinks: (() => {
+            const links: StreamingLink[] = [];
+            if (album.buttons && typeof album.buttons === 'object') {
+              // Маппинг ключей из JSON на ID сервисов покупки
+              const purchaseMap: Record<string, string> = {
+                itunes: 'apple',
+                bandcamp: 'bandcamp',
+                amazon: 'amazon',
+              };
+
+              for (const [key, url] of Object.entries(album.buttons)) {
+                const serviceId = purchaseMap[key.toLowerCase()];
+                if (serviceId && url && typeof url === 'string' && url.trim() !== '') {
+                  links.push({ service: serviceId, url: url.trim() });
+                }
+              }
+            }
+            return links.length > 0 ? links : prev.purchaseLinks;
+          })(),
+          streamingLinks: (() => {
+            const links: StreamingLink[] = [];
+            if (album.buttons && typeof album.buttons === 'object') {
+              // Маппинг ключей из JSON на ID сервисов стриминга
+              const streamingMap: Record<string, string> = {
+                apple: 'applemusic',
+                vk: 'vk',
+                youtube: 'youtube',
+                spotify: 'spotify',
+                yandex: 'yandex',
+                deezer: 'deezer',
+                tidal: 'tidal',
+                applemusic: 'applemusic',
+              };
+
+              for (const [key, url] of Object.entries(album.buttons)) {
+                const serviceId = streamingMap[key.toLowerCase()];
+                if (serviceId && url && typeof url === 'string' && url.trim() !== '') {
+                  links.push({ service: serviceId, url: url.trim() });
+                }
+              }
+            }
+            return links.length > 0 ? links : prev.streamingLinks;
+          })(),
+        };
+      });
+    } catch (error) {
+      console.error('❌ Error loading album data in EditAlbumModal:', error);
+    }
+  }, [isOpen, albumId, albumsFromStore, lang]);
+
+  // Сбрасываем форму при закрытии модального окна
+  useEffect(() => {
+    if (!isOpen) {
+      // Сбрасываем форму при закрытии
+      setFormData({
+        title: '',
+        releaseDate: '',
+        upcEan: '',
+        albumArt: null,
+        description: '',
+        visibleOnAlbumPage: true,
+        allowDownloadSale: 'no',
+        regularPrice: '9.99',
+        currency: 'USD',
+        preorderReleaseDate: '',
+        mood: [],
+        tags: [],
+        albumCoverPhotographer: '',
+        albumCoverDesigner: '',
+        bandMembers: [],
+        sessionMusicians: [],
+        producingCredits: {
+          Producer: [],
+          'Recording/Mixing': [],
+          Mastering: [],
+        },
+        purchaseLinks: [],
+        streamingLinks: [],
+      });
+      setCurrentStep(1);
+    }
+  }, [isOpen]);
 
   const [dragActive, setDragActive] = useState(false);
   const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
@@ -121,7 +440,13 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
   const [bandMemberName, setBandMemberName] = useState('');
   const [bandMemberRole, setBandMemberRole] = useState('');
   const [editingBandMemberIndex, setEditingBandMemberIndex] = useState<number | null>(null);
+  const [sessionMusicianName, setSessionMusicianName] = useState('');
+  const [sessionMusicianRole, setSessionMusicianRole] = useState('');
+  const [editingSessionMusicianIndex, setEditingSessionMusicianIndex] = useState<number | null>(
+    null
+  );
   const [producingNames, setProducingNames] = useState<Record<string, string>>({});
+  const [producingRoles, setProducingRoles] = useState<Record<string, string>>({});
   const [editingProducingCredit, setEditingProducingCredit] = useState<{
     creditType: string;
     nameIndex: number;
@@ -321,8 +646,63 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
     }
   };
 
+  const handleAddSessionMusician = () => {
+    if (!sessionMusicianName.trim() || !sessionMusicianRole.trim()) {
+      return;
+    }
+
+    if (editingSessionMusicianIndex !== null) {
+      // Редактирование существующего участника
+      setFormData((prev) => {
+        const updated = [...(prev.sessionMusicians || [])];
+        updated[editingSessionMusicianIndex] = {
+          name: sessionMusicianName.trim(),
+          role: sessionMusicianRole.trim(),
+        };
+        return { ...prev, sessionMusicians: updated };
+      });
+      setEditingSessionMusicianIndex(null);
+    } else {
+      // Добавление нового участника
+      setFormData((prev) => ({
+        ...prev,
+        sessionMusicians: [
+          ...(prev.sessionMusicians || []),
+          { name: sessionMusicianName.trim(), role: sessionMusicianRole.trim() },
+        ],
+      }));
+    }
+
+    setSessionMusicianName('');
+    setSessionMusicianRole('');
+  };
+
+  const handleEditSessionMusician = (index: number) => {
+    const musician = formData.sessionMusicians[index];
+    setSessionMusicianName(musician.name);
+    setSessionMusicianRole(musician.role);
+    setEditingSessionMusicianIndex(index);
+  };
+
+  const handleCancelEditSessionMusician = () => {
+    setSessionMusicianName('');
+    setSessionMusicianRole('');
+    setEditingSessionMusicianIndex(null);
+  };
+
+  const handleRemoveSessionMusician = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      sessionMusicians: (prev.sessionMusicians || []).filter((_, i) => i !== index),
+    }));
+    if (editingSessionMusicianIndex === index) {
+      handleCancelEditSessionMusician();
+    }
+  };
+
   const handleAddProducingCredit = (creditType: string) => {
     const name = producingNames[creditType]?.trim();
+    const role = producingRoles[creditType]?.trim() || '';
     if (!name) {
       return;
     }
@@ -331,9 +711,9 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
       // Редактирование существующего имени
       setFormData((prev) => {
         const updated = { ...prev.producingCredits };
-        const names = [...(updated[creditType] || [])];
-        names[editingProducingCredit.nameIndex] = name;
-        updated[creditType] = names;
+        const members = [...(updated[creditType] || [])];
+        members[editingProducingCredit.nameIndex] = { name, role };
+        updated[creditType] = members;
         return { ...prev, producingCredits: updated };
       });
       setEditingProducingCredit(null);
@@ -341,23 +721,27 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
       // Добавление нового имени
       setFormData((prev) => {
         const updated = { ...prev.producingCredits };
-        updated[creditType] = [...(updated[creditType] || []), name];
+        updated[creditType] = [...(updated[creditType] || []), { name, role }];
         return { ...prev, producingCredits: updated };
       });
     }
 
     setProducingNames((prev) => ({ ...prev, [creditType]: '' }));
+    setProducingRoles((prev) => ({ ...prev, [creditType]: '' }));
   };
 
   const handleEditProducingCredit = (creditType: string, nameIndex: number) => {
-    const names = formData.producingCredits[creditType] || [];
-    setProducingNames((prev) => ({ ...prev, [creditType]: names[nameIndex] }));
+    const members = formData.producingCredits[creditType] || [];
+    const member = members[nameIndex];
+    setProducingNames((prev) => ({ ...prev, [creditType]: member?.name || '' }));
+    setProducingRoles((prev) => ({ ...prev, [creditType]: member?.role || '' }));
     setEditingProducingCredit({ creditType, nameIndex });
   };
 
   const handleCancelEditProducingCredit = () => {
     if (editingProducingCredit) {
       setProducingNames((prev) => ({ ...prev, [editingProducingCredit.creditType]: '' }));
+      setProducingRoles((prev) => ({ ...prev, [editingProducingCredit.creditType]: '' }));
     }
     setEditingProducingCredit(null);
   };
@@ -532,9 +916,184 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
     }
   };
 
-  const handlePublish = () => {
-    if (onNext) {
-      onNext(formData);
+  /**
+   * Преобразует данные формы в формат для API
+   */
+  const transformFormDataToAlbumFormat = (): {
+    release: Record<string, string>;
+    buttons: Record<string, string>;
+    details: unknown[];
+  } => {
+    // Преобразуем release
+    const release: Record<string, string> = {
+      date: formData.releaseDate,
+      UPC: formData.upcEan,
+    };
+    if (formData.albumCoverPhotographer) {
+      release.photographer = formData.albumCoverPhotographer;
+    }
+    if (formData.albumCoverDesigner) {
+      release.designer = formData.albumCoverDesigner;
+    }
+
+    // Преобразуем buttons (purchase и streaming links)
+    const buttons: Record<string, string> = {};
+
+    // Purchase links
+    formData.purchaseLinks.forEach((link) => {
+      // Маппинг ID сервисов обратно в ключи JSON
+      const purchaseKeyMap: Record<string, string> = {
+        apple: 'itunes',
+        bandcamp: 'bandcamp',
+        amazon: 'amazon',
+      };
+      const key = purchaseKeyMap[link.service] || link.service;
+      if (link.url) {
+        buttons[key] = link.url;
+      }
+    });
+
+    // Streaming links
+    formData.streamingLinks.forEach((link) => {
+      // Маппинг ID сервисов обратно в ключи JSON
+      const streamingKeyMap: Record<string, string> = {
+        applemusic: 'apple',
+        vk: 'vk',
+        youtube: 'youtube',
+        spotify: 'spotify',
+        yandex: 'yandex',
+        deezer: 'deezer',
+        tidal: 'tidal',
+        googleplay: 'googleplay',
+      };
+      const key = streamingKeyMap[link.service] || link.service;
+      if (link.url) {
+        buttons[key] = link.url;
+      }
+    });
+
+    // Преобразуем details
+    const details: unknown[] = [];
+
+    // Band Members
+    if (formData.bandMembers.length > 0) {
+      const bandMembersContent: unknown[] = formData.bandMembers.map((member) => {
+        // Формат: объект с text и link (если есть ссылка) или строка
+        // Пока используем простой формат строки
+        return `${member.name} — ${member.role}.`;
+      });
+      details.push({
+        id: details.length + 1,
+        title: lang === 'ru' ? 'Исполнители' : 'Band members',
+        content: bandMembersContent,
+      });
+    }
+
+    // Producing Credits
+    const producingContent: unknown[] = [];
+    Object.entries(formData.producingCredits).forEach(([creditType, members]) => {
+      if (members.length > 0) {
+        members.forEach((member) => {
+          // Если роль указана, используем её, иначе используем тип кредита как роль
+          const role = member.role || creditType;
+          // Формат: "Name — role." (как в исходном JSON)
+          producingContent.push(`${member.name} — ${role}.`);
+        });
+      }
+    });
+
+    if (producingContent.length > 0) {
+      details.push({
+        id: details.length + 1,
+        title: lang === 'ru' ? 'Продюсирование' : 'Producing',
+        content: producingContent,
+      });
+    }
+
+    return { release, buttons, details };
+  };
+
+  const handlePublish = async () => {
+    if (!albumId) {
+      console.error('Album ID is required');
+      return;
+    }
+
+    // Находим исходный альбом для получения artist и cover
+    const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === albumId);
+    if (!originalAlbum) {
+      console.error('Original album not found');
+      return;
+    }
+
+    setIsSaving(true);
+
+    const { release, buttons, details } = transformFormDataToAlbumFormat();
+
+    // Подготавливаем данные для API
+    // Включаем существующие данные, которые не редактируются в форме
+    const updateData = {
+      albumId,
+      album: formData.title,
+      description: formData.description,
+      release: {
+        ...originalAlbum.release,
+        ...release, // Перезаписываем только изменённые поля
+      },
+      buttons: {
+        ...originalAlbum.buttons,
+        ...buttons, // Перезаписываем только изменённые поля
+      },
+      details: details.length > 0 ? details : originalAlbum.details, // Используем новые details, если они есть
+      lang,
+    };
+
+    console.log('📤 Sending update data:', {
+      albumId: updateData.albumId,
+      album: updateData.album,
+      hasRelease: !!updateData.release,
+      hasButtons: !!updateData.buttons,
+      detailsCount: Array.isArray(updateData.details) ? updateData.details.length : 0,
+    });
+
+    try {
+      // Получаем токен
+      const token = getToken();
+      if (!token) {
+        console.error('No auth token found');
+        setIsSaving(false);
+        return;
+      }
+
+      // Отправляем запрос на обновление
+      const response = await fetch('/api/albums', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Album updated successfully:', result);
+
+      // Вызываем onNext для закрытия модального окна
+      if (onNext) {
+        onNext(formData);
+      }
+    } catch (error) {
+      console.error('❌ Error updating album:', error);
+      alert(
+        `Ошибка при сохранении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -561,6 +1120,7 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
       albumCoverPhotographer: '',
       albumCoverDesigner: '',
       bandMembers: [],
+      sessionMusicians: [],
       producingCredits: {
         Producer: [],
         'Recording/Mixing': [],
@@ -1030,13 +1590,118 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
             )}
           </div>
 
+          {/* Session Musicians Section */}
+          <div className="edit-album-modal__field">
+            <label className="edit-album-modal__label">Session Musicians</label>
+            {formData.sessionMusicians.length > 0 && (
+              <div className="edit-album-modal__list">
+                {formData.sessionMusicians.map((musician, index) => (
+                  <div key={index} className="edit-album-modal__list-item">
+                    <div className="edit-album-modal__list-item-content">
+                      <span className="edit-album-modal__list-item-name">{musician.name}</span>
+                      <span className="edit-album-modal__list-item-role">{musician.role}</span>
+                    </div>
+                    <div className="edit-album-modal__list-item-actions">
+                      <button
+                        type="button"
+                        className="edit-album-modal__list-item-edit"
+                        onClick={() => handleEditSessionMusician(index)}
+                        aria-label={`Edit ${musician.name}`}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        className="edit-album-modal__list-item-remove"
+                        onClick={() => handleRemoveSessionMusician(index)}
+                        aria-label={`Remove ${musician.name}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {formData.sessionMusicians.length >= MAX_BAND_MEMBERS && (
+              <div className="edit-album-modal__help-text">
+                Maximum {MAX_BAND_MEMBERS} session musicians reached
+              </div>
+            )}
+            {formData.sessionMusicians.length < MAX_BAND_MEMBERS && (
+              <>
+                <div className="edit-album-modal__two-column-inputs">
+                  <input
+                    type="text"
+                    className="edit-album-modal__input"
+                    placeholder="Name"
+                    value={sessionMusicianName}
+                    onChange={(e) => setSessionMusicianName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        sessionMusicianName.trim() &&
+                        sessionMusicianRole.trim()
+                      ) {
+                        e.preventDefault();
+                        handleAddSessionMusician();
+                      }
+                      if (e.key === 'Escape' && editingSessionMusicianIndex !== null) {
+                        handleCancelEditSessionMusician();
+                      }
+                    }}
+                  />
+                  <input
+                    type="text"
+                    className="edit-album-modal__input"
+                    placeholder="Role"
+                    value={sessionMusicianRole}
+                    onChange={(e) => setSessionMusicianRole(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        sessionMusicianName.trim() &&
+                        sessionMusicianRole.trim()
+                      ) {
+                        e.preventDefault();
+                        handleAddSessionMusician();
+                      }
+                      if (e.key === 'Escape' && editingSessionMusicianIndex !== null) {
+                        handleCancelEditSessionMusician();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="edit-album-modal__add-button-group">
+                  <button
+                    type="button"
+                    className="edit-album-modal__add-button"
+                    onClick={handleAddSessionMusician}
+                    disabled={!sessionMusicianName.trim() || !sessionMusicianRole.trim()}
+                  >
+                    {editingSessionMusicianIndex !== null ? 'Save' : '+ Add musician'}
+                  </button>
+                  {editingSessionMusicianIndex !== null && (
+                    <button
+                      type="button"
+                      className="edit-album-modal__cancel-button"
+                      onClick={handleCancelEditSessionMusician}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Producing Section */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Producing</label>
 
             {/* Предустановленные типы кредитов */}
             {DEFAULT_PRODUCING_CREDIT_TYPES.map((creditType) => {
-              const names = formData.producingCredits[creditType] || [];
+              const members = formData.producingCredits[creditType] || [];
               const isEditing = editingProducingCredit?.creditType === creditType;
 
               return (
@@ -1044,27 +1709,32 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                   <div className="edit-album-modal__producing-type-header">
                     <label className="edit-album-modal__producing-type-label">{creditType}</label>
                   </div>
-                  {names.length > 0 && (
+                  {members.length > 0 && (
                     <div className="edit-album-modal__list">
-                      {names.map((name, nameIndex) => (
-                        <div key={nameIndex} className="edit-album-modal__list-item">
+                      {members.map((member, memberIndex) => (
+                        <div key={memberIndex} className="edit-album-modal__list-item">
                           <div className="edit-album-modal__list-item-content">
-                            <span className="edit-album-modal__list-item-name">{name}</span>
+                            <span className="edit-album-modal__list-item-name">{member.name}</span>
+                            {member.role && (
+                              <span className="edit-album-modal__list-item-role">
+                                {member.role}
+                              </span>
+                            )}
                           </div>
                           <div className="edit-album-modal__list-item-actions">
                             <button
                               type="button"
                               className="edit-album-modal__list-item-edit"
-                              onClick={() => handleEditProducingCredit(creditType, nameIndex)}
-                              aria-label={`Edit ${name}`}
+                              onClick={() => handleEditProducingCredit(creditType, memberIndex)}
+                              aria-label={`Edit ${member.name}`}
                             >
                               ✎
                             </button>
                             <button
                               type="button"
                               className="edit-album-modal__list-item-remove"
-                              onClick={() => handleRemoveProducingCredit(creditType, nameIndex)}
-                              aria-label={`Remove ${name}`}
+                              onClick={() => handleRemoveProducingCredit(creditType, memberIndex)}
+                              aria-label={`Remove ${member.name}`}
                             >
                               ×
                             </button>
@@ -1075,25 +1745,45 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                   )}
                   {isEditing ? (
                     <div className="edit-album-modal__producing-input-group">
-                      <input
-                        type="text"
-                        className="edit-album-modal__input"
-                        placeholder="Name"
-                        value={producingNames[creditType] || ''}
-                        onChange={(e) =>
-                          setProducingNames((prev) => ({ ...prev, [creditType]: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                            e.preventDefault();
-                            handleAddProducingCredit(creditType);
+                      <div className="edit-album-modal__two-column-inputs">
+                        <input
+                          type="text"
+                          className="edit-album-modal__input"
+                          placeholder="Name"
+                          value={producingNames[creditType] || ''}
+                          onChange={(e) =>
+                            setProducingNames((prev) => ({ ...prev, [creditType]: e.target.value }))
                           }
-                          if (e.key === 'Escape') {
-                            handleCancelEditProducingCredit();
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                              e.preventDefault();
+                              handleAddProducingCredit(creditType);
+                            }
+                            if (e.key === 'Escape') {
+                              handleCancelEditProducingCredit();
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <input
+                          type="text"
+                          className="edit-album-modal__input"
+                          placeholder="Role"
+                          value={producingRoles[creditType] || ''}
+                          onChange={(e) =>
+                            setProducingRoles((prev) => ({ ...prev, [creditType]: e.target.value }))
                           }
-                        }}
-                        autoFocus
-                      />
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                              e.preventDefault();
+                              handleAddProducingCredit(creditType);
+                            }
+                            if (e.key === 'Escape') {
+                              handleCancelEditProducingCredit();
+                            }
+                          }}
+                        />
+                      </div>
                       <div className="edit-album-modal__add-button-group">
                         <button
                           type="button"
@@ -1114,21 +1804,38 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                     </div>
                   ) : (
                     <div className="edit-album-modal__producing-input-group">
-                      <input
-                        type="text"
-                        className="edit-album-modal__input"
-                        placeholder="Name"
-                        value={producingNames[creditType] || ''}
-                        onChange={(e) =>
-                          setProducingNames((prev) => ({ ...prev, [creditType]: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                            e.preventDefault();
-                            handleAddProducingCredit(creditType);
+                      <div className="edit-album-modal__two-column-inputs">
+                        <input
+                          type="text"
+                          className="edit-album-modal__input"
+                          placeholder="Name"
+                          value={producingNames[creditType] || ''}
+                          onChange={(e) =>
+                            setProducingNames((prev) => ({ ...prev, [creditType]: e.target.value }))
                           }
-                        }}
-                      />
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                              e.preventDefault();
+                              handleAddProducingCredit(creditType);
+                            }
+                          }}
+                        />
+                        <input
+                          type="text"
+                          className="edit-album-modal__input"
+                          placeholder="Role"
+                          value={producingRoles[creditType] || ''}
+                          onChange={(e) =>
+                            setProducingRoles((prev) => ({ ...prev, [creditType]: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                              e.preventDefault();
+                              handleAddProducingCredit(creditType);
+                            }
+                          }}
+                        />
+                      </div>
                       <button
                         type="button"
                         className="edit-album-modal__add-button"
@@ -1147,7 +1854,7 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
             {Object.keys(formData.producingCredits)
               .filter((type) => !DEFAULT_PRODUCING_CREDIT_TYPES.includes(type))
               .map((creditType) => {
-                const names = formData.producingCredits[creditType] || [];
+                const members = formData.producingCredits[creditType] || [];
                 const isEditing = editingProducingCredit?.creditType === creditType;
 
                 return (
@@ -1163,27 +1870,34 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                         ×
                       </button>
                     </div>
-                    {names.length > 0 && (
+                    {members.length > 0 && (
                       <div className="edit-album-modal__list">
-                        {names.map((name, nameIndex) => (
-                          <div key={nameIndex} className="edit-album-modal__list-item">
+                        {members.map((member, memberIndex) => (
+                          <div key={memberIndex} className="edit-album-modal__list-item">
                             <div className="edit-album-modal__list-item-content">
-                              <span className="edit-album-modal__list-item-name">{name}</span>
+                              <span className="edit-album-modal__list-item-name">
+                                {member.name}
+                              </span>
+                              {member.role && (
+                                <span className="edit-album-modal__list-item-role">
+                                  {member.role}
+                                </span>
+                              )}
                             </div>
                             <div className="edit-album-modal__list-item-actions">
                               <button
                                 type="button"
                                 className="edit-album-modal__list-item-edit"
-                                onClick={() => handleEditProducingCredit(creditType, nameIndex)}
-                                aria-label={`Edit ${name}`}
+                                onClick={() => handleEditProducingCredit(creditType, memberIndex)}
+                                aria-label={`Edit ${member.name}`}
                               >
                                 ✎
                               </button>
                               <button
                                 type="button"
                                 className="edit-album-modal__list-item-remove"
-                                onClick={() => handleRemoveProducingCredit(creditType, nameIndex)}
-                                aria-label={`Remove ${name}`}
+                                onClick={() => handleRemoveProducingCredit(creditType, memberIndex)}
+                                aria-label={`Remove ${member.name}`}
                               >
                                 ×
                               </button>
@@ -1194,25 +1908,51 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                     )}
                     {isEditing ? (
                       <div className="edit-album-modal__producing-input-group">
-                        <input
-                          type="text"
-                          className="edit-album-modal__input"
-                          placeholder="Name"
-                          value={producingNames[creditType] || ''}
-                          onChange={(e) =>
-                            setProducingNames((prev) => ({ ...prev, [creditType]: e.target.value }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                              e.preventDefault();
-                              handleAddProducingCredit(creditType);
+                        <div className="edit-album-modal__two-column-inputs">
+                          <input
+                            type="text"
+                            className="edit-album-modal__input"
+                            placeholder="Name"
+                            value={producingNames[creditType] || ''}
+                            onChange={(e) =>
+                              setProducingNames((prev) => ({
+                                ...prev,
+                                [creditType]: e.target.value,
+                              }))
                             }
-                            if (e.key === 'Escape') {
-                              handleCancelEditProducingCredit();
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                                e.preventDefault();
+                                handleAddProducingCredit(creditType);
+                              }
+                              if (e.key === 'Escape') {
+                                handleCancelEditProducingCredit();
+                              }
+                            }}
+                            autoFocus
+                          />
+                          <input
+                            type="text"
+                            className="edit-album-modal__input"
+                            placeholder="Role"
+                            value={producingRoles[creditType] || ''}
+                            onChange={(e) =>
+                              setProducingRoles((prev) => ({
+                                ...prev,
+                                [creditType]: e.target.value,
+                              }))
                             }
-                          }}
-                          autoFocus
-                        />
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                                e.preventDefault();
+                                handleAddProducingCredit(creditType);
+                              }
+                              if (e.key === 'Escape') {
+                                handleCancelEditProducingCredit();
+                              }
+                            }}
+                          />
+                        </div>
                         <div className="edit-album-modal__add-button-group">
                           <button
                             type="button"
@@ -1233,21 +1973,44 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                       </div>
                     ) : (
                       <div className="edit-album-modal__producing-input-group">
-                        <input
-                          type="text"
-                          className="edit-album-modal__input"
-                          placeholder="Name"
-                          value={producingNames[creditType] || ''}
-                          onChange={(e) =>
-                            setProducingNames((prev) => ({ ...prev, [creditType]: e.target.value }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                              e.preventDefault();
-                              handleAddProducingCredit(creditType);
+                        <div className="edit-album-modal__two-column-inputs">
+                          <input
+                            type="text"
+                            className="edit-album-modal__input"
+                            placeholder="Name"
+                            value={producingNames[creditType] || ''}
+                            onChange={(e) =>
+                              setProducingNames((prev) => ({
+                                ...prev,
+                                [creditType]: e.target.value,
+                              }))
                             }
-                          }}
-                        />
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                                e.preventDefault();
+                                handleAddProducingCredit(creditType);
+                              }
+                            }}
+                          />
+                          <input
+                            type="text"
+                            className="edit-album-modal__input"
+                            placeholder="Role"
+                            value={producingRoles[creditType] || ''}
+                            onChange={(e) =>
+                              setProducingRoles((prev) => ({
+                                ...prev,
+                                [creditType]: e.target.value,
+                              }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                                e.preventDefault();
+                                handleAddProducingCredit(creditType);
+                              }
+                            }}
+                          />
+                        </div>
                         <button
                           type="button"
                           className="edit-album-modal__add-button"
@@ -1643,8 +2406,9 @@ export function EditAlbumModal({ isOpen, albumId, onClose, onNext }: EditAlbumMo
                   type="button"
                   className="edit-album-modal__button edit-album-modal__button--primary"
                   onClick={handlePublish}
+                  disabled={isSaving}
                 >
-                  Publish album
+                  {isSaving ? 'Saving...' : 'Publish album'}
                 </button>
               ) : (
                 <button

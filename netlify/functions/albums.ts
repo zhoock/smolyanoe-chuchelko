@@ -21,6 +21,7 @@ import {
   handleError,
 } from './lib/api-helpers';
 import type { ApiResponse, SupportedLang } from './lib/types';
+import { updateAlbumsJson } from './lib/github-api';
 
 interface AlbumRow {
   id: string;
@@ -80,6 +81,20 @@ interface CreateAlbumRequest {
   albumId: string;
   artist: string;
   album: string;
+  fullName?: string;
+  description?: string;
+  cover?: Record<string, unknown>;
+  release?: Record<string, unknown>;
+  buttons?: Record<string, unknown>;
+  details?: unknown[];
+  lang: SupportedLang;
+  isPublic?: boolean;
+}
+
+interface UpdateAlbumRequest {
+  albumId: string;
+  artist?: string;
+  album?: string;
   fullName?: string;
   description?: string;
   cover?: Record<string, unknown>;
@@ -251,8 +266,230 @@ export const handler: Handler = async (
       };
     }
 
+    // PUT: обновление альбома (требует авторизации)
+    if (event.httpMethod === 'PUT') {
+      try {
+        const userId = requireAuth(event);
+
+        if (!userId) {
+          return createErrorResponse(401, 'Unauthorized. Authentication required.');
+        }
+
+        const data = parseJsonBody<UpdateAlbumRequest>(event.body, {} as UpdateAlbumRequest);
+
+        console.log('📝 PUT /api/albums - Request data:', {
+          albumId: data.albumId,
+          lang: data.lang,
+          hasArtist: data.artist !== undefined,
+          hasAlbum: data.album !== undefined,
+          hasDescription: data.description !== undefined,
+          hasRelease: data.release !== undefined,
+          hasButtons: data.buttons !== undefined,
+          hasDetails: data.details !== undefined,
+        });
+
+        // Валидация данных
+        if (!data.albumId || !data.lang || !validateLang(data.lang)) {
+          return createErrorResponse(
+            400,
+            'Missing required fields: albumId, lang (must be "en" or "ru")'
+          );
+        }
+
+        // Проверяем, существует ли альбом
+        const existingAlbumResult = await query<AlbumRow>(
+          `SELECT * FROM albums 
+          WHERE album_id = $1 AND lang = $2 
+          AND (user_id = $3 OR user_id IS NULL)
+          ORDER BY user_id NULLS LAST, created_at DESC
+          LIMIT 1`,
+          [data.albumId, data.lang, userId]
+        );
+
+        if (existingAlbumResult.rows.length === 0) {
+          return createErrorResponse(404, 'Album not found or access denied.');
+        }
+
+        const existingAlbum = existingAlbumResult.rows[0];
+
+        // Подготавливаем данные для обновления
+        const updateFields: string[] = [];
+        const updateValues: unknown[] = [];
+        let paramIndex = 1;
+
+        if (data.artist !== undefined) {
+          updateFields.push(`artist = $${paramIndex++}`);
+          updateValues.push(data.artist);
+        }
+        if (data.album !== undefined) {
+          updateFields.push(`album = $${paramIndex++}`);
+          updateValues.push(data.album);
+        }
+        if (data.fullName !== undefined) {
+          updateFields.push(`full_name = $${paramIndex++}`);
+          updateValues.push(data.fullName);
+        }
+        if (data.description !== undefined) {
+          updateFields.push(`description = $${paramIndex++}`);
+          updateValues.push(data.description);
+        }
+        if (data.cover !== undefined) {
+          updateFields.push(`cover = $${paramIndex++}::jsonb`);
+          updateValues.push(JSON.stringify(data.cover));
+        }
+        if (data.release !== undefined) {
+          updateFields.push(`release = $${paramIndex++}::jsonb`);
+          updateValues.push(JSON.stringify(data.release));
+        }
+        if (data.buttons !== undefined) {
+          updateFields.push(`buttons = $${paramIndex++}::jsonb`);
+          updateValues.push(JSON.stringify(data.buttons));
+        }
+        if (data.details !== undefined) {
+          updateFields.push(`details = $${paramIndex++}::jsonb`);
+          updateValues.push(JSON.stringify(data.details));
+        }
+        if (data.isPublic !== undefined) {
+          updateFields.push(`is_public = $${paramIndex++}`);
+          updateValues.push(data.isPublic);
+        }
+
+        if (updateFields.length === 0) {
+          return createErrorResponse(400, 'No fields to update.');
+        }
+
+        // Добавляем updated_at
+        updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+        // Добавляем условия WHERE
+        updateValues.push(existingAlbum.id);
+
+        // Обновляем альбом в БД
+        const updateQuery = `
+        UPDATE albums 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+
+        const updateResult = await query<AlbumRow>(updateQuery, updateValues);
+
+        const updatedAlbum = updateResult.rows[0];
+
+        // Загружаем треки для обновлённого альбома
+        const tracksResult = await query<TrackRow>(
+          `SELECT 
+          t.track_id,
+          t.title,
+          t.duration,
+          t.src,
+          t.content,
+          t.authorship,
+          t.synced_lyrics
+        FROM tracks t
+        WHERE t.album_id = $1
+        ORDER BY t.order_index ASC`,
+          [updatedAlbum.id]
+        );
+
+        const mappedAlbum = mapAlbumToApiFormat(updatedAlbum, tracksResult.rows);
+
+        // Сохраняем в JSON через GitHub API (асинхронно, не блокируем ответ)
+        const githubToken = process.env.GITHUB_TOKEN;
+        if (githubToken) {
+          // Загружаем все альбомы для обновления JSON
+          const allAlbumsResult = await query<AlbumRow>(
+            `SELECT DISTINCT ON (a.album_id) 
+            a.*
+          FROM albums a
+          WHERE a.lang = $1 
+            AND (
+              (a.user_id IS NULL AND a.is_public = true)
+              OR (a.user_id IS NOT NULL AND a.user_id = $2)
+            )
+          ORDER BY a.album_id, a.user_id NULLS LAST, a.created_at DESC`,
+            [data.lang, userId || null]
+          );
+
+          // Загружаем треки для всех альбомов
+          const allAlbumsWithTracks = await Promise.all(
+            allAlbumsResult.rows.map(async (album) => {
+              const tracksResult = await query<TrackRow>(
+                `SELECT 
+                t.track_id,
+                t.title,
+                t.duration,
+                t.src,
+                t.content,
+                t.authorship,
+                t.synced_lyrics
+              FROM tracks t
+              WHERE t.album_id = $1
+              ORDER BY t.order_index ASC`,
+                [album.id]
+              );
+
+              return mapAlbumToApiFormat(album, tracksResult.rows);
+            })
+          );
+
+          // Преобразуем в формат IAlbums для JSON
+          const albumsForJson = allAlbumsWithTracks.map((album) => ({
+            albumId: album.albumId,
+            artist: album.artist,
+            album: album.album,
+            fullName: album.fullName,
+            description: album.description,
+            cover: album.cover,
+            release: album.release,
+            buttons: album.buttons,
+            details: album.details,
+            tracks: album.tracks.map((track) => {
+              // track.id из API - это track_id (строка), нужно преобразовать в число для JSON
+              const trackIdNumber =
+                typeof track.id === 'string'
+                  ? parseInt(track.id, 10) || 0
+                  : typeof track.id === 'number'
+                    ? track.id
+                    : 0;
+
+              return {
+                id: trackIdNumber,
+                title: track.title,
+                duration: track.duration,
+                src: track.src || '',
+                content: track.content || '',
+                authorship: track.authorship || undefined,
+                syncedLyrics: track.syncedLyrics || undefined,
+              };
+            }),
+          }));
+
+          // Обновляем JSON файл (не ждём результата)
+          updateAlbumsJson(data.lang, albumsForJson, data.albumId, githubToken).catch((error) => {
+            console.error('❌ Failed to update JSON file in GitHub:', error);
+          });
+        } else {
+          console.warn('⚠️ GITHUB_TOKEN not set, skipping JSON update');
+        }
+
+        return {
+          statusCode: 200,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({
+            success: true,
+            message: 'Album updated successfully',
+            data: [mappedAlbum],
+          }),
+        };
+      } catch (putError) {
+        console.error('❌ Error in PUT /api/albums:', putError);
+        return handleError(putError, 'albums PUT function');
+      }
+    }
+
     // Неподдерживаемый метод
-    return createErrorResponse(405, 'Method not allowed. Use GET or POST.');
+    return createErrorResponse(405, 'Method not allowed. Use GET, POST, or PUT.');
   } catch (error) {
     return handleError(error, 'albums function');
   }

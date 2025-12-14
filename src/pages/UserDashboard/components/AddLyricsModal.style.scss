@@ -103,6 +103,40 @@ dialog {
       }
     }
 
+    &__field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__label {
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-weight: 500;
+    }
+
+    &__input {
+      display: block;
+      width: 100%;
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-family: inherit;
+      background: transparent;
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      box-sizing: border-box;
+
+      &::placeholder {
+        color: var(--iron-slate);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--dark-greenish-yellow);
+      }
+    }
+
     &__actions {
       display: flex;
       justify-content: flex-end;

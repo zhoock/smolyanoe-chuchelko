@@ -13,7 +13,7 @@ export function AuthPage() {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard/albums', { replace: true });
+      navigate('/dashboard-new', { replace: true });
     }
   }, [navigate]);
 
@@ -23,7 +23,7 @@ export function AuthPage() {
   }
 
   const handleSuccess = () => {
-    navigate('/dashboard/albums');
+    navigate('/dashboard-new');
   };
 
   return (

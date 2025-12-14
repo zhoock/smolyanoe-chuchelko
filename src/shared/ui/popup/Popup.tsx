@@ -19,10 +19,13 @@ const PopupComponent = ({
     if (isActive && !dialog.open) {
       dialog.showModal();
       // Фокус на первом фокусируемом элементе внутри dialog для доступности
-      const firstFocusable = dialog.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      firstFocusable?.focus();
+      // Используем setTimeout для предотвращения конфликтов с расширениями браузера
+      setTimeout(() => {
+        const firstFocusable = dialog.querySelector<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        firstFocusable?.focus();
+      }, 0);
     } else if (!isActive && dialog.open) {
       dialog.close();
     }

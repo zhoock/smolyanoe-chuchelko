@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/EditLyricsModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -9,14 +9,16 @@ import './EditLyricsModal.style.scss';
 interface EditLyricsModalProps {
   isOpen: boolean;
   initialLyrics: string;
+  initialAuthorship?: string;
   onClose: () => void;
-  onSave: (lyrics: string) => void;
+  onSave: (lyrics: string, authorship?: string) => void;
   onPreview?: () => void;
 }
 
 export function EditLyricsModal({
   isOpen,
   initialLyrics,
+  initialAuthorship,
   onClose,
   onSave,
   onPreview,
@@ -24,14 +26,22 @@ export function EditLyricsModal({
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [lyricsText, setLyricsText] = useState(initialLyrics);
+  const [authorship, setAuthorship] = useState(initialAuthorship || '');
+
+  // Обновляем состояние при изменении initialLyrics или initialAuthorship
+  useEffect(() => {
+    setLyricsText(initialLyrics);
+    setAuthorship(initialAuthorship || '');
+  }, [initialLyrics, initialAuthorship]);
 
   const handleSave = () => {
-    onSave(lyricsText);
+    onSave(lyricsText, authorship.trim() || undefined);
     onClose();
   };
 
   const handleClose = () => {
     setLyricsText(initialLyrics);
+    setAuthorship(initialAuthorship || '');
     onClose();
   };
 
@@ -59,6 +69,50 @@ export function EditLyricsModal({
             value={lyricsText}
             onChange={(e) => setLyricsText(e.target.value)}
           />
+          <div className="edit-lyrics-modal__divider"></div>
+          <div className="edit-lyrics-modal__field">
+            <label className="edit-lyrics-modal__label">Авторство:</label>
+            <input
+              type="text"
+              className="edit-lyrics-modal__input"
+              name="authorship"
+              id="authorship"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-gramm="false"
+              data-lpignore="true"
+              data-form-type="other"
+              inputMode="text"
+              aria-autocomplete="none"
+              placeholder="Например: Ярослав Жук — слова и музыка"
+              value={authorship}
+              onChange={(e) => setAuthorship(e.target.value)}
+              onFocus={(e) => {
+                // Предотвращаем всплытие события, чтобы избежать конфликтов с расширениями браузера
+                e.stopPropagation();
+              }}
+              onBlur={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
+              onKeyUp={(e) => {
+                e.stopPropagation();
+              }}
+              onKeyPress={(e) => {
+                e.stopPropagation();
+              }}
+              onInput={(e) => {
+                e.stopPropagation();
+              }}
+            />
+          </div>
           <div className="edit-lyrics-modal__divider"></div>
           <div className="edit-lyrics-modal__actions">
             <button

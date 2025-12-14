@@ -9,21 +9,10 @@ import './PreviewLyricsModal.style.scss';
 interface PreviewLyricsModalProps {
   isOpen: boolean;
   lyrics: string;
+  syncedLyrics?: { text: string; startTime: number; endTime?: number }[];
+  authorship?: string;
   onClose: () => void;
 }
-
-// Mock данные для синхронизированных строк (пока статичные, потом подключим реальные)
-const mockSyncedLyrics = [
-  { text: 'Through the void of space', startTime: 0, endTime: 3 },
-  { text: 'I soar', startTime: 3, endTime: 5 },
-  { text: "Carried by stars' glow", startTime: 5, endTime: 8 },
-  { text: 'so peculiar', startTime: 8, endTime: 10 },
-  { text: "Finding what I've never", startTime: 10, endTime: 13 },
-  { text: 'seen before', startTime: 13, endTime: 16 },
-];
-
-// Индекс выделенной строки (для демонстрации)
-const HIGHLIGHTED_LINE_INDEX = 2; // "Carried by stars' glow so peculiar"
 
 // Форматирование времени в формат MM:SS
 const formatTime = (seconds: number): string => {
@@ -32,13 +21,31 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export function PreviewLyricsModal({ isOpen, lyrics, onClose }: PreviewLyricsModalProps) {
+export function PreviewLyricsModal({
+  isOpen,
+  lyrics,
+  syncedLyrics,
+  authorship,
+  onClose,
+}: PreviewLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const [currentLineIndex, setCurrentLineIndex] = useState(HIGHLIGHTED_LINE_INDEX);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(34); // 0:34 в секундах
-  const [duration] = useState(238); // 3:58 в секундах
+  const [currentTime] = useState(0);
+  const [duration] = useState(0);
+
+  // Берём синхронизированный текст, если есть; иначе разбиваем lyrics по строкам
+  const lines =
+    syncedLyrics && syncedLyrics.length > 0
+      ? syncedLyrics
+      : lyrics
+          .split('\n')
+          .filter((l) => l.trim().length > 0)
+          .map((text) => ({ text, startTime: 0 }));
+
+  // Добавляем авторство как последнюю строку (без тайм-кода), если есть
+  const linesWithAuthorship =
+    authorship && authorship.trim() ? [...lines, { text: authorship.trim(), startTime: 0 }] : lines;
 
   const progress = duration > 0 ? currentTime / duration : 0;
 
@@ -112,13 +119,8 @@ export function PreviewLyricsModal({ isOpen, lyrics, onClose }: PreviewLyricsMod
           <div className="preview-lyrics-modal__divider"></div>
           <div className="preview-lyrics-modal__content">
             <div className="preview-lyrics-modal__lyrics">
-              {mockSyncedLyrics.map((line, index) => (
-                <div
-                  key={index}
-                  className={`preview-lyrics-modal__lyric-line ${
-                    index === currentLineIndex ? 'preview-lyrics-modal__lyric-line--active' : ''
-                  }`}
-                >
+              {linesWithAuthorship.map((line, index) => (
+                <div key={index} className="preview-lyrics-modal__lyric-line">
                   {line.text}
                 </div>
               ))}

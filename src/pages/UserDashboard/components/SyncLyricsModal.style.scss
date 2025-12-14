@@ -14,7 +14,7 @@ dialog {
       display: flex;
       flex-direction: column;
       width: 100%;
-      max-width: 800px;
+      max-width: 600px;
       max-height: 90vh;
       padding: var(--ms-2);
       background: var(--deep-black);
@@ -82,36 +82,17 @@ dialog {
 
     &__player {
       display: flex;
-      flex-direction: column;
-      gap: var(--ms-01);
+      align-items: center;
+      gap: var(--ms-0);
       padding: var(--ms-1) 0;
     }
 
-    &__player-info {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-02);
-    }
-
-    &__player-title {
-      color: var(--white);
-      font-size: var(--ms-0);
-      font-weight: 500;
-      line-height: 1.2;
-    }
-
-    &__player-controls {
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
-    }
-
-    &__player-play-btn {
+    &__play-button {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: calc(var(--ms-1) * 1.5);
-      height: calc(var(--ms-1) * 1.5);
+      width: calc(var(--ms-1) * 2);
+      height: calc(var(--ms-1) * 2);
       padding: 0;
       color: var(--white);
       background: transparent;
@@ -141,94 +122,51 @@ dialog {
       }
     }
 
-    &__player-progress-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-02);
-    }
-
-    &__player-progress-bar {
-      position: relative;
-      width: 100%;
-      height: 4px;
-      background: var(--iron-slate);
-      border-radius: 2px;
-      overflow: hidden;
-
-      input[type='range'] {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background: transparent;
-        border: none;
-        outline: none;
-        cursor: pointer;
-        appearance: none;
-
-        &::-webkit-slider-thumb {
-          appearance: none;
-          width: 12px;
-          height: 12px;
-          background: var(--white);
-          border-radius: 50%;
-          cursor: pointer;
-        }
-
-        &::-moz-range-thumb {
-          width: 12px;
-          height: 12px;
-          background: var(--white);
-          border: none;
-          border-radius: 50%;
-          cursor: pointer;
-        }
-
-        &::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 4px;
-          background: transparent;
-        }
-
-        &::-moz-range-track {
-          width: 100%;
-          height: 4px;
-          background: transparent;
-        }
-      }
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: var(--progress-width, 0%);
-        height: 100%;
-        background: var(--white);
-        border-radius: 2px;
-        transition: width 0.1s linear;
-        pointer-events: none;
-      }
-    }
-
-    &__player-time {
-      display: flex;
-      justify-content: space-between;
+    &__time {
       color: var(--white);
       font-size: var(--ms-0);
       font-weight: 400;
       font-variant-numeric: tabular-nums;
+      min-width: calc(var(--ms-0) * 3);
+      flex-shrink: 0;
     }
 
-    &__lines {
+    &__progress-bar {
+      position: relative;
+      height: 4px;
+      background: var(--iron-slate);
+      border-radius: 2px;
+      flex: 1;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    &__progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: var(--white);
+      border-radius: 2px;
+      transition: width 0.1s linear;
+      pointer-events: none;
+    }
+
+    &__duration {
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+      min-width: calc(var(--ms-0) * 3);
+      flex-shrink: 0;
+    }
+
+    &__content {
       display: flex;
       flex-direction: column;
-      gap: var(--ms-01);
+      gap: 0;
       min-height: 200px;
-      max-height: 400px;
+      max-height: 320px;
       overflow-y: auto;
     }
 
@@ -243,50 +181,104 @@ dialog {
       text-align: center;
     }
 
-    &__lines-list {
+    &__table {
       display: flex;
       flex-direction: column;
-      gap: var(--ms-01);
+      width: 100%;
     }
 
-    &__line {
+    &__table-header {
+      display: grid;
+      grid-template-columns: 40px 1fr 100px 120px 40px;
+      gap: var(--ms-01);
+      padding: var(--ms-01) var(--ms-0);
+      border-bottom: 1px solid var(--iron-slate);
+    }
+
+    &__table-body {
+      display: flex;
+      flex-direction: column;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    &__table-row {
+      display: grid;
+      grid-template-columns: 40px 1fr 100px 120px 40px;
+      gap: var(--ms-01);
+      padding: var(--ms-01) var(--ms-0);
+      border-bottom: 1px solid var(--iron-slate);
+      transition: background-color 0.2s;
+
+      &:hover {
+        background: var(--graphite-green);
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    &__table-col {
       display: flex;
       align-items: center;
-      gap: var(--ms-01);
-      padding: var(--ms-01);
-      background: var(--graphite-green);
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-weight: 400;
+      line-height: 1.5;
+
+      &--number {
+        justify-content: center;
+        font-weight: 500;
+        flex-shrink: 0;
+      }
+
+      &--lyrics {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      &--start,
+      &--end {
+        justify-content: flex-start;
+        flex-shrink: 0;
+      }
+
+      &--remove {
+        justify-content: center;
+        flex-shrink: 0;
+      }
     }
 
-    &__line-number {
+    &__remove-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       width: calc(var(--ms-0) * 1.5);
       height: calc(var(--ms-0) * 1.5);
+      padding: 0;
       color: var(--white);
       font-size: var(--ms-0);
-      font-weight: 500;
+      font-weight: 300;
+      line-height: 1;
+      background: transparent;
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: all 0.2s;
       flex-shrink: 0;
-    }
 
-    &__line-text {
-      flex: 1;
-      color: var(--white);
-      font-size: var(--ms-0);
-      font-weight: 400;
-      line-height: 1.5;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+      &:hover {
+        color: var(--white);
+        background: var(--pink-terracotta);
+        border-color: var(--pink-terracotta);
+      }
 
-    &__line-times {
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
-      flex-shrink: 0;
+      &:focus {
+        outline: none;
+      }
     }
 
     &__time-btn {
@@ -311,23 +303,18 @@ dialog {
         opacity: 0.5;
       }
 
-      &--clear {
-        min-width: auto;
-        width: calc(var(--ms-0) * 1.5);
-        height: calc(var(--ms-0) * 1.5);
-        padding: 0;
-        font-size: var(--ms-0);
-        line-height: 1;
+      &--set {
+        min-width: calc(var(--ms-0) * 5);
       }
     }
 
-    &__line-end {
+    &__end-time-wrapper {
       display: flex;
       align-items: center;
       gap: var(--ms-02);
     }
 
-    &__line-remove {
+    &__clear-btn {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -339,7 +326,7 @@ dialog {
       font-weight: 300;
       line-height: 1;
       background: transparent;
-      border: none;
+      border: 1px solid var(--iron-slate);
       border-radius: var(--ms-02);
       cursor: pointer;
       transition: all 0.2s;
@@ -348,6 +335,7 @@ dialog {
       &:hover {
         color: var(--white);
         background: var(--pink-terracotta);
+        border-color: var(--pink-terracotta);
       }
 
       &:focus {
@@ -355,33 +343,49 @@ dialog {
       }
     }
 
-    &__controls {
+    &__actions {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: var(--ms-01);
-      padding-top: var(--ms-01);
-      border-top: 1px solid var(--iron-slate);
+      gap: var(--ms-0);
     }
 
-    &__save-btn {
-      cursor: pointer;
-      font-size: var(--ms-0);
-      font-weight: 500;
+    &__actions-right {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-0);
+    }
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--honeydew-melon),
-        $hover-color: var(--white),
-        $hover-background: var(--dark-greenish-yellow),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-1),
-        $border: 1px solid var(--honeydew-melon),
-        $border-radius: var(--ms-01)
-      );
+    &__button {
+      &--cancel {
+        @include button-variant(
+          $color: var(--white),
+          $background: transparent,
+          $hover-color: var(--white),
+          $hover-background: var(--graphite-green),
+          $margin: 0,
+          $padding: var(--ms-01) var(--ms-0),
+          $border: 1px solid var(--iron-slate),
+          $border-radius: var(--ms-01)
+        );
+      }
 
-      &:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
+      &--primary {
+        @include button-variant(
+          $color: var(--white),
+          $background: var(--graphite-green),
+          $hover-color: var(--white),
+          $hover-background: var(--iron-slate),
+          $margin: 0,
+          $padding: var(--ms-01) var(--ms-0),
+          $border: 1px solid var(--iron-slate),
+          $border-radius: var(--ms-01)
+        );
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
       }
     }
 
@@ -402,22 +406,30 @@ dialog {
 
     @include breakpoint(phones) {
       &__card {
-        max-width: 100%;
         padding: var(--ms-1);
       }
 
-      &__line {
-        flex-wrap: wrap;
+      &__table-header,
+      &__table-row {
+        grid-template-columns: 30px 1fr 80px 100px 30px;
+        gap: var(--ms-02);
+        padding: var(--ms-01);
       }
 
-      &__line-text {
-        width: 100%;
-        white-space: normal;
+      &__table-col {
+        font-size: calc(var(--ms-0) * 0.9);
+
+        &--lyrics {
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+        }
       }
 
-      &__line-times {
-        width: 100%;
-        justify-content: flex-start;
+      &__time-btn {
+        min-width: calc(var(--ms-0) * 3);
+        padding: var(--ms-02) var(--ms-01);
+        font-size: calc(var(--ms-0) * 0.9);
       }
     }
   }
