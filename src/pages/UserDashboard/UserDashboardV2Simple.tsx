@@ -3,7 +3,7 @@
  * Простая статическая верстка нового дизайна dashboard
  * БЕЗ логики - только верстка по макету в стиле ChatGPT popup
  */
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
@@ -16,6 +16,8 @@ import { logout } from '@shared/lib/auth';
 import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
 import { PreviewLyricsModal } from './components/PreviewLyricsModal';
+import { EditAlbumModal } from './components/EditAlbumModal';
+import { SyncLyricsModal } from './components/SyncLyricsModal';
 import './UserDashboardV2Simple.style.scss';
 
 interface AlbumData {
@@ -33,6 +35,7 @@ interface TrackData {
   duration: string;
   lyricsStatus: 'synced' | 'text-only' | 'empty';
   lyricsText?: string;
+  src?: string;
 }
 
 // Mock текст для редактирования
@@ -106,6 +109,7 @@ function UserDashboardV2Simple() {
   const [activeTab, setActiveTab] = useState<'albums' | 'posts'>('albums');
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>(initialAlbumsData);
+  const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
   const [addLyricsModal, setAddLyricsModal] = useState<{
     isOpen: boolean;
     albumId: string;
@@ -122,6 +126,18 @@ function UserDashboardV2Simple() {
   const [previewLyricsModal, setPreviewLyricsModal] = useState<{
     isOpen: boolean;
     lyrics: string;
+  } | null>(null);
+  const [syncLyricsModal, setSyncLyricsModal] = useState<{
+    isOpen: boolean;
+    albumId: string;
+    trackId: string;
+    trackTitle: string;
+    trackSrc?: string;
+    lyricsText?: string;
+  } | null>(null);
+  const [editAlbumModal, setEditAlbumModal] = useState<{
+    isOpen: boolean;
+    albumId: string;
   } | null>(null);
 
   const toggleAlbum = (albumId: string) => {
@@ -178,6 +194,23 @@ function UserDashboardV2Simple() {
           trackId,
           trackTitle,
           trackStatus: track.lyricsStatus,
+        });
+      }
+    } else if (action === 'prev') {
+      const lyrics = getTrackLyricsText(albumId, trackId);
+      setPreviewLyricsModal({ isOpen: true, lyrics });
+    } else if (action === 'sync') {
+      const album = albumsData.find((a) => a.id === albumId);
+      const track = album?.tracks.find((t) => t.id === trackId);
+      if (track) {
+        const lyricsText = getTrackLyricsText(albumId, trackId);
+        setSyncLyricsModal({
+          isOpen: true,
+          albumId,
+          trackId,
+          trackTitle,
+          trackSrc: track.src,
+          lyricsText,
         });
       }
     }
@@ -380,6 +413,10 @@ function UserDashboardV2Simple() {
                                   <button
                                     type="button"
                                     className="dashboard-v2-simple__edit-album-button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditAlbumModal({ isOpen: true, albumId: album.id });
+                                    }}
                                   >
                                     {ui?.dashboard?.editAlbum ?? 'Edit Album'}
                                   </button>
@@ -389,9 +426,31 @@ function UserDashboardV2Simple() {
                                     <div className="dashboard-v2-simple__track-upload-text">
                                       {ui?.dashboard?.dropTracksHere ?? 'Drop tracks here or'}
                                     </div>
+                                    <input
+                                      ref={(el) => {
+                                        fileInputRefs.current[album.id] = el;
+                                      }}
+                                      type="file"
+                                      multiple
+                                      accept="audio/*"
+                                      style={{ display: 'none' }}
+                                      onChange={(e) => {
+                                        const files = e.target.files;
+                                        if (files && files.length > 0) {
+                                          // TODO: Обработка загруженных файлов
+                                          console.log('Selected files:', files);
+                                        }
+                                      }}
+                                    />
                                     <button
                                       type="button"
                                       className="dashboard-v2-simple__choose-files-button"
+                                      onClick={() => {
+                                        const input = fileInputRefs.current[album.id];
+                                        if (input) {
+                                          input.click();
+                                        }
+                                      }}
                                     >
                                       {ui?.dashboard?.chooseFiles ?? 'Choose files'}
                                     </button>
@@ -538,6 +597,33 @@ function UserDashboardV2Simple() {
           isOpen={previewLyricsModal.isOpen}
           lyrics={previewLyricsModal.lyrics}
           onClose={() => setPreviewLyricsModal(null)}
+        />
+      )}
+
+      {/* Sync Lyrics Modal */}
+      {syncLyricsModal && (
+        <SyncLyricsModal
+          isOpen={syncLyricsModal.isOpen}
+          albumId={syncLyricsModal.albumId}
+          trackId={syncLyricsModal.trackId}
+          trackTitle={syncLyricsModal.trackTitle}
+          trackSrc={syncLyricsModal.trackSrc}
+          lyricsText={syncLyricsModal.lyricsText}
+          onClose={() => setSyncLyricsModal(null)}
+        />
+      )}
+
+      {/* Edit Album Modal */}
+      {editAlbumModal && (
+        <EditAlbumModal
+          isOpen={editAlbumModal.isOpen}
+          albumId={editAlbumModal.albumId}
+          onClose={() => setEditAlbumModal(null)}
+          onNext={(data) => {
+            console.log('Album form data:', data);
+            // TODO: Handle form submission
+            setEditAlbumModal(null);
+          }}
         />
       )}
     </>
