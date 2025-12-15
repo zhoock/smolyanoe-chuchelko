@@ -36,14 +36,9 @@ function createSupabaseAdminClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
-    console.error('❌ Supabase credentials not found:', {
+    console.error('Supabase credentials not found', {
       hasUrl: !!supabaseUrl,
       hasServiceRoleKey: !!serviceRoleKey,
-      envKeys: Object.keys(process.env).filter((k) => k.includes('SUPABASE')),
-      // Логируем все переменные окружения для отладки (без значений)
-      allEnvKeys: Object.keys(process.env).filter(
-        (k) => k.includes('SUPABASE') || k.includes('NETLIFY')
-      ),
     });
     return null;
   }
@@ -83,41 +78,26 @@ function getStoragePath(userId: string, category: ImageCategory, fileName: strin
 }
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-  // Логируем начало выполнения функции
-  console.log('🚀 upload-file function called:', {
-    method: event.httpMethod,
-    path: event.path,
-    queryString: event.queryStringParameters,
-    hasBody: !!event.body,
-    bodyLength: event.body?.length || 0,
-    timestamp: new Date().toISOString(),
-  });
-
   // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    console.log('✅ CORS preflight request');
     return createOptionsResponse();
   }
 
   if (event.httpMethod !== 'POST') {
-    console.error('❌ Invalid method:', event.httpMethod);
     return createErrorResponse(405, 'Method not allowed');
   }
 
   try {
     // Проверяем авторизацию
     const userId = requireAuth(event);
-    console.log('🔐 Auth check:', { userId, hasAuth: !!userId });
     if (!userId) {
-      console.error('❌ Unauthorized request');
       return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
     }
 
     // Парсим JSON body
     const body = parseJsonBody<Partial<UploadFileRequest>>(event.body, {});
 
-    const { fileBase64, fileName, category, contentType, originalFileSize, originalFileName } =
-      body;
+    const { fileBase64, fileName, category, contentType, originalFileSize } = body;
 
     if (!fileBase64 || !fileName || !category) {
       return createErrorResponse(400, 'Missing required fields: fileBase64, fileName, category');
@@ -146,22 +126,12 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Проверяем размер файла
     const receivedSize = fileBuffer.length;
     if (originalFileSize && Math.abs(receivedSize - originalFileSize) > 100) {
-      console.warn('⚠️ File size mismatch:', {
+      console.warn('File size mismatch:', {
         originalFileSize,
         receivedSize,
         difference: Math.abs(receivedSize - originalFileSize),
       });
     }
-
-    console.log('📦 File received:', {
-      originalFileName,
-      fileName,
-      originalFileSize,
-      receivedSize,
-      base64Length: fileBase64.length,
-      bufferSize: fileBuffer.length,
-      contentType,
-    });
 
     // Формируем путь в Storage
     const storagePath = getStoragePath(targetUserId, category, fileName);
@@ -174,9 +144,6 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         limit: 100, // Получаем все файлы в папке
       });
 
-    // Проверяем, существует ли файл с таким же именем
-    const fileExists = existingFiles && existingFiles.some((f) => f.name === fileName);
-
     // Находим все файлы профиля (profile.*) для удаления старых версий
     const profileFiles = existingFiles?.filter((f) => f.name.startsWith('profile.')) || [];
 
@@ -185,55 +152,17 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     if (profileFiles.length > 0) {
       const filesToDelete = profileFiles.map((f) => getStoragePath(targetUserId, category, f.name));
 
-      console.log('📋 Found existing profile files, will be replaced:', {
-        files: profileFiles.map((f) => f.name),
-        filesToDelete,
-        newFileName: fileName,
-      });
-
       // Удаляем все старые файлы
-      const { error: deleteError, data: deleteData } = await supabase.storage
+      const { error: deleteError } = await supabase.storage
         .from(STORAGE_BUCKET_NAME)
         .remove(filesToDelete);
 
       if (deleteError) {
-        console.warn('⚠️ Failed to delete old files (will try upsert):', {
+        console.warn('Failed to delete old files (will try upsert):', {
           filesToDelete,
           error: deleteError.message,
         });
-      } else {
-        console.log('✅ Old profile files deleted successfully:', {
-          deletedFiles: deleteData,
-          count: filesToDelete.length,
-        });
-
-        // Увеличиваем задержку для синхронизации Storage (1 секунда)
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // Проверяем, что файлы действительно удалены
-        const { data: verifyDeleted } = await supabase.storage
-          .from(STORAGE_BUCKET_NAME)
-          .list(`${targetUserId}/${category}`, {
-            limit: 100,
-          });
-
-        const remainingFiles = verifyDeleted?.filter((f) => f.name.startsWith('profile.')) || [];
-        if (remainingFiles.length > 0) {
-          console.warn('⚠️ Some profile files still exist after deletion:', {
-            remainingFiles: remainingFiles.map((f) => f.name),
-          });
-          // Пытаемся удалить ещё раз
-          const remainingPaths = remainingFiles.map((f) =>
-            getStoragePath(targetUserId, category, f.name)
-          );
-          await supabase.storage.from(STORAGE_BUCKET_NAME).remove(remainingPaths);
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        } else {
-          console.log('✅ All profile files successfully deleted');
-        }
       }
-    } else {
-      console.log('📋 No existing profile files found, will create new:', storagePath);
     }
 
     // Загружаем новый файл в Supabase Storage
@@ -264,92 +193,6 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // Получаем публичный URL файла сразу после загрузки
     const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
-
-    console.log('📤 Upload response:', {
-      storagePath,
-      uploadData: data,
-      path: data.path,
-      id: data.id,
-      fullPath: data.fullPath,
-      uploadedSize: fileBuffer.length,
-      originalFileSize,
-    });
-
-    // Проверяем, что файл действительно загружен (с задержкой для синхронизации)
-    // Делаем несколько попыток с задержками
-    let verifyData: any = null;
-    let verifyError: any = null;
-    const maxAttempts = 3;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)); // Увеличиваем задержку с каждой попыткой
-
-      const { data: listData, error: listError } = await supabase.storage
-        .from(STORAGE_BUCKET_NAME)
-        .list(`${targetUserId}/${category}`, {
-          limit: 100,
-        });
-
-      if (listError) {
-        console.warn(`Attempt ${attempt}: Could not list files:`, listError.message);
-        verifyError = listError;
-        continue;
-      }
-
-      const foundFile = listData?.find((file) => file.name === fileName);
-      if (foundFile) {
-        verifyData = foundFile;
-        const fileSize = foundFile.metadata?.size || 0;
-        const sizeMatch = originalFileSize ? Math.abs(fileSize - originalFileSize) < 100 : true;
-
-        console.log(`✅ File verified in storage (attempt ${attempt}):`, {
-          fileName: foundFile.name,
-          size: fileSize,
-          originalFileSize,
-          sizeMatch,
-          updated: foundFile.updated_at,
-          created: foundFile.created_at,
-        });
-
-        if (!sizeMatch && originalFileSize) {
-          console.warn('⚠️ File size mismatch in storage!', {
-            expected: originalFileSize,
-            actual: fileSize,
-            difference: Math.abs(fileSize - originalFileSize),
-          });
-        }
-        break;
-      } else {
-        console.warn(`Attempt ${attempt}: File not found in list:`, {
-          storagePath,
-          fileName,
-          listedFiles: listData?.map((f) => f.name),
-        });
-      }
-    }
-
-    // Также пытаемся получить файл напрямую по пути
-    const { data: directFile, error: directError } = await supabase.storage
-      .from(STORAGE_BUCKET_NAME)
-      .download(storagePath);
-
-    if (directError) {
-      console.warn(
-        '⚠️ Could not download file directly (may be normal if file is large):',
-        directError.message
-      );
-    } else if (directFile) {
-      console.log('✅ File can be downloaded directly, size:', directFile.size, 'bytes');
-    }
-
-    console.log('📋 Final upload summary:', {
-      storagePath,
-      publicUrl: urlData.publicUrl,
-      uploadData: data,
-      verified: !!verifyData,
-      canDownload: !!directFile,
-      fileSize: fileBuffer.length,
-    });
 
     return createSuccessResponse(
       {

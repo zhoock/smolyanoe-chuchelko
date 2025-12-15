@@ -73,30 +73,8 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       return null;
     }
 
-    // Логируем информацию о файле перед конвертацией
-    console.log('📤 Preparing file for upload:', {
-      fileName,
-      originalFileName: file instanceof File ? file.name : 'Blob',
-      fileSize: file.size,
-      fileType: file instanceof File ? file.type : 'unknown',
-      lastModified: file instanceof File ? new Date(file.lastModified).toISOString() : 'N/A',
-    });
-
     // Конвертируем файл в base64
     const fileBase64 = await fileToBase64(file);
-
-    // Проверяем размер base64 (должен быть примерно на 33% больше оригинала)
-    const base64Size = fileBase64.length;
-    const expectedBase64Size = Math.ceil(file.size * 1.33);
-    const sizeDiff = Math.abs(base64Size - expectedBase64Size);
-
-    console.log('📦 File converted to base64:', {
-      originalSize: file.size,
-      base64Size,
-      expectedBase64Size,
-      sizeDiff,
-      isValid: sizeDiff < file.size * 0.1, // Разница не должна быть больше 10%
-    });
 
     // Отправляем запрос на Netlify Function
     const response = await fetch('/.netlify/functions/upload-file', {
@@ -139,11 +117,6 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       console.error('Upload failed:', result.error || 'Unknown error');
       return null;
     }
-
-    console.debug('uploadFile success', {
-      url: result.data.url,
-      storagePath: result.data.storagePath,
-    });
 
     return result.data.url;
   } catch (error) {
