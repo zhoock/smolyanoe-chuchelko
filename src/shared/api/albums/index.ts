@@ -12,14 +12,6 @@ export interface ImageUrlOptions {
  * Проверяет, включено ли использование Supabase Storage
  */
 function shouldUseSupabaseStorage(options?: ImageUrlOptions): boolean {
-  // Статические ассеты (альбомы/статьи/стемы) лежат в репозитории и копируются в dist.
-  // Не уходим в Supabase Storage для них, пока явно не попросили (useSupabaseStorage=true),
-  // чтобы не получать 404 в проде, если бакет не синхронизирован.
-  const staticCategories: ImageCategory[] = ['albums', 'articles', 'stems'];
-  if (options?.category && staticCategories.includes(options.category)) {
-    return options.useSupabaseStorage === true;
-  }
-
   // Если явно указано в опциях
   if (options?.useSupabaseStorage !== undefined) {
     return options.useSupabaseStorage;
