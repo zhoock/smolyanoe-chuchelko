@@ -11,18 +11,9 @@ export interface ImageUrlOptions {
 /**
  * Проверяет, включено ли использование Supabase Storage
  */
-function shouldUseSupabaseStorage(options?: ImageUrlOptions): boolean {
-  // Если явно указано в опциях
-  if (options?.useSupabaseStorage !== undefined) {
-    return options.useSupabaseStorage;
-  }
-
-  // Проверяем переменную окружения
-  if (typeof window !== 'undefined') {
-    return import.meta.env.VITE_USE_SUPABASE_STORAGE === 'true';
-  }
-
-  return process.env.USE_SUPABASE_STORAGE === 'true';
+// Всегда используем Supabase Storage для медиа (обложки/аудио)
+function shouldUseSupabaseStorage(_options?: ImageUrlOptions): boolean {
+  return true;
 }
 
 /**
