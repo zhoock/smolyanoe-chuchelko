@@ -327,21 +327,11 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
     }
     lastUpdateTime = now;
 
-    const { currentTime, duration: audioDuration } = el;
-    const trackDuration = state.player.playlist?.[state.player.currentTrackIndex]?.duration;
-    const storedDuration = state.player.time?.duration;
-
-    const duration =
-      (Number.isFinite(audioDuration) && audioDuration > 0 && audioDuration) ||
-      (Number.isFinite(trackDuration) && trackDuration > 0 && trackDuration) ||
-      (Number.isFinite(storedDuration) && storedDuration > 0 && storedDuration) ||
-      NaN;
-
+    const { duration, currentTime } = el;
     if (!Number.isFinite(duration) || duration <= 0) return;
 
-    const clampedCurrent = Math.min(currentTime, duration);
-    const progress = (clampedCurrent / duration) * 100;
-    dispatch(playerActions.setTime({ current: clampedCurrent, duration }));
+    const progress = (currentTime / duration) * 100;
+    dispatch(playerActions.setTime({ current: currentTime, duration }));
     dispatch(playerActions.setProgress(progress));
   };
   el.addEventListener('timeupdate', timeupdateHandler);
@@ -353,13 +343,7 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
   loadedmetadataHandler = () => {
     const state = getState().player;
     const persistedTime = state.time?.current ?? 0;
-    const audioDuration = el.duration;
-    const trackDuration = state.playlist?.[state.currentTrackIndex]?.duration;
-    const duration =
-      (Number.isFinite(audioDuration) && audioDuration > 0 && audioDuration) ||
-      (Number.isFinite(trackDuration) && trackDuration > 0 && trackDuration) ||
-      NaN;
-
+    const duration = el.duration;
     const hasDuration = Number.isFinite(duration) && duration > 0;
     const shouldRestorePosition =
       Number.isFinite(persistedTime) && persistedTime > 0 && hasDuration;

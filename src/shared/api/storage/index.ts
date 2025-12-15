@@ -1,10 +1,5 @@
 /**
  * API для работы с Supabase Storage
- *
- * ВАЖНО: Для обхода блокировок российских операторов:
- * - getStorageFileUrl и getStorageSignedUrl используют прокси через Netlify Functions
- * - uploadFile, deleteStorageFile, listStorageFiles все еще делают прямые запросы к Supabase
- *   (можно переделать на Netlify Functions при необходимости)
  */
 
 import {
@@ -38,87 +33,46 @@ function getStoragePath(userId: string, category: ImageCategory, fileName: strin
 }
 
 /**
- * Конвертирует File/Blob в base64 строку
- */
-async function fileToBase64(file: File | Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Убираем префикс "data:image/jpeg;base64," если есть
-      const base64 = result.includes(',') ? result.split(',')[1] : result;
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-/**
- * Загрузить файл в Supabase Storage через Netlify Function
- * Использует service role key на сервере, обходит RLS политики
+ * Загрузить файл в Supabase Storage
  * @param options - опции загрузки
  * @returns URL загруженного файла или null в случае ошибки
  */
 export async function uploadFile(options: UploadFileOptions): Promise<string | null> {
   try {
-    const { userId = CURRENT_USER_CONFIG.userId, category, file, fileName, contentType } = options;
+    const {
+      userId = CURRENT_USER_CONFIG.userId,
+      category,
+      file,
+      fileName,
+      contentType,
+      upsert = false,
+    } = options;
 
-    // Импортируем функции аутентификации динамически, чтобы избежать циклических зависимостей
-    const { getToken } = await import('@shared/lib/auth');
-    const token = getToken();
-
-    if (!token) {
-      console.error('User is not authenticated. Please log in to upload files.');
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+      console.error('Supabase client is not available. Please set required environment variables.');
       return null;
     }
 
-    // Конвертируем файл в base64
-    const fileBase64 = await fileToBase64(file);
+    const storagePath = getStoragePath(userId, category, fileName);
 
-    // Отправляем запрос на Netlify Function
-    const response = await fetch('/.netlify/functions/upload-file', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        fileBase64,
-        fileName,
-        userId,
-        category,
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET_NAME)
+      .upload(storagePath, file, {
         contentType: contentType || (file instanceof File ? file.type : 'image/jpeg'),
-        originalFileSize: file.size, // Передаём размер для проверки на сервере
-        originalFileName: file instanceof File ? file.name : undefined,
-      }),
-    });
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (parseError) {
-        const text = await response.text().catch(() => 'Unable to read response');
-        errorData = { error: `HTTP ${response.status}: ${text}` };
-      }
-      console.error('❌ Error uploading file:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData,
-        url: response.url,
+        upsert,
+        cacheControl: '3600', // Кеш на 1 час
       });
+
+    if (error) {
+      console.error('Error uploading file to Supabase Storage:', error);
       return null;
     }
 
-    const result = await response.json();
+    // Получаем публичный URL файла
+    const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
 
-    if (!result.success || !result.data?.url) {
-      console.error('Upload failed:', result.error || 'Unknown error');
-      return null;
-    }
-
-    return result.data.url;
+    return urlData.publicUrl;
   } catch (error) {
     console.error('Error in uploadFile:', error);
     return null;
@@ -177,44 +131,54 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
 
 /**
  * Получить публичный URL файла из Supabase Storage
- * Использует прокси через Netlify Functions для обхода блокировок российских операторов
  * @param options - опции для получения URL
- * @returns Публичный URL файла через прокси
+ * @returns Публичный URL файла
  */
 export function getStorageFileUrl(options: GetFileUrlOptions): string {
   const { userId = CURRENT_USER_CONFIG.userId, category, fileName } = options;
 
+  const supabase = createSupabaseClient();
+  if (!supabase) {
+    console.error('Supabase client is not available. Please set required environment variables.');
+    // Возвращаем пустую строку, если клиент недоступен
+    return '';
+  }
+
   const storagePath = getStoragePath(userId, category, fileName);
 
-  // Используем прокси через Netlify Functions вместо прямого URL Supabase
-  // Это позволяет обойти блокировки российских операторов
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : 'https://smolyanoechuchelko.ru';
-  const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(storagePath)}`;
+  const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
 
-  return proxyUrl;
+  return data.publicUrl;
 }
 
 /**
  * Получить временную (signed) URL файла из Supabase Storage
  * Используется для приватных файлов
- * Использует прокси через Netlify Functions для обхода блокировок российских операторов
  * @param options - опции для получения URL
- * @returns Временный URL файла через прокси или null в случае ошибки
+ * @returns Временный URL файла или null в случае ошибки
  */
 export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<string | null> {
   try {
-    const { userId = CURRENT_USER_CONFIG.userId, category, fileName } = options;
+    const { userId = CURRENT_USER_CONFIG.userId, category, fileName, expiresIn = 3600 } = options;
 
-    // Для приватных файлов также используем прокси
-    // Прокси будет делать запрос с service role key на сервере
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+      console.error('Supabase client is not available. Please set required environment variables.');
+      return null;
+    }
+
     const storagePath = getStoragePath(userId, category, fileName);
 
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://smolyanoechuchelko.ru';
-    const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(storagePath)}`;
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET_NAME)
+      .createSignedUrl(storagePath, expiresIn);
 
-    return proxyUrl;
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return null;
+    }
+
+    return data.signedUrl;
   } catch (error) {
     console.error('Error in getStorageSignedUrl:', error);
     return null;
