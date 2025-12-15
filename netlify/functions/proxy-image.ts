@@ -50,7 +50,8 @@ export const handler: Handler = async (
 
     // Получаем URL Supabase Storage из переменных окружения
     // В Netlify Functions переменные окружения доступны без VITE_ префикса
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    // Сначала проверяем переменные без префикса (для продакшена), затем с префиксом (для локальной разработки)
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
     const bucketName = 'user-media';
 
     if (!supabaseUrl) {

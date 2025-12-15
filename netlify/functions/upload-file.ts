@@ -29,15 +29,21 @@ import {
 const STORAGE_BUCKET_NAME = 'user-media';
 
 function createSupabaseAdminClient() {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  // В Netlify Functions переменные с префиксом VITE_ недоступны
+  // Используем переменные без префикса для серверных функций
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
   const serviceRoleKey =
-    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
     console.error('❌ Supabase credentials not found:', {
       hasUrl: !!supabaseUrl,
       hasServiceRoleKey: !!serviceRoleKey,
       envKeys: Object.keys(process.env).filter((k) => k.includes('SUPABASE')),
+      // Логируем все переменные окружения для отладки (без значений)
+      allEnvKeys: Object.keys(process.env).filter(
+        (k) => k.includes('SUPABASE') || k.includes('NETLIFY')
+      ),
     });
     return null;
   }
