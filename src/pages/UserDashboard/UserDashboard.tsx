@@ -99,9 +99,25 @@ function UserDashboard() {
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
   const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const [avatarSrc, setAvatarSrc] = useState<string>(() =>
-    getUserImageUrl('profile', 'profile', '.jpg')
-  );
+
+  // Ключ для сохранения URL аватара в localStorage
+  const AVATAR_URL_KEY = 'user-avatar-url';
+
+  // Инициализация avatarSrc: сначала проверяем localStorage, затем fallback на дефолтный аватар
+  const [avatarSrc, setAvatarSrc] = useState<string>(() => {
+    try {
+      const savedUrl = localStorage.getItem(AVATAR_URL_KEY);
+      if (savedUrl) {
+        // Добавляем cache-bust при загрузке из localStorage для принудительного обновления
+        const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        return `${savedUrl}?t=${bust}`;
+      }
+    } catch (error) {
+      console.warn('Failed to load avatar URL from localStorage:', error);
+    }
+    // Дефолтный аватар
+    return '/images/avatar.png';
+  });
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
   const [addLyricsModal, setAddLyricsModal] = useState<{
     isOpen: boolean;
@@ -462,23 +478,100 @@ function UserDashboard() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setIsUploadingAvatar(true);
     try {
+      // Определяем расширение файла из MIME типа или имени файла
+      let fileExtension = '.jpg'; // По умолчанию
+      if (file.type) {
+        if (file.type === 'image/png') {
+          fileExtension = '.png';
+        } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+          fileExtension = '.jpg';
+        } else if (file.type === 'image/webp') {
+          fileExtension = '.webp';
+        } else {
+          // Пытаемся определить из имени файла
+          const nameMatch = file.name.match(/\.([a-z0-9]+)$/i);
+          if (nameMatch) {
+            fileExtension = `.${nameMatch[1].toLowerCase()}`;
+          }
+        }
+      }
+
+      const fileName = `profile${fileExtension}`;
+
+      console.log('Starting avatar upload...', {
+        originalFileName: file.name,
+        fileName,
+        fileSize: file.size,
+        fileType: file.type,
+        fileExtension,
+      });
+
       const result = await uploadFile({
         category: 'profile',
         file,
-        fileName: 'profile.jpg',
+        fileName,
         upsert: true,
       });
+
+      console.log('Avatar upload result:', result);
+
       if (!result) {
-        alert('Не удалось загрузить аватар. Попробуйте ещё раз.');
-      } else {
-        const bust = Date.now();
-        setAvatarSrc(`${getUserImageUrl('profile', 'profile', '.jpg')}?t=${bust}`);
+        console.error('Upload failed: result is null');
+        alert('Не удалось загрузить аватар. Проверьте консоль для деталей и повторите.');
+        return;
       }
+
+      // Проверяем, что URL валидный
+      if (!result.startsWith('http')) {
+        console.error('Invalid URL returned:', result);
+        alert('Получен невалидный URL аватара. Проверьте консоль для деталей.');
+        return;
+      }
+
+      // Используем URL, который вернула функцию uploadFile (публичный URL из Supabase Storage)
+      // Добавляем агрессивный cache-bust для принудительного обновления изображения
+      // Используем timestamp + случайное число для гарантированного обновления
+      const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const avatarUrl = `${result}?t=${bust}`;
+
+      // Предзагружаем новое изображение перед обновлением состояния
+      // Это гарантирует, что новый аватар отобразится сразу после окончания прелоадера
+      const preloadImg = new Image();
+
+      await new Promise<void>((resolve, reject) => {
+        preloadImg.onload = () => {
+          console.log('✅ New avatar image preloaded successfully');
+          resolve();
+        };
+        preloadImg.onerror = () => {
+          console.warn('⚠️ Failed to preload new avatar, but will try to display it anyway');
+          // Не отклоняем промис, чтобы всё равно обновить URL
+          resolve();
+        };
+        // Начинаем загрузку
+        preloadImg.src = avatarUrl;
+      });
+
+      // Сохраняем URL в localStorage (без cache-bust)
+      try {
+        localStorage.setItem(AVATAR_URL_KEY, result);
+        console.log('✅ Avatar URL saved to localStorage:', result);
+      } catch (error) {
+        console.warn('Failed to save avatar URL to localStorage:', error);
+      }
+
+      // Обновляем состояние только после предзагрузки
+      // Теперь новое изображение уже в кеше браузера и отобразится мгновенно
+      setAvatarSrc(avatarUrl);
+      console.log('✅ Avatar URL updated in state:', avatarUrl);
     } catch (error) {
-      console.error('Ошибка загрузки аватара:', error);
-      alert('Ошибка загрузки аватара. Попробуйте ещё раз.');
+      console.error('❌ Error uploading avatar:', error);
+      alert(
+        `Ошибка загрузки аватара: ${error instanceof Error ? error.message : 'Unknown error'}. Проверьте консоль для деталей.`
+      );
     } finally {
       setIsUploadingAvatar(false);
       if (avatarInputRef.current) {
@@ -492,9 +585,9 @@ function UserDashboard() {
   if ((albumsStatus === 'loading' || albumsStatus === 'idle') && albumsData.length === 0) {
     return (
       <Popup isActive={true} onClose={() => navigate('/')}>
-        <div className="dashboard-v2-simple">
-          <div className="dashboard-v2-simple__card">
-            <div className="dashboard-v2-simple__loading">Загрузка...</div>
+        <div className="user-dashboard">
+          <div className="user-dashboard__card">
+            <div className="user-dashboard__loading">Загрузка...</div>
           </div>
         </div>
       </Popup>
@@ -504,9 +597,9 @@ function UserDashboard() {
   if (albumsStatus === 'failed') {
     return (
       <Popup isActive={true} onClose={() => navigate('/')}>
-        <div className="dashboard-v2-simple">
-          <div className="dashboard-v2-simple__card">
-            <div className="dashboard-v2-simple__error">
+        <div className="user-dashboard">
+          <div className="user-dashboard__card">
+            <div className="user-dashboard__error">
               Ошибка загрузки: {albumsError || 'Не удалось загрузить альбомы'}
             </div>
           </div>
@@ -522,29 +615,29 @@ function UserDashboard() {
       </Helmet>
 
       <Popup isActive={true} onClose={() => navigate('/')}>
-        <div className="dashboard-v2-simple">
+        <div className="user-dashboard">
           {/* Main card container */}
-          <div className="dashboard-v2-simple__card">
+          <div className="user-dashboard__card">
             {/* Header with tabs */}
-            <div className="dashboard-v2-simple__header">
-              <div className="dashboard-v2-simple__tabs">
+            <div className="user-dashboard__header">
+              <div className="user-dashboard__tabs">
                 <button
                   type="button"
-                  className={`dashboard-v2-simple__tab ${activeTab === 'albums' ? 'dashboard-v2-simple__tab--active' : ''}`}
+                  className={`user-dashboard__tab ${activeTab === 'albums' ? 'user-dashboard__tab--active' : ''}`}
                   onClick={() => setActiveTab('albums')}
                 >
                   {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                 </button>
                 <button
                   type="button"
-                  className={`dashboard-v2-simple__tab ${activeTab === 'posts' ? 'dashboard-v2-simple__tab--active' : ''}`}
+                  className={`user-dashboard__tab ${activeTab === 'posts' ? 'user-dashboard__tab--active' : ''}`}
                   onClick={() => setActiveTab('posts')}
                 >
                   {ui?.dashboard?.tabs?.posts ?? 'Posts'}
                 </button>
                 <button
                   type="button"
-                  className={`dashboard-v2-simple__tab ${activeTab === 'payment-settings' ? 'dashboard-v2-simple__tab--active' : ''}`}
+                  className={`user-dashboard__tab ${activeTab === 'payment-settings' ? 'user-dashboard__tab--active' : ''}`}
                   onClick={() => setActiveTab('payment-settings')}
                 >
                   Payment Settings
@@ -552,7 +645,7 @@ function UserDashboard() {
               </div>
               <button
                 type="button"
-                className="dashboard-v2-simple__logout-button"
+                className="user-dashboard__logout-button"
                 onClick={() => {
                   logout();
                   navigate('/auth');
@@ -563,15 +656,27 @@ function UserDashboard() {
             </div>
 
             {/* Main layout */}
-            <div className="dashboard-v2-simple__layout">
+            <div className="user-dashboard__layout">
               {/* Left column - Profile */}
-              <div className="dashboard-v2-simple__profile">
-                <h3 className="dashboard-v2-simple__profile-title">
+              <div className="user-dashboard__profile">
+                <h3 className="user-dashboard__profile-title">
                   {ui?.dashboard?.profile ?? 'Profile'}
                 </h3>
 
-                <div className="dashboard-v2-simple__avatar">
-                  <div className="dashboard-v2-simple__avatar-img">
+                <div
+                  className="user-dashboard__avatar"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Изменить аватар"
+                  onClick={handleAvatarClick}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleAvatarClick();
+                    }
+                  }}
+                >
+                  <div className="user-dashboard__avatar-img">
                     <img
                       src={avatarSrc}
                       alt={ui?.dashboard?.profile ?? 'Profile'}
@@ -579,28 +684,30 @@ function UserDashboard() {
                         const img = e.target as HTMLImageElement;
                         const applied = img.dataset.fallbackApplied;
 
-                        // 1) если фолбэк ещё не пробовали — пробуем локальный профиль
+                        // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
                         if (!applied) {
-                          img.dataset.fallbackApplied = 'local';
-                          img.src = '/images/users/zhoock/profile/profile.jpg';
-                          return;
-                        }
-
-                        // 2) если уже пробовали локальный — ставим дефолтный аватар
-                        if (applied === 'local') {
                           img.dataset.fallbackApplied = 'default';
                           img.src = '/images/avatar.png';
                           return;
                         }
 
-                        // 3) иначе скрываем
+                        // 2) если и дефолтный не загрузился — скрываем
                         img.style.display = 'none';
                       }}
                     />
+                    {isUploadingAvatar && (
+                      <div
+                        className="user-dashboard__avatar-loader"
+                        aria-live="polite"
+                        aria-busy="true"
+                      >
+                        <div className="user-dashboard__avatar-spinner"></div>
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
-                    className="dashboard-v2-simple__avatar-edit"
+                    className="user-dashboard__avatar-edit"
                     onClick={handleAvatarClick}
                     disabled={isUploadingAvatar}
                     aria-label="Изменить аватар"
@@ -611,18 +718,24 @@ function UserDashboard() {
                     ref={avatarInputRef}
                     type="file"
                     accept="image/*"
-                    style={{ display: 'none' }}
+                    style={{
+                      position: 'absolute',
+                      width: '1px',
+                      height: '1px',
+                      opacity: 0,
+                      pointerEvents: 'none',
+                    }}
                     onChange={handleAvatarChange}
                   />
                 </div>
 
-                <div className="dashboard-v2-simple__profile-fields">
-                  <div className="dashboard-v2-simple__field">
+                <div className="user-dashboard__profile-fields">
+                  <div className="user-dashboard__field">
                     <label htmlFor="name">{ui?.dashboard?.profileFields?.name ?? 'Name'}</label>
                     <input id="name" type="text" defaultValue={user?.name || ''} disabled />
                   </div>
 
-                  <div className="dashboard-v2-simple__field">
+                  <div className="user-dashboard__field">
                     <label htmlFor="email">{ui?.dashboard?.profileFields?.email ?? 'Email'}</label>
                     <input id="email" type="email" defaultValue={user?.email || ''} disabled />
                   </div>
@@ -630,25 +743,25 @@ function UserDashboard() {
               </div>
 
               {/* Vertical separator */}
-              <div className="dashboard-v2-simple__separator"></div>
+              <div className="user-dashboard__separator"></div>
 
               {/* Right column - Content */}
-              <div className="dashboard-v2-simple__content">
+              <div className="user-dashboard__content">
                 {activeTab === 'payment-settings' ? (
                   <PaymentSettings userId="current-user" />
                 ) : activeTab === 'albums' ? (
                   <>
-                    <h3 className="dashboard-v2-simple__section-title">
+                    <h3 className="user-dashboard__section-title">
                       {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                     </h3>
-                    <div className="dashboard-v2-simple__section">
-                      <div className="dashboard-v2-simple__albums-list">
+                    <div className="user-dashboard__section">
+                      <div className="user-dashboard__albums-list">
                         {albumsData.map((album, index) => {
                           const isExpanded = expandedAlbumId === album.id;
                           return (
                             <React.Fragment key={album.id}>
                               <div
-                                className={`dashboard-v2-simple__album-item ${isExpanded ? 'dashboard-v2-simple__album-item--expanded' : ''}`}
+                                className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
                                 onClick={() => toggleAlbum(album.id)}
                                 role="button"
                                 tabIndex={0}
@@ -660,39 +773,35 @@ function UserDashboard() {
                                 }}
                                 aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
                               >
-                                <div className="dashboard-v2-simple__album-thumbnail">
+                                <div className="user-dashboard__album-thumbnail">
                                   <img
                                     src={getUserImageUrl(album.cover, 'albums', '@2x-128.webp')}
                                     alt={album.title}
                                   />
                                 </div>
-                                <div className="dashboard-v2-simple__album-info">
-                                  <div className="dashboard-v2-simple__album-title">
-                                    {album.title}
-                                  </div>
+                                <div className="user-dashboard__album-info">
+                                  <div className="user-dashboard__album-title">{album.title}</div>
                                   {album.releaseDate ? (
-                                    <div className="dashboard-v2-simple__album-date">
+                                    <div className="user-dashboard__album-date">
                                       {album.releaseDate}
                                     </div>
                                   ) : (
-                                    <div className="dashboard-v2-simple__album-year">
-                                      {album.year}
-                                    </div>
+                                    <div className="user-dashboard__album-year">{album.year}</div>
                                   )}
                                 </div>
                                 <div
-                                  className={`dashboard-v2-simple__album-arrow ${isExpanded ? 'dashboard-v2-simple__album-arrow--expanded' : ''}`}
+                                  className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
                                 >
                                   {isExpanded ? '⌃' : '›'}
                                 </div>
                               </div>
 
                               {isExpanded && (
-                                <div className="dashboard-v2-simple__album-expanded">
+                                <div className="user-dashboard__album-expanded">
                                   {/* Edit Album button */}
                                   <button
                                     type="button"
-                                    className="dashboard-v2-simple__edit-album-button"
+                                    className="user-dashboard__edit-album-button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setEditAlbumModal({ isOpen: true, albumId: album.id });
@@ -702,8 +811,8 @@ function UserDashboard() {
                                   </button>
 
                                   {/* Track upload section */}
-                                  <div className="dashboard-v2-simple__track-upload">
-                                    <div className="dashboard-v2-simple__track-upload-text">
+                                  <div className="user-dashboard__track-upload">
+                                    <div className="user-dashboard__track-upload-text">
                                       {ui?.dashboard?.dropTracksHere ?? 'Drop tracks here or'}
                                     </div>
                                     <input
@@ -724,7 +833,7 @@ function UserDashboard() {
                                     />
                                     <button
                                       type="button"
-                                      className="dashboard-v2-simple__choose-files-button"
+                                      className="user-dashboard__choose-files-button"
                                       onClick={() => {
                                         const input = fileInputRefs.current[album.id];
                                         if (input) {
@@ -737,19 +846,16 @@ function UserDashboard() {
                                   </div>
 
                                   {/* Tracks list */}
-                                  <div className="dashboard-v2-simple__tracks-list">
+                                  <div className="user-dashboard__tracks-list">
                                     {album.tracks.map((track) => (
-                                      <div
-                                        key={track.id}
-                                        className="dashboard-v2-simple__track-item"
-                                      >
-                                        <div className="dashboard-v2-simple__track-number">
+                                      <div key={track.id} className="user-dashboard__track-item">
+                                        <div className="user-dashboard__track-number">
                                           {track.id.padStart(2, '0')}
                                         </div>
-                                        <div className="dashboard-v2-simple__track-title">
+                                        <div className="user-dashboard__track-title">
                                           {track.title}
                                         </div>
-                                        <div className="dashboard-v2-simple__track-duration">
+                                        <div className="user-dashboard__track-duration">
                                           {track.duration}
                                         </div>
                                       </div>
@@ -757,40 +863,37 @@ function UserDashboard() {
                                   </div>
 
                                   {/* Lyrics section */}
-                                  <div className="dashboard-v2-simple__lyrics-section">
-                                    <h4 className="dashboard-v2-simple__lyrics-title">
+                                  <div className="user-dashboard__lyrics-section">
+                                    <h4 className="user-dashboard__lyrics-title">
                                       {ui?.dashboard?.lyrics ?? 'Lyrics'}
                                     </h4>
-                                    <div className="dashboard-v2-simple__lyrics-table">
-                                      <div className="dashboard-v2-simple__lyrics-header">
-                                        <div className="dashboard-v2-simple__lyrics-header-cell">
+                                    <div className="user-dashboard__lyrics-table">
+                                      <div className="user-dashboard__lyrics-header">
+                                        <div className="user-dashboard__lyrics-header-cell">
                                           {ui?.dashboard?.track ?? 'Track'}
                                         </div>
-                                        <div className="dashboard-v2-simple__lyrics-header-cell">
+                                        <div className="user-dashboard__lyrics-header-cell">
                                           {ui?.dashboard?.status ?? 'Status'}
                                         </div>
-                                        <div className="dashboard-v2-simple__lyrics-header-cell">
+                                        <div className="user-dashboard__lyrics-header-cell">
                                           {ui?.dashboard?.actions ?? 'Actions'}
                                         </div>
                                       </div>
                                       {album.tracks.map((track) => (
-                                        <div
-                                          key={track.id}
-                                          className="dashboard-v2-simple__lyrics-row"
-                                        >
-                                          <div className="dashboard-v2-simple__lyrics-cell">
+                                        <div key={track.id} className="user-dashboard__lyrics-row">
+                                          <div className="user-dashboard__lyrics-cell">
                                             {track.title}
                                           </div>
-                                          <div className="dashboard-v2-simple__lyrics-cell">
+                                          <div className="user-dashboard__lyrics-cell">
                                             {getLyricsStatusText(track.lyricsStatus)}
                                           </div>
-                                          <div className="dashboard-v2-simple__lyrics-cell dashboard-v2-simple__lyrics-cell--actions">
+                                          <div className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions">
                                             {getLyricsActions(track.lyricsStatus).map(
                                               (action, idx) => (
                                                 <button
                                                   key={idx}
                                                   type="button"
-                                                  className="dashboard-v2-simple__lyrics-action-button"
+                                                  className="user-dashboard__lyrics-action-button"
                                                   onClick={() =>
                                                     handleLyricsAction(
                                                       action.action,
@@ -813,14 +916,14 @@ function UserDashboard() {
                               )}
 
                               {index < albumsData.length - 1 && (
-                                <div className="dashboard-v2-simple__album-divider"></div>
+                                <div className="user-dashboard__album-divider"></div>
                               )}
                             </React.Fragment>
                           );
                         })}
                       </div>
 
-                      <button type="button" className="dashboard-v2-simple__upload-button">
+                      <button type="button" className="user-dashboard__upload-button">
                         <span>+</span>
                         <span>{ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}</span>
                       </button>
@@ -828,15 +931,15 @@ function UserDashboard() {
                   </>
                 ) : (
                   <>
-                    <h3 className="dashboard-v2-simple__section-title">
+                    <h3 className="user-dashboard__section-title">
                       {ui?.dashboard?.tabs?.posts ?? 'Posts'}
                     </h3>
-                    <div className="dashboard-v2-simple__section">
-                      <div className="dashboard-v2-simple__posts-prompt">
-                        <div className="dashboard-v2-simple__posts-prompt-text">
+                    <div className="user-dashboard__section">
+                      <div className="user-dashboard__posts-prompt">
+                        <div className="user-dashboard__posts-prompt-text">
                           {ui?.dashboard?.writeAndPublishArticles ?? 'Write and publish articles'}
                         </div>
-                        <button type="button" className="dashboard-v2-simple__new-post-button">
+                        <button type="button" className="user-dashboard__new-post-button">
                           {ui?.dashboard?.newPost ?? 'New Post'}
                         </button>
                       </div>

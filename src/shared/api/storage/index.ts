@@ -38,46 +38,114 @@ function getStoragePath(userId: string, category: ImageCategory, fileName: strin
 }
 
 /**
- * Загрузить файл в Supabase Storage
+ * Конвертирует File/Blob в base64 строку
+ */
+async function fileToBase64(file: File | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Убираем префикс "data:image/jpeg;base64," если есть
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Загрузить файл в Supabase Storage через Netlify Function
+ * Использует service role key на сервере, обходит RLS политики
  * @param options - опции загрузки
  * @returns URL загруженного файла или null в случае ошибки
  */
 export async function uploadFile(options: UploadFileOptions): Promise<string | null> {
   try {
-    const {
-      userId = CURRENT_USER_CONFIG.userId,
-      category,
-      file,
+    const { userId = CURRENT_USER_CONFIG.userId, category, file, fileName, contentType } = options;
+
+    // Импортируем функции аутентификации динамически, чтобы избежать циклических зависимостей
+    const { getToken } = await import('@shared/lib/auth');
+    const token = getToken();
+
+    if (!token) {
+      console.error('User is not authenticated. Please log in to upload files.');
+      return null;
+    }
+
+    // Логируем информацию о файле перед конвертацией
+    console.log('📤 Preparing file for upload:', {
       fileName,
-      contentType,
-      upsert = false,
-    } = options;
+      originalFileName: file instanceof File ? file.name : 'Blob',
+      fileSize: file.size,
+      fileType: file instanceof File ? file.type : 'unknown',
+      lastModified: file instanceof File ? new Date(file.lastModified).toISOString() : 'N/A',
+    });
 
-    const supabase = createSupabaseClient();
-    if (!supabase) {
-      console.error('Supabase client is not available. Please set required environment variables.');
-      return null;
-    }
+    // Конвертируем файл в base64
+    const fileBase64 = await fileToBase64(file);
 
-    const storagePath = getStoragePath(userId, category, fileName);
+    // Проверяем размер base64 (должен быть примерно на 33% больше оригинала)
+    const base64Size = fileBase64.length;
+    const expectedBase64Size = Math.ceil(file.size * 1.33);
+    const sizeDiff = Math.abs(base64Size - expectedBase64Size);
 
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET_NAME)
-      .upload(storagePath, file, {
+    console.log('📦 File converted to base64:', {
+      originalSize: file.size,
+      base64Size,
+      expectedBase64Size,
+      sizeDiff,
+      isValid: sizeDiff < file.size * 0.1, // Разница не должна быть больше 10%
+    });
+
+    // Отправляем запрос на Netlify Function
+    const response = await fetch('/api/upload-file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        fileBase64,
+        fileName,
+        userId,
+        category,
         contentType: contentType || (file instanceof File ? file.type : 'image/jpeg'),
-        upsert,
-        cacheControl: '3600', // Кеш на 1 час
-      });
+        originalFileSize: file.size, // Передаём размер для проверки на сервере
+        originalFileName: file instanceof File ? file.name : undefined,
+      }),
+    });
 
-    if (error) {
-      console.error('Error uploading file to Supabase Storage:', error);
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        const text = await response.text().catch(() => 'Unable to read response');
+        errorData = { error: `HTTP ${response.status}: ${text}` };
+      }
+      console.error('❌ Error uploading file:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData,
+        url: response.url,
+      });
       return null;
     }
 
-    // Получаем публичный URL файла
-    const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+    const result = await response.json();
 
-    return urlData.publicUrl;
+    if (!result.success || !result.data?.url) {
+      console.error('Upload failed:', result.error || 'Unknown error');
+      return null;
+    }
+
+    console.debug('uploadFile success', {
+      url: result.data.url,
+      storagePath: result.data.storagePath,
+    });
+
+    return result.data.url;
   } catch (error) {
     console.error('Error in uploadFile:', error);
     return null;
