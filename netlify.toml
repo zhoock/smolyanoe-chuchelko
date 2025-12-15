@@ -8,6 +8,12 @@
   port = 8888 # порт, на котором Netlify будет проксировать запросы
 
 # API routes должны быть ПЕРЕД общим redirect на index.html
+# Общий redirect для всех API endpoints (работает в проде, где нет dev-server прокси)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
 # API routes для сохранения синхронизаций
 [[redirects]]
   from = "/api/synced-lyrics*"
