@@ -42,18 +42,66 @@ export const fetchAlbums = createAsyncThunk<
       );
 
     try {
-      // Используем только статический JSON, без обращения к API/БД
-      const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
-      if (fallback.ok) {
-        const data = await fallback.json();
-        if (Array.isArray(data)) {
-          console.log('✅ Loaded albums from static JSON (DB disabled)');
-          return normalize(data);
+      // 1) Сначала пытаемся загрузить из БД через API (приоритет)
+      // Добавляем таймаут 8 секунд для запроса к API
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 секунд таймаут
+
+        const response = await fetch(`/api/albums?lang=${lang}`, {
+          signal: signal || controller.signal,
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const result = await response.json();
+
+          if (result.success && result.data && Array.isArray(result.data)) {
+            // Если данных нет, возвращаем пустой массив
+            if (result.data.length === 0) {
+              return [];
+            }
+
+            // Преобразуем данные из API в формат IAlbums
+            console.log('✅ Loaded albums from API');
+            return normalize(result.data);
+          }
+        }
+      } catch (apiError) {
+        // Если API недоступен или таймаут, пробуем fallback на статику
+        if (apiError instanceof Error && apiError.name === 'AbortError') {
+          console.warn('⚠️ API request timeout (8s), trying fallback to static JSON');
+        } else {
+          console.warn('⚠️ API unavailable, trying fallback to static JSON:', apiError);
         }
       }
-      throw new Error('Static JSON unavailable');
+
+      // 2) Фолбэк на статический JSON (если БД недоступна)
+      try {
+        const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
+        if (fallback.ok) {
+          const data = await fallback.json();
+          if (Array.isArray(data)) {
+            console.log('✅ Loaded albums from static JSON fallback');
+            return normalize(data);
+          }
+        }
+      } catch (fallbackError) {
+        console.warn('⚠️ Static JSON fallback also unavailable:', fallbackError);
+      }
+
+      // Если оба источника недоступны
+      throw new Error('Failed to fetch albums from both API and static JSON');
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof Error) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Unknown error');
     }
   },
   {
