@@ -1,9 +1,6 @@
 // src/pages/UserDashboard/UserDashboard.tsx
-/**
- * Простая статическая верстка нового дизайна dashboard
- * БЕЗ логики - только верстка по макету в стиле ChatGPT popup
- */
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
@@ -20,8 +17,8 @@ import {
   selectAlbumsData,
   selectAlbumsError,
 } from '@entities/album';
-import { getTrackStatus } from '@widgets/dashboard/lib/trackStatus';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
+import { uploadFile } from '@shared/api/storage';
 import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
@@ -86,67 +83,6 @@ function setCachedAuthorship(albumId: string, trackId: string, lang: string, aut
 // Mock текст для редактирования
 const MOCK_LYRICS_TEXT =
   "Venturing beyond the familiar\nThrough the void of space I soar\nCarried by stars' glow so peculiar\nFinding what I've never seen before";
-
-const initialAlbumsData: AlbumData[] = [
-  {
-    id: '23-remastered',
-    title: '23',
-    year: '2023',
-    cover: 'Tar-Baby-Cover-23-remastered',
-    releaseDate: 'April 5, 2024',
-    tracks: [
-      {
-        id: '1',
-        title: 'Into the Unknown',
-        duration: '3:45',
-        lyricsStatus: 'synced',
-        lyricsText: MOCK_LYRICS_TEXT,
-      },
-      {
-        id: '2',
-        title: "Journey's End",
-        duration: '4:20',
-        lyricsStatus: 'text-only',
-        lyricsText: MOCK_LYRICS_TEXT,
-      },
-      {
-        id: '3',
-        title: 'Beyond the Stars',
-        duration: '5:10',
-        lyricsStatus: 'empty',
-      },
-    ],
-  },
-  {
-    id: '23',
-    title: '23',
-    year: '2023',
-    cover: 'Tar-Baby-Cover-23',
-    tracks: [
-      {
-        id: '1',
-        title: 'Track 1',
-        duration: '3:00',
-        lyricsStatus: 'empty',
-      },
-    ],
-  },
-  {
-    id: 'tar-baby',
-    title: 'Смоляное Чучелко',
-    year: '2022',
-    cover: 'Tar-Baby-Cover',
-    tracks: [
-      {
-        id: '1',
-        title: 'Track 1',
-        duration: '3:00',
-        lyricsStatus: 'empty',
-      },
-    ],
-  },
-];
-
 function UserDashboard() {
   const { lang } = useLang();
   const dispatch = useAppDispatch();
@@ -162,6 +98,11 @@ function UserDashboard() {
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
   const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarSrc, setAvatarSrc] = useState<string>(() =>
+    getUserImageUrl('profile', 'profile', '.jpg')
+  );
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
   const [addLyricsModal, setAddLyricsModal] = useState<{
     isOpen: boolean;
     albumId: string;
@@ -513,6 +454,39 @@ function UserDashboard() {
     });
   };
 
+  const handleAvatarClick = () => {
+    if (isUploadingAvatar) return;
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const result = await uploadFile({
+        category: 'profile',
+        file,
+        fileName: 'profile.jpg',
+        upsert: true,
+      });
+      if (!result) {
+        alert('Не удалось загрузить аватар. Попробуйте ещё раз.');
+      } else {
+        const bust = Date.now();
+        setAvatarSrc(`${getUserImageUrl('profile', 'profile', '.jpg')}?t=${bust}`);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки аватара:', error);
+      alert('Ошибка загрузки аватара. Попробуйте ещё раз.');
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
   // Показываем загрузку пока данные не загружены
   // Не показываем пустой дашборд - ждем данные
   if ((albumsStatus === 'loading' || albumsStatus === 'idle') && albumsData.length === 0) {
@@ -599,27 +573,47 @@ function UserDashboard() {
                 <div className="dashboard-v2-simple__avatar">
                   <div className="dashboard-v2-simple__avatar-img">
                     <img
-                      src={getUserImageUrl('profile', 'profile', '.jpg')}
+                      src={avatarSrc}
                       alt={ui?.dashboard?.profile ?? 'Profile'}
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;
-                        // 1) пробуем локальный профиль
-                        if (img.dataset.fallbackApplied !== 'local') {
+                        const applied = img.dataset.fallbackApplied;
+
+                        // 1) если фолбэк ещё не пробовали — пробуем локальный профиль
+                        if (!applied) {
                           img.dataset.fallbackApplied = 'local';
                           img.src = '/images/users/zhoock/profile/profile.jpg';
                           return;
                         }
-                        // 2) дефолтный аватар
-                        if (img.dataset.fallbackApplied !== 'default') {
+
+                        // 2) если уже пробовали локальный — ставим дефолтный аватар
+                        if (applied === 'local') {
                           img.dataset.fallbackApplied = 'default';
                           img.src = '/images/avatar.png';
                           return;
                         }
-                        // 3) если ничего нет — скрываем
+
+                        // 3) иначе скрываем
                         img.style.display = 'none';
                       }}
                     />
                   </div>
+                  <button
+                    type="button"
+                    className="dashboard-v2-simple__avatar-edit"
+                    onClick={handleAvatarClick}
+                    disabled={isUploadingAvatar}
+                    aria-label="Изменить аватар"
+                  >
+                    ✎
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleAvatarChange}
+                  />
                 </div>
 
                 <div className="dashboard-v2-simple__profile-fields">
