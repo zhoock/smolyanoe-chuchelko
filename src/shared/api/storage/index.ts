@@ -99,7 +99,7 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
     });
 
     // Отправляем запрос на Netlify Function
-    const response = await fetch('/api/upload-file', {
+    const response = await fetch('/.netlify/functions/upload-file', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
