@@ -603,13 +603,19 @@ function UserDashboard() {
                       alt={ui?.dashboard?.profile ?? 'Profile'}
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;
-                        // Первая попытка: локальный файл
+                        // 1) пробуем локальный профиль
                         if (img.dataset.fallbackApplied !== 'local') {
                           img.dataset.fallbackApplied = 'local';
                           img.src = '/images/users/zhoock/profile/profile.jpg';
                           return;
                         }
-                        // Если и локальный не найден — скрываем
+                        // 2) дефолтный аватар
+                        if (img.dataset.fallbackApplied !== 'default') {
+                          img.dataset.fallbackApplied = 'default';
+                          img.src = '/images/avatar.png';
+                          return;
+                        }
+                        // 3) если ничего нет — скрываем
                         img.style.display = 'none';
                       }}
                     />
