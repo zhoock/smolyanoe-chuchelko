@@ -1,5 +1,6 @@
 [build]
   publish = "dist"   # <— ВАЖНО: откуда Netlify берёт файлы для прод-раздачи
+  functions = "netlify/functions"  # <— Явно указываем папку с функциями
 
 [dev]
   command = "npm start" # команда для запуска вашего dev-сервера (например, React Dev Server)
