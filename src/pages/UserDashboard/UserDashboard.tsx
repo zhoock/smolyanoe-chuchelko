@@ -663,20 +663,20 @@ function UserDashboard() {
                   {ui?.dashboard?.profile ?? 'Profile'}
                 </h3>
 
-                <div
-                  className="user-dashboard__avatar"
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Изменить аватар"
-                  onClick={handleAvatarClick}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleAvatarClick();
-                    }
-                  }}
-                >
-                  <div className="user-dashboard__avatar-img">
+                <div className="user-dashboard__avatar">
+                  <div
+                    className="user-dashboard__avatar-img"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Изменить аватар"
+                    onClick={handleAvatarClick}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleAvatarClick();
+                      }
+                    }}
+                  >
                     <img
                       src={avatarSrc}
                       alt={ui?.dashboard?.profile ?? 'Profile'}
