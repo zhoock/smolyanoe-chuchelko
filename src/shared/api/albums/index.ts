@@ -11,9 +11,18 @@ export interface ImageUrlOptions {
 /**
  * Проверяет, включено ли использование Supabase Storage
  */
-// Для статичного режима всегда работаем из сборки (GitHub/dist), без Supabase
-function shouldUseSupabaseStorage(_options?: ImageUrlOptions): boolean {
-  return false;
+function shouldUseSupabaseStorage(options?: ImageUrlOptions): boolean {
+  // Если явно указано в опциях
+  if (options?.useSupabaseStorage !== undefined) {
+    return options.useSupabaseStorage;
+  }
+
+  // Проверяем переменную окружения
+  if (typeof window !== 'undefined') {
+    return import.meta.env.VITE_USE_SUPABASE_STORAGE === 'true';
+  }
+
+  return process.env.USE_SUPABASE_STORAGE === 'true';
 }
 
 /**
@@ -102,7 +111,12 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   const normalizedPath = audioPath.startsWith('/audio/') ? audioPath.slice(7) : audioPath;
 
   // Проверяем, нужно ли использовать Supabase Storage
-  const shouldUseStorage = false;
+  const shouldUseStorage =
+    useSupabaseStorage !== undefined
+      ? useSupabaseStorage
+      : typeof window !== 'undefined'
+        ? import.meta.env.VITE_USE_SUPABASE_STORAGE === 'true'
+        : process.env.USE_SUPABASE_STORAGE === 'true';
 
   if (shouldUseStorage) {
     // Используем Supabase Storage
