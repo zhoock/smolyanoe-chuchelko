@@ -190,7 +190,7 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
   // Это позволяет обойти блокировки российских операторов
   const origin =
     typeof window !== 'undefined' ? window.location.origin : 'https://smolyanoechuchelko.ru';
-  const proxyUrl = `${origin}/api/proxy-image?path=${encodeURIComponent(storagePath)}`;
+  const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(storagePath)}`;
 
   return proxyUrl;
 }
@@ -212,7 +212,7 @@ export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<s
 
     const origin =
       typeof window !== 'undefined' ? window.location.origin : 'https://smolyanoechuchelko.ru';
-    const proxyUrl = `${origin}/api/proxy-image?path=${encodeURIComponent(storagePath)}`;
+    const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(storagePath)}`;
 
     return proxyUrl;
   } catch (error) {
