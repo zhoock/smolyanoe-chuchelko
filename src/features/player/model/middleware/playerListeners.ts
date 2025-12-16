@@ -120,13 +120,13 @@ playerListenerMiddleware.startListening({
   effect: (_action, api: PlayerListenerApi) => {
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
+    const src = track?.src;
 
     resetProgress(api);
 
     // setSource сам проверит, нужно ли загружать файл
-    if (track?.src) {
-      audioController.setSource(track.src, state.player.isPlaying);
-    }
+    // Для пустого плейлиста всё равно вызываем, чтобы сбросить источник
+    audioController.setSource(src, !!src && state.player.isPlaying);
   },
 });
 
@@ -185,8 +185,10 @@ playerListenerMiddleware.startListening({
 
     const el = audioController.element;
 
-    // НЕ вызываем setSource здесь - он уже установлен через setCurrentTrackIndex
-    // Просто ждем загрузки метаданных и запускаем воспроизведение
+    // Если источник ещё не установлен (например, только что открыли плеер) — ставим его
+    if (!el.src) {
+      audioController.setSource(track.src, true);
+    }
 
     // Ждём загрузки метаданных если они еще не загружены
     // readyState: 0 = HAVE_NOTHING, 1 = HAVE_METADATA, 2 = HAVE_CURRENT_DATA, 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA
