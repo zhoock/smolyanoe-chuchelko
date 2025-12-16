@@ -173,7 +173,18 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
   const { userId = CURRENT_USER_CONFIG.userId, category, fileName } = options;
   const storagePath = getStoragePath(userId, category, fileName);
 
-  // Отдаём через Netlify proxy-function, чтобы не зависеть от прямого Supabase URl/CORS
+  // Для аудио лучше использовать прямой публичный URL, чтобы браузер корректно получал метаданные
+  if (category === 'audio') {
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+      console.error('Supabase client is not available. Please set required environment variables.');
+      return '';
+    }
+    const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+    return data.publicUrl;
+  }
+
+  // Для изображений оставляем прокси через Netlify функцию
   const origin =
     typeof window !== 'undefined' ? window.location.origin : process.env.NETLIFY_SITE_URL || '';
   return `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(storagePath)}`;
