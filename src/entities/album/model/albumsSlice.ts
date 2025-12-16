@@ -58,6 +58,20 @@ export const fetchAlbums = createAsyncThunk<
 
         clearTimeout(timeoutId);
 
+        // Параллельно пробуем загрузить статический JSON для возможного мержа деталей
+        let fallbackData: any[] = [];
+        try {
+          const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
+          if (fallback.ok) {
+            const data = await fallback.json();
+            if (Array.isArray(data)) {
+              fallbackData = data;
+            }
+          }
+        } catch (fallbackError) {
+          console.warn('⚠️ Could not load static JSON for merge:', fallbackError);
+        }
+
         if (response.ok) {
           const result = await response.json();
 
@@ -67,9 +81,27 @@ export const fetchAlbums = createAsyncThunk<
               return [];
             }
 
-            // Преобразуем данные из API в формат IAlbums
-            console.log('✅ Loaded albums from API');
-            return normalize(result.data);
+            // Дозаполняем детали/релиз из статического JSON, если в ответе пусто или обрезано
+            const fallbackMap = new Map((fallbackData || []).map((a: any) => [a.albumId, a]));
+
+            const merged = result.data.map((album: any) => {
+              const fb = fallbackMap.get(album.albumId);
+              if (fb) {
+                if (!album.details || album.details.length < (fb.details?.length || 0)) {
+                  album.details = fb.details;
+                }
+                if (
+                  (!album.release || Object.keys(album.release || {}).length === 0) &&
+                  fb.release
+                ) {
+                  album.release = fb.release;
+                }
+              }
+              return album;
+            });
+
+            console.log('✅ Loaded albums from API (with fallback merge if needed)');
+            return normalize(merged);
           }
         }
       } catch (apiError) {
