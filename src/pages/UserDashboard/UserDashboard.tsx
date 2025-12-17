@@ -303,11 +303,21 @@ function UserDashboard() {
       const tracksData: TrackUploadData[] = [];
       const fileArray = Array.from(files);
 
-      console.log('📦 [handleTrackUpload] Starting upload of', fileArray.length, 'tracks');
+      // Получаем текущее количество треков в альбоме для правильной нумерации
+      const currentAlbum = albumsData.find((a) => a.id === albumId);
+      const existingTracksCount = currentAlbum?.tracks?.length || 0;
+      const startTrackNumber = existingTracksCount + 1;
+
+      console.log('📦 [handleTrackUpload] Starting upload of', fileArray.length, 'tracks', {
+        existingTracksCount,
+        startTrackNumber,
+        albumId,
+      });
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
-        const trackId = String(i + 1); // Начинаем с 1
+        // Генерируем trackId начиная с существующего количества + 1
+        const trackId = String(startTrackNumber + i);
 
         // Обновляем прогресс: загрузка файла (0-80% для всех файлов)
         const fileProgressStart = (i / fileArray.length) * 80;
