@@ -144,7 +144,7 @@ export const handler: Handler = async (
   }
 
   // Игнорируем запросы к /cover/draft и /cover/commit - они должны обрабатываться отдельными функциями
-  const path = event.path || event.rawPath || '';
+  const path = event.path || '';
   if (path.includes('/cover/draft') || path.includes('/cover/commit')) {
     console.log(
       '[albums.ts] Ignoring cover request, should be handled by dedicated function:',
