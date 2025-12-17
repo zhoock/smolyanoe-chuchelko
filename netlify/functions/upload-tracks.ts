@@ -115,8 +115,26 @@ export const handler: Handler = async (
     for (const track of tracks) {
       const { fileName, title, duration, trackId, orderIndex, storagePath, url } = track;
 
+      console.log('💾 [upload-tracks] Processing track:', {
+        trackId,
+        title,
+        fileName,
+        duration,
+        orderIndex,
+        hasUrl: !!url,
+        hasStoragePath: !!storagePath,
+      });
+
       if (!fileName || !title || !trackId || !storagePath || !url) {
-        console.warn('Skipping track with missing required fields:', { trackId, title, fileName });
+        console.warn('⚠️ [upload-tracks] Skipping track with missing required fields:', {
+          trackId,
+          title,
+          fileName,
+          hasTitle: !!title,
+          hasTrackId: !!trackId,
+          hasStoragePath: !!storagePath,
+          hasUrl: !!url,
+        });
         continue;
       }
 
@@ -140,11 +158,23 @@ export const handler: Handler = async (
         );
 
         if (insertResult.rows.length > 0) {
+          const savedTrack = insertResult.rows[0];
+          console.log('✅ [upload-tracks] Track saved to DB:', {
+            trackId: savedTrack.track_id,
+            title: savedTrack.title,
+            dbId: savedTrack.id,
+          });
+
           uploadedTracks.push({
             trackId,
             title,
             url,
             storagePath,
+          });
+        } else {
+          console.error('❌ [upload-tracks] Track not saved - no rows returned:', {
+            trackId,
+            title,
           });
         }
       } catch (trackError) {

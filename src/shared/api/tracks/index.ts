@@ -157,14 +157,26 @@ export async function prepareAndUploadTrack(
   let trackTitle = title;
   if (!trackTitle) {
     const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+    console.log('📝 [prepareAndUploadTrack] Extracting title from filename:', {
+      originalFileName: file.name,
+      fileNameWithoutExt,
+    });
+
     // Убираем префиксы типа "01-", "03-", "1-", "10-" и т.д. в начале названия
-    // Паттерн: опциональный номер (1-2 цифры), затем дефис и пробел
+    // Паттерн: опциональный номер (1-2 цифры), затем дефис, точка или пробел
     trackTitle = fileNameWithoutExt.replace(/^\d{1,2}[-.\s]+/i, '').trim();
 
     // Если после удаления префикса ничего не осталось, используем оригинальное имя
     if (!trackTitle) {
       trackTitle = fileNameWithoutExt;
     }
+
+    console.log('📝 [prepareAndUploadTrack] Extracted title:', {
+      originalFileName: file.name,
+      extractedTitle: trackTitle,
+    });
+  } else {
+    console.log('📝 [prepareAndUploadTrack] Using provided title:', trackTitle);
   }
 
   // Получаем signed URL для загрузки через Netlify Function
