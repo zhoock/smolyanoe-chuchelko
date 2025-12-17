@@ -552,11 +552,45 @@ export function EditAlbumModal({
         ? albumsFromStore.find((a: IAlbums) => a.albumId === albumId)
         : null;
 
+      // Получаем оригинальный альбом для fallback значений
+      const originalAlbum = albumId
+        ? albumsFromStore.find((a: IAlbums) => a.albumId === albumId)
+        : null;
+
+      // Подготавливаем параметры для uploadCoverDraft
+      const uploadArtist = albumData?.artist || originalAlbum?.artist || '';
+      const uploadAlbum = albumData?.album || formData.title || originalAlbum?.album || '';
+      const uploadAlbumId = albumId || undefined;
+
+      // Проверяем, что у нас есть минимально необходимые данные
+      if (!uploadArtist || !uploadAlbum) {
+        const errorMsg = `Missing required data: artist="${uploadArtist}", album="${uploadAlbum}"`;
+        console.error('❌ [uploadCoverDraft]', errorMsg, {
+          albumId: uploadAlbumId,
+          albumData: albumData ? { artist: albumData.artist, album: albumData.album } : null,
+          formDataTitle: formData.title,
+          originalAlbum: originalAlbum
+            ? { artist: originalAlbum.artist, album: originalAlbum.album }
+            : null,
+        });
+        setUploadStatus('error');
+        setUploadError(errorMsg);
+        return;
+      }
+
+      console.log('📤 [uploadCoverDraft] Uploading cover:', {
+        albumId: uploadAlbumId,
+        artist: uploadArtist,
+        album: uploadAlbum,
+        fileName: file.name,
+        fileSize: file.size,
+      });
+
       const result = await uploadCoverDraft(
         file,
-        albumId || undefined,
-        albumData?.artist,
-        albumData?.album || formData.title,
+        uploadAlbumId,
+        uploadArtist,
+        uploadAlbum,
         (progress) => setUploadProgress(progress)
       );
 

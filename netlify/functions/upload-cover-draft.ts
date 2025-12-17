@@ -126,6 +126,18 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     const { fileBase64, albumId, artist, album, contentType, originalFileSize } = body;
 
+    // Логируем входящие данные для диагностики
+    console.log('[upload-cover-draft] Request received:', {
+      hasFileBase64: !!fileBase64,
+      albumId,
+      artist,
+      album,
+      contentType,
+      originalFileSize,
+      path: event.path,
+      rawPath: event.rawPath,
+    });
+
     if (!fileBase64) {
       return createErrorResponse(400, 'Missing required field: fileBase64');
     }
