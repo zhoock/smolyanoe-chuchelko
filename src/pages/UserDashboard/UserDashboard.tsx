@@ -349,12 +349,89 @@ function UserDashboard() {
 
       if (result.success && result.data) {
         console.log('✅ Tracks uploaded successfully:', result.data);
+        const uploadedCount = Array.isArray(result.data) ? result.data.length : 0;
+
         // Обновляем прогресс: завершение (100%)
         setUploadProgress((prev) => ({ ...prev, [albumId]: 100 }));
 
         // Обновляем список альбомов
-        await dispatch(fetchAlbums({ lang, force: true })).unwrap();
-        alert(`Successfully uploaded ${result.data.length} track(s)`);
+        try {
+          await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+          console.log('✅ Albums refreshed after track upload');
+        } catch (fetchError: any) {
+          // ConditionError - это нормально, condition отменил запрос
+          if (fetchError?.name === 'ConditionError') {
+            console.log('ℹ️ Albums fetch was cancelled by condition (already up to date)');
+          } else {
+            console.error('⚠️ Failed to refresh albums:', fetchError);
+          }
+        }
+
+        // Принудительно обновляем локальное состояние, если нужно
+        // Это гарантирует, что новые треки появятся в UI
+        setTimeout(() => {
+          // Даем время на обновление Redux store, затем обновляем локальное состояние
+          const updatedAlbums = albumsFromStore.map((album) => {
+            if (album.albumId === albumId) {
+              // Альбом уже обновлен через fetchAlbums, просто возвращаем его
+              return album;
+            }
+            return album;
+          });
+
+          // Преобразуем в формат AlbumData
+          const transformedAlbums: AlbumData[] = updatedAlbums.map((album) => {
+            const releaseDate = album.release?.date ? new Date(album.release.date) : null;
+            const tracks: TrackData[] = (album.tracks || []).map((track) => {
+              // Преобразуем duration в строку (формат "M:SS" или "MM:SS")
+              let durationStr = '0:00';
+              if (track.duration) {
+                if (typeof track.duration === 'string') {
+                  durationStr = track.duration;
+                } else if (typeof track.duration === 'number') {
+                  const minutes = Math.floor(track.duration / 60);
+                  const seconds = Math.floor(track.duration % 60);
+                  durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+              }
+
+              // Определяем статус текста
+              let lyricsStatus: TrackData['lyricsStatus'] = 'empty';
+              if (track.syncedLyrics && track.syncedLyrics.length > 0) {
+                const isActuallySynced = track.syncedLyrics.some((line) => line.startTime > 0);
+                lyricsStatus = isActuallySynced ? 'synced' : 'text-only';
+              } else if (track.content && track.content.trim() !== '') {
+                lyricsStatus = 'text-only';
+              }
+
+              return {
+                id: String(track.id || ''),
+                title: track.title || '',
+                duration: durationStr,
+                lyricsStatus,
+              };
+            });
+
+            return {
+              id: album.albumId || '',
+              title: album.album,
+              year: releaseDate ? releaseDate.getFullYear().toString() : '',
+              cover: album.cover || '',
+              releaseDate: releaseDate
+                ? releaseDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : undefined,
+              tracks,
+            };
+          });
+
+          setAlbumsData(transformedAlbums);
+        }, 500);
+
+        alert(`Successfully uploaded ${uploadedCount} track(s)`);
       } else {
         throw new Error(result.error || 'Failed to upload tracks');
       }
