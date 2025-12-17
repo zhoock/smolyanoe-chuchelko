@@ -152,8 +152,20 @@ export async function prepareAndUploadTrack(
   const extension = file.name.split('.').pop() || 'mp3';
   const fileName = `${trackId}.${extension}`;
 
-  // Используем переданное название или имя файла без расширения
-  const trackTitle = title || file.name.replace(/\.[^/.]+$/, '');
+  // Извлекаем название трека из имени файла
+  // Убираем расширение и префиксы типа "01-", "03-" и т.д.
+  let trackTitle = title;
+  if (!trackTitle) {
+    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+    // Убираем префиксы типа "01-", "03-", "1-", "10-" и т.д. в начале названия
+    // Паттерн: опциональный номер (1-2 цифры), затем дефис и пробел
+    trackTitle = fileNameWithoutExt.replace(/^\d{1,2}[-.\s]+/i, '').trim();
+
+    // Если после удаления префикса ничего не осталось, используем оригинальное имя
+    if (!trackTitle) {
+      trackTitle = fileNameWithoutExt;
+    }
+  }
 
   // Получаем signed URL для загрузки через Netlify Function
   // Это обходит проблему с кастомным токеном (не Supabase JWT)
