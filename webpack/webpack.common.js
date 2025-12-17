@@ -148,10 +148,7 @@ module.exports = {
           from: path.resolve(__dirname, '../_headers'), // Путь к файлу _headers
           to: path.resolve(__dirname, '../dist/'), // Папка в которую нужно скопировать
         },
-        {
-          from: path.resolve(__dirname, '../src/_redirects'), // Путь к файлу _redirects
-          to: path.resolve(__dirname, '../dist/'), // Папка в которую нужно скопировать
-        },
+        // _redirects удалён - используем только netlify.toml для единой логики на dev и production
         {
           from: path.resolve(__dirname, '../src/audio'), // Путь к аудиофайлам в src
           to: path.resolve(__dirname, '../dist/audio'), // Папка назначения в dist

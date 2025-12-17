@@ -7,6 +7,19 @@
   targetPort = 8080
   port = 8888
 
+# ---------- Статические файлы ----------
+[[redirects]]
+  from = "/robots.txt"
+  to = "/robots.txt"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/sitemap.xml"
+  status = 200
+  force = true
+
 # ---------- API: СНАЧАЛА САМЫЕ СПЕЦИФИЧНЫЕ ----------
 
 # Covers (draft/commit) — должны быть ДО /api/albums* и ДО /api/*
