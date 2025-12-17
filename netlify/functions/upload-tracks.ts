@@ -142,6 +142,22 @@ export const handler: Handler = async (
         // Сохраняем трек в БД
         // Используем ON CONFLICT для обновления существующих треков
         // album.id - это UUID из БД, который используется как внешний ключ
+
+        // 🔍 DEBUG: Проверяем данные перед сохранением
+        console.log('💾 [upload-tracks] Saving track to DB:', {
+          albumId: album.id,
+          trackId,
+          title,
+          titleType: typeof title,
+          titleLength: title?.length || 0,
+          titleEmpty: title === '',
+          titleNull: title === null,
+          titleUndefined: title === undefined,
+          duration,
+          url,
+          orderIndex,
+        });
+
         const insertResult = await query(
           `INSERT INTO tracks (
         album_id, track_id, title, duration, src, order_index
