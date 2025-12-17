@@ -67,7 +67,7 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
 
     const fileBase64 = await fileToBase64(file);
 
-    const response = await fetch('/.netlify/functions/upload-file', {
+    const response = await fetch('/api/upload-file', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
