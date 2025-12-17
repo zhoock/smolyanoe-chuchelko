@@ -202,6 +202,19 @@ export const handler: Handler = async (
               [album.id]
             );
 
+            // 🔍 DEBUG: Логируем треки из БД
+            if (tracksResult.rows.length > 0) {
+              console.log(`[albums.ts GET] Tracks for album ${album.album_id}:`, {
+                count: tracksResult.rows.length,
+                tracks: tracksResult.rows.map((t) => ({
+                  trackId: t.track_id,
+                  title: t.title,
+                  hasTitle: !!t.title,
+                  titleLength: t.title?.length || 0,
+                })),
+              });
+            }
+
             const mapped = mapAlbumToApiFormat(album, tracksResult.rows);
 
             return mapped;
