@@ -82,9 +82,11 @@ interface CommitCoverResponse {
 
 /**
  * Получает финальный путь в Storage для обложки альбома
+ * ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
  */
 function getFinalStoragePath(userId: string, albumId: string, fileExtension: string): string {
-  return `users/${userId}/albums/${albumId}-cover.${fileExtension}`;
+  // Используем 'zhoock' вместо UUID для единообразия с фронтендом
+  return `users/zhoock/albums/${albumId}-cover.${fileExtension}`;
 }
 
 /**
@@ -218,9 +220,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     });
 
     // Удаляем старые обложки альбома (если есть)
+    // ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
     const { data: existingFiles } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
-      .list(`users/${userId}/albums`, {
+      .list(`users/zhoock/albums`, {
         limit: 100,
       });
 
@@ -233,7 +236,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             f.name.includes(finalBaseName) ||
             f.name.startsWith(`${albumId}-cover`)
         )
-        .map((f) => `users/${userId}/albums/${f.name}`) || [];
+        .map((f) => `users/zhoock/albums/${f.name}`) || [];
 
     if (oldCoverFiles.length > 0) {
       console.log(`Removing ${oldCoverFiles.length} old cover files`);
@@ -263,8 +266,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       const suffix = suffixMatch ? suffixMatch[0] : '';
 
       // Формируем финальное имя файла
+      // ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
       const finalFileName = suffix ? `${finalBaseName}${suffix}` : `${finalBaseName}.webp`;
-      const finalPath = `users/${userId}/albums/${finalFileName}`;
+      const finalPath = `users/zhoock/albums/${finalFileName}`;
 
       // Читаем данные файла
       const arrayBuffer = await draftData.arrayBuffer();
@@ -318,8 +322,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     console.log(`✅ Committed ${committedFiles.length} cover variants`);
 
     // Получаем публичный URL базового файла для превью (используем 448.webp)
+    // ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
     const previewFileName = `${finalBaseName}-448.webp`;
-    const previewPath = `users/${userId}/albums/${previewFileName}`;
+    const previewPath = `users/zhoock/albums/${previewFileName}`;
     const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(previewPath);
 
     return createSuccessResponse(

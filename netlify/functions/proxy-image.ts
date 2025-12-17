@@ -69,15 +69,29 @@ export const handler: Handler = async (
     }
 
     // Декодируем путь (на случай если он был закодирован дважды)
-    const decodedPath = decodeURIComponent(imagePath);
+    let decodedPath = imagePath;
+    try {
+      decodedPath = decodeURIComponent(imagePath);
+      // Если после декодирования всё ещё есть закодированные символы, декодируем ещё раз
+      if (decodedPath.includes('%')) {
+        decodedPath = decodeURIComponent(decodedPath);
+      }
+    } catch (e) {
+      // Если декодирование не удалось, используем исходный путь
+      console.warn('[proxy-image] Failed to decode path, using original:', imagePath);
+      decodedPath = imagePath;
+    }
 
     console.log('[proxy-image] Request details:', {
       originalPath: imagePath,
       decodedPath,
       bucketName,
+      hasSpecialChars: /[()]/.test(decodedPath), // Проверяем наличие скобок
     });
 
     // Формируем полный URL к изображению в Supabase Storage
+    // Supabase Storage API ожидает путь без дополнительного кодирования
+    // Но нужно закодировать только специальные символы, оставив слеши незакодированными
     const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${decodedPath}`;
 
     console.log('[proxy-image] Fetching from Supabase:', imageUrl);
@@ -118,6 +132,7 @@ export const handler: Handler = async (
           const fallbackPath = `${folder}${baseName}${variant}`;
           const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fallbackPath}`;
           console.log('[proxy-image] Trying fallback path:', fallbackPath);
+          console.log('[proxy-image] Fallback URL:', fallbackUrl);
 
           const fallbackResponse = await fetch(fallbackUrl);
           if (fallbackResponse.ok) {
