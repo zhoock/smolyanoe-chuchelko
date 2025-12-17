@@ -301,17 +301,30 @@ function UserDashboard() {
       const tracksData: TrackUploadData[] = [];
       const fileArray = Array.from(files);
 
+      console.log('📦 [handleTrackUpload] Starting upload of', fileArray.length, 'tracks');
+
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
         const trackId = String(i + 1); // Начинаем с 1
+        console.log(`📤 [handleTrackUpload] Uploading track ${trackId}/${fileArray.length}:`, {
+          fileName: file.name,
+          fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        });
         try {
           const trackData = await prepareAndUploadTrack(file, albumId, trackId, i);
           tracksData.push(trackData);
+          console.log(`✅ [handleTrackUpload] Track ${trackId} uploaded successfully`);
         } catch (error) {
-          console.error(`Error uploading track ${trackId}:`, error);
+          console.error(`❌ [handleTrackUpload] Error uploading track ${trackId}:`, error);
           // Продолжаем загрузку остальных треков
         }
       }
+
+      console.log('📊 [handleTrackUpload] Upload summary:', {
+        total: fileArray.length,
+        successful: tracksData.length,
+        failed: fileArray.length - tracksData.length,
+      });
 
       if (tracksData.length === 0) {
         throw new Error('Failed to upload any tracks');

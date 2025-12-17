@@ -156,15 +156,35 @@ export async function prepareAndUploadTrack(
   // Используем переданное название или имя файла без расширения
   const trackTitle = title || file.name.replace(/\.[^/.]+$/, '');
 
-  // Создаём Supabase клиент с токеном пользователя
-  const supabase = createSupabaseClient({ authToken: token });
+  // Используем существующий клиент из кеша или создаём новый с токеном
+  // Это предотвращает создание множественных экземпляров GoTrueClient
+  let supabase = createSupabaseClient({ authToken: token });
   if (!supabase) {
     throw new Error('Failed to create Supabase client. Please check environment variables.');
+  }
+
+  // Убеждаемся, что токен установлен в клиенте
+  // Проверяем текущую сессию и устанавливаем токен, если нужно
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData?.session?.access_token || sessionData.session.access_token !== token) {
+    await supabase.auth.setSession({
+      access_token: token,
+      refresh_token: '',
+    });
   }
 
   // Формируем путь в Storage: users/{userId}/audio/{albumId}/{fileName}
   const userId = CURRENT_USER_CONFIG.userId;
   const storagePath = `users/${userId}/audio/${albumId}/${fileName}`;
+
+  console.log('📤 [prepareAndUploadTrack] Starting upload:', {
+    fileName,
+    storagePath,
+    fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+    fileType: file.type,
+    albumId,
+    trackId,
+  });
 
   // Загружаем файл напрямую в Supabase Storage
   const { data, error } = await supabase.storage
@@ -176,9 +196,21 @@ export async function prepareAndUploadTrack(
     });
 
   if (error) {
-    console.error('Error uploading track to Supabase Storage:', error);
+    console.error('❌ [prepareAndUploadTrack] Upload error:', {
+      error: error.message,
+      statusCode: (error as any).statusCode,
+      errorCode: (error as any).error,
+      storagePath,
+      fileName,
+    });
     throw new Error(`Failed to upload track file: ${error.message}`);
   }
+
+  console.log('✅ [prepareAndUploadTrack] File uploaded successfully:', {
+    fileName,
+    storagePath,
+    uploadData: data,
+  });
 
   // Получаем публичный URL
   const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
@@ -186,6 +218,11 @@ export async function prepareAndUploadTrack(
   if (!urlData?.publicUrl) {
     throw new Error('Failed to get public URL for uploaded track');
   }
+
+  console.log('✅ [prepareAndUploadTrack] Got public URL:', {
+    fileName,
+    url: urlData.publicUrl,
+  });
 
   return {
     fileName,
