@@ -128,8 +128,8 @@ export async function uploadTracks(
 }
 
 /**
- * Подготавливает и загружает трек
- * Загружает файл в Supabase Storage и возвращает метаданные
+ * Подготавливает и загружает трек напрямую в Supabase Storage
+ * Загружает файл напрямую, минуя Netlify Functions, чтобы избежать проблем с размером
  */
 export async function prepareAndUploadTrack(
   file: File,
@@ -138,7 +138,15 @@ export async function prepareAndUploadTrack(
   orderIndex: number,
   title?: string
 ): Promise<TrackUploadData> {
-  const { uploadFile } = await import('@shared/api/storage');
+  const { createSupabaseClient, STORAGE_BUCKET_NAME } = await import('@config/supabase');
+  const { getToken } = await import('@shared/lib/auth');
+  const { CURRENT_USER_CONFIG } = await import('@config/user');
+
+  const token = getToken();
+  if (!token) {
+    throw new Error('User is not authenticated. Please log in.');
+  }
+
   const duration = await getAudioDuration(file);
 
   // Генерируем имя файла: {trackId}.{extension}
@@ -148,28 +156,35 @@ export async function prepareAndUploadTrack(
   // Используем переданное название или имя файла без расширения
   const trackTitle = title || file.name.replace(/\.[^/.]+$/, '');
 
-  // Загружаем файл в Supabase Storage
-  // Путь будет: users/{userId}/audio/{albumId}/{fileName}
-  const url = await uploadFile({
-    category: 'audio',
-    file,
-    fileName: `${albumId}/${fileName}`, // Включаем albumId в путь
-    contentType: file.type || 'audio/mpeg',
-  });
-
-  if (!url) {
-    throw new Error(`Failed to upload track file: ${fileName}`);
+  // Создаём Supabase клиент с токеном пользователя
+  const supabase = createSupabaseClient({ authToken: token });
+  if (!supabase) {
+    throw new Error('Failed to create Supabase client. Please check environment variables.');
   }
 
-  // Извлекаем storagePath из URL
-  // URL имеет формат: https://...supabase.co/storage/v1/object/public/user-media/users/{userId}/audio/{albumId}/{fileName}
-  let storagePath: string;
-  if (url.includes('/storage/v1/object/public/user-media/')) {
-    storagePath = url.split('/storage/v1/object/public/user-media/')[1];
-  } else {
-    // Если URL через proxy или другой формат, формируем путь вручную
-    const { CURRENT_USER_CONFIG } = await import('@config/user');
-    storagePath = `users/${CURRENT_USER_CONFIG.userId}/audio/${albumId}/${fileName}`;
+  // Формируем путь в Storage: users/{userId}/audio/{albumId}/{fileName}
+  const userId = CURRENT_USER_CONFIG.userId;
+  const storagePath = `users/${userId}/audio/${albumId}/${fileName}`;
+
+  // Загружаем файл напрямую в Supabase Storage
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKET_NAME)
+    .upload(storagePath, file, {
+      contentType: file.type || 'audio/mpeg',
+      upsert: true,
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
+
+  if (error) {
+    console.error('Error uploading track to Supabase Storage:', error);
+    throw new Error(`Failed to upload track file: ${error.message}`);
+  }
+
+  // Получаем публичный URL
+  const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+
+  if (!urlData?.publicUrl) {
+    throw new Error('Failed to get public URL for uploaded track');
   }
 
   return {
@@ -179,6 +194,6 @@ export async function prepareAndUploadTrack(
     trackId,
     orderIndex,
     storagePath,
-    url,
+    url: urlData.publicUrl,
   };
 }
