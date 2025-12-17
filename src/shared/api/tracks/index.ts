@@ -155,50 +155,38 @@ export async function prepareAndUploadTrack(
   // Используем переданное название или имя файла без расширения
   const trackTitle = title || file.name.replace(/\.[^/.]+$/, '');
 
-  // Используем существующий клиент из кеша или создаём новый с токеном
-  // Это предотвращает создание множественных экземпляров GoTrueClient
-  let supabase = createSupabaseClient({ authToken: token });
-  if (!supabase) {
-    throw new Error('Failed to create Supabase client. Please check environment variables.');
-  }
-
-  // Устанавливаем токен в клиенте и получаем сессию
-  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-    access_token: token,
-    refresh_token: '',
+  // Получаем signed URL для загрузки через Netlify Function
+  // Это обходит проблему с кастомным токеном (не Supabase JWT)
+  const signedUrlResponse = await fetch('/api/tracks/upload-url', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      albumId,
+      fileName,
+    }),
   });
 
-  if (sessionError) {
-    console.error('❌ [prepareAndUploadTrack] Failed to set session:', sessionError);
-    throw new Error('Failed to authenticate. Please log in again.');
+  if (!signedUrlResponse.ok) {
+    const errorData = await signedUrlResponse.json().catch(() => ({}));
+    console.error('❌ [prepareAndUploadTrack] Failed to get signed URL:', errorData);
+    throw new Error(errorData.error || 'Failed to get upload URL. Please try again.');
   }
 
-  const session = sessionData?.session;
-  if (!session) {
-    console.error('❌ [prepareAndUploadTrack] No session after setSession');
-    throw new Error('Failed to authenticate. Please log in again.');
+  const { data: signedUrlData } = await signedUrlResponse.json();
+  if (!signedUrlData?.signedUrl || !signedUrlData?.storagePath || !signedUrlData?.authUserId) {
+    console.error('❌ [prepareAndUploadTrack] Invalid signed URL response:', signedUrlData);
+    throw new Error('Invalid response from server. Please try again.');
   }
 
-  // Получаем UUID пользователя из сессии
-  // В Supabase сессия содержит user.id, который нужен для RLS политик
-  const authUserId = session.user?.id;
-  if (!authUserId) {
-    console.error('❌ [prepareAndUploadTrack] User ID not found in session:', {
-      hasSession: !!session,
-      hasUser: !!session.user,
-      userKeys: session.user ? Object.keys(session.user) : [],
-    });
-    throw new Error('User ID not found in session. Please log in again.');
-  }
+  const { signedUrl, storagePath, authUserId } = signedUrlData;
 
-  // Используем UUID из Supabase Auth для пути (RLS политики проверяют auth.uid())
-  // Формат пути: users/{authUuid}/audio/{albumId}/{fileName}
-  const storagePath = `users/${authUserId}/audio/${albumId}/${fileName}`;
-
-  console.log('🔐 [prepareAndUploadTrack] Using auth UUID for storage path:', {
+  console.log('🔐 [prepareAndUploadTrack] Got signed URL for upload:', {
     authUserId,
     storagePath,
-    note: 'RLS policies check auth.uid(), so we must use the UUID from Supabase Auth',
+    hasSignedUrl: !!signedUrl,
   });
 
   const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
@@ -228,42 +216,50 @@ export async function prepareAndUploadTrack(
   }, timeoutMs);
 
   try {
-    console.log('🔄 [prepareAndUploadTrack] Uploading to Supabase Storage...');
+    console.log('🔄 [prepareAndUploadTrack] Uploading to Supabase Storage via signed URL...');
     const uploadStartTime = Date.now();
 
-    // Загружаем файл напрямую в Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET_NAME)
-      .upload(storagePath, file, {
-        contentType: file.type || 'audio/mpeg',
-        upsert: true,
-        cacheControl: 'public, max-age=31536000, immutable',
+    // Загружаем файл через signed URL (PUT запрос)
+    const uploadResponse = await fetch(signedUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type || 'audio/mpeg',
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text().catch(() => 'Unknown error');
+      console.error('❌ [prepareAndUploadTrack] Upload failed:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        error: errorText,
       });
+      throw new Error(
+        `Failed to upload file: ${uploadResponse.status} ${uploadResponse.statusText}`
+      );
+    }
 
     clearTimeout(timeoutId);
     const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(2);
     console.log(`⏱️ [prepareAndUploadTrack] Upload completed in ${uploadDuration}s`);
 
-    if (error) {
-      console.error('❌ [prepareAndUploadTrack] Upload error:', {
-        error: error.message,
-        statusCode: (error as any).statusCode,
-        errorCode: (error as any).error,
-        storagePath,
-        fileName,
-        fileSize: `${fileSizeMB} MB`,
-      });
-      throw new Error(`Failed to upload track file: ${error.message}`);
-    }
-
     console.log('✅ [prepareAndUploadTrack] File uploaded successfully:', {
       fileName,
       storagePath,
-      uploadData: data,
     });
 
-    // Получаем публичный URL
-    const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+    // Формируем публичный URL напрямую (Supabase Storage публичный URL)
+    // Формат: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
+    const { createSupabaseClient, STORAGE_BUCKET_NAME: BUCKET_NAME } = await import(
+      '@config/supabase'
+    );
+    const supabaseForUrl = createSupabaseClient();
+    if (!supabaseForUrl) {
+      throw new Error('Failed to create Supabase client for URL');
+    }
+
+    const { data: urlData } = supabaseForUrl.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
 
     if (!urlData?.publicUrl) {
       throw new Error('Failed to get public URL for uploaded track');
