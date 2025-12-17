@@ -20,7 +20,7 @@ import {
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
 import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
-import { uploadTracks, prepareTrackForUpload, type TrackUploadData } from '@shared/api/tracks';
+import { uploadTracks, prepareAndUploadTrack, type TrackUploadData } from '@shared/api/tracks';
 import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
 import { PreviewLyricsModal } from './components/PreviewLyricsModal';
@@ -297,15 +297,24 @@ function UserDashboard() {
         throw new Error('Album not found');
       }
 
-      // Подготавливаем данные для каждого трека
+      // Загружаем файлы и подготавливаем метаданные для каждого трека
       const tracksData: TrackUploadData[] = [];
       const fileArray = Array.from(files);
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
         const trackId = String(i + 1); // Начинаем с 1
-        const trackData = await prepareTrackForUpload(file, trackId, i);
-        tracksData.push(trackData);
+        try {
+          const trackData = await prepareAndUploadTrack(file, albumId, trackId, i);
+          tracksData.push(trackData);
+        } catch (error) {
+          console.error(`Error uploading track ${trackId}:`, error);
+          // Продолжаем загрузку остальных треков
+        }
+      }
+
+      if (tracksData.length === 0) {
+        throw new Error('Failed to upload any tracks');
       }
 
       // Загружаем треки

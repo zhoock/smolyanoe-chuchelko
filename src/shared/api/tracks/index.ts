@@ -5,12 +5,13 @@
 import { getToken } from '@shared/lib/auth';
 
 export interface TrackUploadData {
-  fileBase64: string;
   fileName: string;
   title: string;
   duration: number; // в секундах
   trackId: string; // ID трека в альбоме (например, "1", "2")
   orderIndex: number;
+  storagePath: string; // Путь к файлу в Storage (после загрузки)
+  url: string; // URL файла в Storage (после загрузки)
 }
 
 export interface TrackUploadRequest {
@@ -127,30 +128,57 @@ export async function uploadTracks(
 }
 
 /**
- * Подготавливает данные трека для загрузки
+ * Подготавливает и загружает трек
+ * Загружает файл в Supabase Storage и возвращает метаданные
  */
-export async function prepareTrackForUpload(
+export async function prepareAndUploadTrack(
   file: File,
+  albumId: string,
   trackId: string,
   orderIndex: number,
   title?: string
 ): Promise<TrackUploadData> {
-  const fileBase64 = await fileToBase64(file);
+  const { uploadFile } = await import('@shared/api/storage');
   const duration = await getAudioDuration(file);
 
-  // Генерируем имя файла: {trackId}.{extension} (трек будет в папке альбома)
+  // Генерируем имя файла: {trackId}.{extension}
   const extension = file.name.split('.').pop() || 'mp3';
   const fileName = `${trackId}.${extension}`;
 
   // Используем переданное название или имя файла без расширения
   const trackTitle = title || file.name.replace(/\.[^/.]+$/, '');
 
+  // Загружаем файл в Supabase Storage
+  // Путь будет: users/{userId}/audio/{albumId}/{fileName}
+  const url = await uploadFile({
+    category: 'audio',
+    file,
+    fileName: `${albumId}/${fileName}`, // Включаем albumId в путь
+    contentType: file.type || 'audio/mpeg',
+  });
+
+  if (!url) {
+    throw new Error(`Failed to upload track file: ${fileName}`);
+  }
+
+  // Извлекаем storagePath из URL
+  // URL имеет формат: https://...supabase.co/storage/v1/object/public/user-media/users/{userId}/audio/{albumId}/{fileName}
+  let storagePath: string;
+  if (url.includes('/storage/v1/object/public/user-media/')) {
+    storagePath = url.split('/storage/v1/object/public/user-media/')[1];
+  } else {
+    // Если URL через proxy или другой формат, формируем путь вручную
+    const { CURRENT_USER_CONFIG } = await import('@config/user');
+    storagePath = `users/${CURRENT_USER_CONFIG.userId}/audio/${albumId}/${fileName}`;
+  }
+
   return {
-    fileBase64,
     fileName,
     title: trackTitle,
     duration: Math.round(duration * 100) / 100, // Округляем до 2 знаков после запятой
     trackId,
     orderIndex,
+    storagePath,
+    url,
   };
 }

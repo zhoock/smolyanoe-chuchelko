@@ -1,25 +1,29 @@
 /**
- * Netlify Serverless Function для загрузки треков в базу данных
+ * Netlify Serverless Function для сохранения метаданных треков в базу данных
+ *
+ * ВАЖНО: Файлы должны быть загружены в Supabase Storage с клиента ДО вызова этой функции.
+ * Эта функция только сохраняет метаданные в БД.
  *
  * Использование:
  * POST /api/tracks/upload
  * Authorization: Bearer <token>
  * Content-Type: application/json
  * Body: {
- *   albumId: string (ID альбома в БД - UUID),
+ *   albumId: string (album_id, например "23"),
+ *   lang: string ('ru' или 'en'),
  *   tracks: Array<{
- *     fileBase64: string,
  *     fileName: string,
  *     title: string,
  *     duration: number (в секундах),
  *     trackId: string (ID трека в альбоме, например "1", "2"),
- *     orderIndex: number
+ *     orderIndex: number,
+ *     storagePath: string (путь к файлу в Storage),
+ *     url: string (публичный URL файла)
  *   }>
  * }
  */
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
 import {
   createOptionsResponse,
   createErrorResponse,
@@ -29,42 +33,17 @@ import {
 } from './lib/api-helpers';
 import { query } from './lib/db';
 
-const STORAGE_BUCKET_NAME = 'user-media';
-
-function createSupabaseAdminClient() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error('Supabase credentials not found');
-    return null;
-  }
-
-  try {
-    return createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-  } catch (error) {
-    console.error('❌ Failed to create Supabase admin client:', error);
-    return null;
-  }
-}
-
 interface TrackUploadRequest {
   albumId: string; // album_id (строка, например "23" или "23-remastered"), не UUID
   lang: string; // 'ru' или 'en'
   tracks: Array<{
-    fileBase64: string;
     fileName: string;
     title: string;
     duration: number; // в секундах
     trackId: string; // ID трека в альбоме (например, "1", "2")
     orderIndex: number;
+    storagePath: string; // Путь к файлу в Storage
+    url: string; // URL файла в Storage
   }>;
 }
 
@@ -79,11 +58,7 @@ interface TrackUploadResponse {
   error?: string;
 }
 
-function getStoragePath(userId: string, albumId: string, fileName: string): string {
-  // Аудиофайлы хранятся в users/{userId}/audio/{albumId}/{fileName}
-  // Это позволяет организовать файлы по альбомам
-  return `users/${userId}/audio/${albumId}/${fileName}`;
-}
+// Функция getStoragePath больше не нужна - файлы загружаются с клиента напрямую в Supabase Storage
 
 export const handler: Handler = async (
   event: HandlerEvent,
@@ -133,56 +108,19 @@ export const handler: Handler = async (
       return createErrorResponse(403, 'Forbidden. You can only upload tracks to your own albums.');
     }
 
-    // Создаём Supabase клиент для загрузки файлов
-    const supabase = createSupabaseAdminClient();
-    if (!supabase) {
-      return createErrorResponse(
-        500,
-        'Supabase admin client is not available. Please check environment variables.'
-      );
-    }
-
     const uploadedTracks: TrackUploadResponse['data'] = [];
 
     // Обрабатываем каждый трек
+    // Файлы уже загружены в Supabase Storage с клиента, нам нужно только сохранить метаданные в БД
     for (const track of tracks) {
-      const { fileBase64, fileName, title, duration, trackId, orderIndex } = track;
+      const { fileName, title, duration, trackId, orderIndex, storagePath, url } = track;
 
-      if (!fileBase64 || !fileName || !title || !trackId) {
+      if (!fileName || !title || !trackId || !storagePath || !url) {
         console.warn('Skipping track with missing required fields:', { trackId, title, fileName });
         continue;
       }
 
       try {
-        // Декодируем base64 в Buffer
-        const fileBuffer = Buffer.from(fileBase64, 'base64');
-
-        // Формируем путь в Storage
-        const storagePath = getStoragePath(userId, albumId, fileName);
-
-        // Загружаем файл в Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(STORAGE_BUCKET_NAME)
-          .upload(storagePath, fileBuffer, {
-            contentType: 'audio/mpeg', // или определять по расширению файла
-            upsert: true,
-            cacheControl: 'public, max-age=31536000, immutable',
-          });
-
-        if (uploadError) {
-          console.error('Error uploading track file:', {
-            trackId,
-            fileName,
-            error: uploadError.message,
-          });
-          continue;
-        }
-
-        // Получаем публичный URL
-        const { data: urlData } = supabase.storage
-          .from(STORAGE_BUCKET_NAME)
-          .getPublicUrl(storagePath);
-
         // Сохраняем трек в БД
         // Используем ON CONFLICT для обновления существующих треков
         // album.id - это UUID из БД, который используется как внешний ключ
@@ -198,14 +136,14 @@ export const handler: Handler = async (
         order_index = EXCLUDED.order_index,
         updated_at = CURRENT_TIMESTAMP
       RETURNING id, track_id, title`,
-          [album.id, trackId, title, duration, urlData.publicUrl, orderIndex]
+          [album.id, trackId, title, duration, url, orderIndex]
         );
 
         if (insertResult.rows.length > 0) {
           uploadedTracks.push({
             trackId,
             title,
-            url: urlData.publicUrl,
+            url,
             storagePath,
           });
         }
