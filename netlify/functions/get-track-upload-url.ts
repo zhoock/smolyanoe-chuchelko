@@ -26,7 +26,6 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
-import { query } from './lib/db';
 
 const STORAGE_BUCKET_NAME = 'user-media';
 
