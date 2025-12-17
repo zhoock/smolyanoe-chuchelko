@@ -433,6 +433,31 @@ dialog {
       margin-bottom: var(--ms-0);
     }
 
+    &__track-upload-progress {
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    &__track-upload-progress-bar {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      max-width: 400px;
+      background-color: rgb(255 255 255 / 10%);
+      overflow: hidden;
+    }
+
+    &__track-upload-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4caf50, #8bc34a);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
     &__track-upload-text {
       text-align: center;
     }

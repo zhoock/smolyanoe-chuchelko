@@ -99,6 +99,7 @@ function UserDashboard() {
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
   const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
+  const [uploadProgress, setUploadProgress] = useState<{ [albumId: string]: number }>({});
   const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -289,6 +290,7 @@ function UserDashboard() {
     }
 
     setIsUploadingTracks((prev) => ({ ...prev, [albumId]: true }));
+    setUploadProgress((prev) => ({ ...prev, [albumId]: 0 }));
 
     try {
       // Находим альбом в albumsFromStore для получения данных
@@ -306,6 +308,12 @@ function UserDashboard() {
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
         const trackId = String(i + 1); // Начинаем с 1
+
+        // Обновляем прогресс: загрузка файла (0-80% для всех файлов)
+        const fileProgressStart = (i / fileArray.length) * 80;
+        const fileProgressEnd = ((i + 1) / fileArray.length) * 80;
+        setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressStart }));
+
         console.log(`📤 [handleTrackUpload] Uploading track ${trackId}/${fileArray.length}:`, {
           fileName: file.name,
           fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
@@ -313,12 +321,18 @@ function UserDashboard() {
         try {
           const trackData = await prepareAndUploadTrack(file, albumId, trackId, i);
           tracksData.push(trackData);
+
+          // Обновляем прогресс после успешной загрузки файла
+          setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressEnd }));
           console.log(`✅ [handleTrackUpload] Track ${trackId} uploaded successfully`);
         } catch (error) {
           console.error(`❌ [handleTrackUpload] Error uploading track ${trackId}:`, error);
-          // Продолжаем загрузку остальных треков
+          // Продолжаем загрузку остальных треков, но не обновляем прогресс при ошибке
         }
       }
+
+      // Обновляем прогресс: сохранение метаданных в БД (80-100%)
+      setUploadProgress((prev) => ({ ...prev, [albumId]: 90 }));
 
       console.log('📊 [handleTrackUpload] Upload summary:', {
         total: fileArray.length,
@@ -335,6 +349,9 @@ function UserDashboard() {
 
       if (result.success && result.data) {
         console.log('✅ Tracks uploaded successfully:', result.data);
+        // Обновляем прогресс: завершение (100%)
+        setUploadProgress((prev) => ({ ...prev, [albumId]: 100 }));
+
         // Обновляем список альбомов
         await dispatch(fetchAlbums({ lang, force: true })).unwrap();
         alert(`Successfully uploaded ${result.data.length} track(s)`);
@@ -346,6 +363,11 @@ function UserDashboard() {
       alert(`Error uploading tracks: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploadingTracks((prev) => {
+        const newState = { ...prev };
+        delete newState[albumId];
+        return newState;
+      });
+      setUploadProgress((prev) => {
         const newState = { ...prev };
         delete newState[albumId];
         return newState;
@@ -914,8 +936,20 @@ function UserDashboard() {
                                     }}
                                   >
                                     {isUploadingTracks[album.id] ? (
-                                      <div className="user-dashboard__track-upload-text">
-                                        Uploading tracks...
+                                      <div className="user-dashboard__track-upload-progress">
+                                        <div className="user-dashboard__track-upload-text">
+                                          Uploading tracks...{' '}
+                                          {Math.round(uploadProgress[album.id] || 0)}%
+                                        </div>
+                                        <div className="user-dashboard__track-upload-progress-bar">
+                                          <div
+                                            className="user-dashboard__track-upload-progress-fill"
+                                            style={{
+                                              width: `${uploadProgress[album.id] || 0}%`,
+                                              transition: 'width 0.3s ease',
+                                            }}
+                                          />
+                                        </div>
                                       </div>
                                     ) : (
                                       <>

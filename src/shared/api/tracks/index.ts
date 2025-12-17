@@ -162,29 +162,37 @@ export async function prepareAndUploadTrack(
     throw new Error('Failed to create Supabase client. Please check environment variables.');
   }
 
-  // Убеждаемся, что токен установлен в клиенте
-  // Проверяем текущую сессию и устанавливаем токен, если нужно
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData?.session?.access_token || sessionData.session.access_token !== token) {
-    await supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '',
-    });
+  // Устанавливаем токен в клиенте и получаем сессию
+  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+    access_token: token,
+    refresh_token: '',
+  });
+
+  if (sessionError) {
+    console.error('❌ [prepareAndUploadTrack] Failed to set session:', sessionError);
+    throw new Error('Failed to authenticate. Please log in again.');
   }
 
-  // Получаем UUID пользователя из Supabase Auth (нужен для RLS политик)
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) {
-    console.error('❌ [prepareAndUploadTrack] Failed to get user from Supabase Auth:', userError);
-    throw new Error('Failed to authenticate user. Please log in again.');
+  const session = sessionData?.session;
+  if (!session) {
+    console.error('❌ [prepareAndUploadTrack] No session after setSession');
+    throw new Error('Failed to authenticate. Please log in again.');
+  }
+
+  // Получаем UUID пользователя из сессии
+  // В Supabase сессия содержит user.id, который нужен для RLS политик
+  const authUserId = session.user?.id;
+  if (!authUserId) {
+    console.error('❌ [prepareAndUploadTrack] User ID not found in session:', {
+      hasSession: !!session,
+      hasUser: !!session.user,
+      userKeys: session.user ? Object.keys(session.user) : [],
+    });
+    throw new Error('User ID not found in session. Please log in again.');
   }
 
   // Используем UUID из Supabase Auth для пути (RLS политики проверяют auth.uid())
   // Формат пути: users/{authUuid}/audio/{albumId}/{fileName}
-  const authUserId = user.id; // Это UUID из Supabase Auth
   const storagePath = `users/${authUserId}/audio/${albumId}/${fileName}`;
 
   console.log('🔐 [prepareAndUploadTrack] Using auth UUID for storage path:', {
