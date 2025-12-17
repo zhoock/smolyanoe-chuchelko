@@ -143,6 +143,19 @@ export const handler: Handler = async (
     return createOptionsResponse();
   }
 
+  // Игнорируем запросы к /cover/draft и /cover/commit - они должны обрабатываться отдельными функциями
+  const path = event.path || event.rawPath || '';
+  if (path.includes('/cover/draft') || path.includes('/cover/commit')) {
+    console.log(
+      '[albums.ts] Ignoring cover request, should be handled by dedicated function:',
+      path
+    );
+    return createErrorResponse(
+      404,
+      'This endpoint should be handled by upload-cover-draft or commit-cover function. Check netlify.toml redirects.'
+    );
+  }
+
   try {
     // GET: загрузка альбомов
     if (event.httpMethod === 'GET') {
