@@ -20,6 +20,7 @@ import {
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
 import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
+import { uploadTracks, prepareTrackForUpload, type TrackUploadData } from '@shared/api/tracks';
 import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
 import { PreviewLyricsModal } from './components/PreviewLyricsModal';
@@ -97,6 +98,7 @@ function UserDashboard() {
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
+  const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
   const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -277,6 +279,56 @@ function UserDashboard() {
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
+  };
+
+  // Обработка загрузки треков
+  const handleTrackUpload = async (albumId: string, files: FileList) => {
+    if (isUploadingTracks[albumId]) {
+      console.warn('Upload already in progress for album:', albumId);
+      return;
+    }
+
+    setIsUploadingTracks((prev) => ({ ...prev, [albumId]: true }));
+
+    try {
+      // Находим альбом в albumsFromStore для получения данных
+      const albumFromStore = albumsFromStore.find((a) => a.albumId === albumId);
+      if (!albumFromStore) {
+        throw new Error('Album not found');
+      }
+
+      // Подготавливаем данные для каждого трека
+      const tracksData: TrackUploadData[] = [];
+      const fileArray = Array.from(files);
+
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
+        const trackId = String(i + 1); // Начинаем с 1
+        const trackData = await prepareTrackForUpload(file, trackId, i);
+        tracksData.push(trackData);
+      }
+
+      // Загружаем треки
+      const result = await uploadTracks(albumId, lang, tracksData);
+
+      if (result.success && result.data) {
+        console.log('✅ Tracks uploaded successfully:', result.data);
+        // Обновляем список альбомов
+        await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+        alert(`Successfully uploaded ${result.data.length} track(s)`);
+      } else {
+        throw new Error(result.error || 'Failed to upload tracks');
+      }
+    } catch (error) {
+      console.error('❌ Error uploading tracks:', error);
+      alert(`Error uploading tracks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploadingTracks((prev) => {
+        const newState = { ...prev };
+        delete newState[albumId];
+        return newState;
+      });
+    }
   };
 
   const getLyricsStatusText = (status: TrackData['lyricsStatus']) => {
@@ -820,38 +872,68 @@ function UserDashboard() {
                                   </button>
 
                                   {/* Track upload section */}
-                                  <div className="user-dashboard__track-upload">
-                                    <div className="user-dashboard__track-upload-text">
-                                      {ui?.dashboard?.dropTracksHere ?? 'Drop tracks here or'}
-                                    </div>
-                                    <input
-                                      ref={(el) => {
-                                        fileInputRefs.current[album.id] = el;
-                                      }}
-                                      type="file"
-                                      multiple
-                                      accept="audio/*"
-                                      style={{ display: 'none' }}
-                                      onChange={(e) => {
-                                        const files = e.target.files;
-                                        if (files && files.length > 0) {
-                                          // TODO: Обработка загруженных файлов
-                                          console.log('Selected files:', files);
-                                        }
-                                      }}
-                                    />
-                                    <button
-                                      type="button"
-                                      className="user-dashboard__choose-files-button"
-                                      onClick={() => {
-                                        const input = fileInputRefs.current[album.id];
-                                        if (input) {
-                                          input.click();
-                                        }
-                                      }}
-                                    >
-                                      {ui?.dashboard?.chooseFiles ?? 'Choose files'}
-                                    </button>
+                                  <div
+                                    className="user-dashboard__track-upload"
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      const files = e.dataTransfer.files;
+                                      if (files.length > 0) {
+                                        handleTrackUpload(album.id, files);
+                                      }
+                                    }}
+                                    onDragOver={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                    onDragEnter={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    {isUploadingTracks[album.id] ? (
+                                      <div className="user-dashboard__track-upload-text">
+                                        Uploading tracks...
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="user-dashboard__track-upload-text">
+                                          {ui?.dashboard?.dropTracksHere ?? 'Drop tracks here or'}
+                                        </div>
+                                        <input
+                                          ref={(el) => {
+                                            fileInputRefs.current[album.id] = el;
+                                          }}
+                                          type="file"
+                                          multiple
+                                          accept="audio/*"
+                                          style={{ display: 'none' }}
+                                          onChange={(e) => {
+                                            const files = e.target.files;
+                                            if (files && files.length > 0) {
+                                              handleTrackUpload(album.id, files);
+                                            }
+                                            // Сбрасываем input, чтобы можно было загрузить те же файлы снова
+                                            if (e.target) {
+                                              e.target.value = '';
+                                            }
+                                          }}
+                                        />
+                                        <button
+                                          type="button"
+                                          className="user-dashboard__choose-files-button"
+                                          disabled={isUploadingTracks[album.id]}
+                                          onClick={() => {
+                                            const input = fileInputRefs.current[album.id];
+                                            if (input) {
+                                              input.click();
+                                            }
+                                          }}
+                                        >
+                                          {ui?.dashboard?.chooseFiles ?? 'Choose files'}
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
 
                                   {/* Tracks list */}

@@ -141,6 +141,13 @@
   status = 200
   force = true
 
+# Tracks upload
+[[redirects]]
+  from = "/api/tracks/upload*"
+  to = "/.netlify/functions/upload-tracks"
+  status = 200
+  force = true
+
 # ---------- API catch-all (САМОЕ ПОСЛЕДНЕЕ ИЗ /api) ----------
 [[redirects]]
   from = "/api/*"
