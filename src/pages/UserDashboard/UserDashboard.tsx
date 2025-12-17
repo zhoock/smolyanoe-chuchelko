@@ -324,12 +324,17 @@ function UserDashboard() {
         const fileProgressEnd = ((i + 1) / fileArray.length) * 80;
         setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressStart }));
 
+        // orderIndex должен быть равен индексу в массиве всех треков (существующие + новые)
+        const orderIndex = existingTracksCount + i;
+
         console.log(`📤 [handleTrackUpload] Uploading track ${trackId}/${fileArray.length}:`, {
           fileName: file.name,
           fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+          trackId,
+          orderIndex,
         });
         try {
-          const trackData = await prepareAndUploadTrack(file, albumId, trackId, i);
+          const trackData = await prepareAndUploadTrack(file, albumId, trackId, orderIndex);
           tracksData.push(trackData);
 
           // Обновляем прогресс после успешной загрузки файла
