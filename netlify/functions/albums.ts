@@ -31,7 +31,7 @@ interface AlbumRow {
   album: string;
   full_name: string;
   description: string;
-  cover: Record<string, unknown>;
+  cover: string; // Changed from Record<string, unknown> to string
   release: Record<string, unknown>;
   buttons: Record<string, unknown>;
   details: unknown[];
@@ -59,7 +59,7 @@ interface AlbumData {
   album: string;
   fullName: string;
   description: string;
-  cover: Record<string, unknown>;
+  cover: string; // Changed from Record<string, unknown> to string
   release: Record<string, unknown>;
   buttons: Record<string, unknown>;
   details: unknown[];
@@ -83,7 +83,7 @@ interface CreateAlbumRequest {
   album: string;
   fullName?: string;
   description?: string;
-  cover?: Record<string, unknown>;
+  cover?: string; // Changed from Record<string, unknown> to string
   release?: Record<string, unknown>;
   buttons?: Record<string, unknown>;
   details?: unknown[];
@@ -97,7 +97,7 @@ interface UpdateAlbumRequest {
   album?: string;
   fullName?: string;
   description?: string;
-  cover?: Record<string, unknown>;
+  cover?: string; // Changed from Record<string, unknown> to string
   release?: Record<string, unknown>;
   buttons?: Record<string, unknown>;
   details?: unknown[];
@@ -117,7 +117,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
     album: album.album,
     fullName: album.full_name,
     description: album.description,
-    cover: album.cover as Record<string, unknown>,
+    cover: album.cover, // Changed: now it's a string, no cast needed
     release: album.release as Record<string, unknown>,
     buttons: album.buttons as Record<string, unknown>,
     details: album.details as unknown[],
@@ -211,8 +211,61 @@ export const handler: Handler = async (
 
       const data = parseJsonBody<CreateAlbumRequest>(event.body, {} as CreateAlbumRequest);
 
+      // #region agent log
+      const fs = require('fs');
+      const logPath = '/Users/zhoock/Sites/my-project-copy/.cursor/debug.log';
+      const logEntry =
+        JSON.stringify({
+          location: 'albums.ts:212',
+          message: 'POST request received',
+          data: {
+            albumId: data.albumId,
+            artist: data.artist,
+            album: data.album,
+            lang: data.lang,
+            hasArtist: data.artist !== undefined,
+            hasAlbum: data.album !== undefined,
+            bodyKeys: Object.keys(data),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }) + '\n';
+      try {
+        fs.appendFileSync(logPath, logEntry);
+      } catch (e) {
+        // Ignore
+      }
+      // #endregion
+
       // Валидация данных
       if (!data.albumId || !data.artist || !data.album || !data.lang || !validateLang(data.lang)) {
+        // #region agent log
+        const errorLog =
+          JSON.stringify({
+            location: 'albums.ts:215',
+            message: 'POST validation failed',
+            data: {
+              missingFields: {
+                albumId: !data.albumId,
+                artist: !data.artist,
+                album: !data.album,
+                lang: !data.lang || !validateLang(data.lang),
+              },
+              receivedData: data,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }) + '\n';
+        try {
+          fs.appendFileSync(logPath, errorLog);
+        } catch (e) {
+          // Ignore
+        }
+        // #endregion
         return createErrorResponse(
           400,
           'Missing required fields: albumId, artist, album, lang (must be "en" or "ru")'
@@ -244,7 +297,7 @@ export const handler: Handler = async (
           data.album,
           data.fullName || null,
           data.description || null,
-          JSON.stringify(data.cover || {}),
+          data.cover || null, // cover теперь строка, не jsonb!
           JSON.stringify(data.release || {}),
           JSON.stringify(data.buttons || {}),
           JSON.stringify(data.details || []),
@@ -276,6 +329,34 @@ export const handler: Handler = async (
         }
 
         const data = parseJsonBody<UpdateAlbumRequest>(event.body, {} as UpdateAlbumRequest);
+
+        // #region agent log
+        const fs = require('fs');
+        const logPath = '/Users/zhoock/Sites/my-project-copy/.cursor/debug.log';
+        const putLog =
+          JSON.stringify({
+            location: 'albums.ts:278',
+            message: 'PUT request received',
+            data: {
+              albumId: data.albumId,
+              artist: data.artist,
+              album: data.album,
+              lang: data.lang,
+              hasArtist: data.artist !== undefined,
+              hasAlbum: data.album !== undefined,
+              bodyKeys: Object.keys(data),
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }) + '\n';
+        try {
+          fs.appendFileSync(logPath, putLog);
+        } catch (e) {
+          // Ignore
+        }
+        // #endregion
 
         console.log('📝 PUT /api/albums - Request data:', {
           albumId: data.albumId,
@@ -312,6 +393,17 @@ export const handler: Handler = async (
 
         const existingAlbum = existingAlbumResult.rows[0];
 
+        // 🔍 DEBUG: Проверяем, что пришло в запросе
+        console.log('[albums.ts PUT] Request data:', {
+          albumId: data.albumId,
+          cover: data.cover,
+          coverType: typeof data.cover,
+          coverUndefined: data.cover === undefined,
+          coverNull: data.cover === null,
+          coverEmpty: data.cover === '',
+          allDataKeys: Object.keys(data),
+        });
+
         // Подготавливаем данные для обновления
         const updateFields: string[] = [];
         const updateValues: unknown[] = [];
@@ -333,9 +425,17 @@ export const handler: Handler = async (
           updateFields.push(`description = $${paramIndex++}`);
           updateValues.push(data.description);
         }
-        if (data.cover !== undefined) {
-          updateFields.push(`cover = $${paramIndex++}::jsonb`);
-          updateValues.push(JSON.stringify(data.cover));
+        if (data.cover !== undefined && data.cover !== null && data.cover !== '') {
+          updateFields.push(`cover = $${paramIndex++}::text`);
+          updateValues.push(data.cover); // cover теперь строка, не jsonb!
+          console.log('[albums.ts PUT] ✅ Cover will be updated to:', data.cover);
+        } else {
+          console.log('[albums.ts PUT] ⚠️ Cover NOT updated:', {
+            cover: data.cover,
+            undefined: data.cover === undefined,
+            null: data.cover === null,
+            empty: data.cover === '',
+          });
         }
         if (data.release !== undefined) {
           updateFields.push(`release = $${paramIndex++}::jsonb`);
@@ -361,6 +461,19 @@ export const handler: Handler = async (
         // Добавляем updated_at
         updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
+        // 🔍 DEBUG: Проверяем, что будет отправлено в БД
+        console.log('[albums.ts PUT] Update query fields:', updateFields);
+        console.log('[albums.ts PUT] Update query values:', updateValues);
+        const coverIndex = updateFields.findIndex((f) => f.includes('cover'));
+        if (coverIndex >= 0) {
+          console.log('[albums.ts PUT] Cover will be updated:', {
+            field: updateFields[coverIndex],
+            value: updateValues[coverIndex],
+          });
+        } else {
+          console.log('[albums.ts PUT] ⚠️ Cover NOT in updateFields!');
+        }
+
         // Добавляем условия WHERE
         updateValues.push(existingAlbum.id);
 
@@ -375,6 +488,13 @@ export const handler: Handler = async (
         const updateResult = await query<AlbumRow>(updateQuery, updateValues);
 
         const updatedAlbum = updateResult.rows[0];
+
+        // 🔍 DEBUG: Проверяем, что пришло из БД
+        console.log('[albums.ts PUT] Raw cover from DB:', {
+          type: typeof updatedAlbum.cover,
+          value: updatedAlbum.cover,
+          stringified: JSON.stringify(updatedAlbum.cover),
+        });
 
         // Загружаем треки для обновлённого альбома
         const tracksResult = await query<TrackRow>(
@@ -393,6 +513,13 @@ export const handler: Handler = async (
         );
 
         const mappedAlbum = mapAlbumToApiFormat(updatedAlbum, tracksResult.rows);
+
+        // 🔍 DEBUG: Проверяем, что получилось после маппинга
+        console.log('[albums.ts PUT] Mapped cover:', {
+          type: typeof mappedAlbum.cover,
+          value: mappedAlbum.cover,
+          stringified: JSON.stringify(mappedAlbum.cover),
+        });
 
         // Сохраняем в JSON через GitHub API (асинхронно, не блокируем ответ)
         const githubToken = process.env.GITHUB_TOKEN;

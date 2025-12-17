@@ -688,10 +688,7 @@ describe('playerSlice', () => {
         album: 'Test Album',
         artist: 'Test Artist',
         fullName: 'Test Artist — Test Album',
-        cover: {
-          img: 'cover.jpg',
-          fullName: 'Test Artist — Test Album',
-        },
+        cover: 'cover',
       };
 
       store.dispatch(playerActions.setAlbumMeta(albumMeta));
@@ -713,10 +710,7 @@ describe('playerSlice', () => {
               album: 'Test Album',
               artist: 'Test Artist',
               fullName: 'Test Artist — Test Album',
-              cover: {
-                img: 'cover.jpg',
-                fullName: 'Test Artist — Test Album',
-              },
+              cover: 'cover',
             },
           },
         },
@@ -752,10 +746,7 @@ describe('playerSlice', () => {
         album: 'New Album',
         artist: 'New Artist',
         fullName: 'New Artist — New Album',
-        cover: {
-          img: 'new-cover.jpg',
-          fullName: 'New Artist — New Album',
-        },
+        cover: 'new-cover',
       };
 
       store.dispatch(playerActions.setAlbumMeta(newAlbumMeta));

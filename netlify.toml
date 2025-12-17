@@ -1,97 +1,115 @@
 [build]
-  publish = "dist"   # <— ВАЖНО: откуда Netlify берёт файлы для прод-раздачи
-  functions = "netlify/functions"  # <— Явно указываем папку с функциями
+  publish = "dist"
+  functions = "netlify/functions"
 
 [dev]
-  command = "npm start" # команда для запуска вашего dev-сервера (например, React Dev Server)
-  targetPort = 8080 # порт, на котором работает ваш webpack dev server
-  port = 8888 # порт, на котором Netlify будет проксировать запросы
+  command = "npm start"
+  targetPort = 8080
+  port = 8888
 
-# API routes должны быть ПЕРЕД общим redirect на index.html
-# Общий redirect для всех API endpoints (работает в проде, где нет dev-server прокси)
+# ---------- API: СНАЧАЛА САМЫЕ СПЕЦИФИЧНЫЕ ----------
+
+# Covers (draft/commit) — должны быть ДО /api/albums* и ДО /api/*
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/api/albums/cover/draft*"
+  to = "/.netlify/functions/upload-cover-draft"
   status = 200
+  force = true
 
-# API routes для сохранения синхронизаций
+[[redirects]]
+  from = "/api/albums/cover/commit*"
+  to = "/.netlify/functions/commit-cover"
+  status = 200
+  force = true
+
+# Synced lyrics
 [[redirects]]
   from = "/api/synced-lyrics*"
   to = "/.netlify/functions/synced-lyrics"
   status = 200
   force = true
 
-# Старый endpoint для обратной совместимости
 [[redirects]]
   from = "/api/save-synced-lyrics*"
   to = "/.netlify/functions/synced-lyrics"
   status = 200
   force = true
 
-# API route для сохранения текста трека
 [[redirects]]
   from = "/api/save-track-text*"
   to = "/.netlify/functions/save-track-text"
   status = 200
   force = true
 
-# API route для применения миграций БД (только для админов)
+# Admin миграции
 [[redirects]]
   from = "/api/apply-migrations*"
   to = "/.netlify/functions/apply-migrations"
   status = 200
   force = true
 
-# API route для миграции JSON в БД (только для админов)
 [[redirects]]
   from = "/api/migrate-json-to-db*"
   to = "/.netlify/functions/migrate-json-to-db"
   status = 200
   force = true
 
-# API route для работы с альбомами
+# Albums (общее правило)
 [[redirects]]
   from = "/api/albums*"
   to = "/.netlify/functions/albums"
   status = 200
   force = true
 
-# API route для работы с профилем пользователя (theBand)
+# User profile
 [[redirects]]
   from = "/api/user-profile*"
   to = "/.netlify/functions/user-profile"
   status = 200
   force = true
 
-# API route для работы со статьями пользователей
+# Articles
 [[redirects]]
   from = "/api/articles-api*"
   to = "/.netlify/functions/articles-api"
   status = 200
   force = true
 
-# API route для проксирования изображений из Supabase Storage (для работы ColorThief)
+# Proxy image
 [[redirects]]
   from = "/api/proxy-image*"
   to = "/.netlify/functions/proxy-image"
   status = 200
   force = true
 
-# API route для аутентификации
+# Auth
 [[redirects]]
   from = "/api/auth/*"
   to = "/.netlify/functions/auth"
   status = 200
   force = true
 
-# API route для загрузки файлов в Supabase Storage
+# Upload file
 [[redirects]]
   from = "/api/upload-file*"
   to = "/.netlify/functions/upload-file"
   status = 200
   force = true
 
-# API routes для платежей ЮKassa
+# Update/check covers
+[[redirects]]
+  from = "/api/update-album-covers*"
+  to = "/.netlify/functions/update-album-covers"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/check-album-covers*"
+  to = "/.netlify/functions/check-album-covers"
+  status = 200
+  force = true
+
+# Payments
 [[redirects]]
   from = "/api/create-payment*"
   to = "/.netlify/functions/create-payment"
@@ -110,39 +128,15 @@
   status = 200
   force = true
 
-# Исключаем статические файлы из redirect на index.html
-# Эти redirects должны быть ПЕРЕД общим redirect для SPA
-# В dev режиме Netlify Dev автоматически проксирует их на webpack dev server (порт 8080)
-# force = false позволяет Netlify Dev проксировать запросы на targetPort в dev режиме
+# ---------- API catch-all (САМОЕ ПОСЛЕДНЕЕ ИЗ /api) ----------
 [[redirects]]
-  from = "/scripts/*"
-  to = "/scripts/:splat"
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
   status = 200
+  force = true
 
-[[redirects]]
-  from = "/styles/*"
-  to = "/styles/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/images/*"
-  to = "/images/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/audio/*"
-  to = "/audio/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/assets/*"
-  to = "/assets/:splat"
-  status = 200
-
-# Общий redirect для SPA - должен быть ПОСЛЕДНИМ
+# ---------- SPA ----------
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-

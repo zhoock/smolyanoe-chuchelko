@@ -265,6 +265,217 @@ BEGIN
 END $$;
 `;
 
+const MIGRATION_011 = `
+-- Миграция: Обновление имен обложек альбомов
+-- Заменяет старые имена обложек (Tar-Baby-Cover-*, 23-cover) на новые (smolyanoe-chuchelko-Cover-*)
+-- Это нужно для совместимости с новой системой именования файлов
+
+DO $$
+DECLARE
+  album_record RECORD;
+  old_cover_img TEXT;
+  new_cover_img TEXT;
+  updated_count INTEGER := 0;
+BEGIN
+  -- Проходим по всем альбомам
+  FOR album_record IN 
+    SELECT id, cover, album_id
+    FROM albums
+    WHERE cover IS NOT NULL
+  LOOP
+    -- Извлекаем старое имя обложки из JSON
+    old_cover_img := album_record.cover->>'img';
+    
+    -- Пропускаем, если имя обложки пустое
+    IF old_cover_img IS NULL OR old_cover_img = '' THEN
+      CONTINUE;
+    END IF;
+    
+    -- Пропускаем, если уже в новом формате
+    IF old_cover_img LIKE 'smolyanoe-chuchelko-Cover%' THEN
+      CONTINUE;
+    END IF;
+    
+    -- Определяем новое имя в зависимости от старого
+    new_cover_img := NULL;
+    
+    -- Случай 1: Tar-Baby-Cover-*
+    IF old_cover_img LIKE 'Tar-Baby-Cover%' THEN
+      new_cover_img := REPLACE(old_cover_img, 'Tar-Baby-Cover', 'smolyanoe-chuchelko-Cover');
+    -- Случай 2: 23-cover или albumId-cover
+    ELSIF old_cover_img LIKE '%-cover' OR old_cover_img = '23-cover' THEN
+      new_cover_img := 'smolyanoe-chuchelko-Cover-' || album_record.album_id;
+    END IF;
+    
+    -- Обновляем альбом, если нашли новое имя
+    IF new_cover_img IS NOT NULL THEN
+      UPDATE albums
+      SET cover = jsonb_set(
+        cover,
+        '{img}',
+        to_jsonb(new_cover_img)
+      ),
+      updated_at = NOW()
+      WHERE id = album_record.id;
+      
+      updated_count := updated_count + 1;
+      
+      RAISE NOTICE 'Обновлен альбом %: % -> %', album_record.album_id, old_cover_img, new_cover_img;
+    END IF;
+  END LOOP;
+  
+  RAISE NOTICE 'Всего обновлено альбомов: %', updated_count;
+END $$;
+`;
+
+const MIGRATION_012 = `
+-- Миграция: Принудительное обновление имен обложек альбомов (улучшенная версия)
+-- Обновляет все старые имена обложек на новые, включая различные варианты
+
+DO $$
+DECLARE
+  album_record RECORD;
+  old_cover_img TEXT;
+  new_cover_img TEXT;
+  updated_count INTEGER := 0;
+BEGIN
+  -- Проходим по всем альбомам
+  FOR album_record IN 
+    SELECT id, cover, album_id
+    FROM albums
+    WHERE cover IS NOT NULL
+  LOOP
+    -- Извлекаем старое имя обложки из JSON
+    old_cover_img := album_record.cover->>'img';
+    
+    -- Пропускаем, если имя обложки пустое
+    IF old_cover_img IS NULL OR old_cover_img = '' THEN
+      CONTINUE;
+    END IF;
+    
+    -- Пропускаем, если уже в новом формате
+    IF old_cover_img LIKE 'smolyanoe-chuchelko-Cover%' THEN
+      CONTINUE;
+    END IF;
+    
+    -- Определяем новое имя в зависимости от старого
+    new_cover_img := NULL;
+    
+    -- Случай 1: Tar-Baby-Cover-* (любые варианты)
+    IF old_cover_img LIKE '%Tar-Baby-Cover%' THEN
+      new_cover_img := REPLACE(old_cover_img, 'Tar-Baby-Cover', 'smolyanoe-chuchelko-Cover');
+    -- Случай 2: 23-cover или просто albumId-cover
+    ELSIF old_cover_img ~ '^[0-9]+-cover$' OR old_cover_img = album_record.album_id || '-cover' THEN
+      new_cover_img := 'smolyanoe-chuchelko-Cover-' || album_record.album_id;
+    -- Случай 3: Любое имя, содержащее только albumId и "cover"
+    ELSIF old_cover_img LIKE album_record.album_id || '-cover%' AND old_cover_img NOT LIKE 'smolyanoe-chuchelko%' THEN
+      new_cover_img := 'smolyanoe-chuchelko-Cover-' || album_record.album_id;
+    END IF;
+    
+    -- Обновляем альбом, если нашли новое имя
+    IF new_cover_img IS NOT NULL THEN
+      UPDATE albums
+      SET cover = jsonb_set(
+        cover,
+        '{img}',
+        to_jsonb(new_cover_img)
+      ),
+      updated_at = NOW()
+      WHERE id = album_record.id;
+      
+      updated_count := updated_count + 1;
+      
+      RAISE NOTICE 'Обновлен альбом %: % -> %', album_record.album_id, old_cover_img, new_cover_img;
+    END IF;
+  END LOOP;
+  
+  RAISE NOTICE 'Всего обновлено альбомов: %', updated_count;
+END $$;
+`;
+
+const MIGRATION_013 = `
+-- Миграция: Прямое обновление всех имен обложек альбомов
+-- Обновляет ВСЕ записи, где cover.img содержит старые имена
+
+-- Обновляем все записи с Tar-Baby-Cover
+UPDATE albums
+SET cover = jsonb_set(
+  cover,
+  '{img}',
+  to_jsonb(REPLACE(cover->>'img', 'Tar-Baby-Cover', 'smolyanoe-chuchelko-Cover'))
+),
+updated_at = NOW()
+WHERE cover IS NOT NULL
+  AND cover->>'img' IS NOT NULL
+  AND cover->>'img' LIKE '%Tar-Baby-Cover%'
+  AND cover->>'img' NOT LIKE '%smolyanoe-chuchelko-Cover%';
+
+-- Обновляем все записи с форматом albumId-cover (например, 23-cover)
+UPDATE albums
+SET cover = jsonb_set(
+  cover,
+  '{img}',
+  to_jsonb('smolyanoe-chuchelko-Cover-' || album_id)
+),
+updated_at = NOW()
+WHERE cover IS NOT NULL
+  AND cover->>'img' IS NOT NULL
+  AND (cover->>'img' = album_id || '-cover' OR cover->>'img' ~ '^[0-9]+-cover$')
+  AND cover->>'img' NOT LIKE '%smolyanoe-chuchelko-Cover%';
+`;
+
+const MIGRATION_014 = `
+-- Миграция: Принудительное обновление ВСЕХ имен обложек
+-- Обновляет все записи, которые НЕ содержат smolyanoe-chuchelko-Cover
+
+-- Шаг 1: Обновляем все записи с Tar-Baby-Cover (любые варианты)
+UPDATE albums
+SET cover = jsonb_set(
+  cover,
+  '{img}',
+  to_jsonb(REPLACE(cover->>'img', 'Tar-Baby-Cover', 'smolyanoe-chuchelko-Cover'))
+),
+updated_at = NOW()
+WHERE cover IS NOT NULL
+  AND cover->>'img' IS NOT NULL
+  AND cover->>'img' != ''
+  AND cover->>'img' LIKE '%Tar-Baby-Cover%';
+
+-- Шаг 2: Обновляем все записи с форматом albumId-cover (например, 23-cover, smolyanoechuchelko-cover)
+UPDATE albums
+SET cover = jsonb_set(
+  cover,
+  '{img}',
+  to_jsonb('smolyanoe-chuchelko-Cover-' || album_id)
+),
+updated_at = NOW()
+WHERE cover IS NOT NULL
+  AND cover->>'img' IS NOT NULL
+  AND cover->>'img' != ''
+  AND cover->>'img' NOT LIKE '%smolyanoe-chuchelko-Cover%'
+  AND (
+    cover->>'img' = album_id || '-cover'
+    OR cover->>'img' ~ '^[0-9]+-cover$'
+    OR cover->>'img' LIKE album_id || '-cover%'
+  );
+
+-- Шаг 3: Обновляем все остальные записи, которые не содержат smolyanoe-chuchelko-Cover
+-- и содержат слово "cover" (на всякий случай)
+UPDATE albums
+SET cover = jsonb_set(
+  cover,
+  '{img}',
+  to_jsonb('smolyanoe-chuchelko-Cover-' || album_id)
+),
+updated_at = NOW()
+WHERE cover IS NOT NULL
+  AND cover->>'img' IS NOT NULL
+  AND cover->>'img' != ''
+  AND cover->>'img' NOT LIKE '%smolyanoe-chuchelko-Cover%'
+  AND cover->>'img' ILIKE '%cover%'
+  AND cover->>'img' NOT LIKE 'smolyanoe-chuchelko-Cover%';
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -274,6 +485,10 @@ const MIGRATIONS: Record<string, string> = {
   '008_remove_duplicate_albums.sql': MIGRATION_008,
   '009_remove_duplicate_articles.sql': MIGRATION_009,
   '010_claim_public_data_to_owner.sql': MIGRATION_010,
+  '011_update_album_cover_names.sql': MIGRATION_011,
+  '012_force_update_album_cover_names.sql': MIGRATION_012,
+  '013_direct_update_album_covers.sql': MIGRATION_013,
+  '014_force_all_covers.sql': MIGRATION_014,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -409,6 +624,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '008_remove_duplicate_albums.sql',
       '009_remove_duplicate_articles.sql',
       '010_claim_public_data_to_owner.sql',
+      '011_update_album_cover_names.sql',
+      '012_force_update_album_cover_names.sql',
+      '013_direct_update_album_covers.sql',
+      '014_force_all_covers.sql',
     ];
 
     const results: MigrationResult[] = [];

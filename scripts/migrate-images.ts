@@ -15,9 +15,9 @@ const MIGRATION_MAP: Record<string, string[]> = {
   albums: [
     'album_cover_smolyanoe_chuchelko_23',
     'album_cover_smolyanoe_chuchelko_EP',
-    'Tar-Baby-Cover-23',
-    'Tar-Baby-Cover-23-remastered',
-    'Tar-Baby-Cover',
+    'smolyanoe-chuchelko-Cover-23',
+    'smolyanoe-chuchelko-Cover-23-remastered',
+    'smolyanoe-chuchelko-Cover',
   ],
   articles: [
     'yaroslav_zhoock',

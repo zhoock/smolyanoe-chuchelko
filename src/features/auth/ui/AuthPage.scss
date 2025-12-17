@@ -1,12 +1,51 @@
 .auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+}
 
-  &__container {
-    width: 100%;
-    max-width: 500px;
+.auth-page__backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 30%, rgb(255 255 255 / 4%), transparent 55%), rgb(0 0 0 / 78%);
+  backdrop-filter: blur(12px);
+}
+
+.auth-page__container {
+  position: relative;
+  width: min(600px, 92vw);
+  padding: var(--ms-2);
+  color: var(--white);
+  background: var(--deep-black);
+  border: 1px solid var(--iron-slate);
+  border-radius: var(--ms-0);
+  box-shadow: 0 8px 32px rgb(var(--black-rgb) / 50%);
+}
+
+.auth-page__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--white);
+  font-size: 20px;
+  line-height: 1;
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    background: rgb(255 255 255 / 12%);
+    border-color: rgb(255 255 255 / 16%);
   }
 }

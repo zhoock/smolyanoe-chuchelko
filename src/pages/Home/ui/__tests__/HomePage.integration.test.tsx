@@ -16,10 +16,7 @@ describe('HomePage integration tests', () => {
       release: {
         date: '2024-01-01',
       },
-      cover: {
-        img: 'cover1.jpg',
-        fullName: 'Artist 1 — Album 1',
-      },
+      cover: 'cover1',
       tracks: [],
       buttons: {},
       details: [],

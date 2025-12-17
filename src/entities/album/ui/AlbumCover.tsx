@@ -10,6 +10,7 @@ type Density = 1 | 2 | 3;
 const DEFAULT_BASE_SIZE = 448;
 const DEFAULT_DENSITIES: Density[] = [1, 2, 3];
 
+// Локальные ассеты (не Supabase деривативы)
 const DENSITY_SUFFIX: Record<ImageFormat, Record<Density, (base: number) => string | null>> = {
   webp: {
     1: (base) => `-${base}.webp`,
@@ -19,37 +20,85 @@ const DENSITY_SUFFIX: Record<ImageFormat, Record<Density, (base: number) => stri
   jpg: {
     1: (base) => `-${base}.jpg`,
     2: (base) => `@2x-${base * 2}.jpg`,
-    3: () => null, // jpg-версий для 3x нет в ассетах
+    3: () => null,
   },
 };
 
+// Supabase деривативы фиксированы (по твоему описанию)
+const SUPA_WEBP_SIZES = [448, 896, 1344] as const;
+const SUPA_JPG_SIZES = [448, 896] as const;
+
 const formatDescriptor = (density: Density) => `${density}x`;
+
+function withCacheBust(url: string, cacheBust?: string) {
+  if (!cacheBust) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}v=${encodeURIComponent(cacheBust)}`;
+}
+
+function isSupabaseStorageEnabled() {
+  // Всегда используем Supabase Storage для медиа (обложки/аудио)
+  // Это должно совпадать с shouldUseSupabaseStorage() в src/shared/api/albums/index.ts
+  return true;
+}
+
+/**
+ * Берём "не меньше цели", чтобы не апскейлить (лучше чуть больше, чем меньше).
+ * Если всё меньше — берём максимальный.
+ */
+function pickCeilOrMax(target: number, candidates: readonly number[]) {
+  for (const c of candidates) {
+    if (c >= target) return c;
+  }
+  return candidates[candidates.length - 1];
+}
+
+function supaSuffix(format: ImageFormat, targetPx: number): string | null {
+  if (format === 'webp') {
+    const px = pickCeilOrMax(targetPx, SUPA_WEBP_SIZES);
+    return `-${px}.webp`;
+  }
+  const px = pickCeilOrMax(targetPx, SUPA_JPG_SIZES);
+  return `-${px}.jpg`;
+}
 
 const buildSrcSet = ({
   img,
   baseSize,
   format,
   densities,
+  cacheBust,
 }: {
   img: string;
   baseSize: number;
   format: ImageFormat;
   densities: Density[];
+  cacheBust?: string;
 }) => {
+  const useSupabaseStorage = isSupabaseStorageEnabled();
+
   return densities
     .map((density) => {
-      const suffix = DENSITY_SUFFIX[format][density]?.(baseSize);
-      if (!suffix) {
-        return null;
+      let suffix: string | null = null;
+
+      if (useSupabaseStorage) {
+        // Supabase деривативы -448/-896/-1344 (webp) и -448/-896 (jpg)
+        suffix = supaSuffix(format, baseSize * density);
+      } else {
+        suffix = DENSITY_SUFFIX[format][density]?.(baseSize) ?? null;
       }
-      return `${getUserImageUrl(img, 'albums', suffix)} ${formatDescriptor(density)}`;
+
+      if (!suffix) return null;
+
+      const url = getUserImageUrl(img, 'albums', suffix);
+      return `${withCacheBust(url, cacheBust)} ${formatDescriptor(density)}`;
     })
     .filter(Boolean)
     .join(', ');
 };
 
 /**
- * Компонент обложки альбома с поддержкой responsive-загрузки.
+ * Компонент обложки альбома с responsive-загрузкой.
  */
 function AlbumCover({
   img,
@@ -66,47 +115,64 @@ function AlbumCover({
 
   const densitySteps = useMemo(() => {
     const unique = new Set<Density>((densities || DEFAULT_DENSITIES) as Density[]);
-    // Гарантируем наличие 1x как базового варианта
     unique.add(1);
     return Array.from(unique).sort((a, b) => a - b) as Density[];
   }, [densities]);
 
+  /**
+   * cacheBust уникальный на монтирование + пересчитывается при смене img
+   */
+  const cacheBust = useMemo(() => `${Date.now()}`, [img]);
+
   const webpSrcSet = useMemo(
     () =>
-      buildSrcSet({ img, baseSize: effectiveBaseSize, format: 'webp', densities: densitySteps }),
-    [img, effectiveBaseSize, densitySteps]
+      buildSrcSet({
+        img,
+        baseSize: effectiveBaseSize,
+        format: 'webp',
+        densities: densitySteps,
+        cacheBust,
+      }),
+    [img, effectiveBaseSize, densitySteps, cacheBust]
   );
 
   const jpegSrcSet = useMemo(
-    () => buildSrcSet({ img, baseSize: effectiveBaseSize, format: 'jpg', densities: densitySteps }),
-    [img, effectiveBaseSize, densitySteps]
+    () =>
+      buildSrcSet({
+        img,
+        baseSize: effectiveBaseSize,
+        format: 'jpg',
+        densities: densitySteps,
+        cacheBust,
+      }),
+    [img, effectiveBaseSize, densitySteps, cacheBust]
   );
 
   const fallbackSrc = useMemo(() => {
+    const useSupabaseStorage = isSupabaseStorageEnabled();
+
+    if (useSupabaseStorage) {
+      const suffix = supaSuffix('webp', effectiveBaseSize) ?? '-448.webp';
+      const url = getUserImageUrl(img, 'albums', suffix);
+      return withCacheBust(url, cacheBust);
+    }
+
     const primarySuffix = DENSITY_SUFFIX.jpg[1]?.(effectiveBaseSize);
-    return primarySuffix
+    const baseUrl = primarySuffix
       ? getUserImageUrl(img, 'albums', primarySuffix)
       : getUserImageUrl(img, 'albums');
-  }, [img, effectiveBaseSize]);
+
+    return withCacheBust(baseUrl, cacheBust);
+  }, [img, effectiveBaseSize, cacheBust]);
 
   const resolvedSizes =
     sizes ??
     `(max-width: 480px) 60vw, (max-width: 1024px) min(40vw, ${effectiveBaseSize}px), ${effectiveBaseSize}px`;
 
   return (
-    <picture className="album-cover" role="img">
-      <source
-        className="album-cover__source"
-        srcSet={webpSrcSet}
-        sizes={resolvedSizes}
-        type="image/webp"
-      />
-      <source
-        className="album-cover__source"
-        srcSet={jpegSrcSet}
-        sizes={resolvedSizes}
-        type="image/jpeg"
-      />
+    <picture className="album-cover">
+      <source srcSet={webpSrcSet} sizes={resolvedSizes} type="image/webp" />
+      <source srcSet={jpegSrcSet} sizes={resolvedSizes} type="image/jpeg" />
 
       <img
         ref={imgRef}

@@ -15,10 +15,7 @@ describe('AlbumsSection integration tests', () => {
       release: {
         date: '2024-01-01',
       },
-      cover: {
-        img: 'cover1.jpg',
-        fullName: 'Artist 1 — Album 1',
-      },
+      cover: 'cover1',
       tracks: [],
       buttons: {},
       details: [],
@@ -32,10 +29,7 @@ describe('AlbumsSection integration tests', () => {
       release: {
         date: '2024-02-01',
       },
-      cover: {
-        img: 'cover2.jpg',
-        fullName: 'Artist 2 — Album 2',
-      },
+      cover: 'cover2',
       tracks: [],
       buttons: {},
       details: [],

@@ -14,10 +14,7 @@ describe('Album integration tests', () => {
     release: {
       date: '2024-01-01',
     },
-    cover: {
-      img: 'cover.jpg',
-      fullName: 'Test Artist — Test Album',
-    },
+    cover: 'cover',
     tracks: [
       {
         id: 1,

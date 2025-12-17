@@ -120,7 +120,7 @@ export default function Album() {
         </nav>
 
         <div className="item">
-          <AlbumCover {...album.cover} fullName={album.fullName} />
+          <AlbumCover img={album.cover || ''} fullName={album.fullName} />
           <Share />
         </div>
 

@@ -141,7 +141,7 @@ function CartStep({
         <div className="purchase-popup__item-thumbnail">
           {album?.cover ? (
             <AlbumCover
-              {...album.cover}
+              img={album.cover}
               fullName={album.fullName}
               size={64}
               densities={[1, 2]}
@@ -393,7 +393,7 @@ function CheckoutStep({
                     <div className="purchase-popup__order-item-thumbnail">
                       {album?.cover ? (
                         <AlbumCover
-                          {...album.cover}
+                          img={album.cover}
                           fullName={album.fullName}
                           size={64}
                           densities={[1, 2]}
@@ -1114,7 +1114,7 @@ function PaymentStep({
                     <div className="purchase-popup__order-item-thumbnail">
                       {album?.cover ? (
                         <AlbumCover
-                          {...album.cover}
+                          img={album.cover}
                           fullName={album.fullName}
                           size={64}
                           densities={[1, 2]}

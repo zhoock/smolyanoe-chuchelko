@@ -33,7 +33,7 @@ interface AlbumData {
   id: string;
   title: string;
   year: string;
-  cover: string;
+  cover?: string;
   releaseDate?: string;
   tracks: TrackData[];
 }
@@ -164,7 +164,11 @@ function UserDashboard() {
   useEffect(() => {
     if (albumsStatus === 'idle' || albumsStatus === 'failed') {
       console.log('🔄 Starting albums fetch, status:', albumsStatus);
-      dispatch(fetchAlbums({ lang })).catch((error) => {
+      dispatch(fetchAlbums({ lang })).catch((error: any) => {
+        // ConditionError - это нормально, condition отменил запрос
+        if (error?.name === 'ConditionError') {
+          return; // Это нормально, не логируем
+        }
         console.error('❌ Error fetching albums:', error);
       });
     }
@@ -237,7 +241,7 @@ function UserDashboard() {
             id: albumId,
             title: album.album,
             year: releaseDate ? releaseDate.getFullYear().toString() : '',
-            cover: album.cover?.img || '',
+            cover: album.cover,
             releaseDate: releaseDate
               ? releaseDate.toLocaleDateString('en-US', {
                   year: 'numeric',
@@ -774,10 +778,15 @@ function UserDashboard() {
                                 aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
                               >
                                 <div className="user-dashboard__album-thumbnail">
-                                  <img
-                                    src={getUserImageUrl(album.cover, 'albums', '@2x-128.webp')}
-                                    alt={album.title}
-                                  />
+                                  {album.cover ? (
+                                    <img
+                                      key={`cover-${album.id}-${album.cover}`}
+                                      src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}-${Date.now()}`}
+                                      alt={album.title}
+                                    />
+                                  ) : (
+                                    <img src="/images/album-placeholder.png" alt={album.title} />
+                                  )}
                                 </div>
                                 <div className="user-dashboard__album-info">
                                   <div className="user-dashboard__album-title">{album.title}</div>
@@ -1005,43 +1014,51 @@ function UserDashboard() {
           isOpen={editAlbumModal.isOpen}
           albumId={editAlbumModal.albumId}
           onClose={() => setEditAlbumModal(null)}
-          onNext={async (formData) => {
+          onNext={async (formData, updatedAlbum) => {
             if (!editAlbumModal) {
               setEditAlbumModal(null);
               return;
             }
 
-            // Обновляем локальное состояние сразу, чтобы изменения были видны мгновенно
-            setAlbumsData((prev) =>
-              prev.map((album) => {
-                if (album.id === editAlbumModal.albumId) {
-                  // Обновляем данные альбома из formData
-                  const releaseDate = formData.releaseDate ? new Date(formData.releaseDate) : null;
-
-                  return {
-                    ...album,
-                    title: formData.title,
-                    year: releaseDate ? releaseDate.getFullYear().toString() : album.year,
-                    releaseDate: releaseDate
-                      ? releaseDate.toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : album.releaseDate,
-                  };
-                }
-                return album;
-              })
-            );
+            // Обновляем локальное состояние, если передан обновленный альбом
+            if (updatedAlbum && updatedAlbum.albumId) {
+              setAlbumsData((prev) => {
+                const updated = prev.map((album) =>
+                  album.id === updatedAlbum.albumId
+                    ? {
+                        ...album,
+                        title: updatedAlbum.album || album.title,
+                        cover: updatedAlbum.cover || album.cover || '',
+                        // Обновляем другие поля, если они изменились
+                        ...(updatedAlbum.description && { description: updatedAlbum.description }),
+                      }
+                    : album
+                );
+                console.log('✅ [DEBUG] albumsData updated:', {
+                  albumId: updatedAlbum.albumId,
+                  oldCover: prev.find((a) => a.id === updatedAlbum.albumId)?.cover,
+                  newCover: updated.find((a) => a.id === updatedAlbum.albumId)?.cover,
+                  allAlbums: updated.map((a) => ({ id: a.id, cover: a.cover })),
+                });
+                return updated;
+              });
+              console.log('✅ [DEBUG] Local state updated with new cover:', {
+                albumId: updatedAlbum.albumId,
+                newCover: updatedAlbum.cover,
+              });
+            }
 
             // Пытаемся обновить Redux store (если БД доступна)
             try {
-              await dispatch(fetchAlbums({ lang })).unwrap();
+              await dispatch(fetchAlbums({ lang, force: true })).unwrap();
               console.log('✅ Albums data refreshed from API');
-            } catch (error) {
-              // Если БД недоступна - не страшно, локальное состояние уже обновлено
-              console.warn('⚠️ API unavailable, using local state update');
+            } catch (error: any) {
+              // ConditionError - это нормально, condition отменил запрос
+              if (error?.name === 'ConditionError') {
+                return; // Это нормально, не логируем
+              }
+              // Если БД недоступна - не страшно
+              console.error('⚠️ API unavailable:', error);
             }
 
             setEditAlbumModal(null);

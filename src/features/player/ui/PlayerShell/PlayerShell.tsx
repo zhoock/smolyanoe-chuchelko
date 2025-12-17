@@ -255,12 +255,7 @@ export const PlayerShell: React.FC = () => {
       return null;
     }
 
-    const cover =
-      albumMeta.cover ??
-      ({
-        img: '',
-        fullName: albumMeta.fullName ?? albumMeta.album ?? '',
-      } as IAlbums['cover']);
+    const cover = albumMeta.cover ?? '';
 
     return {
       albumId: albumMeta.albumId ?? undefined,

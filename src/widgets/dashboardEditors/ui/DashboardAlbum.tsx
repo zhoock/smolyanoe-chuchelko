@@ -147,7 +147,7 @@ export default function DashboardAlbum({
           <div className="admin-album__info">
             <div className="admin-album__cover">
               {album.cover && (
-                <AlbumCover {...album.cover} fullName={`${album.artist} - ${album.album}`} />
+                <AlbumCover img={album.cover} fullName={`${album.artist} - ${album.album}`} />
               )}
             </div>
             <div className="admin-album__details">

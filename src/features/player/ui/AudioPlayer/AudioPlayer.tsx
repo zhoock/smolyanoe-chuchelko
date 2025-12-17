@@ -638,11 +638,11 @@ export default function AudioPlayer({
    * ВАЖНО: НЕ очищаем кеш при размонтировании компонента, только при смене альбома.
    */
   useEffect(() => {
-    if (album.cover?.img) {
-      clearImageColorCache(album.cover.img);
+    if (album.cover) {
+      clearImageColorCache(album.cover);
     }
     // Не делаем cleanup - кеш должен оставаться для следующего открытия попапа
-  }, [albumId, album.cover?.img]);
+  }, [albumId, album.cover]);
 
   /**
    * Мемоизируем компонент обложки альбома.
@@ -655,7 +655,7 @@ export default function AudioPlayer({
     () => (
       <AlbumCover
         key={`album-cover-${albumId}`}
-        {...album.cover}
+        img={album.cover || ''}
         fullName={album.fullName}
         onColorsExtracted={handleColorsExtracted}
       />

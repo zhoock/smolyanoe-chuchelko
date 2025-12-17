@@ -8,7 +8,12 @@ import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
-): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
+): Promise<{
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+  isBase64Encoded?: boolean;
+}> => {
   // CORS headers для работы с фронтенда
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -66,14 +71,109 @@ export const handler: Handler = async (
     // Декодируем путь (на случай если он был закодирован дважды)
     const decodedPath = decodeURIComponent(imagePath);
 
+    console.log('[proxy-image] Request details:', {
+      originalPath: imagePath,
+      decodedPath,
+      bucketName,
+    });
+
     // Формируем полный URL к изображению в Supabase Storage
     const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${decodedPath}`;
 
+    console.log('[proxy-image] Fetching from Supabase:', imageUrl);
+
     // Загружаем изображение из Supabase
-    const response = await fetch(imageUrl);
+    let response = await fetch(imageUrl);
+
+    console.log('[proxy-image] Response status:', response.status, response.statusText);
+
+    // Если файл не найден (404 или 400), пытаемся найти альтернативные варианты
+    if (!response.ok && (response.status === 404 || response.status === 400)) {
+      // Извлекаем базовое имя и расширение
+      const pathMatch = decodedPath.match(
+        /^(.+?\/)(.+?)(?:-64|-128|-448|-896|-1344)(\.(jpg|webp))$/
+      );
+
+      if (pathMatch) {
+        const [, folder, baseName, , ext] = pathMatch;
+        const extension = ext || 'webp';
+
+        // Список вариантов для fallback (от меньшего к большему)
+        // Новый формат: без @2x и @3x, просто размеры
+        const fallbackVariants = [
+          '-64.webp',
+          '-64.jpg',
+          '-128.webp',
+          '-128.jpg',
+          '-448.webp',
+          '-448.jpg',
+          '-896.webp',
+          '-896.jpg',
+          '-1344.webp',
+          `.${extension}`, // Базовое имя без суффикса
+        ];
+
+        // Пробуем каждый вариант
+        for (const variant of fallbackVariants) {
+          const fallbackPath = `${folder}${baseName}${variant}`;
+          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fallbackPath}`;
+          console.log('[proxy-image] Trying fallback path:', fallbackPath);
+
+          const fallbackResponse = await fetch(fallbackUrl);
+          if (fallbackResponse.ok) {
+            response = fallbackResponse;
+            console.log('[proxy-image] Found fallback:', fallbackPath);
+            break;
+          }
+        }
+
+        // Если не нашли с новым именем, пробуем со старым (Tar-Baby-Cover)
+        if (!response.ok && baseName.includes('smolyanoe-chuchelko-Cover')) {
+          const oldBaseName = baseName.replace(/smolyanoe-chuchelko-Cover/g, 'Tar-Baby-Cover');
+          console.log('[proxy-image] Trying old name format:', oldBaseName);
+
+          for (const variant of fallbackVariants) {
+            const oldPath = `${folder}${oldBaseName}${variant}`;
+            const oldUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${oldPath}`;
+            console.log('[proxy-image] Trying old path:', oldPath);
+
+            const oldResponse = await fetch(oldUrl);
+            if (oldResponse.ok) {
+              response = oldResponse;
+              console.log('[proxy-image] Found old format:', oldPath);
+              break;
+            }
+          }
+        }
+      } else {
+        // Если паттерн не совпал, пробуем базовое имя без суффиксов
+        const baseNameMatch = decodedPath.match(
+          /^(.+?)(?:-64|-128|-448|-896|-1344)(\.(jpg|webp))$/
+        );
+        if (baseNameMatch) {
+          const basePath = `${baseNameMatch[1]}${baseNameMatch[2]}`;
+          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${basePath}`;
+          console.log('[proxy-image] Trying fallback path:', basePath);
+          response = await fetch(fallbackUrl);
+
+          // Если не нашли, пробуем со старым именем
+          if (!response.ok && basePath.includes('smolyanoe-chuchelko-Cover')) {
+            const oldPath = basePath.replace(/smolyanoe-chuchelko-Cover/g, 'Tar-Baby-Cover');
+            const oldUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${oldPath}`;
+            console.log('[proxy-image] Trying old path:', oldPath);
+            response = await fetch(oldUrl);
+          }
+        }
+      }
+    }
 
     if (!response.ok) {
-      console.error('[proxy-image] Failed to fetch image:', response.status, response.statusText);
+      console.error('[proxy-image] Failed to fetch image:', {
+        status: response.status,
+        statusText: response.statusText,
+        originalPath: decodedPath,
+        url: imageUrl,
+      });
       return {
         statusCode: response.status,
         headers: corsHeaders,
@@ -82,6 +182,7 @@ export const handler: Handler = async (
           status: response.status,
           statusText: response.statusText,
           url: imageUrl,
+          path: decodedPath,
         }),
       };
     }

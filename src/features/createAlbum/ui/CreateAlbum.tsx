@@ -129,10 +129,7 @@ const formatDuration = (value: string): number | undefined => {
 };
 
 const draftToAlbum = (draft: AlbumDraft): IAlbums => {
-  const cover: IAlbums['cover'] = {
-    img: draft.coverImg.trim(),
-    fullName: `${draft.artist.trim()} — ${draft.album.trim()}`.trim(),
-  };
+  const cover: IAlbums['cover'] = draft.coverImg.trim() || undefined;
 
   const releaseEntries = Object.entries({
     date: draft.releaseDate.trim(),
@@ -255,7 +252,7 @@ const albumToDraft = (album: IAlbums): AlbumDraft => {
     artist: album.artist || '',
     album: album.album || '',
     description: album.description || '',
-    coverImg: album.cover?.img || '',
+    coverImg: album.cover || '',
     releaseDate: album.release?.date || '',
     releaseUpc: album.release?.UPC || '',
     tracks,
@@ -536,7 +533,7 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
                 id="album-cover"
                 value={draft.coverImg}
                 onChange={(event) => handleAlbumChange('coverImg', event.target.value)}
-                placeholder="Tar-Baby-Cover-23-remastered"
+                placeholder="smolyanoe-chuchelko-Cover-23-remastered"
               />
             </div>
             <div className="album-builder__field album-builder__field--inline">

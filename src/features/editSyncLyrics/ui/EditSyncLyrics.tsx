@@ -117,7 +117,7 @@ export default function EditSyncLyrics({
           album: album.album,
           artist: album.artist,
           fullName: album.fullName,
-          cover: album.cover,
+          cover: album.cover ?? null,
         })
       );
       dispatch(
@@ -870,7 +870,7 @@ export default function EditSyncLyrics({
           <div className="admin-sync__player-wrapper">
             <div className="admin-sync__player-cover">
               <AlbumCover
-                {...album.cover}
+                img={album.cover || ''}
                 fullName={`${album.artist} - ${album.album}`}
                 size={448}
               />

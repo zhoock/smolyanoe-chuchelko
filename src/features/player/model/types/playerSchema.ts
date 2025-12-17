@@ -8,14 +8,14 @@ export interface PlayerTimeState {
   duration: number; // общая длительность трека в секундах (NaN если трек не загружен)
 }
 
-import type { TracksProps, CoverProps } from '@models';
+import type { TracksProps } from '@models';
 
 export interface PlayerAlbumMeta {
   albumId: string | null;
   album: string | null;
   artist: string | null;
   fullName: string | null;
-  cover: CoverProps | null;
+  cover: string | null;
 }
 
 export interface PlayerSourceLocation {

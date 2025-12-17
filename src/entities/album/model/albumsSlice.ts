@@ -11,7 +11,7 @@ const initialState: AlbumsState = createInitialLangState<IAlbums[]>([]);
 
 export const fetchAlbums = createAsyncThunk<
   IAlbums[],
-  { lang: SupportedLang },
+  { lang: SupportedLang; force?: boolean },
   { rejectValue: string; state: RootState }
 >(
   'albums/fetchByLang',
@@ -48,8 +48,17 @@ export const fetchAlbums = createAsyncThunk<
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 секунд таймаут
 
+        // Привязываем внешний signal к controller
+        if (signal) {
+          if (signal.aborted) {
+            controller.abort();
+          } else {
+            signal.addEventListener('abort', () => controller.abort(), { once: true });
+          }
+        }
+
         const response = await fetch(`/api/albums?lang=${lang}`, {
-          signal: signal || controller.signal,
+          signal: controller.signal,
           cache: 'no-cache',
           headers: {
             'Cache-Control': 'no-cache',
@@ -69,6 +78,20 @@ export const fetchAlbums = createAsyncThunk<
 
             // Преобразуем данные из API в формат IAlbums
             console.log('✅ Loaded albums from API');
+
+            // 🔍 DEBUG: Проверяем cover для первого альбома
+            if (result.data.length > 0) {
+              const firstAlbum = result.data[0];
+              console.log('🔍 [DEBUG] First album cover from API:', {
+                albumId: firstAlbum.albumId,
+                cover: firstAlbum.cover,
+                coverType: typeof firstAlbum.cover,
+                coverUndefined: firstAlbum.cover === undefined,
+                coverNull: firstAlbum.cover === null,
+                coverEmpty: firstAlbum.cover === '',
+              });
+            }
+
             return normalize(result.data);
           }
         }
@@ -105,13 +128,15 @@ export const fetchAlbums = createAsyncThunk<
     }
   },
   {
-    condition: ({ lang }, { getState }) => {
-      const state = getState();
-      const entry = state.albums[lang];
-      // Не запускаем, если уже загружается или уже загружено
-      if (entry.status === 'loading' || entry.status === 'succeeded') {
-        return false;
-      }
+    condition: ({ lang, force }, { getState }) => {
+      const entry = getState().albums[lang];
+
+      // Всегда блокируем параллельные запросы
+      if (entry.status === 'loading') return false;
+
+      // Блокируем повторный запуск только если НЕ force
+      if (entry.status === 'succeeded' && !force) return false;
+
       return true;
     },
   }

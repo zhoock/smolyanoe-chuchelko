@@ -1,7 +1,6 @@
 // src/features/player/ui/PlayerShell/MiniPlayer.tsx
 import React from 'react';
 import clsx from 'clsx';
-import type { CoverProps } from 'models';
 import AlbumCover from '@entities/album/ui/AlbumCover';
 
 import './style.scss';
@@ -16,7 +15,7 @@ interface ForwardHandlers {
 
 interface MiniPlayerProps {
   title: string;
-  cover?: CoverProps | null;
+  cover?: string | null;
   isPlaying: boolean;
   onToggle: () => void;
   onExpand: () => void;
@@ -50,7 +49,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     >
       <div className="mini-player__cover">
         {cover ? (
-          <AlbumCover {...cover} size={64} densities={[1, 2]} sizes="64px" />
+          <AlbumCover img={cover} fullName="" size={64} densities={[1, 2]} sizes="64px" />
         ) : (
           <div className="mini-player__cover-placeholder" aria-hidden />
         )}

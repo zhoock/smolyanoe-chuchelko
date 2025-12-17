@@ -27,8 +27,17 @@ export function AuthPage() {
   };
 
   return (
-    <div className="auth-page main-background">
+    <div className="auth-page">
+      <div className="auth-page__backdrop" />
       <div className="auth-page__container">
+        <button
+          type="button"
+          className="auth-page__close"
+          aria-label="Закрыть"
+          onClick={() => navigate(-1)}
+        >
+          ×
+        </button>
         {mode === 'login' ? (
           <LoginForm onSuccess={handleSuccess} onSwitchToRegister={() => setMode('register')} />
         ) : (

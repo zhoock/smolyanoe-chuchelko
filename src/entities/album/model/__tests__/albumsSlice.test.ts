@@ -81,10 +81,7 @@ describe('albumsSlice', () => {
         release: {
           date: '2024-01-01',
         },
-        cover: {
-          img: 'cover.jpg',
-          fullName: 'Test Artist — Test Album',
-        },
+        cover: 'cover',
         tracks: [],
         buttons: {},
         details: [],
@@ -184,10 +181,7 @@ describe('albumsSlice', () => {
           release: {
             date: '2024-01-01',
           },
-          cover: {
-            img: 'cover-en.jpg',
-            fullName: 'English Artist — English Album',
-          },
+          cover: 'cover-en',
           tracks: [],
           buttons: {},
           details: [],
@@ -204,10 +198,7 @@ describe('albumsSlice', () => {
           release: {
             date: '2024-01-01',
           },
-          cover: {
-            img: 'cover-ru.jpg',
-            fullName: 'Русский артист — Русский альбом',
-          },
+          cover: 'cover-ru',
           tracks: [],
           buttons: {},
           details: [],
@@ -496,10 +487,7 @@ describe('albumsSlice', () => {
         release: {
           date: '2024-01-01',
         },
-        cover: {
-          img: `cover-${i}.jpg`,
-          fullName: `Artist ${i} — Album ${i}`,
-        },
+        cover: `cover-${i}`,
         tracks: [],
         buttons: {},
         details: [],
@@ -532,10 +520,7 @@ describe('albumsSlice', () => {
         release: {
           date: '2024-01-01',
         },
-        cover: {
-          img: `cover-${i}.jpg`,
-          fullName: `Artist ${i} — Album ${i}`,
-        },
+        cover: `cover-${i}`,
         tracks: [],
         buttons: {},
         details: [],

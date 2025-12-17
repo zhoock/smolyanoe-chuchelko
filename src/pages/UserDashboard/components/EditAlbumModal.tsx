@@ -6,6 +6,8 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectAlbumsData } from '@entities/album';
 import { useLang } from '@app/providers/lang';
 import { getToken } from '@shared/lib/auth';
+import { getUserImageUrl } from '@shared/api/albums';
+import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums } from '@models';
 import './EditAlbumModal.style.scss';
 
@@ -13,7 +15,7 @@ interface EditAlbumModalProps {
   isOpen: boolean;
   albumId?: string;
   onClose: () => void;
-  onNext?: (data: AlbumFormData) => void;
+  onNext?: (data: AlbumFormData, updatedAlbum?: IAlbums) => void;
 }
 
 export interface BandMember {
@@ -62,11 +64,11 @@ const MOOD_OPTIONS = [
   'Intense',
   'Peaceful',
 ];
+
 const MAX_TAGS = 10;
 const MIN_TAG_LENGTH = 2;
 const MAX_TAG_LENGTH = 30;
 const MAX_BAND_MEMBERS = 20;
-const MAX_PRODUCING_CREDITS = 30;
 const DEFAULT_PRODUCING_CREDIT_TYPES = ['Producer', 'Recording/Mixing', 'Mastering'];
 
 const PURCHASE_SERVICES = [
@@ -96,8 +98,10 @@ export function EditAlbumModal({
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState<AlbumFormData>({
     title: '',
     releaseDate: '',
@@ -124,334 +128,33 @@ export function EditAlbumModal({
     streamingLinks: [],
   });
 
-  // Загружаем данные альбома при открытии модального окна
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    if (!albumId) {
-      console.warn('⚠️ EditAlbumModal: albumId is missing');
-      return;
-    }
-
-    if (!albumsFromStore || !Array.isArray(albumsFromStore)) {
-      console.warn('⚠️ EditAlbumModal: albumsFromStore is not available or not an array');
-      return;
-    }
-
-    try {
-      const album = albumsFromStore.find((a: IAlbums) => a && a.albumId === albumId);
-      if (!album) {
-        console.warn(`⚠️ EditAlbumModal: Album with id "${albumId}" not found`);
-        return;
-      }
-      // Парсим данные о членах группы из details
-      const bandMembers: BandMember[] = [];
-      const bandMembersDetail = Array.isArray(album.details)
-        ? album.details.find(
-            (detail) =>
-              detail &&
-              (detail.title === 'Band members' ||
-                detail.title === 'Участники группы' ||
-                detail.title === 'Исполнители')
-          )
-        : null;
-
-      if (bandMembersDetail && bandMembersDetail.content) {
-        for (const item of bandMembersDetail.content) {
-          // Пропускаем пустые строки
-          if (typeof item === 'string' && item.trim() === '') {
-            continue;
-          }
-
-          // Обрабатываем объекты с text и link
-          if (typeof item === 'object' && item.text && Array.isArray(item.text)) {
-            // Объединяем все части текста
-            const fullText = item.text.join('');
-
-            // Парсим строку вида "Yaroslav Zhuk — lead vocals, backing vocals, words and music."
-            // или "Ярослав Жук — вокал, бэк-вокал, слова и музыка."
-            const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
-            if (match) {
-              const name = match[1].trim();
-              const role = match[2].trim();
-              if (name && role) {
-                bandMembers.push({ name, role });
-              }
-            } else if (fullText.trim()) {
-              // Если нет разделителя "—", используем весь текст как имя
-              bandMembers.push({ name: fullText.trim(), role: '' });
-            }
-          } else if (typeof item === 'string' && item.trim()) {
-            // Обрабатываем простые строки
-            const match = item.match(/^(.+?)\s*—\s*(.+)$/);
-            if (match) {
-              const name = match[1].trim();
-              const role = match[2].trim();
-              if (name && role) {
-                bandMembers.push({ name, role });
-              }
-            } else {
-              bandMembers.push({ name: item.trim(), role: '' });
-            }
-          }
-        }
-      }
-
-      // Парсим данные о сессионных музыкантах из details
-      const sessionMusicians: BandMember[] = [];
-      const sessionMusiciansDetail = Array.isArray(album.details)
-        ? album.details.find(
-            (detail) =>
-              detail &&
-              (detail.title === 'Session musicians' ||
-                detail.title === 'Сессионные музыканты' ||
-                detail.title === 'Session Musicians')
-          )
-        : null;
-
-      if (sessionMusiciansDetail && sessionMusiciansDetail.content) {
-        for (const item of sessionMusiciansDetail.content) {
-          // Пропускаем пустые строки
-          if (typeof item === 'string' && item.trim() === '') {
-            continue;
-          }
-
-          // Обрабатываем объекты с text и link
-          if (typeof item === 'object' && item.text && Array.isArray(item.text)) {
-            // Объединяем все части текста
-            const fullText = item.text.join('');
-
-            // Парсим строку вида "Name — role."
-            const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
-            if (match) {
-              const name = match[1].trim();
-              const role = match[2].trim();
-              if (name && role) {
-                sessionMusicians.push({ name, role });
-              }
-            } else if (fullText.trim()) {
-              // Если нет разделителя "—", используем весь текст как имя
-              sessionMusicians.push({ name: fullText.trim(), role: '' });
-            }
-          } else if (typeof item === 'string' && item.trim()) {
-            // Обрабатываем простые строки
-            const match = item.match(/^(.+?)\s*—\s*(.+)$/);
-            if (match) {
-              const name = match[1].trim();
-              const role = match[2].trim();
-              if (name && role) {
-                sessionMusicians.push({ name, role });
-              }
-            } else {
-              sessionMusicians.push({ name: item.trim(), role: '' });
-            }
-          }
-        }
-      }
-
-      // Парсим данные о продюсировании из details
-      const producingCredits: ProducingCredits = {
-        Producer: [],
-        'Recording/Mixing': [],
-        Mastering: [],
-      };
-      const producingDetail = Array.isArray(album.details)
-        ? album.details.find(
-            (detail) =>
-              detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
-          )
-        : null;
-
-      if (producingDetail && producingDetail.content) {
-        // Маппинг русских названий на английские ключи
-        const creditTypeMap: Record<string, string> = {
-          продюсер: 'Producer',
-          producer: 'Producer',
-          'запись/сведение': 'Recording/Mixing',
-          'recording/mixing': 'Recording/Mixing',
-          запись: 'Recording/Mixing',
-          сведение: 'Recording/Mixing',
-          мастеринг: 'Mastering',
-          mastering: 'Mastering',
-        };
-
-        for (const item of producingDetail.content) {
-          // Пропускаем пустые строки
-          if (typeof item === 'string' && item.trim() === '') {
-            continue;
-          }
-
-          let fullText = '';
-          if (typeof item === 'object' && item.text && Array.isArray(item.text)) {
-            fullText = item.text.join('');
-          } else if (typeof item === 'string') {
-            fullText = item;
-          }
-
-          if (fullText.trim()) {
-            // Парсим строку вида "Ярослав Жук — продюсер." или "Илья Marvel Горохводацкий — запись/сведение."
-            const match = fullText.match(/^(.+?)\s*—\s*(.+?)(?:\.|$)/);
-            if (match) {
-              const name = match[1].trim();
-              const roleText = match[2].trim().toLowerCase();
-
-              // Определяем тип кредита по роли
-              let creditType = 'Producer'; // По умолчанию
-              for (const [key, value] of Object.entries(creditTypeMap)) {
-                if (roleText.includes(key)) {
-                  creditType = value;
-                  break;
-                }
-              }
-
-              // Добавляем имя и роль в соответствующий массив
-              if (!producingCredits[creditType]) {
-                producingCredits[creditType] = [];
-              }
-
-              // Сохраняем оригинальную роль (без точки в конце)
-              const role = match[2].trim().replace(/\.$/, '');
-
-              // Проверяем, нет ли уже такого имени с такой же ролью
-              const existingIndex = producingCredits[creditType].findIndex(
-                (member) => member.name === name && member.role === role
-              );
-              if (existingIndex === -1) {
-                producingCredits[creditType].push({ name, role });
-              }
-            }
-          }
-        }
-      }
-
-      // Заполняем поля из данных альбома
-      setFormData((prev) => {
-        const release = album.release && typeof album.release === 'object' ? album.release : {};
-        const releaseDate = release.date || '';
-        const upc = release.UPC || '';
-
-        return {
-          ...prev,
-          title: album.album || prev.title,
-          releaseDate: releaseDate || prev.releaseDate,
-          upcEan: upc || prev.upcEan,
-          description: album.description || prev.description,
-          albumCoverPhotographer: release.photographer || prev.albumCoverPhotographer,
-          albumCoverDesigner: release.designer || prev.albumCoverDesigner,
-          bandMembers: bandMembers.length > 0 ? bandMembers : prev.bandMembers,
-          sessionMusicians: sessionMusicians.length > 0 ? sessionMusicians : prev.sessionMusicians,
-          producingCredits: Object.keys(producingCredits).some(
-            (key) => producingCredits[key].length > 0
-          )
-            ? producingCredits
-            : prev.producingCredits,
-          // Парсим ссылки из buttons
-          purchaseLinks: (() => {
-            const links: StreamingLink[] = [];
-            if (album.buttons && typeof album.buttons === 'object') {
-              // Маппинг ключей из JSON на ID сервисов покупки
-              const purchaseMap: Record<string, string> = {
-                itunes: 'apple',
-                bandcamp: 'bandcamp',
-                amazon: 'amazon',
-              };
-
-              for (const [key, url] of Object.entries(album.buttons)) {
-                const serviceId = purchaseMap[key.toLowerCase()];
-                if (serviceId && url && typeof url === 'string' && url.trim() !== '') {
-                  links.push({ service: serviceId, url: url.trim() });
-                }
-              }
-            }
-            return links.length > 0 ? links : prev.purchaseLinks;
-          })(),
-          streamingLinks: (() => {
-            const links: StreamingLink[] = [];
-            if (album.buttons && typeof album.buttons === 'object') {
-              // Маппинг ключей из JSON на ID сервисов стриминга
-              const streamingMap: Record<string, string> = {
-                apple: 'applemusic',
-                vk: 'vk',
-                youtube: 'youtube',
-                spotify: 'spotify',
-                yandex: 'yandex',
-                deezer: 'deezer',
-                tidal: 'tidal',
-                applemusic: 'applemusic',
-              };
-
-              for (const [key, url] of Object.entries(album.buttons)) {
-                const serviceId = streamingMap[key.toLowerCase()];
-                if (serviceId && url && typeof url === 'string' && url.trim() !== '') {
-                  links.push({ service: serviceId, url: url.trim() });
-                }
-              }
-            }
-            return links.length > 0 ? links : prev.streamingLinks;
-          })(),
-        };
-      });
-    } catch (error) {
-      console.error('❌ Error loading album data in EditAlbumModal:', error);
-    }
-  }, [isOpen, albumId, albumsFromStore, lang]);
-
-  // Сбрасываем форму при закрытии модального окна
-  useEffect(() => {
-    if (!isOpen) {
-      // Сбрасываем форму при закрытии
-      setFormData({
-        title: '',
-        releaseDate: '',
-        upcEan: '',
-        albumArt: null,
-        description: '',
-        visibleOnAlbumPage: true,
-        allowDownloadSale: 'no',
-        regularPrice: '9.99',
-        currency: 'USD',
-        preorderReleaseDate: '',
-        mood: [],
-        tags: [],
-        albumCoverPhotographer: '',
-        albumCoverDesigner: '',
-        bandMembers: [],
-        sessionMusicians: [],
-        producingCredits: {
-          Producer: [],
-          'Recording/Mixing': [],
-          Mastering: [],
-        },
-        purchaseLinks: [],
-        streamingLinks: [],
-      });
-      setCurrentStep(1);
-    }
-  }, [isOpen]);
-
   const [dragActive, setDragActive] = useState(false);
   const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [tagError, setTagError] = useState('');
+
   const moodDropdownRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+
   const [bandMemberName, setBandMemberName] = useState('');
   const [bandMemberRole, setBandMemberRole] = useState('');
   const [editingBandMemberIndex, setEditingBandMemberIndex] = useState<number | null>(null);
+
   const [sessionMusicianName, setSessionMusicianName] = useState('');
   const [sessionMusicianRole, setSessionMusicianRole] = useState('');
   const [editingSessionMusicianIndex, setEditingSessionMusicianIndex] = useState<number | null>(
     null
   );
+
   const [producingNames, setProducingNames] = useState<Record<string, string>>({});
   const [producingRoles, setProducingRoles] = useState<Record<string, string>>({});
   const [editingProducingCredit, setEditingProducingCredit] = useState<{
     creditType: string;
     nameIndex: number;
   } | null>(null);
+
   const [newCreditType, setNewCreditType] = useState('');
+
   const [editingPurchaseLink, setEditingPurchaseLink] = useState<number | null>(null);
   const [purchaseLinkService, setPurchaseLinkService] = useState('');
   const [purchaseLinkUrl, setPurchaseLinkUrl] = useState('');
@@ -460,37 +163,435 @@ export function EditAlbumModal({
   const [streamingLinkService, setStreamingLinkService] = useState('');
   const [streamingLinkUrl, setStreamingLinkUrl] = useState('');
 
-  const handleInputChange = (field: keyof AlbumFormData, value: string | boolean | File | null) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const [albumArtPreview, setAlbumArtPreview] = useState<string | null>(null);
+  const [coverDraftKey, setCoverDraftKey] = useState<string | null>(null);
+
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'uploaded' | 'error'>(
+    'idle'
+  );
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // ========= FIX: objectURL lifecycle =========
+  const localPreviewUrlRef = useRef<string | null>(null);
+
+  const setLocalPreview = (file: File) => {
+    if (localPreviewUrlRef.current) {
+      URL.revokeObjectURL(localPreviewUrlRef.current);
+    }
+    const url = URL.createObjectURL(file);
+    localPreviewUrlRef.current = url;
+    setAlbumArtPreview(url);
   };
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrlRef.current) {
+        URL.revokeObjectURL(localPreviewUrlRef.current);
+        localPreviewUrlRef.current = null;
+      }
+    };
+  }, []);
+  // ===========================================
+
+  const handleInputChange = (field: keyof AlbumFormData, value: string | boolean | File | null) => {
+    setFormData((prev) => ({ ...prev, [field]: value as never }));
+  };
+
+  // Загружаем данные альбома при открытии модального окна
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!albumId) return;
+    if (!albumsFromStore || !Array.isArray(albumsFromStore)) return;
+
+    const album = albumsFromStore.find((a: IAlbums) => a && a.albumId === albumId);
+    if (!album) return;
+
+    // --- парсинг band members ---
+    const bandMembers: BandMember[] = [];
+    const bandMembersDetail = Array.isArray(album.details)
+      ? album.details.find(
+          (detail) =>
+            detail &&
+            (detail.title === 'Band members' ||
+              detail.title === 'Участники группы' ||
+              detail.title === 'Исполнители')
+        )
+      : null;
+
+    if (bandMembersDetail && (bandMembersDetail as any).content) {
+      for (const item of (bandMembersDetail as any).content) {
+        if (typeof item === 'string' && item.trim() === '') continue;
+
+        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          const fullText = item.text.join('');
+          const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+          if (match) {
+            const name = match[1].trim();
+            const role = match[2].trim();
+            if (name && role) bandMembers.push({ name, role });
+          } else if (fullText.trim()) {
+            bandMembers.push({ name: fullText.trim(), role: '' });
+          }
+        } else if (typeof item === 'string' && item.trim()) {
+          const match = item.match(/^(.+?)\s*—\s*(.+)$/);
+          if (match) {
+            const name = match[1].trim();
+            const role = match[2].trim();
+            if (name && role) bandMembers.push({ name, role });
+          } else {
+            bandMembers.push({ name: item.trim(), role: '' });
+          }
+        }
+      }
+    }
+
+    // --- парсинг session musicians ---
+    const sessionMusicians: BandMember[] = [];
+    const sessionMusiciansDetail = Array.isArray(album.details)
+      ? album.details.find(
+          (detail) =>
+            detail &&
+            (detail.title === 'Session musicians' ||
+              detail.title === 'Сессионные музыканты' ||
+              detail.title === 'Session Musicians')
+        )
+      : null;
+
+    if (sessionMusiciansDetail && (sessionMusiciansDetail as any).content) {
+      for (const item of (sessionMusiciansDetail as any).content) {
+        if (typeof item === 'string' && item.trim() === '') continue;
+
+        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          const fullText = item.text.join('');
+          const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+          if (match) {
+            const name = match[1].trim();
+            const role = match[2].trim();
+            if (name && role) sessionMusicians.push({ name, role });
+          } else if (fullText.trim()) {
+            sessionMusicians.push({ name: fullText.trim(), role: '' });
+          }
+        } else if (typeof item === 'string' && item.trim()) {
+          const match = item.match(/^(.+?)\s*—\s*(.+)$/);
+          if (match) {
+            const name = match[1].trim();
+            const role = match[2].trim();
+            if (name && role) sessionMusicians.push({ name, role });
+          } else {
+            sessionMusicians.push({ name: item.trim(), role: '' });
+          }
+        }
+      }
+    }
+
+    // --- парсинг producing ---
+    const producingCredits: ProducingCredits = {
+      Producer: [],
+      'Recording/Mixing': [],
+      Mastering: [],
+    };
+
+    const producingDetail = Array.isArray(album.details)
+      ? album.details.find(
+          (detail) => detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
+        )
+      : null;
+
+    if (producingDetail && (producingDetail as any).content) {
+      const creditTypeMap: Record<string, string> = {
+        продюсер: 'Producer',
+        producer: 'Producer',
+        'запись/сведение': 'Recording/Mixing',
+        'recording/mixing': 'Recording/Mixing',
+        запись: 'Recording/Mixing',
+        сведение: 'Recording/Mixing',
+        мастеринг: 'Mastering',
+        mastering: 'Mastering',
+      };
+
+      for (const item of (producingDetail as any).content) {
+        if (typeof item === 'string' && item.trim() === '') continue;
+
+        let fullText = '';
+        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          fullText = item.text.join('');
+        } else if (typeof item === 'string') {
+          fullText = item;
+        }
+
+        if (!fullText.trim()) continue;
+
+        const match = fullText.match(/^(.+?)\s*—\s*(.+?)(?:\.|$)/);
+        if (!match) continue;
+
+        const name = match[1].trim();
+        const roleTextLower = match[2].trim().toLowerCase();
+
+        let creditType = 'Producer';
+        for (const [key, value] of Object.entries(creditTypeMap)) {
+          if (roleTextLower.includes(key)) {
+            creditType = value;
+            break;
+          }
+        }
+
+        const role = match[2].trim().replace(/\.$/, '');
+
+        const existingIndex = (producingCredits[creditType] || []).findIndex(
+          (m) => m.name === name && m.role === role
+        );
+
+        if (existingIndex === -1) {
+          producingCredits[creditType] = [...(producingCredits[creditType] || []), { name, role }];
+        }
+      }
+    }
+
+    // Заполняем поля из данных альбома
+    setFormData((prev) => {
+      const release = album.release && typeof album.release === 'object' ? album.release : {};
+      const releaseDate = (release as any).date || '';
+      const upc = (release as any).UPC || '';
+
+      const purchaseLinks: StreamingLink[] = (() => {
+        const links: StreamingLink[] = [];
+        if (album.buttons && typeof album.buttons === 'object') {
+          const purchaseMap: Record<string, string> = {
+            itunes: 'apple',
+            bandcamp: 'bandcamp',
+            amazon: 'amazon',
+          };
+
+          for (const [key, url] of Object.entries(album.buttons as Record<string, unknown>)) {
+            const serviceId = purchaseMap[key.toLowerCase()];
+            if (serviceId && typeof url === 'string' && url.trim()) {
+              links.push({ service: serviceId, url: url.trim() });
+            }
+          }
+        }
+        return links;
+      })();
+
+      const streamingLinks: StreamingLink[] = (() => {
+        const links: StreamingLink[] = [];
+        if (album.buttons && typeof album.buttons === 'object') {
+          const streamingMap: Record<string, string> = {
+            apple: 'applemusic',
+            vk: 'vk',
+            youtube: 'youtube',
+            spotify: 'spotify',
+            yandex: 'yandex',
+            deezer: 'deezer',
+            tidal: 'tidal',
+            applemusic: 'applemusic',
+            googleplay: 'googleplay',
+          };
+
+          for (const [key, url] of Object.entries(album.buttons as Record<string, unknown>)) {
+            const serviceId = streamingMap[key.toLowerCase()];
+            if (serviceId && typeof url === 'string' && url.trim()) {
+              links.push({ service: serviceId, url: url.trim() });
+            }
+          }
+        }
+        return links;
+      })();
+
+      return {
+        ...prev,
+        title: album.album || prev.title,
+        releaseDate: releaseDate || prev.releaseDate,
+        upcEan: upc || prev.upcEan,
+        description: album.description || prev.description,
+        albumCoverPhotographer: (release as any).photographer || prev.albumCoverPhotographer,
+        albumCoverDesigner: (release as any).designer || prev.albumCoverDesigner,
+        bandMembers: bandMembers.length > 0 ? bandMembers : prev.bandMembers,
+        sessionMusicians: sessionMusicians.length > 0 ? sessionMusicians : prev.sessionMusicians,
+        producingCredits: Object.keys(producingCredits).some(
+          (k) => (producingCredits[k] || []).length
+        )
+          ? producingCredits
+          : prev.producingCredits,
+        purchaseLinks: purchaseLinks.length ? purchaseLinks : prev.purchaseLinks,
+        streamingLinks: streamingLinks.length ? streamingLinks : prev.streamingLinks,
+      };
+    });
+
+    // Показываем существующую обложку
+    const coverName =
+      typeof (album as any).cover === 'string'
+        ? (album as any).cover
+        : (album as any).cover && typeof (album as any).cover === 'object'
+          ? (album as any).cover.img
+          : null;
+
+    if (coverName) {
+      // Убираем расширение из coverName если есть (на всякий случай)
+      const stripExt = (s: string) => s.replace(/\.(webp|jpg|jpeg|png)$/i, '');
+
+      // Собираем имя с суффиксом размера и передаём расширение отдельно
+      const base = stripExt(coverName); // "my-cover" или "my-cover-448" -> "my-cover" или "my-cover-448"
+      const coverUrl = getUserImageUrl(`${base}-448`, 'albums', '.webp', false);
+
+      if (coverUrl) {
+        setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
+      }
+    }
+  }, [isOpen, albumId, albumsFromStore, lang]);
+
+  // Сбрасываем форму при закрытии модального окна
+  useEffect(() => {
+    if (isOpen) return;
+
+    setFormData({
+      title: '',
+      releaseDate: '',
+      upcEan: '',
+      albumArt: null,
+      description: '',
+      visibleOnAlbumPage: true,
+      allowDownloadSale: 'no',
+      regularPrice: '9.99',
+      currency: 'USD',
+      preorderReleaseDate: '',
+      mood: [],
+      tags: [],
+      albumCoverPhotographer: '',
+      albumCoverDesigner: '',
+      bandMembers: [],
+      sessionMusicians: [],
+      producingCredits: {
+        Producer: [],
+        'Recording/Mixing': [],
+        Mastering: [],
+      },
+      purchaseLinks: [],
+      streamingLinks: [],
+    });
+
+    setCurrentStep(1);
+
+    setAlbumArtPreview(null);
+    setCoverDraftKey(null);
+    setUploadProgress(0);
+    setUploadStatus('idle');
+    setUploadError(null);
+
+    setDragActive(false);
+    setMoodDropdownOpen(false);
+    setTagInput('');
+    setTagError('');
+    setBandMemberName('');
+    setBandMemberRole('');
+    setEditingBandMemberIndex(null);
+    setSessionMusicianName('');
+    setSessionMusicianRole('');
+    setEditingSessionMusicianIndex(null);
+    setProducingNames({});
+    setProducingRoles({});
+    setEditingProducingCredit(null);
+    setNewCreditType('');
+    setEditingPurchaseLink(null);
+    setPurchaseLinkService('');
+    setPurchaseLinkUrl('');
+    setEditingStreamingLink(null);
+    setStreamingLinkService('');
+    setStreamingLinkUrl('');
+
+    if (localPreviewUrlRef.current) {
+      URL.revokeObjectURL(localPreviewUrlRef.current);
+      localPreviewUrlRef.current = null;
+    }
+  }, [isOpen]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    if (e.type === 'dragleave') setDragActive(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleInputChange('albumArt', e.dataTransfer.files[0]);
+    const file = e.dataTransfer.files?.[0];
+    if (file) await handleFileUpload(file);
+  };
+
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await handleFileUpload(file);
+  };
+
+  const handleFileUpload = async (file: File | null) => {
+    if (!file) return;
+
+    // Защита от двойного вызова
+    if (uploadStatus === 'uploading') {
+      console.warn('⚠️ Upload already in progress, ignoring duplicate call');
+      return;
+    }
+
+    try {
+      // сохраняем в форме (если где-то ещё используется)
+      handleInputChange('albumArt', file);
+
+      // сброс
+      setUploadProgress(0);
+      setUploadStatus('uploading');
+      setUploadError(null);
+      setCoverDraftKey(null);
+
+      // локальное превью (не течёт)
+      setLocalPreview(file);
+
+      const albumData = albumId
+        ? albumsFromStore.find((a: IAlbums) => a.albumId === albumId)
+        : null;
+
+      const result = await uploadCoverDraft(
+        file,
+        albumId || undefined,
+        albumData?.artist,
+        albumData?.album || formData.title,
+        (progress) => setUploadProgress(progress)
+      );
+
+      if (result.success && result.data) {
+        setCoverDraftKey(result.data.draftKey);
+
+        // освобождаем objectURL
+        if (localPreviewUrlRef.current) {
+          URL.revokeObjectURL(localPreviewUrlRef.current);
+          localPreviewUrlRef.current = null;
+        }
+
+        const url = result.data.url;
+        setAlbumArtPreview(`${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`);
+        setUploadStatus('uploaded');
+      } else if (!result.success) {
+        setUploadStatus('error');
+        setUploadError(result.error || 'Failed to upload cover');
+      }
+    } catch (error) {
+      console.error('Error uploading cover draft:', error);
+      setUploadStatus('error');
+      setUploadError(error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleInputChange('albumArt', e.target.files[0]);
-    }
+  const formatFileSize = (bytes: number): string => {
+    if (!bytes || Number.isNaN(bytes)) return '';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / 1024 ** exponent;
+    return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
   };
 
-  // Закрытие dropdown при клике вне его
+  // Закрытие dropdown при клике вне него
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (moodDropdownRef.current && !moodDropdownRef.current.contains(event.target as Node)) {
@@ -498,13 +599,8 @@ export function EditAlbumModal({
       }
     };
 
-    if (moodDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (moodDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [moodDropdownOpen]);
 
   const handleMoodToggle = (mood: string) => {
@@ -512,33 +608,22 @@ export function EditAlbumModal({
       const currentMood = prev.mood || [];
       if (currentMood.includes(mood)) {
         return { ...prev, mood: currentMood.filter((m) => m !== mood) };
-      } else {
-        return { ...prev, mood: [...currentMood, mood] };
       }
+      return { ...prev, mood: [...currentMood, mood] };
     });
   };
 
   const handleRemoveMood = (mood: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      mood: (prev.mood || []).filter((m) => m !== mood),
-    }));
+    setFormData((prev) => ({ ...prev, mood: (prev.mood || []).filter((m) => m !== mood) }));
   };
 
   const validateTag = (tag: string): string | null => {
     const trimmedTag = tag.trim();
-
-    if (!trimmedTag) {
-      return 'Tag cannot be empty';
-    }
-
-    if (trimmedTag.length < MIN_TAG_LENGTH) {
+    if (!trimmedTag) return 'Tag cannot be empty';
+    if (trimmedTag.length < MIN_TAG_LENGTH)
       return `Tag must be at least ${MIN_TAG_LENGTH} characters`;
-    }
-
-    if (trimmedTag.length > MAX_TAG_LENGTH) {
+    if (trimmedTag.length > MAX_TAG_LENGTH)
       return `Tag must be no more than ${MAX_TAG_LENGTH} characters`;
-    }
 
     const tagWithoutHash = trimmedTag.startsWith('#') ? trimmedTag.slice(1) : trimmedTag;
     if (tagWithoutHash.length < MIN_TAG_LENGTH) {
@@ -546,14 +631,8 @@ export function EditAlbumModal({
     }
 
     const normalizedTag = `#${tagWithoutHash.toLowerCase()}`;
-    if (formData.tags.includes(normalizedTag)) {
-      return 'This tag already exists';
-    }
-
-    if (formData.tags.length >= MAX_TAGS) {
-      return `Maximum ${MAX_TAGS} tags allowed`;
-    }
-
+    if (formData.tags.includes(normalizedTag)) return 'This tag already exists';
+    if (formData.tags.length >= MAX_TAGS) return `Maximum ${MAX_TAGS} tags allowed`;
     return null;
   };
 
@@ -564,15 +643,11 @@ export function EditAlbumModal({
       return;
     }
 
-    const trimmedTag = tagInput.trim();
-    const tagWithoutHash = trimmedTag.startsWith('#') ? trimmedTag.slice(1) : trimmedTag;
+    const trimmed = tagInput.trim();
+    const tagWithoutHash = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
     const normalizedTag = `#${tagWithoutHash.toLowerCase()}`;
 
-    setFormData((prev) => ({
-      ...prev,
-      tags: [...(prev.tags || []), normalizedTag],
-    }));
-
+    setFormData((prev) => ({ ...prev, tags: [...(prev.tags || []), normalizedTag] }));
     setTagInput('');
     setTagError('');
     tagInputRef.current?.focus();
@@ -586,19 +661,13 @@ export function EditAlbumModal({
   };
 
   const handleRemoveTag = (tag: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: (prev.tags || []).filter((t) => t !== tag),
-    }));
+    setFormData((prev) => ({ ...prev, tags: (prev.tags || []).filter((t) => t !== tag) }));
   };
 
   const handleAddBandMember = () => {
-    if (!bandMemberName.trim() || !bandMemberRole.trim()) {
-      return;
-    }
+    if (!bandMemberName.trim() || !bandMemberRole.trim()) return;
 
     if (editingBandMemberIndex !== null) {
-      // Редактирование существующего участника
       setFormData((prev) => {
         const updated = [...(prev.bandMembers || [])];
         updated[editingBandMemberIndex] = {
@@ -609,7 +678,6 @@ export function EditAlbumModal({
       });
       setEditingBandMemberIndex(null);
     } else {
-      // Добавление нового участника
       setFormData((prev) => ({
         ...prev,
         bandMembers: [
@@ -641,18 +709,13 @@ export function EditAlbumModal({
       ...prev,
       bandMembers: (prev.bandMembers || []).filter((_, i) => i !== index),
     }));
-    if (editingBandMemberIndex === index) {
-      handleCancelEditBandMember();
-    }
+    if (editingBandMemberIndex === index) handleCancelEditBandMember();
   };
 
   const handleAddSessionMusician = () => {
-    if (!sessionMusicianName.trim() || !sessionMusicianRole.trim()) {
-      return;
-    }
+    if (!sessionMusicianName.trim() || !sessionMusicianRole.trim()) return;
 
     if (editingSessionMusicianIndex !== null) {
-      // Редактирование существующего участника
       setFormData((prev) => {
         const updated = [...(prev.sessionMusicians || [])];
         updated[editingSessionMusicianIndex] = {
@@ -663,7 +726,6 @@ export function EditAlbumModal({
       });
       setEditingSessionMusicianIndex(null);
     } else {
-      // Добавление нового участника
       setFormData((prev) => ({
         ...prev,
         sessionMusicians: [
@@ -695,20 +757,15 @@ export function EditAlbumModal({
       ...prev,
       sessionMusicians: (prev.sessionMusicians || []).filter((_, i) => i !== index),
     }));
-    if (editingSessionMusicianIndex === index) {
-      handleCancelEditSessionMusician();
-    }
+    if (editingSessionMusicianIndex === index) handleCancelEditSessionMusician();
   };
 
   const handleAddProducingCredit = (creditType: string) => {
     const name = producingNames[creditType]?.trim();
     const role = producingRoles[creditType]?.trim() || '';
-    if (!name) {
-      return;
-    }
+    if (!name) return;
 
     if (editingProducingCredit && editingProducingCredit.creditType === creditType) {
-      // Редактирование существующего имени
       setFormData((prev) => {
         const updated = { ...prev.producingCredits };
         const members = [...(updated[creditType] || [])];
@@ -718,7 +775,6 @@ export function EditAlbumModal({
       });
       setEditingProducingCredit(null);
     } else {
-      // Добавление нового имени
       setFormData((prev) => {
         const updated = { ...prev.producingCredits };
         updated[creditType] = [...(updated[creditType] || []), { name, role }];
@@ -752,6 +808,7 @@ export function EditAlbumModal({
       updated[creditType] = (updated[creditType] || []).filter((_, i) => i !== nameIndex);
       return { ...prev, producingCredits: updated };
     });
+
     if (
       editingProducingCredit?.creditType === creditType &&
       editingProducingCredit.nameIndex === nameIndex
@@ -761,31 +818,20 @@ export function EditAlbumModal({
   };
 
   const handleAddNewCreditType = () => {
-    if (!newCreditType.trim()) {
-      return;
-    }
-
+    if (!newCreditType.trim()) return;
     const trimmedType = newCreditType.trim();
-    if (formData.producingCredits[trimmedType]) {
-      return; // Тип уже существует
-    }
+    if (formData.producingCredits[trimmedType]) return;
 
     setFormData((prev) => ({
       ...prev,
-      producingCredits: {
-        ...prev.producingCredits,
-        [trimmedType]: [],
-      },
+      producingCredits: { ...prev.producingCredits, [trimmedType]: [] },
     }));
 
     setNewCreditType('');
   };
 
   const handleRemoveCreditType = (creditType: string) => {
-    // Нельзя удалять предустановленные типы
-    if (DEFAULT_PRODUCING_CREDIT_TYPES.includes(creditType)) {
-      return;
-    }
+    if (DEFAULT_PRODUCING_CREDIT_TYPES.includes(creditType)) return;
 
     setFormData((prev) => {
       const updated = { ...prev.producingCredits };
@@ -793,18 +839,13 @@ export function EditAlbumModal({
       return { ...prev, producingCredits: updated };
     });
 
-    if (editingProducingCredit?.creditType === creditType) {
-      handleCancelEditProducingCredit();
-    }
+    if (editingProducingCredit?.creditType === creditType) handleCancelEditProducingCredit();
   };
 
   const handleAddPurchaseLink = () => {
-    if (!purchaseLinkService.trim() || !purchaseLinkUrl.trim()) {
-      return;
-    }
+    if (!purchaseLinkService.trim() || !purchaseLinkUrl.trim()) return;
 
     if (editingPurchaseLink !== null) {
-      // Редактирование существующей ссылки
       setFormData((prev) => {
         const links = [...prev.purchaseLinks];
         links[editingPurchaseLink] = {
@@ -815,7 +856,6 @@ export function EditAlbumModal({
       });
       setEditingPurchaseLink(null);
     } else {
-      // Добавление новой ссылки
       setFormData((prev) => ({
         ...prev,
         purchaseLinks: [
@@ -847,19 +887,13 @@ export function EditAlbumModal({
       ...prev,
       purchaseLinks: prev.purchaseLinks.filter((_, i) => i !== index),
     }));
-
-    if (editingPurchaseLink === index) {
-      handleCancelEditPurchaseLink();
-    }
+    if (editingPurchaseLink === index) handleCancelEditPurchaseLink();
   };
 
   const handleAddStreamingLink = () => {
-    if (!streamingLinkService.trim() || !streamingLinkUrl.trim()) {
-      return;
-    }
+    if (!streamingLinkService.trim() || !streamingLinkUrl.trim()) return;
 
     if (editingStreamingLink !== null) {
-      // Редактирование существующей ссылки
       setFormData((prev) => {
         const links = [...prev.streamingLinks];
         links[editingStreamingLink] = {
@@ -870,7 +904,6 @@ export function EditAlbumModal({
       });
       setEditingStreamingLink(null);
     } else {
-      // Добавление новой ссылки
       setFormData((prev) => ({
         ...prev,
         streamingLinks: [
@@ -902,60 +935,44 @@ export function EditAlbumModal({
       ...prev,
       streamingLinks: prev.streamingLinks.filter((_, i) => i !== index),
     }));
-
-    if (editingStreamingLink === index) {
-      handleCancelEditStreamingLink();
-    }
+    if (editingStreamingLink === index) handleCancelEditStreamingLink();
   };
 
   const handleNext = () => {
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    } else if (currentStep === 4) {
-      handlePublish();
-    }
+    if (currentStep < 4) setCurrentStep((s) => s + 1);
+    if (currentStep === 4) handlePublish();
   };
 
-  /**
-   * Преобразует данные формы в формат для API
-   */
+  const handlePrevious = () => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  };
+
   const transformFormDataToAlbumFormat = (): {
     release: Record<string, string>;
     buttons: Record<string, string>;
     details: unknown[];
   } => {
-    // Преобразуем release
     const release: Record<string, string> = {
       date: formData.releaseDate,
       UPC: formData.upcEan,
     };
-    if (formData.albumCoverPhotographer) {
-      release.photographer = formData.albumCoverPhotographer;
-    }
-    if (formData.albumCoverDesigner) {
-      release.designer = formData.albumCoverDesigner;
-    }
 
-    // Преобразуем buttons (purchase и streaming links)
+    if (formData.albumCoverPhotographer) release.photographer = formData.albumCoverPhotographer;
+    if (formData.albumCoverDesigner) release.designer = formData.albumCoverDesigner;
+
     const buttons: Record<string, string> = {};
 
-    // Purchase links
     formData.purchaseLinks.forEach((link) => {
-      // Маппинг ID сервисов обратно в ключи JSON
       const purchaseKeyMap: Record<string, string> = {
         apple: 'itunes',
         bandcamp: 'bandcamp',
         amazon: 'amazon',
       };
       const key = purchaseKeyMap[link.service] || link.service;
-      if (link.url) {
-        buttons[key] = link.url;
-      }
+      if (link.url) buttons[key] = link.url;
     });
 
-    // Streaming links
     formData.streamingLinks.forEach((link) => {
-      // Маппинг ID сервисов обратно в ключи JSON
       const streamingKeyMap: Record<string, string> = {
         applemusic: 'apple',
         vk: 'vk',
@@ -967,36 +984,24 @@ export function EditAlbumModal({
         googleplay: 'googleplay',
       };
       const key = streamingKeyMap[link.service] || link.service;
-      if (link.url) {
-        buttons[key] = link.url;
-      }
+      if (link.url) buttons[key] = link.url;
     });
 
-    // Преобразуем details
     const details: unknown[] = [];
 
-    // Band Members
     if (formData.bandMembers.length > 0) {
-      const bandMembersContent: unknown[] = formData.bandMembers.map((member) => {
-        // Формат: объект с text и link (если есть ссылка) или строка
-        // Пока используем простой формат строки
-        return `${member.name} — ${member.role}.`;
-      });
       details.push({
         id: details.length + 1,
         title: lang === 'ru' ? 'Исполнители' : 'Band members',
-        content: bandMembersContent,
+        content: formData.bandMembers.map((m) => `${m.name} — ${m.role}.`),
       });
     }
 
-    // Producing Credits
     const producingContent: unknown[] = [];
     Object.entries(formData.producingCredits).forEach(([creditType, members]) => {
       if (members.length > 0) {
         members.forEach((member) => {
-          // Если роль указана, используем её, иначе используем тип кредита как роль
           const role = member.role || creditType;
-          // Формат: "Name — role." (как в исходном JSON)
           producingContent.push(`${member.name} — ${role}.`);
         });
       }
@@ -1014,58 +1019,108 @@ export function EditAlbumModal({
   };
 
   const handlePublish = async () => {
-    if (!albumId) {
-      console.error('Album ID is required');
-      return;
-    }
+    if (!albumId) return;
 
-    // Находим исходный альбом для получения artist и cover
     const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === albumId);
-    if (!originalAlbum) {
-      console.error('Original album not found');
+    if (!originalAlbum) return;
+
+    if (!originalAlbum.artist) {
+      alert('Ошибка: не найдено название группы для альбома. Обнови страницу и попробуй снова.');
       return;
     }
 
     setIsSaving(true);
 
+    const normalizedLang = lang.toLowerCase() === 'ru' ? 'ru' : 'en';
+
+    let newCover: string | undefined;
+    const currentCoverDraftKey = coverDraftKey;
+
+    if (currentCoverDraftKey) {
+      try {
+        console.log('✅ [DEBUG] Committing cover with draftKey:', currentCoverDraftKey);
+        const commitResult = await commitCover(currentCoverDraftKey, albumId, {
+          artist: originalAlbum.artist,
+          album: formData.title || originalAlbum.album,
+          lang: normalizedLang,
+        });
+
+        console.log('✅ [DEBUG] Cover commit result:', commitResult);
+
+        if (commitResult.success && commitResult.data) {
+          const data = commitResult.data as any;
+
+          const fromFile = (name?: string) =>
+            name
+              ? name.replace(/\.(webp|jpg)$/i, '').replace(/-(64|128|448|896|1344)$/i, '')
+              : undefined;
+
+          const baseName =
+            data?.baseName ||
+            fromFile(data?.storagePath?.split('/').pop()) ||
+            fromFile(data?.url?.split('/').pop());
+
+          console.log('✅ [DEBUG] Extracted baseName:', baseName);
+
+          if (!baseName) {
+            console.error('❌ [DEBUG] baseName missing in commit response:', commitResult.data);
+            alert('Ошибка: не удалось получить имя обложки. Попробуй снова.');
+            setIsSaving(false);
+            return;
+          }
+
+          newCover = baseName;
+          console.log('✅ [DEBUG] newCover set to:', newCover);
+        } else if (!commitResult.success) {
+          console.error('❌ [DEBUG] Commit failed:', commitResult.error);
+          alert(`Ошибка при сохранении обложки: ${commitResult.error || 'Unknown error'}`);
+          setIsSaving(false);
+          return;
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Exception during commit:', e);
+        alert(`Ошибка при сохранении обложки: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        setIsSaving(false);
+        return;
+      }
+    }
+
     const { release, buttons, details } = transformFormDataToAlbumFormat();
 
-    // Подготавливаем данные для API
-    // Включаем существующие данные, которые не редактируются в форме
-    const updateData = {
-      albumId,
-      album: formData.title,
-      description: formData.description,
-      release: {
-        ...originalAlbum.release,
-        ...release, // Перезаписываем только изменённые поля
-      },
-      buttons: {
-        ...originalAlbum.buttons,
-        ...buttons, // Перезаписываем только изменённые поля
-      },
-      details: details.length > 0 ? details : originalAlbum.details, // Используем новые details, если они есть
-      lang,
-    };
-
-    console.log('📤 Sending update data:', {
-      albumId: updateData.albumId,
-      album: updateData.album,
-      hasRelease: !!updateData.release,
-      hasButtons: !!updateData.buttons,
-      detailsCount: Array.isArray(updateData.details) ? updateData.details.length : 0,
+    // 🔍 КРИТИЧЕСКИЙ DEBUG: проверяем newCover перед созданием updateData
+    console.log('🔍 [DEBUG] Before updateData creation:', {
+      newCover,
+      currentCoverDraftKey,
+      hasDraftKey: !!currentCoverDraftKey,
+      coverDraftKey,
     });
 
+    const updateData: Record<string, unknown> = {
+      albumId,
+      artist: originalAlbum.artist,
+      album: formData.title,
+      description: formData.description,
+      release: { ...(originalAlbum.release as any), ...release },
+      buttons: { ...(originalAlbum.buttons as any), ...buttons },
+      details: details.length > 0 ? details : originalAlbum.details,
+      lang: normalizedLang,
+      ...(newCover ? { cover: newCover } : {}),
+    };
+
+    console.log('✅ [DEBUG] Cover included in updateData:', updateData.cover);
+    console.log('✅ [DEBUG] newCover value:', newCover);
+    console.log('✅ [DEBUG] updateData.cover value:', updateData.cover);
+    console.log('✅ [DEBUG] Full updateData:', updateData);
+
     try {
-      // Получаем токен
       const token = getToken();
       if (!token) {
-        console.error('No auth token found');
         setIsSaving(false);
         return;
       }
 
-      // Отправляем запрос на обновление
+      console.log('✅ [DEBUG] Sending PUT request to /api/albums');
+
       const response = await fetch('/api/albums', {
         method: 'PUT',
         headers: {
@@ -1075,18 +1130,69 @@ export function EditAlbumModal({
         body: JSON.stringify(updateData),
       });
 
+      console.log('✅ [DEBUG] PUT response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('✅ Album updated successfully:', result);
+      console.log('✅ [DEBUG] PUT response result:', result);
+      console.log('✅ [DEBUG] PUT response result.data:', result.data);
+      console.log('✅ [DEBUG] PUT response result.data[0]:', result.data?.[0]);
+      console.log('✅ [DEBUG] PUT response result.data[0]?.cover:', result.data?.[0]?.cover);
 
-      // Вызываем onNext для закрытия модального окна
-      if (onNext) {
-        onNext(formData);
+      const resultCover =
+        result.data && Array.isArray(result.data) ? result.data[0]?.cover : undefined;
+
+      console.log('✅ [DEBUG] Extracted resultCover:', resultCover);
+      console.log('✅ [DEBUG] Comparison:', {
+        newCover,
+        resultCover,
+        areEqual: newCover === resultCover,
+        newCoverType: typeof newCover,
+        resultCoverType: typeof resultCover,
+      });
+
+      if (newCover) {
+        if (resultCover === newCover) {
+          console.log('✅ [DEBUG] Cover successfully updated in database:', {
+            expected: newCover,
+            actual: resultCover,
+            match: true,
+          });
+        } else {
+          console.error('❌ [DEBUG] Cover update FAILED - mismatch!', {
+            expected: newCover,
+            actual: resultCover || 'missing',
+            coverInUpdateData: updateData.cover,
+            resultData: result.data,
+          });
+        }
+      } else {
+        console.warn('⚠️ [DEBUG] newCover is undefined, skipping cover comparison');
       }
+
+      // Передаём обновленный альбом в onNext для обновления UI
+      const updatedAlbum: IAlbums | undefined =
+        result.data && Array.isArray(result.data) ? result.data[0] : undefined;
+
+      if (onNext) onNext(formData, updatedAlbum);
+
+      console.log('✅ [DEBUG] Album saved successfully! Reloading page in 30 seconds...');
+      console.log('💡 TIP: У вас есть 30 секунд, чтобы скопировать логи из консоли!');
+
+      // Закрываем модалку
+      handleClose();
+
+      // Перезагружаем страницу через 30 секунд (даём время на копирование логов)
+      setTimeout(() => {
+        console.log('🔄 Reloading page now...');
+        window.location.reload();
+      }, 30000);
+
+      return result;
     } catch (error) {
       console.error('❌ Error updating album:', error);
       alert(
@@ -1097,55 +1203,11 @@ export function EditAlbumModal({
     }
   };
 
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
   const handleClose = () => {
-    setFormData({
-      title: '',
-      releaseDate: '',
-      upcEan: '',
-      albumArt: null,
-      description: '',
-      visibleOnAlbumPage: true,
-      allowDownloadSale: 'no',
-      regularPrice: '9.99',
-      currency: 'USD',
-      preorderReleaseDate: '',
-      mood: [],
-      tags: [],
-      albumCoverPhotographer: '',
-      albumCoverDesigner: '',
-      bandMembers: [],
-      sessionMusicians: [],
-      producingCredits: {
-        Producer: [],
-        'Recording/Mixing': [],
-        Mastering: [],
-      },
-      purchaseLinks: [],
-      streamingLinks: [],
-    });
-    setCurrentStep(1);
-    setDragActive(false);
-    setMoodDropdownOpen(false);
-    setTagInput('');
-    setTagError('');
-    setBandMemberName('');
-    setBandMemberRole('');
-    setEditingBandMemberIndex(null);
-    setProducingNames({});
-    setEditingProducingCredit(null);
-    setNewCreditType('');
-    setEditingPurchaseLink(null);
-    setPurchaseLinkService('');
-    setPurchaseLinkUrl('');
-    setEditingStreamingLink(null);
-    setStreamingLinkService('');
-    setStreamingLinkUrl('');
+    if (localPreviewUrlRef.current) {
+      URL.revokeObjectURL(localPreviewUrlRef.current);
+      localPreviewUrlRef.current = null;
+    }
     onClose();
   };
 
@@ -1157,8 +1219,8 @@ export function EditAlbumModal({
     if (currentStep === 1) {
       return (
         <>
-          <div className="edit-album-modal__divider"></div>
-          {/* Album title */}
+          <div className="edit-album-modal__divider" />
+
           <div className="edit-album-modal__field">
             <label htmlFor="album-title" className="edit-album-modal__label">
               Album title
@@ -1172,7 +1234,6 @@ export function EditAlbumModal({
             />
           </div>
 
-          {/* Release date */}
           <div className="edit-album-modal__field">
             <label htmlFor="release-date" className="edit-album-modal__label">
               Release date
@@ -1187,7 +1248,6 @@ export function EditAlbumModal({
             />
           </div>
 
-          {/* UPC / EAN */}
           <div className="edit-album-modal__field">
             <label htmlFor="upc-ean" className="edit-album-modal__label">
               UPC / EAN
@@ -1202,34 +1262,91 @@ export function EditAlbumModal({
             />
           </div>
 
-          {/* Album art */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Album art</label>
-            <div
-              className={`edit-album-modal__dropzone ${dragActive ? 'edit-album-modal__dropzone--active' : ''}`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <div className="edit-album-modal__dropzone-text">Drag image here</div>
-              <input
-                type="file"
-                id="album-art-input"
-                accept="image/*"
-                className="edit-album-modal__file-input"
-                onChange={handleFileInput}
-              />
-              <label htmlFor="album-art-input" className="edit-album-modal__file-label">
-                Choose file
-              </label>
-              {formData.albumArt && (
-                <div className="edit-album-modal__file-name">{formData.albumArt.name}</div>
-              )}
-            </div>
+
+            <input
+              type="file"
+              id="album-art-input"
+              accept="image/*"
+              className="edit-album-modal__file-input"
+              onChange={handleFileInput}
+            />
+
+            {albumArtPreview ? (
+              <div className="edit-album-modal__art-wrap">
+                <div className="edit-album-modal__art-preview">
+                  <img
+                    src={albumArtPreview}
+                    alt="Album art preview"
+                    className="edit-album-modal__art-image"
+                  />
+                </div>
+
+                <div className="edit-album-modal__art-actions">
+                  <div className="edit-album-modal__art-buttons">
+                    <label htmlFor="album-art-input" className="edit-album-modal__art-button">
+                      Replace
+                    </label>
+                  </div>
+
+                  {formData.albumArt && formData.albumArt instanceof File && (
+                    <div className="edit-album-modal__art-meta">
+                      {formData.albumArt.type || 'Image'} • {formatFileSize(formData.albumArt.size)}
+                    </div>
+                  )}
+
+                  {uploadStatus === 'uploading' && (
+                    <div className="edit-album-modal__art-status">
+                      <div className="edit-album-modal__art-progress">
+                        <div
+                          className="edit-album-modal__art-progress-bar"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <span className="edit-album-modal__art-status-text">Uploading...</span>
+                    </div>
+                  )}
+
+                  {uploadStatus === 'uploaded' && (
+                    <div className="edit-album-modal__art-status">
+                      <span className="edit-album-modal__art-status-text edit-album-modal__art-status-text--success">
+                        Uploaded (draft)
+                      </span>
+                    </div>
+                  )}
+
+                  {uploadStatus === 'error' && uploadError && (
+                    <div className="edit-album-modal__art-status">
+                      <span className="edit-album-modal__art-status-text edit-album-modal__art-status-text--error">
+                        Error: {uploadError}
+                      </span>
+                    </div>
+                  )}
+
+                  {!coverDraftKey && albumArtPreview && uploadStatus === 'idle' && (
+                    <div className="edit-album-modal__art-status">
+                      <span className="edit-album-modal__art-status-text">Published cover</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`edit-album-modal__dropzone ${dragActive ? 'edit-album-modal__dropzone--active' : ''}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <div className="edit-album-modal__dropzone-text">Drag image here</div>
+                <label htmlFor="album-art-input" className="edit-album-modal__file-label">
+                  Choose file
+                </label>
+              </div>
+            )}
           </div>
 
-          {/* Description */}
           <div className="edit-album-modal__field">
             <label htmlFor="description" className="edit-album-modal__label">
               Description
@@ -1243,7 +1360,6 @@ export function EditAlbumModal({
             />
           </div>
 
-          {/* Visible on album page */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Visible on album page</label>
             <div className="edit-album-modal__checkbox-wrapper">
@@ -1260,7 +1376,6 @@ export function EditAlbumModal({
             </div>
           </div>
 
-          {/* Allow download / sale */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Allow download / sale</label>
             <div className="edit-album-modal__help-text">
@@ -1280,6 +1395,7 @@ export function EditAlbumModal({
                   No
                 </label>
               </div>
+
               <div className="edit-album-modal__radio-wrapper">
                 <input
                   type="radio"
@@ -1293,6 +1409,7 @@ export function EditAlbumModal({
                   Yes
                 </label>
               </div>
+
               <div className="edit-album-modal__radio-wrapper">
                 <input
                   type="radio"
@@ -1307,6 +1424,7 @@ export function EditAlbumModal({
                 </label>
               </div>
             </div>
+
             {formData.allowDownloadSale === 'preorder' && (
               <div className="edit-album-modal__preorder-help">
                 Fans can buy now, download after release date
@@ -1314,7 +1432,6 @@ export function EditAlbumModal({
             )}
           </div>
 
-          {/* Regular price - shown when Yes or Pre-order is selected */}
           {showPriceFields && (
             <div className="edit-album-modal__field">
               <label className="edit-album-modal__label">Regular price</label>
@@ -1328,6 +1445,7 @@ export function EditAlbumModal({
                   <option value="EUR">EUR</option>
                   <option value="RUB">RUB</option>
                 </select>
+
                 <input
                   type="text"
                   className="edit-album-modal__input edit-album-modal__input--price"
@@ -1339,7 +1457,6 @@ export function EditAlbumModal({
             </div>
           )}
 
-          {/* Pre-order release date - shown when Pre-order is selected */}
           {showPreorderDate && (
             <div className="edit-album-modal__field">
               <label htmlFor="preorder-date" className="edit-album-modal__label">
@@ -1362,10 +1479,11 @@ export function EditAlbumModal({
     if (currentStep === 2) {
       return (
         <>
-          <div className="edit-album-modal__divider"></div>
-          {/* Mood Section */}
+          <div className="edit-album-modal__divider" />
+
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Mood</label>
+
             <div className="edit-album-modal__multiselect" ref={moodDropdownRef}>
               <div
                 className="edit-album-modal__multiselect-input"
@@ -1393,10 +1511,12 @@ export function EditAlbumModal({
                 ) : (
                   <span className="edit-album-modal__multiselect-placeholder">Select moods...</span>
                 )}
+
                 <span className="edit-album-modal__multiselect-arrow">
                   {moodDropdownOpen ? '⌃' : '⌄'}
                 </span>
               </div>
+
               {moodDropdownOpen && (
                 <div className="edit-album-modal__multiselect-dropdown">
                   {MOOD_OPTIONS.map((mood) => (
@@ -1414,9 +1534,9 @@ export function EditAlbumModal({
             </div>
           </div>
 
-          {/* Tags Section */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Tags</label>
+
             <div className="edit-album-modal__tags-input-wrapper">
               {formData.tags.length > 0 && (
                 <div className="edit-album-modal__tags-container">
@@ -1435,6 +1555,7 @@ export function EditAlbumModal({
                   ))}
                 </div>
               )}
+
               <div className="edit-album-modal__tags-input-group">
                 <input
                   ref={tagInputRef}
@@ -1458,6 +1579,7 @@ export function EditAlbumModal({
                   Add +
                 </button>
               </div>
+
               {tagError && <div className="edit-album-modal__error">{tagError}</div>}
               {formData.tags.length >= MAX_TAGS && (
                 <div className="edit-album-modal__help-text">Maximum {MAX_TAGS} tags reached</div>
@@ -1471,8 +1593,8 @@ export function EditAlbumModal({
     if (currentStep === 3) {
       return (
         <>
-          <div className="edit-album-modal__divider"></div>
-          {/* Album Cover Section */}
+          <div className="edit-album-modal__divider" />
+
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Album Cover</label>
             <div className="edit-album-modal__two-column-inputs">
@@ -1493,9 +1615,9 @@ export function EditAlbumModal({
             </div>
           </div>
 
-          {/* Band Members Section */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Band Members</label>
+
             {formData.bandMembers.length > 0 && (
               <div className="edit-album-modal__list">
                 {formData.bandMembers.map((member, index) => (
@@ -1526,11 +1648,13 @@ export function EditAlbumModal({
                 ))}
               </div>
             )}
+
             {formData.bandMembers.length >= MAX_BAND_MEMBERS && (
               <div className="edit-album-modal__help-text">
                 Maximum {MAX_BAND_MEMBERS} band members reached
               </div>
             )}
+
             {formData.bandMembers.length < MAX_BAND_MEMBERS && (
               <>
                 <div className="edit-album-modal__two-column-inputs">
@@ -1567,6 +1691,7 @@ export function EditAlbumModal({
                     }}
                   />
                 </div>
+
                 <div className="edit-album-modal__add-button-group">
                   <button
                     type="button"
@@ -1576,6 +1701,7 @@ export function EditAlbumModal({
                   >
                     {editingBandMemberIndex !== null ? 'Save' : '+ Add member'}
                   </button>
+
                   {editingBandMemberIndex !== null && (
                     <button
                       type="button"
@@ -1590,9 +1716,9 @@ export function EditAlbumModal({
             )}
           </div>
 
-          {/* Session Musicians Section */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Session Musicians</label>
+
             {formData.sessionMusicians.length > 0 && (
               <div className="edit-album-modal__list">
                 {formData.sessionMusicians.map((musician, index) => (
@@ -1623,11 +1749,13 @@ export function EditAlbumModal({
                 ))}
               </div>
             )}
+
             {formData.sessionMusicians.length >= MAX_BAND_MEMBERS && (
               <div className="edit-album-modal__help-text">
                 Maximum {MAX_BAND_MEMBERS} session musicians reached
               </div>
             )}
+
             {formData.sessionMusicians.length < MAX_BAND_MEMBERS && (
               <>
                 <div className="edit-album-modal__two-column-inputs">
@@ -1672,6 +1800,7 @@ export function EditAlbumModal({
                     }}
                   />
                 </div>
+
                 <div className="edit-album-modal__add-button-group">
                   <button
                     type="button"
@@ -1681,6 +1810,7 @@ export function EditAlbumModal({
                   >
                     {editingSessionMusicianIndex !== null ? 'Save' : '+ Add musician'}
                   </button>
+
                   {editingSessionMusicianIndex !== null && (
                     <button
                       type="button"
@@ -1695,11 +1825,9 @@ export function EditAlbumModal({
             )}
           </div>
 
-          {/* Producing Section */}
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">Producing</label>
 
-            {/* Предустановленные типы кредитов */}
             {DEFAULT_PRODUCING_CREDIT_TYPES.map((creditType) => {
               const members = formData.producingCredits[creditType] || [];
               const isEditing = editingProducingCredit?.creditType === creditType;
@@ -1709,6 +1837,7 @@ export function EditAlbumModal({
                   <div className="edit-album-modal__producing-type-header">
                     <label className="edit-album-modal__producing-type-label">{creditType}</label>
                   </div>
+
                   {members.length > 0 && (
                     <div className="edit-album-modal__list">
                       {members.map((member, memberIndex) => (
@@ -1743,6 +1872,7 @@ export function EditAlbumModal({
                       ))}
                     </div>
                   )}
+
                   {isEditing ? (
                     <div className="edit-album-modal__producing-input-group">
                       <div className="edit-album-modal__two-column-inputs">
@@ -1759,9 +1889,7 @@ export function EditAlbumModal({
                               e.preventDefault();
                               handleAddProducingCredit(creditType);
                             }
-                            if (e.key === 'Escape') {
-                              handleCancelEditProducingCredit();
-                            }
+                            if (e.key === 'Escape') handleCancelEditProducingCredit();
                           }}
                           autoFocus
                         />
@@ -1778,12 +1906,11 @@ export function EditAlbumModal({
                               e.preventDefault();
                               handleAddProducingCredit(creditType);
                             }
-                            if (e.key === 'Escape') {
-                              handleCancelEditProducingCredit();
-                            }
+                            if (e.key === 'Escape') handleCancelEditProducingCredit();
                           }}
                         />
                       </div>
+
                       <div className="edit-album-modal__add-button-group">
                         <button
                           type="button"
@@ -1850,7 +1977,6 @@ export function EditAlbumModal({
               );
             })}
 
-            {/* Дополнительные типы кредитов */}
             {Object.keys(formData.producingCredits)
               .filter((type) => !DEFAULT_PRODUCING_CREDIT_TYPES.includes(type))
               .map((creditType) => {
@@ -1870,6 +1996,7 @@ export function EditAlbumModal({
                         ×
                       </button>
                     </div>
+
                     {members.length > 0 && (
                       <div className="edit-album-modal__list">
                         {members.map((member, memberIndex) => (
@@ -1906,6 +2033,7 @@ export function EditAlbumModal({
                         ))}
                       </div>
                     )}
+
                     {isEditing ? (
                       <div className="edit-album-modal__producing-input-group">
                         <div className="edit-album-modal__two-column-inputs">
@@ -1925,9 +2053,7 @@ export function EditAlbumModal({
                                 e.preventDefault();
                                 handleAddProducingCredit(creditType);
                               }
-                              if (e.key === 'Escape') {
-                                handleCancelEditProducingCredit();
-                              }
+                              if (e.key === 'Escape') handleCancelEditProducingCredit();
                             }}
                             autoFocus
                           />
@@ -1947,12 +2073,11 @@ export function EditAlbumModal({
                                 e.preventDefault();
                                 handleAddProducingCredit(creditType);
                               }
-                              if (e.key === 'Escape') {
-                                handleCancelEditProducingCredit();
-                              }
+                              if (e.key === 'Escape') handleCancelEditProducingCredit();
                             }}
                           />
                         </div>
+
                         <div className="edit-album-modal__add-button-group">
                           <button
                             type="button"
@@ -2025,7 +2150,6 @@ export function EditAlbumModal({
                 );
               })}
 
-            {/* Добавление нового типа кредита */}
             <div className="edit-album-modal__producing-new-type">
               <div className="edit-album-modal__producing-input-group">
                 <input
@@ -2059,11 +2183,12 @@ export function EditAlbumModal({
     if (currentStep === 4) {
       return (
         <>
-          <div className="edit-album-modal__divider"></div>
+          <div className="edit-album-modal__divider" />
+
           <div className="edit-album-modal__links-container">
-            {/* Purchase Links */}
             <div className="edit-album-modal__links-column">
               <label className="edit-album-modal__links-label">Purchase</label>
+
               <div className="edit-album-modal__links-list">
                 {formData.purchaseLinks.map((link, index) => {
                   const service = PURCHASE_SERVICES.find((s) => s.id === link.service);
@@ -2085,6 +2210,7 @@ export function EditAlbumModal({
                               </option>
                             ))}
                           </select>
+
                           <input
                             type="url"
                             className="edit-album-modal__link-input"
@@ -2100,12 +2226,11 @@ export function EditAlbumModal({
                                 e.preventDefault();
                                 handleAddPurchaseLink();
                               }
-                              if (e.key === 'Escape') {
-                                handleCancelEditPurchaseLink();
-                              }
+                              if (e.key === 'Escape') handleCancelEditPurchaseLink();
                             }}
                             autoFocus
                           />
+
                           <div className="edit-album-modal__link-actions">
                             <button
                               type="button"
@@ -2128,9 +2253,7 @@ export function EditAlbumModal({
                         <>
                           <div className="edit-album-modal__link-content">
                             {service && (
-                              <span
-                                className={`edit-album-modal__link-icon ${service.icon}`}
-                              ></span>
+                              <span className={`edit-album-modal__link-icon ${service.icon}`} />
                             )}
                             <span className="edit-album-modal__link-name">
                               {service ? service.name : link.service}
@@ -2160,6 +2283,7 @@ export function EditAlbumModal({
                   );
                 })}
               </div>
+
               {editingPurchaseLink === null && (
                 <div className="edit-album-modal__link-add">
                   <select
@@ -2176,6 +2300,7 @@ export function EditAlbumModal({
                       </option>
                     ))}
                   </select>
+
                   <input
                     type="url"
                     className="edit-album-modal__link-input"
@@ -2193,6 +2318,7 @@ export function EditAlbumModal({
                       }
                     }}
                   />
+
                   <button
                     type="button"
                     className="edit-album-modal__add-button"
@@ -2205,9 +2331,9 @@ export function EditAlbumModal({
               )}
             </div>
 
-            {/* Streaming Links */}
             <div className="edit-album-modal__links-column">
               <label className="edit-album-modal__links-label">Streaming</label>
+
               <div className="edit-album-modal__links-list">
                 {formData.streamingLinks.map((link, index) => {
                   const service = STREAMING_SERVICES.find((s) => s.id === link.service);
@@ -2229,6 +2355,7 @@ export function EditAlbumModal({
                               </option>
                             ))}
                           </select>
+
                           <input
                             type="url"
                             className="edit-album-modal__link-input"
@@ -2244,12 +2371,11 @@ export function EditAlbumModal({
                                 e.preventDefault();
                                 handleAddStreamingLink();
                               }
-                              if (e.key === 'Escape') {
-                                handleCancelEditStreamingLink();
-                              }
+                              if (e.key === 'Escape') handleCancelEditStreamingLink();
                             }}
                             autoFocus
                           />
+
                           <div className="edit-album-modal__link-actions">
                             <button
                               type="button"
@@ -2272,9 +2398,7 @@ export function EditAlbumModal({
                         <>
                           <div className="edit-album-modal__link-content">
                             {service && (
-                              <span
-                                className={`edit-album-modal__link-icon ${service.icon}`}
-                              ></span>
+                              <span className={`edit-album-modal__link-icon ${service.icon}`} />
                             )}
                             <span className="edit-album-modal__link-name">
                               {service ? service.name : link.service}
@@ -2304,6 +2428,7 @@ export function EditAlbumModal({
                   );
                 })}
               </div>
+
               {editingStreamingLink === null && (
                 <div className="edit-album-modal__link-add">
                   <select
@@ -2320,6 +2445,7 @@ export function EditAlbumModal({
                       </option>
                     ))}
                   </select>
+
                   <input
                     type="url"
                     className="edit-album-modal__link-input"
@@ -2337,6 +2463,7 @@ export function EditAlbumModal({
                       }
                     }}
                   />
+
                   <button
                     type="button"
                     className="edit-album-modal__add-button"
@@ -2382,7 +2509,6 @@ export function EditAlbumModal({
           <div className="edit-album-modal__form">
             {renderStepContent()}
 
-            {/* Actions */}
             <div className="edit-album-modal__actions">
               {currentStep > 1 ? (
                 <button
@@ -2401,6 +2527,7 @@ export function EditAlbumModal({
                   {ui?.dashboard?.cancel ?? 'Cancel'}
                 </button>
               )}
+
               {currentStep === 4 ? (
                 <button
                   type="button"
@@ -2408,7 +2535,11 @@ export function EditAlbumModal({
                   onClick={handlePublish}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : 'Publish album'}
+                  {isSaving
+                    ? 'Saving...'
+                    : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId)
+                      ? 'Save changes'
+                      : 'Publish album'}
                 </button>
               ) : (
                 <button
