@@ -2,8 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { selectAlbumsData } from '@entities/album';
+import { selectAlbumsData, fetchAlbums } from '@entities/album';
 import { useLang } from '@app/providers/lang';
 import { getToken } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
@@ -97,8 +98,12 @@ export function EditAlbumModal({
   onNext,
 }: EditAlbumModalProps): JSX.Element | null {
   const { lang } = useLang();
+  const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
+
+  // Контроль инициализации - чтобы не перетирать ввод пользователя
+  const didInitRef = useRef(false);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -196,18 +201,33 @@ export function EditAlbumModal({
   }, []);
   // ===========================================
 
+  // Упрощенный handleInputChange для совместимости со старым кодом
+  // Но основные поля теперь используют прямой setFormData
   const handleInputChange = (field: keyof AlbumFormData, value: string | boolean | File | null) => {
     setFormData((prev) => ({ ...prev, [field]: value as never }));
   };
 
   // Загружаем данные альбома при открытии модального окна
   useEffect(() => {
-    if (!isOpen) return;
+    // Сбрасываем флаг инициализации при закрытии модалки
+    if (!isOpen) {
+      didInitRef.current = false;
+      return;
+    }
+
+    // Инициализируем только один раз при открытии
+    if (didInitRef.current) {
+      return;
+    }
+
     if (!albumId) return;
     if (!albumsFromStore || !Array.isArray(albumsFromStore)) return;
 
     const album = albumsFromStore.find((a: IAlbums) => a && a.albumId === albumId);
     if (!album) return;
+
+    // Устанавливаем флаг инициализации
+    didInitRef.current = true;
 
     // --- парсинг band members ---
     const bandMembers: BandMember[] = [];
@@ -350,7 +370,7 @@ export function EditAlbumModal({
       }
     }
 
-    // Заполняем поля из данных альбома
+    // Заполняем поля из данных альбома (только при первой инициализации)
     setFormData((prev) => {
       const release = album.release && typeof album.release === 'object' ? album.release : {};
       const releaseDate = (release as any).date || '';
@@ -441,7 +461,9 @@ export function EditAlbumModal({
         setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
       }
     }
-  }, [isOpen, albumId, albumsFromStore, lang]); // albumsFromStore в зависимостях - обновляет форму при изменении Redux store
+    // ВАЖНО: НЕ включаем albumsFromStore в зависимости, чтобы не перетирать ввод пользователя
+    // Инициализация происходит только один раз при открытии модалки
+  }, [isOpen, albumId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Сбрасываем форму при закрытии модального окна
   useEffect(() => {
@@ -1019,12 +1041,32 @@ export function EditAlbumModal({
       });
     }
 
+    if (formData.sessionMusicians.length > 0) {
+      details.push({
+        id: details.length + 1,
+        title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
+        content: formData.sessionMusicians.map((m) => `${m.name} — ${m.role}.`),
+      });
+    }
+
+    // Обрабатываем Producing, Recording/Mixing и Mastering отдельно
     const producingContent: unknown[] = [];
+    const recordingMixingContent: unknown[] = [];
+    const masteringContent: unknown[] = [];
+
     Object.entries(formData.producingCredits).forEach(([creditType, members]) => {
       if (members.length > 0) {
         members.forEach((member) => {
           const role = member.role || creditType;
-          producingContent.push(`${member.name} — ${role}.`);
+          const creditText = `${member.name} — ${role}.`;
+
+          if (creditType === 'Recording/Mixing') {
+            recordingMixingContent.push(creditText);
+          } else if (creditType === 'Mastering') {
+            masteringContent.push(creditText);
+          } else {
+            producingContent.push(creditText);
+          }
         });
       }
     });
@@ -1037,19 +1079,73 @@ export function EditAlbumModal({
       });
     }
 
+    if (recordingMixingContent.length > 0) {
+      details.push({
+        id: details.length + 1,
+        title: lang === 'ru' ? 'Запись/сведение' : 'Recording/Mixing',
+        content: recordingMixingContent,
+      });
+    }
+
+    if (masteringContent.length > 0) {
+      details.push({
+        id: details.length + 1,
+        title: lang === 'ru' ? 'Мастеринг' : 'Mastering',
+        content: masteringContent,
+      });
+    }
+
     return { release, buttons, details };
   };
 
   const handlePublish = async () => {
-    if (!albumId) return;
+    console.log('🚀 [EditAlbumModal] handlePublish called', {
+      albumId,
+      hasAlbumId: !!albumId,
+      albumsFromStoreLength: albumsFromStore.length,
+    });
+
+    // ВАЖНО: Защита от случайного сохранения нового альбома с пустыми данными
+    // Создание нового альбома пока не реализовано - требуется albumId
+    if (!albumId) {
+      console.error('❌ [EditAlbumModal] No albumId provided. Cannot save album without albumId.');
+      alert(
+        'Ошибка: невозможно сохранить альбом без ID. Пожалуйста, выберите существующий альбом для редактирования.'
+      );
+      setIsSaving(false);
+      return;
+    }
 
     const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === albumId);
-    if (!originalAlbum) return;
+    if (!originalAlbum) {
+      console.error('❌ [EditAlbumModal] Album not found in store:', albumId);
+      alert(
+        `Ошибка: альбом с ID "${albumId}" не найден. Пожалуйста, обновите страницу и попробуйте снова.`
+      );
+      setIsSaving(false);
+      return;
+    }
 
+    console.log('📋 [EditAlbumModal] Original album found:', {
+      albumId: originalAlbum.albumId,
+      artist: originalAlbum.artist,
+      album: originalAlbum.album,
+    });
+
+    // Валидация обязательных полей
     if (!formData.artist && !originalAlbum.artist) {
       alert(
         'Ошибка: не найдено название группы для альбома. Заполните поле "Artist / Group name" и попробуйте снова.'
       );
+      setIsSaving(false);
+      return;
+    }
+
+    if (!formData.title && !originalAlbum.album) {
+      alert(
+        'Ошибка: не найдено название альбома. Заполните поле "Album title" и попробуйте снова.'
+      );
+      setIsSaving(false);
       return;
     }
 
@@ -1102,24 +1198,72 @@ export function EditAlbumModal({
 
     const { release, buttons, details } = transformFormDataToAlbumFormat();
 
+    // Формируем fullName из artist и album
+    const fullName = `${formData.artist || originalAlbum.artist} — ${formData.title || originalAlbum.album}`;
+
+    // ВАЖНО: Используем formData.title напрямую, даже если оно пустое
+    // Это позволяет очистить поле, если пользователь удалил значение
+    const albumTitle = formData.title !== undefined ? formData.title : originalAlbum.album;
+
+    console.log('📝 [EditAlbumModal] Form data before update:', {
+      formDataTitle: formData.title,
+      formDataTitleType: typeof formData.title,
+      formDataTitleLength: formData.title?.length || 0,
+      originalAlbumTitle: originalAlbum.album,
+      albumTitleToSend: albumTitle,
+    });
+
     const updateData: Record<string, unknown> = {
       albumId,
       artist: formData.artist || originalAlbum.artist,
-      album: formData.title,
-      description: formData.description,
+      album: albumTitle, // Используем явно определенное значение
+      fullName,
+      description:
+        formData.description !== undefined ? formData.description : originalAlbum.description || '',
       release: { ...(originalAlbum.release as any), ...release },
       buttons: { ...(originalAlbum.buttons as any), ...buttons },
-      details: details.length > 0 ? details : originalAlbum.details,
+      details: details.length > 0 ? details : originalAlbum.details || [],
       lang: normalizedLang,
       ...(newCover ? { cover: newCover } : {}),
     };
 
+    console.log('📦 [EditAlbumModal] Update data prepared:', {
+      albumId: updateData.albumId,
+      album: updateData.album,
+      artist: updateData.artist,
+      fullName: updateData.fullName,
+      description: updateData.description,
+      hasRelease: !!updateData.release,
+      hasButtons: !!updateData.buttons,
+      detailsCount: Array.isArray(updateData.details) ? updateData.details.length : 0,
+    });
+
     try {
       const token = getToken();
+      console.log('🔐 [EditAlbumModal] Token check:', {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
+      });
+
       if (!token) {
+        console.error('❌ [EditAlbumModal] No token found! Cannot save album.');
+        alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
         setIsSaving(false);
         return;
       }
+
+      console.log('📤 [EditAlbumModal] Sending PUT request:', {
+        url: '/api/albums',
+        method: 'PUT',
+        albumId: updateData.albumId,
+        album: updateData.album, // Явно показываем значение album
+        artist: updateData.artist,
+        hasDescription: !!updateData.description,
+        hasCover: !!updateData.cover,
+        updateDataKeys: Object.keys(updateData),
+        updateDataStringified: JSON.stringify(updateData).substring(0, 500), // Первые 500 символов для проверки
+      });
 
       const response = await fetch('/api/albums', {
         method: 'PUT',
@@ -1130,18 +1274,63 @@ export function EditAlbumModal({
         body: JSON.stringify(updateData),
       });
 
+      console.log('📥 [EditAlbumModal] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        contentType: response.headers.get('content-type'),
+      });
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('❌ [EditAlbumModal] Response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        });
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('✅ [EditAlbumModal] Success:', {
+        success: result.success,
+        hasData: !!result.data,
+        dataLength: Array.isArray(result.data) ? result.data.length : 'not array',
+      });
+
+      // Детально логируем что вернул сервер
+      if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+        const returnedAlbum = result.data[0];
+        console.log('📋 [EditAlbumModal] Album returned from server:', {
+          albumId: returnedAlbum.albumId,
+          album: returnedAlbum.album, // Должно быть "32"
+          artist: returnedAlbum.artist,
+          description: returnedAlbum.description?.substring(0, 50) || '',
+          cover: returnedAlbum.cover,
+        });
+      }
+
+      // ВАЖНО: Форсим обновление Redux store ПЕРЕД вызовом onNext
+      const normalizedLang: 'ru' | 'en' = lang === 'ru' ? 'ru' : 'en';
+      console.log('🔄 [EditAlbumModal] Forcing fetchAlbums with force: true...');
+      try {
+        await dispatch(fetchAlbums({ lang: normalizedLang, force: true })).unwrap();
+        console.log('✅ [EditAlbumModal] Redux store updated');
+      } catch (fetchError) {
+        console.error('❌ [EditAlbumModal] Failed to update Redux store:', fetchError);
+        // Продолжаем выполнение даже если fetchAlbums не удался
+      }
 
       // Передаём обновленный альбом в onNext для обновления UI
       const updatedAlbum: IAlbums | undefined =
         result.data && Array.isArray(result.data) ? result.data[0] : undefined;
 
-      if (onNext) onNext(formData, updatedAlbum);
+      if (onNext) {
+        await onNext(formData, updatedAlbum);
+      }
+
+      // Небольшая задержка перед закрытием модалки для гарантии обновления UI
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Закрываем модалку
       handleClose();
@@ -1185,8 +1374,8 @@ export function EditAlbumModal({
               type="text"
               autoComplete="organization"
               className="edit-album-modal__input"
-              value={formData.artist}
-              onChange={(e) => handleInputChange('artist', e.target.value)}
+              value={formData.artist ?? ''}
+              onChange={(e) => setFormData((s) => ({ ...s, artist: e.target.value }))}
             />
           </div>
 
@@ -1200,8 +1389,8 @@ export function EditAlbumModal({
               type="text"
               autoComplete="off"
               className="edit-album-modal__input"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
+              value={formData.title ?? ''}
+              onChange={(e) => setFormData((s) => ({ ...s, title: e.target.value }))}
             />
           </div>
 
@@ -1216,8 +1405,8 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__input"
               placeholder="DD/MM/YYYY"
-              value={formData.releaseDate}
-              onChange={(e) => handleInputChange('releaseDate', e.target.value)}
+              value={formData.releaseDate ?? ''}
+              onChange={(e) => setFormData((s) => ({ ...s, releaseDate: e.target.value }))}
             />
           </div>
 
@@ -1232,8 +1421,8 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__input"
               placeholder="Optional"
-              value={formData.upcEan}
-              onChange={(e) => handleInputChange('upcEan', e.target.value)}
+              value={formData.upcEan ?? ''}
+              onChange={(e) => setFormData((s) => ({ ...s, upcEan: e.target.value }))}
             />
           </div>
 
@@ -1332,8 +1521,8 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__textarea"
               placeholder="Short story about the album, credits highlights, mood, etc."
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              value={formData.description ?? ''}
+              onChange={(e) => setFormData((s) => ({ ...s, description: e.target.value }))}
             />
           </div>
 

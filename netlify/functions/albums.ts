@@ -170,6 +170,8 @@ export const handler: Handler = async (
 
       // Загружаем публичные альбомы (user_id IS NULL, is_public = true) и альбомы пользователя
       // Важно: используем DISTINCT ON для исключения дубликатов по album_id
+      // ORDER BY с NULLS LAST означает: пользовательские записи (user_id NOT NULL)
+      // будут выше публичных (user_id IS NULL), что правильно - "мои перекрывают публичные"
       const albumsResult = await query<AlbumRow>(
         `SELECT DISTINCT ON (a.album_id) 
           a.*
@@ -235,63 +237,38 @@ export const handler: Handler = async (
         return createErrorResponse(401, 'Unauthorized. Authentication required.');
       }
 
-      const data = parseJsonBody<CreateAlbumRequest>(event.body, {} as CreateAlbumRequest);
-
-      // #region agent log
-      const fs = require('fs');
-      const logPath = '/Users/zhoock/Sites/my-project-copy/.cursor/debug.log';
-      const logEntry =
-        JSON.stringify({
-          location: 'albums.ts:212',
-          message: 'POST request received',
-          data: {
-            albumId: data.albumId,
-            artist: data.artist,
-            album: data.album,
-            lang: data.lang,
-            hasArtist: data.artist !== undefined,
-            hasAlbum: data.album !== undefined,
-            bodyKeys: Object.keys(data),
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }) + '\n';
+      let data: CreateAlbumRequest;
       try {
-        fs.appendFileSync(logPath, logEntry);
-      } catch (e) {
-        // Ignore
+        data = parseJsonBody<CreateAlbumRequest>(event.body, {} as CreateAlbumRequest);
+      } catch (error) {
+        return createErrorResponse(
+          400,
+          error instanceof Error ? error.message : 'Invalid JSON body'
+        );
       }
-      // #endregion
+
+      // Логируем в console.log для Netlify
+      console.log('📝 POST /api/albums - Request data:', {
+        albumId: data.albumId,
+        artist: data.artist,
+        album: data.album,
+        lang: data.lang,
+        hasArtist: data.artist !== undefined,
+        hasAlbum: data.album !== undefined,
+        bodyKeys: Object.keys(data),
+      });
 
       // Валидация данных
       if (!data.albumId || !data.artist || !data.album || !data.lang || !validateLang(data.lang)) {
-        // #region agent log
-        const errorLog =
-          JSON.stringify({
-            location: 'albums.ts:215',
-            message: 'POST validation failed',
-            data: {
-              missingFields: {
-                albumId: !data.albumId,
-                artist: !data.artist,
-                album: !data.album,
-                lang: !data.lang || !validateLang(data.lang),
-              },
-              receivedData: data,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'A',
-          }) + '\n';
-        try {
-          fs.appendFileSync(logPath, errorLog);
-        } catch (e) {
-          // Ignore
-        }
-        // #endregion
+        console.error('❌ POST /api/albums - Validation failed:', {
+          missingFields: {
+            albumId: !data.albumId,
+            artist: !data.artist,
+            album: !data.album,
+            lang: !data.lang || !validateLang(data.lang),
+          },
+          receivedData: data,
+        });
         return createErrorResponse(
           400,
           'Missing required fields: albumId, artist, album, lang (must be "en" or "ru")'
@@ -354,35 +331,17 @@ export const handler: Handler = async (
           return createErrorResponse(401, 'Unauthorized. Authentication required.');
         }
 
-        const data = parseJsonBody<UpdateAlbumRequest>(event.body, {} as UpdateAlbumRequest);
-
-        // #region agent log
-        const fs = require('fs');
-        const logPath = '/Users/zhoock/Sites/my-project-copy/.cursor/debug.log';
-        const putLog =
-          JSON.stringify({
-            location: 'albums.ts:278',
-            message: 'PUT request received',
-            data: {
-              albumId: data.albumId,
-              artist: data.artist,
-              album: data.album,
-              lang: data.lang,
-              hasArtist: data.artist !== undefined,
-              hasAlbum: data.album !== undefined,
-              bodyKeys: Object.keys(data),
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'A',
-          }) + '\n';
+        let data: UpdateAlbumRequest;
         try {
-          fs.appendFileSync(logPath, putLog);
-        } catch (e) {
-          // Ignore
+          data = parseJsonBody<UpdateAlbumRequest>(event.body, {} as UpdateAlbumRequest);
+        } catch (error) {
+          return createErrorResponse(
+            400,
+            error instanceof Error ? error.message : 'Invalid JSON body'
+          );
         }
-        // #endregion
+
+        // Логируем в console.log для Netlify
 
         console.log('📝 PUT /api/albums - Request data:', {
           albumId: data.albumId,
@@ -541,9 +500,13 @@ export const handler: Handler = async (
         const mappedAlbum = mapAlbumToApiFormat(updatedAlbum, tracksResult.rows);
 
         // 🔍 DEBUG: Проверяем, что получилось после маппинга
-        console.log('[albums.ts PUT] Mapped cover:', {
+        console.log('[albums.ts PUT] Mapped album:', {
+          albumId: mappedAlbum.albumId,
+          album: mappedAlbum.album, // Должно быть новое значение
+          artist: mappedAlbum.artist,
+          description: mappedAlbum.description?.substring(0, 50) || '',
+          cover: mappedAlbum.cover,
           type: typeof mappedAlbum.cover,
-          value: mappedAlbum.cover,
           stringified: JSON.stringify(mappedAlbum.cover),
         });
 
@@ -641,8 +604,80 @@ export const handler: Handler = async (
       }
     }
 
+    // DELETE: удаление альбома (требует авторизации)
+    if (event.httpMethod === 'DELETE') {
+      try {
+        const userId = requireAuth(event);
+
+        if (!userId) {
+          return createErrorResponse(401, 'Unauthorized. Authentication required.');
+        }
+
+        let data: { albumId: string; lang: string };
+        try {
+          data = parseJsonBody<{ albumId: string; lang: string }>(
+            event.body,
+            {} as { albumId: string; lang: string }
+          );
+        } catch (error) {
+          return createErrorResponse(
+            400,
+            error instanceof Error ? error.message : 'Invalid JSON body'
+          );
+        }
+
+        if (!data.albumId || !data.lang || !validateLang(data.lang)) {
+          return createErrorResponse(
+            400,
+            'Missing required fields: albumId, lang (must be "en" or "ru")'
+          );
+        }
+
+        console.log('🗑️ DELETE /api/albums - Request data:', {
+          albumId: data.albumId,
+          lang: data.lang,
+          userId,
+        });
+
+        // Удаляем альбом из БД (только если он принадлежит пользователю)
+        const deleteResult = await query<AlbumRow>(
+          `DELETE FROM albums 
+          WHERE album_id = $1 AND lang = $2 AND user_id = $3
+          RETURNING *`,
+          [data.albumId, data.lang, userId]
+        );
+
+        if (deleteResult.rows.length === 0) {
+          return createErrorResponse(
+            404,
+            'Album not found or you do not have permission to delete it.'
+          );
+        }
+
+        // Удаляем треки альбома
+        await query(`DELETE FROM tracks WHERE album_id = $1`, [deleteResult.rows[0].id]);
+
+        console.log('✅ DELETE /api/albums - Album deleted:', {
+          albumId: data.albumId,
+          lang: data.lang,
+        });
+
+        return {
+          statusCode: 200,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({
+            success: true,
+            message: 'Album deleted successfully',
+          }),
+        };
+      } catch (deleteError) {
+        console.error('❌ Error in DELETE /api/albums:', deleteError);
+        return handleError(deleteError, 'albums DELETE function');
+      }
+    }
+
     // Неподдерживаемый метод
-    return createErrorResponse(405, 'Method not allowed. Use GET, POST, or PUT.');
+    return createErrorResponse(405, 'Method not allowed. Use GET, POST, PUT, or DELETE.');
   } catch (error) {
     return handleError(error, 'albums function');
   }

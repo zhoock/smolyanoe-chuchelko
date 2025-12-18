@@ -4,6 +4,7 @@ import type { SupportedLang } from '@shared/model/lang';
 import type { IAlbums } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
 import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
+import { getToken } from '@shared/lib/auth';
 
 import type { AlbumsState } from './types';
 
@@ -16,30 +17,87 @@ export const fetchAlbums = createAsyncThunk<
 >(
   'albums/fetchByLang',
   async ({ lang }, { signal, rejectWithValue }) => {
-    const normalize = (data: any[]): IAlbums[] =>
-      data.map(
-        (album: any) =>
-          ({
-            albumId: album.albumId,
-            artist: album.artist,
-            album: album.album,
-            fullName: album.fullName,
-            description: album.description,
-            cover: album.cover,
-            release: album.release,
-            buttons: album.buttons,
-            details: album.details,
-            tracks: (album.tracks ?? []).map((track: any) => ({
-              id: track.id,
+    // Type guard для проверки структуры альбома
+    const isValidAlbum = (
+      album: unknown
+    ): album is {
+      albumId: string;
+      artist: string;
+      album: string;
+      fullName?: string;
+      description?: string;
+      cover?: string;
+      release?: unknown;
+      buttons?: unknown;
+      details?: unknown[];
+      tracks?: unknown[];
+    } => {
+      return (
+        typeof album === 'object' &&
+        album !== null &&
+        'albumId' in album &&
+        'artist' in album &&
+        'album' in album &&
+        typeof (album as { albumId: unknown }).albumId === 'string' &&
+        typeof (album as { artist: unknown }).artist === 'string' &&
+        typeof (album as { album: unknown }).album === 'string'
+      );
+    };
+
+    // Type guard для проверки структуры трека
+    const isValidTrack = (
+      track: unknown
+    ): track is {
+      id: string | number;
+      title: string;
+      duration?: number;
+      src?: string;
+      content?: string;
+      authorship?: string;
+      syncedLyrics?: unknown;
+    } => {
+      return (
+        typeof track === 'object' &&
+        track !== null &&
+        'id' in track &&
+        'title' in track &&
+        typeof (track as { title: unknown }).title === 'string'
+      );
+    };
+
+    const normalize = (data: unknown[]): IAlbums[] => {
+      if (!Array.isArray(data)) {
+        console.warn('⚠️ normalize: data is not an array', data);
+        return [];
+      }
+
+      return data.filter(isValidAlbum).map((album) => {
+        const tracks = Array.isArray(album.tracks)
+          ? album.tracks.filter(isValidTrack).map((track) => ({
+              id: typeof track.id === 'number' ? track.id : parseInt(String(track.id), 10) || 0,
               title: track.title,
               duration: track.duration,
               src: track.src,
               content: track.content,
               authorship: track.authorship,
               syncedLyrics: track.syncedLyrics,
-            })),
-          }) as IAlbums
-      );
+            }))
+          : [];
+
+        return {
+          albumId: album.albumId,
+          artist: album.artist,
+          album: album.album,
+          fullName: album.fullName || `${album.artist} — ${album.album}`,
+          description: album.description || '',
+          cover: album.cover || '',
+          release: album.release || {},
+          buttons: album.buttons || {},
+          details: Array.isArray(album.details) ? album.details : [],
+          tracks,
+        } as IAlbums;
+      });
+    };
 
     try {
       // 1) Сначала пытаемся загрузить из БД через API (приоритет)
@@ -57,12 +115,20 @@ export const fetchAlbums = createAsyncThunk<
           }
         }
 
+        // ВАЖНО: Добавляем токен авторизации, чтобы сервер вернул пользовательские альбомы
+        // Без токена сервер возвращает только публичные альбомы (user_id IS NULL)
+        const token = getToken();
+        const headers: Record<string, string> = {
+          'Cache-Control': 'no-cache',
+        };
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
         const response = await fetch(`/api/albums?lang=${lang}`, {
           signal: controller.signal,
-          cache: 'no-cache',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
+          cache: 'no-store',
+          headers,
         });
 
         clearTimeout(timeoutId);

@@ -81,7 +81,7 @@ function getPool(): Pool {
 /**
  * Выполняет SQL запрос с retry логикой.
  */
-export async function query<T = any>(
+export async function query<T extends Record<string, any> = any>(
   text: string,
   params?: any[],
   retries = 2 // Увеличено количество retry для надежности при блокировках
@@ -108,12 +108,23 @@ export async function query<T = any>(
             text: text.substring(0, 100), // Ограничиваем длину лога
             duration,
             rows: result.rowCount,
+            command: result.command, // INSERT, UPDATE, SELECT, etc.
           });
         } else {
           console.log('✅ Executed query', {
             text: text.substring(0, 100),
             duration,
             rows: result.rowCount,
+            command: result.command, // INSERT, UPDATE, SELECT, etc.
+          });
+        }
+
+        // Для UPDATE/INSERT запросов проверяем, что изменения действительно применены
+        if ((result.command === 'UPDATE' || result.command === 'INSERT') && result.rowCount === 0) {
+          console.warn('⚠️ Query executed but no rows affected:', {
+            text: text.substring(0, 200),
+            command: result.command,
+            params: params || [],
           });
         }
 

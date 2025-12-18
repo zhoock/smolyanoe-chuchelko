@@ -10,7 +10,7 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { getUserImageUrl } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
-import { logout, isAuthenticated, getUser } from '@shared/lib/auth';
+import { logout, isAuthenticated, getUser, getToken } from '@shared/lib/auth';
 import {
   fetchAlbums,
   selectAlbumsStatus,
@@ -289,6 +289,66 @@ function UserDashboard() {
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
+  };
+
+  // Удаление альбома
+  const handleDeleteAlbum = async (albumId: string) => {
+    // Находим альбом для получения названия
+    const album = albumsData.find((a) => a.id === albumId);
+    const albumTitle = album?.title || albumId;
+
+    // Подтверждение удаления
+    const confirmed = window.confirm(
+      `Вы уверены, что хотите удалить альбом "${albumTitle}"?\n\nЭто действие нельзя отменить.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const token = getToken();
+      if (!token) {
+        alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
+        return;
+      }
+
+      // Удаляем альбом через API
+      const response = await fetch('/api/albums', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          albumId,
+          lang,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      // Обновляем Redux store
+      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+
+      // Удаляем альбом из локального состояния
+      setAlbumsData((prev) => prev.filter((a) => a.id !== albumId));
+
+      // Закрываем расширенный вид, если удаленный альбом был открыт
+      if (expandedAlbumId === albumId) {
+        setExpandedAlbumId(null);
+      }
+
+      console.log('✅ Album deleted successfully:', albumId);
+    } catch (error) {
+      console.error('❌ Error deleting album:', error);
+      alert(
+        `Ошибка при удалении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   };
 
   // Обработка загрузки треков
@@ -967,6 +1027,18 @@ function UserDashboard() {
                                     <div className="user-dashboard__album-year">{album.year}</div>
                                   )}
                                 </div>
+                                <button
+                                  type="button"
+                                  className="user-dashboard__delete-album-button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAlbum(album.id);
+                                  }}
+                                  title="Удалить альбом"
+                                  aria-label="Удалить альбом"
+                                >
+                                  ×
+                                </button>
                                 <div
                                   className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
                                 >
@@ -1237,69 +1309,118 @@ function UserDashboard() {
 
             // Обновляем Redux store из БД
             try {
+              console.log('🔄 [UserDashboard] Fetching albums after save...');
               const result = await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+              console.log('✅ [UserDashboard] Albums fetched:', {
+                count: result?.length || 0,
+                albumIds: result?.map((a: IAlbums) => a.albumId) || [],
+              });
 
-              // Принудительно обновляем albumsData из результата, если Redux не обновился
+              // Проверяем, что обновленный альбом действительно пришел с новыми данными
               if (result && result.length > 0) {
                 const updatedAlbum = result.find(
                   (a: IAlbums) => a.albumId === editAlbumModal.albumId
                 );
                 if (updatedAlbum) {
-                  // Небольшая задержка для гарантии обновления Redux store
-                  await new Promise((resolve) => setTimeout(resolve, 100));
-
-                  setAlbumsData((prev) => {
-                    const index = prev.findIndex((a) => a.id === updatedAlbum.albumId);
-                    if (index >= 0) {
-                      const updated = [...prev];
-                      // Обрабатываем release для releaseDate
-                      let releaseDate: string | undefined = undefined;
-                      if (
-                        updatedAlbum.release &&
-                        typeof updatedAlbum.release === 'object' &&
-                        'date' in updatedAlbum.release
-                      ) {
-                        const dateStr = (updatedAlbum.release as any).date;
-                        if (dateStr) {
-                          const date = new Date(dateStr);
-                          releaseDate = date.toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          });
-                        }
-                      }
-
-                      const coverChanged =
-                        updatedAlbum.cover !== undefined &&
-                        updatedAlbum.cover !== null &&
-                        updatedAlbum.cover !== updated[index].cover;
-
-                      updated[index] = {
-                        ...updated[index],
-                        title: updatedAlbum.album || updated[index].title,
-                        artist: updatedAlbum.artist || updated[index].artist || '',
-                        // Всегда используем новое значение cover, если оно есть, иначе оставляем старое
-                        cover:
-                          updatedAlbum.cover !== undefined && updatedAlbum.cover !== null
-                            ? updatedAlbum.cover
-                            : updated[index].cover,
-                        // Обновляем timestamp при изменении обложки для принудительной перезагрузки
-                        coverUpdatedAt: coverChanged ? Date.now() : updated[index].coverUpdatedAt,
-                        releaseDate: releaseDate || updated[index].releaseDate,
-                        year: releaseDate
-                          ? new Date((updatedAlbum.release as any).date).getFullYear().toString()
-                          : updated[index].year,
-                      };
-                      return updated;
-                    }
-                    return prev;
+                  console.log('🔍 [UserDashboard] Updated album from fetchAlbums:', {
+                    albumId: updatedAlbum.albumId,
+                    album: updatedAlbum.album, // Должно быть "32"
+                    artist: updatedAlbum.artist,
+                    description: updatedAlbum.description?.substring(0, 50) || '',
+                    cover: updatedAlbum.cover,
                   });
+                } else {
+                  console.warn(
+                    '⚠️ [UserDashboard] Updated album not found in fetchAlbums result:',
+                    {
+                      searchedAlbumId: editAlbumModal.albumId,
+                      availableIds: result.map((a: IAlbums) => a.albumId),
+                    }
+                  );
                 }
               }
 
+              // Небольшая задержка для гарантии обновления Redux store
+              await new Promise((resolve) => setTimeout(resolve, 300));
+
+              // Принудительно обновляем albumsData из результата fetchAlbums
+              // Это гарантирует, что все поля будут обновлены сразу после сохранения
+              if (result && result.length > 0) {
+                console.log('🔄 [UserDashboard] Updating albumsData from fetchAlbums result...');
+
+                // Полностью пересоздаем albumsData из результата, используя ту же логику что и в useEffect
+                const transformedAlbums: AlbumData[] = result.map((album: IAlbums) => {
+                  const albumId = album.albumId || '';
+
+                  // Обрабатываем release (объект с полем date)
+                  let releaseDate: Date | null = null;
+                  if (
+                    album.release &&
+                    typeof album.release === 'object' &&
+                    'date' in album.release
+                  ) {
+                    const dateStr = album.release.date;
+                    if (dateStr) {
+                      releaseDate = new Date(dateStr);
+                    }
+                  }
+
+                  // Создаем треки с определением статуса на основе данных из альбома
+                  const tracks: TrackData[] = (album.tracks || []).map((track) => {
+                    let lyricsStatus: TrackData['lyricsStatus'] = 'empty';
+                    if (track.syncedLyrics && track.syncedLyrics.length > 0) {
+                      const isActuallySynced = track.syncedLyrics.some(
+                        (line) => line.startTime > 0
+                      );
+                      lyricsStatus = isActuallySynced ? 'synced' : 'text-only';
+                    } else if (track.content && track.content.trim() !== '') {
+                      lyricsStatus = 'text-only';
+                    }
+
+                    return {
+                      id: String(track.id),
+                      title: track.title,
+                      duration:
+                        typeof track.duration === 'string'
+                          ? track.duration
+                          : track.duration
+                            ? String(track.duration)
+                            : '0:00',
+                      lyricsStatus,
+                      lyricsText: track.content,
+                      src: track.src,
+                      authorship: (track as any).authorship || undefined,
+                    };
+                  });
+
+                  return {
+                    id: albumId,
+                    title: album.album,
+                    artist: album.artist || '',
+                    year: releaseDate ? releaseDate.getFullYear().toString() : '',
+                    cover: album.cover || '',
+                    coverUpdatedAt: Date.now(), // Обновляем timestamp для принудительной перезагрузки
+                    releaseDate: releaseDate
+                      ? releaseDate.toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })
+                      : undefined,
+                    tracks,
+                  };
+                });
+
+                setAlbumsData(transformedAlbums);
+                console.log('✅ [UserDashboard] albumsData updated:', {
+                  count: transformedAlbums.length,
+                  albumIds: transformedAlbums.map((a) => a.id),
+                });
+              }
+
               // Закрываем модальное окно после обновления
-              await new Promise((resolve) => setTimeout(resolve, 100));
+              // Небольшая задержка для гарантии обновления UI
+              await new Promise((resolve) => setTimeout(resolve, 200));
               setEditAlbumModal(null);
             } catch (error: any) {
               // ConditionError - это нормально, condition отменил запрос
