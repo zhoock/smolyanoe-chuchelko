@@ -39,7 +39,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   };
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <form className="auth-form" onSubmit={handleSubmit} method="post" autoComplete="on">
       <h2 className="auth-form__title">Вход</h2>
 
       {error && <div className="auth-form__error">{error}</div>}
@@ -50,13 +50,15 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
         </label>
         <input
           id="login-email"
+          name="email"
           type="email"
           className="auth-form__input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          autoComplete="email"
+          autoComplete="username"
           disabled={loading}
+          data-form-type="username"
         />
       </div>
 
@@ -66,6 +68,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
         </label>
         <input
           id="login-password"
+          name="password"
           type="password"
           className="auth-form__input"
           value={password}
@@ -73,6 +76,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           required
           autoComplete="current-password"
           disabled={loading}
+          data-form-type="password"
         />
       </div>
 

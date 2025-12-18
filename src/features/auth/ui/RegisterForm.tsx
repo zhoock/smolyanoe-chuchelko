@@ -64,6 +64,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         </label>
         <input
           id="register-name"
+          name="name"
           type="text"
           className="auth-form__input"
           value={name}
@@ -79,6 +80,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         </label>
         <input
           id="register-email"
+          name="email"
           type="email"
           className="auth-form__input"
           value={email}
@@ -95,6 +97,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         </label>
         <input
           id="register-password"
+          name="password"
           type="password"
           className="auth-form__input"
           value={password}
@@ -112,6 +115,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         </label>
         <input
           id="register-confirm-password"
+          name="confirm-password"
           type="password"
           className="auth-form__input"
           value={confirmPassword}

@@ -33,8 +33,10 @@ import './UserDashboard.style.scss';
 interface AlbumData {
   id: string;
   title: string;
+  artist: string;
   year: string;
   cover?: string;
+  coverUpdatedAt?: number; // Timestamp для принудительной перезагрузки изображения
   releaseDate?: string;
   tracks: TrackData[];
 }
@@ -153,7 +155,7 @@ function UserDashboard() {
   } | null>(null);
   const [editAlbumModal, setEditAlbumModal] = useState<{
     isOpen: boolean;
-    albumId: string;
+    albumId?: string;
   } | null>(null);
 
   // Проверка авторизации
@@ -166,28 +168,31 @@ function UserDashboard() {
   // Загрузка альбомов
   useEffect(() => {
     if (albumsStatus === 'idle' || albumsStatus === 'failed') {
-      console.log('🔄 Starting albums fetch, status:', albumsStatus);
       dispatch(fetchAlbums({ lang })).catch((error: any) => {
         // ConditionError - это нормально, condition отменил запрос
         if (error?.name === 'ConditionError') {
-          return; // Это нормально, не логируем
+          return;
         }
-        console.error('❌ Error fetching albums:', error);
+        console.error('Error fetching albums:', error);
       });
     }
   }, [dispatch, lang, albumsStatus]);
 
   // Преобразование данных из IAlbums[] в AlbumData[] и загрузка статусов треков
-  useEffect(() => {
-    console.log('📊 Albums data check:', {
-      albumsFromStore: albumsFromStore?.length || 0,
-      albumsStatus,
-      isLoadingTracks,
-    });
+  // Используем JSON.stringify для отслеживания изменений в данных
+  const albumsFromStoreKey = JSON.stringify(
+    albumsFromStore?.map((a) => ({
+      albumId: a.albumId,
+      artist: a.artist,
+      album: a.album,
+      cover: a.cover,
+    }))
+  );
 
+  useEffect(() => {
     if (!albumsFromStore || albumsFromStore.length === 0) {
       setAlbumsData([]);
-      setIsLoadingTracks(false); // Важно: сбрасываем флаг загрузки, чтобы дашборд мог показаться
+      setIsLoadingTracks(false);
       return;
     }
 
@@ -196,7 +201,8 @@ function UserDashboard() {
 
     (async () => {
       try {
-        // Сначала преобразуем альбомы без загрузки статусов (быстро показываем структуру)
+        // Преобразуем альбомы из Redux store в формат для UI
+        // Создаем новый массив для каждого альбома, чтобы React увидел изменения
         const transformedAlbums: AlbumData[] = albumsFromStore.map((album: IAlbums) => {
           const albumId = album.albumId || '';
 
@@ -243,8 +249,10 @@ function UserDashboard() {
           return {
             id: albumId,
             title: album.album,
+            artist: album.artist || '',
             year: releaseDate ? releaseDate.getFullYear().toString() : '',
             cover: album.cover,
+            coverUpdatedAt: Date.now(), // Добавляем timestamp для принудительной перезагрузки изображения
             releaseDate: releaseDate
               ? releaseDate.toLocaleDateString('en-US', {
                   year: 'numeric',
@@ -256,9 +264,10 @@ function UserDashboard() {
           };
         });
 
-        // Показываем данные сразу (статусы определены на основе данных из альбомов)
+        // Обновляем локальное состояние из Redux store
+        // Принудительно создаем новый массив для гарантии обновления React
         if (!abortController.signal.aborted) {
-          setAlbumsData(transformedAlbums);
+          setAlbumsData([...transformedAlbums]);
           setIsLoadingTracks(false);
         }
 
@@ -276,7 +285,7 @@ function UserDashboard() {
     return () => {
       abortController.abort();
     };
-  }, [albumsFromStore, lang]);
+  }, [albumsFromStoreKey, lang, albumsFromStore]);
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
@@ -285,7 +294,6 @@ function UserDashboard() {
   // Обработка загрузки треков
   const handleTrackUpload = async (albumId: string, files: FileList) => {
     if (isUploadingTracks[albumId]) {
-      console.warn('Upload already in progress for album:', albumId);
       return;
     }
 
@@ -308,12 +316,6 @@ function UserDashboard() {
       const existingTracksCount = currentAlbum?.tracks?.length || 0;
       const startTrackNumber = existingTracksCount + 1;
 
-      console.log('📦 [handleTrackUpload] Starting upload of', fileArray.length, 'tracks', {
-        existingTracksCount,
-        startTrackNumber,
-        albumId,
-      });
-
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
         // Генерируем trackId начиная с существующего количества + 1
@@ -327,19 +329,12 @@ function UserDashboard() {
         // orderIndex должен быть равен индексу в массиве всех треков (существующие + новые)
         const orderIndex = existingTracksCount + i;
 
-        console.log(`📤 [handleTrackUpload] Uploading track ${trackId}/${fileArray.length}:`, {
-          fileName: file.name,
-          fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-          trackId,
-          orderIndex,
-        });
         try {
           const trackData = await prepareAndUploadTrack(file, albumId, trackId, orderIndex);
           tracksData.push(trackData);
 
           // Обновляем прогресс после успешной загрузки файла
           setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressEnd }));
-          console.log(`✅ [handleTrackUpload] Track ${trackId} uploaded successfully`);
         } catch (error) {
           console.error(`❌ [handleTrackUpload] Error uploading track ${trackId}:`, error);
           // Продолжаем загрузку остальных треков, но не обновляем прогресс при ошибке
@@ -349,12 +344,6 @@ function UserDashboard() {
       // Обновляем прогресс: сохранение метаданных в БД (80-100%)
       setUploadProgress((prev) => ({ ...prev, [albumId]: 90 }));
 
-      console.log('📊 [handleTrackUpload] Upload summary:', {
-        total: fileArray.length,
-        successful: tracksData.length,
-        failed: fileArray.length - tracksData.length,
-      });
-
       if (tracksData.length === 0) {
         throw new Error('Failed to upload any tracks');
       }
@@ -363,7 +352,6 @@ function UserDashboard() {
       const result = await uploadTracks(albumId, lang, tracksData);
 
       if (result.success && result.data) {
-        console.log('✅ Tracks uploaded successfully:', result.data);
         const uploadedCount = Array.isArray(result.data) ? result.data.length : 0;
 
         // Обновляем прогресс: завершение (100%)
@@ -372,12 +360,9 @@ function UserDashboard() {
         // Обновляем список альбомов
         try {
           await dispatch(fetchAlbums({ lang, force: true })).unwrap();
-          console.log('✅ Albums refreshed after track upload');
         } catch (fetchError: any) {
           // ConditionError - это нормально, condition отменил запрос
-          if (fetchError?.name === 'ConditionError') {
-            console.log('ℹ️ Albums fetch was cancelled by condition (already up to date)');
-          } else {
+          if (fetchError?.name !== 'ConditionError') {
             console.error('⚠️ Failed to refresh albums:', fetchError);
           }
         }
@@ -430,6 +415,7 @@ function UserDashboard() {
             return {
               id: album.albumId || '',
               title: album.album,
+              artist: album.artist || '',
               year: releaseDate ? releaseDate.getFullYear().toString() : '',
               cover: album.cover || '',
               releaseDate: releaseDate
@@ -693,22 +679,12 @@ function UserDashboard() {
 
       const fileName = `profile${fileExtension}`;
 
-      console.log('Starting avatar upload...', {
-        originalFileName: file.name,
-        fileName,
-        fileSize: file.size,
-        fileType: file.type,
-        fileExtension,
-      });
-
       const result = await uploadFile({
         category: 'profile',
         file,
         fileName,
         upsert: true,
       });
-
-      console.log('Avatar upload result:', result);
 
       if (!result) {
         console.error('Upload failed: result is null');
@@ -735,7 +711,6 @@ function UserDashboard() {
 
       await new Promise<void>((resolve, reject) => {
         preloadImg.onload = () => {
-          console.log('✅ New avatar image preloaded successfully');
           resolve();
         };
         preloadImg.onerror = () => {
@@ -750,7 +725,6 @@ function UserDashboard() {
       // Сохраняем URL в localStorage (без cache-bust)
       try {
         localStorage.setItem(AVATAR_URL_KEY, result);
-        console.log('✅ Avatar URL saved to localStorage:', result);
       } catch (error) {
         console.warn('Failed to save avatar URL to localStorage:', error);
       }
@@ -758,7 +732,6 @@ function UserDashboard() {
       // Обновляем состояние только после предзагрузки
       // Теперь новое изображение уже в кеше браузера и отобразится мгновенно
       setAvatarSrc(avatarUrl);
-      console.log('✅ Avatar URL updated in state:', avatarUrl);
     } catch (error) {
       console.error('❌ Error uploading avatar:', error);
       alert(
@@ -968,9 +941,17 @@ function UserDashboard() {
                                 <div className="user-dashboard__album-thumbnail">
                                   {album.cover ? (
                                     <img
-                                      key={`cover-${album.id}-${album.cover}`}
-                                      src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}-${Date.now()}`}
+                                      key={`cover-${album.id}-${album.cover}-${album.coverUpdatedAt || ''}`}
+                                      src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
                                       alt={album.title}
+                                      onError={(e) => {
+                                        const img = e.target as HTMLImageElement;
+                                        // При ошибке загрузки добавляем timestamp для принудительной перезагрузки
+                                        const currentSrc = img.src;
+                                        if (!currentSrc.includes('&_retry=')) {
+                                          img.src = `${currentSrc.split('&v=')[0]}&v=${album.cover}&_retry=${Date.now()}`;
+                                        }
+                                      }}
                                     />
                                   ) : (
                                     <img src="/images/album-placeholder.png" alt={album.title} />
@@ -1162,7 +1143,11 @@ function UserDashboard() {
                         })}
                       </div>
 
-                      <button type="button" className="user-dashboard__upload-button">
+                      <button
+                        type="button"
+                        className="user-dashboard__upload-button"
+                        onClick={() => setEditAlbumModal({ isOpen: true })}
+                      >
                         <span>+</span>
                         <span>{ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}</span>
                       </button>
@@ -1250,48 +1235,80 @@ function UserDashboard() {
               return;
             }
 
-            // Обновляем локальное состояние, если передан обновленный альбом
-            if (updatedAlbum && updatedAlbum.albumId) {
-              setAlbumsData((prev) => {
-                const updated = prev.map((album) =>
-                  album.id === updatedAlbum.albumId
-                    ? {
-                        ...album,
-                        title: updatedAlbum.album || album.title,
-                        cover: updatedAlbum.cover || album.cover || '',
-                        // Обновляем другие поля, если они изменились
-                        ...(updatedAlbum.description && { description: updatedAlbum.description }),
-                      }
-                    : album
-                );
-                console.log('✅ [DEBUG] albumsData updated:', {
-                  albumId: updatedAlbum.albumId,
-                  oldCover: prev.find((a) => a.id === updatedAlbum.albumId)?.cover,
-                  newCover: updated.find((a) => a.id === updatedAlbum.albumId)?.cover,
-                  allAlbums: updated.map((a) => ({ id: a.id, cover: a.cover })),
-                });
-                return updated;
-              });
-              console.log('✅ [DEBUG] Local state updated with new cover:', {
-                albumId: updatedAlbum.albumId,
-                newCover: updatedAlbum.cover,
-              });
-            }
-
-            // Пытаемся обновить Redux store (если БД доступна)
+            // Обновляем Redux store из БД
             try {
-              await dispatch(fetchAlbums({ lang, force: true })).unwrap();
-              console.log('✅ Albums data refreshed from API');
+              const result = await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+
+              // Принудительно обновляем albumsData из результата, если Redux не обновился
+              if (result && result.length > 0) {
+                const updatedAlbum = result.find(
+                  (a: IAlbums) => a.albumId === editAlbumModal.albumId
+                );
+                if (updatedAlbum) {
+                  // Небольшая задержка для гарантии обновления Redux store
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+
+                  setAlbumsData((prev) => {
+                    const index = prev.findIndex((a) => a.id === updatedAlbum.albumId);
+                    if (index >= 0) {
+                      const updated = [...prev];
+                      // Обрабатываем release для releaseDate
+                      let releaseDate: string | undefined = undefined;
+                      if (
+                        updatedAlbum.release &&
+                        typeof updatedAlbum.release === 'object' &&
+                        'date' in updatedAlbum.release
+                      ) {
+                        const dateStr = (updatedAlbum.release as any).date;
+                        if (dateStr) {
+                          const date = new Date(dateStr);
+                          releaseDate = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          });
+                        }
+                      }
+
+                      const coverChanged =
+                        updatedAlbum.cover !== undefined &&
+                        updatedAlbum.cover !== null &&
+                        updatedAlbum.cover !== updated[index].cover;
+
+                      updated[index] = {
+                        ...updated[index],
+                        title: updatedAlbum.album || updated[index].title,
+                        artist: updatedAlbum.artist || updated[index].artist || '',
+                        // Всегда используем новое значение cover, если оно есть, иначе оставляем старое
+                        cover:
+                          updatedAlbum.cover !== undefined && updatedAlbum.cover !== null
+                            ? updatedAlbum.cover
+                            : updated[index].cover,
+                        // Обновляем timestamp при изменении обложки для принудительной перезагрузки
+                        coverUpdatedAt: coverChanged ? Date.now() : updated[index].coverUpdatedAt,
+                        releaseDate: releaseDate || updated[index].releaseDate,
+                        year: releaseDate
+                          ? new Date((updatedAlbum.release as any).date).getFullYear().toString()
+                          : updated[index].year,
+                      };
+                      return updated;
+                    }
+                    return prev;
+                  });
+                }
+              }
+
+              // Закрываем модальное окно после обновления
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              setEditAlbumModal(null);
             } catch (error: any) {
               // ConditionError - это нормально, condition отменил запрос
               if (error?.name === 'ConditionError') {
-                return; // Это нормально, не логируем
+                setEditAlbumModal(null);
+                return;
               }
-              // Если БД недоступна - не страшно
-              console.error('⚠️ API unavailable:', error);
+              setEditAlbumModal(null);
             }
-
-            setEditAlbumModal(null);
           }}
         />
       )}

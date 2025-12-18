@@ -66,11 +66,15 @@ export function createLangExtraReducers<
         thunk.fulfilled,
         (state: TState, action: PayloadAction<TData, string, { arg: { lang: SupportedLang } }>) => {
           const { lang } = action.meta.arg;
-          const entry = state[lang];
-          entry.data = action.payload;
-          entry.status = 'succeeded';
-          entry.error = null;
-          entry.lastUpdated = Date.now();
+          // Создаем новый объект entry для гарантии обновления React
+          const newData = Array.isArray(action.payload) ? [...action.payload] : action.payload;
+          state[lang] = {
+            ...state[lang],
+            data: newData as TData,
+            status: 'succeeded',
+            error: null,
+            lastUpdated: Date.now(),
+          };
         }
       )
       .addCase(

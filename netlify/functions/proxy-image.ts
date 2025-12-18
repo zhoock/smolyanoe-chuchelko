@@ -90,11 +90,19 @@ export const handler: Handler = async (
     });
 
     // Формируем полный URL к изображению в Supabase Storage
-    // Supabase Storage API ожидает путь без дополнительного кодирования
-    // Но нужно закодировать только специальные символы, оставив слеши незакодированными
-    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${decodedPath}`;
+    // Supabase Storage API требует кодирование пути через encodeURIComponent для каждого сегмента
+    // Но слеши должны оставаться незакодированными
+    const pathSegments = decodedPath.split('/');
+    const encodedSegments = pathSegments.map((segment) => encodeURIComponent(segment));
+    const encodedPath = encodedSegments.join('/');
+    const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodedPath}`;
 
-    console.log('[proxy-image] Fetching from Supabase:', imageUrl);
+    console.log('[proxy-image] Fetching from Supabase:', {
+      originalPath: imagePath,
+      decodedPath,
+      encodedPath,
+      imageUrl,
+    });
 
     // Загружаем изображение из Supabase
     let response = await fetch(imageUrl);
@@ -130,7 +138,12 @@ export const handler: Handler = async (
         // Пробуем каждый вариант
         for (const variant of fallbackVariants) {
           const fallbackPath = `${folder}${baseName}${variant}`;
-          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fallbackPath}`;
+          const fallbackSegments = fallbackPath.split('/');
+          const encodedFallbackSegments = fallbackSegments.map((segment) =>
+            encodeURIComponent(segment)
+          );
+          const encodedFallbackPath = encodedFallbackSegments.join('/');
+          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodedFallbackPath}`;
           console.log('[proxy-image] Trying fallback path:', fallbackPath);
           console.log('[proxy-image] Fallback URL:', fallbackUrl);
 
@@ -141,25 +154,6 @@ export const handler: Handler = async (
             break;
           }
         }
-
-        // Если не нашли с новым именем, пробуем со старым (Tar-Baby-Cover)
-        if (!response.ok && baseName.includes('smolyanoe-chuchelko-Cover')) {
-          const oldBaseName = baseName.replace(/smolyanoe-chuchelko-Cover/g, 'Tar-Baby-Cover');
-          console.log('[proxy-image] Trying old name format:', oldBaseName);
-
-          for (const variant of fallbackVariants) {
-            const oldPath = `${folder}${oldBaseName}${variant}`;
-            const oldUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${oldPath}`;
-            console.log('[proxy-image] Trying old path:', oldPath);
-
-            const oldResponse = await fetch(oldUrl);
-            if (oldResponse.ok) {
-              response = oldResponse;
-              console.log('[proxy-image] Found old format:', oldPath);
-              break;
-            }
-          }
-        }
       } else {
         // Если паттерн не совпал, пробуем базовое имя без суффиксов
         const baseNameMatch = decodedPath.match(
@@ -167,27 +161,32 @@ export const handler: Handler = async (
         );
         if (baseNameMatch) {
           const basePath = `${baseNameMatch[1]}${baseNameMatch[2]}`;
-          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${basePath}`;
+          const baseSegments = basePath.split('/');
+          const encodedBaseSegments = baseSegments.map((segment) => encodeURIComponent(segment));
+          const encodedBasePath = encodedBaseSegments.join('/');
+          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodedBasePath}`;
           console.log('[proxy-image] Trying fallback path:', basePath);
           response = await fetch(fallbackUrl);
-
-          // Если не нашли, пробуем со старым именем
-          if (!response.ok && basePath.includes('smolyanoe-chuchelko-Cover')) {
-            const oldPath = basePath.replace(/smolyanoe-chuchelko-Cover/g, 'Tar-Baby-Cover');
-            const oldUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${oldPath}`;
-            console.log('[proxy-image] Trying old path:', oldPath);
-            response = await fetch(oldUrl);
-          }
         }
       }
     }
 
     if (!response.ok) {
+      // Получаем текст ошибки от Supabase для диагностики
+      let errorText = '';
+      try {
+        errorText = await response.text();
+      } catch (e) {
+        // Игнорируем ошибку чтения текста
+      }
+
       console.error('[proxy-image] Failed to fetch image:', {
         status: response.status,
         statusText: response.statusText,
         originalPath: decodedPath,
+        encodedPath,
         url: imageUrl,
+        errorText: errorText.substring(0, 200), // Первые 200 символов ошибки
       });
       return {
         statusCode: response.status,
@@ -198,6 +197,7 @@ export const handler: Handler = async (
           statusText: response.statusText,
           url: imageUrl,
           path: decodedPath,
+          errorText: errorText.substring(0, 200),
         }),
       };
     }

@@ -33,6 +33,7 @@ export interface StreamingLink {
 }
 
 export interface AlbumFormData {
+  artist: string;
   title: string;
   releaseDate: string;
   upcEan: string;
@@ -103,6 +104,7 @@ export function EditAlbumModal({
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<AlbumFormData>({
+    artist: '',
     title: '',
     releaseDate: '',
     upcEan: '',
@@ -400,6 +402,7 @@ export function EditAlbumModal({
 
       return {
         ...prev,
+        artist: album.artist || prev.artist,
         title: album.album || prev.title,
         releaseDate: releaseDate || prev.releaseDate,
         upcEan: upc || prev.upcEan,
@@ -438,13 +441,14 @@ export function EditAlbumModal({
         setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
       }
     }
-  }, [isOpen, albumId, albumsFromStore, lang]);
+  }, [isOpen, albumId, albumsFromStore, lang]); // albumsFromStore в зависимостях - обновляет форму при изменении Redux store
 
   // Сбрасываем форму при закрытии модального окна
   useEffect(() => {
     if (isOpen) return;
 
     setFormData({
+      artist: '',
       title: '',
       releaseDate: '',
       upcEan: '',
@@ -531,7 +535,6 @@ export function EditAlbumModal({
 
     // Защита от двойного вызова
     if (uploadStatus === 'uploading') {
-      console.warn('⚠️ Upload already in progress, ignoring duplicate call');
       return;
     }
 
@@ -558,33 +561,18 @@ export function EditAlbumModal({
         : null;
 
       // Подготавливаем параметры для uploadCoverDraft
-      const uploadArtist = albumData?.artist || originalAlbum?.artist || '';
-      const uploadAlbum = albumData?.album || formData.title || originalAlbum?.album || '';
+      const uploadArtist = formData.artist || albumData?.artist || originalAlbum?.artist || '';
+      const uploadAlbum = formData.title || albumData?.album || originalAlbum?.album || '';
       const uploadAlbumId = albumId || undefined;
 
       // Проверяем, что у нас есть минимально необходимые данные
       if (!uploadArtist || !uploadAlbum) {
         const errorMsg = `Missing required data: artist="${uploadArtist}", album="${uploadAlbum}"`;
-        console.error('❌ [uploadCoverDraft]', errorMsg, {
-          albumId: uploadAlbumId,
-          albumData: albumData ? { artist: albumData.artist, album: albumData.album } : null,
-          formDataTitle: formData.title,
-          originalAlbum: originalAlbum
-            ? { artist: originalAlbum.artist, album: originalAlbum.album }
-            : null,
-        });
+        console.error('Error uploading cover draft:', errorMsg);
         setUploadStatus('error');
         setUploadError(errorMsg);
         return;
       }
-
-      console.log('📤 [uploadCoverDraft] Uploading cover:', {
-        albumId: uploadAlbumId,
-        artist: uploadArtist,
-        album: uploadAlbum,
-        fileName: file.name,
-        fileSize: file.size,
-      });
 
       const result = await uploadCoverDraft(
         file,
@@ -1058,8 +1046,10 @@ export function EditAlbumModal({
     const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === albumId);
     if (!originalAlbum) return;
 
-    if (!originalAlbum.artist) {
-      alert('Ошибка: не найдено название группы для альбома. Обнови страницу и попробуй снова.');
+    if (!formData.artist && !originalAlbum.artist) {
+      alert(
+        'Ошибка: не найдено название группы для альбома. Заполните поле "Artist / Group name" и попробуйте снова.'
+      );
       return;
     }
 
@@ -1072,14 +1062,11 @@ export function EditAlbumModal({
 
     if (currentCoverDraftKey) {
       try {
-        console.log('✅ [DEBUG] Committing cover with draftKey:', currentCoverDraftKey);
         const commitResult = await commitCover(currentCoverDraftKey, albumId, {
-          artist: originalAlbum.artist,
+          artist: formData.artist || originalAlbum.artist,
           album: formData.title || originalAlbum.album,
           lang: normalizedLang,
         });
-
-        console.log('✅ [DEBUG] Cover commit result:', commitResult);
 
         if (commitResult.success && commitResult.data) {
           const data = commitResult.data as any;
@@ -1094,25 +1081,19 @@ export function EditAlbumModal({
             fromFile(data?.storagePath?.split('/').pop()) ||
             fromFile(data?.url?.split('/').pop());
 
-          console.log('✅ [DEBUG] Extracted baseName:', baseName);
-
           if (!baseName) {
-            console.error('❌ [DEBUG] baseName missing in commit response:', commitResult.data);
             alert('Ошибка: не удалось получить имя обложки. Попробуй снова.');
             setIsSaving(false);
             return;
           }
 
           newCover = baseName;
-          console.log('✅ [DEBUG] newCover set to:', newCover);
         } else if (!commitResult.success) {
-          console.error('❌ [DEBUG] Commit failed:', commitResult.error);
           alert(`Ошибка при сохранении обложки: ${commitResult.error || 'Unknown error'}`);
           setIsSaving(false);
           return;
         }
       } catch (e) {
-        console.error('❌ [DEBUG] Exception during commit:', e);
         alert(`Ошибка при сохранении обложки: ${e instanceof Error ? e.message : 'Unknown error'}`);
         setIsSaving(false);
         return;
@@ -1121,17 +1102,9 @@ export function EditAlbumModal({
 
     const { release, buttons, details } = transformFormDataToAlbumFormat();
 
-    // 🔍 КРИТИЧЕСКИЙ DEBUG: проверяем newCover перед созданием updateData
-    console.log('🔍 [DEBUG] Before updateData creation:', {
-      newCover,
-      currentCoverDraftKey,
-      hasDraftKey: !!currentCoverDraftKey,
-      coverDraftKey,
-    });
-
     const updateData: Record<string, unknown> = {
       albumId,
-      artist: originalAlbum.artist,
+      artist: formData.artist || originalAlbum.artist,
       album: formData.title,
       description: formData.description,
       release: { ...(originalAlbum.release as any), ...release },
@@ -1141,19 +1114,12 @@ export function EditAlbumModal({
       ...(newCover ? { cover: newCover } : {}),
     };
 
-    console.log('✅ [DEBUG] Cover included in updateData:', updateData.cover);
-    console.log('✅ [DEBUG] newCover value:', newCover);
-    console.log('✅ [DEBUG] updateData.cover value:', updateData.cover);
-    console.log('✅ [DEBUG] Full updateData:', updateData);
-
     try {
       const token = getToken();
       if (!token) {
         setIsSaving(false);
         return;
       }
-
-      console.log('✅ [DEBUG] Sending PUT request to /api/albums');
 
       const response = await fetch('/api/albums', {
         method: 'PUT',
@@ -1164,49 +1130,12 @@ export function EditAlbumModal({
         body: JSON.stringify(updateData),
       });
 
-      console.log('✅ [DEBUG] PUT response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('✅ [DEBUG] PUT response result:', result);
-      console.log('✅ [DEBUG] PUT response result.data:', result.data);
-      console.log('✅ [DEBUG] PUT response result.data[0]:', result.data?.[0]);
-      console.log('✅ [DEBUG] PUT response result.data[0]?.cover:', result.data?.[0]?.cover);
-
-      const resultCover =
-        result.data && Array.isArray(result.data) ? result.data[0]?.cover : undefined;
-
-      console.log('✅ [DEBUG] Extracted resultCover:', resultCover);
-      console.log('✅ [DEBUG] Comparison:', {
-        newCover,
-        resultCover,
-        areEqual: newCover === resultCover,
-        newCoverType: typeof newCover,
-        resultCoverType: typeof resultCover,
-      });
-
-      if (newCover) {
-        if (resultCover === newCover) {
-          console.log('✅ [DEBUG] Cover successfully updated in database:', {
-            expected: newCover,
-            actual: resultCover,
-            match: true,
-          });
-        } else {
-          console.error('❌ [DEBUG] Cover update FAILED - mismatch!', {
-            expected: newCover,
-            actual: resultCover || 'missing',
-            coverInUpdateData: updateData.cover,
-            resultData: result.data,
-          });
-        }
-      } else {
-        console.warn('⚠️ [DEBUG] newCover is undefined, skipping cover comparison');
-      }
 
       // Передаём обновленный альбом в onNext для обновления UI
       const updatedAlbum: IAlbums | undefined =
@@ -1214,17 +1143,8 @@ export function EditAlbumModal({
 
       if (onNext) onNext(formData, updatedAlbum);
 
-      console.log('✅ [DEBUG] Album saved successfully! Reloading page in 30 seconds...');
-      console.log('💡 TIP: У вас есть 30 секунд, чтобы скопировать логи из консоли!');
-
       // Закрываем модалку
       handleClose();
-
-      // Перезагружаем страницу через 30 секунд (даём время на копирование логов)
-      setTimeout(() => {
-        console.log('🔄 Reloading page now...');
-        window.location.reload();
-      }, 30000);
 
       return result;
     } catch (error) {
@@ -1256,12 +1176,29 @@ export function EditAlbumModal({
           <div className="edit-album-modal__divider" />
 
           <div className="edit-album-modal__field">
+            <label htmlFor="artist-name" className="edit-album-modal__label">
+              Artist / Group name
+            </label>
+            <input
+              id="artist-name"
+              name="artist"
+              type="text"
+              autoComplete="organization"
+              className="edit-album-modal__input"
+              value={formData.artist}
+              onChange={(e) => handleInputChange('artist', e.target.value)}
+            />
+          </div>
+
+          <div className="edit-album-modal__field">
             <label htmlFor="album-title" className="edit-album-modal__label">
               Album title
             </label>
             <input
               id="album-title"
+              name="album-title"
               type="text"
+              autoComplete="off"
               className="edit-album-modal__input"
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
@@ -1274,7 +1211,9 @@ export function EditAlbumModal({
             </label>
             <input
               id="release-date"
+              name="release-date"
               type="text"
+              autoComplete="off"
               className="edit-album-modal__input"
               placeholder="DD/MM/YYYY"
               value={formData.releaseDate}
@@ -1288,7 +1227,9 @@ export function EditAlbumModal({
             </label>
             <input
               id="upc-ean"
+              name="upc-ean"
               type="text"
+              autoComplete="off"
               className="edit-album-modal__input"
               placeholder="Optional"
               value={formData.upcEan}
@@ -1387,6 +1328,8 @@ export function EditAlbumModal({
             </label>
             <textarea
               id="description"
+              name="description"
+              autoComplete="off"
               className="edit-album-modal__textarea"
               placeholder="Short story about the album, credits highlights, mood, etc."
               value={formData.description}
@@ -1471,6 +1414,8 @@ export function EditAlbumModal({
               <label className="edit-album-modal__label">Regular price</label>
               <div className="edit-album-modal__price-group">
                 <select
+                  name="currency"
+                  autoComplete="off"
                   className="edit-album-modal__select"
                   value={formData.currency}
                   onChange={(e) => handleInputChange('currency', e.target.value)}
@@ -1481,7 +1426,9 @@ export function EditAlbumModal({
                 </select>
 
                 <input
+                  name="regular-price"
                   type="text"
+                  autoComplete="off"
                   className="edit-album-modal__input edit-album-modal__input--price"
                   value={formData.regularPrice}
                   onChange={(e) => handleInputChange('regularPrice', e.target.value)}
@@ -1498,7 +1445,9 @@ export function EditAlbumModal({
               </label>
               <input
                 id="preorder-date"
+                name="preorder-date"
                 type="text"
+                autoComplete="off"
                 className="edit-album-modal__input"
                 placeholder="DD/MM/YYYY"
                 value={formData.preorderReleaseDate}
@@ -1593,7 +1542,9 @@ export function EditAlbumModal({
               <div className="edit-album-modal__tags-input-group">
                 <input
                   ref={tagInputRef}
+                  name="tag-input"
                   type="text"
+                  autoComplete="off"
                   className="edit-album-modal__input edit-album-modal__input--tags"
                   placeholder="Add a tag..."
                   value={tagInput}
@@ -1633,14 +1584,18 @@ export function EditAlbumModal({
             <label className="edit-album-modal__label">Album Cover</label>
             <div className="edit-album-modal__two-column-inputs">
               <input
+                name="album-cover-photographer"
                 type="text"
+                autoComplete="name"
                 className="edit-album-modal__input"
                 placeholder="Photographer"
                 value={formData.albumCoverPhotographer}
                 onChange={(e) => handleInputChange('albumCoverPhotographer', e.target.value)}
               />
               <input
+                name="album-cover-designer"
                 type="text"
+                autoComplete="name"
                 className="edit-album-modal__input"
                 placeholder="Designer"
                 value={formData.albumCoverDesigner}
@@ -1693,7 +1648,9 @@ export function EditAlbumModal({
               <>
                 <div className="edit-album-modal__two-column-inputs">
                   <input
+                    name="band-member-name"
                     type="text"
+                    autoComplete="name"
                     className="edit-album-modal__input"
                     placeholder="Name"
                     value={bandMemberName}
@@ -1709,7 +1666,9 @@ export function EditAlbumModal({
                     }}
                   />
                   <input
+                    name="band-member-role"
                     type="text"
+                    autoComplete="organization-title"
                     className="edit-album-modal__input"
                     placeholder="Role"
                     value={bandMemberRole}
@@ -1794,7 +1753,9 @@ export function EditAlbumModal({
               <>
                 <div className="edit-album-modal__two-column-inputs">
                   <input
+                    name="session-musician-name"
                     type="text"
+                    autoComplete="name"
                     className="edit-album-modal__input"
                     placeholder="Name"
                     value={sessionMusicianName}
@@ -1814,7 +1775,9 @@ export function EditAlbumModal({
                     }}
                   />
                   <input
+                    name="session-musician-role"
                     type="text"
+                    autoComplete="organization-title"
                     className="edit-album-modal__input"
                     placeholder="Role"
                     value={sessionMusicianRole}
@@ -1911,7 +1874,9 @@ export function EditAlbumModal({
                     <div className="edit-album-modal__producing-input-group">
                       <div className="edit-album-modal__two-column-inputs">
                         <input
+                          name={`producing-${creditType}-name`}
                           type="text"
+                          autoComplete="name"
                           className="edit-album-modal__input"
                           placeholder="Name"
                           value={producingNames[creditType] || ''}
@@ -1928,7 +1893,9 @@ export function EditAlbumModal({
                           autoFocus
                         />
                         <input
+                          name={`producing-${creditType}-role`}
                           type="text"
+                          autoComplete="organization-title"
                           className="edit-album-modal__input"
                           placeholder="Role"
                           value={producingRoles[creditType] || ''}
@@ -1967,7 +1934,9 @@ export function EditAlbumModal({
                     <div className="edit-album-modal__producing-input-group">
                       <div className="edit-album-modal__two-column-inputs">
                         <input
+                          name={`producing-${creditType}-name`}
                           type="text"
+                          autoComplete="name"
                           className="edit-album-modal__input"
                           placeholder="Name"
                           value={producingNames[creditType] || ''}
@@ -1982,7 +1951,9 @@ export function EditAlbumModal({
                           }}
                         />
                         <input
+                          name={`producing-${creditType}-role`}
                           type="text"
+                          autoComplete="organization-title"
                           className="edit-album-modal__input"
                           placeholder="Role"
                           value={producingRoles[creditType] || ''}
@@ -2072,7 +2043,9 @@ export function EditAlbumModal({
                       <div className="edit-album-modal__producing-input-group">
                         <div className="edit-album-modal__two-column-inputs">
                           <input
+                            name={`producing-${creditType}-name`}
                             type="text"
+                            autoComplete="name"
                             className="edit-album-modal__input"
                             placeholder="Name"
                             value={producingNames[creditType] || ''}
@@ -2092,7 +2065,9 @@ export function EditAlbumModal({
                             autoFocus
                           />
                           <input
+                            name={`producing-${creditType}-role`}
                             type="text"
+                            autoComplete="organization-title"
                             className="edit-album-modal__input"
                             placeholder="Role"
                             value={producingRoles[creditType] || ''}
@@ -2134,7 +2109,9 @@ export function EditAlbumModal({
                       <div className="edit-album-modal__producing-input-group">
                         <div className="edit-album-modal__two-column-inputs">
                           <input
+                            name={`producing-${creditType}-name`}
                             type="text"
+                            autoComplete="name"
                             className="edit-album-modal__input"
                             placeholder="Name"
                             value={producingNames[creditType] || ''}
@@ -2152,7 +2129,9 @@ export function EditAlbumModal({
                             }}
                           />
                           <input
+                            name={`producing-${creditType}-role`}
                             type="text"
+                            autoComplete="organization-title"
                             className="edit-album-modal__input"
                             placeholder="Role"
                             value={producingRoles[creditType] || ''}
@@ -2187,7 +2166,9 @@ export function EditAlbumModal({
             <div className="edit-album-modal__producing-new-type">
               <div className="edit-album-modal__producing-input-group">
                 <input
+                  name="new-credit-type"
                   type="text"
+                  autoComplete="off"
                   className="edit-album-modal__input"
                   placeholder="New credit type"
                   value={newCreditType}
@@ -2233,6 +2214,8 @@ export function EditAlbumModal({
                       {isEditing ? (
                         <div className="edit-album-modal__link-edit">
                           <select
+                            name="purchase-link-service"
+                            autoComplete="off"
                             className="edit-album-modal__link-select"
                             value={purchaseLinkService}
                             onChange={(e) => setPurchaseLinkService(e.target.value)}
@@ -2246,7 +2229,9 @@ export function EditAlbumModal({
                           </select>
 
                           <input
+                            name="purchase-link-url"
                             type="url"
+                            autoComplete="url"
                             className="edit-album-modal__link-input"
                             placeholder="URL"
                             value={purchaseLinkUrl}
@@ -2321,6 +2306,8 @@ export function EditAlbumModal({
               {editingPurchaseLink === null && (
                 <div className="edit-album-modal__link-add">
                   <select
+                    name="purchase-link-service"
+                    autoComplete="off"
                     className="edit-album-modal__link-select"
                     value={purchaseLinkService}
                     onChange={(e) => setPurchaseLinkService(e.target.value)}
@@ -2336,7 +2323,9 @@ export function EditAlbumModal({
                   </select>
 
                   <input
+                    name="purchase-link-url"
                     type="url"
+                    autoComplete="url"
                     className="edit-album-modal__link-input"
                     placeholder="URL"
                     value={purchaseLinkUrl}
@@ -2378,6 +2367,8 @@ export function EditAlbumModal({
                       {isEditing ? (
                         <div className="edit-album-modal__link-edit">
                           <select
+                            name="streaming-link-service"
+                            autoComplete="off"
                             className="edit-album-modal__link-select"
                             value={streamingLinkService}
                             onChange={(e) => setStreamingLinkService(e.target.value)}
@@ -2391,7 +2382,9 @@ export function EditAlbumModal({
                           </select>
 
                           <input
+                            name="streaming-link-url"
                             type="url"
+                            autoComplete="url"
                             className="edit-album-modal__link-input"
                             placeholder="URL"
                             value={streamingLinkUrl}
@@ -2466,6 +2459,8 @@ export function EditAlbumModal({
               {editingStreamingLink === null && (
                 <div className="edit-album-modal__link-add">
                   <select
+                    name="streaming-link-service"
+                    autoComplete="off"
                     className="edit-album-modal__link-select"
                     value={streamingLinkService}
                     onChange={(e) => setStreamingLinkService(e.target.value)}
@@ -2481,7 +2476,9 @@ export function EditAlbumModal({
                   </select>
 
                   <input
+                    name="streaming-link-url"
                     type="url"
+                    autoComplete="url"
                     className="edit-album-modal__link-input"
                     placeholder="URL"
                     value={streamingLinkUrl}

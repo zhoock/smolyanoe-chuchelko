@@ -77,21 +77,6 @@ export const fetchAlbums = createAsyncThunk<
             }
 
             // Преобразуем данные из API в формат IAlbums
-            console.log('✅ Loaded albums from API');
-
-            // 🔍 DEBUG: Проверяем cover для первого альбома
-            if (result.data.length > 0) {
-              const firstAlbum = result.data[0];
-              console.log('🔍 [DEBUG] First album cover from API:', {
-                albumId: firstAlbum.albumId,
-                cover: firstAlbum.cover,
-                coverType: typeof firstAlbum.cover,
-                coverUndefined: firstAlbum.cover === undefined,
-                coverNull: firstAlbum.cover === null,
-                coverEmpty: firstAlbum.cover === '',
-              });
-            }
-
             return normalize(result.data);
           }
         }
@@ -110,7 +95,6 @@ export const fetchAlbums = createAsyncThunk<
         if (fallback.ok) {
           const data = await fallback.json();
           if (Array.isArray(data)) {
-            console.log('✅ Loaded albums from static JSON fallback');
             return normalize(data);
           }
         }

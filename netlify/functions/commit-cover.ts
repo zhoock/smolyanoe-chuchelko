@@ -227,15 +227,33 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         limit: 100,
       });
 
-    // Ищем старые файлы по базовому имени или по albumId
+    // Ищем старые файлы по точному совпадению базового имени
+    // ВАЖНО: используем точное совпадение, чтобы не удалить файлы других альбомов
+    // Например, для albumId="23" не должны удаляться файлы "Cover-23-remastered"
     const oldCoverFiles =
       existingFiles
-        ?.filter(
-          (f) =>
-            f.name.includes(`${albumId}-cover`) ||
-            f.name.includes(finalBaseName) ||
-            f.name.startsWith(`${albumId}-cover`)
-        )
+        ?.filter((f) => {
+          // Проверяем точное совпадение базового имени (без суффиксов размера)
+          // Убираем суффиксы размера и расширение для сравнения
+          const nameWithoutSuffix = f.name.replace(
+            /(?:-64|-128|-448|-896|-1344)(\.(jpg|webp))$/,
+            ''
+          );
+          const nameWithoutExt = nameWithoutSuffix.replace(/\.(jpg|webp)$/, '');
+
+          // Точное совпадение базового имени
+          if (nameWithoutExt === finalBaseName) {
+            return true;
+          }
+
+          // Также проверяем по albumId-cover для обратной совместимости
+          // Но только если это не remastered версия
+          if (f.name.startsWith(`${albumId}-cover`) && !f.name.includes('remastered')) {
+            return true;
+          }
+
+          return false;
+        })
         .map((f) => `users/zhoock/albums/${f.name}`) || [];
 
     if (oldCoverFiles.length > 0) {
