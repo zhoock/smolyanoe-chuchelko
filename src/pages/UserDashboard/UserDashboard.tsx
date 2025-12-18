@@ -98,6 +98,7 @@ function UserDashboard() {
 
   const [activeTab, setActiveTab] = useState<'albums' | 'posts' | 'payment-settings'>('albums');
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
+  const [contentLang, setContentLang] = useState<'ru' | 'en'>(lang === 'ru' ? 'ru' : 'en');
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
   const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
@@ -868,16 +869,39 @@ function UserDashboard() {
                   Payment Settings
                 </button>
               </div>
-              <button
-                type="button"
-                className="user-dashboard__logout-button"
-                onClick={() => {
-                  logout();
-                  navigate('/auth');
-                }}
-              >
-                {ui?.dashboard?.logout ?? 'Logout'}
-              </button>
+              <div className="user-dashboard__header-controls">
+                <div className="user-dashboard__content-lang-switcher">
+                  <span className="user-dashboard__content-lang-label">
+                    Редактируемый язык контента:
+                  </span>
+                  <div className="user-dashboard__content-lang-buttons">
+                    <button
+                      type="button"
+                      className={`user-dashboard__content-lang-button ${contentLang === 'ru' ? 'user-dashboard__content-lang-button--active' : ''}`}
+                      onClick={() => setContentLang('ru')}
+                    >
+                      RU
+                    </button>
+                    <button
+                      type="button"
+                      className={`user-dashboard__content-lang-button ${contentLang === 'en' ? 'user-dashboard__content-lang-button--active' : ''}`}
+                      onClick={() => setContentLang('en')}
+                    >
+                      EN
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="user-dashboard__logout-button"
+                  onClick={() => {
+                    logout();
+                    navigate('/auth');
+                  }}
+                >
+                  {ui?.dashboard?.logout ?? 'Logout'}
+                </button>
+              </div>
             </div>
 
             {/* Main layout */}
@@ -1027,18 +1051,6 @@ function UserDashboard() {
                                     <div className="user-dashboard__album-year">{album.year}</div>
                                   )}
                                 </div>
-                                <button
-                                  type="button"
-                                  className="user-dashboard__delete-album-button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteAlbum(album.id);
-                                  }}
-                                  title="Удалить альбом"
-                                  aria-label="Удалить альбом"
-                                >
-                                  ×
-                                </button>
                                 <div
                                   className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
                                 >
@@ -1152,6 +1164,22 @@ function UserDashboard() {
                                         </div>
                                       </div>
                                     ))}
+                                  </div>
+
+                                  {/* Delete album button - после списка треков, справа */}
+                                  <div className="user-dashboard__delete-album-container">
+                                    <button
+                                      type="button"
+                                      className="user-dashboard__delete-album-button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteAlbum(album.id);
+                                      }}
+                                      title="Удалить альбом"
+                                      aria-label="Удалить альбом"
+                                    >
+                                      Удалить альбом
+                                    </button>
                                   </div>
 
                                   {/* Lyrics section */}
@@ -1301,6 +1329,8 @@ function UserDashboard() {
           isOpen={editAlbumModal.isOpen}
           albumId={editAlbumModal.albumId}
           onClose={() => setEditAlbumModal(null)}
+          contentLang={contentLang}
+          onContentLangChange={setContentLang}
           onNext={async (formData, updatedAlbum) => {
             if (!editAlbumModal) {
               setEditAlbumModal(null);

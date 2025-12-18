@@ -104,25 +104,13 @@ export function validateLang(lang: string | undefined): lang is 'en' | 'ru' {
  */
 export function getUserIdFromEvent(event: HandlerEvent): string | null {
   // Проверяем все возможные варианты регистра заголовка
-  const authHeader =
-    event.headers.authorization ||
-    event.headers.Authorization ||
-    event.headers['authorization'] ||
-    event.headers['Authorization'] ||
+  const auth =
+    (event.headers?.authorization as string | undefined) ||
+    (event.headers?.Authorization as string | undefined) ||
     // Проверяем clientContext для Netlify Identity функций
-    (event as any).clientContext?.user?.token ||
-    null;
+    ((event as any).clientContext?.user?.token as string | undefined);
 
-  if (!authHeader) {
-    console.warn('⚠️ Authorization header not found in event.headers:', {
-      headersKeys: Object.keys(event.headers),
-      hasAuthorization: 'authorization' in event.headers,
-      hasAuthorizationCapital: 'Authorization' in event.headers,
-    });
-    return null;
-  }
-
-  return extractUserIdFromToken(authHeader);
+  return extractUserIdFromToken(auth);
 }
 
 /**

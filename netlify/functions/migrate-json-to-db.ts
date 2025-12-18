@@ -69,6 +69,18 @@ async function migrateAlbumsToDb(
       const albumId =
         album.albumId || `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
 
+      // Обрабатываем cover: если это строка, используем её напрямую, если объект - извлекаем img
+      let coverValue: string | null = null;
+      if (album.cover) {
+        if (typeof album.cover === 'string') {
+          coverValue = album.cover;
+        } else if (typeof album.cover === 'object' && album.cover !== null) {
+          // Если cover - объект, извлекаем img или используем первый строковый ключ
+          coverValue =
+            (album.cover as any).img || (album.cover as any).cover || String(album.cover);
+        }
+      }
+
       // 1. Создаём альбом
       const albumResult = await query(
         `INSERT INTO albums (
@@ -94,7 +106,7 @@ async function migrateAlbumsToDb(
           album.album,
           album.fullName,
           album.description,
-          JSON.stringify(album.cover),
+          coverValue, // cover теперь TEXT, не JSONB
           JSON.stringify(album.release),
           JSON.stringify(album.buttons),
           JSON.stringify(album.details),

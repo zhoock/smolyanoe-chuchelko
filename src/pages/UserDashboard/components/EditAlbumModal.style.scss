@@ -36,6 +36,49 @@ dialog {
       letter-spacing: normal !important;
     }
 
+    &__content-lang-switcher {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+      padding: var(--ms-0) 0;
+      margin-bottom: var(--ms-0);
+    }
+
+    &__content-lang-label {
+      color: var(--warm-concrete);
+      font-size: var(--ms-0);
+      font-weight: 500;
+    }
+
+    &__content-lang-buttons {
+      display: flex;
+      gap: var(--ms-01);
+    }
+
+    &__content-lang-button {
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--warm-concrete);
+      font-size: var(--ms-0);
+      font-weight: 500;
+      background: transparent;
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        border-color: var(--dark-greenish-yellow);
+        color: var(--white);
+      }
+
+      &--active {
+        color: var(--deep-black);
+        background: var(--dark-greenish-yellow);
+        border-color: var(--dark-greenish-yellow);
+        font-weight: 600;
+      }
+    }
+
     &__form {
       display: flex;
       flex-direction: column;
