@@ -590,9 +590,48 @@ dialog {
       font-size: var(--ms-0);
     }
 
+    &__track-duration-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+    }
+
     &__track-duration {
       color: var(--warm-concrete);
       font-variant-numeric: tabular-nums;
+    }
+
+    &__track-delete-button {
+      position: absolute;
+      right: 0;
+      bottom: -10px;
+      z-index: 10;
+      margin-bottom: var(--ms-01);
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease,
+        all 200ms ease;
+
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--iron-slate),
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0,
+        $padding: var(--ms-01) var(--ms-0),
+        $border-radius: var(--ms-01)
+      );
+    }
+
+    &__track-item:hover .user-dashboard__track-delete-button {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
     }
 
     &__album-divider {

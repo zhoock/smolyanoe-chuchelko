@@ -8,7 +8,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
-import { extractUserIdFromToken } from './lib/jwt';
+import { getUserIdFromEvent } from './lib/api-helpers';
 
 interface SyncedLyricsRow {
   id: string;
@@ -53,11 +53,12 @@ export const handler: Handler = async (
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
   const startTime = Date.now();
 
-  // Используем context.remainingTimeInMillis для Netlify Functions (если доступно)
+  // Используем context.getRemainingTimeInMillis для Netlify Functions (если доступно)
   // Оставляем запас в 2 секунды для обработки ответа
-  const maxExecutionTime = context.remainingTimeInMillis
-    ? context.remainingTimeInMillis - 2000
-    : 8000; // Fallback: 8 секунд
+  const maxExecutionTime =
+    typeof context.getRemainingTimeInMillis === 'function'
+      ? context.getRemainingTimeInMillis() - 2000
+      : 8000; // Fallback: 8 секунд
 
   // CORS headers
   const headers = {
@@ -93,33 +94,54 @@ export const handler: Handler = async (
       }
 
       // Извлекаем user_id из токена (если есть)
-      const userId = extractUserIdFromToken(event.headers.authorization);
+      const userId = getUserIdFromEvent(event);
+
+      console.log('[synced-lyrics.ts GET] Loading synced lyrics:', {
+        albumId,
+        trackId,
+        lang,
+        userId,
+      });
 
       // Добавляем LIMIT 1 для оптимизации запроса
       // Приоритет: пользовательские синхронизации, затем публичные (user_id IS NULL)
+      // Если userId есть, ищем сначала пользовательские, затем публичные
+      // Если userId нет, ищем только публичные
       const result = await query<SyncedLyricsRow>(
-        `SELECT synced_lyrics, authorship 
-         FROM synced_lyrics 
-         WHERE album_id = $1 AND track_id = $2 AND lang = $3
-           AND (user_id = $4 OR user_id IS NULL)
-         ORDER BY user_id NULLS LAST
-         LIMIT 1`,
-        [albumId, String(trackId), lang, userId],
+        userId
+          ? `SELECT synced_lyrics, authorship 
+             FROM synced_lyrics 
+             WHERE album_id = $1 AND track_id = $2 AND lang = $3
+               AND (user_id = $4 OR user_id IS NULL)
+             ORDER BY user_id NULLS LAST
+             LIMIT 1`
+          : `SELECT synced_lyrics, authorship 
+             FROM synced_lyrics 
+             WHERE album_id = $1 AND track_id = $2 AND lang = $3
+               AND user_id IS NULL
+             LIMIT 1`,
+        userId ? [albumId, String(trackId), lang, userId] : [albumId, String(trackId), lang],
         0 // Без retry для GET запросов - они должны быть быстрыми
       );
 
       if (result.rows.length === 0) {
+        console.log('[synced-lyrics.ts GET] No synced lyrics found');
         return {
           statusCode: 200,
           headers,
           body: JSON.stringify({
             success: true,
-            data: null,
+            data: undefined,
           } as SyncedLyricsResponse),
         };
       }
 
       const row = result.rows[0];
+      console.log('[synced-lyrics.ts GET] ✅ Found synced lyrics:', {
+        linesCount: Array.isArray(row.synced_lyrics) ? row.synced_lyrics.length : 0,
+        hasAuthorship: !!row.authorship,
+      });
+
       return {
         statusCode: 200,
         headers,
@@ -150,7 +172,7 @@ export const handler: Handler = async (
       }
 
       // Извлекаем user_id из токена (обязательно для сохранения)
-      const userId = extractUserIdFromToken(event.headers.authorization);
+      const userId = getUserIdFromEvent(event);
 
       if (!userId) {
         return {
@@ -163,32 +185,49 @@ export const handler: Handler = async (
         };
       }
 
-      // Сохраняем в БД (UPSERT)
-      // Без retry для POST - они должны быть быстрыми или упасть сразу
-      await query(
-        `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
-         ON CONFLICT (user_id, album_id, track_id, lang)
-         DO UPDATE SET 
-           synced_lyrics = $5::jsonb,
-           authorship = $6,
-           updated_at = NOW()`,
-        [
-          userId,
-          data.albumId,
-          String(data.trackId),
-          data.lang,
-          JSON.stringify(data.syncedLyrics),
-          data.authorship || null,
-        ],
-        0 // Без retry для POST запросов
-      );
+      // Сохраняем в таблицу synced_lyrics (UPSERT)
+      // НЕ обновляем tracks.synced_lyrics и не ищем альбом - это лишние запросы
+      // Синхронизации загружаются из synced_lyrics при загрузке альбомов
+      console.log('[synced-lyrics.ts POST] Saving synced lyrics:', {
+        userId,
+        albumId: data.albumId,
+        trackId: data.trackId,
+        lang: data.lang,
+        linesCount: data.syncedLyrics.length,
+        hasAuthorship: data.authorship !== undefined,
+      });
+
+      try {
+        await query(
+          `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+           ON CONFLICT ON CONSTRAINT synced_lyrics_user_album_track_lang_unique
+           DO UPDATE SET 
+             synced_lyrics = $5::jsonb,
+             authorship = $6,
+             updated_at = NOW()`,
+          [
+            userId,
+            data.albumId,
+            String(data.trackId),
+            data.lang,
+            JSON.stringify(data.syncedLyrics),
+            data.authorship || null,
+          ],
+          0 // Без retry для POST запросов
+        );
+        console.log('[synced-lyrics.ts POST] ✅ Saved to synced_lyrics table');
+      } catch (saveError) {
+        console.error('[synced-lyrics.ts POST] ❌ Error saving to synced_lyrics:', saveError);
+        throw saveError;
+      }
 
       console.log('✅ Synced lyrics saved to database:', {
         albumId: data.albumId,
         trackId: data.trackId,
         lang: data.lang,
         linesCount: data.syncedLyrics.length,
+        hasAuthorship: data.authorship !== undefined,
       });
 
       return {

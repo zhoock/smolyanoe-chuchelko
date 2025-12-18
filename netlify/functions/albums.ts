@@ -189,35 +189,123 @@ export const handler: Handler = async (
       const albumsWithTracks = await Promise.all(
         albumsResult.rows.map(async (album) => {
           try {
+            // Загружаем треки по строковому album_id, а не по UUID
+            // Это позволяет находить треки для всех языковых версий альбома
+            // Используем подзапрос с ROW_NUMBER для исключения дубликатов
             const tracksResult = await query<TrackRow>(
               `SELECT 
-                t.track_id,
-                t.title,
-                t.duration,
-                t.src,
-                t.content,
-                t.authorship,
-                t.synced_lyrics
-              FROM tracks t
-              WHERE t.album_id = $1
-              ORDER BY t.order_index ASC`,
-              [album.id]
+                ranked.track_id,
+                ranked.title,
+                ranked.duration,
+                ranked.src,
+                ranked.content,
+                ranked.authorship,
+                ranked.synced_lyrics,
+                ranked.order_index
+              FROM (
+                SELECT 
+                  t.track_id,
+                  t.title,
+                  t.duration,
+                  t.src,
+                  t.content,
+                  t.authorship,
+                  t.synced_lyrics,
+                  t.order_index,
+                  ROW_NUMBER() OVER (PARTITION BY t.track_id ORDER BY t.order_index ASC, a.created_at DESC) as rn
+                FROM tracks t
+                INNER JOIN albums a ON t.album_id = a.id
+                WHERE a.album_id = $1
+              ) ranked
+              WHERE ranked.rn = 1
+              ORDER BY ranked.order_index ASC`,
+              [album.album_id]
             );
 
             // 🔍 DEBUG: Логируем треки из БД
-            if (tracksResult.rows.length > 0) {
-              console.log(`[albums.ts GET] Tracks for album ${album.album_id}:`, {
-                count: tracksResult.rows.length,
+            if (album.album_id === '23-remastered') {
+              console.log(`[albums.ts GET] 🔍 DEBUG for 23-remastered (${lang}):`, {
+                albumId: album.album_id,
+                albumDbId: album.id,
+                lang,
+                tracksCount: tracksResult.rows.length,
                 tracks: tracksResult.rows.map((t) => ({
                   trackId: t.track_id,
                   title: t.title,
+                  src: t.src,
                   hasTitle: !!t.title,
-                  titleLength: t.title?.length || 0,
+                  hasSrc: !!t.src,
                 })),
               });
             }
 
-            const mapped = mapAlbumToApiFormat(album, tracksResult.rows);
+            // Загружаем синхронизации из таблицы synced_lyrics для всех треков одним запросом
+            // Используем DISTINCT ON для приоритета пользовательских синхронизаций
+            const trackIds = tracksResult.rows.map((t) => t.track_id);
+            let syncedLyricsMap = new Map<
+              string,
+              { synced_lyrics: unknown; authorship: string | null }
+            >();
+
+            if (trackIds.length > 0) {
+              try {
+                console.log(
+                  `[albums.ts GET] Loading synced lyrics for album ${album.album_id}, tracks: ${trackIds.length}`,
+                  {
+                    albumId: album.album_id,
+                    trackIds: trackIds.slice(0, 5), // Логируем только первые 5
+                    lang,
+                    userId,
+                  }
+                );
+                // Загружаем все синхронизации для всех треков альбома одним запросом
+                // Используем DISTINCT ON для получения одной записи на трек (приоритет: пользовательские)
+                // ВАЖНО: DISTINCT ON требует, чтобы первая колонка в ORDER BY была такой же, как в DISTINCT ON
+                const syncedLyricsResult = await query<{
+                  track_id: string;
+                  synced_lyrics: unknown;
+                  authorship: string | null;
+                }>(
+                  `SELECT DISTINCT ON (track_id)
+                     track_id, synced_lyrics, authorship
+                   FROM synced_lyrics 
+                   WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
+                     AND (user_id = $4 OR user_id IS NULL)
+                   ORDER BY track_id, user_id NULLS LAST, updated_at DESC`,
+                  [album.album_id, trackIds, lang, userId || null]
+                );
+
+                // Создаём Map для быстрого поиска
+                syncedLyricsResult.rows.forEach((row) => {
+                  syncedLyricsMap.set(row.track_id, {
+                    synced_lyrics: row.synced_lyrics,
+                    authorship: row.authorship,
+                  });
+                });
+                console.log(
+                  `[albums.ts GET] ✅ Loaded ${syncedLyricsResult.rows.length} synced lyrics from synced_lyrics table for album ${album.album_id}`
+                );
+              } catch (syncedError) {
+                // Если ошибка при загрузке синхронизаций, используем данные из tracks
+                console.error('❌ [albums.ts GET] Error loading synced lyrics:', syncedError);
+              }
+            }
+
+            // Объединяем данные треков с синхронизациями
+            const tracksWithSyncedLyrics = tracksResult.rows.map((track) => {
+              const syncedData = syncedLyricsMap.get(track.track_id);
+              if (syncedData) {
+                return {
+                  ...track,
+                  synced_lyrics: syncedData.synced_lyrics,
+                  // Используем authorship из synced_lyrics, если он есть, иначе из tracks
+                  authorship: syncedData.authorship || track.authorship,
+                };
+              }
+              return track;
+            });
+
+            const mapped = mapAlbumToApiFormat(album, tracksWithSyncedLyrics);
 
             return mapped;
           } catch (trackError) {
@@ -363,20 +451,53 @@ export const handler: Handler = async (
         }
 
         // Проверяем, существует ли альбом
-        const existingAlbumResult = await query<AlbumRow>(
-          `SELECT * FROM albums 
-          WHERE album_id = $1 AND lang = $2 
-          AND (user_id = $3 OR user_id IS NULL)
-          ORDER BY user_id NULLS LAST, created_at DESC
-          LIMIT 1`,
-          [data.albumId, data.lang, userId]
-        );
+        console.log('[albums.ts PUT] Searching for existing album:', {
+          albumId: data.albumId,
+          lang: data.lang,
+          userId,
+        });
+
+        let existingAlbumResult;
+        try {
+          existingAlbumResult = await query<AlbumRow>(
+            `SELECT * FROM albums 
+            WHERE album_id = $1 AND lang = $2 
+            AND (user_id = $3 OR user_id IS NULL)
+            ORDER BY user_id NULLS LAST, created_at DESC
+            LIMIT 1`,
+            [data.albumId, data.lang, userId]
+          );
+          console.log('[albums.ts PUT] Album search result:', {
+            found: existingAlbumResult.rows.length > 0,
+            rowsCount: existingAlbumResult.rows.length,
+          });
+        } catch (searchError) {
+          console.error('❌ [albums.ts PUT] Error searching for album:', searchError);
+          throw searchError;
+        }
 
         if (existingAlbumResult.rows.length === 0) {
+          console.warn('[albums.ts PUT] Album not found, returning 404:', {
+            albumId: data.albumId,
+            lang: data.lang,
+            userId,
+          });
           return createErrorResponse(404, 'Album not found or access denied.');
         }
 
         const existingAlbum = existingAlbumResult.rows[0];
+        console.log('[albums.ts PUT] Found existing album:', {
+          id: existingAlbum.id,
+          albumId: existingAlbum.album_id,
+          userId: existingAlbum.user_id,
+          lang: existingAlbum.lang,
+        });
+
+        // Если найденный альбом - публичный (user_id IS NULL), а пользователь авторизован,
+        // обновляем публичный альбом (это нормальное поведение для админки)
+        if (existingAlbum.user_id === null && userId) {
+          console.log('[albums.ts PUT] Public album found, will update public album');
+        }
 
         // 🔍 DEBUG: Проверяем, что пришло в запросе
         console.log('[albums.ts PUT] Request data:', {
@@ -470,7 +591,32 @@ export const handler: Handler = async (
         RETURNING *
       `;
 
-        const updateResult = await query<AlbumRow>(updateQuery, updateValues);
+        console.log('[albums.ts PUT] Executing update query:', {
+          query: updateQuery.substring(0, 200),
+          paramsCount: updateValues.length,
+          fieldsCount: updateFields.length,
+        });
+
+        let updateResult;
+        try {
+          updateResult = await query<AlbumRow>(updateQuery, updateValues);
+          console.log('[albums.ts PUT] Update query executed successfully:', {
+            rowsUpdated: updateResult.rows.length,
+          });
+        } catch (updateError) {
+          console.error('❌ [albums.ts PUT] Error executing update query:', updateError);
+          console.error('❌ [albums.ts PUT] Update query was:', updateQuery);
+          console.error('❌ [albums.ts PUT] Update values were:', updateValues);
+          throw updateError;
+        }
+
+        if (updateResult.rows.length === 0) {
+          console.error('❌ [albums.ts PUT] Update query returned 0 rows:', {
+            albumId: data.albumId,
+            existingAlbumId: existingAlbum.id,
+          });
+          return createErrorResponse(500, 'Album update failed: no rows affected.');
+        }
 
         const updatedAlbum = updateResult.rows[0];
 
@@ -482,22 +628,55 @@ export const handler: Handler = async (
         });
 
         // Загружаем треки для обновлённого альбома
-        const tracksResult = await query<TrackRow>(
-          `SELECT 
-          t.track_id,
-          t.title,
-          t.duration,
-          t.src,
-          t.content,
-          t.authorship,
-          t.synced_lyrics
-        FROM tracks t
-        WHERE t.album_id = $1
-        ORDER BY t.order_index ASC`,
-          [updatedAlbum.id]
-        );
+        let tracksResult;
+        try {
+          // Загружаем треки по строковому album_id, а не по UUID
+          // Это позволяет находить треки для всех языковых версий альбома
+          tracksResult = await query<TrackRow>(
+            `SELECT 
+              ranked.track_id,
+              ranked.title,
+              ranked.duration,
+              ranked.src,
+              ranked.content,
+              ranked.authorship,
+              ranked.synced_lyrics,
+              ranked.order_index
+            FROM (
+              SELECT 
+                t.track_id,
+                t.title,
+                t.duration,
+                t.src,
+                t.content,
+                t.authorship,
+                t.synced_lyrics,
+                t.order_index,
+                ROW_NUMBER() OVER (PARTITION BY t.track_id ORDER BY t.order_index ASC, a.created_at DESC) as rn
+              FROM tracks t
+              INNER JOIN albums a ON t.album_id = a.id
+              WHERE a.album_id = $1
+            ) ranked
+            WHERE ranked.rn = 1
+            ORDER BY ranked.order_index ASC`,
+            [updatedAlbum.album_id]
+          );
+          console.log('[albums.ts PUT] Tracks loaded:', {
+            count: tracksResult.rows.length,
+          });
+        } catch (tracksError) {
+          console.error('❌ [albums.ts PUT] Error loading tracks:', tracksError);
+          throw tracksError;
+        }
 
-        const mappedAlbum = mapAlbumToApiFormat(updatedAlbum, tracksResult.rows);
+        let mappedAlbum;
+        try {
+          mappedAlbum = mapAlbumToApiFormat(updatedAlbum, tracksResult.rows);
+          console.log('[albums.ts PUT] Album mapped successfully');
+        } catch (mapError) {
+          console.error('❌ [albums.ts PUT] Error mapping album:', mapError);
+          throw mapError;
+        }
 
         // 🔍 DEBUG: Проверяем, что получилось после маппинга
         console.log('[albums.ts PUT] Mapped album:', {
@@ -530,19 +709,36 @@ export const handler: Handler = async (
           // Загружаем треки для всех альбомов
           const allAlbumsWithTracks = await Promise.all(
             allAlbumsResult.rows.map(async (album) => {
+              // Загружаем треки по строковому album_id, а не по UUID
+              // Это позволяет находить треки для всех языковых версий альбома
               const tracksResult = await query<TrackRow>(
                 `SELECT 
-                t.track_id,
-                t.title,
-                t.duration,
-                t.src,
-                t.content,
-                t.authorship,
-                t.synced_lyrics
-              FROM tracks t
-              WHERE t.album_id = $1
-              ORDER BY t.order_index ASC`,
-                [album.id]
+                  ranked.track_id,
+                  ranked.title,
+                  ranked.duration,
+                  ranked.src,
+                  ranked.content,
+                  ranked.authorship,
+                  ranked.synced_lyrics,
+                  ranked.order_index
+                FROM (
+                  SELECT 
+                    t.track_id,
+                    t.title,
+                    t.duration,
+                    t.src,
+                    t.content,
+                    t.authorship,
+                    t.synced_lyrics,
+                    t.order_index,
+                    ROW_NUMBER() OVER (PARTITION BY t.track_id ORDER BY t.order_index ASC, a.created_at DESC) as rn
+                  FROM tracks t
+                  INNER JOIN albums a ON t.album_id = a.id
+                  WHERE a.album_id = $1
+                ) ranked
+                WHERE ranked.rn = 1
+                ORDER BY ranked.order_index ASC`,
+                [album.album_id]
               );
 
               return mapAlbumToApiFormat(album, tracksResult.rows);
@@ -604,7 +800,7 @@ export const handler: Handler = async (
       }
     }
 
-    // DELETE: удаление альбома (требует авторизации)
+    // DELETE: удаление трека или альбома (требует авторизации)
     if (event.httpMethod === 'DELETE') {
       try {
         const userId = requireAuth(event);
@@ -613,6 +809,86 @@ export const handler: Handler = async (
           return createErrorResponse(401, 'Unauthorized. Authentication required.');
         }
 
+        // Проверяем query параметры для удаления трека
+        const queryParams = event.queryStringParameters || {};
+        const trackId = queryParams.trackId;
+        const albumIdFromQuery = queryParams.albumId;
+        const langFromQuery = queryParams.lang;
+
+        // Если есть trackId в query параметрах, удаляем трек
+        if (trackId && albumIdFromQuery && langFromQuery) {
+          if (!validateLang(langFromQuery)) {
+            return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru"');
+          }
+
+          console.log('🗑️ DELETE /api/albums - Delete track request:', {
+            albumId: albumIdFromQuery,
+            trackId,
+            lang: langFromQuery,
+            userId,
+          });
+
+          // Находим альбом по album_id и lang
+          const albumResult = await query<AlbumRow>(
+            `SELECT id, album_id, lang, user_id FROM albums
+             WHERE album_id = $1 AND lang = $2
+             AND (user_id = $3 OR user_id IS NULL)
+             ORDER BY user_id NULLS LAST, created_at DESC
+             LIMIT 1`,
+            [albumIdFromQuery, langFromQuery, userId]
+          );
+
+          if (albumResult.rows.length === 0) {
+            return createErrorResponse(404, 'Album not found or access denied.');
+          }
+
+          const album = albumResult.rows[0];
+
+          // Проверяем, что пользователь имеет право удалять треки из этого альбома
+          // (альбом должен быть публичным или принадлежать пользователю)
+          if (album.user_id !== null && album.user_id !== userId) {
+            return createErrorResponse(
+              403,
+              'You do not have permission to delete tracks from this album.'
+            );
+          }
+
+          // Удаляем трек
+          const deleteTrackResult = await query(
+            `DELETE FROM tracks 
+             WHERE album_id = $1 AND track_id = $2
+             RETURNING id`,
+            [album.id, String(trackId)]
+          );
+
+          if (deleteTrackResult.rows.length === 0) {
+            return createErrorResponse(404, 'Track not found.');
+          }
+
+          // Также удаляем синхронизированные тексты для этого трека
+          await query(
+            `DELETE FROM synced_lyrics 
+             WHERE album_id = $1 AND track_id = $2 AND lang = $3`,
+            [albumIdFromQuery, String(trackId), langFromQuery]
+          );
+
+          console.log('✅ DELETE /api/albums - Track deleted:', {
+            albumId: albumIdFromQuery,
+            trackId,
+            lang: langFromQuery,
+          });
+
+          return {
+            statusCode: 200,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({
+              success: true,
+              message: 'Track deleted successfully',
+            }),
+          };
+        }
+
+        // Иначе удаляем альбом (оригинальная логика)
         let data: { albumId: string; lang: string };
         try {
           data = parseJsonBody<{ albumId: string; lang: string }>(

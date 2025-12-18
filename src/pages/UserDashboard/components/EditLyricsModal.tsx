@@ -13,6 +13,7 @@ interface EditLyricsModalProps {
   onClose: () => void;
   onSave: (lyrics: string, authorship?: string) => void;
   onPreview?: () => void;
+  onSync?: (currentLyrics: string, currentAuthorship?: string) => void;
 }
 
 export function EditLyricsModal({
@@ -22,6 +23,7 @@ export function EditLyricsModal({
   onClose,
   onSave,
   onPreview,
+  onSync,
 }: EditLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -33,6 +35,9 @@ export function EditLyricsModal({
     setLyricsText(initialLyrics);
     setAuthorship(initialAuthorship || '');
   }, [initialLyrics, initialAuthorship]);
+
+  // Проверяем, изменился ли текст относительно исходного
+  const hasTextChanged = lyricsText.trim() !== initialLyrics.trim();
 
   const handleSave = () => {
     onSave(lyricsText, authorship.trim() || undefined);
@@ -53,14 +58,25 @@ export function EditLyricsModal({
             <h2 className="edit-lyrics-modal__title">
               {ui?.dashboard?.editLyrics ?? 'Edit Lyrics'}
             </h2>
-            {onPreview && (
+            {/* Показываем Sync, если текст изменился, иначе Preview (если есть) */}
+            {hasTextChanged && onSync ? (
               <button
                 type="button"
                 className="edit-lyrics-modal__preview-button"
-                onClick={onPreview}
+                onClick={() => onSync(lyricsText, authorship.trim() || undefined)}
               >
-                {ui?.dashboard?.preview ?? 'Preview'}
+                {ui?.dashboard?.sync ?? 'Sync'}
               </button>
+            ) : (
+              onPreview && (
+                <button
+                  type="button"
+                  className="edit-lyrics-modal__preview-button"
+                  onClick={onPreview}
+                >
+                  {ui?.dashboard?.preview ?? 'Preview'}
+                </button>
+              )
             )}
           </div>
           <div className="edit-lyrics-modal__divider"></div>

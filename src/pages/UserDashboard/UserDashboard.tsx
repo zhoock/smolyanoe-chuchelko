@@ -32,6 +32,7 @@ import './UserDashboard.style.scss';
 
 interface AlbumData {
   id: string;
+  albumId: string; // Строковый ID альбома (например, "23-remastered")
   title: string;
   artist: string;
   year: string;
@@ -144,6 +145,7 @@ function UserDashboard() {
     lyrics: string;
     syncedLyrics?: { text: string; startTime: number; endTime?: number }[];
     authorship?: string;
+    trackSrc?: string;
   } | null>(null);
   const [syncLyricsModal, setSyncLyricsModal] = useState<{
     isOpen: boolean;
@@ -249,6 +251,7 @@ function UserDashboard() {
 
           return {
             id: albumId,
+            albumId: album.albumId || albumId, // Сохраняем строковый ID альбома
             title: album.album,
             artist: album.artist || '',
             year: releaseDate ? releaseDate.getFullYear().toString() : '',
@@ -293,6 +296,52 @@ function UserDashboard() {
   };
 
   // Удаление альбома
+  const handleDeleteTrack = async (albumId: string, trackId: string, trackTitle: string) => {
+    // Подтверждение удаления
+    const confirmed = window.confirm(
+      `Вы уверены, что хотите удалить трек "${trackTitle}"?\n\nЭто действие нельзя отменить.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const token = getToken();
+      if (!token) {
+        alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
+        return;
+      }
+
+      // Удаляем трек через API
+      const response = await fetch(
+        `/api/albums?trackId=${encodeURIComponent(trackId)}&albumId=${encodeURIComponent(albumId)}&lang=${encodeURIComponent(lang)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      // Обновляем Redux store
+      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+
+      console.log('✅ Track deleted successfully:', { albumId, trackId });
+    } catch (error) {
+      console.error('❌ Error deleting track:', error);
+      alert(
+        `Ошибка при удалении трека: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  };
+
   const handleDeleteAlbum = async (albumId: string) => {
     // Находим альбом для получения названия
     const album = albumsData.find((a) => a.id === albumId);
@@ -475,6 +524,7 @@ function UserDashboard() {
 
             return {
               id: album.albumId || '',
+              albumId: album.albumId || '', // Сохраняем строковый ID альбома
               title: album.album,
               artist: album.artist || '',
               year: releaseDate ? releaseDate.getFullYear().toString() : '',
@@ -576,7 +626,23 @@ function UserDashboard() {
       }
     } else if (action === 'prev') {
       const lyrics = getTrackLyricsText(albumId, trackId);
-      setPreviewLyricsModal({ isOpen: true, lyrics });
+      const syncedLyrics = getTrackSyncedLyrics(albumId, trackId);
+      const album = albumsData.find((a) => a.id === albumId);
+      const track = album?.tracks.find((t) => t.id === trackId);
+      console.log('[UserDashboard] Opening Preview Lyrics:', {
+        albumId,
+        trackId,
+        trackSrc: track?.src,
+        hasTrack: !!track,
+        albumTracks: album?.tracks.map((t) => ({ id: t.id, src: t.src })),
+      });
+      setPreviewLyricsModal({
+        isOpen: true,
+        lyrics,
+        syncedLyrics,
+        authorship: track?.authorship,
+        trackSrc: track?.src,
+      });
     } else if (action === 'sync') {
       const album = albumsData.find((a) => a.id === albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
@@ -682,6 +748,12 @@ function UserDashboard() {
     return track?.lyricsText ?? MOCK_LYRICS_TEXT;
   };
 
+  const getTrackAuthorship = (albumId: string, trackId: string): string | undefined => {
+    const album = albumsData.find((a) => a.id === albumId);
+    const track = album?.tracks.find((t) => t.id === trackId);
+    return track?.authorship;
+  };
+
   const getTrackSyncedLyrics = (
     albumId: string,
     trackId: string
@@ -706,7 +778,32 @@ function UserDashboard() {
       lyrics,
       syncedLyrics,
       authorship: track?.authorship,
+      trackSrc: track?.src,
     });
+  };
+
+  const handleSyncLyricsFromEdit = async (currentLyrics: string, currentAuthorship?: string) => {
+    if (!editLyricsModal) return;
+    const { albumId, trackId, trackTitle } = editLyricsModal;
+    // Сначала сохраняем изменения текста
+    await handleSaveLyrics(currentLyrics, currentAuthorship);
+    // Закрываем модалку редактирования текста
+    setEditLyricsModal(null);
+    // Открываем модалку синхронизации с сохранённым текстом
+    const album = albumsData.find((a) => a.id === albumId);
+    const track = album?.tracks.find((t) => t.id === trackId);
+    if (track) {
+      // Используем переданный текст напрямую (он уже сохранён через handleSaveLyrics)
+      setSyncLyricsModal({
+        isOpen: true,
+        albumId,
+        trackId,
+        trackTitle,
+        trackSrc: track.src,
+        lyricsText: currentLyrics,
+        authorship: currentAuthorship,
+      });
+    }
   };
 
   const handleAvatarClick = () => {
@@ -1159,8 +1256,26 @@ function UserDashboard() {
                                         <div className="user-dashboard__track-title">
                                           {track.title}
                                         </div>
-                                        <div className="user-dashboard__track-duration">
-                                          {track.duration}
+                                        <div className="user-dashboard__track-duration-container">
+                                          <div className="user-dashboard__track-duration">
+                                            {track.duration}
+                                          </div>
+                                          <button
+                                            type="button"
+                                            className="user-dashboard__track-delete-button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteTrack(
+                                                album.albumId,
+                                                track.id,
+                                                track.title
+                                              );
+                                            }}
+                                            title="Удалить трек"
+                                            aria-label="Удалить трек"
+                                          >
+                                            Удалить трек
+                                          </button>
                                         </div>
                                       </div>
                                     ))}
@@ -1292,9 +1407,14 @@ function UserDashboard() {
         <EditLyricsModal
           isOpen={editLyricsModal.isOpen}
           initialLyrics={getTrackLyricsText(editLyricsModal.albumId, editLyricsModal.trackId)}
+          initialAuthorship={
+            editLyricsModal.initialAuthorship ||
+            getTrackAuthorship(editLyricsModal.albumId, editLyricsModal.trackId)
+          }
           onClose={() => setEditLyricsModal(null)}
           onSave={handleSaveLyrics}
           onPreview={editLyricsModal.trackStatus === 'synced' ? handlePreviewLyrics : undefined}
+          onSync={editLyricsModal.trackStatus === 'synced' ? handleSyncLyricsFromEdit : undefined}
         />
       )}
 
@@ -1305,6 +1425,7 @@ function UserDashboard() {
           lyrics={previewLyricsModal.lyrics}
           syncedLyrics={previewLyricsModal.syncedLyrics}
           authorship={previewLyricsModal.authorship}
+          trackSrc={previewLyricsModal.trackSrc}
           onClose={() => setPreviewLyricsModal(null)}
         />
       )}
@@ -1425,6 +1546,7 @@ function UserDashboard() {
 
                   return {
                     id: albumId,
+                    albumId: album.albumId || albumId, // Сохраняем строковый ID альбома
                     title: album.album,
                     artist: album.artist || '',
                     year: releaseDate ? releaseDate.getFullYear().toString() : '',

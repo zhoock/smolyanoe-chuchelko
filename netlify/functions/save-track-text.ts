@@ -7,7 +7,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
-import { extractUserIdFromToken } from './lib/jwt';
+import { getUserIdFromEvent } from './lib/api-helpers';
 
 interface SaveTrackTextRequest {
   albumId: string;
@@ -61,7 +61,7 @@ export const handler: Handler = async (
       }
 
       // Извлекаем user_id из токена (обязательно для сохранения)
-      const userId = extractUserIdFromToken(event.headers.authorization);
+      const userId = getUserIdFromEvent(event);
 
       if (!userId) {
         return {
@@ -74,32 +74,54 @@ export const handler: Handler = async (
         };
       }
 
-      // Сохраняем текст в БД
-      // Преобразуем текст в массив строк для хранения в synced_lyrics
-      // Каждая строка текста становится элементом массива без тайм-кодов
-      const textLines = data.content
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .map((text) => ({ text, startTime: 0 })); // Без тайм-кодов, startTime = 0
+      // Находим альбом по album_id и lang (может быть публичный или пользовательский)
+      const albumResult = await query<{ id: string }>(
+        `SELECT id FROM albums 
+         WHERE album_id = $1 AND lang = $2 
+         AND (user_id = $3 OR user_id IS NULL)
+         ORDER BY user_id NULLS LAST, created_at DESC
+         LIMIT 1`,
+        [data.albumId, data.lang, userId]
+      );
 
-      await query(
-        `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
-         ON CONFLICT (user_id, album_id, track_id, lang)
-         DO UPDATE SET 
-           synced_lyrics = $5::jsonb,
-           authorship = $6,
-           updated_at = NOW()`,
+      if (albumResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message: 'Album not found',
+          } as SaveTrackTextResponse),
+        };
+      }
+
+      const albumDbId = albumResult.rows[0].id;
+
+      // Обновляем трек в таблице tracks
+      // Используем album_id (UUID) из таблицы albums и track_id (строка) для поиска
+      const updateResult = await query(
+        `UPDATE tracks 
+         SET content = $1, authorship = $2, updated_at = NOW()
+         WHERE album_id = $3 AND track_id = $4
+         RETURNING id`,
         [
-          userId,
-          data.albumId,
-          String(data.trackId),
-          data.lang,
-          JSON.stringify(textLines), // Массив строк текста
+          data.content, // content теперь хранит полный текст напрямую
           data.authorship || null,
+          albumDbId,
+          String(data.trackId),
         ]
       );
+
+      if (updateResult.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message: 'Track not found',
+          } as SaveTrackTextResponse),
+        };
+      }
 
       console.log('✅ Track text saved to database:', {
         albumId: data.albumId,
@@ -107,6 +129,8 @@ export const handler: Handler = async (
         lang: data.lang,
         contentLength: data.content.length,
         hasAuthorship: data.authorship !== undefined,
+        albumDbId,
+        trackDbId: updateResult.rows[0].id,
       });
 
       return {
