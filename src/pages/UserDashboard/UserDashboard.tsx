@@ -28,65 +28,14 @@ import { EditAlbumModal, type AlbumFormData } from './components/EditAlbumModal'
 import { SyncLyricsModal } from './components/SyncLyricsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import type { IAlbums } from '@models';
+import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
+import {
+  transformAlbumsToAlbumData,
+  type AlbumData,
+  type TrackData,
+} from '@entities/album/lib/transformAlbumData';
+import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import './UserDashboard.style.scss';
-
-interface AlbumData {
-  id: string;
-  albumId: string; // Строковый ID альбома (например, "23-remastered")
-  title: string;
-  artist: string;
-  year: string;
-  cover?: string;
-  coverUpdatedAt?: number; // Timestamp для принудительной перезагрузки изображения
-  releaseDate?: string;
-  tracks: TrackData[];
-}
-
-interface TrackData {
-  id: string;
-  title: string;
-  duration: string;
-  lyricsStatus: 'synced' | 'text-only' | 'empty';
-  lyricsText?: string;
-  src?: string;
-  authorship?: string;
-  syncedLyrics?: { text: string; startTime: number; endTime?: number }[];
-}
-
-// Локальный кэш авторства (fallback, если API недоступен)
-const AUTHORS_CACHE_KEY = 'authorship-cache-v1';
-
-function getCachedAuthorship(albumId: string, trackId: string, lang: string): string | null {
-  try {
-    const raw = localStorage.getItem(AUTHORS_CACHE_KEY);
-    if (!raw) return null;
-    const map = JSON.parse(raw) as Record<string, string>;
-    const key = `${albumId}:${trackId}:${lang}`;
-    return map[key] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function setCachedAuthorship(albumId: string, trackId: string, lang: string, authorship?: string) {
-  try {
-    const raw = localStorage.getItem(AUTHORS_CACHE_KEY);
-    const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
-    const key = `${albumId}:${trackId}:${lang}`;
-    if (authorship && authorship.trim()) {
-      map[key] = authorship.trim();
-    } else {
-      delete map[key];
-    }
-    localStorage.setItem(AUTHORS_CACHE_KEY, JSON.stringify(map));
-  } catch {
-    // игнорируем ошибки localStorage
-  }
-}
-
-// Mock текст для редактирования
-const MOCK_LYRICS_TEXT =
-  "Venturing beyond the familiar\nThrough the void of space I soar\nCarried by stars' glow so peculiar\nFinding what I've never seen before";
 function UserDashboard() {
   const { lang } = useLang();
   const dispatch = useAppDispatch();
@@ -104,27 +53,8 @@ function UserDashboard() {
   const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
   const [uploadProgress, setUploadProgress] = useState<{ [albumId: string]: number }>({});
   const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
-  const avatarInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Ключ для сохранения URL аватара в localStorage
-  const AVATAR_URL_KEY = 'user-avatar-url';
-
-  // Инициализация avatarSrc: сначала проверяем localStorage, затем fallback на дефолтный аватар
-  const [avatarSrc, setAvatarSrc] = useState<string>(() => {
-    try {
-      const savedUrl = localStorage.getItem(AVATAR_URL_KEY);
-      if (savedUrl) {
-        // Добавляем cache-bust при загрузке из localStorage для принудительного обновления
-        const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        return `${savedUrl}?t=${bust}`;
-      }
-    } catch (error) {
-      console.warn('Failed to load avatar URL from localStorage:', error);
-    }
-    // Дефолтный аватар
-    return '/images/avatar.png';
-  });
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
+  const { avatarSrc, isUploadingAvatar, avatarInputRef, handleAvatarClick, handleAvatarChange } =
+    useAvatar();
   const [addLyricsModal, setAddLyricsModal] = useState<{
     isOpen: boolean;
     albumId: string;
@@ -181,16 +111,6 @@ function UserDashboard() {
   }, [dispatch, lang, albumsStatus]);
 
   // Преобразование данных из IAlbums[] в AlbumData[] и загрузка статусов треков
-  // Используем JSON.stringify для отслеживания изменений в данных
-  const albumsFromStoreKey = JSON.stringify(
-    albumsFromStore?.map((a) => ({
-      albumId: a.albumId,
-      artist: a.artist,
-      album: a.album,
-      cover: a.cover,
-    }))
-  );
-
   useEffect(() => {
     if (!albumsFromStore || albumsFromStore.length === 0) {
       setAlbumsData([]);
@@ -204,79 +124,25 @@ function UserDashboard() {
     (async () => {
       try {
         // Преобразуем альбомы из Redux store в формат для UI
-        // Создаем новый массив для каждого альбома, чтобы React увидел изменения
-        const transformedAlbums: AlbumData[] = albumsFromStore.map((album: IAlbums) => {
-          const albumId = album.albumId || '';
+        const transformedAlbums = transformAlbumsToAlbumData(albumsFromStore);
 
-          // Обрабатываем release (объект с полем date)
-          let releaseDate: Date | null = null;
-          if (album.release && typeof album.release === 'object' && 'date' in album.release) {
-            const dateStr = album.release.date;
-            if (dateStr) {
-              releaseDate = new Date(dateStr);
+        // Добавляем authorship из кеша для каждого трека
+        transformedAlbums.forEach((album) => {
+          album.tracks.forEach((track) => {
+            if (!track.authorship) {
+              const cachedAuthorship = getCachedAuthorship(album.albumId, track.id, lang);
+              if (cachedAuthorship) {
+                track.authorship = cachedAuthorship;
+              }
             }
-          }
-
-          // Создаем треки с определением статуса на основе данных из альбома
-          const tracks: TrackData[] = (album.tracks || []).map((track) => {
-            // Определяем статус на основе данных из альбома
-            let lyricsStatus: TrackData['lyricsStatus'] = 'empty';
-            if (track.syncedLyrics && track.syncedLyrics.length > 0) {
-              // Проверяем, действительно ли синхронизировано (есть startTime > 0)
-              const isActuallySynced = track.syncedLyrics.some((line) => line.startTime > 0);
-              lyricsStatus = isActuallySynced ? 'synced' : 'text-only';
-            } else if (track.content && track.content.trim() !== '') {
-              lyricsStatus = 'text-only';
-            }
-
-            return {
-              id: String(track.id),
-              title: track.title,
-              duration:
-                typeof track.duration === 'string'
-                  ? track.duration
-                  : track.duration
-                    ? String(track.duration)
-                    : '0:00',
-              lyricsStatus,
-              lyricsText: track.content, // Используем текст из альбома, если есть
-              src: track.src,
-              authorship:
-                (track as any).authorship ||
-                getCachedAuthorship(albumId, String(track.id), lang) ||
-                undefined,
-            };
           });
-
-          return {
-            id: albumId,
-            albumId: album.albumId || albumId, // Сохраняем строковый ID альбома
-            title: album.album,
-            artist: album.artist || '',
-            year: releaseDate ? releaseDate.getFullYear().toString() : '',
-            cover: album.cover,
-            coverUpdatedAt: Date.now(), // Добавляем timestamp для принудительной перезагрузки изображения
-            releaseDate: releaseDate
-              ? releaseDate.toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })
-              : undefined,
-            tracks,
-          };
         });
 
         // Обновляем локальное состояние из Redux store
-        // Принудительно создаем новый массив для гарантии обновления React
         if (!abortController.signal.aborted) {
           setAlbumsData([...transformedAlbums]);
           setIsLoadingTracks(false);
         }
-
-        // Статусы треков определяются на основе данных из альбомов
-        // Дополнительная загрузка из БД отключена, чтобы избежать таймаутов
-        // Статусы будут обновляться при необходимости (например, при сохранении)
       } catch (error) {
         console.error('Ошибка загрузки данных альбомов:', error);
         if (!abortController.signal.aborted) {
@@ -288,7 +154,7 @@ function UserDashboard() {
     return () => {
       abortController.abort();
     };
-  }, [albumsFromStoreKey, lang, albumsFromStore]);
+  }, [albumsFromStore, lang]);
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
@@ -744,7 +610,7 @@ function UserDashboard() {
   const getTrackLyricsText = (albumId: string, trackId: string): string => {
     const album = albumsData.find((a) => a.id === albumId);
     const track = album?.tracks.find((t) => t.id === trackId);
-    return track?.lyricsText ?? MOCK_LYRICS_TEXT;
+    return track?.lyricsText || '';
   };
 
   const getTrackAuthorship = (albumId: string, trackId: string): string | undefined => {
@@ -802,103 +668,6 @@ function UserDashboard() {
         lyricsText: currentLyrics,
         authorship: currentAuthorship,
       });
-    }
-  };
-
-  const handleAvatarClick = () => {
-    if (isUploadingAvatar) return;
-    avatarInputRef.current?.click();
-  };
-
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingAvatar(true);
-    try {
-      // Определяем расширение файла из MIME типа или имени файла
-      let fileExtension = '.jpg'; // По умолчанию
-      if (file.type) {
-        if (file.type === 'image/png') {
-          fileExtension = '.png';
-        } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-          fileExtension = '.jpg';
-        } else if (file.type === 'image/webp') {
-          fileExtension = '.webp';
-        } else {
-          // Пытаемся определить из имени файла
-          const nameMatch = file.name.match(/\.([a-z0-9]+)$/i);
-          if (nameMatch) {
-            fileExtension = `.${nameMatch[1].toLowerCase()}`;
-          }
-        }
-      }
-
-      const fileName = `profile${fileExtension}`;
-
-      const result = await uploadFile({
-        category: 'profile',
-        file,
-        fileName,
-        upsert: true,
-      });
-
-      if (!result) {
-        console.error('Upload failed: result is null');
-        alert('Не удалось загрузить аватар. Проверьте консоль для деталей и повторите.');
-        return;
-      }
-
-      // Проверяем, что URL валидный
-      if (!result.startsWith('http')) {
-        console.error('Invalid URL returned:', result);
-        alert('Получен невалидный URL аватара. Проверьте консоль для деталей.');
-        return;
-      }
-
-      // Используем URL, который вернула функцию uploadFile (публичный URL из Supabase Storage)
-      // Добавляем агрессивный cache-bust для принудительного обновления изображения
-      // Используем timestamp + случайное число для гарантированного обновления
-      const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      const avatarUrl = `${result}?t=${bust}`;
-
-      // Предзагружаем новое изображение перед обновлением состояния
-      // Это гарантирует, что новый аватар отобразится сразу после окончания прелоадера
-      const preloadImg = new Image();
-
-      await new Promise<void>((resolve, reject) => {
-        preloadImg.onload = () => {
-          resolve();
-        };
-        preloadImg.onerror = () => {
-          console.warn('⚠️ Failed to preload new avatar, but will try to display it anyway');
-          // Не отклоняем промис, чтобы всё равно обновить URL
-          resolve();
-        };
-        // Начинаем загрузку
-        preloadImg.src = avatarUrl;
-      });
-
-      // Сохраняем URL в localStorage (без cache-bust)
-      try {
-        localStorage.setItem(AVATAR_URL_KEY, result);
-      } catch (error) {
-        console.warn('Failed to save avatar URL to localStorage:', error);
-      }
-
-      // Обновляем состояние только после предзагрузки
-      // Теперь новое изображение уже в кеше браузера и отобразится мгновенно
-      setAvatarSrc(avatarUrl);
-    } catch (error) {
-      console.error('❌ Error uploading avatar:', error);
-      alert(
-        `Ошибка загрузки аватара: ${error instanceof Error ? error.message : 'Unknown error'}. Проверьте консоль для деталей.`
-      );
-    } finally {
-      setIsUploadingAvatar(false);
-      if (avatarInputRef.current) {
-        avatarInputRef.current.value = '';
-      }
     }
   };
 
@@ -1471,72 +1240,20 @@ function UserDashboard() {
               await new Promise((resolve) => setTimeout(resolve, 300));
 
               // Принудительно обновляем albumsData из результата fetchAlbums
-              // Это гарантирует, что все поля будут обновлены сразу после сохранения
               if (result && result.length > 0) {
                 console.log('🔄 [UserDashboard] Updating albumsData from fetchAlbums result...');
 
-                // Полностью пересоздаем albumsData из результата, используя ту же логику что и в useEffect
-                const transformedAlbums: AlbumData[] = result.map((album: IAlbums) => {
-                  const albumId = album.albumId || '';
-
-                  // Обрабатываем release (объект с полем date)
-                  let releaseDate: Date | null = null;
-                  if (
-                    album.release &&
-                    typeof album.release === 'object' &&
-                    'date' in album.release
-                  ) {
-                    const dateStr = album.release.date;
-                    if (dateStr) {
-                      releaseDate = new Date(dateStr);
+                const transformedAlbums = transformAlbumsToAlbumData(result);
+                // Добавляем authorship из кеша
+                transformedAlbums.forEach((album) => {
+                  album.tracks.forEach((track) => {
+                    if (!track.authorship) {
+                      const cachedAuthorship = getCachedAuthorship(album.albumId, track.id, lang);
+                      if (cachedAuthorship) {
+                        track.authorship = cachedAuthorship;
+                      }
                     }
-                  }
-
-                  // Создаем треки с определением статуса на основе данных из альбома
-                  const tracks: TrackData[] = (album.tracks || []).map((track) => {
-                    let lyricsStatus: TrackData['lyricsStatus'] = 'empty';
-                    if (track.syncedLyrics && track.syncedLyrics.length > 0) {
-                      const isActuallySynced = track.syncedLyrics.some(
-                        (line) => line.startTime > 0
-                      );
-                      lyricsStatus = isActuallySynced ? 'synced' : 'text-only';
-                    } else if (track.content && track.content.trim() !== '') {
-                      lyricsStatus = 'text-only';
-                    }
-
-                    return {
-                      id: String(track.id),
-                      title: track.title,
-                      duration:
-                        typeof track.duration === 'string'
-                          ? track.duration
-                          : track.duration
-                            ? String(track.duration)
-                            : '0:00',
-                      lyricsStatus,
-                      lyricsText: track.content,
-                      src: track.src,
-                      authorship: (track as any).authorship || undefined,
-                    };
                   });
-
-                  return {
-                    id: albumId,
-                    albumId: album.albumId || albumId, // Сохраняем строковый ID альбома
-                    title: album.album,
-                    artist: album.artist || '',
-                    year: releaseDate ? releaseDate.getFullYear().toString() : '',
-                    cover: album.cover || '',
-                    coverUpdatedAt: Date.now(), // Обновляем timestamp для принудительной перезагрузки
-                    releaseDate: releaseDate
-                      ? releaseDate.toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : undefined,
-                    tracks,
-                  };
                 });
 
                 setAlbumsData(transformedAlbums);
