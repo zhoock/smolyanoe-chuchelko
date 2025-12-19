@@ -1281,22 +1281,6 @@ function UserDashboard() {
                                     ))}
                                   </div>
 
-                                  {/* Delete album button - после списка треков, справа */}
-                                  <div className="user-dashboard__delete-album-container">
-                                    <button
-                                      type="button"
-                                      className="user-dashboard__delete-album-button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteAlbum(album.id);
-                                      }}
-                                      title="Удалить альбом"
-                                      aria-label="Удалить альбом"
-                                    >
-                                      Удалить альбом
-                                    </button>
-                                  </div>
-
                                   {/* Lyrics section */}
                                   <div className="user-dashboard__lyrics-section">
                                     <h4 className="user-dashboard__lyrics-title">
@@ -1346,6 +1330,22 @@ function UserDashboard() {
                                         </div>
                                       ))}
                                     </div>
+                                  </div>
+
+                                  {/* Delete album button - после блока Lyrics, внизу вправо */}
+                                  <div className="user-dashboard__delete-album-container">
+                                    <button
+                                      type="button"
+                                      className="user-dashboard__delete-album-button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteAlbum(album.id);
+                                      }}
+                                      title="Удалить альбом"
+                                      aria-label="Удалить альбом"
+                                    >
+                                      Удалить альбом
+                                    </button>
                                   </div>
                                 </div>
                               )}

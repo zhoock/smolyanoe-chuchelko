@@ -39,13 +39,12 @@ module.exports = {
     // Если нет - проксируем на локальный Netlify Dev (порт 8888)
     proxy: [
       {
-        // Простая настройка - проксируем все запросы к /api/*
+        // Проксируем все запросы к /api/*
         context: ['/api'],
         target: process.env.NETLIFY_SITE_URL || 'http://localhost:8888',
         changeOrigin: true,
         secure: process.env.NETLIFY_SITE_URL ? true : false,
         logLevel: 'debug',
-        // Убеждаемся, что прокси работает
         onProxyReq: (proxyReq, req) => {
           const target = process.env.NETLIFY_SITE_URL || 'http://localhost:8888';
           console.log('[HPM] Проксируем:', req.method, req.url, '->', target + req.url);
@@ -55,6 +54,30 @@ module.exports = {
         },
         onError: (err) => {
           console.error('[HPM] Ошибка прокси:', err.message);
+        },
+      },
+      {
+        // Проксируем все запросы к /.netlify/*
+        context: ['/.netlify'],
+        target: process.env.NETLIFY_SITE_URL || 'http://localhost:8888',
+        changeOrigin: true,
+        secure: process.env.NETLIFY_SITE_URL ? true : false,
+        logLevel: 'debug',
+        onProxyReq: (proxyReq, req) => {
+          const target = process.env.NETLIFY_SITE_URL || 'http://localhost:8888';
+          console.log(
+            '[HPM] Проксируем Netlify Function:',
+            req.method,
+            req.url,
+            '->',
+            target + req.url
+          );
+        },
+        onProxyRes: (proxyRes, req) => {
+          console.log('[HPM] Ответ прокси Netlify Function:', proxyRes.statusCode, req.url);
+        },
+        onError: (err) => {
+          console.error('[HPM] Ошибка прокси Netlify Function:', err.message);
         },
       },
     ],

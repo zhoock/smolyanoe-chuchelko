@@ -60,15 +60,14 @@ export interface AlbumFormData {
   streamingLinks: StreamingLink[];
 }
 
-const MOOD_OPTIONS = [
-  'Ambient',
-  'Melancholic',
-  'Dreamy',
-  'Dark',
-  'Energetic',
-  'Calm',
-  'Intense',
-  'Peaceful',
+const GENRE_OPTIONS = [
+  'Grunge',
+  'Alternative rock',
+  'Punk',
+  'Indie rock',
+  'Post-rock',
+  'Shoegaze',
+  'Noise rock',
 ];
 
 const MAX_TAGS = 10;
@@ -403,6 +402,57 @@ export function EditAlbumModal({
       }
     }
 
+    // --- парсинг Genre из details ---
+    const mood: string[] = [];
+    const genreDetail = Array.isArray(album.details)
+      ? album.details.find(
+          (detail) =>
+            detail &&
+            (detail.title === 'Genre' ||
+              detail.title === 'Genres' ||
+              detail.title === 'Жанр' ||
+              detail.title === 'Жанры')
+        )
+      : null;
+
+    if (genreDetail && (genreDetail as any).content) {
+      // Обрабатываем content - может быть массивом строк или объектов с text
+      for (const item of (genreDetail as any).content) {
+        let text = '';
+        if (typeof item === 'string') {
+          text = item;
+        } else if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          text = item.text.join('');
+        }
+
+        if (!text.trim()) continue;
+
+        // Разбиваем строку по запятым и убираем точки в конце
+        const parsedGenres = text
+          .split(',')
+          .map((g: string) => g.trim().replace(/\.$/, ''))
+          .filter((g: string) => g.length > 0);
+
+        // Сопоставляем с опциями из GENRE_OPTIONS (case-insensitive)
+        parsedGenres.forEach((parsedGenre: string) => {
+          // Нормализуем: первая буква заглавная, остальные строчные (кроме слов после пробелов)
+          const normalizedParsed = parsedGenre
+            .split(' ')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+
+          // Ищем точное совпадение (case-insensitive)
+          const matchedOption = GENRE_OPTIONS.find(
+            (option) => option.toLowerCase() === normalizedParsed.toLowerCase()
+          );
+
+          if (matchedOption && !mood.includes(matchedOption)) {
+            mood.push(matchedOption);
+          }
+        });
+      }
+    }
+
     // Заполняем поля из данных альбома (только при первой инициализации для этого языка)
     setFormByLang((prev) => ({
       ...prev,
@@ -463,6 +513,7 @@ export function EditAlbumModal({
           releaseDate: releaseDate || prevForm.releaseDate,
           upcEan: upc || prevForm.upcEan,
           description: album.description || prevForm.description,
+          mood: mood.length > 0 ? mood : prevForm.mood,
           albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
           albumCoverDesigner: (release as any).designer || prevForm.albumCoverDesigner,
           bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
@@ -997,9 +1048,91 @@ export function EditAlbumModal({
     if (editingStreamingLink === index) handleCancelEditStreamingLink();
   };
 
+  // Валидация полей для каждого шага
+  const validateStep = (step: number): boolean => {
+    if (step === 1) {
+      // Шаг 1: Basic Info
+      const errors: string[] = [];
+      if (!formData.artist || !formData.artist.trim()) {
+        errors.push('Artist / Group name');
+      }
+      if (!formData.title || !formData.title.trim()) {
+        errors.push('Album title');
+      }
+      if (!formData.releaseDate || !formData.releaseDate.trim()) {
+        errors.push('Release date');
+      }
+      if (!formData.description || !formData.description.trim()) {
+        errors.push('Description');
+      }
+      // Regular price обязателен только если продажа включена
+      if (
+        formData.allowDownloadSale !== 'no' &&
+        (!formData.regularPrice || !formData.regularPrice.trim())
+      ) {
+        errors.push('Regular price');
+      }
+      // Pre-order release date обязателен только если pre-order включен
+      if (
+        formData.allowDownloadSale === 'preorder' &&
+        (!formData.preorderReleaseDate || !formData.preorderReleaseDate.trim())
+      ) {
+        errors.push('Pre-order release date');
+      }
+      if (errors.length > 0) {
+        alert(`Пожалуйста, заполните обязательные поля:\n${errors.join('\n')}`);
+        return false;
+      }
+      return true;
+    }
+
+    if (step === 2) {
+      // Шаг 2: Music Details - Genre обязателен
+      if (!formData.mood || formData.mood.length === 0) {
+        alert('Пожалуйста, выберите хотя бы один жанр (Genre).');
+        return false;
+      }
+      return true;
+    }
+
+    if (step === 3) {
+      // Шаг 3: Credits
+      const errors: string[] = [];
+      if (!formData.albumCoverPhotographer || !formData.albumCoverPhotographer.trim()) {
+        errors.push('Album Cover Photographer');
+      }
+      if (!formData.albumCoverDesigner || !formData.albumCoverDesigner.trim()) {
+        errors.push('Album Cover Designer');
+      }
+      if (!formData.bandMembers || formData.bandMembers.length === 0) {
+        errors.push('Band Members (хотя бы один участник)');
+      }
+      // Проверяем, что есть хотя бы один Producer в producingCredits
+      if (!formData.producingCredits.Producer || formData.producingCredits.Producer.length === 0) {
+        errors.push('Producer (хотя бы один продюсер)');
+      }
+      if (errors.length > 0) {
+        alert(`Пожалуйста, заполните обязательные поля:\n${errors.join('\n')}`);
+        return false;
+      }
+      return true;
+    }
+
+    // Шаг 4 (Links) - нет обязательных полей
+    return true;
+  };
+
   const handleNext = () => {
-    if (currentStep < 4) setCurrentStep((s) => s + 1);
-    if (currentStep === 4) handlePublish();
+    // Валидируем текущий шаг перед переходом
+    if (!validateStep(currentStep)) {
+      return; // Останавливаем переход, если валидация не прошла
+    }
+
+    if (currentStep < 4) {
+      setCurrentStep((s) => s + 1);
+    } else if (currentStep === 4) {
+      handlePublish();
+    }
   };
 
   const handlePrevious = () => {
@@ -1402,6 +1535,7 @@ export function EditAlbumModal({
               type="text"
               autoComplete="organization"
               className="edit-album-modal__input"
+              required
               value={formData.artist ?? ''}
               onChange={(e) => setFormDataForLang((s) => ({ ...s, artist: e.target.value }))}
             />
@@ -1417,6 +1551,7 @@ export function EditAlbumModal({
               type="text"
               autoComplete="off"
               className="edit-album-modal__input"
+              required
               value={formData.title ?? ''}
               onChange={(e) => setFormDataForLang((s) => ({ ...s, title: e.target.value }))}
             />
@@ -1433,6 +1568,7 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__input"
               placeholder="DD/MM/YYYY"
+              required
               value={formData.releaseDate ?? ''}
               onChange={(e) => setFormDataForLang((s) => ({ ...s, releaseDate: e.target.value }))}
             />
@@ -1549,6 +1685,7 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__textarea"
               placeholder="Short story about the album, credits highlights, mood, etc."
+              required
               value={formData.description ?? ''}
               onChange={(e) => setFormDataForLang((s) => ({ ...s, description: e.target.value }))}
             />
@@ -1682,7 +1819,7 @@ export function EditAlbumModal({
           <div className="edit-album-modal__divider" />
 
           <div className="edit-album-modal__field">
-            <label className="edit-album-modal__label">Mood</label>
+            <label className="edit-album-modal__label">Genre</label>
 
             <div className="edit-album-modal__multiselect" ref={moodDropdownRef}>
               <div
@@ -1709,7 +1846,9 @@ export function EditAlbumModal({
                     ))}
                   </div>
                 ) : (
-                  <span className="edit-album-modal__multiselect-placeholder">Select moods...</span>
+                  <span className="edit-album-modal__multiselect-placeholder">
+                    Select genres...
+                  </span>
                 )}
 
                 <span className="edit-album-modal__multiselect-arrow">
@@ -1719,7 +1858,7 @@ export function EditAlbumModal({
 
               {moodDropdownOpen && (
                 <div className="edit-album-modal__multiselect-dropdown">
-                  {MOOD_OPTIONS.map((mood) => (
+                  {GENRE_OPTIONS.map((mood) => (
                     <label key={mood} className="edit-album-modal__multiselect-option">
                       <input
                         type="checkbox"
@@ -1806,6 +1945,7 @@ export function EditAlbumModal({
                 autoComplete="name"
                 className="edit-album-modal__input"
                 placeholder="Photographer"
+                required
                 value={formData.albumCoverPhotographer}
                 onChange={(e) => handleInputChange('albumCoverPhotographer', e.target.value)}
               />
@@ -1815,6 +1955,7 @@ export function EditAlbumModal({
                 autoComplete="name"
                 className="edit-album-modal__input"
                 placeholder="Designer"
+                required
                 value={formData.albumCoverDesigner}
                 onChange={(e) => handleInputChange('albumCoverDesigner', e.target.value)}
               />
