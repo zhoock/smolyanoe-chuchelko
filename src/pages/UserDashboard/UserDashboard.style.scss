@@ -69,50 +69,6 @@ dialog {
       gap: var(--ms-0);
     }
 
-    &__content-lang-switcher {
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
-    }
-
-    &__content-lang-label {
-      color: var(--warm-concrete);
-      font-size: var(--ms-0);
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    &__content-lang-buttons {
-      display: flex;
-      gap: var(--ms-01);
-    }
-
-    &__content-lang-button {
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--warm-concrete);
-      font-size: var(--ms-0);
-      font-weight: 500;
-      background: transparent;
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: none;
-      letter-spacing: normal;
-
-      &:hover {
-        border-color: var(--dark-greenish-yellow);
-        color: var(--white);
-      }
-
-      &--active {
-        color: var(--deep-black);
-        background: var(--dark-greenish-yellow);
-        border-color: var(--dark-greenish-yellow);
-        font-weight: 600;
-      }
-    }
-
     &__logout-button {
       padding: var(--ms-01) var(--ms-0);
       color: var(--dark-greenish-yellow);

@@ -12,15 +12,11 @@ import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums } from '@models';
 import './EditAlbumModal.style.scss';
 
-type ContentLang = 'ru' | 'en';
-
 interface EditAlbumModalProps {
   isOpen: boolean;
   albumId?: string;
   onClose: () => void;
   onNext?: (data: AlbumFormData, updatedAlbum?: IAlbums) => void;
-  contentLang?: 'ru' | 'en';
-  onContentLangChange?: (lang: 'ru' | 'en') => void;
 }
 
 export interface BandMember {
@@ -60,8 +56,7 @@ export interface AlbumFormData {
   streamingLinks: StreamingLink[];
 }
 
-const GENRE_OPTIONS = [
-  // English
+const GENRE_OPTIONS_EN = [
   'Grunge',
   'Alternative rock',
   'Punk',
@@ -69,7 +64,9 @@ const GENRE_OPTIONS = [
   'Post-rock',
   'Shoegaze',
   'Noise rock',
-  // Russian
+];
+
+const GENRE_OPTIONS_RU = [
   'Гранж',
   'Альтернативный рок',
   'Панк',
@@ -110,28 +107,16 @@ export function EditAlbumModal({
   albumId,
   onClose,
   onNext,
-  contentLang: externalContentLang,
-  onContentLangChange,
 }: EditAlbumModalProps): JSX.Element | null {
   const { lang } = useLang();
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  // Получаем альбомы для обоих языков контента
-  const albumsRu = useAppSelector((state) => selectAlbumsData(state, 'ru'));
-  const albumsEn = useAppSelector((state) => selectAlbumsData(state, 'en'));
+  // Получаем альбомы для текущего языка сайта
+  const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
 
-  // Язык редактируемого контента (отдельно от языка UI)
-  // Используем внешний contentLang если передан, иначе локальный
-  const [internalContentLang, setInternalContentLang] = useState<ContentLang>(
-    lang === 'ru' ? 'ru' : 'en'
-  );
-  const contentLang = externalContentLang ?? internalContentLang;
-  const setContentLang = onContentLangChange ?? setInternalContentLang;
-  const albumsForContent = contentLang === 'ru' ? albumsRu : albumsEn;
-
-  // Контроль инициализации - чтобы не перетирать ввод пользователя (по языкам контента)
-  const didInitRef = useRef<Record<ContentLang, boolean>>({ ru: false, en: false });
+  // Контроль инициализации - чтобы не перетирать ввод пользователя
+  const didInitRef = useRef(false);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -164,19 +149,8 @@ export function EditAlbumModal({
     streamingLinks: [],
   });
 
-  // Храним черновики формы отдельно для RU и EN
-  const [formByLang, setFormByLang] = useState<Record<ContentLang, AlbumFormData>>({
-    ru: makeEmptyForm(),
-    en: makeEmptyForm(),
-  });
-
-  // Текущие данные формы для выбранного языка контента
-  const formData = formByLang[contentLang];
-
-  // Функция для обновления формы текущего языка контента
-  const setFormDataForLang = (updater: (prev: AlbumFormData) => AlbumFormData) => {
-    setFormByLang((prev) => ({ ...prev, [contentLang]: updater(prev[contentLang]) }));
-  };
+  // Данные формы
+  const [formData, setFormData] = useState<AlbumFormData>(makeEmptyForm());
 
   const [dragActive, setDragActive] = useState(false);
   const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
@@ -245,32 +219,31 @@ export function EditAlbumModal({
   // ===========================================
 
   // Упрощенный handleInputChange для совместимости со старым кодом
-  // Но основные поля теперь используют прямой setFormDataForLang
   const handleInputChange = (field: keyof AlbumFormData, value: string | boolean | File | null) => {
-    setFormDataForLang((prev) => ({ ...prev, [field]: value as never }));
+    setFormData((prev) => ({ ...prev, [field]: value as never }));
   };
 
   // Загружаем данные альбома при открытии модального окна
   useEffect(() => {
-    // Сбрасываем флаги инициализации при закрытии модалки
+    // Сбрасываем флаг инициализации при закрытии модалки
     if (!isOpen) {
-      didInitRef.current = { ru: false, en: false };
+      didInitRef.current = false;
       return;
     }
 
-    // Инициализируем только если еще не инициализировали для этого языка контента
-    if (didInitRef.current[contentLang]) {
+    // Инициализируем только если еще не инициализировали
+    if (didInitRef.current) {
       return;
     }
 
     if (!albumId) return;
-    if (!albumsForContent || !Array.isArray(albumsForContent)) return;
+    if (!albumsFromStore || !Array.isArray(albumsFromStore)) return;
 
-    const album = albumsForContent.find((a: IAlbums) => a && a.albumId === albumId);
+    const album = albumsFromStore.find((a: IAlbums) => a && a.albumId === albumId);
     if (!album) return;
 
-    // Устанавливаем флаг инициализации для этого языка
-    didInitRef.current[contentLang] = true;
+    // Устанавливаем флаг инициализации
+    didInitRef.current = true;
 
     // --- парсинг band members ---
     const bandMembers: BandMember[] = [];
@@ -416,6 +389,9 @@ export function EditAlbumModal({
     // --- парсинг Genre из details ---
     const mood: string[] = [];
 
+    // Выбираем список опций жанров в зависимости от языка сайта
+    const genreOptions = lang === 'ru' ? GENRE_OPTIONS_RU : GENRE_OPTIONS_EN;
+
     // Парсим details, если это строка (JSONB из базы может приходить как строка)
     let parsedDetails = album.details;
     if (typeof album.details === 'string') {
@@ -484,8 +460,8 @@ export function EditAlbumModal({
           const parsedTrimmed = parsedGenre.trim();
           const parsedLower = parsedTrimmed.toLowerCase();
 
-          // Ищем точное совпадение в GENRE_OPTIONS (case-insensitive)
-          const matchedOption = GENRE_OPTIONS.find((option) => {
+          // Ищем точное совпадение в genreOptions (case-insensitive)
+          const matchedOption = genreOptions.find((option) => {
             const optionLower = option.toLowerCase();
             // Точное совпадение
             if (optionLower === parsedLower) return true;
@@ -513,82 +489,78 @@ export function EditAlbumModal({
 
     console.log('[EditAlbumModal] Final parsed mood array:', mood);
 
-    // Заполняем поля из данных альбома (только при первой инициализации для этого языка)
-    setFormByLang((prev) => ({
-      ...prev,
-      [contentLang]: (() => {
-        const prevForm = prev[contentLang];
-        const release = album.release && typeof album.release === 'object' ? album.release : {};
-        const releaseDate = (release as any).date || '';
-        const upc = (release as any).UPC || '';
+    // Заполняем поля из данных альбома (только при первой инициализации)
+    setFormData((prevForm) => {
+      const release = album.release && typeof album.release === 'object' ? album.release : {};
+      const releaseDate = (release as any).date || '';
+      const upc = (release as any).UPC || '';
 
-        const purchaseLinks: StreamingLink[] = (() => {
-          const links: StreamingLink[] = [];
-          if (album.buttons && typeof album.buttons === 'object') {
-            const purchaseMap: Record<string, string> = {
-              itunes: 'apple',
-              bandcamp: 'bandcamp',
-              amazon: 'amazon',
-            };
+      const purchaseLinks: StreamingLink[] = (() => {
+        const links: StreamingLink[] = [];
+        if (album.buttons && typeof album.buttons === 'object') {
+          const purchaseMap: Record<string, string> = {
+            itunes: 'apple',
+            bandcamp: 'bandcamp',
+            amazon: 'amazon',
+          };
 
-            for (const [key, url] of Object.entries(album.buttons as Record<string, unknown>)) {
-              const serviceId = purchaseMap[key.toLowerCase()];
-              if (serviceId && typeof url === 'string' && url.trim()) {
-                links.push({ service: serviceId, url: url.trim() });
-              }
+          for (const [key, url] of Object.entries(album.buttons as Record<string, unknown>)) {
+            const serviceId = purchaseMap[key.toLowerCase()];
+            if (serviceId && typeof url === 'string' && url.trim()) {
+              links.push({ service: serviceId, url: url.trim() });
             }
           }
-          return links;
-        })();
+        }
+        return links;
+      })();
 
-        const streamingLinks: StreamingLink[] = (() => {
-          const links: StreamingLink[] = [];
-          if (album.buttons && typeof album.buttons === 'object') {
-            const streamingMap: Record<string, string> = {
-              apple: 'applemusic',
-              vk: 'vk',
-              youtube: 'youtube',
-              spotify: 'spotify',
-              yandex: 'yandex',
-              deezer: 'deezer',
-              tidal: 'tidal',
-              applemusic: 'applemusic',
-              googleplay: 'googleplay',
-            };
+      const streamingLinks: StreamingLink[] = (() => {
+        const links: StreamingLink[] = [];
+        if (album.buttons && typeof album.buttons === 'object') {
+          const streamingMap: Record<string, string> = {
+            apple: 'applemusic',
+            vk: 'vk',
+            youtube: 'youtube',
+            spotify: 'spotify',
+            yandex: 'yandex',
+            deezer: 'deezer',
+            tidal: 'tidal',
+            applemusic: 'applemusic',
+            googleplay: 'googleplay',
+          };
 
-            for (const [key, url] of Object.entries(album.buttons as Record<string, unknown>)) {
-              const serviceId = streamingMap[key.toLowerCase()];
-              if (serviceId && typeof url === 'string' && url.trim()) {
-                links.push({ service: serviceId, url: url.trim() });
-              }
+          for (const [key, url] of Object.entries(album.buttons as Record<string, unknown>)) {
+            const serviceId = streamingMap[key.toLowerCase()];
+            if (serviceId && typeof url === 'string' && url.trim()) {
+              links.push({ service: serviceId, url: url.trim() });
             }
           }
-          return links;
-        })();
+        }
+        return links;
+      })();
 
-        return {
-          ...prevForm,
-          artist: album.artist || prevForm.artist,
-          title: album.album || prevForm.title,
-          releaseDate: releaseDate || prevForm.releaseDate,
-          upcEan: upc || prevForm.upcEan,
-          description: album.description || prevForm.description,
-          mood: mood.length > 0 ? mood : prevForm.mood || [],
-          albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
-          albumCoverDesigner: (release as any).designer || prevForm.albumCoverDesigner,
-          bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
-          sessionMusicians:
-            sessionMusicians.length > 0 ? sessionMusicians : prevForm.sessionMusicians,
-          producingCredits: Object.keys(producingCredits).some(
-            (k) => (producingCredits[k] || []).length
-          )
-            ? producingCredits
-            : prevForm.producingCredits,
-          purchaseLinks: purchaseLinks.length ? purchaseLinks : prevForm.purchaseLinks,
-          streamingLinks: streamingLinks.length ? streamingLinks : prevForm.streamingLinks,
-        };
-      })(),
-    }));
+      return {
+        ...prevForm,
+        artist: album.artist || prevForm.artist,
+        title: album.album || prevForm.title,
+        releaseDate: releaseDate || prevForm.releaseDate,
+        upcEan: upc || prevForm.upcEan,
+        description: album.description || prevForm.description,
+        mood: mood.length > 0 ? mood : prevForm.mood || [],
+        albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
+        albumCoverDesigner: (release as any).designer || prevForm.albumCoverDesigner,
+        bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
+        sessionMusicians:
+          sessionMusicians.length > 0 ? sessionMusicians : prevForm.sessionMusicians,
+        producingCredits: Object.keys(producingCredits).some(
+          (k) => (producingCredits[k] || []).length
+        )
+          ? producingCredits
+          : prevForm.producingCredits,
+        purchaseLinks: purchaseLinks.length ? purchaseLinks : prevForm.purchaseLinks,
+        streamingLinks: streamingLinks.length ? streamingLinks : prevForm.streamingLinks,
+      };
+    });
 
     // Показываем существующую обложку
     const coverName =
@@ -610,17 +582,14 @@ export function EditAlbumModal({
         setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
       }
     }
-    // ВАЖНО: Инициализация происходит только один раз для каждого языка контента
-  }, [isOpen, albumId, contentLang, albumsForContent]);
+    // ВАЖНО: Инициализация происходит только один раз
+  }, [isOpen, albumId, lang, albumsFromStore]);
 
   // Сбрасываем форму при закрытии модального окна
   useEffect(() => {
     if (isOpen) return;
 
-    setFormByLang({
-      ru: makeEmptyForm(),
-      en: makeEmptyForm(),
-    });
+    setFormData(makeEmptyForm());
 
     setCurrentStep(1);
 
@@ -700,12 +669,12 @@ export function EditAlbumModal({
       setLocalPreview(file);
 
       const albumData = albumId
-        ? albumsForContent.find((a: IAlbums) => a.albumId === albumId)
+        ? albumsFromStore.find((a: IAlbums) => a.albumId === albumId)
         : null;
 
       // Получаем оригинальный альбом для fallback значений
       const originalAlbum = albumId
-        ? albumsForContent.find((a: IAlbums) => a.albumId === albumId)
+        ? albumsFromStore.find((a: IAlbums) => a.albumId === albumId)
         : null;
 
       // Подготавливаем параметры для uploadCoverDraft
@@ -774,7 +743,7 @@ export function EditAlbumModal({
   }, [moodDropdownOpen]);
 
   const handleMoodToggle = (mood: string) => {
-    setFormDataForLang((prev) => {
+    setFormData((prev) => {
       const currentMood = prev.mood || [];
       if (currentMood.includes(mood)) {
         return { ...prev, mood: currentMood.filter((m) => m !== mood) };
@@ -784,7 +753,7 @@ export function EditAlbumModal({
   };
 
   const handleRemoveMood = (mood: string) => {
-    setFormDataForLang((prev) => ({ ...prev, mood: (prev.mood || []).filter((m) => m !== mood) }));
+    setFormData((prev) => ({ ...prev, mood: (prev.mood || []).filter((m) => m !== mood) }));
   };
 
   const validateTag = (tag: string): string | null => {
@@ -817,7 +786,7 @@ export function EditAlbumModal({
     const tagWithoutHash = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
     const normalizedTag = `#${tagWithoutHash.toLowerCase()}`;
 
-    setFormDataForLang((prev) => ({ ...prev, tags: [...(prev.tags || []), normalizedTag] }));
+    setFormData((prev) => ({ ...prev, tags: [...(prev.tags || []), normalizedTag] }));
     setTagInput('');
     setTagError('');
     tagInputRef.current?.focus();
@@ -831,14 +800,14 @@ export function EditAlbumModal({
   };
 
   const handleRemoveTag = (tag: string) => {
-    setFormDataForLang((prev) => ({ ...prev, tags: (prev.tags || []).filter((t) => t !== tag) }));
+    setFormData((prev) => ({ ...prev, tags: (prev.tags || []).filter((t) => t !== tag) }));
   };
 
   const handleAddBandMember = () => {
     if (!bandMemberName.trim() || !bandMemberRole.trim()) return;
 
     if (editingBandMemberIndex !== null) {
-      setFormDataForLang((prev) => {
+      setFormData((prev) => {
         const updated = [...(prev.bandMembers || [])];
         updated[editingBandMemberIndex] = {
           name: bandMemberName.trim(),
@@ -848,7 +817,7 @@ export function EditAlbumModal({
       });
       setEditingBandMemberIndex(null);
     } else {
-      setFormDataForLang((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         bandMembers: [
           ...(prev.bandMembers || []),
@@ -875,7 +844,7 @@ export function EditAlbumModal({
   };
 
   const handleRemoveBandMember = (index: number) => {
-    setFormDataForLang((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       bandMembers: (prev.bandMembers || []).filter((_, i) => i !== index),
     }));
@@ -886,7 +855,7 @@ export function EditAlbumModal({
     if (!sessionMusicianName.trim() || !sessionMusicianRole.trim()) return;
 
     if (editingSessionMusicianIndex !== null) {
-      setFormDataForLang((prev) => {
+      setFormData((prev) => {
         const updated = [...(prev.sessionMusicians || [])];
         updated[editingSessionMusicianIndex] = {
           name: sessionMusicianName.trim(),
@@ -896,7 +865,7 @@ export function EditAlbumModal({
       });
       setEditingSessionMusicianIndex(null);
     } else {
-      setFormDataForLang((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         sessionMusicians: [
           ...(prev.sessionMusicians || []),
@@ -923,7 +892,7 @@ export function EditAlbumModal({
   };
 
   const handleRemoveSessionMusician = (index: number) => {
-    setFormDataForLang((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       sessionMusicians: (prev.sessionMusicians || []).filter((_, i) => i !== index),
     }));
@@ -936,7 +905,7 @@ export function EditAlbumModal({
     if (!name) return;
 
     if (editingProducingCredit && editingProducingCredit.creditType === creditType) {
-      setFormDataForLang((prev) => {
+      setFormData((prev) => {
         const updated = { ...prev.producingCredits };
         const members = [...(updated[creditType] || [])];
         members[editingProducingCredit.nameIndex] = { name, role };
@@ -945,7 +914,7 @@ export function EditAlbumModal({
       });
       setEditingProducingCredit(null);
     } else {
-      setFormDataForLang((prev) => {
+      setFormData((prev) => {
         const updated = { ...prev.producingCredits };
         updated[creditType] = [...(updated[creditType] || []), { name, role }];
         return { ...prev, producingCredits: updated };
@@ -973,7 +942,7 @@ export function EditAlbumModal({
   };
 
   const handleRemoveProducingCredit = (creditType: string, nameIndex: number) => {
-    setFormDataForLang((prev) => {
+    setFormData((prev) => {
       const updated = { ...prev.producingCredits };
       updated[creditType] = (updated[creditType] || []).filter((_, i) => i !== nameIndex);
       return { ...prev, producingCredits: updated };
@@ -992,7 +961,7 @@ export function EditAlbumModal({
     const trimmedType = newCreditType.trim();
     if (formData.producingCredits[trimmedType]) return;
 
-    setFormDataForLang((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       producingCredits: { ...prev.producingCredits, [trimmedType]: [] },
     }));
@@ -1003,7 +972,7 @@ export function EditAlbumModal({
   const handleRemoveCreditType = (creditType: string) => {
     if (DEFAULT_PRODUCING_CREDIT_TYPES.includes(creditType)) return;
 
-    setFormDataForLang((prev) => {
+    setFormData((prev) => {
       const updated = { ...prev.producingCredits };
       delete updated[creditType];
       return { ...prev, producingCredits: updated };
@@ -1016,7 +985,7 @@ export function EditAlbumModal({
     if (!purchaseLinkService.trim() || !purchaseLinkUrl.trim()) return;
 
     if (editingPurchaseLink !== null) {
-      setFormDataForLang((prev) => {
+      setFormData((prev) => {
         const links = [...prev.purchaseLinks];
         links[editingPurchaseLink] = {
           service: purchaseLinkService.trim(),
@@ -1026,7 +995,7 @@ export function EditAlbumModal({
       });
       setEditingPurchaseLink(null);
     } else {
-      setFormDataForLang((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         purchaseLinks: [
           ...prev.purchaseLinks,
@@ -1053,7 +1022,7 @@ export function EditAlbumModal({
   };
 
   const handleRemovePurchaseLink = (index: number) => {
-    setFormDataForLang((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       purchaseLinks: prev.purchaseLinks.filter((_, i) => i !== index),
     }));
@@ -1064,7 +1033,7 @@ export function EditAlbumModal({
     if (!streamingLinkService.trim() || !streamingLinkUrl.trim()) return;
 
     if (editingStreamingLink !== null) {
-      setFormDataForLang((prev) => {
+      setFormData((prev) => {
         const links = [...prev.streamingLinks];
         links[editingStreamingLink] = {
           service: streamingLinkService.trim(),
@@ -1074,7 +1043,7 @@ export function EditAlbumModal({
       });
       setEditingStreamingLink(null);
     } else {
-      setFormDataForLang((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         streamingLinks: [
           ...prev.streamingLinks,
@@ -1101,7 +1070,7 @@ export function EditAlbumModal({
   };
 
   const handleRemoveStreamingLink = (index: number) => {
-    setFormDataForLang((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       streamingLinks: prev.streamingLinks.filter((_, i) => i !== index),
     }));
@@ -1244,7 +1213,7 @@ export function EditAlbumModal({
     if (formData.bandMembers.length > 0) {
       details.push({
         id: details.length + 1,
-        title: contentLang === 'ru' ? 'Исполнители' : 'Band members',
+        title: lang === 'ru' ? 'Исполнители' : 'Band members',
         content: formData.bandMembers.map((m) => `${m.name} — ${m.role}.`),
       });
     }
@@ -1252,7 +1221,7 @@ export function EditAlbumModal({
     if (formData.sessionMusicians.length > 0) {
       details.push({
         id: details.length + 1,
-        title: contentLang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
+        title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
         content: formData.sessionMusicians.map((m) => `${m.name} — ${m.role}.`),
       });
     }
@@ -1282,7 +1251,7 @@ export function EditAlbumModal({
     if (producingContent.length > 0) {
       details.push({
         id: details.length + 1,
-        title: contentLang === 'ru' ? 'Продюсирование' : 'Producing',
+        title: lang === 'ru' ? 'Продюсирование' : 'Producing',
         content: producingContent,
       });
     }
@@ -1290,7 +1259,7 @@ export function EditAlbumModal({
     if (recordingMixingContent.length > 0) {
       details.push({
         id: details.length + 1,
-        title: contentLang === 'ru' ? 'Запись/сведение' : 'Recording/Mixing',
+        title: lang === 'ru' ? 'Запись/сведение' : 'Recording/Mixing',
         content: recordingMixingContent,
       });
     }
@@ -1298,7 +1267,7 @@ export function EditAlbumModal({
     if (masteringContent.length > 0) {
       details.push({
         id: details.length + 1,
-        title: contentLang === 'ru' ? 'Мастеринг' : 'Mastering',
+        title: lang === 'ru' ? 'Мастеринг' : 'Mastering',
         content: masteringContent,
       });
     }
@@ -1310,8 +1279,8 @@ export function EditAlbumModal({
     console.log('🚀 [EditAlbumModal] handlePublish called', {
       albumId,
       hasAlbumId: !!albumId,
-      contentLang,
-      albumsForContentLength: albumsForContent.length,
+      lang,
+      albumsFromStoreLength: albumsFromStore.length,
     });
 
     // Проверка наличия albumId обязательна
@@ -1325,13 +1294,13 @@ export function EditAlbumModal({
     }
 
     // Проверяем, существует ли версия языка для этого альбома
-    const originalAlbum = albumsForContent.find((a: IAlbums) => a.albumId === albumId);
+    const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === albumId);
     const exists = !!originalAlbum;
     const method = exists ? 'PUT' : 'POST';
 
     console.log('📋 [EditAlbumModal] Album version check:', {
       albumId,
-      contentLang,
+      lang,
       exists,
       method,
     });
@@ -1366,8 +1335,8 @@ export function EditAlbumModal({
 
     setIsSaving(true);
 
-    // Используем contentLang для сохранения
-    const normalizedLang = contentLang;
+    // Используем lang для сохранения
+    const normalizedLang = lang;
 
     let newCover: string | undefined;
     const currentCoverDraftKey = coverDraftKey;
@@ -1421,7 +1390,7 @@ export function EditAlbumModal({
 
     console.log('📝 [EditAlbumModal] Form data before save:', {
       method,
-      contentLang,
+      lang,
       formDataTitle: formData.title,
       formDataArtist: formData.artist,
       originalAlbumTitle: originalAlbum?.album,
@@ -1479,7 +1448,7 @@ export function EditAlbumModal({
       console.log('📤 [EditAlbumModal] Sending request:', {
         url: '/api/albums',
         method,
-        contentLang: normalizedLang,
+        lang: normalizedLang,
         albumId: updateData.albumId,
         album: updateData.album,
         artist: updateData.artist,
@@ -1533,10 +1502,10 @@ export function EditAlbumModal({
       }
 
       // ВАЖНО: Форсим обновление Redux store для языка контента ПЕРЕД вызовом onNext
-      console.log('🔄 [EditAlbumModal] Forcing fetchAlbums for contentLang:', contentLang);
+      console.log('🔄 [EditAlbumModal] Forcing fetchAlbums for lang:', lang);
       try {
-        await dispatch(fetchAlbums({ lang: contentLang, force: true })).unwrap();
-        console.log('✅ [EditAlbumModal] Redux store updated for', contentLang);
+        await dispatch(fetchAlbums({ lang: lang, force: true })).unwrap();
+        console.log('✅ [EditAlbumModal] Redux store updated for', lang);
       } catch (fetchError) {
         console.error('❌ [EditAlbumModal] Failed to update Redux store:', fetchError);
         // Продолжаем выполнение даже если fetchAlbums не удался
@@ -1597,7 +1566,7 @@ export function EditAlbumModal({
               className="edit-album-modal__input"
               required
               value={formData.artist ?? ''}
-              onChange={(e) => setFormDataForLang((s) => ({ ...s, artist: e.target.value }))}
+              onChange={(e) => setFormData((s) => ({ ...s, artist: e.target.value }))}
             />
           </div>
 
@@ -1613,7 +1582,7 @@ export function EditAlbumModal({
               className="edit-album-modal__input"
               required
               value={formData.title ?? ''}
-              onChange={(e) => setFormDataForLang((s) => ({ ...s, title: e.target.value }))}
+              onChange={(e) => setFormData((s) => ({ ...s, title: e.target.value }))}
             />
           </div>
 
@@ -1630,7 +1599,7 @@ export function EditAlbumModal({
               placeholder="DD/MM/YYYY"
               required
               value={formData.releaseDate ?? ''}
-              onChange={(e) => setFormDataForLang((s) => ({ ...s, releaseDate: e.target.value }))}
+              onChange={(e) => setFormData((s) => ({ ...s, releaseDate: e.target.value }))}
             />
           </div>
 
@@ -1646,7 +1615,7 @@ export function EditAlbumModal({
               className="edit-album-modal__input"
               placeholder="Optional"
               value={formData.upcEan ?? ''}
-              onChange={(e) => setFormDataForLang((s) => ({ ...s, upcEan: e.target.value }))}
+              onChange={(e) => setFormData((s) => ({ ...s, upcEan: e.target.value }))}
             />
           </div>
 
@@ -1747,7 +1716,7 @@ export function EditAlbumModal({
               placeholder="Short story about the album, credits highlights, mood, etc."
               required
               value={formData.description ?? ''}
-              onChange={(e) => setFormDataForLang((s) => ({ ...s, description: e.target.value }))}
+              onChange={(e) => setFormData((s) => ({ ...s, description: e.target.value }))}
             />
           </div>
 
@@ -1918,7 +1887,7 @@ export function EditAlbumModal({
 
               {moodDropdownOpen && (
                 <div className="edit-album-modal__multiselect-dropdown">
-                  {GENRE_OPTIONS.map((mood) => (
+                  {(lang === 'ru' ? GENRE_OPTIONS_RU : GENRE_OPTIONS_EN).map((mood: string) => (
                     <label key={mood} className="edit-album-modal__multiselect-option">
                       <input
                         type="checkbox"
@@ -2986,7 +2955,7 @@ export function EditAlbumModal({
                 >
                   {isSaving
                     ? 'Saving...'
-                    : albumId && albumsForContent?.some((a: IAlbums) => a.albumId === albumId)
+                    : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId)
                       ? 'Save changes'
                       : 'Publish album'}
                 </button>

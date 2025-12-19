@@ -99,7 +99,6 @@ function UserDashboard() {
 
   const [activeTab, setActiveTab] = useState<'albums' | 'posts' | 'payment-settings'>('albums');
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
-  const [contentLang, setContentLang] = useState<'ru' | 'en'>(lang === 'ru' ? 'ru' : 'en');
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
   const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
@@ -967,27 +966,6 @@ function UserDashboard() {
                 </button>
               </div>
               <div className="user-dashboard__header-controls">
-                <div className="user-dashboard__content-lang-switcher">
-                  <span className="user-dashboard__content-lang-label">
-                    Редактируемый язык контента:
-                  </span>
-                  <div className="user-dashboard__content-lang-buttons">
-                    <button
-                      type="button"
-                      className={`user-dashboard__content-lang-button ${contentLang === 'ru' ? 'user-dashboard__content-lang-button--active' : ''}`}
-                      onClick={() => setContentLang('ru')}
-                    >
-                      RU
-                    </button>
-                    <button
-                      type="button"
-                      className={`user-dashboard__content-lang-button ${contentLang === 'en' ? 'user-dashboard__content-lang-button--active' : ''}`}
-                      onClick={() => setContentLang('en')}
-                    >
-                      EN
-                    </button>
-                  </div>
-                </div>
                 <button
                   type="button"
                   className="user-dashboard__logout-button"
@@ -1450,8 +1428,6 @@ function UserDashboard() {
           isOpen={editAlbumModal.isOpen}
           albumId={editAlbumModal.albumId}
           onClose={() => setEditAlbumModal(null)}
-          contentLang={contentLang}
-          onContentLangChange={setContentLang}
           onNext={async (formData, updatedAlbum) => {
             if (!editAlbumModal) {
               setEditAlbumModal(null);
