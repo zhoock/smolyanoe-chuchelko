@@ -61,6 +61,7 @@ export interface AlbumFormData {
 }
 
 const GENRE_OPTIONS = [
+  // English
   'Grunge',
   'Alternative rock',
   'Punk',
@@ -68,6 +69,16 @@ const GENRE_OPTIONS = [
   'Post-rock',
   'Shoegaze',
   'Noise rock',
+  // Russian
+  'Гранж',
+  'Альтернативный рок',
+  'Панк',
+  'Инди рок',
+  'Инди-рок',
+  'Пост-рок',
+  'Шугейз',
+  'Нойз рок',
+  'Нойз-рок',
 ];
 
 const MAX_TAGS = 10;
@@ -404,8 +415,31 @@ export function EditAlbumModal({
 
     // --- парсинг Genre из details ---
     const mood: string[] = [];
-    const genreDetail = Array.isArray(album.details)
-      ? album.details.find(
+
+    // Парсим details, если это строка (JSONB из базы может приходить как строка)
+    let parsedDetails = album.details;
+    if (typeof album.details === 'string') {
+      try {
+        parsedDetails = JSON.parse(album.details);
+      } catch (e) {
+        console.error('[EditAlbumModal] Error parsing details:', e);
+        parsedDetails = [];
+      }
+    }
+
+    console.log('[EditAlbumModal] Album details:', {
+      originalDetails: album.details,
+      parsedDetails,
+      detailsType: typeof album.details,
+      parsedType: typeof parsedDetails,
+      isArray: Array.isArray(parsedDetails) ? 'true' : 'false',
+      detailsLength: Array.isArray(parsedDetails) ? parsedDetails.length : 0,
+      firstDetail:
+        Array.isArray(parsedDetails) && parsedDetails.length > 0 ? parsedDetails[0] : null,
+    });
+
+    const genreDetail = Array.isArray(parsedDetails)
+      ? parsedDetails.find(
           (detail) =>
             detail &&
             (detail.title === 'Genre' ||
@@ -414,6 +448,12 @@ export function EditAlbumModal({
               detail.title === 'Жанры')
         )
       : null;
+
+    console.log('[EditAlbumModal] Genre detail found:', {
+      genreDetail,
+      hasContent: !!(genreDetail && (genreDetail as any).content),
+      content: genreDetail ? (genreDetail as any).content : null,
+    });
 
     if (genreDetail && (genreDetail as any).content) {
       // Обрабатываем content - может быть массивом строк или объектов с text
@@ -433,25 +473,45 @@ export function EditAlbumModal({
           .map((g: string) => g.trim().replace(/\.$/, ''))
           .filter((g: string) => g.length > 0);
 
+        console.log('[EditAlbumModal] Parsing genres from text:', {
+          originalText: text,
+          parsedGenres,
+        });
+
         // Сопоставляем с опциями из GENRE_OPTIONS (case-insensitive)
+        // Используем жанры как есть (русские или английские в зависимости от языка контента)
         parsedGenres.forEach((parsedGenre: string) => {
-          // Нормализуем: первая буква заглавная, остальные строчные (кроме слов после пробелов)
-          const normalizedParsed = parsedGenre
-            .split(' ')
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
+          const parsedTrimmed = parsedGenre.trim();
+          const parsedLower = parsedTrimmed.toLowerCase();
 
-          // Ищем точное совпадение (case-insensitive)
-          const matchedOption = GENRE_OPTIONS.find(
-            (option) => option.toLowerCase() === normalizedParsed.toLowerCase()
-          );
+          // Ищем точное совпадение в GENRE_OPTIONS (case-insensitive)
+          const matchedOption = GENRE_OPTIONS.find((option) => {
+            const optionLower = option.toLowerCase();
+            // Точное совпадение
+            if (optionLower === parsedLower) return true;
+            // Совпадение с учетом пробелов
+            if (optionLower.replace(/\s+/g, ' ') === parsedLower.replace(/\s+/g, ' ')) return true;
+            return false;
+          });
 
-          if (matchedOption && !mood.includes(matchedOption)) {
-            mood.push(matchedOption);
+          // Если точного совпадения нет, используем то, что пришло (нормализуем первую букву)
+          const finalOption = matchedOption || parsedTrimmed;
+
+          console.log('[EditAlbumModal] Genre matching:', {
+            parsedGenre: parsedTrimmed,
+            parsedLower,
+            matchedOption,
+            finalOption,
+          });
+
+          if (finalOption && !mood.includes(finalOption)) {
+            mood.push(finalOption);
           }
         });
       }
     }
+
+    console.log('[EditAlbumModal] Final parsed mood array:', mood);
 
     // Заполняем поля из данных альбома (только при первой инициализации для этого языка)
     setFormByLang((prev) => ({
@@ -513,7 +573,7 @@ export function EditAlbumModal({
           releaseDate: releaseDate || prevForm.releaseDate,
           upcEan: upc || prevForm.upcEan,
           description: album.description || prevForm.description,
-          mood: mood.length > 0 ? mood : prevForm.mood,
+          mood: mood.length > 0 ? mood : prevForm.mood || [],
           albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
           albumCoverDesigner: (release as any).designer || prevForm.albumCoverDesigner,
           bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
