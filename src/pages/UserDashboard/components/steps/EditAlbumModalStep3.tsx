@@ -11,10 +11,14 @@ interface EditAlbumModalStep3Props {
   bandMemberRole: string;
   bandMemberURL: string;
   editingBandMemberIndex: number | null;
+  showAddBandMemberInputs: boolean;
+  onShowAddBandMemberInputs: () => void;
   sessionMusicianName: string;
   sessionMusicianRole: string;
   sessionMusicianURL: string;
   editingSessionMusicianIndex: number | null;
+  showAddSessionMusicianInputs: boolean;
+  onShowAddSessionMusicianInputs: () => void;
   producingNames: Record<string, string>;
   producingRoles: Record<string, string>;
   producingURLs: Record<string, string>;
@@ -53,10 +57,14 @@ export function EditAlbumModalStep3({
   bandMemberRole,
   bandMemberURL,
   editingBandMemberIndex,
+  showAddBandMemberInputs,
+  onShowAddBandMemberInputs,
   sessionMusicianName,
   sessionMusicianRole,
   sessionMusicianURL,
   editingSessionMusicianIndex,
+  showAddSessionMusicianInputs,
+  onShowAddSessionMusicianInputs,
   producingNames,
   producingRoles,
   producingURLs,
@@ -180,6 +188,7 @@ export function EditAlbumModalStep3({
                     onFormDataChange('recordedAtText', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('editingRecordedAtIndex', null);
+                    onFormDataChange('showAddRecordedAtInputs', false);
                   }}
                   onRemove={() => {
                     const updated = [...formData.recordedAt];
@@ -189,59 +198,100 @@ export function EditAlbumModalStep3({
                   titlePlaceholder="Recording info (e.g., SEP. 28, 2021: Studio Name, Location.)"
                   descriptionPlaceholder=""
                   urlPlaceholder="URL (optional)"
-                  showCancel={true}
                 />
               );
             })}
           </div>
         )}
 
-        <div className="edit-album-modal__two-column-inputs">
-          <input
-            name="recorded-at-text"
-            type="text"
-            className="edit-album-modal__input"
-            placeholder="Recording info (e.g., SEP. 28, 2021: Studio Name, Location.)"
-            value={formData.recordedAtText || ''}
-            onChange={(e) => onFormDataChange('recordedAtText', e.target.value)}
-          />
-          <input
-            name="recorded-at-url"
-            type="url"
-            autoComplete="url"
-            className="edit-album-modal__input"
-            placeholder="URL (optional)"
-            value={formData.recordedAtURL || ''}
-            onChange={(e) => onFormDataChange('recordedAtURL', e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && formData.recordedAtText?.trim()) {
-                e.preventDefault();
-                const text = formData.recordedAtText.trim();
-                const url = formData.recordedAtURL?.trim() || undefined;
-                const newEntry = { text, url };
-                onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
-                onFormDataChange('recordedAtText', '');
-                onFormDataChange('recordedAtURL', '');
-              }
-            }}
-          />
-        </div>
-        {formData.recordedAtText?.trim() && (
-          <button
-            type="button"
-            className="edit-album-modal__add-button"
-            onClick={() => {
-              const text = formData.recordedAtText!.trim();
-              const url = formData.recordedAtURL?.trim() || undefined;
-              const newEntry = { text, url };
-              onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
-              onFormDataChange('recordedAtText', '');
-              onFormDataChange('recordedAtURL', '');
-            }}
-          >
-            + Add
-          </button>
-        )}
+        {(formData.recordedAt.length === 0 || formData.showAddRecordedAtInputs) &&
+          formData.editingRecordedAtIndex === null && (
+            <>
+              <div className="edit-album-modal__two-column-inputs">
+                <input
+                  name="recorded-at-text"
+                  type="text"
+                  className="edit-album-modal__input"
+                  placeholder="Recording info (e.g., SEP. 28, 2021: Studio Name, Location.)"
+                  value={formData.recordedAtText || ''}
+                  onChange={(e) => onFormDataChange('recordedAtText', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.recordedAtText?.trim()) {
+                      e.preventDefault();
+                      const text = formData.recordedAtText.trim();
+                      const url = formData.recordedAtURL?.trim() || undefined;
+                      const newEntry = { text, url };
+                      onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
+                      onFormDataChange('recordedAtText', '');
+                      onFormDataChange('recordedAtURL', '');
+                      onFormDataChange('showAddRecordedAtInputs', false);
+                    }
+                    if (e.key === 'Escape') {
+                      onFormDataChange('recordedAtText', '');
+                      onFormDataChange('recordedAtURL', '');
+                      onFormDataChange('showAddRecordedAtInputs', false);
+                    }
+                  }}
+                />
+                <input
+                  name="recorded-at-url"
+                  type="url"
+                  autoComplete="url"
+                  className="edit-album-modal__input"
+                  placeholder="URL (optional)"
+                  value={formData.recordedAtURL || ''}
+                  onChange={(e) => onFormDataChange('recordedAtURL', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.recordedAtText?.trim()) {
+                      e.preventDefault();
+                      const text = formData.recordedAtText.trim();
+                      const url = formData.recordedAtURL?.trim() || undefined;
+                      const newEntry = { text, url };
+                      onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
+                      onFormDataChange('recordedAtText', '');
+                      onFormDataChange('recordedAtURL', '');
+                      onFormDataChange('showAddRecordedAtInputs', false);
+                    }
+                    if (e.key === 'Escape') {
+                      onFormDataChange('recordedAtText', '');
+                      onFormDataChange('recordedAtURL', '');
+                      onFormDataChange('showAddRecordedAtInputs', false);
+                    }
+                  }}
+                />
+              </div>
+              {formData.recordedAtText?.trim() && (
+                <button
+                  type="button"
+                  className="edit-album-modal__add-button"
+                  onClick={() => {
+                    const text = formData.recordedAtText!.trim();
+                    const url = formData.recordedAtURL?.trim() || undefined;
+                    const newEntry = { text, url };
+                    onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
+                    onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtURL', '');
+                    onFormDataChange('showAddRecordedAtInputs', false);
+                  }}
+                >
+                  + Add
+                </button>
+              )}
+            </>
+          )}
+
+        {formData.recordedAt &&
+          formData.recordedAt.length > 0 &&
+          !formData.showAddRecordedAtInputs &&
+          !formData.editingRecordedAtIndex && (
+            <button
+              type="button"
+              className="edit-album-modal__add-button"
+              onClick={() => onFormDataChange('showAddRecordedAtInputs', true)}
+            >
+              + Добавить
+            </button>
+          )}
       </div>
 
       <div className="edit-album-modal__field">
@@ -285,6 +335,7 @@ export function EditAlbumModalStep3({
                     onFormDataChange('mixedAtText', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('editingMixedAtIndex', null);
+                    onFormDataChange('showAddMixedAtInputs', false);
                   }}
                   onRemove={() => {
                     const updated = [...formData.mixedAt];
@@ -294,59 +345,100 @@ export function EditAlbumModalStep3({
                   titlePlaceholder="Mixing info (e.g., JAN. 14, 2024—SEP. 22, 2024: Studio Name, Location.)"
                   descriptionPlaceholder=""
                   urlPlaceholder="URL (optional)"
-                  showCancel={true}
                 />
               );
             })}
           </div>
         )}
 
-        <div className="edit-album-modal__two-column-inputs">
-          <input
-            name="mixed-at-text"
-            type="text"
-            className="edit-album-modal__input"
-            placeholder="Mixing info (e.g., JAN. 14, 2024—SEP. 22, 2024: Studio Name, Location.)"
-            value={formData.mixedAtText || ''}
-            onChange={(e) => onFormDataChange('mixedAtText', e.target.value)}
-          />
-          <input
-            name="mixed-at-url"
-            type="url"
-            autoComplete="url"
-            className="edit-album-modal__input"
-            placeholder="URL (optional)"
-            value={formData.mixedAtURL || ''}
-            onChange={(e) => onFormDataChange('mixedAtURL', e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && formData.mixedAtText?.trim()) {
-                e.preventDefault();
-                const text = formData.mixedAtText.trim();
-                const url = formData.mixedAtURL?.trim() || undefined;
-                const newEntry = { text, url };
-                onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
-                onFormDataChange('mixedAtText', '');
-                onFormDataChange('mixedAtURL', '');
-              }
-            }}
-          />
-        </div>
-        {formData.mixedAtText?.trim() && (
-          <button
-            type="button"
-            className="edit-album-modal__add-button"
-            onClick={() => {
-              const text = formData.mixedAtText!.trim();
-              const url = formData.mixedAtURL?.trim() || undefined;
-              const newEntry = { text, url };
-              onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
-              onFormDataChange('mixedAtText', '');
-              onFormDataChange('mixedAtURL', '');
-            }}
-          >
-            + Add
-          </button>
-        )}
+        {(formData.mixedAt.length === 0 || formData.showAddMixedAtInputs) &&
+          formData.editingMixedAtIndex === null && (
+            <>
+              <div className="edit-album-modal__two-column-inputs">
+                <input
+                  name="mixed-at-text"
+                  type="text"
+                  className="edit-album-modal__input"
+                  placeholder="Mixing info (e.g., JAN. 14, 2024—SEP. 22, 2024: Studio Name, Location.)"
+                  value={formData.mixedAtText || ''}
+                  onChange={(e) => onFormDataChange('mixedAtText', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.mixedAtText?.trim()) {
+                      e.preventDefault();
+                      const text = formData.mixedAtText.trim();
+                      const url = formData.mixedAtURL?.trim() || undefined;
+                      const newEntry = { text, url };
+                      onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
+                      onFormDataChange('mixedAtText', '');
+                      onFormDataChange('mixedAtURL', '');
+                      onFormDataChange('showAddMixedAtInputs', false);
+                    }
+                    if (e.key === 'Escape') {
+                      onFormDataChange('mixedAtText', '');
+                      onFormDataChange('mixedAtURL', '');
+                      onFormDataChange('showAddMixedAtInputs', false);
+                    }
+                  }}
+                />
+                <input
+                  name="mixed-at-url"
+                  type="url"
+                  autoComplete="url"
+                  className="edit-album-modal__input"
+                  placeholder="URL (optional)"
+                  value={formData.mixedAtURL || ''}
+                  onChange={(e) => onFormDataChange('mixedAtURL', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.mixedAtText?.trim()) {
+                      e.preventDefault();
+                      const text = formData.mixedAtText.trim();
+                      const url = formData.mixedAtURL?.trim() || undefined;
+                      const newEntry = { text, url };
+                      onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
+                      onFormDataChange('mixedAtText', '');
+                      onFormDataChange('mixedAtURL', '');
+                      onFormDataChange('showAddMixedAtInputs', false);
+                    }
+                    if (e.key === 'Escape') {
+                      onFormDataChange('mixedAtText', '');
+                      onFormDataChange('mixedAtURL', '');
+                      onFormDataChange('showAddMixedAtInputs', false);
+                    }
+                  }}
+                />
+              </div>
+              {formData.mixedAtText?.trim() && (
+                <button
+                  type="button"
+                  className="edit-album-modal__add-button"
+                  onClick={() => {
+                    const text = formData.mixedAtText!.trim();
+                    const url = formData.mixedAtURL?.trim() || undefined;
+                    const newEntry = { text, url };
+                    onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
+                    onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtURL', '');
+                    onFormDataChange('showAddMixedAtInputs', false);
+                  }}
+                >
+                  + Add
+                </button>
+              )}
+            </>
+          )}
+
+        {formData.mixedAt &&
+          formData.mixedAt.length > 0 &&
+          !formData.showAddMixedAtInputs &&
+          !formData.editingMixedAtIndex && (
+            <button
+              type="button"
+              className="edit-album-modal__add-button"
+              onClick={() => onFormDataChange('showAddMixedAtInputs', true)}
+            >
+              + Добавить
+            </button>
+          )}
       </div>
 
       <div className="edit-album-modal__field">
@@ -387,66 +479,81 @@ export function EditAlbumModalStep3({
           </div>
         )}
 
-        {formData.bandMembers.length < MAX_BAND_MEMBERS && (
-          <>
-            <div className="edit-album-modal__two-column-inputs">
+        {(formData.bandMembers.length === 0 || showAddBandMemberInputs) &&
+          formData.bandMembers.length < MAX_BAND_MEMBERS &&
+          editingBandMemberIndex === null && (
+            <>
+              <div className="edit-album-modal__two-column-inputs">
+                <input
+                  name="band-member-name"
+                  type="text"
+                  autoComplete="name"
+                  className="edit-album-modal__input"
+                  placeholder="Name"
+                  value={bandMemberName}
+                  onChange={(e) => onBandMemberNameChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
+                      e.preventDefault();
+                      onAddBandMember();
+                    }
+                    if (e.key === 'Escape') {
+                      onCancelEditBandMember();
+                    }
+                  }}
+                />
+                <input
+                  name="band-member-role"
+                  type="text"
+                  autoComplete="organization-title"
+                  className="edit-album-modal__input"
+                  placeholder="Role"
+                  value={bandMemberRole}
+                  onChange={(e) => onBandMemberRoleChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
+                      e.preventDefault();
+                      onAddBandMember();
+                    }
+                    if (e.key === 'Escape') {
+                      onCancelEditBandMember();
+                    }
+                  }}
+                />
+              </div>
               <input
-                name="band-member-name"
-                type="text"
-                autoComplete="name"
+                name="band-member-url"
+                type="url"
+                autoComplete="url"
                 className="edit-album-modal__input"
-                placeholder="Name"
-                value={bandMemberName}
-                onChange={(e) => onBandMemberNameChange(e.target.value)}
+                placeholder="URL (optional)"
+                value={bandMemberURL}
+                onChange={(e) => onBandMemberURLChange(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
                     e.preventDefault();
                     onAddBandMember();
                   }
-                  if (e.key === 'Escape' && editingBandMemberIndex !== null) {
+                  if (e.key === 'Escape') {
                     onCancelEditBandMember();
                   }
                 }}
               />
-              <input
-                name="band-member-role"
-                type="text"
-                autoComplete="organization-title"
-                className="edit-album-modal__input"
-                placeholder="Role"
-                value={bandMemberRole}
-                onChange={(e) => onBandMemberRoleChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
-                    e.preventDefault();
-                    onAddBandMember();
-                  }
-                  if (e.key === 'Escape' && editingBandMemberIndex !== null) {
-                    onCancelEditBandMember();
-                  }
-                }}
-              />
-            </div>
-            <input
-              name="band-member-url"
-              type="url"
-              autoComplete="url"
-              className="edit-album-modal__input"
-              placeholder="URL (optional)"
-              value={bandMemberURL}
-              onChange={(e) => onBandMemberURLChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
-                  e.preventDefault();
-                  onAddBandMember();
-                }
-                if (e.key === 'Escape' && editingBandMemberIndex !== null) {
-                  onCancelEditBandMember();
-                }
-              }}
-            />
-          </>
-        )}
+            </>
+          )}
+
+        {formData.bandMembers.length > 0 &&
+          !showAddBandMemberInputs &&
+          editingBandMemberIndex === null &&
+          formData.bandMembers.length < MAX_BAND_MEMBERS && (
+            <button
+              type="button"
+              className="edit-album-modal__add-button"
+              onClick={onShowAddBandMemberInputs}
+            >
+              + Добавить
+            </button>
+          )}
       </div>
 
       <div className="edit-album-modal__field">
@@ -775,34 +882,6 @@ export function EditAlbumModalStep3({
               </div>
             );
           })}
-
-        <div className="edit-album-modal__producing-new-type">
-          <div className="edit-album-modal__producing-input-group">
-            <input
-              name="new-credit-type"
-              type="text"
-              autoComplete="off"
-              className="edit-album-modal__input"
-              placeholder="New credit type"
-              value={newCreditType}
-              onChange={(e) => onNewCreditTypeChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newCreditType.trim()) {
-                  e.preventDefault();
-                  onAddNewCreditType();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="edit-album-modal__add-button"
-              onClick={onAddNewCreditType}
-              disabled={!newCreditType.trim()}
-            >
-              + Add type
-            </button>
-          </div>
-        </div>
       </div>
     </>
   );

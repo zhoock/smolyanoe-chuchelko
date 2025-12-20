@@ -123,9 +123,11 @@ export const makeEmptyForm = (): AlbumFormData => ({
   recordedAt: [],
   recordedAtText: '',
   recordedAtURL: '',
+  showAddRecordedAtInputs: false,
   mixedAt: [],
   mixedAtText: '',
   mixedAtURL: '',
+  showAddMixedAtInputs: false,
   purchaseLinks: [],
   streamingLinks: [],
 });

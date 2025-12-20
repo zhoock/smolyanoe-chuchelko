@@ -53,10 +53,12 @@ export interface AlbumFormData {
   recordedAtText?: string; // Временное поле для ввода текста
   recordedAtURL?: string; // Временное поле для ввода URL
   editingRecordedAtIndex?: number | null; // Индекс редактируемой записи
+  showAddRecordedAtInputs?: boolean; // Показывать поля для добавления новой записи
   mixedAt: RecordingEntry[];
   mixedAtText?: string; // Временное поле для ввода текста
   mixedAtURL?: string; // Временное поле для ввода URL
   editingMixedAtIndex?: number | null; // Индекс редактируемой записи
+  showAddMixedAtInputs?: boolean; // Показывать поля для добавления новой записи
   purchaseLinks: StreamingLink[];
   streamingLinks: StreamingLink[];
 }

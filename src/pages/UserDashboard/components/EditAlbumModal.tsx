@@ -86,6 +86,7 @@ export function EditAlbumModal({
   const [bandMemberRole, setBandMemberRole] = useState('');
   const [bandMemberURL, setBandMemberURL] = useState('');
   const [editingBandMemberIndex, setEditingBandMemberIndex] = useState<number | null>(null);
+  const [showAddBandMemberInputs, setShowAddBandMemberInputs] = useState(false);
 
   const [sessionMusicianName, setSessionMusicianName] = useState('');
   const [sessionMusicianRole, setSessionMusicianRole] = useState('');
@@ -93,6 +94,7 @@ export function EditAlbumModal({
   const [editingSessionMusicianIndex, setEditingSessionMusicianIndex] = useState<number | null>(
     null
   );
+  const [showAddSessionMusicianInputs, setShowAddSessionMusicianInputs] = useState(false);
 
   const [producingNames, setProducingNames] = useState<Record<string, string>>({});
   const [producingRoles, setProducingRoles] = useState<Record<string, string>>({});
@@ -536,6 +538,8 @@ export function EditAlbumModal({
           : prevForm.producingCredits,
         recordedAt: recordedAt,
         mixedAt: mixedAt,
+        showAddRecordedAtInputs: false,
+        showAddMixedAtInputs: false,
         purchaseLinks: purchaseLinks.length ? purchaseLinks : prevForm.purchaseLinks,
         streamingLinks: streamingLinks.length ? streamingLinks : prevForm.streamingLinks,
       };
@@ -813,6 +817,7 @@ export function EditAlbumModal({
     setBandMemberName('');
     setBandMemberRole('');
     setBandMemberURL('');
+    setShowAddBandMemberInputs(false);
   };
 
   const handleEditBandMember = (index: number) => {
@@ -828,6 +833,7 @@ export function EditAlbumModal({
     setBandMemberRole('');
     setBandMemberURL('');
     setEditingBandMemberIndex(null);
+    setShowAddBandMemberInputs(false);
   };
 
   const handleRemoveBandMember = (index: number) => {
@@ -871,6 +877,7 @@ export function EditAlbumModal({
     setSessionMusicianName('');
     setSessionMusicianRole('');
     setSessionMusicianURL('');
+    setShowAddSessionMusicianInputs(false);
   };
 
   const handleEditSessionMusician = (index: number) => {
@@ -886,6 +893,7 @@ export function EditAlbumModal({
     setSessionMusicianRole('');
     setSessionMusicianURL('');
     setEditingSessionMusicianIndex(null);
+    setShowAddSessionMusicianInputs(false);
   };
 
   const handleRemoveSessionMusician = (index: number) => {
@@ -1918,10 +1926,14 @@ export function EditAlbumModal({
           bandMemberRole={bandMemberRole}
           bandMemberURL={bandMemberURL}
           editingBandMemberIndex={editingBandMemberIndex}
+          showAddBandMemberInputs={showAddBandMemberInputs}
+          onShowAddBandMemberInputs={() => setShowAddBandMemberInputs(true)}
           sessionMusicianName={sessionMusicianName}
           sessionMusicianRole={sessionMusicianRole}
           sessionMusicianURL={sessionMusicianURL}
           editingSessionMusicianIndex={editingSessionMusicianIndex}
+          showAddSessionMusicianInputs={showAddSessionMusicianInputs}
+          onShowAddSessionMusicianInputs={() => setShowAddSessionMusicianInputs(true)}
           producingNames={producingNames}
           producingRoles={producingRoles}
           producingURLs={producingURLs}

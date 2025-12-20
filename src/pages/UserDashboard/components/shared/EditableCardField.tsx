@@ -113,23 +113,13 @@ export function EditableCardField({
           >
             ✔
           </button>
-          {showCancel && (
-            <button
-              type="button"
-              className="edit-album-modal__list-item-cancel"
-              onClick={onCancel}
-              aria-label="Cancel"
-            >
-              ✕
-            </button>
-          )}
           <button
             type="button"
             className="edit-album-modal__list-item-remove"
             onClick={onRemove}
             aria-label="Remove"
           >
-            ✕
+            ×
           </button>
         </div>
       </div>
