@@ -323,7 +323,28 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: nextId++,
       title: lang === 'ru' ? 'Исполнители' : 'Band members',
-      content: formData.bandMembers.map((m) => `${m.name} — ${m.role}.`),
+      content: formData.bandMembers.map((m) => {
+        const text = `${m.name} — ${m.role}.`;
+        // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
+        const urlTrimmed = m.url?.trim();
+        if (urlTrimmed && urlTrimmed.length > 0) {
+          console.log('🔗 [transformFormDataToAlbumFormat] Saving band member with URL:', {
+            name: m.name,
+            url: urlTrimmed,
+          });
+          return {
+            text: ['', m.name, ` — ${m.role}.`],
+            link: urlTrimmed,
+          };
+        }
+        // Иначе сохраняем как строку (без link)
+        console.log('📝 [transformFormDataToAlbumFormat] Saving band member as string:', {
+          name: m.name,
+          url: m.url,
+          urlTrimmed,
+        });
+        return text;
+      }),
     });
   }
 

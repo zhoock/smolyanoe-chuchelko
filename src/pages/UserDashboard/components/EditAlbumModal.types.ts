@@ -11,6 +11,7 @@ export interface EditAlbumModalProps {
 export interface BandMember {
   name: string;
   role: string;
+  url?: string;
 }
 
 export interface ProducingCredits {

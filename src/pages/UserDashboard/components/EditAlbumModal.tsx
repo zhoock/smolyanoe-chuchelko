@@ -83,6 +83,7 @@ export function EditAlbumModal({
 
   const [bandMemberName, setBandMemberName] = useState('');
   const [bandMemberRole, setBandMemberRole] = useState('');
+  const [bandMemberURL, setBandMemberURL] = useState('');
   const [editingBandMemberIndex, setEditingBandMemberIndex] = useState<number | null>(null);
 
   const [sessionMusicianName, setSessionMusicianName] = useState('');
@@ -188,9 +189,11 @@ export function EditAlbumModal({
           if (match) {
             const name = match[1].trim();
             const role = match[2].trim();
-            if (name && role) bandMembers.push({ name, role });
+            const url = item.link ? String(item.link).trim() : undefined;
+            if (name && role) bandMembers.push({ name, role, url });
           } else if (fullText.trim()) {
-            bandMembers.push({ name: fullText.trim(), role: '' });
+            const url = item.link ? String(item.link).trim() : undefined;
+            bandMembers.push({ name: fullText.trim(), role: '', url });
           }
         } else if (typeof item === 'string' && item.trim()) {
           const match = item.match(/^(.+?)\s*—\s*(.+)$/);
@@ -733,12 +736,17 @@ export function EditAlbumModal({
   const handleAddBandMember = () => {
     if (!bandMemberName.trim() || !bandMemberRole.trim()) return;
 
+    // Если URL пустой или только пробелы, устанавливаем undefined (не пустую строку)
+    const url =
+      bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
+
     if (editingBandMemberIndex !== null) {
       setFormData((prev) => {
         const updated = [...(prev.bandMembers || [])];
         updated[editingBandMemberIndex] = {
           name: bandMemberName.trim(),
           role: bandMemberRole.trim(),
+          url, // undefined если пустой
         };
         return { ...prev, bandMembers: updated };
       });
@@ -748,25 +756,28 @@ export function EditAlbumModal({
         ...prev,
         bandMembers: [
           ...(prev.bandMembers || []),
-          { name: bandMemberName.trim(), role: bandMemberRole.trim() },
+          { name: bandMemberName.trim(), role: bandMemberRole.trim(), url }, // undefined если пустой
         ],
       }));
     }
 
     setBandMemberName('');
     setBandMemberRole('');
+    setBandMemberURL('');
   };
 
   const handleEditBandMember = (index: number) => {
     const member = formData.bandMembers[index];
     setBandMemberName(member.name);
     setBandMemberRole(member.role);
+    setBandMemberURL(member.url || '');
     setEditingBandMemberIndex(index);
   };
 
   const handleCancelEditBandMember = () => {
     setBandMemberName('');
     setBandMemberRole('');
+    setBandMemberURL('');
     setEditingBandMemberIndex(null);
   };
 
@@ -1083,6 +1094,43 @@ export function EditAlbumModal({
 
     setIsSaving(true);
 
+    // Если есть незавершенные изменения band member (редактирование или добавление),
+    // применяем их к formData перед сохранением
+    let finalFormData = formData;
+    if (bandMemberName.trim() && bandMemberRole.trim()) {
+      const url =
+        bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
+
+      if (editingBandMemberIndex !== null) {
+        // Редактируем существующего band member
+        const updated = [...(formData.bandMembers || [])];
+        updated[editingBandMemberIndex] = {
+          name: bandMemberName.trim(),
+          role: bandMemberRole.trim(),
+          url,
+        };
+        finalFormData = { ...formData, bandMembers: updated };
+      } else {
+        // Добавляем нового band member
+        finalFormData = {
+          ...formData,
+          bandMembers: [
+            ...(formData.bandMembers || []),
+            { name: bandMemberName.trim(), role: bandMemberRole.trim(), url },
+          ],
+        };
+      }
+
+      // Обновляем formData для UI
+      setFormData(finalFormData);
+
+      // Сбрасываем состояние
+      setEditingBandMemberIndex(null);
+      setBandMemberName('');
+      setBandMemberRole('');
+      setBandMemberURL('');
+    }
+
     // Используем lang для сохранения
     const normalizedLang = lang;
 
@@ -1129,7 +1177,11 @@ export function EditAlbumModal({
       }
     }
 
-    const { release, buttons, details } = transformFormDataToAlbumFormat(formData, lang);
+    const {
+      release,
+      buttons,
+      details: newDetails,
+    } = transformFormDataToAlbumFormat(finalFormData, lang);
 
     // Формируем fullName из artist и album
     const artistName = formData.artist || originalAlbum?.artist || '';
@@ -1145,14 +1197,47 @@ export function EditAlbumModal({
       originalAlbumArtist: originalAlbum?.artist,
     });
 
+    // Объединяем details: берем оригинальные и заменяем только те, что редактируются
+    const originalDetails = (originalAlbum?.details as Array<{ id: number; title: string }>) || [];
+    const mergedDetails = [...originalDetails];
+
+    // Заменяем редактируемые блоки (Genre, Band members, Session musicians, Producing)
+    const editableTitles = [
+      // Genre
+      lang === 'ru' ? 'Жанр' : 'Genre',
+      // Band members (только два варианта: Исполнители и Band members)
+      lang === 'ru' ? 'Исполнители' : 'Band members',
+      // Session musicians
+      lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
+      // Producing
+      lang === 'ru' ? 'Продюсирование' : 'Producing',
+    ];
+
+    // Удаляем старые редактируемые блоки
+    editableTitles.forEach((title) => {
+      const index = mergedDetails.findIndex((d) => d && d.title === title);
+      if (index >= 0) {
+        mergedDetails.splice(index, 1);
+      }
+    });
+
+    // Добавляем новые редактируемые блоки из формы
+    newDetails.forEach((newDetail) => {
+      const detail = newDetail as { id: number; title: string };
+      mergedDetails.push(detail);
+    });
+
+    // Сортируем по id
+    mergedDetails.sort((a, b) => (a.id || 0) - (b.id || 0));
+
     const updateData: Record<string, unknown> = {
       albumId,
       artist: artistName,
       album: albumTitle,
       fullName,
       description:
-        formData.description !== undefined
-          ? formData.description
+        finalFormData.description !== undefined
+          ? finalFormData.description
           : originalAlbum?.description || '',
       // Для release делаем полную замену, а не merge, чтобы пустые URL поля корректно удалялись
       release: release,
@@ -1160,7 +1245,7 @@ export function EditAlbumModal({
         exists && originalAlbum?.buttons
           ? { ...(originalAlbum.buttons as any), ...buttons }
           : buttons,
-      details: details.length > 0 ? details : originalAlbum?.details || [],
+      details: mergedDetails.length > 0 ? mergedDetails : [],
       lang: normalizedLang,
       ...(newCover ? { cover: newCover } : {}),
     };
@@ -1683,6 +1768,7 @@ export function EditAlbumModal({
           formData={formData}
           bandMemberName={bandMemberName}
           bandMemberRole={bandMemberRole}
+          bandMemberURL={bandMemberURL}
           editingBandMemberIndex={editingBandMemberIndex}
           sessionMusicianName={sessionMusicianName}
           sessionMusicianRole={sessionMusicianRole}
@@ -1694,6 +1780,7 @@ export function EditAlbumModal({
           onFormDataChange={handleInputChange}
           onBandMemberNameChange={setBandMemberName}
           onBandMemberRoleChange={setBandMemberRole}
+          onBandMemberURLChange={setBandMemberURL}
           onAddBandMember={handleAddBandMember}
           onEditBandMember={handleEditBandMember}
           onRemoveBandMember={handleRemoveBandMember}

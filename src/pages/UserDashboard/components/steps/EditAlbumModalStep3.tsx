@@ -7,6 +7,7 @@ interface EditAlbumModalStep3Props {
   formData: AlbumFormData;
   bandMemberName: string;
   bandMemberRole: string;
+  bandMemberURL: string;
   editingBandMemberIndex: number | null;
   sessionMusicianName: string;
   sessionMusicianRole: string;
@@ -18,6 +19,7 @@ interface EditAlbumModalStep3Props {
   onFormDataChange: (field: keyof AlbumFormData, value: string | boolean | File | null) => void;
   onBandMemberNameChange: (value: string) => void;
   onBandMemberRoleChange: (value: string) => void;
+  onBandMemberURLChange: (value: string) => void;
   onAddBandMember: () => void;
   onEditBandMember: (index: number) => void;
   onRemoveBandMember: (index: number) => void;
@@ -43,6 +45,7 @@ export function EditAlbumModalStep3({
   formData,
   bandMemberName,
   bandMemberRole,
+  bandMemberURL,
   editingBandMemberIndex,
   sessionMusicianName,
   sessionMusicianRole,
@@ -54,6 +57,7 @@ export function EditAlbumModalStep3({
   onFormDataChange,
   onBandMemberNameChange,
   onBandMemberRoleChange,
+  onBandMemberURLChange,
   onAddBandMember,
   onEditBandMember,
   onRemoveBandMember,
@@ -135,6 +139,11 @@ export function EditAlbumModalStep3({
                 <div className="edit-album-modal__list-item-content">
                   <span className="edit-album-modal__list-item-name">{member.name}</span>
                   <span className="edit-album-modal__list-item-role">{member.role}</span>
+                  {member.url && (
+                    <span className="edit-album-modal__list-item-url" title={member.url}>
+                      🔗
+                    </span>
+                  )}
                 </div>
                 <div className="edit-album-modal__list-item-actions">
                   <button
@@ -205,27 +214,24 @@ export function EditAlbumModalStep3({
                 }}
               />
             </div>
-
-            <div className="edit-album-modal__add-button-group">
-              <button
-                type="button"
-                className="edit-album-modal__add-button"
-                onClick={onAddBandMember}
-                disabled={!bandMemberName.trim() || !bandMemberRole.trim()}
-              >
-                {editingBandMemberIndex !== null ? 'Save' : '+ Add member'}
-              </button>
-
-              {editingBandMemberIndex !== null && (
-                <button
-                  type="button"
-                  className="edit-album-modal__cancel-button"
-                  onClick={onCancelEditBandMember}
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
+            <input
+              name="band-member-url"
+              type="url"
+              autoComplete="url"
+              className="edit-album-modal__input"
+              placeholder="URL (optional)"
+              value={bandMemberURL}
+              onChange={(e) => onBandMemberURLChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
+                  e.preventDefault();
+                  onAddBandMember();
+                }
+                if (e.key === 'Escape' && editingBandMemberIndex !== null) {
+                  onCancelEditBandMember();
+                }
+              }}
+            />
           </>
         )}
       </div>
