@@ -246,9 +246,24 @@ export const transformFormDataToAlbumFormat = (
 
   const details: unknown[] = [];
 
+  // Genre должен быть первым элементом с id: 1
+  if (formData.mood && formData.mood.length > 0) {
+    // Форматируем жанры: "Grunge, Alternative rock." для английского
+    // или "Гранж, Альтернативный рок." для русского
+    const genreText = formData.mood.join(', ') + '.';
+    details.push({
+      id: 1,
+      title: lang === 'ru' ? 'Жанр' : 'Genre',
+      content: [genreText],
+    });
+  }
+
+  // Начинаем id с 2, так как Genre имеет id: 1
+  let nextId = details.length > 0 ? 2 : 1;
+
   if (formData.bandMembers.length > 0) {
     details.push({
-      id: details.length + 1,
+      id: nextId++,
       title: lang === 'ru' ? 'Исполнители' : 'Band members',
       content: formData.bandMembers.map((m) => `${m.name} — ${m.role}.`),
     });
@@ -256,7 +271,7 @@ export const transformFormDataToAlbumFormat = (
 
   if (formData.sessionMusicians.length > 0) {
     details.push({
-      id: details.length + 1,
+      id: nextId++,
       title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
       content: formData.sessionMusicians.map((m) => `${m.name} — ${m.role}.`),
     });
@@ -286,7 +301,7 @@ export const transformFormDataToAlbumFormat = (
 
   if (producingContent.length > 0) {
     details.push({
-      id: details.length + 1,
+      id: nextId++,
       title: lang === 'ru' ? 'Продюсирование' : 'Producing',
       content: producingContent,
     });
@@ -294,7 +309,7 @@ export const transformFormDataToAlbumFormat = (
 
   if (recordingMixingContent.length > 0) {
     details.push({
-      id: details.length + 1,
+      id: nextId++,
       title: lang === 'ru' ? 'Запись/сведение' : 'Recording/Mixing',
       content: recordingMixingContent,
     });
@@ -302,7 +317,7 @@ export const transformFormDataToAlbumFormat = (
 
   if (masteringContent.length > 0) {
     details.push({
-      id: details.length + 1,
+      id: nextId++,
       title: lang === 'ru' ? 'Мастеринг' : 'Mastering',
       content: masteringContent,
     });
