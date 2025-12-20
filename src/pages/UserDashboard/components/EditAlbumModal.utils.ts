@@ -248,13 +248,15 @@ export const transformFormDataToAlbumFormat = (
 
   // Genre должен быть первым элементом с id: 1
   if (formData.mood && formData.mood.length > 0) {
-    // Форматируем жанры: "Grunge, Alternative rock." для английского
-    // или "Гранж, Альтернативный рок." для русского
-    const genreText = formData.mood.join(', ') + '.';
+    // Сохраняем жанры как массив строк в нижнем регистре: ["grunge", "alternative rock"]
+    // или ["гранж", "альтернативный рок"] для русского
+    const genreArray = formData.mood
+      .map((genre) => genre.toLowerCase().trim())
+      .filter((g) => g.length > 0);
     details.push({
       id: 1,
       title: lang === 'ru' ? 'Жанр' : 'Genre',
-      content: [genreText],
+      content: genreArray,
     });
   }
 

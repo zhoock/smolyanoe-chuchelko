@@ -346,69 +346,60 @@ export function EditAlbumModal({
         )
       : null;
 
-    console.log('[EditAlbumModal] Genre detail found:', {
-      genreDetail,
-      hasContent: !!(genreDetail && (genreDetail as any).content),
-      content: genreDetail ? (genreDetail as any).content : null,
-    });
-
     if (genreDetail && (genreDetail as any).content) {
-      // Обрабатываем content - может быть массивом строк или объектов с text
-      for (const item of (genreDetail as any).content) {
-        let text = '';
-        if (typeof item === 'string') {
-          text = item;
-        } else if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          text = item.text.join('');
-        }
+      // Обрабатываем content - новый формат: массив строк в нижнем регистре ["grunge", "alternative rock"]
+      // Поддерживаем обратную совместимость со старым форматом (строка с запятыми)
+      const content = (genreDetail as any).content;
 
-        if (!text.trim()) continue;
+      if (Array.isArray(content)) {
+        content.forEach((item: unknown) => {
+          if (typeof item !== 'string' || !item.trim()) return;
 
-        // Разбиваем строку по запятым и убираем точки в конце
-        const parsedGenres = text
-          .split(',')
-          .map((g: string) => g.trim().replace(/\.$/, ''))
-          .filter((g: string) => g.length > 0);
+          const genreLower = item.toLowerCase().trim();
 
-        console.log('[EditAlbumModal] Parsing genres from text:', {
-          originalText: text,
-          parsedGenres,
-        });
+          // Поддерживаем старый формат: "Grunge, alternative rock." (строка с запятыми и точкой)
+          if (genreLower.includes(',')) {
+            // Старый формат - разбиваем по запятым
+            const parsedGenres = genreLower
+              .split(',')
+              .map((g: string) => g.trim().replace(/\.$/, ''))
+              .filter((g: string) => g.length > 0);
 
-        // Сопоставляем с опциями из GENRE_OPTIONS (case-insensitive)
-        // Используем жанры как есть (русские или английские в зависимости от языка контента)
-        parsedGenres.forEach((parsedGenre: string) => {
-          const parsedTrimmed = parsedGenre.trim();
-          const parsedLower = parsedTrimmed.toLowerCase();
+            parsedGenres.forEach((parsedGenre: string) => {
+              // Ищем точное совпадение в genreOptions (case-insensitive)
+              const matchedOption = genreOptions.find((option) => {
+                const optionLower = option.toLowerCase();
+                return (
+                  optionLower === parsedGenre ||
+                  optionLower.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ')
+                );
+              });
 
-          // Ищем точное совпадение в genreOptions (case-insensitive)
-          const matchedOption = genreOptions.find((option) => {
-            const optionLower = option.toLowerCase();
-            // Точное совпадение
-            if (optionLower === parsedLower) return true;
-            // Совпадение с учетом пробелов
-            if (optionLower.replace(/\s+/g, ' ') === parsedLower.replace(/\s+/g, ' ')) return true;
-            return false;
-          });
+              const finalOption = matchedOption || parsedGenre;
+              if (finalOption && !mood.includes(finalOption)) {
+                mood.push(finalOption);
+              }
+            });
+          } else {
+            // Новый формат - каждый элемент массива это отдельный жанр в нижнем регистре
+            // Ищем точное совпадение в genreOptions (case-insensitive)
+            const matchedOption = genreOptions.find((option) => {
+              const optionLower = option.toLowerCase();
+              return (
+                optionLower === genreLower ||
+                optionLower.replace(/\s+/g, ' ') === genreLower.replace(/\s+/g, ' ')
+              );
+            });
 
-          // Если точного совпадения нет, используем то, что пришло (нормализуем первую букву)
-          const finalOption = matchedOption || parsedTrimmed;
-
-          console.log('[EditAlbumModal] Genre matching:', {
-            parsedGenre: parsedTrimmed,
-            parsedLower,
-            matchedOption,
-            finalOption,
-          });
-
-          if (finalOption && !mood.includes(finalOption)) {
-            mood.push(finalOption);
+            // Используем matchedOption (с правильным регистром) или genreLower как fallback
+            const finalOption = matchedOption || genreLower;
+            if (finalOption && !mood.includes(finalOption)) {
+              mood.push(finalOption);
+            }
           }
         });
       }
     }
-
-    console.log('[EditAlbumModal] Final parsed mood array:', mood);
 
     // Заполняем поля из данных альбома (только при первой инициализации)
     setFormData((prevForm) => {
