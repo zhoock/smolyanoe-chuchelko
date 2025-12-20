@@ -248,16 +248,43 @@ export const transformFormDataToAlbumFormat = (
 
   // Genre должен быть первым элементом с id: 1
   if (formData.mood && formData.mood.length > 0) {
-    // Сохраняем жанры как массив строк в нижнем регистре: ["grunge", "alternative rock"]
-    // или ["гранж", "альтернативный рок"] для русского
-    const genreArray = formData.mood
-      .map((genre) => genre.toLowerCase().trim())
-      .filter((g) => g.length > 0);
-    details.push({
-      id: 1,
-      title: lang === 'ru' ? 'Жанр' : 'Genre',
-      content: genreArray,
-    });
+    // Форматируем жанры: все в нижнем регистре, кроме первой буквы первого слова первого жанра
+    // Затем объединяем через запятую и добавляем точку в конце
+    // Например: "Grunge, alternative rock." или "Grunge."
+    const formatGenres = (genres: string[]): string => {
+      if (genres.length === 0) return '';
+
+      // Все жанры в нижнем регистре
+      const lowerGenres = genres
+        .map((genre) => genre.trim().toLowerCase())
+        .filter((g) => g.length > 0);
+
+      if (lowerGenres.length === 0) return '';
+
+      // Первую букву первого жанра делаем заглавной
+      const firstGenre = lowerGenres[0];
+      const capitalizedFirstGenre = firstGenre.charAt(0).toUpperCase() + firstGenre.slice(1);
+
+      // Остальные жанры остаются в нижнем регистре
+      const otherGenres = lowerGenres.slice(1);
+
+      // Объединяем через запятую и пробел, добавляем точку в конце
+      const allGenres =
+        otherGenres.length > 0
+          ? [capitalizedFirstGenre, ...otherGenres].join(', ')
+          : capitalizedFirstGenre;
+
+      return `${allGenres}.`;
+    };
+
+    const genreText = formatGenres(formData.mood);
+    if (genreText) {
+      details.push({
+        id: 1,
+        title: lang === 'ru' ? 'Жанр' : 'Genre',
+        content: [genreText],
+      });
+    }
   }
 
   // Начинаем id с 2, так как Genre имеет id: 1

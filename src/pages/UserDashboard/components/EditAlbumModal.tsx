@@ -381,21 +381,31 @@ export function EditAlbumModal({
               }
             });
           } else {
-            // Новый формат - каждый элемент массива это отдельный жанр в нижнем регистре
-            // Ищем точное совпадение в genreOptions (case-insensitive)
-            const matchedOption = genreOptions.find((option) => {
-              const optionLower = option.toLowerCase();
-              return (
-                optionLower === genreLower ||
-                optionLower.replace(/\s+/g, ' ') === genreLower.replace(/\s+/g, ' ')
-              );
-            });
+            // Новый формат - один элемент массива это строка с жанрами через запятую и точкой в конце
+            // Например: "Grunge, alternative rock." или "Grunge."
+            // Разбиваем по запятым, убираем точку в конце
+            const genreWithoutDot = genreLower.replace(/\.$/, '').trim();
+            const parsedGenres = genreWithoutDot
+              .split(',')
+              .map((g: string) => g.trim())
+              .filter((g: string) => g.length > 0);
 
-            // Используем matchedOption (с правильным регистром) или genreLower как fallback
-            const finalOption = matchedOption || genreLower;
-            if (finalOption && !mood.includes(finalOption)) {
-              mood.push(finalOption);
-            }
+            parsedGenres.forEach((parsedGenre: string) => {
+              // Ищем точное совпадение в genreOptions (case-insensitive)
+              const matchedOption = genreOptions.find((option) => {
+                const optionLower = option.toLowerCase();
+                return (
+                  optionLower === parsedGenre ||
+                  optionLower.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ')
+                );
+              });
+
+              // Используем matchedOption (с правильным регистром) или parsedGenre как fallback
+              const finalOption = matchedOption || parsedGenre;
+              if (finalOption && !mood.includes(finalOption)) {
+                mood.push(finalOption);
+              }
+            });
           }
         });
       }
