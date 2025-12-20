@@ -135,6 +135,9 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
     if (!formData.releaseDate || !formData.releaseDate.trim()) {
       errors.push('Release date');
     }
+    if (!formData.upcEan || !formData.upcEan.trim()) {
+      errors.push('UPC / EAN');
+    }
     if (!formData.description || !formData.description.trim()) {
       errors.push('Description');
     }

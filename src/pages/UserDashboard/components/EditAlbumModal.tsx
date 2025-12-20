@@ -1389,7 +1389,8 @@ export function EditAlbumModal({
               type="text"
               autoComplete="off"
               className="edit-album-modal__input"
-              placeholder="Optional"
+              placeholder="UPC / EAN"
+              required
               value={formData.upcEan ?? ''}
               onChange={(e) => setFormData((s) => ({ ...s, upcEan: e.target.value }))}
             />
