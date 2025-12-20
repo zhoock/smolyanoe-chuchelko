@@ -14,6 +14,11 @@ export interface BandMember {
   url?: string;
 }
 
+export interface RecordingEntry {
+  text: string; // Полный текст записи (например, "SEP. 28, 2021: Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.")
+  url?: string;
+}
+
 export interface ProducingCredits {
   [creditType: string]: BandMember[];
 }
@@ -44,6 +49,14 @@ export interface AlbumFormData {
   bandMembers: BandMember[];
   sessionMusicians: BandMember[];
   producingCredits: ProducingCredits;
+  recordedAt: RecordingEntry[];
+  recordedAtText?: string; // Временное поле для ввода текста
+  recordedAtURL?: string; // Временное поле для ввода URL
+  editingRecordedAtIndex?: number | null; // Индекс редактируемой записи
+  mixedAt: RecordingEntry[];
+  mixedAtText?: string; // Временное поле для ввода текста
+  mixedAtURL?: string; // Временное поле для ввода URL
+  editingMixedAtIndex?: number | null; // Индекс редактируемой записи
   purchaseLinks: StreamingLink[];
   streamingLinks: StreamingLink[];
 }

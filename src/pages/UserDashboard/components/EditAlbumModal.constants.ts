@@ -26,7 +26,7 @@ export const MAX_TAGS = 10;
 export const MIN_TAG_LENGTH = 2;
 export const MAX_TAG_LENGTH = 30;
 export const MAX_BAND_MEMBERS = 20;
-export const DEFAULT_PRODUCING_CREDIT_TYPES = ['Producer', 'Recording/Mixing', 'Mastering'];
+export const DEFAULT_PRODUCING_CREDIT_TYPES = ['Producer', 'Mastering'];
 
 export const PURCHASE_SERVICES = [
   { id: 'apple', name: 'Apple', icon: 'icon-apple' },

@@ -120,6 +120,12 @@ export const makeEmptyForm = (): AlbumFormData => ({
     acc[type] = [];
     return acc;
   }, {} as ProducingCredits),
+  recordedAt: [],
+  recordedAtText: '',
+  recordedAtURL: '',
+  mixedAt: [],
+  mixedAtText: '',
+  mixedAtURL: '',
   purchaseLinks: [],
   streamingLinks: [],
 });
@@ -324,7 +330,9 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Исполнители' : 'Band members',
       content: formData.bandMembers.map((m) => {
-        const text = `${m.name} — ${m.role}.`;
+        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
+        const roleClean = m.role.trim().replace(/\.+$/, '');
+        const text = `${m.name} — ${roleClean}.`;
         // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
         const urlTrimmed = m.url?.trim();
         if (urlTrimmed && urlTrimmed.length > 0) {
@@ -333,7 +341,7 @@ export const transformFormDataToAlbumFormat = (
             url: urlTrimmed,
           });
           return {
-            text: ['', m.name, ` — ${m.role}.`],
+            text: ['', m.name, ` — ${roleClean}.`],
             link: urlTrimmed,
           };
         }
@@ -352,27 +360,50 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: nextId++,
       title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
-      content: formData.sessionMusicians.map((m) => `${m.name} — ${m.role}.`),
+      content: formData.sessionMusicians.map((m) => {
+        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
+        const roleClean = m.role.trim().replace(/\.+$/, '');
+        const text = `${m.name} — ${roleClean}.`;
+        // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
+        const urlTrimmed = m.url?.trim();
+        if (urlTrimmed && urlTrimmed.length > 0) {
+          return {
+            text: ['', m.name, ` — ${roleClean}.`],
+            link: urlTrimmed,
+          };
+        }
+        // Иначе сохраняем как строку (без link)
+        return text;
+      }),
     });
   }
 
-  // Обрабатываем Producing, Recording/Mixing и Mastering отдельно
+  // Обрабатываем Producing и Mastering
   const producingContent: unknown[] = [];
-  const recordingMixingContent: unknown[] = [];
   const masteringContent: unknown[] = [];
 
   Object.entries(formData.producingCredits).forEach(([creditType, members]) => {
     if (members.length > 0) {
       members.forEach((member) => {
         const role = member.role || creditType;
-        const creditText = `${member.name} — ${role}.`;
+        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
+        const roleClean = role.trim().replace(/\.+$/, '');
+        const creditText = `${member.name} — ${roleClean}.`;
 
-        if (creditType === 'Recording/Mixing') {
-          recordingMixingContent.push(creditText);
-        } else if (creditType === 'Mastering') {
-          masteringContent.push(creditText);
+        // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
+        const urlTrimmed = member.url?.trim();
+        const itemToPush =
+          urlTrimmed && urlTrimmed.length > 0
+            ? {
+                text: ['', member.name, ` — ${roleClean}.`],
+                link: urlTrimmed,
+              }
+            : creditText;
+
+        if (creditType === 'Mastering') {
+          masteringContent.push(itemToPush);
         } else {
-          producingContent.push(creditText);
+          producingContent.push(itemToPush);
         }
       });
     }
@@ -386,19 +417,49 @@ export const transformFormDataToAlbumFormat = (
     });
   }
 
-  if (recordingMixingContent.length > 0) {
-    details.push({
-      id: nextId++,
-      title: lang === 'ru' ? 'Запись/сведение' : 'Recording/Mixing',
-      content: recordingMixingContent,
-    });
-  }
-
   if (masteringContent.length > 0) {
     details.push({
       id: nextId++,
       title: lang === 'ru' ? 'Мастеринг' : 'Mastering',
       content: masteringContent,
+    });
+  }
+
+  // Добавляем Recorded At
+  if (formData.recordedAt.length > 0) {
+    details.push({
+      id: nextId++,
+      title: lang === 'ru' ? 'Запись' : 'Recorded At',
+      content: formData.recordedAt.map((entry) => {
+        if (entry.url && entry.url.trim()) {
+          // Если есть URL, сохраняем в формате объекта с text и link
+          return {
+            text: [entry.text],
+            link: entry.url.trim(),
+          };
+        }
+        // Иначе сохраняем как строку
+        return entry.text;
+      }),
+    });
+  }
+
+  // Добавляем Mixed At
+  if (formData.mixedAt.length > 0) {
+    details.push({
+      id: nextId++,
+      title: lang === 'ru' ? 'Сведение' : 'Mixed At',
+      content: formData.mixedAt.map((entry) => {
+        if (entry.url && entry.url.trim()) {
+          // Если есть URL, сохраняем в формате объекта с text и link
+          return {
+            text: [entry.text],
+            link: entry.url.trim(),
+          };
+        }
+        // Иначе сохраняем как строку
+        return entry.text;
+      }),
     });
   }
 

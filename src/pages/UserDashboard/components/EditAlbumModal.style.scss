@@ -713,6 +713,12 @@ dialog {
       font-size: var(--ms-01);
     }
 
+    &__list-item-url {
+      color: var(--warm-concrete);
+      font-size: var(--ms-01);
+      word-break: break-all;
+    }
+
     &__list-item-actions {
       display: flex;
       align-items: center;

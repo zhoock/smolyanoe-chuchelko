@@ -2,6 +2,8 @@
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
 import { MAX_BAND_MEMBERS, DEFAULT_PRODUCING_CREDIT_TYPES } from '../EditAlbumModal.constants';
+import { EditableCardField } from '../shared/EditableCardField';
+import '../shared/EditableCardField.style.scss';
 
 interface EditAlbumModalStep3Props {
   formData: AlbumFormData;
@@ -11,12 +13,14 @@ interface EditAlbumModalStep3Props {
   editingBandMemberIndex: number | null;
   sessionMusicianName: string;
   sessionMusicianRole: string;
+  sessionMusicianURL: string;
   editingSessionMusicianIndex: number | null;
   producingNames: Record<string, string>;
   producingRoles: Record<string, string>;
+  producingURLs: Record<string, string>;
   editingProducingCredit: { creditType: string; nameIndex: number } | null;
   newCreditType: string;
-  onFormDataChange: (field: keyof AlbumFormData, value: string | boolean | File | null) => void;
+  onFormDataChange: (field: keyof AlbumFormData, value: any) => void;
   onBandMemberNameChange: (value: string) => void;
   onBandMemberRoleChange: (value: string) => void;
   onBandMemberURLChange: (value: string) => void;
@@ -26,12 +30,14 @@ interface EditAlbumModalStep3Props {
   onCancelEditBandMember: () => void;
   onSessionMusicianNameChange: (value: string) => void;
   onSessionMusicianRoleChange: (value: string) => void;
+  onSessionMusicianURLChange: (value: string) => void;
   onAddSessionMusician: () => void;
   onEditSessionMusician: (index: number) => void;
   onRemoveSessionMusician: (index: number) => void;
   onCancelEditSessionMusician: () => void;
   onProducingNameChange: (creditType: string, value: string) => void;
   onProducingRoleChange: (creditType: string, value: string) => void;
+  onProducingURLChange: (creditType: string, value: string) => void;
   onAddProducingCredit: (creditType: string) => void;
   onEditProducingCredit: (creditType: string, nameIndex: number) => void;
   onRemoveProducingCredit: (creditType: string, nameIndex: number) => void;
@@ -49,9 +55,11 @@ export function EditAlbumModalStep3({
   editingBandMemberIndex,
   sessionMusicianName,
   sessionMusicianRole,
+  sessionMusicianURL,
   editingSessionMusicianIndex,
   producingNames,
   producingRoles,
+  producingURLs,
   editingProducingCredit,
   newCreditType,
   onFormDataChange,
@@ -64,12 +72,14 @@ export function EditAlbumModalStep3({
   onCancelEditBandMember,
   onSessionMusicianNameChange,
   onSessionMusicianRoleChange,
+  onSessionMusicianURLChange,
   onAddSessionMusician,
   onEditSessionMusician,
   onRemoveSessionMusician,
   onCancelEditSessionMusician,
   onProducingNameChange,
   onProducingRoleChange,
+  onProducingURLChange,
   onAddProducingCredit,
   onEditProducingCredit,
   onRemoveProducingCredit,
@@ -130,40 +140,243 @@ export function EditAlbumModalStep3({
       </div>
 
       <div className="edit-album-modal__field">
+        <label className="edit-album-modal__label">Recorded At</label>
+
+        {formData.recordedAt.length > 0 && (
+          <div className="edit-album-modal__list">
+            {formData.recordedAt.map((entry, index) => {
+              const isEditing = formData.editingRecordedAtIndex === index;
+              return (
+                <EditableCardField
+                  key={index}
+                  data={{
+                    title: entry.text,
+                    url: entry.url,
+                  }}
+                  isEditing={isEditing}
+                  editTitle={formData.recordedAtText || ''}
+                  editDescription=""
+                  editUrl={formData.recordedAtURL || ''}
+                  onTitleChange={(value) => onFormDataChange('recordedAtText', value)}
+                  onDescriptionChange={() => {}}
+                  onUrlChange={(value) => onFormDataChange('recordedAtURL', value)}
+                  onEdit={() => {
+                    onFormDataChange('editingRecordedAtIndex', index);
+                    onFormDataChange('recordedAtText', entry.text);
+                    onFormDataChange('recordedAtURL', entry.url || '');
+                  }}
+                  onSave={() => {
+                    const updated = [...formData.recordedAt];
+                    updated[index] = {
+                      text: formData.recordedAtText!.trim(),
+                      url: formData.recordedAtURL?.trim() || undefined,
+                    };
+                    onFormDataChange('recordedAt', updated);
+                    onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtURL', '');
+                    onFormDataChange('editingRecordedAtIndex', null);
+                  }}
+                  onCancel={() => {
+                    onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtURL', '');
+                    onFormDataChange('editingRecordedAtIndex', null);
+                  }}
+                  onRemove={() => {
+                    const updated = [...formData.recordedAt];
+                    updated.splice(index, 1);
+                    onFormDataChange('recordedAt', updated);
+                  }}
+                  titlePlaceholder="Recording info (e.g., SEP. 28, 2021: Studio Name, Location.)"
+                  descriptionPlaceholder=""
+                  urlPlaceholder="URL (optional)"
+                  showCancel={true}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        <div className="edit-album-modal__two-column-inputs">
+          <input
+            name="recorded-at-text"
+            type="text"
+            className="edit-album-modal__input"
+            placeholder="Recording info (e.g., SEP. 28, 2021: Studio Name, Location.)"
+            value={formData.recordedAtText || ''}
+            onChange={(e) => onFormDataChange('recordedAtText', e.target.value)}
+          />
+          <input
+            name="recorded-at-url"
+            type="url"
+            autoComplete="url"
+            className="edit-album-modal__input"
+            placeholder="URL (optional)"
+            value={formData.recordedAtURL || ''}
+            onChange={(e) => onFormDataChange('recordedAtURL', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && formData.recordedAtText?.trim()) {
+                e.preventDefault();
+                const text = formData.recordedAtText.trim();
+                const url = formData.recordedAtURL?.trim() || undefined;
+                const newEntry = { text, url };
+                onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
+                onFormDataChange('recordedAtText', '');
+                onFormDataChange('recordedAtURL', '');
+              }
+            }}
+          />
+        </div>
+        {formData.recordedAtText?.trim() && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            onClick={() => {
+              const text = formData.recordedAtText!.trim();
+              const url = formData.recordedAtURL?.trim() || undefined;
+              const newEntry = { text, url };
+              onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
+              onFormDataChange('recordedAtText', '');
+              onFormDataChange('recordedAtURL', '');
+            }}
+          >
+            + Add
+          </button>
+        )}
+      </div>
+
+      <div className="edit-album-modal__field">
+        <label className="edit-album-modal__label">Mixed At</label>
+
+        {formData.mixedAt.length > 0 && (
+          <div className="edit-album-modal__list">
+            {formData.mixedAt.map((entry, index) => {
+              const isEditing = formData.editingMixedAtIndex === index;
+              return (
+                <EditableCardField
+                  key={index}
+                  data={{
+                    title: entry.text,
+                    url: entry.url,
+                  }}
+                  isEditing={isEditing}
+                  editTitle={formData.mixedAtText || ''}
+                  editDescription=""
+                  editUrl={formData.mixedAtURL || ''}
+                  onTitleChange={(value) => onFormDataChange('mixedAtText', value)}
+                  onDescriptionChange={() => {}}
+                  onUrlChange={(value) => onFormDataChange('mixedAtURL', value)}
+                  onEdit={() => {
+                    onFormDataChange('editingMixedAtIndex', index);
+                    onFormDataChange('mixedAtText', entry.text);
+                    onFormDataChange('mixedAtURL', entry.url || '');
+                  }}
+                  onSave={() => {
+                    const updated = [...formData.mixedAt];
+                    updated[index] = {
+                      text: formData.mixedAtText!.trim(),
+                      url: formData.mixedAtURL?.trim() || undefined,
+                    };
+                    onFormDataChange('mixedAt', updated);
+                    onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtURL', '');
+                    onFormDataChange('editingMixedAtIndex', null);
+                  }}
+                  onCancel={() => {
+                    onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtURL', '');
+                    onFormDataChange('editingMixedAtIndex', null);
+                  }}
+                  onRemove={() => {
+                    const updated = [...formData.mixedAt];
+                    updated.splice(index, 1);
+                    onFormDataChange('mixedAt', updated);
+                  }}
+                  titlePlaceholder="Mixing info (e.g., JAN. 14, 2024—SEP. 22, 2024: Studio Name, Location.)"
+                  descriptionPlaceholder=""
+                  urlPlaceholder="URL (optional)"
+                  showCancel={true}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        <div className="edit-album-modal__two-column-inputs">
+          <input
+            name="mixed-at-text"
+            type="text"
+            className="edit-album-modal__input"
+            placeholder="Mixing info (e.g., JAN. 14, 2024—SEP. 22, 2024: Studio Name, Location.)"
+            value={formData.mixedAtText || ''}
+            onChange={(e) => onFormDataChange('mixedAtText', e.target.value)}
+          />
+          <input
+            name="mixed-at-url"
+            type="url"
+            autoComplete="url"
+            className="edit-album-modal__input"
+            placeholder="URL (optional)"
+            value={formData.mixedAtURL || ''}
+            onChange={(e) => onFormDataChange('mixedAtURL', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && formData.mixedAtText?.trim()) {
+                e.preventDefault();
+                const text = formData.mixedAtText.trim();
+                const url = formData.mixedAtURL?.trim() || undefined;
+                const newEntry = { text, url };
+                onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
+                onFormDataChange('mixedAtText', '');
+                onFormDataChange('mixedAtURL', '');
+              }
+            }}
+          />
+        </div>
+        {formData.mixedAtText?.trim() && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            onClick={() => {
+              const text = formData.mixedAtText!.trim();
+              const url = formData.mixedAtURL?.trim() || undefined;
+              const newEntry = { text, url };
+              onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
+              onFormDataChange('mixedAtText', '');
+              onFormDataChange('mixedAtURL', '');
+            }}
+          >
+            + Add
+          </button>
+        )}
+      </div>
+
+      <div className="edit-album-modal__field">
         <label className="edit-album-modal__label">Band Members</label>
 
         {formData.bandMembers.length > 0 && (
           <div className="edit-album-modal__list">
             {formData.bandMembers.map((member, index) => (
-              <div key={index} className="edit-album-modal__list-item">
-                <div className="edit-album-modal__list-item-content">
-                  <span className="edit-album-modal__list-item-name">{member.name}</span>
-                  <span className="edit-album-modal__list-item-role">{member.role}</span>
-                  {member.url && (
-                    <span className="edit-album-modal__list-item-url" title={member.url}>
-                      🔗
-                    </span>
-                  )}
-                </div>
-                <div className="edit-album-modal__list-item-actions">
-                  <button
-                    type="button"
-                    className="edit-album-modal__list-item-edit"
-                    onClick={() => onEditBandMember(index)}
-                    aria-label={`Edit ${member.name}`}
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    className="edit-album-modal__list-item-remove"
-                    onClick={() => onRemoveBandMember(index)}
-                    aria-label={`Remove ${member.name}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
+              <EditableCardField
+                key={index}
+                data={{
+                  title: member.name,
+                  description: member.role,
+                  url: member.url,
+                }}
+                isEditing={editingBandMemberIndex === index}
+                editTitle={bandMemberName}
+                editDescription={bandMemberRole}
+                editUrl={bandMemberURL}
+                onTitleChange={onBandMemberNameChange}
+                onDescriptionChange={onBandMemberRoleChange}
+                onUrlChange={onBandMemberURLChange}
+                onEdit={() => onEditBandMember(index)}
+                onSave={onAddBandMember}
+                onCancel={onCancelEditBandMember}
+                onRemove={() => onRemoveBandMember(index)}
+                titlePlaceholder="Name"
+                descriptionPlaceholder="Role"
+                urlPlaceholder="URL (optional)"
+              />
             ))}
           </div>
         )}
@@ -242,30 +455,28 @@ export function EditAlbumModalStep3({
         {formData.sessionMusicians.length > 0 && (
           <div className="edit-album-modal__list">
             {formData.sessionMusicians.map((musician, index) => (
-              <div key={index} className="edit-album-modal__list-item">
-                <div className="edit-album-modal__list-item-content">
-                  <span className="edit-album-modal__list-item-name">{musician.name}</span>
-                  <span className="edit-album-modal__list-item-role">{musician.role}</span>
-                </div>
-                <div className="edit-album-modal__list-item-actions">
-                  <button
-                    type="button"
-                    className="edit-album-modal__list-item-edit"
-                    onClick={() => onEditSessionMusician(index)}
-                    aria-label={`Edit ${musician.name}`}
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    className="edit-album-modal__list-item-remove"
-                    onClick={() => onRemoveSessionMusician(index)}
-                    aria-label={`Remove ${musician.name}`}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
+              <EditableCardField
+                key={index}
+                data={{
+                  title: musician.name,
+                  description: musician.role,
+                  url: musician.url,
+                }}
+                isEditing={editingSessionMusicianIndex === index}
+                editTitle={sessionMusicianName}
+                editDescription={sessionMusicianRole}
+                editUrl={sessionMusicianURL}
+                onTitleChange={onSessionMusicianNameChange}
+                onDescriptionChange={onSessionMusicianRoleChange}
+                onUrlChange={onSessionMusicianURLChange}
+                onEdit={() => onEditSessionMusician(index)}
+                onSave={onAddSessionMusician}
+                onCancel={onCancelEditSessionMusician}
+                onRemove={() => onRemoveSessionMusician(index)}
+                titlePlaceholder="Name"
+                descriptionPlaceholder="Role"
+                urlPlaceholder="URL (optional)"
+              />
             ))}
           </div>
         )}
@@ -324,27 +535,24 @@ export function EditAlbumModalStep3({
                 }}
               />
             </div>
-
-            <div className="edit-album-modal__add-button-group">
-              <button
-                type="button"
-                className="edit-album-modal__add-button"
-                onClick={onAddSessionMusician}
-                disabled={!sessionMusicianName.trim() || !sessionMusicianRole.trim()}
-              >
-                {editingSessionMusicianIndex !== null ? 'Save' : '+ Add musician'}
-              </button>
-
-              {editingSessionMusicianIndex !== null && (
-                <button
-                  type="button"
-                  className="edit-album-modal__cancel-button"
-                  onClick={onCancelEditSessionMusician}
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
+            <input
+              name="session-musician-url"
+              type="url"
+              autoComplete="url"
+              className="edit-album-modal__input"
+              placeholder="URL (optional)"
+              value={sessionMusicianURL}
+              onChange={(e) => onSessionMusicianURLChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && sessionMusicianName.trim() && sessionMusicianRole.trim()) {
+                  e.preventDefault();
+                  onAddSessionMusician();
+                }
+                if (e.key === 'Escape' && editingSessionMusicianIndex !== null) {
+                  onCancelEditSessionMusician();
+                }
+              }}
+            />
           </>
         )}
       </div>
@@ -364,94 +572,39 @@ export function EditAlbumModalStep3({
 
               {members.length > 0 && (
                 <div className="edit-album-modal__list">
-                  {members.map((member, memberIndex) => (
-                    <div key={memberIndex} className="edit-album-modal__list-item">
-                      <div className="edit-album-modal__list-item-content">
-                        <span className="edit-album-modal__list-item-name">{member.name}</span>
-                        {member.role && (
-                          <span className="edit-album-modal__list-item-role">{member.role}</span>
-                        )}
-                      </div>
-                      <div className="edit-album-modal__list-item-actions">
-                        <button
-                          type="button"
-                          className="edit-album-modal__list-item-edit"
-                          onClick={() => onEditProducingCredit(creditType, memberIndex)}
-                          aria-label={`Edit ${member.name}`}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          type="button"
-                          className="edit-album-modal__list-item-remove"
-                          onClick={() => onRemoveProducingCredit(creditType, memberIndex)}
-                          aria-label={`Remove ${member.name}`}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {members.map((member, memberIndex) => {
+                    const isEditing =
+                      editingProducingCredit?.creditType === creditType &&
+                      editingProducingCredit?.nameIndex === memberIndex;
+                    return (
+                      <EditableCardField
+                        key={memberIndex}
+                        data={{
+                          title: member.name,
+                          description: member.role,
+                          url: member.url,
+                        }}
+                        isEditing={isEditing}
+                        editTitle={producingNames[creditType] || ''}
+                        editDescription={producingRoles[creditType] || ''}
+                        editUrl={producingURLs[creditType] || ''}
+                        onTitleChange={(value) => onProducingNameChange(creditType, value)}
+                        onDescriptionChange={(value) => onProducingRoleChange(creditType, value)}
+                        onUrlChange={(value) => onProducingURLChange(creditType, value)}
+                        onEdit={() => onEditProducingCredit(creditType, memberIndex)}
+                        onSave={() => onAddProducingCredit(creditType)}
+                        onCancel={onCancelEditProducingCredit}
+                        onRemove={() => onRemoveProducingCredit(creditType, memberIndex)}
+                        titlePlaceholder="Name"
+                        descriptionPlaceholder="Role"
+                        urlPlaceholder="URL (optional)"
+                      />
+                    );
+                  })}
                 </div>
               )}
 
-              {isEditing ? (
-                <div className="edit-album-modal__producing-input-group">
-                  <div className="edit-album-modal__two-column-inputs">
-                    <input
-                      name={`producing-${creditType}-name`}
-                      type="text"
-                      autoComplete="name"
-                      className="edit-album-modal__input"
-                      placeholder="Name"
-                      value={producingNames[creditType] || ''}
-                      onChange={(e) => onProducingNameChange(creditType, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                          e.preventDefault();
-                          onAddProducingCredit(creditType);
-                        }
-                        if (e.key === 'Escape') onCancelEditProducingCredit();
-                      }}
-                      autoFocus
-                    />
-                    <input
-                      name={`producing-${creditType}-role`}
-                      type="text"
-                      autoComplete="organization-title"
-                      className="edit-album-modal__input"
-                      placeholder="Role"
-                      value={producingRoles[creditType] || ''}
-                      onChange={(e) => onProducingRoleChange(creditType, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                          e.preventDefault();
-                          onAddProducingCredit(creditType);
-                        }
-                        if (e.key === 'Escape') onCancelEditProducingCredit();
-                      }}
-                    />
-                  </div>
-
-                  <div className="edit-album-modal__add-button-group">
-                    <button
-                      type="button"
-                      className="edit-album-modal__add-button"
-                      onClick={() => onAddProducingCredit(creditType)}
-                      disabled={!producingNames[creditType]?.trim()}
-                    >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      className="edit-album-modal__cancel-button"
-                      onClick={onCancelEditProducingCredit}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              {!isEditing && (
                 <div className="edit-album-modal__producing-input-group">
                   <div className="edit-album-modal__two-column-inputs">
                     <input
@@ -485,14 +638,21 @@ export function EditAlbumModalStep3({
                       }}
                     />
                   </div>
-                  <button
-                    type="button"
-                    className="edit-album-modal__add-button"
-                    onClick={() => onAddProducingCredit(creditType)}
-                    disabled={!producingNames[creditType]?.trim()}
-                  >
-                    + Add
-                  </button>
+                  <input
+                    name={`producing-${creditType}-url`}
+                    type="url"
+                    autoComplete="url"
+                    className="edit-album-modal__input"
+                    placeholder="URL (optional)"
+                    value={producingURLs[creditType] || ''}
+                    onChange={(e) => onProducingURLChange(creditType, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                        e.preventDefault();
+                        onAddProducingCredit(creditType);
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -521,94 +681,39 @@ export function EditAlbumModalStep3({
 
                 {members.length > 0 && (
                   <div className="edit-album-modal__list">
-                    {members.map((member, memberIndex) => (
-                      <div key={memberIndex} className="edit-album-modal__list-item">
-                        <div className="edit-album-modal__list-item-content">
-                          <span className="edit-album-modal__list-item-name">{member.name}</span>
-                          {member.role && (
-                            <span className="edit-album-modal__list-item-role">{member.role}</span>
-                          )}
-                        </div>
-                        <div className="edit-album-modal__list-item-actions">
-                          <button
-                            type="button"
-                            className="edit-album-modal__list-item-edit"
-                            onClick={() => onEditProducingCredit(creditType, memberIndex)}
-                            aria-label={`Edit ${member.name}`}
-                          >
-                            ✎
-                          </button>
-                          <button
-                            type="button"
-                            className="edit-album-modal__list-item-remove"
-                            onClick={() => onRemoveProducingCredit(creditType, memberIndex)}
-                            aria-label={`Remove ${member.name}`}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                    {members.map((member, memberIndex) => {
+                      const isEditingMember =
+                        editingProducingCredit?.creditType === creditType &&
+                        editingProducingCredit?.nameIndex === memberIndex;
+                      return (
+                        <EditableCardField
+                          key={memberIndex}
+                          data={{
+                            title: member.name,
+                            description: member.role,
+                            url: member.url,
+                          }}
+                          isEditing={isEditingMember}
+                          editTitle={producingNames[creditType] || ''}
+                          editDescription={producingRoles[creditType] || ''}
+                          editUrl={producingURLs[creditType] || ''}
+                          onTitleChange={(value) => onProducingNameChange(creditType, value)}
+                          onDescriptionChange={(value) => onProducingRoleChange(creditType, value)}
+                          onUrlChange={(value) => onProducingURLChange(creditType, value)}
+                          onEdit={() => onEditProducingCredit(creditType, memberIndex)}
+                          onSave={() => onAddProducingCredit(creditType)}
+                          onCancel={onCancelEditProducingCredit}
+                          onRemove={() => onRemoveProducingCredit(creditType, memberIndex)}
+                          titlePlaceholder="Name"
+                          descriptionPlaceholder="Role"
+                          urlPlaceholder="URL (optional)"
+                        />
+                      );
+                    })}
                   </div>
                 )}
 
-                {isEditing ? (
-                  <div className="edit-album-modal__producing-input-group">
-                    <div className="edit-album-modal__two-column-inputs">
-                      <input
-                        name={`producing-${creditType}-name`}
-                        type="text"
-                        autoComplete="name"
-                        className="edit-album-modal__input"
-                        placeholder="Name"
-                        value={producingNames[creditType] || ''}
-                        onChange={(e) => onProducingNameChange(creditType, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                            e.preventDefault();
-                            onAddProducingCredit(creditType);
-                          }
-                          if (e.key === 'Escape') onCancelEditProducingCredit();
-                        }}
-                        autoFocus
-                      />
-                      <input
-                        name={`producing-${creditType}-role`}
-                        type="text"
-                        autoComplete="organization-title"
-                        className="edit-album-modal__input"
-                        placeholder="Role"
-                        value={producingRoles[creditType] || ''}
-                        onChange={(e) => onProducingRoleChange(creditType, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
-                            e.preventDefault();
-                            onAddProducingCredit(creditType);
-                          }
-                          if (e.key === 'Escape') onCancelEditProducingCredit();
-                        }}
-                      />
-                    </div>
-
-                    <div className="edit-album-modal__add-button-group">
-                      <button
-                        type="button"
-                        className="edit-album-modal__add-button"
-                        onClick={() => onAddProducingCredit(creditType)}
-                        disabled={!producingNames[creditType]?.trim()}
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        className="edit-album-modal__cancel-button"
-                        onClick={onCancelEditProducingCredit}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+                {!isEditing && (
                   <div className="edit-album-modal__producing-input-group">
                     <div className="edit-album-modal__two-column-inputs">
                       <input
@@ -642,6 +747,21 @@ export function EditAlbumModalStep3({
                         }}
                       />
                     </div>
+                    <input
+                      name={`producing-${creditType}-url`}
+                      type="url"
+                      autoComplete="url"
+                      className="edit-album-modal__input"
+                      placeholder="URL (optional)"
+                      value={producingURLs[creditType] || ''}
+                      onChange={(e) => onProducingURLChange(creditType, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && producingNames[creditType]?.trim()) {
+                          e.preventDefault();
+                          onAddProducingCredit(creditType);
+                        }
+                      }}
+                    />
                     <button
                       type="button"
                       className="edit-album-modal__add-button"

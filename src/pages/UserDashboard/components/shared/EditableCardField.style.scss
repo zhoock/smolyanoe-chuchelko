@@ -1,0 +1,96 @@
+// src/pages/UserDashboard/components/shared/EditableCardField.style.scss
+@use '../../../../scss/abstracts/mixins' as *;
+
+.edit-album-modal__list-item {
+  &--editing {
+    .edit-album-modal__list-item-content {
+      gap: var(--ms-01);
+    }
+  }
+}
+
+.edit-album-modal__list-item-input {
+  width: 100%;
+  padding: var(--ms-01);
+  color: var(--white) !important;
+  font-size: var(--ms-0) !important;
+  background: var(--deep-black) !important;
+  border: 1px solid var(--iron-slate) !important;
+  border-radius: var(--ms-01) !important;
+  transition: all 0.2s;
+  box-sizing: border-box !important;
+
+  &::placeholder {
+    color: var(--warm-concrete);
+  }
+
+  &:focus {
+    outline: none !important;
+    border-color: var(--dark-greenish-yellow) !important;
+  }
+
+  &--title {
+    font-weight: 500;
+    font-size: var(--ms-0);
+  }
+
+  &--description {
+    color: var(--warm-concrete) !important;
+    font-size: var(--ms-01);
+  }
+
+  &--url {
+    color: var(--warm-concrete) !important;
+    font-size: var(--ms-01);
+  }
+}
+
+.edit-album-modal__list-item-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--ms-0) * 1.2);
+  height: calc(var(--ms-0) * 1.2);
+  padding: 0;
+  color: var(--dark-greenish-yellow);
+  font-size: var(--ms-01);
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--white);
+    background: var(--dark-greenish-yellow);
+  }
+}
+
+.edit-album-modal__list-item-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--ms-0) * 1.2);
+  height: calc(var(--ms-0) * 1.2);
+  padding: 0;
+  color: var(--warm-concrete);
+  font-size: var(--ms-0);
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--white);
+    background: var(--iron-slate);
+  }
+}
