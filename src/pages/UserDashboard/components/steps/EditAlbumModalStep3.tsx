@@ -87,8 +87,7 @@ export function EditAlbumModalStep3({
               type="text"
               autoComplete="name"
               className="edit-album-modal__input"
-              placeholder="Photographer"
-              required
+              placeholder="Photographer (optional)"
               value={formData.albumCoverPhotographer}
               onChange={(e) => onFormDataChange('albumCoverPhotographer', e.target.value)}
             />

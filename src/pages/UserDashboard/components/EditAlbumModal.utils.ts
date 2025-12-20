@@ -176,9 +176,7 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
   if (step === 3) {
     // Шаг 3: Credits
     const errors: string[] = [];
-    if (!formData.albumCoverPhotographer || !formData.albumCoverPhotographer.trim()) {
-      errors.push('Album Cover Photographer');
-    }
+    // albumCoverPhotographer и albumCoverDesigner теперь необязательные поля
     if (!formData.albumCoverDesigner || !formData.albumCoverDesigner.trim()) {
       errors.push('Album Cover Designer');
     }
@@ -217,7 +215,7 @@ export const transformFormDataToAlbumFormat = (
     UPC: formData.upcEan,
   };
 
-  // Сохраняем photographer и designer (обязательные поля)
+  // Сохраняем photographer (необязательное поле) и designer (обязательное поле)
   if (formData.albumCoverPhotographer) release.photographer = formData.albumCoverPhotographer;
   if (formData.albumCoverDesigner) release.designer = formData.albumCoverDesigner;
 
