@@ -111,7 +111,9 @@ export const makeEmptyForm = (): AlbumFormData => ({
   mood: [],
   tags: [],
   albumCoverPhotographer: '',
+  albumCoverPhotographerURL: '',
   albumCoverDesigner: '',
+  albumCoverDesignerURL: '',
   bandMembers: [],
   sessionMusicians: [],
   producingCredits: DEFAULT_PRODUCING_CREDIT_TYPES.reduce((acc, type) => {
@@ -209,13 +211,42 @@ export const transformFormDataToAlbumFormat = (
   // Конвертируем дату из формата DD/MM/YYYY в ISO формат YYYY-MM-DD для сохранения в БД
   const releaseDateISO = formatDateToISO(formData.releaseDate);
 
+  // Базовый объект release с обязательными полями
   const release: Record<string, string> = {
     date: releaseDateISO,
     UPC: formData.upcEan,
   };
 
+  // Сохраняем photographer и designer (обязательные поля)
   if (formData.albumCoverPhotographer) release.photographer = formData.albumCoverPhotographer;
   if (formData.albumCoverDesigner) release.designer = formData.albumCoverDesigner;
+
+  // Сохраняем URL (необязательные поля)
+  // Важно: явно устанавливаем пустую строку для пустых значений, чтобы удалить их при merge
+  const photographerURLTrimmed = formData.albumCoverPhotographerURL?.trim();
+  if (photographerURLTrimmed) {
+    release.photographerURL = photographerURLTrimmed;
+  } else {
+    // Устанавливаем пустую строку, чтобы удалить поле при merge (пустая строка будет отфильтрована)
+    release.photographerURL = '';
+  }
+
+  const designerURLTrimmed = formData.albumCoverDesignerURL?.trim();
+  if (designerURLTrimmed) {
+    release.designerURL = designerURLTrimmed;
+  } else {
+    // Устанавливаем пустую строку, чтобы удалить поле при merge (пустая строка будет отфильтрована)
+    release.designerURL = '';
+  }
+
+  // Удаляем пустые URL поля из объекта перед сохранением
+  Object.keys(release).forEach((key) => {
+    if (key === 'photographerURL' || key === 'designerURL') {
+      if (!release[key] || release[key].trim() === '') {
+        delete release[key];
+      }
+    }
+  });
 
   const buttons: Record<string, string> = {};
 

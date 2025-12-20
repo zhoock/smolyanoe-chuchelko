@@ -472,7 +472,10 @@ export function EditAlbumModal({
         description: album.description || prevForm.description,
         mood: mood.length > 0 ? mood : prevForm.mood || [],
         albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
+        albumCoverPhotographerURL:
+          (release as any).photographerURL || prevForm.albumCoverPhotographerURL,
         albumCoverDesigner: (release as any).designer || prevForm.albumCoverDesigner,
+        albumCoverDesignerURL: (release as any).designerURL || prevForm.albumCoverDesignerURL,
         bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
         sessionMusicians:
           sessionMusicians.length > 0 ? sessionMusicians : prevForm.sessionMusicians,
@@ -1151,10 +1154,8 @@ export function EditAlbumModal({
         formData.description !== undefined
           ? formData.description
           : originalAlbum?.description || '',
-      release:
-        exists && originalAlbum?.release
-          ? { ...(originalAlbum.release as any), ...release }
-          : release,
+      // Для release делаем полную замену, а не merge, чтобы пустые URL поля корректно удалялись
+      release: release,
       buttons:
         exists && originalAlbum?.buttons
           ? { ...(originalAlbum.buttons as any), ...buttons }

@@ -81,26 +81,48 @@ export function EditAlbumModalStep3({
       <div className="edit-album-modal__field">
         <label className="edit-album-modal__label">Album Cover</label>
         <div className="edit-album-modal__two-column-inputs">
-          <input
-            name="album-cover-photographer"
-            type="text"
-            autoComplete="name"
-            className="edit-album-modal__input"
-            placeholder="Photographer"
-            required
-            value={formData.albumCoverPhotographer}
-            onChange={(e) => onFormDataChange('albumCoverPhotographer', e.target.value)}
-          />
-          <input
-            name="album-cover-designer"
-            type="text"
-            autoComplete="name"
-            className="edit-album-modal__input"
-            placeholder="Designer"
-            required
-            value={formData.albumCoverDesigner}
-            onChange={(e) => onFormDataChange('albumCoverDesigner', e.target.value)}
-          />
+          <div>
+            <input
+              name="album-cover-photographer"
+              type="text"
+              autoComplete="name"
+              className="edit-album-modal__input"
+              placeholder="Photographer"
+              required
+              value={formData.albumCoverPhotographer}
+              onChange={(e) => onFormDataChange('albumCoverPhotographer', e.target.value)}
+            />
+            <input
+              name="album-cover-photographer-url"
+              type="url"
+              autoComplete="url"
+              className="edit-album-modal__input"
+              placeholder="Photographer URL (optional)"
+              value={formData.albumCoverPhotographerURL}
+              onChange={(e) => onFormDataChange('albumCoverPhotographerURL', e.target.value)}
+            />
+          </div>
+          <div>
+            <input
+              name="album-cover-designer"
+              type="text"
+              autoComplete="name"
+              className="edit-album-modal__input"
+              placeholder="Designer"
+              required
+              value={formData.albumCoverDesigner}
+              onChange={(e) => onFormDataChange('albumCoverDesigner', e.target.value)}
+            />
+            <input
+              name="album-cover-designer-url"
+              type="url"
+              autoComplete="url"
+              className="edit-album-modal__input"
+              placeholder="Designer URL (optional)"
+              value={formData.albumCoverDesignerURL}
+              onChange={(e) => onFormDataChange('albumCoverDesignerURL', e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

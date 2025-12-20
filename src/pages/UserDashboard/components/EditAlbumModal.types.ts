@@ -37,7 +37,9 @@ export interface AlbumFormData {
   mood: string[];
   tags: string[];
   albumCoverPhotographer: string;
+  albumCoverPhotographerURL: string;
   albumCoverDesigner: string;
+  albumCoverDesignerURL: string;
   bandMembers: BandMember[];
   sessionMusicians: BandMember[];
   producingCredits: ProducingCredits;
