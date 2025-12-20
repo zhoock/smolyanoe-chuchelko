@@ -123,8 +123,38 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   return `/audio/${normalizedPath}`;
 }
 
+/**
+ * Форматирует дату для отображения в формате DD/MM/YYYY
+ * Поддерживает ISO формат (YYYY-MM-DD) и другие форматы дат
+ */
 export function formatDate(dateRelease: string): string {
-  const date = new Date(dateRelease);
+  if (!dateRelease || !dateRelease.trim()) {
+    return '';
+  }
+
+  let date: Date;
+
+  // Если дата уже в формате YYYY-MM-DD (ISO), парсим явно
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateRelease.trim())) {
+    const parts = dateRelease.trim().split(/[-T]/);
+    if (parts.length >= 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // месяцы в JS начинаются с 0
+      const day = parseInt(parts[2], 10);
+      date = new Date(year, month, day);
+    } else {
+      date = new Date(dateRelease);
+    }
+  } else {
+    // Пытаемся распарсить через Date
+    date = new Date(dateRelease);
+  }
+
+  // Проверяем валидность даты
+  if (isNaN(date.getTime())) {
+    return dateRelease; // Возвращаем как есть, если не удалось распарсить
+  }
+
   const dd = date.getDate().toString().padStart(2, '0');
   const mm = (date.getMonth() + 1).toString().padStart(2, '0');
   const yyyy = date.getFullYear();

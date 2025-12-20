@@ -32,6 +32,9 @@ import {
   makeEmptyForm,
   validateStep,
   transformFormDataToAlbumFormat,
+  formatDateFromISO,
+  formatDateToISO,
+  formatDateInput,
 } from './EditAlbumModal.utils';
 import { EditAlbumModalStep1 } from './steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from './steps/EditAlbumModalStep2';
@@ -410,7 +413,9 @@ export function EditAlbumModal({
     // Заполняем поля из данных альбома (только при первой инициализации)
     setFormData((prevForm) => {
       const release = album.release && typeof album.release === 'object' ? album.release : {};
-      const releaseDate = (release as any).date || '';
+      // Конвертируем дату из ISO формата (YYYY-MM-DD) в формат для отображения (DD/MM/YYYY)
+      const releaseDateISO = (release as any).date || '';
+      const releaseDate = releaseDateISO ? formatDateFromISO(releaseDateISO) : '';
       const upc = (release as any).UPC || '';
 
       const purchaseLinks: StreamingLink[] = (() => {
@@ -1336,9 +1341,41 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__input"
               placeholder="DD/MM/YYYY"
+              maxLength={10}
               required
               value={formData.releaseDate ?? ''}
-              onChange={(e) => setFormData((s) => ({ ...s, releaseDate: e.target.value }))}
+              onChange={(e) => {
+                const formatted = formatDateInput(e.target.value);
+                setFormData((s) => ({ ...s, releaseDate: formatted }));
+              }}
+              onBlur={(e) => {
+                // При потере фокуса валидируем дату
+                const value = e.target.value.trim();
+                if (value && value.length === 10) {
+                  const parts = value.split('/');
+                  if (parts.length === 3) {
+                    const [day, month, year] = parts.map((p) => parseInt(p, 10));
+                    if (
+                      day >= 1 &&
+                      day <= 31 &&
+                      month >= 1 &&
+                      month <= 12 &&
+                      year >= 1900 &&
+                      year <= 2100
+                    ) {
+                      const date = new Date(year, month - 1, day);
+                      if (
+                        date.getDate() === day &&
+                        date.getMonth() === month - 1 &&
+                        date.getFullYear() === year
+                      ) {
+                        const formatted = formatDateInput(value);
+                        setFormData((s) => ({ ...s, releaseDate: formatted }));
+                      }
+                    }
+                  }
+                }
+              }}
             />
           </div>
 
@@ -1572,8 +1609,40 @@ export function EditAlbumModal({
                 autoComplete="off"
                 className="edit-album-modal__input"
                 placeholder="DD/MM/YYYY"
+                maxLength={10}
                 value={formData.preorderReleaseDate}
-                onChange={(e) => handleInputChange('preorderReleaseDate', e.target.value)}
+                onChange={(e) => {
+                  const formatted = formatDateInput(e.target.value);
+                  handleInputChange('preorderReleaseDate', formatted);
+                }}
+                onBlur={(e) => {
+                  // При потере фокуса валидируем дату
+                  const value = e.target.value.trim();
+                  if (value && value.length === 10) {
+                    const parts = value.split('/');
+                    if (parts.length === 3) {
+                      const [day, month, year] = parts.map((p) => parseInt(p, 10));
+                      if (
+                        day >= 1 &&
+                        day <= 31 &&
+                        month >= 1 &&
+                        month <= 12 &&
+                        year >= 1900 &&
+                        year <= 2100
+                      ) {
+                        const date = new Date(year, month - 1, day);
+                        if (
+                          date.getDate() === day &&
+                          date.getMonth() === month - 1 &&
+                          date.getFullYear() === year
+                        ) {
+                          const formatted = formatDateInput(value);
+                          handleInputChange('preorderReleaseDate', formatted);
+                        }
+                      }
+                    }
+                  }
+                }}
               />
             </div>
           )}

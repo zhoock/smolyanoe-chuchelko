@@ -3,6 +3,99 @@ import type { AlbumFormData, ProducingCredits } from './EditAlbumModal.types';
 import { DEFAULT_PRODUCING_CREDIT_TYPES } from './EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 
+/**
+ * Конвертирует дату из формата DD/MM/YYYY в ISO формат YYYY-MM-DD для сохранения в БД
+ */
+export function formatDateToISO(dateStr: string): string {
+  if (!dateStr || !dateStr.trim()) return '';
+
+  // Если дата уже в формате YYYY-MM-DD, возвращаем как есть
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+    return dateStr.trim();
+  }
+
+  // Парсим DD/MM/YYYY
+  const parts = dateStr.trim().split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts.map((p) => p.padStart(2, '0'));
+    // Проверяем валидность
+    if (day && month && year && day.length === 2 && month.length === 2 && year.length === 4) {
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  // Если формат не распознан, пытаемся распарсить через Date
+  const date = new Date(dateStr);
+  if (!isNaN(date.getTime())) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Если ничего не помогло, возвращаем как есть (будет ошибка валидации)
+  return dateStr;
+}
+
+/**
+ * Конвертирует дату из ISO формата YYYY-MM-DD в формат DD/MM/YYYY для отображения
+ */
+export function formatDateFromISO(dateStr: string): string {
+  if (!dateStr || !dateStr.trim()) return '';
+
+  // Если дата уже в формате DD/MM/YYYY, возвращаем как есть
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr.trim())) {
+    return dateStr.trim();
+  }
+
+  // Парсим YYYY-MM-DD или ISO формат
+  let date: Date;
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr.trim())) {
+    // ISO формат YYYY-MM-DD
+    const parts = dateStr.trim().split(/[-T]/);
+    if (parts.length >= 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // месяцы в JS начинаются с 0
+      const day = parseInt(parts[2], 10);
+      date = new Date(year, month, day);
+    } else {
+      date = new Date(dateStr);
+    }
+  } else {
+    date = new Date(dateStr);
+  }
+
+  if (isNaN(date.getTime())) {
+    return dateStr; // Возвращаем как есть, если не удалось распарсить
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Применяет маску ввода для поля даты DD/MM/YYYY
+ */
+export function formatDateInput(value: string): string {
+  // Удаляем все нецифровые символы
+  const digits = value.replace(/\D/g, '');
+
+  // Ограничиваем длину до 8 цифр (DDMMYYYY)
+  const limited = digits.slice(0, 8);
+
+  // Форматируем: добавляем слеши
+  if (limited.length <= 2) {
+    return limited;
+  } else if (limited.length <= 4) {
+    return `${limited.slice(0, 2)}/${limited.slice(2)}`;
+  } else {
+    return `${limited.slice(0, 2)}/${limited.slice(2, 4)}/${limited.slice(4)}`;
+  }
+}
+
 export const makeEmptyForm = (): AlbumFormData => ({
   artist: '',
   title: '',
@@ -110,8 +203,11 @@ export const transformFormDataToAlbumFormat = (
   buttons: Record<string, string>;
   details: unknown[];
 } => {
+  // Конвертируем дату из формата DD/MM/YYYY в ISO формат YYYY-MM-DD для сохранения в БД
+  const releaseDateISO = formatDateToISO(formData.releaseDate);
+
   const release: Record<string, string> = {
-    date: formData.releaseDate,
+    date: releaseDateISO,
     UPC: formData.upcEan,
   };
 

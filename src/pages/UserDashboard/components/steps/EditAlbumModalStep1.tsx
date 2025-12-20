@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep1.tsx
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
+import { formatDateInput } from '../EditAlbumModal.utils';
 
 interface EditAlbumModalStep1Props {
   formData: AlbumFormData;
@@ -81,9 +82,44 @@ export function EditAlbumModalStep1({
           autoComplete="off"
           className="edit-album-modal__input"
           placeholder="DD/MM/YYYY"
+          maxLength={10}
           required
           value={formData.releaseDate ?? ''}
-          onChange={(e) => onFormDataChange('releaseDate', e.target.value)}
+          onChange={(e) => {
+            const formatted = formatDateInput(e.target.value);
+            onFormDataChange('releaseDate', formatted);
+          }}
+          onBlur={(e) => {
+            // При потере фокуса валидируем дату и при необходимости корректируем формат
+            const value = e.target.value.trim();
+            if (value && value.length === 10) {
+              // Проверяем, что формат правильный DD/MM/YYYY
+              const parts = value.split('/');
+              if (parts.length === 3) {
+                const [day, month, year] = parts.map((p) => parseInt(p, 10));
+                // Проверяем валидность даты
+                if (
+                  day >= 1 &&
+                  day <= 31 &&
+                  month >= 1 &&
+                  month <= 12 &&
+                  year >= 1900 &&
+                  year <= 2100
+                ) {
+                  const date = new Date(year, month - 1, day);
+                  if (
+                    date.getDate() === day &&
+                    date.getMonth() === month - 1 &&
+                    date.getFullYear() === year
+                  ) {
+                    // Дата валидна, форматируем обратно для отображения
+                    const formatted = formatDateInput(value);
+                    onFormDataChange('releaseDate', formatted);
+                  }
+                }
+              }
+            }
+          }}
         />
       </div>
 
@@ -317,8 +353,40 @@ export function EditAlbumModalStep1({
             autoComplete="off"
             className="edit-album-modal__input"
             placeholder="DD/MM/YYYY"
+            maxLength={10}
             value={formData.preorderReleaseDate}
-            onChange={(e) => onFormDataChange('preorderReleaseDate', e.target.value)}
+            onChange={(e) => {
+              const formatted = formatDateInput(e.target.value);
+              onFormDataChange('preorderReleaseDate', formatted);
+            }}
+            onBlur={(e) => {
+              // При потере фокуса валидируем дату
+              const value = e.target.value.trim();
+              if (value && value.length === 10) {
+                const parts = value.split('/');
+                if (parts.length === 3) {
+                  const [day, month, year] = parts.map((p) => parseInt(p, 10));
+                  if (
+                    day >= 1 &&
+                    day <= 31 &&
+                    month >= 1 &&
+                    month <= 12 &&
+                    year >= 1900 &&
+                    year <= 2100
+                  ) {
+                    const date = new Date(year, month - 1, day);
+                    if (
+                      date.getDate() === day &&
+                      date.getMonth() === month - 1 &&
+                      date.getFullYear() === year
+                    ) {
+                      const formatted = formatDateInput(value);
+                      onFormDataChange('preorderReleaseDate', formatted);
+                    }
+                  }
+                }
+              }
+            }}
           />
         </div>
       )}
