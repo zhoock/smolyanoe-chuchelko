@@ -167,12 +167,12 @@
 # - Webpack dev server обрабатывает historyApiFallback и статические файлы
 # - Правило redirects применяется ДО проксирования, что ломает статические файлы
 #
-# В production правило SPA тоже не нужно, если используется pre-rendering или
-# если файлы уже собраны правильно. Если нужно SPA routing в production,
-# можно раскомментировать правило ниже, но тогда нужно убедиться, что статические
-# файлы (scripts, styles, images, audio, assets) исключены.
+# В production правило SPA необходимо для корректной работы client-side routing:
+# Netlify автоматически проверяет существование файла перед применением redirect,
+# поэтому статические файлы (scripts, styles, images, audio, assets) будут
+# отдаваться напрямую, а несуществующие пути будут перенаправляться на index.html
 
-# [[redirects]]
-#   from = "/*"
-#   to = "/index.html"
-#   status = 200
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
