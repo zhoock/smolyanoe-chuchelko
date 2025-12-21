@@ -56,7 +56,8 @@
       "title": "Кабинет пользователя",
       "tabs": {
         "albums": "Альбомы",
-        "posts": "Посты"
+        "posts": "Посты",
+        "paymentSettings": "Настройки оплаты"
       },
       "profile": "Профиль",
       "logout": "Выйти",
@@ -91,7 +92,88 @@
       "preview": "Предпросмотр",
       "previewLyrics": "Предпросмотр текста",
       "close": "Закрыть",
-      "instrumental": "Инструментал"
+      "instrumental": "Инструментал",
+      "editAlbumModal": {
+        "stepTitles": {
+          "step1": "Шаг 1 из 5: Основная информация",
+          "step2": "Шаг 2 из 5: Музыкальные детали",
+          "step3": "Шаг 3 из 5: Запись/Сведение/Мастеринг",
+          "step4": "Шаг 4 из 5: Кредиты",
+          "step5": "Шаг 5 из 5: Ссылки"
+        },
+        "fieldLabels": {
+          "artistGroupName": "Исполнитель / Название группы",
+          "albumTitle": "Название альбома",
+          "releaseDate": "Дата релиза",
+          "upcEan": "UPC / EAN",
+          "albumArt": "Обложка альбома",
+          "description": "Описание",
+          "visibleOnAlbumPage": "Видимо на странице альбома",
+          "allowDownloadSale": "Разрешить скачивание / продажу",
+          "regularPrice": "Обычная цена",
+          "preorderReleaseDate": "Дата релиза предзаказа"
+        },
+        "placeholders": {
+          "upcEan": "UPC / EAN",
+          "releaseDate": "ДД/ММ/ГГГГ",
+          "preorderDate": "ДД/ММ/ГГГГ",
+          "description": "Краткая история об альбоме, основные кредиты, настроение и т.д.",
+          "dragImageHere": "Перетащите изображение сюда",
+          "chooseFile": "Выберите файл"
+        },
+        "buttons": {
+          "replace": "Заменить",
+          "next": "Далее",
+          "previous": "Назад",
+          "saveChanges": "Сохранить изменения",
+          "publishAlbum": "Опубликовать альбом",
+          "saving": "Сохранение...",
+          "add": "Добавить"
+        },
+        "status": {
+          "uploading": "Загрузка...",
+          "uploaded": "Загружено (черновик)",
+          "publishedCover": "Опубликованная обложка",
+          "error": "Ошибка"
+        },
+        "helpText": {
+          "controlDownloadSale": "Контролируйте, могут ли фанаты купить/скачать этот альбом.",
+          "fansCanBuyNow": "Фанаты могут купить сейчас, скачать после даты релиза"
+        },
+        "radioOptions": {
+          "no": "Нет",
+          "yes": "Да",
+          "acceptPreorders": "Принимать предзаказы"
+        },
+        "step3": {
+          "recordedAt": "Запись",
+          "mixedAt": "Сведение",
+          "masteredBy": "Мастеринг",
+          "addButton": "Добавить"
+        },
+        "step4": {
+          "albumCover": "Обложка альбома",
+          "bandMembers": "Участники группы",
+          "sessionMusicians": "Сессионные музыканты",
+          "producer": "Продюсер",
+          "addButton": "Добавить",
+          "photographer": "Фотограф (необязательно)",
+          "photographerUrl": "URL фотографа (необязательно)",
+          "designer": "Дизайнер",
+          "designerUrl": "URL дизайнера (необязательно)",
+          "name": "Имя",
+          "role": "Роль",
+          "urlOptional": "URL (необязательно)"
+        },
+        "step5": {
+          "purchase": "Покупка",
+          "streaming": "Стриминг",
+          "selectService": "Выберите сервис",
+          "url": "URL",
+          "save": "Сохранить",
+          "cancel": "Отмена"
+        }
+      }
     }
   }
 ]

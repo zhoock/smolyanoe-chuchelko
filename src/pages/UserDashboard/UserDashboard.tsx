@@ -731,7 +731,7 @@ function UserDashboard() {
                   className={`user-dashboard__tab ${activeTab === 'payment-settings' ? 'user-dashboard__tab--active' : ''}`}
                   onClick={() => setActiveTab('payment-settings')}
                 >
-                  Payment Settings
+                  {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
                 </button>
               </div>
               <div className="user-dashboard__header-controls">

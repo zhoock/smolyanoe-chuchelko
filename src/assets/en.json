@@ -56,7 +56,8 @@
       "title": "User Dashboard",
       "tabs": {
         "albums": "Albums",
-        "posts": "Posts"
+        "posts": "Posts",
+        "paymentSettings": "Payment Settings"
       },
       "profile": "Profile",
       "logout": "Logout",
@@ -91,7 +92,88 @@
       "preview": "Preview",
       "previewLyrics": "Preview Lyrics",
       "close": "Close",
-      "instrumental": "Instrumental"
+      "instrumental": "Instrumental",
+      "editAlbumModal": {
+        "stepTitles": {
+          "step1": "Step 1 of 5: Basic Info",
+          "step2": "Step 2 of 5: Music Details",
+          "step3": "Step 3 of 5: Recorded/Mixed/Mastered",
+          "step4": "Step 4 of 5: Credits",
+          "step5": "Step 5 of 5: Links"
+        },
+        "fieldLabels": {
+          "artistGroupName": "Artist / Group name",
+          "albumTitle": "Album title",
+          "releaseDate": "Release date",
+          "upcEan": "UPC / EAN",
+          "albumArt": "Album art",
+          "description": "Description",
+          "visibleOnAlbumPage": "Visible on album page",
+          "allowDownloadSale": "Allow download / sale",
+          "regularPrice": "Regular price",
+          "preorderReleaseDate": "Pre-order release date"
+        },
+        "placeholders": {
+          "upcEan": "UPC / EAN",
+          "releaseDate": "DD/MM/YYYY",
+          "preorderDate": "DD/MM/YYYY",
+          "description": "Short story about the album, credits highlights, mood, etc.",
+          "dragImageHere": "Drag image here",
+          "chooseFile": "Choose file"
+        },
+        "buttons": {
+          "replace": "Replace",
+          "next": "Next",
+          "previous": "Previous",
+          "saveChanges": "Save changes",
+          "publishAlbum": "Publish album",
+          "saving": "Saving...",
+          "add": "Add"
+        },
+        "status": {
+          "uploading": "Uploading...",
+          "uploaded": "Uploaded (draft)",
+          "publishedCover": "Published cover",
+          "error": "Error"
+        },
+        "helpText": {
+          "controlDownloadSale": "Control whether fans can buy/download this album.",
+          "fansCanBuyNow": "Fans can buy now, download after release date"
+        },
+        "radioOptions": {
+          "no": "No",
+          "yes": "Yes",
+          "acceptPreorders": "Accept pre-orders"
+        },
+        "step3": {
+          "recordedAt": "Recorded At",
+          "mixedAt": "Mixed At",
+          "masteredBy": "Mastered By",
+          "addButton": "Add"
+        },
+        "step4": {
+          "albumCover": "Album Cover",
+          "bandMembers": "Band Members",
+          "sessionMusicians": "Session Musicians",
+          "producer": "Producer",
+          "addButton": "Add",
+          "photographer": "Photographer (optional)",
+          "photographerUrl": "Photographer URL (optional)",
+          "designer": "Designer",
+          "designerUrl": "Designer URL (optional)",
+          "name": "Name",
+          "role": "Role",
+          "urlOptional": "URL (optional)"
+        },
+        "step5": {
+          "purchase": "Purchase",
+          "streaming": "Streaming",
+          "selectService": "Select service",
+          "url": "URL",
+          "save": "Save",
+          "cancel": "Cancel"
+        }
+      }
     }
   }
 ]

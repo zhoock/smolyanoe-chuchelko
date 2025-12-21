@@ -164,6 +164,7 @@ export interface IInterface {
     tabs: {
       albums: string;
       posts: string;
+      paymentSettings: string;
     };
     profile: string;
     logout: string;
@@ -199,6 +200,87 @@ export interface IInterface {
     previewLyrics: string;
     close: string;
     instrumental: string;
+    editAlbumModal?: {
+      stepTitles: {
+        step1: string;
+        step2: string;
+        step3: string;
+        step4: string;
+        step5: string;
+      };
+      fieldLabels: {
+        artistGroupName: string;
+        albumTitle: string;
+        releaseDate: string;
+        upcEan: string;
+        albumArt: string;
+        description: string;
+        visibleOnAlbumPage: string;
+        allowDownloadSale: string;
+        regularPrice: string;
+        preorderReleaseDate: string;
+      };
+      placeholders: {
+        upcEan: string;
+        releaseDate: string;
+        preorderDate: string;
+        description: string;
+        dragImageHere: string;
+        chooseFile: string;
+      };
+      buttons: {
+        replace: string;
+        next: string;
+        previous: string;
+        saveChanges: string;
+        publishAlbum: string;
+        saving: string;
+        add: string;
+      };
+      status: {
+        uploading: string;
+        uploaded: string;
+        publishedCover: string;
+        error: string;
+      };
+      helpText: {
+        controlDownloadSale: string;
+        fansCanBuyNow: string;
+      };
+      radioOptions: {
+        no: string;
+        yes: string;
+        acceptPreorders: string;
+      };
+      step3?: {
+        recordedAt: string;
+        mixedAt: string;
+        masteredBy: string;
+        addButton: string;
+      };
+      step4?: {
+        albumCover: string;
+        bandMembers: string;
+        sessionMusicians: string;
+        producer: string;
+        addButton: string;
+        photographer: string;
+        photographerUrl: string;
+        designer: string;
+        designerUrl: string;
+        name: string;
+        role: string;
+        urlOptional: string;
+      };
+      step5?: {
+        purchase: string;
+        streaming: string;
+        selectService: string;
+        url: string;
+        save: string;
+        cancel: string;
+      };
+    };
   };
 }
 

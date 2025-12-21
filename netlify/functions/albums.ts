@@ -111,6 +111,54 @@ type AlbumsResponse = ApiResponse<AlbumData[]>;
  * Преобразует данные альбома из БД в формат API
  */
 function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
+  // Парсим details, если это строка (PostgreSQL может вернуть JSONB как строку)
+  let details: unknown[] = [];
+  if (album.details) {
+    if (typeof album.details === 'string') {
+      try {
+        details = JSON.parse(album.details);
+      } catch (error) {
+        console.error('❌ Error parsing album.details as string:', error);
+        details = [];
+      }
+    } else if (Array.isArray(album.details)) {
+      details = album.details;
+    } else if (typeof album.details === 'object') {
+      // Если это объект, пытаемся преобразовать в массив
+      details = [album.details];
+    }
+  }
+
+  // Парсим release, если это строка
+  let release: Record<string, unknown> = {};
+  if (album.release) {
+    if (typeof album.release === 'string') {
+      try {
+        release = JSON.parse(album.release);
+      } catch (error) {
+        console.error('❌ Error parsing album.release as string:', error);
+        release = {};
+      }
+    } else if (typeof album.release === 'object') {
+      release = album.release as Record<string, unknown>;
+    }
+  }
+
+  // Парсим buttons, если это строка
+  let buttons: Record<string, unknown> = {};
+  if (album.buttons) {
+    if (typeof album.buttons === 'string') {
+      try {
+        buttons = JSON.parse(album.buttons);
+      } catch (error) {
+        console.error('❌ Error parsing album.buttons as string:', error);
+        buttons = {};
+      }
+    } else if (typeof album.buttons === 'object') {
+      buttons = album.buttons as Record<string, unknown>;
+    }
+  }
+
   return {
     albumId: album.album_id,
     artist: album.artist,
@@ -118,9 +166,9 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
     fullName: album.full_name,
     description: album.description,
     cover: album.cover, // Changed: now it's a string, no cast needed
-    release: album.release as Record<string, unknown>,
-    buttons: album.buttons as Record<string, unknown>,
-    details: album.details as unknown[],
+    release,
+    buttons,
+    details,
     lang: album.lang,
     tracks: tracks.map((track) => ({
       id: track.track_id,

@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep5.tsx
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { IInterface } from '@models';
 import { PURCHASE_SERVICES, STREAMING_SERVICES } from '../EditAlbumModal.constants';
 
 interface EditAlbumModalStep5Props {
@@ -23,6 +24,7 @@ interface EditAlbumModalStep5Props {
   onEditStreamingLink: (index: number) => void;
   onRemoveStreamingLink: (index: number) => void;
   onCancelEditStreamingLink: () => void;
+  ui?: IInterface;
 }
 
 export function EditAlbumModalStep5({
@@ -45,6 +47,7 @@ export function EditAlbumModalStep5({
   onEditStreamingLink,
   onRemoveStreamingLink,
   onCancelEditStreamingLink,
+  ui,
 }: EditAlbumModalStep5Props) {
   return (
     <>
@@ -52,7 +55,9 @@ export function EditAlbumModalStep5({
 
       <div className="edit-album-modal__links-container">
         <div className="edit-album-modal__links-column">
-          <label className="edit-album-modal__links-label">Purchase</label>
+          <label className="edit-album-modal__links-label">
+            {ui?.dashboard?.editAlbumModal?.step5?.purchase ?? 'Purchase'}
+          </label>
 
           <div className="edit-album-modal__links-list">
             {formData.purchaseLinks.map((link, index) => {
@@ -70,7 +75,9 @@ export function EditAlbumModalStep5({
                         value={purchaseLinkService}
                         onChange={(e) => onPurchaseLinkServiceChange(e.target.value)}
                       >
-                        <option value="">Select service</option>
+                        <option value="">
+                          {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
+                        </option>
                         {PURCHASE_SERVICES.map((s) => (
                           <option key={s.id} value={s.id}>
                             {s.name}
@@ -83,7 +90,7 @@ export function EditAlbumModalStep5({
                         type="url"
                         autoComplete="url"
                         className="edit-album-modal__link-input"
-                        placeholder="URL"
+                        placeholder={ui?.dashboard?.editAlbumModal?.step5?.url ?? 'URL'}
                         value={purchaseLinkUrl}
                         onChange={(e) => onPurchaseLinkUrlChange(e.target.value)}
                         onKeyDown={(e) => {
@@ -107,14 +114,14 @@ export function EditAlbumModalStep5({
                           onClick={onAddPurchaseLink}
                           disabled={!purchaseLinkService.trim() || !purchaseLinkUrl.trim()}
                         >
-                          Save
+                          {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Save'}
                         </button>
                         <button
                           type="button"
                           className="edit-album-modal__link-cancel"
                           onClick={onCancelEditPurchaseLink}
                         >
-                          Cancel
+                          {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
                         </button>
                       </div>
                     </div>
@@ -162,7 +169,9 @@ export function EditAlbumModalStep5({
                 value={purchaseLinkService}
                 onChange={(e) => onPurchaseLinkServiceChange(e.target.value)}
               >
-                <option value="">Select service</option>
+                <option value="">
+                  {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
+                </option>
                 {PURCHASE_SERVICES.filter(
                   (s) => !formData.purchaseLinks.some((l) => l.service === s.id)
                 ).map((s) => (
@@ -201,7 +210,9 @@ export function EditAlbumModalStep5({
         </div>
 
         <div className="edit-album-modal__links-column">
-          <label className="edit-album-modal__links-label">Streaming</label>
+          <label className="edit-album-modal__links-label">
+            {ui?.dashboard?.editAlbumModal?.step5?.streaming ?? 'Streaming'}
+          </label>
 
           <div className="edit-album-modal__links-list">
             {formData.streamingLinks.map((link, index) => {
@@ -219,7 +230,9 @@ export function EditAlbumModalStep5({
                         value={streamingLinkService}
                         onChange={(e) => onStreamingLinkServiceChange(e.target.value)}
                       >
-                        <option value="">Select service</option>
+                        <option value="">
+                          {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
+                        </option>
                         {STREAMING_SERVICES.map((s) => (
                           <option key={s.id} value={s.id}>
                             {s.name}
@@ -232,7 +245,7 @@ export function EditAlbumModalStep5({
                         type="url"
                         autoComplete="url"
                         className="edit-album-modal__link-input"
-                        placeholder="URL"
+                        placeholder={ui?.dashboard?.editAlbumModal?.step5?.url ?? 'URL'}
                         value={streamingLinkUrl}
                         onChange={(e) => onStreamingLinkUrlChange(e.target.value)}
                         onKeyDown={(e) => {
@@ -311,7 +324,9 @@ export function EditAlbumModalStep5({
                 value={streamingLinkService}
                 onChange={(e) => onStreamingLinkServiceChange(e.target.value)}
               >
-                <option value="">Select service</option>
+                <option value="">
+                  {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
+                </option>
                 {STREAMING_SERVICES.filter(
                   (s) => !formData.streamingLinks.some((l) => l.service === s.id)
                 ).map((s) => (

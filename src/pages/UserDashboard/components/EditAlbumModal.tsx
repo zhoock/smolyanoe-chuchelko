@@ -1436,7 +1436,7 @@ export function EditAlbumModal({
 
           <div className="edit-album-modal__field">
             <label htmlFor="artist-name" className="edit-album-modal__label">
-              Artist / Group name
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.artistGroupName ?? 'Artist / Group name'}
             </label>
             <input
               id="artist-name"
@@ -1452,7 +1452,7 @@ export function EditAlbumModal({
 
           <div className="edit-album-modal__field">
             <label htmlFor="album-title" className="edit-album-modal__label">
-              Album title
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumTitle ?? 'Album title'}
             </label>
             <input
               id="album-title"
@@ -1468,7 +1468,7 @@ export function EditAlbumModal({
 
           <div className="edit-album-modal__field">
             <label htmlFor="release-date" className="edit-album-modal__label">
-              Release date
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.releaseDate ?? 'Release date'}
             </label>
             <input
               id="release-date"
@@ -1476,7 +1476,7 @@ export function EditAlbumModal({
               type="text"
               autoComplete="off"
               className="edit-album-modal__input"
-              placeholder="DD/MM/YYYY"
+              placeholder={ui?.dashboard?.editAlbumModal?.placeholders?.releaseDate ?? 'DD/MM/YYYY'}
               maxLength={10}
               required
               value={formData.releaseDate ?? ''}
@@ -1517,7 +1517,7 @@ export function EditAlbumModal({
 
           <div className="edit-album-modal__field">
             <label htmlFor="upc-ean" className="edit-album-modal__label">
-              UPC / EAN
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.upcEan ?? 'UPC / EAN'}
             </label>
             <input
               id="upc-ean"
@@ -1525,7 +1525,7 @@ export function EditAlbumModal({
               type="text"
               autoComplete="off"
               className="edit-album-modal__input"
-              placeholder="UPC / EAN"
+              placeholder={ui?.dashboard?.editAlbumModal?.placeholders?.upcEan ?? 'UPC / EAN'}
               required
               value={formData.upcEan ?? ''}
               onChange={(e) => setFormData((s) => ({ ...s, upcEan: e.target.value }))}
@@ -1533,7 +1533,9 @@ export function EditAlbumModal({
           </div>
 
           <div className="edit-album-modal__field">
-            <label className="edit-album-modal__label">Album art</label>
+            <label className="edit-album-modal__label">
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumArt ?? 'Album art'}
+            </label>
 
             <input
               type="file"
@@ -1556,7 +1558,7 @@ export function EditAlbumModal({
                 <div className="edit-album-modal__art-actions">
                   <div className="edit-album-modal__art-buttons">
                     <label htmlFor="album-art-input" className="edit-album-modal__art-button">
-                      Replace
+                      {ui?.dashboard?.editAlbumModal?.buttons?.replace ?? 'Replace'}
                     </label>
                   </div>
 
@@ -1574,14 +1576,16 @@ export function EditAlbumModal({
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <span className="edit-album-modal__art-status-text">Uploading...</span>
+                      <span className="edit-album-modal__art-status-text">
+                        {ui?.dashboard?.editAlbumModal?.status?.uploading ?? 'Uploading...'}
+                      </span>
                     </div>
                   )}
 
                   {uploadStatus === 'uploaded' && (
                     <div className="edit-album-modal__art-status">
                       <span className="edit-album-modal__art-status-text edit-album-modal__art-status-text--success">
-                        Uploaded (draft)
+                        {ui?.dashboard?.editAlbumModal?.status?.uploaded ?? 'Uploaded (draft)'}
                       </span>
                     </div>
                   )}
@@ -1589,14 +1593,16 @@ export function EditAlbumModal({
                   {uploadStatus === 'error' && uploadError && (
                     <div className="edit-album-modal__art-status">
                       <span className="edit-album-modal__art-status-text edit-album-modal__art-status-text--error">
-                        Error: {uploadError}
+                        {ui?.dashboard?.editAlbumModal?.status?.error ?? 'Error'}: {uploadError}
                       </span>
                     </div>
                   )}
 
                   {!coverDraftKey && albumArtPreview && uploadStatus === 'idle' && (
                     <div className="edit-album-modal__art-status">
-                      <span className="edit-album-modal__art-status-text">Published cover</span>
+                      <span className="edit-album-modal__art-status-text">
+                        {ui?.dashboard?.editAlbumModal?.status?.publishedCover ?? 'Published cover'}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1609,9 +1615,11 @@ export function EditAlbumModal({
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <div className="edit-album-modal__dropzone-text">Drag image here</div>
+                <div className="edit-album-modal__dropzone-text">
+                  {ui?.dashboard?.editAlbumModal?.placeholders?.dragImageHere ?? 'Drag image here'}
+                </div>
                 <label htmlFor="album-art-input" className="edit-album-modal__file-label">
-                  Choose file
+                  {ui?.dashboard?.editAlbumModal?.placeholders?.chooseFile ?? 'Choose file'}
                 </label>
               </div>
             )}
@@ -1619,14 +1627,17 @@ export function EditAlbumModal({
 
           <div className="edit-album-modal__field">
             <label htmlFor="description" className="edit-album-modal__label">
-              Description
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.description ?? 'Description'}
             </label>
             <textarea
               id="description"
               name="description"
               autoComplete="off"
               className="edit-album-modal__textarea"
-              placeholder="Short story about the album, credits highlights, mood, etc."
+              placeholder={
+                ui?.dashboard?.editAlbumModal?.placeholders?.description ??
+                'Short story about the album, credits highlights, mood, etc.'
+              }
               required
               value={formData.description ?? ''}
               onChange={(e) => setFormData((s) => ({ ...s, description: e.target.value }))}
@@ -1634,7 +1645,10 @@ export function EditAlbumModal({
           </div>
 
           <div className="edit-album-modal__field">
-            <label className="edit-album-modal__label">Visible on album page</label>
+            <label className="edit-album-modal__label">
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.visibleOnAlbumPage ??
+                'Visible on album page'}
+            </label>
             <div className="edit-album-modal__checkbox-wrapper">
               <input
                 type="checkbox"
@@ -1644,15 +1658,20 @@ export function EditAlbumModal({
                 onChange={(e) => handleInputChange('visibleOnAlbumPage', e.target.checked)}
               />
               <label htmlFor="visible-on-page" className="edit-album-modal__checkbox-label">
-                Visible on album page
+                {ui?.dashboard?.editAlbumModal?.fieldLabels?.visibleOnAlbumPage ??
+                  'Visible on album page'}
               </label>
             </div>
           </div>
 
           <div className="edit-album-modal__field">
-            <label className="edit-album-modal__label">Allow download / sale</label>
+            <label className="edit-album-modal__label">
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.allowDownloadSale ??
+                'Allow download / sale'}
+            </label>
             <div className="edit-album-modal__help-text">
-              Control whether fans can buy/download this album.
+              {ui?.dashboard?.editAlbumModal?.helpText?.controlDownloadSale ??
+                'Control whether fans can buy/download this album.'}
             </div>
             <div className="edit-album-modal__radio-group">
               <div className="edit-album-modal__radio-wrapper">
@@ -1665,7 +1684,7 @@ export function EditAlbumModal({
                   onChange={() => handleInputChange('allowDownloadSale', 'no')}
                 />
                 <label htmlFor="download-no" className="edit-album-modal__radio-label">
-                  No
+                  {ui?.dashboard?.editAlbumModal?.radioOptions?.no ?? 'No'}
                 </label>
               </div>
 
@@ -1679,7 +1698,7 @@ export function EditAlbumModal({
                   onChange={() => handleInputChange('allowDownloadSale', 'yes')}
                 />
                 <label htmlFor="download-yes" className="edit-album-modal__radio-label">
-                  Yes
+                  {ui?.dashboard?.editAlbumModal?.radioOptions?.yes ?? 'Yes'}
                 </label>
               </div>
 
@@ -1693,21 +1712,25 @@ export function EditAlbumModal({
                   onChange={() => handleInputChange('allowDownloadSale', 'preorder')}
                 />
                 <label htmlFor="download-preorder" className="edit-album-modal__radio-label">
-                  Accept pre-orders
+                  {ui?.dashboard?.editAlbumModal?.radioOptions?.acceptPreorders ??
+                    'Accept pre-orders'}
                 </label>
               </div>
             </div>
 
             {formData.allowDownloadSale === 'preorder' && (
               <div className="edit-album-modal__preorder-help">
-                Fans can buy now, download after release date
+                {ui?.dashboard?.editAlbumModal?.helpText?.fansCanBuyNow ??
+                  'Fans can buy now, download after release date'}
               </div>
             )}
           </div>
 
           {showPriceFields && (
             <div className="edit-album-modal__field">
-              <label className="edit-album-modal__label">Regular price</label>
+              <label className="edit-album-modal__label">
+                {ui?.dashboard?.editAlbumModal?.fieldLabels?.regularPrice ?? 'Regular price'}
+              </label>
               <div className="edit-album-modal__price-group">
                 <select
                   name="currency"
@@ -1737,7 +1760,8 @@ export function EditAlbumModal({
           {showPreorderDate && (
             <div className="edit-album-modal__field">
               <label htmlFor="preorder-date" className="edit-album-modal__label">
-                Pre-order release date
+                {ui?.dashboard?.editAlbumModal?.fieldLabels?.preorderReleaseDate ??
+                  'Pre-order release date'}
               </label>
               <input
                 id="preorder-date"
@@ -1745,7 +1769,9 @@ export function EditAlbumModal({
                 type="text"
                 autoComplete="off"
                 className="edit-album-modal__input"
-                placeholder="DD/MM/YYYY"
+                placeholder={
+                  ui?.dashboard?.editAlbumModal?.placeholders?.preorderDate ?? 'DD/MM/YYYY'
+                }
                 maxLength={10}
                 value={formData.preorderReleaseDate}
                 onChange={(e) => {
@@ -1812,7 +1838,13 @@ export function EditAlbumModal({
     }
 
     if (currentStep === 3) {
-      return <EditAlbumModalStep3 formData={formData} onFormDataChange={handleInputChange} />;
+      return (
+        <EditAlbumModalStep3
+          formData={formData}
+          onFormDataChange={handleInputChange}
+          ui={ui ?? undefined}
+        />
+      );
     }
 
     if (currentStep === 4) {
@@ -1842,6 +1874,7 @@ export function EditAlbumModal({
           onEditSessionMusician={handleEditSessionMusician}
           onRemoveSessionMusician={handleRemoveSessionMusician}
           onCancelEditSessionMusician={handleCancelEditSessionMusician}
+          ui={ui ?? undefined}
         />
       );
     }
@@ -1868,6 +1901,7 @@ export function EditAlbumModal({
           onEditStreamingLink={handleEditStreamingLink}
           onRemoveStreamingLink={handleRemoveStreamingLink}
           onCancelEditStreamingLink={handleCancelEditStreamingLink}
+          ui={ui ?? undefined}
         />
       );
     }
@@ -1878,15 +1912,17 @@ export function EditAlbumModal({
   const getStepTitle = () => {
     switch (currentStep) {
       case 1:
-        return 'Step 1 of 5: Basic Info';
+        return ui?.dashboard?.editAlbumModal?.stepTitles?.step1 ?? 'Step 1 of 5: Basic Info';
       case 2:
-        return 'Step 2 of 5: Music Details';
+        return ui?.dashboard?.editAlbumModal?.stepTitles?.step2 ?? 'Step 2 of 5: Music Details';
       case 3:
-        return 'Step 3 of 5: Recorded/Mixed/Mastered';
+        return (
+          ui?.dashboard?.editAlbumModal?.stepTitles?.step3 ?? 'Step 3 of 5: Recorded/Mixed/Mastered'
+        );
       case 4:
-        return 'Step 4 of 5: Credits';
+        return ui?.dashboard?.editAlbumModal?.stepTitles?.step4 ?? 'Step 4 of 5: Credits';
       case 5:
-        return 'Step 5 of 5: Links';
+        return ui?.dashboard?.editAlbumModal?.stepTitles?.step5 ?? 'Step 5 of 5: Links';
       default:
         return `Step ${currentStep} of 5`;
     }
@@ -1910,7 +1946,7 @@ export function EditAlbumModal({
                   className="edit-album-modal__button edit-album-modal__button--secondary"
                   onClick={handlePrevious}
                 >
-                  Previous
+                  {ui?.dashboard?.editAlbumModal?.buttons?.previous ?? 'Previous'}
                 </button>
               ) : (
                 <button
@@ -1930,10 +1966,10 @@ export function EditAlbumModal({
                   disabled={isSaving}
                 >
                   {isSaving
-                    ? 'Saving...'
+                    ? (ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...')
                     : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId)
-                      ? 'Save changes'
-                      : 'Publish album'}
+                      ? (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
+                      : (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')}
                 </button>
               ) : (
                 <button
@@ -1941,7 +1977,7 @@ export function EditAlbumModal({
                   className="edit-album-modal__button edit-album-modal__button--primary"
                   onClick={handleNext}
                 >
-                  Next
+                  {ui?.dashboard?.editAlbumModal?.buttons?.next ?? 'Next'}
                 </button>
               )}
             </div>

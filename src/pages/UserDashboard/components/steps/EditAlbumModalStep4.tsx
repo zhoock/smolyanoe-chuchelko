@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep4.tsx
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { IInterface } from '@models';
 import { MAX_BAND_MEMBERS } from '../EditAlbumModal.constants';
 import { EditableCardField } from '../shared/EditableCardField';
 import '../shared/EditableCardField.style.scss';
@@ -30,6 +31,7 @@ interface EditAlbumModalStep4Props {
   onEditSessionMusician: (index: number) => void;
   onRemoveSessionMusician: (index: number) => void;
   onCancelEditSessionMusician: () => void;
+  ui?: IInterface;
 }
 
 export function EditAlbumModalStep4({
@@ -57,13 +59,16 @@ export function EditAlbumModalStep4({
   onEditSessionMusician,
   onRemoveSessionMusician,
   onCancelEditSessionMusician,
+  ui,
 }: EditAlbumModalStep4Props) {
   return (
     <>
       <div className="edit-album-modal__divider" />
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Album Cover</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step4?.albumCover ?? 'Album Cover'}
+        </label>
         <div className="edit-album-modal__two-column-inputs">
           <div>
             <input
@@ -71,7 +76,9 @@ export function EditAlbumModalStep4({
               type="text"
               autoComplete="name"
               className="edit-album-modal__input"
-              placeholder="Photographer (optional)"
+              placeholder={
+                ui?.dashboard?.editAlbumModal?.step4?.photographer ?? 'Photographer (optional)'
+              }
               value={formData.albumCoverPhotographer}
               onChange={(e) => onFormDataChange('albumCoverPhotographer', e.target.value)}
             />
@@ -80,7 +87,10 @@ export function EditAlbumModalStep4({
               type="url"
               autoComplete="url"
               className="edit-album-modal__input"
-              placeholder="Photographer URL (optional)"
+              placeholder={
+                ui?.dashboard?.editAlbumModal?.step4?.photographerUrl ??
+                'Photographer URL (optional)'
+              }
               value={formData.albumCoverPhotographerURL}
               onChange={(e) => onFormDataChange('albumCoverPhotographerURL', e.target.value)}
             />
@@ -91,7 +101,7 @@ export function EditAlbumModalStep4({
               type="text"
               autoComplete="name"
               className="edit-album-modal__input"
-              placeholder="Designer"
+              placeholder={ui?.dashboard?.editAlbumModal?.step4?.designer ?? 'Designer'}
               required
               value={formData.albumCoverDesigner}
               onChange={(e) => onFormDataChange('albumCoverDesigner', e.target.value)}
@@ -101,7 +111,9 @@ export function EditAlbumModalStep4({
               type="url"
               autoComplete="url"
               className="edit-album-modal__input"
-              placeholder="Designer URL (optional)"
+              placeholder={
+                ui?.dashboard?.editAlbumModal?.step4?.designerUrl ?? 'Designer URL (optional)'
+              }
               value={formData.albumCoverDesignerURL}
               onChange={(e) => onFormDataChange('albumCoverDesignerURL', e.target.value)}
             />
@@ -110,7 +122,9 @@ export function EditAlbumModalStep4({
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Band Members</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step4?.bandMembers ?? 'Band Members'}
+        </label>
 
         {formData.bandMembers.length > 0 && (
           <div className="edit-album-modal__list">
@@ -157,7 +171,7 @@ export function EditAlbumModalStep4({
                   type="text"
                   autoComplete="name"
                   className="edit-album-modal__input"
-                  placeholder="Name"
+                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
                   value={bandMemberName}
                   onChange={(e) => onBandMemberNameChange(e.target.value)}
                   onKeyDown={(e) => {
@@ -175,7 +189,7 @@ export function EditAlbumModalStep4({
                   type="text"
                   autoComplete="organization-title"
                   className="edit-album-modal__input"
-                  placeholder="Role"
+                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
                   value={bandMemberRole}
                   onChange={(e) => onBandMemberRoleChange(e.target.value)}
                   onKeyDown={(e) => {
@@ -213,7 +227,7 @@ export function EditAlbumModalStep4({
                   className="edit-album-modal__add-button"
                   onClick={onAddBandMember}
                 >
-                  + Add
+                  {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
                 </button>
               )}
             </>
@@ -228,13 +242,15 @@ export function EditAlbumModalStep4({
               className="edit-album-modal__add-button"
               onClick={() => onFormDataChange('showAddBandMemberInputs', true)}
             >
-              + Добавить
+              {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
             </button>
           )}
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Session Musicians</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step4?.sessionMusicians ?? 'Session Musicians'}
+        </label>
 
         {formData.sessionMusicians.length > 0 && (
           <div className="edit-album-modal__list">
@@ -282,7 +298,7 @@ export function EditAlbumModalStep4({
                   type="text"
                   autoComplete="name"
                   className="edit-album-modal__input"
-                  placeholder="Name"
+                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
                   value={sessionMusicianName}
                   onChange={(e) => onSessionMusicianNameChange(e.target.value)}
                   onKeyDown={(e) => {
@@ -304,7 +320,7 @@ export function EditAlbumModalStep4({
                   type="text"
                   autoComplete="organization-title"
                   className="edit-album-modal__input"
-                  placeholder="Role"
+                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
                   value={sessionMusicianRole}
                   onChange={(e) => onSessionMusicianRoleChange(e.target.value)}
                   onKeyDown={(e) => {
@@ -350,7 +366,7 @@ export function EditAlbumModalStep4({
                   className="edit-album-modal__add-button"
                   onClick={onAddSessionMusician}
                 >
-                  + Add
+                  {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
                 </button>
               )}
             </>
@@ -365,13 +381,15 @@ export function EditAlbumModalStep4({
               className="edit-album-modal__add-button"
               onClick={() => onFormDataChange('showAddSessionMusicianInputs', true)}
             >
-              + Добавить
+              {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
             </button>
           )}
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Producer</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step4?.producer ?? 'Producer'}
+        </label>
 
         {formData.producer.length > 0 && (
           <div className="edit-album-modal__list">
@@ -461,7 +479,9 @@ export function EditAlbumModalStep4({
                   type="url"
                   autoComplete="url"
                   className="edit-album-modal__input"
-                  placeholder="URL (optional)"
+                  placeholder={
+                    ui?.dashboard?.editAlbumModal?.step4?.urlOptional ?? 'URL (optional)'
+                  }
                   value={formData.producerURL || ''}
                   onChange={(e) => onFormDataChange('producerURL', e.target.value)}
                   onKeyDown={(e) => {
@@ -497,7 +517,7 @@ export function EditAlbumModalStep4({
                     onFormDataChange('showAddProducerInputs', false);
                   }}
                 >
-                  + Add
+                  {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
                 </button>
               )}
             </>
@@ -512,7 +532,7 @@ export function EditAlbumModalStep4({
               className="edit-album-modal__add-button"
               onClick={() => onFormDataChange('showAddProducerInputs', true)}
             >
-              + Добавить
+              {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
             </button>
           )}
       </div>

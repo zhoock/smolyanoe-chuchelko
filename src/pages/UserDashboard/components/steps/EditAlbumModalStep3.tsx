@@ -1,21 +1,25 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep3.tsx
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { IInterface } from '@models';
 import { EditableCardField } from '../shared/EditableCardField';
 import '../shared/EditableCardField.style.scss';
 
 interface EditAlbumModalStep3Props {
   formData: AlbumFormData;
   onFormDataChange: (field: keyof AlbumFormData, value: any) => void;
+  ui?: IInterface;
 }
 
-export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumModalStep3Props) {
+export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbumModalStep3Props) {
   return (
     <>
       <div className="edit-album-modal__divider" />
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Recorded At</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step3?.recordedAt ?? 'Recorded At'}
+        </label>
 
         {formData.recordedAt.length > 0 && (
           <div className="edit-album-modal__list">
@@ -141,7 +145,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumMod
                     onFormDataChange('showAddRecordedAtInputs', false);
                   }}
                 >
-                  + Add
+                  {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
                 </button>
               )}
             </>
@@ -156,13 +160,15 @@ export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumMod
               className="edit-album-modal__add-button"
               onClick={() => onFormDataChange('showAddRecordedAtInputs', true)}
             >
-              + Добавить
+              {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
             </button>
           )}
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Mixed At</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step3?.mixedAt ?? 'Mixed At'}
+        </label>
 
         {formData.mixedAt.length > 0 && (
           <div className="edit-album-modal__list">
@@ -288,7 +294,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumMod
                     onFormDataChange('showAddMixedAtInputs', false);
                   }}
                 >
-                  + Add
+                  {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
                 </button>
               )}
             </>
@@ -303,13 +309,15 @@ export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumMod
               className="edit-album-modal__add-button"
               onClick={() => onFormDataChange('showAddMixedAtInputs', true)}
             >
-              + Добавить
+              {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
             </button>
           )}
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Mastered By</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step3?.masteredBy ?? 'Mastered By'}
+        </label>
 
         {formData.mastering.length > 0 && (
           <div className="edit-album-modal__list">
@@ -435,7 +443,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumMod
                     onFormDataChange('showAddMasteringInputs', false);
                   }}
                 >
-                  + Add
+                  {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
                 </button>
               )}
             </>
@@ -450,7 +458,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange }: EditAlbumMod
               className="edit-album-modal__add-button"
               onClick={() => onFormDataChange('showAddMasteringInputs', true)}
             >
-              + Добавить
+              {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
             </button>
           )}
       </div>
