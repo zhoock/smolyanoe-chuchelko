@@ -397,7 +397,16 @@ export const transformFormDataToAlbumFormat = (
       title: lang === 'ru' ? 'Продюсирование' : 'Producing',
       content: formData.producer.map((entry) => {
         if (entry.url && entry.url.trim()) {
-          // Если есть URL, сохраняем в формате объекта с text и link
+          // Если есть URL, пытаемся разбить текст на имя и роль (формат: "Name — role.")
+          const match = entry.text.match(/^(.+?)\s*—\s*(.+)$/);
+          if (match) {
+            // Сохраняем в формате исходного JSON: ["", name, " — role."]
+            return {
+              text: ['', match[1].trim(), ` — ${match[2].trim()}`],
+              link: entry.url.trim(),
+            };
+          }
+          // Если не удалось разбить, сохраняем как есть
           return {
             text: [entry.text],
             link: entry.url.trim(),
@@ -416,7 +425,16 @@ export const transformFormDataToAlbumFormat = (
       title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
       content: formData.mastering.map((entry) => {
         if (entry.url && entry.url.trim()) {
-          // Если есть URL, сохраняем в формате объекта с text и link
+          // Если есть URL, пытаемся разбить текст на имя и роль (формат: "Name — role.")
+          const match = entry.text.match(/^(.+?)\s*—\s*(.+)$/);
+          if (match) {
+            // Сохраняем в формате исходного JSON: ["", name, " — role."]
+            return {
+              text: ['', match[1].trim(), ` — ${match[2].trim()}`],
+              link: entry.url.trim(),
+            };
+          }
+          // Если не удалось разбить, сохраняем как есть
           return {
             text: [entry.text],
             link: entry.url.trim(),

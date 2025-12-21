@@ -406,13 +406,10 @@ export function EditAlbumModal({
 
         if (!fullText.trim()) continue;
 
-        // Проверяем, содержит ли роль producer/продюсер (но не mastering/мастеринг)
+        // Добавляем все записи из блока Producing, кроме тех, что содержат mastering/мастеринг
+        // (они будут обработаны в блоке Mastered By)
         const roleTextLower = fullText.toLowerCase();
-        if (
-          (roleTextLower.includes('producer') || roleTextLower.includes('продюсер')) &&
-          !roleTextLower.includes('mastering') &&
-          !roleTextLower.includes('мастеринг')
-        ) {
+        if (!roleTextLower.includes('mastering') && !roleTextLower.includes('мастеринг')) {
           if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
             const text = item.text.join('').trim();
             const url = item.link ? String(item.link).trim() : undefined;
@@ -426,17 +423,13 @@ export function EditAlbumModal({
       }
     }
 
-    // --- парсинг Mastering ---
+    // --- парсинг Mastered By ---
     const mastering: Array<{ text: string; url?: string }> = [];
 
     // Сначала ищем отдельный блок "Mastered By" / "Мастеринг"
     const masteredByDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
-          (detail) =>
-            detail &&
-            (detail.title === 'Mastered By' ||
-              detail.title === 'Mastering' ||
-              detail.title === 'Мастеринг')
+          (detail) => detail && (detail.title === 'Mastered By' || detail.title === 'Мастеринг')
         )
       : null;
 
@@ -555,8 +548,8 @@ export function EditAlbumModal({
         producingCredits: prevForm.producingCredits, // Оставляем для обратной совместимости, но больше не используем
         recordedAt: recordedAt,
         mixedAt: mixedAt,
-        producer: producer,
-        mastering: mastering,
+        producer: producer.length > 0 ? producer : prevForm.producer || [],
+        mastering: mastering.length > 0 ? mastering : prevForm.mastering || [],
         showAddBandMemberInputs: false,
         showAddSessionMusicianInputs: false,
         showAddRecordedAtInputs: false,
@@ -1261,7 +1254,7 @@ export function EditAlbumModal({
       // Producing
       lang === 'ru' ? 'Продюсирование' : 'Producing',
       // Mastering
-      lang === 'ru' ? 'Мастеринг' : 'Mastering',
+      lang === 'ru' ? 'Мастеринг' : 'Mastered By',
       // Recorded At
       lang === 'ru' ? 'Запись' : 'Recorded At',
       // Mixed At
