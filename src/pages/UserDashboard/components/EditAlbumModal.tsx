@@ -14,7 +14,6 @@ import type {
   EditAlbumModalProps,
   AlbumFormData,
   BandMember,
-  ProducingCredits,
   RecordingEntry,
   StreamingLink,
 } from './EditAlbumModal.types';
@@ -25,7 +24,6 @@ import {
   MIN_TAG_LENGTH,
   MAX_TAG_LENGTH,
   MAX_BAND_MEMBERS,
-  DEFAULT_PRODUCING_CREDIT_TYPES,
   PURCHASE_SERVICES,
   STREAMING_SERVICES,
 } from './EditAlbumModal.constants';
@@ -47,7 +45,6 @@ import './EditAlbumModal.style.scss';
 export type {
   EditAlbumModalProps,
   BandMember,
-  ProducingCredits,
   StreamingLink,
   AlbumFormData,
 } from './EditAlbumModal.types';
@@ -86,7 +83,6 @@ export function EditAlbumModal({
   const [bandMemberRole, setBandMemberRole] = useState('');
   const [bandMemberURL, setBandMemberURL] = useState('');
   const [editingBandMemberIndex, setEditingBandMemberIndex] = useState<number | null>(null);
-  const [showAddBandMemberInputs, setShowAddBandMemberInputs] = useState(false);
 
   const [sessionMusicianName, setSessionMusicianName] = useState('');
   const [sessionMusicianRole, setSessionMusicianRole] = useState('');
@@ -94,17 +90,6 @@ export function EditAlbumModal({
   const [editingSessionMusicianIndex, setEditingSessionMusicianIndex] = useState<number | null>(
     null
   );
-  const [showAddSessionMusicianInputs, setShowAddSessionMusicianInputs] = useState(false);
-
-  const [producingNames, setProducingNames] = useState<Record<string, string>>({});
-  const [producingRoles, setProducingRoles] = useState<Record<string, string>>({});
-  const [producingURLs, setProducingURLs] = useState<Record<string, string>>({});
-  const [editingProducingCredit, setEditingProducingCredit] = useState<{
-    creditType: string;
-    nameIndex: number;
-  } | null>(null);
-
-  const [newCreditType, setNewCreditType] = useState('');
 
   const [editingPurchaseLink, setEditingPurchaseLink] = useState<number | null>(null);
   const [purchaseLinkService, setPurchaseLinkService] = useState('');
@@ -270,69 +255,6 @@ export function EditAlbumModal({
       }
     }
 
-    // --- парсинг producing ---
-    const producingCredits: ProducingCredits = {
-      Producer: [],
-      Mastering: [],
-    };
-
-    const producingDetail = Array.isArray(parsedDetails)
-      ? parsedDetails.find(
-          (detail) => detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
-        )
-      : null;
-
-    if (producingDetail && (producingDetail as any).content) {
-      const creditTypeMap: Record<string, string> = {
-        продюсер: 'Producer',
-        producer: 'Producer',
-        мастеринг: 'Mastering',
-        mastering: 'Mastering',
-      };
-
-      for (const item of (producingDetail as any).content) {
-        if (typeof item === 'string' && item.trim() === '') continue;
-
-        let fullText = '';
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          fullText = item.text.join('');
-        } else if (typeof item === 'string') {
-          fullText = item;
-        }
-
-        if (!fullText.trim()) continue;
-
-        const match = fullText.match(/^(.+?)\s*—\s*(.+?)(?:\.|$)/);
-        if (!match) continue;
-
-        const name = match[1].trim();
-        const roleTextLower = match[2].trim().toLowerCase();
-
-        let creditType = 'Producer';
-        for (const [key, value] of Object.entries(creditTypeMap)) {
-          if (roleTextLower.includes(key)) {
-            creditType = value;
-            break;
-          }
-        }
-
-        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек при сохранении)
-        const role = match[2].trim().replace(/\.+$/, '');
-        const url = typeof item === 'object' && item?.link ? String(item.link).trim() : undefined;
-
-        const existingIndex = (producingCredits[creditType] || []).findIndex(
-          (m) => m.name === name && m.role === role
-        );
-
-        if (existingIndex === -1) {
-          producingCredits[creditType] = [
-            ...(producingCredits[creditType] || []),
-            { name, role, url },
-          ];
-        }
-      }
-    }
-
     // --- парсинг Genre из details ---
     const mood: string[] = [];
 
@@ -463,6 +385,105 @@ export function EditAlbumModal({
       }
     }
 
+    // --- парсинг Producer ---
+    const producer: Array<{ text: string; url?: string }> = [];
+    const producingDetail = Array.isArray(parsedDetails)
+      ? parsedDetails.find(
+          (detail) => detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
+        )
+      : null;
+
+    if (producingDetail && (producingDetail as any).content) {
+      for (const item of (producingDetail as any).content) {
+        if (!item) continue;
+
+        let fullText = '';
+        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          fullText = item.text.join('');
+        } else if (typeof item === 'string') {
+          fullText = item;
+        }
+
+        if (!fullText.trim()) continue;
+
+        // Проверяем, содержит ли роль producer/продюсер (но не mastering/мастеринг)
+        const roleTextLower = fullText.toLowerCase();
+        if (
+          (roleTextLower.includes('producer') || roleTextLower.includes('продюсер')) &&
+          !roleTextLower.includes('mastering') &&
+          !roleTextLower.includes('мастеринг')
+        ) {
+          if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+            const text = item.text.join('').trim();
+            const url = item.link ? String(item.link).trim() : undefined;
+            if (text) {
+              producer.push({ text, url });
+            }
+          } else if (typeof item === 'string' && item.trim()) {
+            producer.push({ text: item.trim() });
+          }
+        }
+      }
+    }
+
+    // --- парсинг Mastering ---
+    const mastering: Array<{ text: string; url?: string }> = [];
+
+    // Сначала ищем отдельный блок "Mastered By" / "Мастеринг"
+    const masteredByDetail = Array.isArray(parsedDetails)
+      ? parsedDetails.find(
+          (detail) =>
+            detail &&
+            (detail.title === 'Mastered By' ||
+              detail.title === 'Mastering' ||
+              detail.title === 'Мастеринг')
+        )
+      : null;
+
+    if (masteredByDetail && (masteredByDetail as any).content) {
+      for (const item of (masteredByDetail as any).content) {
+        if (!item) continue;
+
+        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          const text = item.text.join('').trim();
+          const url = item.link ? String(item.link).trim() : undefined;
+          if (text) {
+            mastering.push({ text, url });
+          }
+        } else if (typeof item === 'string' && item.trim()) {
+          mastering.push({ text: item.trim() });
+        }
+      }
+    } else if (producingDetail && (producingDetail as any).content) {
+      // Если нет отдельного блока, ищем в блоке "Producing"
+      for (const item of (producingDetail as any).content) {
+        if (!item) continue;
+
+        let fullText = '';
+        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+          fullText = item.text.join('');
+        } else if (typeof item === 'string') {
+          fullText = item;
+        }
+
+        if (!fullText.trim()) continue;
+
+        // Проверяем, содержит ли роль mastering/мастеринг
+        const roleTextLower = fullText.toLowerCase();
+        if (roleTextLower.includes('mastering') || roleTextLower.includes('мастеринг')) {
+          if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
+            const text = item.text.join('').trim();
+            const url = item.link ? String(item.link).trim() : undefined;
+            if (text) {
+              mastering.push({ text, url });
+            }
+          } else if (typeof item === 'string' && item.trim()) {
+            mastering.push({ text: item.trim() });
+          }
+        }
+      }
+    }
+
     // Заполняем поля из данных альбома (только при первой инициализации)
     setFormData((prevForm) => {
       const release = album.release && typeof album.release === 'object' ? album.release : {};
@@ -531,15 +552,17 @@ export function EditAlbumModal({
         bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
         sessionMusicians:
           sessionMusicians.length > 0 ? sessionMusicians : prevForm.sessionMusicians,
-        producingCredits: Object.keys(producingCredits).some(
-          (k) => (producingCredits[k] || []).length
-        )
-          ? producingCredits
-          : prevForm.producingCredits,
+        producingCredits: prevForm.producingCredits, // Оставляем для обратной совместимости, но больше не используем
         recordedAt: recordedAt,
         mixedAt: mixedAt,
+        producer: producer,
+        mastering: mastering,
+        showAddBandMemberInputs: false,
+        showAddSessionMusicianInputs: false,
         showAddRecordedAtInputs: false,
         showAddMixedAtInputs: false,
+        showAddProducerInputs: false,
+        showAddMasteringInputs: false,
         purchaseLinks: purchaseLinks.length ? purchaseLinks : prevForm.purchaseLinks,
         streamingLinks: streamingLinks.length ? streamingLinks : prevForm.streamingLinks,
       };
@@ -592,10 +615,6 @@ export function EditAlbumModal({
     setSessionMusicianName('');
     setSessionMusicianRole('');
     setEditingSessionMusicianIndex(null);
-    setProducingNames({});
-    setProducingRoles({});
-    setEditingProducingCredit(null);
-    setNewCreditType('');
     setEditingPurchaseLink(null);
     setPurchaseLinkService('');
     setPurchaseLinkUrl('');
@@ -794,6 +813,7 @@ export function EditAlbumModal({
       bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
 
     if (editingBandMemberIndex !== null) {
+      // Редактирование существующего элемента - закрываем поля после сохранения
       setFormData((prev) => {
         const updated = [...(prev.bandMembers || [])];
         updated[editingBandMemberIndex] = {
@@ -801,23 +821,26 @@ export function EditAlbumModal({
           role: bandMemberRole.trim(),
           url, // undefined если пустой
         };
-        return { ...prev, bandMembers: updated };
+        return { ...prev, bandMembers: updated, showAddBandMemberInputs: false };
       });
       setEditingBandMemberIndex(null);
+      setBandMemberName('');
+      setBandMemberRole('');
+      setBandMemberURL('');
     } else {
+      // Добавление нового элемента - закрываем поля после добавления
       setFormData((prev) => ({
         ...prev,
         bandMembers: [
           ...(prev.bandMembers || []),
           { name: bandMemberName.trim(), role: bandMemberRole.trim(), url }, // undefined если пустой
         ],
+        showAddBandMemberInputs: false,
       }));
+      setBandMemberName('');
+      setBandMemberRole('');
+      setBandMemberURL('');
     }
-
-    setBandMemberName('');
-    setBandMemberRole('');
-    setBandMemberURL('');
-    setShowAddBandMemberInputs(false);
   };
 
   const handleEditBandMember = (index: number) => {
@@ -833,7 +856,7 @@ export function EditAlbumModal({
     setBandMemberRole('');
     setBandMemberURL('');
     setEditingBandMemberIndex(null);
-    setShowAddBandMemberInputs(false);
+    handleInputChange('showAddBandMemberInputs', false);
   };
 
   const handleRemoveBandMember = (index: number) => {
@@ -854,6 +877,7 @@ export function EditAlbumModal({
         : undefined;
 
     if (editingSessionMusicianIndex !== null) {
+      // Редактирование существующего элемента - закрываем поля после сохранения
       setFormData((prev) => {
         const updated = [...(prev.sessionMusicians || [])];
         updated[editingSessionMusicianIndex] = {
@@ -861,23 +885,26 @@ export function EditAlbumModal({
           role: sessionMusicianRole.trim(),
           url,
         };
-        return { ...prev, sessionMusicians: updated };
+        return { ...prev, sessionMusicians: updated, showAddSessionMusicianInputs: false };
       });
       setEditingSessionMusicianIndex(null);
+      setSessionMusicianName('');
+      setSessionMusicianRole('');
+      setSessionMusicianURL('');
     } else {
+      // Добавление нового элемента - закрываем поля после добавления
       setFormData((prev) => ({
         ...prev,
         sessionMusicians: [
           ...(prev.sessionMusicians || []),
           { name: sessionMusicianName.trim(), role: sessionMusicianRole.trim(), url },
         ],
+        showAddSessionMusicianInputs: false,
       }));
+      setSessionMusicianName('');
+      setSessionMusicianRole('');
+      setSessionMusicianURL('');
     }
-
-    setSessionMusicianName('');
-    setSessionMusicianRole('');
-    setSessionMusicianURL('');
-    setShowAddSessionMusicianInputs(false);
   };
 
   const handleEditSessionMusician = (index: number) => {
@@ -893,7 +920,7 @@ export function EditAlbumModal({
     setSessionMusicianRole('');
     setSessionMusicianURL('');
     setEditingSessionMusicianIndex(null);
-    setShowAddSessionMusicianInputs(false);
+    handleInputChange('showAddSessionMusicianInputs', false);
   };
 
   const handleRemoveSessionMusician = (index: number) => {
@@ -902,97 +929,6 @@ export function EditAlbumModal({
       sessionMusicians: (prev.sessionMusicians || []).filter((_, i) => i !== index),
     }));
     if (editingSessionMusicianIndex === index) handleCancelEditSessionMusician();
-  };
-
-  const handleAddProducingCredit = (creditType: string) => {
-    const name = producingNames[creditType]?.trim();
-    const role = producingRoles[creditType]?.trim() || '';
-    if (!name) return;
-
-    // Если URL пустой или только пробелы, устанавливаем undefined (не пустую строку)
-    const url =
-      producingURLs[creditType]?.trim() && producingURLs[creditType].trim().length > 0
-        ? producingURLs[creditType].trim()
-        : undefined;
-
-    if (editingProducingCredit && editingProducingCredit.creditType === creditType) {
-      setFormData((prev) => {
-        const updated = { ...prev.producingCredits };
-        const members = [...(updated[creditType] || [])];
-        members[editingProducingCredit.nameIndex] = { name, role, url };
-        updated[creditType] = members;
-        return { ...prev, producingCredits: updated };
-      });
-      setEditingProducingCredit(null);
-    } else {
-      setFormData((prev) => {
-        const updated = { ...prev.producingCredits };
-        updated[creditType] = [...(updated[creditType] || []), { name, role, url }];
-        return { ...prev, producingCredits: updated };
-      });
-    }
-
-    setProducingNames((prev) => ({ ...prev, [creditType]: '' }));
-    setProducingRoles((prev) => ({ ...prev, [creditType]: '' }));
-    setProducingURLs((prev) => ({ ...prev, [creditType]: '' }));
-  };
-
-  const handleEditProducingCredit = (creditType: string, nameIndex: number) => {
-    const members = formData.producingCredits[creditType] || [];
-    const member = members[nameIndex];
-    setProducingNames((prev) => ({ ...prev, [creditType]: member?.name || '' }));
-    setProducingRoles((prev) => ({ ...prev, [creditType]: member?.role || '' }));
-    setProducingURLs((prev) => ({ ...prev, [creditType]: member?.url || '' }));
-    setEditingProducingCredit({ creditType, nameIndex });
-  };
-
-  const handleCancelEditProducingCredit = () => {
-    if (editingProducingCredit) {
-      setProducingNames((prev) => ({ ...prev, [editingProducingCredit.creditType]: '' }));
-      setProducingRoles((prev) => ({ ...prev, [editingProducingCredit.creditType]: '' }));
-      setProducingURLs((prev) => ({ ...prev, [editingProducingCredit.creditType]: '' }));
-    }
-    setEditingProducingCredit(null);
-  };
-
-  const handleRemoveProducingCredit = (creditType: string, nameIndex: number) => {
-    setFormData((prev) => {
-      const updated = { ...prev.producingCredits };
-      updated[creditType] = (updated[creditType] || []).filter((_, i) => i !== nameIndex);
-      return { ...prev, producingCredits: updated };
-    });
-
-    if (
-      editingProducingCredit?.creditType === creditType &&
-      editingProducingCredit.nameIndex === nameIndex
-    ) {
-      handleCancelEditProducingCredit();
-    }
-  };
-
-  const handleAddNewCreditType = () => {
-    if (!newCreditType.trim()) return;
-    const trimmedType = newCreditType.trim();
-    if (formData.producingCredits[trimmedType]) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      producingCredits: { ...prev.producingCredits, [trimmedType]: [] },
-    }));
-
-    setNewCreditType('');
-  };
-
-  const handleRemoveCreditType = (creditType: string) => {
-    if (DEFAULT_PRODUCING_CREDIT_TYPES.includes(creditType)) return;
-
-    setFormData((prev) => {
-      const updated = { ...prev.producingCredits };
-      delete updated[creditType];
-      return { ...prev, producingCredits: updated };
-    });
-
-    if (editingProducingCredit?.creditType === creditType) handleCancelEditProducingCredit();
   };
 
   const handleAddPurchaseLink = () => {
@@ -1242,48 +1178,6 @@ export function EditAlbumModal({
       setSessionMusicianName('');
       setSessionMusicianRole('');
       setSessionMusicianURL('');
-    }
-
-    // Применяем незавершенные изменения producing credits
-    Object.keys(producingNames).forEach((creditType) => {
-      const name = producingNames[creditType]?.trim();
-      if (!name) return;
-
-      const role = producingRoles[creditType]?.trim() || '';
-      const url =
-        producingURLs[creditType]?.trim() && producingURLs[creditType].trim().length > 0
-          ? producingURLs[creditType].trim()
-          : undefined;
-
-      if (editingProducingCredit && editingProducingCredit.creditType === creditType) {
-        // Редактируем существующего producing credit
-        const updated = { ...finalFormData.producingCredits };
-        const members = [...(updated[creditType] || [])];
-        members[editingProducingCredit.nameIndex] = { name, role, url };
-        updated[creditType] = members;
-        finalFormData = { ...finalFormData, producingCredits: updated };
-
-        // Сбрасываем состояние
-        setProducingNames((prev) => ({ ...prev, [creditType]: '' }));
-        setProducingRoles((prev) => ({ ...prev, [creditType]: '' }));
-        setProducingURLs((prev) => ({ ...prev, [creditType]: '' }));
-        setEditingProducingCredit(null);
-      } else {
-        // Добавляем нового producing credit
-        const updated = { ...finalFormData.producingCredits };
-        updated[creditType] = [...(updated[creditType] || []), { name, role, url }];
-        finalFormData = { ...finalFormData, producingCredits: updated };
-
-        // Сбрасываем состояние
-        setProducingNames((prev) => ({ ...prev, [creditType]: '' }));
-        setProducingRoles((prev) => ({ ...prev, [creditType]: '' }));
-        setProducingURLs((prev) => ({ ...prev, [creditType]: '' }));
-      }
-    });
-
-    // Обновляем formData для UI если были изменения
-    if (Object.keys(producingNames).some((creditType) => producingNames[creditType]?.trim())) {
-      setFormData(finalFormData);
     }
 
     // Используем lang для сохранения
@@ -1931,19 +1825,10 @@ export function EditAlbumModal({
           bandMemberRole={bandMemberRole}
           bandMemberURL={bandMemberURL}
           editingBandMemberIndex={editingBandMemberIndex}
-          showAddBandMemberInputs={showAddBandMemberInputs}
-          onShowAddBandMemberInputs={() => setShowAddBandMemberInputs(true)}
           sessionMusicianName={sessionMusicianName}
           sessionMusicianRole={sessionMusicianRole}
           sessionMusicianURL={sessionMusicianURL}
           editingSessionMusicianIndex={editingSessionMusicianIndex}
-          showAddSessionMusicianInputs={showAddSessionMusicianInputs}
-          onShowAddSessionMusicianInputs={() => setShowAddSessionMusicianInputs(true)}
-          producingNames={producingNames}
-          producingRoles={producingRoles}
-          producingURLs={producingURLs}
-          editingProducingCredit={editingProducingCredit}
-          newCreditType={newCreditType}
           onFormDataChange={handleInputChange}
           onBandMemberNameChange={setBandMemberName}
           onBandMemberRoleChange={setBandMemberRole}
@@ -1959,22 +1844,6 @@ export function EditAlbumModal({
           onEditSessionMusician={handleEditSessionMusician}
           onRemoveSessionMusician={handleRemoveSessionMusician}
           onCancelEditSessionMusician={handleCancelEditSessionMusician}
-          onProducingNameChange={(creditType, value) =>
-            setProducingNames((prev) => ({ ...prev, [creditType]: value }))
-          }
-          onProducingRoleChange={(creditType, value) =>
-            setProducingRoles((prev) => ({ ...prev, [creditType]: value }))
-          }
-          onProducingURLChange={(creditType, value) =>
-            setProducingURLs((prev) => ({ ...prev, [creditType]: value }))
-          }
-          onAddProducingCredit={handleAddProducingCredit}
-          onEditProducingCredit={handleEditProducingCredit}
-          onRemoveProducingCredit={handleRemoveProducingCredit}
-          onCancelEditProducingCredit={handleCancelEditProducingCredit}
-          onNewCreditTypeChange={setNewCreditType}
-          onAddNewCreditType={handleAddNewCreditType}
-          onRemoveCreditType={handleRemoveCreditType}
         />
       );
     }

@@ -47,8 +47,20 @@ export interface AlbumFormData {
   albumCoverDesigner: string;
   albumCoverDesignerURL: string;
   bandMembers: BandMember[];
+  showAddBandMemberInputs?: boolean; // Показывать поля для добавления нового участника
   sessionMusicians: BandMember[];
-  producingCredits: ProducingCredits;
+  showAddSessionMusicianInputs?: boolean; // Показывать поля для добавления нового музыканта
+  producer: RecordingEntry[];
+  producerText?: string; // Временное поле для ввода текста
+  producerURL?: string; // Временное поле для ввода URL
+  editingProducerIndex?: number | null; // Индекс редактируемой записи
+  showAddProducerInputs?: boolean; // Показывать поля для добавления новой записи
+  mastering: RecordingEntry[];
+  masteringText?: string; // Временное поле для ввода текста
+  masteringURL?: string; // Временное поле для ввода URL
+  editingMasteringIndex?: number | null; // Индекс редактируемой записи
+  showAddMasteringInputs?: boolean; // Показывать поля для добавления новой записи
+  producingCredits: ProducingCredits; // Оставляем для обратной совместимости, но больше не используем
   recordedAt: RecordingEntry[];
   recordedAtText?: string; // Временное поле для ввода текста
   recordedAtURL?: string; // Временное поле для ввода URL

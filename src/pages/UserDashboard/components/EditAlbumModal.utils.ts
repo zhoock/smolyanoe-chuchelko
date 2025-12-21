@@ -115,7 +115,17 @@ export const makeEmptyForm = (): AlbumFormData => ({
   albumCoverDesigner: '',
   albumCoverDesignerURL: '',
   bandMembers: [],
+  showAddBandMemberInputs: false,
   sessionMusicians: [],
+  showAddSessionMusicianInputs: false,
+  producer: [],
+  producerText: '',
+  producerURL: '',
+  showAddProducerInputs: false,
+  mastering: [],
+  masteringText: '',
+  masteringURL: '',
+  showAddMasteringInputs: false,
   producingCredits: DEFAULT_PRODUCING_CREDIT_TYPES.reduce((acc, type) => {
     acc[type] = [];
     return acc;
@@ -191,8 +201,8 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
     if (!formData.bandMembers || formData.bandMembers.length === 0) {
       errors.push('Band Members (хотя бы один участник)');
     }
-    // Проверяем, что есть хотя бы один Producer в producingCredits
-    if (!formData.producingCredits.Producer || formData.producingCredits.Producer.length === 0) {
+    // Проверяем, что есть хотя бы один Producer
+    if (!formData.producer || formData.producer.length === 0) {
       errors.push('Producer (хотя бы один продюсер)');
     }
     if (errors.length > 0) {
@@ -380,50 +390,41 @@ export const transformFormDataToAlbumFormat = (
     });
   }
 
-  // Обрабатываем Producing и Mastering
-  const producingContent: unknown[] = [];
-  const masteringContent: unknown[] = [];
-
-  Object.entries(formData.producingCredits).forEach(([creditType, members]) => {
-    if (members.length > 0) {
-      members.forEach((member) => {
-        const role = member.role || creditType;
-        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
-        const roleClean = role.trim().replace(/\.+$/, '');
-        const creditText = `${member.name} — ${roleClean}.`;
-
-        // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
-        const urlTrimmed = member.url?.trim();
-        const itemToPush =
-          urlTrimmed && urlTrimmed.length > 0
-            ? {
-                text: ['', member.name, ` — ${roleClean}.`],
-                link: urlTrimmed,
-              }
-            : creditText;
-
-        if (creditType === 'Mastering') {
-          masteringContent.push(itemToPush);
-        } else {
-          producingContent.push(itemToPush);
-        }
-      });
-    }
-  });
-
-  if (producingContent.length > 0) {
+  // Добавляем Producer
+  if (formData.producer && formData.producer.length > 0) {
     details.push({
       id: nextId++,
       title: lang === 'ru' ? 'Продюсирование' : 'Producing',
-      content: producingContent,
+      content: formData.producer.map((entry) => {
+        if (entry.url && entry.url.trim()) {
+          // Если есть URL, сохраняем в формате объекта с text и link
+          return {
+            text: [entry.text],
+            link: entry.url.trim(),
+          };
+        }
+        // Иначе сохраняем как строку
+        return entry.text;
+      }),
     });
   }
 
-  if (masteringContent.length > 0) {
+  // Добавляем Mastering
+  if (formData.mastering && formData.mastering.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Мастеринг' : 'Mastering',
-      content: masteringContent,
+      title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
+      content: formData.mastering.map((entry) => {
+        if (entry.url && entry.url.trim()) {
+          // Если есть URL, сохраняем в формате объекта с text и link
+          return {
+            text: [entry.text],
+            link: entry.url.trim(),
+          };
+        }
+        // Иначе сохраняем как строку
+        return entry.text;
+      }),
     });
   }
 
