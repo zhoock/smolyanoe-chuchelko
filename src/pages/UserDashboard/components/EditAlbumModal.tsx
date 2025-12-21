@@ -1356,8 +1356,7 @@ export function EditAlbumModal({
     const originalDetails = (originalAlbum?.details as Array<{ id: number; title: string }>) || [];
     const mergedDetails = [...originalDetails];
 
-    // Заменяем редактируемые блоки (Genre, Band members, Session musicians, Producing)
-    // Recorded At и Mixed At остаются из originalDetails и не редактируются через форму
+    // Заменяем редактируемые блоки (Genre, Band members, Session musicians, Producing, Recorded At, Mixed At)
     const editableTitles = [
       // Genre
       lang === 'ru' ? 'Жанр' : 'Genre',
@@ -1367,6 +1366,12 @@ export function EditAlbumModal({
       lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
       // Producing
       lang === 'ru' ? 'Продюсирование' : 'Producing',
+      // Mastering
+      lang === 'ru' ? 'Мастеринг' : 'Mastering',
+      // Recorded At
+      lang === 'ru' ? 'Запись' : 'Recorded At',
+      // Mixed At
+      lang === 'ru' ? 'Сведение' : 'Mixed At',
     ];
 
     // Удаляем старые редактируемые блоки
