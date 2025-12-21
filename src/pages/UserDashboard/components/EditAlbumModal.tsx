@@ -39,6 +39,7 @@ import { EditAlbumModalStep1 } from './steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from './steps/EditAlbumModalStep2';
 import { EditAlbumModalStep3 } from './steps/EditAlbumModalStep3';
 import { EditAlbumModalStep4 } from './steps/EditAlbumModalStep4';
+import { EditAlbumModalStep5 } from './steps/EditAlbumModalStep5';
 import './EditAlbumModal.style.scss';
 
 // Re-export types for backward compatibility
@@ -1028,9 +1029,9 @@ export function EditAlbumModal({
       return; // Останавливаем переход, если валидация не прошла
     }
 
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       setCurrentStep((s) => s + 1);
-    } else if (currentStep === 4) {
+    } else if (currentStep === 5) {
       handlePublish();
     }
   };
@@ -1811,8 +1812,12 @@ export function EditAlbumModal({
     }
 
     if (currentStep === 3) {
+      return <EditAlbumModalStep3 formData={formData} onFormDataChange={handleInputChange} />;
+    }
+
+    if (currentStep === 4) {
       return (
-        <EditAlbumModalStep3
+        <EditAlbumModalStep4
           formData={formData}
           bandMemberName={bandMemberName}
           bandMemberRole={bandMemberRole}
@@ -1841,9 +1846,9 @@ export function EditAlbumModal({
       );
     }
 
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       return (
-        <EditAlbumModalStep4
+        <EditAlbumModalStep5
           formData={formData}
           editingPurchaseLink={editingPurchaseLink}
           purchaseLinkService={purchaseLinkService}
@@ -1873,15 +1878,17 @@ export function EditAlbumModal({
   const getStepTitle = () => {
     switch (currentStep) {
       case 1:
-        return 'Step 1 of 4: Basic Info';
+        return 'Step 1 of 5: Basic Info';
       case 2:
-        return 'Step 2 of 4: Music Details';
+        return 'Step 2 of 5: Music Details';
       case 3:
-        return 'Step 3 of 4: Credits';
+        return 'Step 3 of 5: Recorded/Mixed/Mastered';
       case 4:
-        return 'Step 4 of 4: Links';
+        return 'Step 4 of 5: Credits';
+      case 5:
+        return 'Step 5 of 5: Links';
       default:
-        return `Step ${currentStep} of 4`;
+        return `Step ${currentStep} of 5`;
     }
   };
 
@@ -1915,7 +1922,7 @@ export function EditAlbumModal({
                 </button>
               )}
 
-              {currentStep === 4 ? (
+              {currentStep === 5 ? (
                 <button
                   type="button"
                   className="edit-album-modal__button edit-album-modal__button--primary"

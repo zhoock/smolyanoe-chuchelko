@@ -1,353 +1,520 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep4.tsx
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
-import { PURCHASE_SERVICES, STREAMING_SERVICES } from '../EditAlbumModal.constants';
+import { MAX_BAND_MEMBERS } from '../EditAlbumModal.constants';
+import { EditableCardField } from '../shared/EditableCardField';
+import '../shared/EditableCardField.style.scss';
 
 interface EditAlbumModalStep4Props {
   formData: AlbumFormData;
-  editingPurchaseLink: number | null;
-  purchaseLinkService: string;
-  purchaseLinkUrl: string;
-  editingStreamingLink: number | null;
-  streamingLinkService: string;
-  streamingLinkUrl: string;
-  onPurchaseLinkServiceChange: (value: string) => void;
-  onPurchaseLinkUrlChange: (value: string) => void;
-  onAddPurchaseLink: () => void;
-  onEditPurchaseLink: (index: number) => void;
-  onRemovePurchaseLink: (index: number) => void;
-  onCancelEditPurchaseLink: () => void;
-  onStreamingLinkServiceChange: (value: string) => void;
-  onStreamingLinkUrlChange: (value: string) => void;
-  onAddStreamingLink: () => void;
-  onEditStreamingLink: (index: number) => void;
-  onRemoveStreamingLink: (index: number) => void;
-  onCancelEditStreamingLink: () => void;
+  bandMemberName: string;
+  bandMemberRole: string;
+  bandMemberURL: string;
+  editingBandMemberIndex: number | null;
+  sessionMusicianName: string;
+  sessionMusicianRole: string;
+  sessionMusicianURL: string;
+  editingSessionMusicianIndex: number | null;
+  onFormDataChange: (field: keyof AlbumFormData, value: any) => void;
+  onBandMemberNameChange: (value: string) => void;
+  onBandMemberRoleChange: (value: string) => void;
+  onBandMemberURLChange: (value: string) => void;
+  onAddBandMember: () => void;
+  onEditBandMember: (index: number) => void;
+  onRemoveBandMember: (index: number) => void;
+  onCancelEditBandMember: () => void;
+  onSessionMusicianNameChange: (value: string) => void;
+  onSessionMusicianRoleChange: (value: string) => void;
+  onSessionMusicianURLChange: (value: string) => void;
+  onAddSessionMusician: () => void;
+  onEditSessionMusician: (index: number) => void;
+  onRemoveSessionMusician: (index: number) => void;
+  onCancelEditSessionMusician: () => void;
 }
 
 export function EditAlbumModalStep4({
   formData,
-  editingPurchaseLink,
-  purchaseLinkService,
-  purchaseLinkUrl,
-  editingStreamingLink,
-  streamingLinkService,
-  streamingLinkUrl,
-  onPurchaseLinkServiceChange,
-  onPurchaseLinkUrlChange,
-  onAddPurchaseLink,
-  onEditPurchaseLink,
-  onRemovePurchaseLink,
-  onCancelEditPurchaseLink,
-  onStreamingLinkServiceChange,
-  onStreamingLinkUrlChange,
-  onAddStreamingLink,
-  onEditStreamingLink,
-  onRemoveStreamingLink,
-  onCancelEditStreamingLink,
+  bandMemberName,
+  bandMemberRole,
+  bandMemberURL,
+  editingBandMemberIndex,
+  sessionMusicianName,
+  sessionMusicianRole,
+  sessionMusicianURL,
+  editingSessionMusicianIndex,
+  onFormDataChange,
+  onBandMemberNameChange,
+  onBandMemberRoleChange,
+  onBandMemberURLChange,
+  onAddBandMember,
+  onEditBandMember,
+  onRemoveBandMember,
+  onCancelEditBandMember,
+  onSessionMusicianNameChange,
+  onSessionMusicianRoleChange,
+  onSessionMusicianURLChange,
+  onAddSessionMusician,
+  onEditSessionMusician,
+  onRemoveSessionMusician,
+  onCancelEditSessionMusician,
 }: EditAlbumModalStep4Props) {
   return (
     <>
       <div className="edit-album-modal__divider" />
 
-      <div className="edit-album-modal__links-container">
-        <div className="edit-album-modal__links-column">
-          <label className="edit-album-modal__links-label">Purchase</label>
-
-          <div className="edit-album-modal__links-list">
-            {formData.purchaseLinks.map((link, index) => {
-              const service = PURCHASE_SERVICES.find((s) => s.id === link.service);
-              const isEditing = editingPurchaseLink === index;
-
-              return (
-                <div key={index} className="edit-album-modal__link-item">
-                  {isEditing ? (
-                    <div className="edit-album-modal__link-edit">
-                      <select
-                        name="purchase-link-service"
-                        autoComplete="off"
-                        className="edit-album-modal__link-select"
-                        value={purchaseLinkService}
-                        onChange={(e) => onPurchaseLinkServiceChange(e.target.value)}
-                      >
-                        <option value="">Select service</option>
-                        {PURCHASE_SERVICES.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <input
-                        name="purchase-link-url"
-                        type="url"
-                        autoComplete="url"
-                        className="edit-album-modal__link-input"
-                        placeholder="URL"
-                        value={purchaseLinkUrl}
-                        onChange={(e) => onPurchaseLinkUrlChange(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (
-                            e.key === 'Enter' &&
-                            purchaseLinkService.trim() &&
-                            purchaseLinkUrl.trim()
-                          ) {
-                            e.preventDefault();
-                            onAddPurchaseLink();
-                          }
-                          if (e.key === 'Escape') onCancelEditPurchaseLink();
-                        }}
-                        autoFocus
-                      />
-
-                      <div className="edit-album-modal__link-actions">
-                        <button
-                          type="button"
-                          className="edit-album-modal__link-save"
-                          onClick={onAddPurchaseLink}
-                          disabled={!purchaseLinkService.trim() || !purchaseLinkUrl.trim()}
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          className="edit-album-modal__link-cancel"
-                          onClick={onCancelEditPurchaseLink}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="edit-album-modal__link-content">
-                        {service && (
-                          <span className={`edit-album-modal__link-icon ${service.icon}`} />
-                        )}
-                        <span className="edit-album-modal__link-name">
-                          {service ? service.name : link.service}
-                        </span>
-                      </div>
-                      <div className="edit-album-modal__link-item-actions">
-                        <button
-                          type="button"
-                          className="edit-album-modal__list-item-edit"
-                          onClick={() => onEditPurchaseLink(index)}
-                          aria-label={`Edit ${service ? service.name : link.service}`}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          type="button"
-                          className="edit-album-modal__list-item-remove"
-                          onClick={() => onRemovePurchaseLink(index)}
-                          aria-label={`Remove ${service ? service.name : link.service}`}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+      <div className="edit-album-modal__field">
+        <label className="edit-album-modal__label">Album Cover</label>
+        <div className="edit-album-modal__two-column-inputs">
+          <div>
+            <input
+              name="album-cover-photographer"
+              type="text"
+              autoComplete="name"
+              className="edit-album-modal__input"
+              placeholder="Photographer (optional)"
+              value={formData.albumCoverPhotographer}
+              onChange={(e) => onFormDataChange('albumCoverPhotographer', e.target.value)}
+            />
+            <input
+              name="album-cover-photographer-url"
+              type="url"
+              autoComplete="url"
+              className="edit-album-modal__input"
+              placeholder="Photographer URL (optional)"
+              value={formData.albumCoverPhotographerURL}
+              onChange={(e) => onFormDataChange('albumCoverPhotographerURL', e.target.value)}
+            />
           </div>
+          <div>
+            <input
+              name="album-cover-designer"
+              type="text"
+              autoComplete="name"
+              className="edit-album-modal__input"
+              placeholder="Designer"
+              required
+              value={formData.albumCoverDesigner}
+              onChange={(e) => onFormDataChange('albumCoverDesigner', e.target.value)}
+            />
+            <input
+              name="album-cover-designer-url"
+              type="url"
+              autoComplete="url"
+              className="edit-album-modal__input"
+              placeholder="Designer URL (optional)"
+              value={formData.albumCoverDesignerURL}
+              onChange={(e) => onFormDataChange('albumCoverDesignerURL', e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
 
-          {editingPurchaseLink === null && (
-            <div className="edit-album-modal__link-add">
-              <select
-                name="purchase-link-service"
-                autoComplete="off"
-                className="edit-album-modal__link-select"
-                value={purchaseLinkService}
-                onChange={(e) => onPurchaseLinkServiceChange(e.target.value)}
-              >
-                <option value="">Select service</option>
-                {PURCHASE_SERVICES.filter(
-                  (s) => !formData.purchaseLinks.some((l) => l.service === s.id)
-                ).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+      <div className="edit-album-modal__field">
+        <label className="edit-album-modal__label">Band Members</label>
 
+        {formData.bandMembers.length > 0 && (
+          <div className="edit-album-modal__list">
+            {formData.bandMembers.map((member, index) => (
+              <EditableCardField
+                key={index}
+                data={{
+                  title: member.name,
+                  description: member.role,
+                  url: member.url,
+                }}
+                isEditing={editingBandMemberIndex === index}
+                editTitle={bandMemberName}
+                editDescription={bandMemberRole}
+                editUrl={bandMemberURL}
+                onTitleChange={onBandMemberNameChange}
+                onDescriptionChange={onBandMemberRoleChange}
+                onUrlChange={onBandMemberURLChange}
+                onEdit={() => onEditBandMember(index)}
+                onSave={onAddBandMember}
+                onCancel={onCancelEditBandMember}
+                onRemove={() => onRemoveBandMember(index)}
+                titlePlaceholder="Name"
+                descriptionPlaceholder="Role"
+                urlPlaceholder="URL (optional)"
+              />
+            ))}
+          </div>
+        )}
+
+        {formData.bandMembers.length >= MAX_BAND_MEMBERS && (
+          <div className="edit-album-modal__help-text">
+            Maximum {MAX_BAND_MEMBERS} band members reached
+          </div>
+        )}
+
+        {(formData.bandMembers.length === 0 || formData.showAddBandMemberInputs === true) &&
+          formData.bandMembers.length < MAX_BAND_MEMBERS &&
+          !editingBandMemberIndex && (
+            <>
+              <div className="edit-album-modal__two-column-inputs">
+                <input
+                  name="band-member-name"
+                  type="text"
+                  autoComplete="name"
+                  className="edit-album-modal__input"
+                  placeholder="Name"
+                  value={bandMemberName}
+                  onChange={(e) => onBandMemberNameChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
+                      e.preventDefault();
+                      onAddBandMember();
+                    }
+                    if (e.key === 'Escape') {
+                      onCancelEditBandMember();
+                    }
+                  }}
+                />
+                <input
+                  name="band-member-role"
+                  type="text"
+                  autoComplete="organization-title"
+                  className="edit-album-modal__input"
+                  placeholder="Role"
+                  value={bandMemberRole}
+                  onChange={(e) => onBandMemberRoleChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
+                      e.preventDefault();
+                      onAddBandMember();
+                    }
+                    if (e.key === 'Escape') {
+                      onCancelEditBandMember();
+                    }
+                  }}
+                />
+              </div>
               <input
-                name="purchase-link-url"
+                name="band-member-url"
                 type="url"
                 autoComplete="url"
-                className="edit-album-modal__link-input"
-                placeholder="URL"
-                value={purchaseLinkUrl}
-                onChange={(e) => onPurchaseLinkUrlChange(e.target.value)}
+                className="edit-album-modal__input"
+                placeholder="URL (optional)"
+                value={bandMemberURL}
+                onChange={(e) => onBandMemberURLChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && purchaseLinkService.trim() && purchaseLinkUrl.trim()) {
+                  if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
                     e.preventDefault();
-                    onAddPurchaseLink();
+                    onAddBandMember();
+                  }
+                  if (e.key === 'Escape') {
+                    onCancelEditBandMember();
                   }
                 }}
               />
-
-              <button
-                type="button"
-                className="edit-album-modal__add-button"
-                onClick={onAddPurchaseLink}
-                disabled={!purchaseLinkService.trim() || !purchaseLinkUrl.trim()}
-              >
-                + Add
-              </button>
-            </div>
+              {bandMemberName.trim() && bandMemberRole.trim() && (
+                <button
+                  type="button"
+                  className="edit-album-modal__add-button"
+                  onClick={onAddBandMember}
+                >
+                  + Add
+                </button>
+              )}
+            </>
           )}
-        </div>
 
-        <div className="edit-album-modal__links-column">
-          <label className="edit-album-modal__links-label">Streaming</label>
+        {formData.bandMembers.length > 0 &&
+          formData.showAddBandMemberInputs !== true &&
+          formData.bandMembers.length < MAX_BAND_MEMBERS &&
+          !editingBandMemberIndex && (
+            <button
+              type="button"
+              className="edit-album-modal__add-button"
+              onClick={() => onFormDataChange('showAddBandMemberInputs', true)}
+            >
+              + Добавить
+            </button>
+          )}
+      </div>
 
-          <div className="edit-album-modal__links-list">
-            {formData.streamingLinks.map((link, index) => {
-              const service = STREAMING_SERVICES.find((s) => s.id === link.service);
-              const isEditing = editingStreamingLink === index;
+      <div className="edit-album-modal__field">
+        <label className="edit-album-modal__label">Session Musicians</label>
 
-              return (
-                <div key={index} className="edit-album-modal__link-item">
-                  {isEditing ? (
-                    <div className="edit-album-modal__link-edit">
-                      <select
-                        name="streaming-link-service"
-                        autoComplete="off"
-                        className="edit-album-modal__link-select"
-                        value={streamingLinkService}
-                        onChange={(e) => onStreamingLinkServiceChange(e.target.value)}
-                      >
-                        <option value="">Select service</option>
-                        {STREAMING_SERVICES.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <input
-                        name="streaming-link-url"
-                        type="url"
-                        autoComplete="url"
-                        className="edit-album-modal__link-input"
-                        placeholder="URL"
-                        value={streamingLinkUrl}
-                        onChange={(e) => onStreamingLinkUrlChange(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (
-                            e.key === 'Enter' &&
-                            streamingLinkService.trim() &&
-                            streamingLinkUrl.trim()
-                          ) {
-                            e.preventDefault();
-                            onAddStreamingLink();
-                          }
-                          if (e.key === 'Escape') onCancelEditStreamingLink();
-                        }}
-                        autoFocus
-                      />
-
-                      <div className="edit-album-modal__link-actions">
-                        <button
-                          type="button"
-                          className="edit-album-modal__link-save"
-                          onClick={onAddStreamingLink}
-                          disabled={!streamingLinkService.trim() || !streamingLinkUrl.trim()}
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          className="edit-album-modal__link-cancel"
-                          onClick={onCancelEditStreamingLink}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="edit-album-modal__link-content">
-                        {service && (
-                          <span className={`edit-album-modal__link-icon ${service.icon}`} />
-                        )}
-                        <span className="edit-album-modal__link-name">
-                          {service ? service.name : link.service}
-                        </span>
-                      </div>
-                      <div className="edit-album-modal__link-item-actions">
-                        <button
-                          type="button"
-                          className="edit-album-modal__list-item-edit"
-                          onClick={() => onEditStreamingLink(index)}
-                          aria-label={`Edit ${service ? service.name : link.service}`}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          type="button"
-                          className="edit-album-modal__list-item-remove"
-                          onClick={() => onRemoveStreamingLink(index)}
-                          aria-label={`Remove ${service ? service.name : link.service}`}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+        {formData.sessionMusicians.length > 0 && (
+          <div className="edit-album-modal__list">
+            {formData.sessionMusicians.map((musician, index) => (
+              <EditableCardField
+                key={index}
+                data={{
+                  title: musician.name,
+                  description: musician.role,
+                  url: musician.url,
+                }}
+                isEditing={editingSessionMusicianIndex === index}
+                editTitle={sessionMusicianName}
+                editDescription={sessionMusicianRole}
+                editUrl={sessionMusicianURL}
+                onTitleChange={onSessionMusicianNameChange}
+                onDescriptionChange={onSessionMusicianRoleChange}
+                onUrlChange={onSessionMusicianURLChange}
+                onEdit={() => onEditSessionMusician(index)}
+                onSave={onAddSessionMusician}
+                onCancel={onCancelEditSessionMusician}
+                onRemove={() => onRemoveSessionMusician(index)}
+                titlePlaceholder="Name"
+                descriptionPlaceholder="Role"
+                urlPlaceholder="URL (optional)"
+              />
+            ))}
           </div>
+        )}
 
-          {editingStreamingLink === null && (
-            <div className="edit-album-modal__link-add">
-              <select
-                name="streaming-link-service"
-                autoComplete="off"
-                className="edit-album-modal__link-select"
-                value={streamingLinkService}
-                onChange={(e) => onStreamingLinkServiceChange(e.target.value)}
-              >
-                <option value="">Select service</option>
-                {STREAMING_SERVICES.filter(
-                  (s) => !formData.streamingLinks.some((l) => l.service === s.id)
-                ).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+        {formData.sessionMusicians.length >= MAX_BAND_MEMBERS && (
+          <div className="edit-album-modal__help-text">
+            Maximum {MAX_BAND_MEMBERS} session musicians reached
+          </div>
+        )}
 
+        {(formData.sessionMusicians.length === 0 ||
+          formData.showAddSessionMusicianInputs === true) &&
+          formData.sessionMusicians.length < MAX_BAND_MEMBERS &&
+          !editingSessionMusicianIndex && (
+            <>
+              <div className="edit-album-modal__two-column-inputs">
+                <input
+                  name="session-musician-name"
+                  type="text"
+                  autoComplete="name"
+                  className="edit-album-modal__input"
+                  placeholder="Name"
+                  value={sessionMusicianName}
+                  onChange={(e) => onSessionMusicianNameChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === 'Enter' &&
+                      sessionMusicianName.trim() &&
+                      sessionMusicianRole.trim()
+                    ) {
+                      e.preventDefault();
+                      onAddSessionMusician();
+                    }
+                    if (e.key === 'Escape') {
+                      onCancelEditSessionMusician();
+                    }
+                  }}
+                />
+                <input
+                  name="session-musician-role"
+                  type="text"
+                  autoComplete="organization-title"
+                  className="edit-album-modal__input"
+                  placeholder="Role"
+                  value={sessionMusicianRole}
+                  onChange={(e) => onSessionMusicianRoleChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === 'Enter' &&
+                      sessionMusicianName.trim() &&
+                      sessionMusicianRole.trim()
+                    ) {
+                      e.preventDefault();
+                      onAddSessionMusician();
+                    }
+                    if (e.key === 'Escape') {
+                      onCancelEditSessionMusician();
+                    }
+                  }}
+                />
+              </div>
               <input
-                name="streaming-link-url"
+                name="session-musician-url"
                 type="url"
                 autoComplete="url"
-                className="edit-album-modal__link-input"
-                placeholder="URL"
-                value={streamingLinkUrl}
-                onChange={(e) => onStreamingLinkUrlChange(e.target.value)}
+                className="edit-album-modal__input"
+                placeholder="URL (optional)"
+                value={sessionMusicianURL}
+                onChange={(e) => onSessionMusicianURLChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && streamingLinkService.trim() && streamingLinkUrl.trim()) {
+                  if (
+                    e.key === 'Enter' &&
+                    sessionMusicianName.trim() &&
+                    sessionMusicianRole.trim()
+                  ) {
                     e.preventDefault();
-                    onAddStreamingLink();
+                    onAddSessionMusician();
+                  }
+                  if (e.key === 'Escape') {
+                    onCancelEditSessionMusician();
                   }
                 }}
               />
-
-              <button
-                type="button"
-                className="edit-album-modal__add-button"
-                onClick={onAddStreamingLink}
-                disabled={!streamingLinkService.trim() || !streamingLinkUrl.trim()}
-              >
-                + Add
-              </button>
-            </div>
+              {sessionMusicianName.trim() && sessionMusicianRole.trim() && (
+                <button
+                  type="button"
+                  className="edit-album-modal__add-button"
+                  onClick={onAddSessionMusician}
+                >
+                  + Add
+                </button>
+              )}
+            </>
           )}
-        </div>
+
+        {formData.sessionMusicians.length > 0 &&
+          formData.showAddSessionMusicianInputs !== true &&
+          formData.sessionMusicians.length < MAX_BAND_MEMBERS &&
+          !editingSessionMusicianIndex && (
+            <button
+              type="button"
+              className="edit-album-modal__add-button"
+              onClick={() => onFormDataChange('showAddSessionMusicianInputs', true)}
+            >
+              + Добавить
+            </button>
+          )}
+      </div>
+
+      <div className="edit-album-modal__field">
+        <label className="edit-album-modal__label">Producer</label>
+
+        {formData.producer.length > 0 && (
+          <div className="edit-album-modal__list">
+            {formData.producer.map((entry, index) => {
+              const isEditing = formData.editingProducerIndex === index;
+              return (
+                <EditableCardField
+                  key={index}
+                  data={{
+                    title: entry.text,
+                    url: entry.url,
+                  }}
+                  isEditing={isEditing}
+                  editTitle={formData.producerText || ''}
+                  editDescription=""
+                  editUrl={formData.producerURL || ''}
+                  onTitleChange={(value) => onFormDataChange('producerText', value)}
+                  onDescriptionChange={() => {}}
+                  onUrlChange={(value) => onFormDataChange('producerURL', value)}
+                  onEdit={() => {
+                    onFormDataChange('editingProducerIndex', index);
+                    onFormDataChange('producerText', entry.text);
+                    onFormDataChange('producerURL', entry.url || '');
+                  }}
+                  onSave={() => {
+                    const updated = [...formData.producer];
+                    updated[index] = {
+                      text: formData.producerText!.trim(),
+                      url: formData.producerURL?.trim() || undefined,
+                    };
+                    onFormDataChange('producer', updated);
+                    onFormDataChange('producerText', '');
+                    onFormDataChange('producerURL', '');
+                    onFormDataChange('editingProducerIndex', null);
+                  }}
+                  onCancel={() => {
+                    onFormDataChange('producerText', '');
+                    onFormDataChange('producerURL', '');
+                    onFormDataChange('editingProducerIndex', null);
+                    onFormDataChange('showAddProducerInputs', false);
+                  }}
+                  onRemove={() => {
+                    const updated = [...formData.producer];
+                    updated.splice(index, 1);
+                    onFormDataChange('producer', updated);
+                  }}
+                  titlePlaceholder="Producer info (e.g., Yaroslav Zhuk — producer.)"
+                  descriptionPlaceholder=""
+                  urlPlaceholder="URL (optional)"
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {(formData.producer.length === 0 || formData.showAddProducerInputs === true) &&
+          !formData.editingProducerIndex && (
+            <>
+              <div className="edit-album-modal__two-column-inputs">
+                <input
+                  name="producer-text"
+                  type="text"
+                  className="edit-album-modal__input"
+                  placeholder="Producer info (e.g., Yaroslav Zhuk — producer.)"
+                  value={formData.producerText || ''}
+                  onChange={(e) => onFormDataChange('producerText', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.producerText?.trim()) {
+                      e.preventDefault();
+                      const text = formData.producerText.trim();
+                      const url = formData.producerURL?.trim() || undefined;
+                      const newEntry = { text, url };
+                      onFormDataChange('producer', [...formData.producer, newEntry]);
+                      onFormDataChange('producerText', '');
+                      onFormDataChange('producerURL', '');
+                      onFormDataChange('showAddProducerInputs', false);
+                    }
+                    if (e.key === 'Escape') {
+                      onFormDataChange('producerText', '');
+                      onFormDataChange('producerURL', '');
+                      onFormDataChange('showAddProducerInputs', false);
+                    }
+                  }}
+                />
+                <input
+                  name="producer-url"
+                  type="url"
+                  autoComplete="url"
+                  className="edit-album-modal__input"
+                  placeholder="URL (optional)"
+                  value={formData.producerURL || ''}
+                  onChange={(e) => onFormDataChange('producerURL', e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && formData.producerText?.trim()) {
+                      e.preventDefault();
+                      const text = formData.producerText.trim();
+                      const url = formData.producerURL?.trim() || undefined;
+                      const newEntry = { text, url };
+                      onFormDataChange('producer', [...formData.producer, newEntry]);
+                      onFormDataChange('producerText', '');
+                      onFormDataChange('producerURL', '');
+                      onFormDataChange('showAddProducerInputs', false);
+                    }
+                    if (e.key === 'Escape') {
+                      onFormDataChange('producerText', '');
+                      onFormDataChange('producerURL', '');
+                      onFormDataChange('showAddProducerInputs', false);
+                    }
+                  }}
+                />
+              </div>
+              {formData.producerText?.trim() && (
+                <button
+                  type="button"
+                  className="edit-album-modal__add-button"
+                  onClick={() => {
+                    const text = formData.producerText!.trim();
+                    const url = formData.producerURL?.trim() || undefined;
+                    const newEntry = { text, url };
+                    onFormDataChange('producer', [...formData.producer, newEntry]);
+                    onFormDataChange('producerText', '');
+                    onFormDataChange('producerURL', '');
+                    onFormDataChange('showAddProducerInputs', false);
+                  }}
+                >
+                  + Add
+                </button>
+              )}
+            </>
+          )}
+
+        {formData.producer &&
+          formData.producer.length > 0 &&
+          formData.showAddProducerInputs !== true &&
+          !formData.editingProducerIndex && (
+            <button
+              type="button"
+              className="edit-album-modal__add-button"
+              onClick={() => onFormDataChange('showAddProducerInputs', true)}
+            >
+              + Добавить
+            </button>
+          )}
       </div>
     </>
   );
