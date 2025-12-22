@@ -4,9 +4,9 @@ import { DEFAULT_PRODUCING_CREDIT_TYPES } from './EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 
 /**
- * Форматирует дату из формата YYYY-MM-DD в формат "MON. DD, YYYY"
+ * Форматирует дату из формата YYYY-MM-DD в формат "MON. DD, YYYY" (английский)
  */
-export function formatDateToDisplay(dateStr: string | undefined): string {
+export function formatDateToDisplayEN(dateStr: string | undefined): string {
   if (!dateStr) return '';
 
   try {
@@ -35,6 +35,47 @@ export function formatDateToDisplay(dateStr: string | undefined): string {
   } catch {
     return dateStr;
   }
+}
+
+/**
+ * Форматирует дату из формата YYYY-MM-DD в формат "DD месяца YYYY" (русский)
+ */
+export function formatDateToDisplayRU(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    const months = [
+      'января',
+      'февраля',
+      'марта',
+      'апреля',
+      'мая',
+      'июня',
+      'июля',
+      'августа',
+      'сентября',
+      'октября',
+      'ноября',
+      'декабря',
+    ];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
+ * Форматирует дату из формата YYYY-MM-DD в формат в зависимости от языка
+ */
+export function formatDateToDisplay(dateStr: string | undefined, lang: 'en' | 'ru' = 'en'): string {
+  return lang === 'ru' ? formatDateToDisplayRU(dateStr) : formatDateToDisplayEN(dateStr);
 }
 
 /**
@@ -119,23 +160,24 @@ export function parseRecordingText(text: string): {
 }
 
 /**
- * Строит текст записи из дат и текста студии
+ * Строит текст записи из дат и текста студии для указанного языка
  */
 export function buildRecordingText(
   dateFrom: string | undefined,
   dateTo: string | undefined,
-  studioText: string | undefined
+  studioText: string | undefined,
+  lang: 'en' | 'ru' = 'en'
 ): string {
   const parts: string[] = [];
 
   if (dateFrom && dateTo) {
-    const fromFormatted = formatDateToDisplay(dateFrom);
-    const toFormatted = formatDateToDisplay(dateTo);
+    const fromFormatted = formatDateToDisplay(dateFrom, lang);
+    const toFormatted = formatDateToDisplay(dateTo, lang);
     parts.push(`${fromFormatted}—${toFormatted}`);
   } else if (dateFrom) {
-    parts.push(formatDateToDisplay(dateFrom));
+    parts.push(formatDateToDisplay(dateFrom, lang));
   } else if (dateTo) {
-    parts.push(formatDateToDisplay(dateTo));
+    parts.push(formatDateToDisplay(dateTo, lang));
   }
 
   if (studioText) {
@@ -581,24 +623,17 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
       content: formData.mastering.map((entry) => {
+        // Сохраняем в новом формате с dateFrom, dateTo, studioText, url
+        const result: any = {};
+        if (entry.dateFrom) result.dateFrom = entry.dateFrom;
+        if (entry.dateTo) result.dateTo = entry.dateTo;
+        if (entry.studioText) result.studioText = entry.studioText;
         if (entry.url && entry.url.trim()) {
-          // Если есть URL, пытаемся разбить текст на имя и роль (формат: "Name — role.")
-          const match = entry.text.match(/^(.+?)\s*—\s*(.+)$/);
-          if (match) {
-            // Сохраняем в формате исходного JSON: ["", name, " — role."]
-            return {
-              text: ['', match[1].trim(), ` — ${match[2].trim()}`],
-              link: entry.url.trim(),
-            };
-          }
-          // Если не удалось разбить, сохраняем как есть
-          return {
-            text: [entry.text],
-            link: entry.url.trim(),
-          };
+          result.url = entry.url.trim();
+        } else {
+          result.url = null;
         }
-        // Иначе сохраняем как строку
-        return entry.text;
+        return result;
       }),
     });
   }
@@ -609,15 +644,17 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Запись' : 'Recorded At',
       content: formData.recordedAt.map((entry) => {
+        // Сохраняем в новом формате с dateFrom, dateTo, studioText, url
+        const result: any = {};
+        if (entry.dateFrom) result.dateFrom = entry.dateFrom;
+        if (entry.dateTo) result.dateTo = entry.dateTo;
+        if (entry.studioText) result.studioText = entry.studioText;
         if (entry.url && entry.url.trim()) {
-          // Если есть URL, сохраняем в формате объекта с text и link
-          return {
-            text: [entry.text],
-            link: entry.url.trim(),
-          };
+          result.url = entry.url.trim();
+        } else {
+          result.url = null;
         }
-        // Иначе сохраняем как строку
-        return entry.text;
+        return result;
       }),
     });
   }
@@ -628,15 +665,17 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Сведение' : 'Mixed At',
       content: formData.mixedAt.map((entry) => {
+        // Сохраняем в новом формате с dateFrom, dateTo, studioText, url
+        const result: any = {};
+        if (entry.dateFrom) result.dateFrom = entry.dateFrom;
+        if (entry.dateTo) result.dateTo = entry.dateTo;
+        if (entry.studioText) result.studioText = entry.studioText;
         if (entry.url && entry.url.trim()) {
-          // Если есть URL, сохраняем в формате объекта с text и link
-          return {
-            text: [entry.text],
-            link: entry.url.trim(),
-          };
+          result.url = entry.url.trim();
+        } else {
+          result.url = null;
         }
-        // Иначе сохраняем как строку
-        return entry.text;
+        return result;
       }),
     });
   }

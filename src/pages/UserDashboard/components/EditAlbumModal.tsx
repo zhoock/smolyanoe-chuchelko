@@ -35,6 +35,7 @@ import {
   formatDateToISO,
   formatDateInput,
   parseRecordingText,
+  buildRecordingText,
 } from './EditAlbumModal.utils';
 import { EditAlbumModalStep1 } from './steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from './steps/EditAlbumModalStep2';
@@ -349,29 +350,16 @@ export function EditAlbumModal({
 
     if (recordedAtDetail && (recordedAtDetail as any).content) {
       for (const item of (recordedAtDetail as any).content) {
-        if (!item) continue;
+        if (!item || typeof item !== 'object' || !item.dateFrom) continue;
 
-        let text = '';
-        let url: string | undefined = undefined;
-
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          text = item.text.join('').trim();
-          url = item.link ? String(item.link).trim() : undefined;
-        } else if (typeof item === 'string' && item.trim()) {
-          text = item.trim();
-        }
-
-        if (text) {
-          // Парсим текст для извлечения дат
-          const parsed = parseRecordingText(text);
-          recordedAt.push({
-            text,
-            url,
-            dateFrom: parsed.dateFrom,
-            dateTo: parsed.dateTo,
-            studioText: parsed.studioText,
-          });
-        }
+        // Новый формат: { dateFrom, dateTo?, studioText, url }
+        recordedAt.push({
+          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, lang),
+          url: item.url || undefined,
+          dateFrom: item.dateFrom,
+          dateTo: item.dateTo,
+          studioText: item.studioText,
+        });
       }
     }
 
@@ -385,29 +373,16 @@ export function EditAlbumModal({
 
     if (mixedAtDetail && (mixedAtDetail as any).content) {
       for (const item of (mixedAtDetail as any).content) {
-        if (!item) continue;
+        if (!item || typeof item !== 'object' || !item.dateFrom) continue;
 
-        let text = '';
-        let url: string | undefined = undefined;
-
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          text = item.text.join('').trim();
-          url = item.link ? String(item.link).trim() : undefined;
-        } else if (typeof item === 'string' && item.trim()) {
-          text = item.trim();
-        }
-
-        if (text) {
-          // Парсим текст для извлечения дат
-          const parsed = parseRecordingText(text);
-          mixedAt.push({
-            text,
-            url,
-            dateFrom: parsed.dateFrom,
-            dateTo: parsed.dateTo,
-            studioText: parsed.studioText,
-          });
-        }
+        // Новый формат: { dateFrom, dateTo?, studioText, url }
+        mixedAt.push({
+          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, lang),
+          url: item.url || undefined,
+          dateFrom: item.dateFrom,
+          dateTo: item.dateTo,
+          studioText: item.studioText,
+        });
       }
     }
 
@@ -452,7 +427,7 @@ export function EditAlbumModal({
     // --- парсинг Mastered By ---
     const mastering: RecordingEntry[] = [];
 
-    // Сначала ищем отдельный блок "Mastered By" / "Мастеринг"
+    // Ищем отдельный блок "Mastered By" / "Мастеринг"
     const masteredByDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
           (detail) => detail && (detail.title === 'Mastered By' || detail.title === 'Мастеринг')
@@ -461,57 +436,16 @@ export function EditAlbumModal({
 
     if (masteredByDetail && (masteredByDetail as any).content) {
       for (const item of (masteredByDetail as any).content) {
-        if (!item) continue;
+        if (!item || typeof item !== 'object' || !item.dateFrom) continue;
 
-        let text = '';
-        let url: string | undefined = undefined;
-
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          text = item.text.join('').trim();
-          url = item.link ? String(item.link).trim() : undefined;
-        } else if (typeof item === 'string' && item.trim()) {
-          text = item.trim();
-        }
-
-        if (text) {
-          // Парсим текст для извлечения дат
-          const parsed = parseRecordingText(text);
-          mastering.push({
-            text,
-            url,
-            dateFrom: parsed.dateFrom,
-            dateTo: parsed.dateTo,
-            studioText: parsed.studioText,
-          });
-        }
-      }
-    } else if (producingDetail && (producingDetail as any).content) {
-      // Если нет отдельного блока, ищем в блоке "Producing"
-      for (const item of (producingDetail as any).content) {
-        if (!item) continue;
-
-        let fullText = '';
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          fullText = item.text.join('');
-        } else if (typeof item === 'string') {
-          fullText = item;
-        }
-
-        if (!fullText.trim()) continue;
-
-        // Проверяем, содержит ли роль mastering/мастеринг
-        const roleTextLower = fullText.toLowerCase();
-        if (roleTextLower.includes('mastering') || roleTextLower.includes('мастеринг')) {
-          if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-            const text = item.text.join('').trim();
-            const url = item.link ? String(item.link).trim() : undefined;
-            if (text) {
-              mastering.push({ text, url });
-            }
-          } else if (typeof item === 'string' && item.trim()) {
-            mastering.push({ text: item.trim() });
-          }
-        }
+        // Новый формат: { dateFrom, dateTo?, studioText, url }
+        mastering.push({
+          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, lang),
+          url: item.url || undefined,
+          dateFrom: item.dateFrom,
+          dateTo: item.dateTo,
+          studioText: item.studioText,
+        });
       }
     }
 

@@ -26,6 +26,7 @@
     "load-env": "echo '⚠️  Используйте: source scripts/load-netlify-env.sh' && bash scripts/load-netlify-env.sh",
     "migrate-covers": "tsx scripts/migrate-album-covers-to-supabase.ts",
     "move-covers-to-root": "tsx scripts/move-album-covers-to-root.ts",
+    "migrate-recording-entries": "tsx database/scripts/migrate-recording-entries-to-new-format.ts",
     "dev": "netlify dev",
     "dev:local": "npm start"
   },

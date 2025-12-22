@@ -36,16 +36,14 @@
         "title": "Recorded At",
         "content": [
           {
-            "text": [
-              "SEP. 28, 2021:",
-              "Igor Matvienko's recording studio M.A.M.A, Big studio",
-              ", Moscow."
-            ],
-            "link": "https://studio-mama.ru/"
+            "dateFrom": "2021-09-28",
+            "studioText": "Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.",
+            "url": "https://studio-mama.ru/"
           },
           {
-            "text": ["NOV. 01, 2021:", "DTH Studios, Studio A", ", Moscow."],
-            "link": "http://dthstudios.com/studios"
+            "dateFrom": "2021-11-01",
+            "studioText": "DTH Studios, Studio A, Moscow.",
+            "url": "http://dthstudios.com/studios"
           }
         ]
       },
@@ -54,8 +52,10 @@
         "title": "Mixed At",
         "content": [
           {
-            "text": ["JAN. 14, 2024—SEP. 22, 2024:", "DTH Studios, Studio A", ", Moscow."],
-            "link": "http://dthstudios.com/studios"
+            "dateFrom": "2024-01-14",
+            "dateTo": "2024-09-22",
+            "studioText": "DTH Studios, Studio A, Moscow.",
+            "url": "http://dthstudios.com/studios"
           }
         ]
       },
@@ -64,8 +64,10 @@
         "title": "Mastered By",
         "content": [
           {
-            "text": ["JAN. 14, 2025—FEB. 7, 2025:", "Chicago Mastering Service, Chicago", ", USA."],
-            "link": "https://chicagomasteringservice.com/"
+            "dateFrom": "2025-01-14",
+            "dateTo": "2025-02-07",
+            "studioText": "Chicago Mastering Service, Chicago, USA.",
+            "url": "https://chicagomasteringservice.com/"
           }
         ]
       },
@@ -574,16 +576,14 @@
         "title": "Recorded At",
         "content": [
           {
-            "text": [
-              "SEP. 28, 2021:",
-              "Igor Matvienko's recording studio M.A.M.A, Big studio",
-              ", Moscow."
-            ],
-            "link": "https://studio-mama.ru/"
+            "dateFrom": "2021-09-28",
+            "studioText": "Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.",
+            "url": "https://studio-mama.ru/"
           },
           {
-            "text": ["NOV. 01, 2021:", "DTH Studios, Studio A", ", Moscow."],
-            "link": "http://dthstudios.com/studios"
+            "dateFrom": "2021-11-01",
+            "studioText": "DTH Studios, Studio A, Moscow.",
+            "url": "http://dthstudios.com/studios"
           }
         ]
       },
@@ -592,12 +592,10 @@
         "title": "Mixed At",
         "content": [
           {
-            "text": [
-              "NOV. 16, 2021—NOV. 17 2021:",
-              "Recording studio \"Vintage Records\"",
-              ", Moscow."
-            ],
-            "link": "https://vintage.studio/about/large-equipment-room"
+            "dateFrom": "2021-11-16",
+            "dateTo": "2021-11-17",
+            "studioText": "Recording studio \"Vintage Records\", Moscow.",
+            "url": "https://vintage.studio/about/large-equipment-room"
           }
         ]
       },
@@ -606,8 +604,10 @@
         "title": "Mastered By",
         "content": [
           {
-            "text": ["NOV. 30 2021—DEC. 4, 2021:", "Chicago Mastering Service, Chicago", ", USA."],
-            "link": "https://chicagomasteringservice.com/"
+            "dateFrom": "2021-11-30",
+            "dateTo": "2021-12-04",
+            "studioText": "Chicago Mastering Service, Chicago, USA.",
+            "url": "https://chicagomasteringservice.com/"
           }
         ]
       },
@@ -706,16 +706,27 @@
         "title": "Recorded At",
         "content": [
           {
-            "text": [
-              "OCT. 16, 2018—DEC. 28, 2018:",
-              "Igor Matvienko's recording studio M.A.M.A, Big studio",
-              ", Moscow."
-            ],
-            "link": "https://studio-mama.ru/"
+            "dateFrom": "2018-10-16",
+            "dateTo": "2018-12-28",
+            "studioText": "Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.",
+            "url": "https://studio-mama.ru/"
           },
-          "NOV. 02, 2018 (Alexey Muskatin's Production Center, Moscow).",
-          "OCT. 4, 2019 (Studio Cosmos, Moscow).",
-          "OCT. 9, 2019—DEC. 14, 2019 (495 Studio Records, Moscow)."
+          {
+            "dateFrom": "2018-11-02",
+            "studioText": "Alexey Muskatin's Production Center, Moscow.",
+            "url": null
+          },
+          {
+            "dateFrom": "2019-10-04",
+            "studioText": "Studio Cosmos, Moscow.",
+            "url": null
+          },
+          {
+            "dateFrom": "2019-10-09",
+            "dateTo": "2019-12-14",
+            "studioText": "495 Studio Records, Moscow.",
+            "url": null
+          }
         ]
       },
       {
@@ -723,12 +734,10 @@
         "title": "Mixed At",
         "content": [
           {
-            "text": [
-              "DEC. 15,  2019—MAR. 2, 2020:",
-              "DTH Studios, Studio A, Studio B",
-              ", Moscow."
-            ],
-            "link": "http://dthstudios.com/studios"
+            "dateFrom": "2019-12-15",
+            "dateTo": "2020-03-02",
+            "studioText": "DTH Studios, Studio A, Studio B, Moscow.",
+            "url": "http://dthstudios.com/studios"
           }
         ]
       },
@@ -737,12 +746,10 @@
         "title": "Mastered By",
         "content": [
           {
-            "text": [
-              "MAR. 31, 2020—APR. 10, 2020:",
-              "Chicago Mastering Service, Chicago",
-              ", USA."
-            ],
-            "link": "https://chicagomasteringservice.com/"
+            "dateFrom": "2020-03-31",
+            "dateTo": "2020-04-10",
+            "studioText": "Chicago Mastering Service, Chicago, USA.",
+            "url": "https://chicagomasteringservice.com/"
           }
         ]
       },
