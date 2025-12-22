@@ -476,6 +476,32 @@ WHERE cover IS NOT NULL
   AND cover->>'img' NOT LIKE 'smolyanoe-chuchelko-Cover%';
 `;
 
+const MIGRATION_015 = `
+-- Миграция: Исправление проблемы с NULL в synced_lyrics и очистка дубликатов
+-- Проблема: NULL != NULL в PostgreSQL, поэтому ON CONFLICT не работает для user_id = NULL
+-- Решение: создаем partial unique index для публичных записей
+
+-- Шаг 1: Очистка дубликатов - оставляем только самую свежую public-запись
+DELETE FROM synced_lyrics a
+USING synced_lyrics b
+WHERE a.user_id IS NULL
+  AND b.user_id IS NULL
+  AND a.album_id = b.album_id
+  AND a.track_id = b.track_id
+  AND a.lang = b.lang
+  AND a.updated_at < b.updated_at;
+
+-- Шаг 2: Создаем partial unique index для публичных записей (user_id IS NULL)
+CREATE UNIQUE INDEX IF NOT EXISTS synced_lyrics_public_unique
+ON synced_lyrics (album_id, track_id, lang)
+WHERE user_id IS NULL;
+
+-- Шаг 3: (Опционально) Создаем partial unique index для пользовательских записей
+CREATE UNIQUE INDEX IF NOT EXISTS synced_lyrics_user_unique
+ON synced_lyrics (user_id, album_id, track_id, lang)
+WHERE user_id IS NOT NULL;
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -489,6 +515,7 @@ const MIGRATIONS: Record<string, string> = {
   '012_force_update_album_cover_names.sql': MIGRATION_012,
   '013_direct_update_album_covers.sql': MIGRATION_013,
   '014_force_all_covers.sql': MIGRATION_014,
+  '015_fix_synced_lyrics_null_duplicates.sql': MIGRATION_015,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -628,6 +655,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '012_force_update_album_cover_names.sql',
       '013_direct_update_album_covers.sql',
       '014_force_all_covers.sql',
+      '015_fix_synced_lyrics_null_duplicates.sql',
     ];
 
     const results: MigrationResult[] = [];

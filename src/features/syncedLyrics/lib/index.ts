@@ -230,9 +230,9 @@ export async function loadSyncedLyricsFromStorage(
         lang,
       });
 
-      // Добавляем таймаут для запроса (10 секунд)
+      // Добавляем таймаут для запроса (20 секунд для Netlify Functions)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
       // Если передан signal извне, объединяем его с таймаутом
       // Используем внешний signal, если он есть, иначе используем controller
@@ -340,9 +340,9 @@ export async function loadAuthorshipFromStorage(
         lang,
       });
 
-      // Добавляем таймаут для запроса (10 секунд)
+      // Добавляем таймаут для запроса (20 секунд для Netlify Functions)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
       // Если передан signal извне, объединяем его с таймаутом
       const finalSignal = signal || controller.signal;

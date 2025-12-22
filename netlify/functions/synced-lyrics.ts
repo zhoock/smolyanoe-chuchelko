@@ -105,11 +105,13 @@ export const handler: Handler = async (
 
       // Сначала ищем синхронизированный текст в таблице synced_lyrics
       // Загружаем только публичные синхронизации (user_id IS NULL)
+      // ORDER BY updated_at DESC для получения самой свежей записи
       const syncedResult = await query<SyncedLyricsRow>(
         `SELECT synced_lyrics, authorship 
          FROM synced_lyrics 
          WHERE album_id = $1 AND track_id = $2 AND lang = $3
            AND user_id IS NULL
+         ORDER BY updated_at DESC
          LIMIT 1`,
         [albumId, String(trackId), lang],
         0 // Без retry для GET запросов - они должны быть быстрыми
@@ -279,14 +281,15 @@ export const handler: Handler = async (
       });
 
       try {
-        await query(
+        const result = await query(
           `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
            VALUES (NULL, $1, $2, $3, $4::jsonb, $5, NOW())
-           ON CONFLICT ON CONSTRAINT synced_lyrics_user_album_track_lang_unique
+           ON CONFLICT (album_id, track_id, lang) WHERE user_id IS NULL
            DO UPDATE SET 
-             synced_lyrics = $4::jsonb,
-             authorship = $5,
-             updated_at = NOW()`,
+             synced_lyrics = EXCLUDED.synced_lyrics,
+             authorship = EXCLUDED.authorship,
+             updated_at = NOW()
+           RETURNING id, user_id, album_id, track_id, lang`,
           [
             data.albumId,
             String(data.trackId),
@@ -296,7 +299,14 @@ export const handler: Handler = async (
           ],
           0 // Без retry для POST запросов
         );
-        console.log('[synced-lyrics.ts POST] ✅ Saved to synced_lyrics table');
+        console.log('[synced-lyrics.ts POST] ✅ Saved to synced_lyrics table:', {
+          albumId: data.albumId,
+          trackId: data.trackId,
+          lang: data.lang,
+          savedId: result.rows[0]?.id,
+          savedUserId: result.rows[0]?.user_id,
+          linesCount: data.syncedLyrics.length,
+        });
       } catch (saveError) {
         console.error('[synced-lyrics.ts POST] ❌ Error saving to synced_lyrics:', saveError);
         throw saveError;

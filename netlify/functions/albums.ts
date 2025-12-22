@@ -318,7 +318,7 @@ export const handler: Handler = async (
                    FROM synced_lyrics 
                    WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
                      AND user_id IS NULL
-                   ORDER BY track_id, updated_at DESC`,
+                   ORDER BY track_id, updated_at DESC NULLS LAST`,
                   [album.album_id, trackIds, lang]
                 );
 

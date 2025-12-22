@@ -9,6 +9,7 @@ import {
   saveSyncedLyrics,
   loadSyncedLyricsFromStorage,
   loadAuthorshipFromStorage,
+  clearSyncedLyricsCache,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import './SyncLyricsModal.style.scss';
@@ -22,6 +23,7 @@ interface SyncLyricsModalProps {
   lyricsText?: string;
   authorship?: string;
   onClose: () => void;
+  onSave?: () => void;
 }
 
 // Форматирование времени для отображения (с миллисекундами для тайм-кодов)
@@ -50,6 +52,7 @@ export function SyncLyricsModal({
   lyricsText: propLyricsText,
   authorship: propAuthorship,
   onClose,
+  onSave,
 }: SyncLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -115,22 +118,39 @@ export function SyncLyricsModal({
           // Если есть текст, разбиваем на строки
           const contentLines = textToUse.split('\n').filter((line) => line.trim());
 
-          // Пытаемся загрузить сохраненные синхронизации (необязательно)
+          // Пытаемся загрузить сохраненные синхронизации из БД (необязательно)
+          // Очищаем кэш перед загрузкой, чтобы получить актуальные данные
+          clearSyncedLyricsCache(albumId, trackId, lang);
           try {
             const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
             if (storedSync && storedSync.length > 0) {
+              // Загружаем авторство для фильтрации
+              const storedAuthorship = await loadAuthorshipFromStorage(
+                albumId,
+                trackId,
+                lang
+              ).catch(() => null);
+              const trackAuthorship = (storedAuthorship || propAuthorship || '').trim();
+
+              // Фильтруем авторство из сохраненных синхронизаций при сравнении
+              // Сравниваем только первые N строк (без авторства)
+              const storedMain = storedSync.filter((line) => {
+                const lineText = (line.text || '').trim();
+                return !(trackAuthorship && lineText === trackAuthorship);
+              });
+
               // Проверяем, совпадает ли текст с сохраненными синхронизациями
-              const syncTextLines = storedSync
+              const syncTextLines = storedMain
                 .filter((line) => line.text) // Исключаем пустые строки
                 .map((line) => line.text.trim());
               const currentTextLines = contentLines.map((line) => line.trim());
 
-              // Если тексты совпадают, используем сохраненные синхронизации
+              // Если тексты совпадают, используем сохраненные синхронизации (без авторства)
               if (
                 syncTextLines.length === currentTextLines.length &&
                 syncTextLines.every((line, index) => line === currentTextLines[index])
               ) {
-                linesToDisplay = storedSync;
+                linesToDisplay = storedMain;
               } else {
                 // Текст изменился, создаем новые строки
                 linesToDisplay = contentLines.map((line) => ({
@@ -162,24 +182,17 @@ export function SyncLyricsModal({
         }
 
         // Пытаемся загрузить авторство (необязательно, не блокируем если таймаут)
+        // Авторство НЕ добавляется в linesToDisplay
+        // Оно хранится отдельным полем authorship в БД
+        // В UI авторство показывается отдельно, не как часть синхронизированных строк
         try {
           const storedAuthorship = await Promise.race([
             loadAuthorshipFromStorage(albumId, trackId, lang),
-            new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 2000)),
+            new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 5000)),
           ]);
 
+          // Авторство используется только для отображения в UI, но не добавляется в syncedLyrics
           const authorshipToUse = storedAuthorship || propAuthorship || null;
-
-          if (authorshipToUse) {
-            const lastLine = linesToDisplay[linesToDisplay.length - 1];
-            if (!lastLine || lastLine.text !== authorshipToUse) {
-              linesToDisplay.push({
-                text: authorshipToUse,
-                startTime: duration || 0,
-                endTime: undefined,
-              });
-            }
-          }
         } catch (authorshipError) {
           // Игнорируем ошибки загрузки авторства
           console.warn('Не удалось загрузить авторство:', authorshipError);
@@ -262,15 +275,14 @@ export function SyncLyricsModal({
     try {
       // Загружаем авторство
       const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
-      const trackAuthorship = storedAuthorship || propAuthorship || '';
+      const trackAuthorship = (storedAuthorship || propAuthorship || '').trim();
 
       // Фильтруем строки авторства из syncedLines перед сохранением
-      const linesToSave = syncedLines.filter((line, index) => {
-        // Если это последняя строка и она совпадает с authorship, проверяем наличие таймкодов
-        if (index === syncedLines.length - 1 && trackAuthorship && line.text === trackAuthorship) {
-          return line.startTime > 0 || line.endTime !== undefined;
-        }
-        return true;
+      // Авторство хранится отдельным полем authorship, не должно быть в syncedLyrics
+      const linesToSave = syncedLines.filter((line) => {
+        const lineText = (line.text || '').trim();
+        // Исключаем строки, которые совпадают с авторством
+        return !(trackAuthorship && lineText === trackAuthorship);
       });
 
       const result = await saveSyncedLyrics({
@@ -284,12 +296,18 @@ export function SyncLyricsModal({
       if (result.success) {
         setIsDirty(false);
         setIsSaved(true);
+        // Очищаем кэш синхронизаций, чтобы при следующей загрузке получить актуальные данные
+        clearSyncedLyricsCache(albumId, trackId, lang);
         // Останавливаем воспроизведение и сбрасываем время
         if (audioRef.current) {
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
           setIsPlaying(false);
           setCurrentTime(0);
+        }
+        // Вызываем callback для обновления статуса трека
+        if (onSave) {
+          onSave();
         }
       } else {
         alert(`❌ Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
@@ -300,7 +318,7 @@ export function SyncLyricsModal({
     } finally {
       setIsSaving(false);
     }
-  }, [albumId, trackId, lang, syncedLines, propAuthorship]);
+  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave]);
 
   // Переключение play/pause
   const togglePlayPause = useCallback(() => {

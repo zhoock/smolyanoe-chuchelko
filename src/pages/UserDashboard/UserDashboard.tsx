@@ -449,6 +449,7 @@ function UserDashboard() {
         return [
           { label: ui?.dashboard?.edit ?? 'Edit', action: 'edit' },
           { label: ui?.dashboard?.prev ?? 'Prev', action: 'prev' },
+          { label: ui?.dashboard?.sync ?? 'Sync', action: 'sync' },
         ];
       case 'text-only':
         return [
@@ -1244,6 +1245,14 @@ function UserDashboard() {
           lyricsText={syncLyricsModal.lyricsText}
           authorship={syncLyricsModal.authorship}
           onClose={() => setSyncLyricsModal(null)}
+          onSave={async () => {
+            // Перезагружаем альбомы из БД, чтобы получить актуальные синхронизированные тексты
+            try {
+              await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+            } catch (error) {
+              console.error('❌ Error reloading albums after sync save:', error);
+            }
+          }}
         />
       )}
 
