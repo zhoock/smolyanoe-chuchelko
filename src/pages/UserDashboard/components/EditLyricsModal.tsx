@@ -99,7 +99,9 @@ export function EditLyricsModal({
           />
           <div className="edit-lyrics-modal__divider"></div>
           <div className="edit-lyrics-modal__field">
-            <label className="edit-lyrics-modal__label">Авторство:</label>
+            <label className="edit-lyrics-modal__label">
+              {ui?.dashboard?.authorship ?? 'Authorship:'}
+            </label>
             <input
               type="text"
               className="edit-lyrics-modal__input"
@@ -114,7 +116,10 @@ export function EditLyricsModal({
               data-form-type="other"
               inputMode="text"
               aria-autocomplete="none"
-              placeholder="Например: Ярослав Жук — слова и музыка"
+              placeholder={
+                ui?.dashboard?.authorshipPlaceholder ??
+                'For example: Yaroslav Zhuk — words and music'
+              }
               value={authorship}
               onChange={(e) => setAuthorship(e.target.value)}
               onFocus={(e) => {

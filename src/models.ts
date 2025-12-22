@@ -200,6 +200,8 @@ export interface IInterface {
     previewLyrics: string;
     close: string;
     instrumental: string;
+    authorship: string;
+    authorshipPlaceholder: string;
     editAlbumModal?: {
       stepTitles: {
         step1: string;
