@@ -97,31 +97,120 @@ export const handler: Handler = async (
 
       const albumDbId = albumResult.rows[0].id;
 
-      // Обновляем трек в таблице tracks
-      // Используем album_id (UUID) из таблицы albums и track_id (строка) для поиска
-      const updateResult = await query(
-        `UPDATE tracks 
-         SET content = $1, authorship = $2, updated_at = NOW()
-         WHERE album_id = $3 AND track_id = $4
-         RETURNING id`,
+      // Получаем данные существующего трека (если есть)
+      // Трек должен существовать, так как сначала добавляется аудио, потом текст
+      const existingTrackResult = await query<{
+        title: string;
+        duration: number | null;
+        src: string | null;
+        order_index: number;
+      }>(
+        `SELECT title, duration, src, order_index 
+         FROM tracks 
+         WHERE album_id = $1 AND track_id = $2
+         LIMIT 1`,
+        [albumDbId, String(data.trackId)]
+      );
+
+      // Если трек не найден в пользовательской версии, ищем в публичной
+      let trackData: {
+        title: string;
+        duration: number | null;
+        src: string | null;
+        order_index: number;
+      } | null = null;
+
+      if (existingTrackResult.rows.length > 0) {
+        trackData = existingTrackResult.rows[0];
+        console.log('✅ [save-track-text] Found existing track:', {
+          albumId: data.albumId,
+          trackId: data.trackId,
+          title: trackData.title,
+        });
+      } else {
+        // Ищем трек в публичной версии альбома
+        const publicAlbumResult = await query<{ id: string }>(
+          `SELECT id FROM albums 
+           WHERE album_id = $1 AND lang = $2 AND user_id IS NULL
+           LIMIT 1`,
+          [data.albumId, data.lang]
+        );
+
+        if (publicAlbumResult.rows.length > 0) {
+          const publicAlbumDbId = publicAlbumResult.rows[0].id;
+          const publicTrackResult = await query<{
+            title: string;
+            duration: number | null;
+            src: string | null;
+            order_index: number;
+          }>(
+            `SELECT title, duration, src, order_index 
+             FROM tracks 
+             WHERE album_id = $1 AND track_id = $2
+             LIMIT 1`,
+            [publicAlbumDbId, String(data.trackId)]
+          );
+
+          if (publicTrackResult.rows.length > 0) {
+            trackData = publicTrackResult.rows[0];
+            console.log(
+              '✅ [save-track-text] Found track in public album, will copy to user album:',
+              {
+                albumId: data.albumId,
+                trackId: data.trackId,
+                title: trackData.title,
+              }
+            );
+          }
+        }
+      }
+
+      // Если трек не найден нигде - это ошибка, но используем минимальные данные
+      if (!trackData) {
+        console.warn('⚠️ [save-track-text] Track not found, using minimal data:', {
+          albumId: data.albumId,
+          trackId: data.trackId,
+          albumDbId,
+        });
+        trackData = {
+          title: `Track ${data.trackId}`,
+          duration: null,
+          src: null,
+          order_index: 0,
+        };
+      }
+
+      // Используем INSERT ... ON CONFLICT DO UPDATE для надежного сохранения
+      // Это обновит существующий трек или создаст новый, если его нет
+      await query(
+        `INSERT INTO tracks (
+          album_id, track_id, title, duration, src, content,
+          authorship, order_index
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (album_id, track_id)
+        DO UPDATE SET
+          content = EXCLUDED.content,
+          authorship = EXCLUDED.authorship,
+          updated_at = NOW()`,
         [
-          data.content, // content теперь хранит полный текст напрямую
-          data.authorship || null,
           albumDbId,
           String(data.trackId),
+          trackData.title,
+          trackData.duration,
+          trackData.src,
+          data.content,
+          data.authorship || null,
+          trackData.order_index,
         ]
       );
 
-      if (updateResult.rows.length === 0) {
-        return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            message: 'Track not found',
-          } as SaveTrackTextResponse),
-        };
-      }
+      // Получаем обновленный трек для логирования
+      const updatedTrackResult = await query<{ id: string }>(
+        `SELECT id FROM tracks 
+         WHERE album_id = $1 AND track_id = $2
+         LIMIT 1`,
+        [albumDbId, String(data.trackId)]
+      );
 
       console.log('✅ Track text saved to database:', {
         albumId: data.albumId,
@@ -130,7 +219,7 @@ export const handler: Handler = async (
         contentLength: data.content.length,
         hasAuthorship: data.authorship !== undefined,
         albumDbId,
-        trackDbId: updateResult.rows[0].id,
+        trackDbId: updatedTrackResult.rows[0]?.id || 'unknown',
       });
 
       return {
