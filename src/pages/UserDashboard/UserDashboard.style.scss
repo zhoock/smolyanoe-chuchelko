@@ -69,6 +69,78 @@ dialog {
       gap: var(--ms-0);
     }
 
+    &__lang-menu {
+      position: relative;
+    }
+
+    &__lang-current {
+      display: flex;
+      width: 40.25px;
+      height: 40.25px;
+      margin: 0;
+      padding: 0;
+      color: var(--dark-greenish-yellow, #998238);
+      font-size: 14px;
+      background: transparent;
+      border: 1px solid var(--dark-greenish-yellow, #998238);
+      border-radius: 50%;
+      transition: all 0.2s;
+      font-weight: bold;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        color: var(--deep-coal, #1a1a1a);
+        background: var(--dark-greenish-yellow, #998238);
+      }
+    }
+
+    &__lang-list {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      z-index: 100;
+      padding: 0;
+      background: var(--deep-black, #1a1a1a);
+      border: 1px solid var(--iron-slate, #2a2a2a);
+      border-radius: var(--ms-01);
+      list-style: none;
+      margin-top: var(--ms-0);
+      min-width: 60px;
+
+      &.is-hidden {
+        display: none;
+      }
+
+      li {
+        padding: var(--ms-01) var(--ms-0);
+      }
+    }
+
+    &__lang-option {
+      width: 100%;
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--warm-concrete, #dddddd);
+      text-align: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      transition: all 0.2s;
+      appearance: none;
+      cursor: pointer;
+
+      &.active {
+        color: var(--dark-greenish-yellow, #998238);
+        background: var(--graphite-green, #2a3a2a);
+      }
+
+      &:hover {
+        color: var(--white, #ffffff);
+        background: var(--graphite-green, #2a3a2a);
+      }
+    }
+
     &__logout-button {
       padding: var(--ms-01) var(--ms-0);
       color: var(--dark-greenish-yellow);

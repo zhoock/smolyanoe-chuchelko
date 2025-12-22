@@ -7,6 +7,8 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import type { SupportedLang } from '@shared/model/lang';
+import clsx from 'clsx';
 import { getUserImageUrl } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
@@ -36,8 +38,10 @@ import {
 } from '@entities/album/lib/transformAlbumData';
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import './UserDashboard.style.scss';
+const LANG_OPTIONS: SupportedLang[] = ['en', 'ru'];
+
 function UserDashboard() {
-  const { lang } = useLang();
+  const { lang, setLang } = useLang();
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
@@ -47,6 +51,8 @@ function UserDashboard() {
   const user = getUser();
 
   const [activeTab, setActiveTab] = useState<'albums' | 'posts' | 'payment-settings'>('albums');
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
@@ -156,6 +162,25 @@ function UserDashboard() {
       abortController.abort();
     };
   }, [albumsFromStore, lang]);
+
+  // Закрываем меню языка при клике вне
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Смена языка
+  const changeLang = (newLang: SupportedLang) => {
+    if (newLang !== lang) {
+      setLang(newLang);
+    }
+    setLangOpen(false);
+  };
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
@@ -649,7 +674,8 @@ function UserDashboard() {
           })
         );
 
-        // Обновляем initialLyrics в состоянии модального окна, чтобы при следующем открытии использовались актуальные данные
+        // Обновляем initialLyrics в состоянии модального окна ДО закрытия, чтобы изменения сразу отобразились
+        // Это важно, если модалка остается открытой (хотя обычно она закрывается)
         setEditLyricsModal((prev) =>
           prev
             ? {
@@ -665,6 +691,7 @@ function UserDashboard() {
           trackId: editLyricsModal.trackId,
           lyricsLength: finalText.length,
           loadedFromDb: !!savedText,
+          finalText: finalText.substring(0, 50) + '...',
         });
       } else {
         alert(result.message || 'Ошибка при сохранении текста');
@@ -797,6 +824,36 @@ function UserDashboard() {
                 </button>
               </div>
               <div className="user-dashboard__header-controls">
+                {/* Language switcher */}
+                <div className="user-dashboard__lang-menu" ref={langRef}>
+                  <button
+                    type="button"
+                    className="user-dashboard__lang-current"
+                    onClick={() => setLangOpen(!langOpen)}
+                    aria-haspopup="listbox"
+                    aria-expanded={langOpen}
+                    aria-label={`Выбрать язык. Текущий язык: ${lang === 'ru' ? 'Русский' : 'English'}`}
+                  >
+                    {lang.toUpperCase()}
+                  </button>
+                  <ul
+                    className={clsx('user-dashboard__lang-list', { 'is-hidden': !langOpen })}
+                    role="listbox"
+                  >
+                    {LANG_OPTIONS.map((l) => (
+                      <li key={l}>
+                        <button
+                          className={clsx('user-dashboard__lang-option', { active: lang === l })}
+                          onClick={() => changeLang(l)}
+                          role="option"
+                          aria-selected={lang === l}
+                        >
+                          {l.toUpperCase()}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 <button
                   type="button"
                   className="user-dashboard__logout-button"

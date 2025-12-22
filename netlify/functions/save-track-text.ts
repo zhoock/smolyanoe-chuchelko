@@ -177,6 +177,43 @@ export const handler: Handler = async (
       }
 
       const savedRow = upsertResult.rows[0];
+
+      // Также обновляем synced_lyrics, чтобы текст был синхронизирован
+      // Разбиваем текст на строки с startTime: 0 (обычный текст, не синхронизированный)
+      const syncedLyrics = data.content
+        .split('\n')
+        .map((line) => ({ text: line, startTime: 0 }))
+        .filter((line) => line.text.trim().length > 0);
+
+      try {
+        await query(
+          `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
+           VALUES (NULL, $1, $2, $3, $4::jsonb, $5, NOW())
+           ON CONFLICT (album_id, track_id, lang) WHERE user_id IS NULL
+           DO UPDATE SET 
+             synced_lyrics = EXCLUDED.synced_lyrics,
+             authorship = EXCLUDED.authorship,
+             updated_at = NOW()`,
+          [
+            data.albumId,
+            String(data.trackId),
+            data.lang,
+            JSON.stringify(syncedLyrics),
+            data.authorship || null,
+          ],
+          0 // Без retry
+        );
+        console.log('✅ Synced lyrics updated:', {
+          albumId: data.albumId,
+          trackId: data.trackId,
+          lang: data.lang,
+          linesCount: syncedLyrics.length,
+        });
+      } catch (syncError) {
+        // Логируем ошибку, но не прерываем сохранение
+        console.warn('⚠️ Failed to update synced_lyrics (non-critical):', syncError);
+      }
+
       console.log('✅ Track text saved to database:', {
         albumId: data.albumId,
         trackId: data.trackId,

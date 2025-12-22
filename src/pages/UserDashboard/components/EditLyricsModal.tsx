@@ -36,11 +36,15 @@ export function EditLyricsModal({
       console.log('[EditLyricsModal] initialLyrics changed:', {
         initialLyricsLength: initialLyrics.length,
         currentLyricsLength: lyricsText.length,
+        isOpen,
       });
     }
-    setLyricsText(initialLyrics);
-    setAuthorship(initialAuthorship || '');
-  }, [initialLyrics, initialAuthorship]);
+    // Обновляем только если модалка открыта, чтобы не сбрасывать изменения пользователя при закрытии
+    if (isOpen) {
+      setLyricsText(initialLyrics);
+      setAuthorship(initialAuthorship || '');
+    }
+  }, [initialLyrics, initialAuthorship, isOpen]);
 
   // Проверяем, изменился ли текст относительно исходного
   const hasTextChanged = lyricsText.trim() !== initialLyrics.trim();
