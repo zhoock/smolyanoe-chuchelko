@@ -410,6 +410,10 @@ export const handler: Handler = async (
         );
       }
 
+      // Для публичных альбомов (isPublic: true) устанавливаем user_id = NULL
+      // Для приватных альбомов используем userId текущего пользователя
+      const albumUserId = data.isPublic ? null : userId;
+
       // Создаём альбом
       const albumResult = await query<AlbumRow>(
         `INSERT INTO albums (
@@ -429,7 +433,7 @@ export const handler: Handler = async (
           updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
-          userId,
+          albumUserId,
           data.albumId,
           data.artist,
           data.album,
@@ -943,23 +947,119 @@ export const handler: Handler = async (
           userId,
         });
 
-        // Удаляем альбом из БД (только если он принадлежит пользователю)
-        const deleteResult = await query<AlbumRow>(
-          `DELETE FROM albums 
-          WHERE album_id = $1 AND lang = $2 AND user_id = $3
-          RETURNING *`,
-          [data.albumId, data.lang, userId]
+        // Сначала находим все записи альбома (все языковые версии)
+        const findAlbumsResult = await query<AlbumRow>(
+          `SELECT id, album_id, lang, user_id, cover FROM albums 
+          WHERE album_id = $1 
+            AND (user_id IS NULL OR user_id = $2)`,
+          [data.albumId, userId]
         );
 
-        if (deleteResult.rows.length === 0) {
+        if (findAlbumsResult.rows.length === 0) {
           return createErrorResponse(
             404,
             'Album not found or you do not have permission to delete it.'
           );
         }
 
-        // Удаляем треки альбома
-        await query(`DELETE FROM tracks WHERE album_id = $1`, [deleteResult.rows[0].id]);
+        const albumIds = findAlbumsResult.rows.map((row) => row.id);
+        const coversToDelete = findAlbumsResult.rows
+          .map((row) => row.cover)
+          .filter((cover): cover is string => !!cover);
+
+        // Удаляем все треки альбома (для всех языковых версий)
+        if (albumIds.length > 0) {
+          await query(`DELETE FROM tracks WHERE album_id = ANY($1::uuid[])`, [albumIds]);
+        }
+
+        // Удаляем все синхронизированные тексты альбома (для всех языковых версий)
+        await query(
+          `DELETE FROM synced_lyrics 
+          WHERE album_id = $1 
+            AND (user_id IS NULL OR user_id = $2)`,
+          [data.albumId, userId]
+        );
+
+        // Удаляем все языковые версии альбома
+        const deleteResult = await query<AlbumRow>(
+          `DELETE FROM albums 
+          WHERE album_id = $1 
+            AND (user_id IS NULL OR user_id = $2)
+          RETURNING *`,
+          [data.albumId, userId]
+        );
+
+        // Удаляем обложки альбома из Supabase Storage
+        // Собираем все уникальные обложки из всех удаленных записей
+        const uniqueCovers = Array.from(
+          new Set(
+            deleteResult.rows.map((row) => row.cover).filter((cover): cover is string => !!cover)
+          )
+        );
+
+        if (uniqueCovers.length > 0) {
+          try {
+            // Импортируем Supabase клиент
+            const { createClient } = await import('@supabase/supabase-js');
+            const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+            const serviceRoleKey =
+              process.env.SUPABASE_SERVICE_ROLE_KEY ||
+              process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+              '';
+
+            if (supabaseUrl && serviceRoleKey) {
+              const supabase = createClient(supabaseUrl, serviceRoleKey, {
+                auth: {
+                  persistSession: false,
+                  autoRefreshToken: false,
+                  detectSessionInUrl: false,
+                },
+              });
+
+              const STORAGE_BUCKET_NAME = 'user-media';
+
+              // Формируем пути для всех вариантов всех обложек
+              const allCoverPaths: string[] = [];
+              for (const coverBaseName of uniqueCovers) {
+                const coverVariants = [
+                  `${coverBaseName}-64.webp`,
+                  `${coverBaseName}-128.webp`,
+                  `${coverBaseName}-448.webp`,
+                  `${coverBaseName}-896.webp`,
+                  `${coverBaseName}-1344.webp`,
+                  `${coverBaseName}-64.jpg`,
+                  `${coverBaseName}-128.jpg`,
+                  `${coverBaseName}-448.jpg`,
+                  `${coverBaseName}-896.jpg`,
+                  `${coverBaseName}-1344.jpg`,
+                ];
+
+                const coverPaths = coverVariants.map((variant) => `users/zhoock/albums/${variant}`);
+                allCoverPaths.push(...coverPaths);
+              }
+
+              // Удаляем все варианты всех обложек
+              if (allCoverPaths.length > 0) {
+                const { error: deleteError } = await supabase.storage
+                  .from(STORAGE_BUCKET_NAME)
+                  .remove(allCoverPaths);
+
+                if (deleteError) {
+                  console.warn('⚠️ Failed to delete cover files from storage:', deleteError);
+                } else {
+                  console.log('✅ Cover files deleted from storage:', {
+                    albumId: data.albumId,
+                    coversCount: uniqueCovers.length,
+                    variantsCount: allCoverPaths.length,
+                  });
+                }
+              }
+            }
+          } catch (coverDeleteError) {
+            console.warn('⚠️ Error deleting cover files (non-critical):', coverDeleteError);
+            // Не блокируем удаление альбома, если обложки не удалились
+          }
+        }
 
         console.log('✅ DELETE /api/albums - Album deleted:', {
           albumId: data.albumId,

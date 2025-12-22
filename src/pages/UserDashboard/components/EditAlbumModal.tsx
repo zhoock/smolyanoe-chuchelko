@@ -1048,23 +1048,116 @@ export function EditAlbumModal({
       albumsFromStoreLength: albumsFromStore.length,
     });
 
-    // Проверка наличия albumId обязательна
-    if (!albumId) {
-      console.error('❌ [EditAlbumModal] No albumId provided. Cannot save album without albumId.');
-      alert(
-        'Ошибка: невозможно сохранить альбом без ID. Пожалуйста, выберите существующий альбом для редактирования.'
-      );
-      setIsSaving(false);
-      return;
+    // Если albumId не передан, генерируем его из названия альбома и артиста
+    let finalAlbumId = albumId;
+    if (!finalAlbumId) {
+      // Проверяем, что есть минимальные данные для генерации albumId
+      if (!formData.artist || !formData.title) {
+        alert(
+          'Ошибка: для создания нового альбома необходимо заполнить поля "Artist / Group name" и "Album title".'
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      // Генерируем albumId из названия артиста и альбома
+      // Преобразуем в lowercase, транслитерируем кириллицу, заменяем пробелы на дефисы
+      const generateAlbumId = (artist: string, title: string): string => {
+        // Таблица транслитерации кириллицы в латиницу
+        const transliterationMap: Record<string, string> = {
+          а: 'a',
+          б: 'b',
+          в: 'v',
+          г: 'g',
+          д: 'd',
+          е: 'e',
+          ё: 'yo',
+          ж: 'zh',
+          з: 'z',
+          и: 'i',
+          й: 'y',
+          к: 'k',
+          л: 'l',
+          м: 'm',
+          н: 'n',
+          о: 'o',
+          п: 'p',
+          р: 'r',
+          с: 's',
+          т: 't',
+          у: 'u',
+          ф: 'f',
+          х: 'h',
+          ц: 'ts',
+          ч: 'ch',
+          ш: 'sh',
+          щ: 'sch',
+          ъ: '',
+          ы: 'y',
+          ь: '',
+          э: 'e',
+          ю: 'yu',
+          я: 'ya',
+        };
+
+        const transliterate = (str: string): string => {
+          return str
+            .toLowerCase()
+            .split('')
+            .map((char) => {
+              // Если это кириллица, транслитерируем
+              if (transliterationMap[char]) {
+                return transliterationMap[char];
+              }
+              // Если это латиница или цифра, оставляем как есть
+              if (/[a-z0-9]/.test(char)) {
+                return char;
+              }
+              // Пробелы и дефисы заменяем на дефис
+              if (/[\s-]/.test(char)) {
+                return '-';
+              }
+              // Все остальное удаляем
+              return '';
+            })
+            .join('');
+        };
+
+        const normalize = (str: string) => {
+          const transliterated = transliterate(str.trim());
+          return transliterated
+            .replace(/-+/g, '-') // Убираем множественные дефисы
+            .replace(/^-|-$/g, ''); // Убираем дефисы в начале и конце
+        };
+
+        const artistSlug = normalize(artist);
+        const titleSlug = normalize(title);
+
+        // Если оба пустые, генерируем на основе timestamp
+        if (!artistSlug && !titleSlug) {
+          return `album-${Date.now()}`;
+        }
+
+        // Если titleSlug пустой, используем только artistSlug
+        return titleSlug ? `${artistSlug}-${titleSlug}` : artistSlug;
+      };
+
+      finalAlbumId = generateAlbumId(formData.artist, formData.title);
+      console.log('🆕 [EditAlbumModal] Generated albumId for new album:', {
+        artist: formData.artist,
+        title: formData.title,
+        generatedAlbumId: finalAlbumId,
+      });
     }
 
     // Проверяем, существует ли версия языка для этого альбома
-    const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === albumId);
+    const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === finalAlbumId);
     const exists = !!originalAlbum;
     const method = exists ? 'PUT' : 'POST';
 
     console.log('📋 [EditAlbumModal] Album version check:', {
-      albumId,
+      originalAlbumId: albumId,
+      finalAlbumId,
       lang,
       exists,
       method,
@@ -1182,7 +1275,7 @@ export function EditAlbumModal({
 
     if (currentCoverDraftKey) {
       try {
-        const commitResult = await commitCover(currentCoverDraftKey, albumId, {
+        const commitResult = await commitCover(currentCoverDraftKey, finalAlbumId, {
           artist: formData.artist || originalAlbum?.artist || '',
           album: formData.title || originalAlbum?.album || '',
           lang: normalizedLang,
@@ -1201,22 +1294,24 @@ export function EditAlbumModal({
             fromFile(data?.storagePath?.split('/').pop()) ||
             fromFile(data?.url?.split('/').pop());
 
-          if (!baseName) {
-            alert('Ошибка: не удалось получить имя обложки. Попробуй снова.');
-            setIsSaving(false);
-            return;
+          if (baseName) {
+            newCover = baseName;
+            console.log('✅ [EditAlbumModal] Cover committed successfully:', { baseName });
+          } else {
+            console.warn('⚠️ [EditAlbumModal] Cover commit succeeded but baseName not found');
           }
-
-          newCover = baseName;
-        } else if (!commitResult.success) {
-          alert(`Ошибка при сохранении обложки: ${commitResult.error || 'Unknown error'}`);
-          setIsSaving(false);
-          return;
+        } else {
+          // Не блокируем сохранение альбома, если обложка не закоммитилась
+          const errorMessage = !commitResult.success ? commitResult.error : 'Unknown error';
+          console.warn('⚠️ [EditAlbumModal] Cover commit failed, continuing without cover:', {
+            error: errorMessage,
+          });
         }
       } catch (e) {
-        alert(`Ошибка при сохранении обложки: ${e instanceof Error ? e.message : 'Unknown error'}`);
-        setIsSaving(false);
-        return;
+        // Не блокируем сохранение альбома, если обложка не закоммитилась
+        console.warn('⚠️ [EditAlbumModal] Cover commit error, continuing without cover:', {
+          error: e instanceof Error ? e.message : 'Unknown error',
+        });
       }
     }
 
@@ -1280,7 +1375,7 @@ export function EditAlbumModal({
     mergedDetails.sort((a, b) => (a.id || 0) - (b.id || 0));
 
     const updateData: Record<string, unknown> = {
-      albumId,
+      albumId: finalAlbumId,
       artist: artistName,
       album: albumTitle,
       fullName,
@@ -1296,6 +1391,8 @@ export function EditAlbumModal({
           : buttons,
       details: mergedDetails.length > 0 ? mergedDetails : [],
       lang: normalizedLang,
+      // Для новых альбомов устанавливаем isPublic: true, чтобы они отображались в списке
+      isPublic: !exists ? true : undefined,
       ...(newCover ? { cover: newCover } : {}),
     };
 

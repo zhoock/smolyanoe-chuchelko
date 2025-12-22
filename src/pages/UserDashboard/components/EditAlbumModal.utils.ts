@@ -192,7 +192,12 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
   }
 
   if (step === 3) {
-    // Шаг 3: Credits
+    // Шаг 3: Recorded/Mixed/Mastered - нет обязательных полей
+    return true;
+  }
+
+  if (step === 4) {
+    // Шаг 4: Album Cover, Band Members, Session Musicians, Producer
     const errors: string[] = [];
     // albumCoverPhotographer и albumCoverDesigner теперь необязательные поля
     if (!formData.albumCoverDesigner || !formData.albumCoverDesigner.trim()) {
@@ -212,7 +217,7 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
     return true;
   }
 
-  // Шаг 4 (Links) - нет обязательных полей
+  // Шаг 5 (Links) - нет обязательных полей
   return true;
 };
 

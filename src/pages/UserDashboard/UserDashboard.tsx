@@ -1334,7 +1334,11 @@ function UserDashboard() {
 
             // Обновляем Redux store из БД
             try {
-              console.log('🔄 [UserDashboard] Fetching albums after save...');
+              console.log('🔄 [UserDashboard] Fetching albums after save...', {
+                originalAlbumId: editAlbumModal.albumId,
+                updatedAlbumId: updatedAlbum?.albumId,
+                isNewAlbum: !editAlbumModal.albumId,
+              });
               const result = await dispatch(fetchAlbums({ lang, force: true })).unwrap();
               console.log('✅ [UserDashboard] Albums fetched:', {
                 count: result?.length || 0,
@@ -1342,24 +1346,26 @@ function UserDashboard() {
               });
 
               // Проверяем, что обновленный альбом действительно пришел с новыми данными
-              if (result && result.length > 0) {
-                const updatedAlbum = result.find(
-                  (a: IAlbums) => a.albumId === editAlbumModal.albumId
-                );
-                if (updatedAlbum) {
+              // Для новых альбомов используем albumId из updatedAlbum, для существующих - из editAlbumModal
+              const searchAlbumId = updatedAlbum?.albumId || editAlbumModal.albumId;
+              if (result && result.length > 0 && searchAlbumId) {
+                const foundAlbum = result.find((a: IAlbums) => a.albumId === searchAlbumId);
+                if (foundAlbum) {
                   console.log('🔍 [UserDashboard] Updated album from fetchAlbums:', {
-                    albumId: updatedAlbum.albumId,
-                    album: updatedAlbum.album, // Должно быть "32"
-                    artist: updatedAlbum.artist,
-                    description: updatedAlbum.description?.substring(0, 50) || '',
-                    cover: updatedAlbum.cover,
+                    albumId: foundAlbum.albumId,
+                    album: foundAlbum.album,
+                    artist: foundAlbum.artist,
+                    description: foundAlbum.description?.substring(0, 50) || '',
+                    cover: foundAlbum.cover,
+                    isNewAlbum: !editAlbumModal.albumId,
                   });
                 } else {
                   console.warn(
                     '⚠️ [UserDashboard] Updated album not found in fetchAlbums result:',
                     {
-                      searchedAlbumId: editAlbumModal.albumId,
+                      searchedAlbumId: searchAlbumId,
                       availableIds: result.map((a: IAlbums) => a.albumId),
+                      isNewAlbum: !editAlbumModal.albumId,
                     }
                   );
                 }
