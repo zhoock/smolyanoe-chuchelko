@@ -216,21 +216,16 @@ export const handler: Handler = async (
       // Извлекаем user_id из токена (если есть)
       const userId = getUserIdFromEvent(event);
 
-      // Загружаем публичные альбомы (user_id IS NULL, is_public = true) и альбомы пользователя
-      // Важно: используем DISTINCT ON для исключения дубликатов по album_id
-      // ORDER BY с NULLS LAST означает: пользовательские записи (user_id NOT NULL)
-      // будут выше публичных (user_id IS NULL), что правильно - "мои перекрывают публичные"
+      // Загружаем только публичные альбомы (user_id IS NULL, is_public = true)
+      // Единственная версия альбома в БД
       const albumsResult = await query<AlbumRow>(
-        `SELECT DISTINCT ON (a.album_id) 
-          a.*
+        `SELECT a.*
         FROM albums a
         WHERE a.lang = $1 
-          AND (
-            (a.user_id IS NULL AND a.is_public = true)
-            OR (a.user_id IS NOT NULL AND a.user_id = $2)
-          )
-        ORDER BY a.album_id, a.user_id NULLS LAST, a.created_at DESC`,
-        [lang, userId || null]
+          AND a.user_id IS NULL
+          AND a.is_public = true
+        ORDER BY a.created_at DESC`,
+        [lang]
       );
 
       // Загружаем треки для каждого альбома
@@ -260,10 +255,14 @@ export const handler: Handler = async (
                   t.authorship,
                   t.synced_lyrics,
                   t.order_index,
-                  ROW_NUMBER() OVER (PARTITION BY t.track_id ORDER BY t.order_index ASC, a.created_at DESC) as rn
+                  ROW_NUMBER() OVER (
+                    PARTITION BY t.track_id 
+                    ORDER BY t.order_index ASC, a.created_at DESC
+                  ) as rn
                 FROM tracks t
                 INNER JOIN albums a ON t.album_id = a.id
                 WHERE a.album_id = $1
+                  AND a.user_id IS NULL
               ) ranked
               WHERE ranked.rn = 1
               ORDER BY ranked.order_index ASC`,
@@ -318,9 +317,9 @@ export const handler: Handler = async (
                      track_id, synced_lyrics, authorship
                    FROM synced_lyrics 
                    WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
-                     AND (user_id = $4 OR user_id IS NULL)
-                   ORDER BY track_id, user_id NULLS LAST, updated_at DESC`,
-                  [album.album_id, trackIds, lang, userId || null]
+                     AND user_id IS NULL
+                   ORDER BY track_id, updated_at DESC`,
+                  [album.album_id, trackIds, lang]
                 );
 
                 // Создаём Map для быстрого поиска
@@ -510,10 +509,10 @@ export const handler: Handler = async (
           existingAlbumResult = await query<AlbumRow>(
             `SELECT * FROM albums 
             WHERE album_id = $1 AND lang = $2 
-            AND (user_id = $3 OR user_id IS NULL)
-            ORDER BY user_id NULLS LAST, created_at DESC
+            AND user_id IS NULL
+            ORDER BY created_at DESC
             LIMIT 1`,
-            [data.albumId, data.lang, userId]
+            [data.albumId, data.lang]
           );
           console.log('[albums.ts PUT] Album search result:', {
             found: existingAlbumResult.rows.length > 0,
@@ -537,15 +536,8 @@ export const handler: Handler = async (
         console.log('[albums.ts PUT] Found existing album:', {
           id: existingAlbum.id,
           albumId: existingAlbum.album_id,
-          userId: existingAlbum.user_id,
           lang: existingAlbum.lang,
         });
-
-        // Если найденный альбом - публичный (user_id IS NULL), а пользователь авторизован,
-        // обновляем публичный альбом (это нормальное поведение для админки)
-        if (existingAlbum.user_id === null && userId) {
-          console.log('[albums.ts PUT] Public album found, will update public album');
-        }
 
         // 🔍 DEBUG: Проверяем, что пришло в запросе
         console.log('[albums.ts PUT] Request data:', {
@@ -742,16 +734,13 @@ export const handler: Handler = async (
         if (githubToken) {
           // Загружаем все альбомы для обновления JSON
           const allAlbumsResult = await query<AlbumRow>(
-            `SELECT DISTINCT ON (a.album_id) 
-            a.*
+            `SELECT a.*
           FROM albums a
           WHERE a.lang = $1 
-            AND (
-              (a.user_id IS NULL AND a.is_public = true)
-              OR (a.user_id IS NOT NULL AND a.user_id = $2)
-            )
-          ORDER BY a.album_id, a.user_id NULLS LAST, a.created_at DESC`,
-            [data.lang, userId || null]
+            AND a.user_id IS NULL
+            AND a.is_public = true
+          ORDER BY a.created_at DESC`,
+            [data.lang]
           );
 
           // Загружаем треки для всех альбомов
@@ -876,30 +865,21 @@ export const handler: Handler = async (
             userId,
           });
 
-          // Находим альбом по album_id и lang
+          // Находим публичный альбом по album_id и lang
           const albumResult = await query<AlbumRow>(
             `SELECT id, album_id, lang, user_id FROM albums
              WHERE album_id = $1 AND lang = $2
-             AND (user_id = $3 OR user_id IS NULL)
-             ORDER BY user_id NULLS LAST, created_at DESC
+             AND user_id IS NULL
+             ORDER BY created_at DESC
              LIMIT 1`,
-            [albumIdFromQuery, langFromQuery, userId]
+            [albumIdFromQuery, langFromQuery]
           );
 
           if (albumResult.rows.length === 0) {
-            return createErrorResponse(404, 'Album not found or access denied.');
+            return createErrorResponse(404, 'Album not found.');
           }
 
           const album = albumResult.rows[0];
-
-          // Проверяем, что пользователь имеет право удалять треки из этого альбома
-          // (альбом должен быть публичным или принадлежать пользователю)
-          if (album.user_id !== null && album.user_id !== userId) {
-            return createErrorResponse(
-              403,
-              'You do not have permission to delete tracks from this album.'
-            );
-          }
 
           // Удаляем трек
           const deleteTrackResult = await query(

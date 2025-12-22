@@ -252,6 +252,15 @@ export interface IInterface {
         yes: string;
         acceptPreorders: string;
       };
+      step2?: {
+        mood: string;
+        tags: string;
+        selectGenres: string;
+        addTagPlaceholder: string;
+        addTagButton: string;
+        maxTagsReached: string;
+        removeTag: string;
+      };
       step3?: {
         recordedAt: string;
         mixedAt: string;

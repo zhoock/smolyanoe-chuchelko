@@ -11,7 +11,7 @@ interface EditLyricsModalProps {
   initialLyrics: string;
   initialAuthorship?: string;
   onClose: () => void;
-  onSave: (lyrics: string, authorship?: string) => void;
+  onSave: (lyrics: string, authorship?: string) => Promise<void> | void;
   onPreview?: () => void;
   onSync?: (currentLyrics: string, currentAuthorship?: string) => void;
 }
@@ -32,6 +32,12 @@ export function EditLyricsModal({
 
   // Обновляем состояние при изменении initialLyrics или initialAuthorship
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[EditLyricsModal] initialLyrics changed:', {
+        initialLyricsLength: initialLyrics.length,
+        currentLyricsLength: lyricsText.length,
+      });
+    }
     setLyricsText(initialLyrics);
     setAuthorship(initialAuthorship || '');
   }, [initialLyrics, initialAuthorship]);
@@ -39,9 +45,15 @@ export function EditLyricsModal({
   // Проверяем, изменился ли текст относительно исходного
   const hasTextChanged = lyricsText.trim() !== initialLyrics.trim();
 
-  const handleSave = () => {
-    onSave(lyricsText, authorship.trim() || undefined);
-    onClose();
+  const handleSave = async () => {
+    try {
+      await onSave(lyricsText, authorship.trim() || undefined);
+      // Закрываем модальное окно только после успешного сохранения
+      onClose();
+    } catch (error) {
+      console.error('Error saving lyrics:', error);
+      // Не закрываем модальное окно при ошибке
+    }
   };
 
   const handleClose = () => {

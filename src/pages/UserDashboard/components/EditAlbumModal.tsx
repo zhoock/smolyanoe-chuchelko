@@ -1833,6 +1833,7 @@ export function EditAlbumModal({
           onTagInputKeyDown={handleTagInputKeyDown}
           onAddTag={handleAddTag}
           onRemoveTag={handleRemoveTag}
+          ui={ui ?? undefined}
         />
       );
     }

@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep2.tsx
 import React from 'react';
 import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { IInterface } from '@models';
 import { GENRE_OPTIONS_EN, GENRE_OPTIONS_RU, MAX_TAGS } from '../EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 
@@ -19,6 +20,7 @@ interface EditAlbumModalStep2Props {
   onTagInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
+  ui?: IInterface;
 }
 
 export function EditAlbumModalStep2({
@@ -36,6 +38,7 @@ export function EditAlbumModalStep2({
   onTagInputKeyDown,
   onAddTag,
   onRemoveTag,
+  ui,
 }: EditAlbumModalStep2Props) {
   const genreOptions = lang === 'ru' ? GENRE_OPTIONS_RU : GENRE_OPTIONS_EN;
 
@@ -44,7 +47,9 @@ export function EditAlbumModalStep2({
       <div className="edit-album-modal__divider" />
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Genre</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step2?.mood ?? 'Genre'}
+        </label>
 
         <div className="edit-album-modal__multiselect" ref={moodDropdownRef}>
           <div className="edit-album-modal__multiselect-input" onClick={onMoodDropdownToggle}>
@@ -60,7 +65,7 @@ export function EditAlbumModalStep2({
                         e.stopPropagation();
                         onRemoveMood(mood);
                       }}
-                      aria-label={`Remove ${mood}`}
+                      aria-label={`${ui?.dashboard?.editAlbumModal?.step2?.removeTag ?? 'Remove'} ${mood}`}
                     >
                       ×
                     </button>
@@ -68,7 +73,9 @@ export function EditAlbumModalStep2({
                 ))}
               </div>
             ) : (
-              <span className="edit-album-modal__multiselect-placeholder">Select genres...</span>
+              <span className="edit-album-modal__multiselect-placeholder">
+                {ui?.dashboard?.editAlbumModal?.step2?.selectGenres ?? 'Select genres...'}
+              </span>
             )}
 
             <span className="edit-album-modal__multiselect-arrow">
@@ -94,7 +101,9 @@ export function EditAlbumModalStep2({
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Tags</label>
+        <label className="edit-album-modal__label">
+          {ui?.dashboard?.editAlbumModal?.step2?.tags ?? 'Tags'}
+        </label>
 
         <div className="edit-album-modal__tags-input-wrapper">
           {formData.tags.length > 0 && (
@@ -106,7 +115,7 @@ export function EditAlbumModalStep2({
                     type="button"
                     className="edit-album-modal__tag-remove"
                     onClick={() => onRemoveTag(tag)}
-                    aria-label={`Remove ${tag}`}
+                    aria-label={`${ui?.dashboard?.editAlbumModal?.step2?.removeTag ?? 'Remove'} ${tag}`}
                   >
                     ×
                   </button>
@@ -122,7 +131,9 @@ export function EditAlbumModalStep2({
               type="text"
               autoComplete="off"
               className="edit-album-modal__input edit-album-modal__input--tags"
-              placeholder="Add a tag..."
+              placeholder={
+                ui?.dashboard?.editAlbumModal?.step2?.addTagPlaceholder ?? 'Add a tag...'
+              }
               value={tagInput}
               onChange={(e) => {
                 onTagInputChange(e.target.value);
@@ -136,13 +147,18 @@ export function EditAlbumModalStep2({
               onClick={onAddTag}
               disabled={formData.tags.length >= MAX_TAGS || !tagInput.trim()}
             >
-              Add +
+              {ui?.dashboard?.editAlbumModal?.step2?.addTagButton ?? 'Add +'}
             </button>
           </div>
 
           {tagError && <div className="edit-album-modal__error">{tagError}</div>}
           {formData.tags.length >= MAX_TAGS && (
-            <div className="edit-album-modal__help-text">Maximum {MAX_TAGS} tags reached</div>
+            <div className="edit-album-modal__help-text">
+              {ui?.dashboard?.editAlbumModal?.step2?.maxTagsReached?.replace(
+                '{maxTags}',
+                String(MAX_TAGS)
+              ) ?? `Maximum ${MAX_TAGS} tags reached`}
+            </div>
           )}
         </div>
       </div>

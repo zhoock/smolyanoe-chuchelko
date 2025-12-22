@@ -145,6 +145,15 @@
           "yes": "Yes",
           "acceptPreorders": "Accept pre-orders"
         },
+        "step2": {
+          "mood": "Genre",
+          "tags": "Tags",
+          "selectGenres": "Select genres...",
+          "addTagPlaceholder": "Add a tag...",
+          "addTagButton": "Add +",
+          "maxTagsReached": "Maximum {maxTags} tags reached",
+          "removeTag": "Remove"
+        },
         "step3": {
           "recordedAt": "Recorded At",
           "mixedAt": "Mixed At",

@@ -67,6 +67,7 @@ function UserDashboard() {
     trackId: string;
     trackTitle: string;
     trackStatus: TrackData['lyricsStatus'];
+    initialLyrics?: string;
     initialAuthorship?: string;
   } | null>(null);
   const [previewLyricsModal, setPreviewLyricsModal] = useState<{
@@ -473,12 +474,28 @@ function UserDashboard() {
       const album = albumsData.find((a) => a.id === albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
       if (track) {
-        // Загружаем authorship для отображения в модальном окне
+        // Загружаем текст и authorship из БД для отображения в модальном окне
+        const [storedText, storedAuthorship] = await Promise.all([
+          loadTrackTextFromDatabase(albumId, trackId, lang).catch(() => null),
+          loadAuthorshipFromStorage(albumId, trackId, lang).catch(() => null),
+        ]);
+
         const cachedAuthorship = getCachedAuthorship(albumId, trackId, lang);
-        const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(
-          () => null
-        );
         const fallbackAuthorship = track.authorship || cachedAuthorship;
+        const fallbackText = track.lyricsText || '';
+
+        const finalText = storedText || fallbackText;
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[UserDashboard] Opening edit lyrics modal:', {
+            albumId,
+            trackId,
+            storedTextLength: storedText?.length || 0,
+            fallbackTextLength: fallbackText.length,
+            finalTextLength: finalText.length,
+            loadedFromDb: !!storedText,
+          });
+        }
 
         setEditLyricsModal({
           isOpen: true,
@@ -486,6 +503,7 @@ function UserDashboard() {
           trackId,
           trackTitle,
           trackStatus: track.lyricsStatus,
+          initialLyrics: finalText,
           initialAuthorship: storedAuthorship || fallbackAuthorship || undefined,
         });
       }
@@ -586,6 +604,18 @@ function UserDashboard() {
 
       if (result.success) {
         setCachedAuthorship(editLyricsModal.albumId, editLyricsModal.trackId, lang, authorship);
+
+        // Перезагружаем текст из БД, чтобы убедиться, что он сохранен корректно
+        const savedText = await loadTrackTextFromDatabase(
+          editLyricsModal.albumId,
+          editLyricsModal.trackId,
+          lang
+        ).catch(() => null);
+
+        // Используем сохраненный текст из БД, если он есть, иначе используем переданный текст
+        const finalText = savedText || lyrics;
+
+        // Обновляем albumsData с сохраненным текстом
         setAlbumsData((prev) =>
           prev.map((a) => {
             if (a.id === editLyricsModal.albumId) {
@@ -593,7 +623,12 @@ function UserDashboard() {
                 ...a,
                 tracks: a.tracks.map((track) =>
                   track.id === editLyricsModal.trackId
-                    ? { ...track, lyricsText: lyrics, authorship }
+                    ? {
+                        ...track,
+                        lyricsText: finalText,
+                        authorship,
+                        lyricsStatus: 'text-only' as const,
+                      }
                     : track
                 ),
               };
@@ -601,6 +636,24 @@ function UserDashboard() {
             return a;
           })
         );
+
+        // Обновляем initialLyrics в состоянии модального окна, чтобы при следующем открытии использовались актуальные данные
+        setEditLyricsModal((prev) =>
+          prev
+            ? {
+                ...prev,
+                initialLyrics: finalText,
+                initialAuthorship: authorship || prev.initialAuthorship,
+              }
+            : null
+        );
+
+        console.log('✅ Lyrics saved and albumsData updated:', {
+          albumId: editLyricsModal.albumId,
+          trackId: editLyricsModal.trackId,
+          lyricsLength: finalText.length,
+          loadedFromDb: !!savedText,
+        });
       } else {
         alert(result.message || 'Ошибка при сохранении текста');
       }
@@ -1153,7 +1206,10 @@ function UserDashboard() {
       {editLyricsModal && (
         <EditLyricsModal
           isOpen={editLyricsModal.isOpen}
-          initialLyrics={getTrackLyricsText(editLyricsModal.albumId, editLyricsModal.trackId)}
+          initialLyrics={
+            editLyricsModal.initialLyrics ??
+            getTrackLyricsText(editLyricsModal.albumId, editLyricsModal.trackId)
+          }
           initialAuthorship={
             editLyricsModal.initialAuthorship ||
             getTrackAuthorship(editLyricsModal.albumId, editLyricsModal.trackId)

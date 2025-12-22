@@ -103,29 +103,57 @@ export const handler: Handler = async (
         userId,
       });
 
-      // Добавляем LIMIT 1 для оптимизации запроса
-      // Приоритет: пользовательские синхронизации, затем публичные (user_id IS NULL)
-      // Если userId есть, ищем сначала пользовательские, затем публичные
-      // Если userId нет, ищем только публичные
-      const result = await query<SyncedLyricsRow>(
-        userId
-          ? `SELECT synced_lyrics, authorship 
-             FROM synced_lyrics 
-             WHERE album_id = $1 AND track_id = $2 AND lang = $3
-               AND (user_id = $4 OR user_id IS NULL)
-             ORDER BY user_id NULLS LAST
-             LIMIT 1`
-          : `SELECT synced_lyrics, authorship 
-             FROM synced_lyrics 
-             WHERE album_id = $1 AND track_id = $2 AND lang = $3
-               AND user_id IS NULL
-             LIMIT 1`,
-        userId ? [albumId, String(trackId), lang, userId] : [albumId, String(trackId), lang],
+      // Сначала ищем синхронизированный текст в таблице synced_lyrics
+      // Загружаем только публичные синхронизации (user_id IS NULL)
+      const syncedResult = await query<SyncedLyricsRow>(
+        `SELECT synced_lyrics, authorship 
+         FROM synced_lyrics 
+         WHERE album_id = $1 AND track_id = $2 AND lang = $3
+           AND user_id IS NULL
+         LIMIT 1`,
+        [albumId, String(trackId), lang],
         0 // Без retry для GET запросов - они должны быть быстрыми
       );
 
-      if (result.rows.length === 0) {
-        console.log('[synced-lyrics.ts GET] No synced lyrics found');
+      // Если нашли синхронизированный текст, возвращаем его
+      if (syncedResult.rows.length > 0) {
+        const row = syncedResult.rows[0];
+        console.log('[synced-lyrics.ts GET] ✅ Found synced lyrics:', {
+          linesCount: Array.isArray(row.synced_lyrics) ? row.synced_lyrics.length : 0,
+          hasAuthorship: !!row.authorship,
+        });
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            data: {
+              syncedLyrics: row.synced_lyrics,
+              authorship: row.authorship || undefined,
+            },
+          } as SyncedLyricsResponse),
+        };
+      }
+
+      // Если синхронизированного текста нет, проверяем tracks.content
+      // Находим публичный альбом (user_id IS NULL) - единственная версия альбома в БД
+      // Та же логика, что и при сохранении
+      const albumResult = await query<{ id: string; user_id: string | null }>(
+        `SELECT id, user_id FROM albums 
+         WHERE album_id = $1 AND lang = $2
+           AND user_id IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [albumId, lang],
+        0
+      );
+
+      if (albumResult.rows.length === 0) {
+        console.log('[synced-lyrics.ts GET] No album found:', {
+          albumId,
+          lang,
+        });
         return {
           statusCode: 200,
           headers,
@@ -136,10 +164,64 @@ export const handler: Handler = async (
         };
       }
 
-      const row = result.rows[0];
-      console.log('[synced-lyrics.ts GET] ✅ Found synced lyrics:', {
-        linesCount: Array.isArray(row.synced_lyrics) ? row.synced_lyrics.length : 0,
-        hasAuthorship: !!row.authorship,
+      const albumDbId = albumResult.rows[0].id;
+      const albumUserId = albumResult.rows[0].user_id;
+
+      console.log('[synced-lyrics.ts GET] Found album for tracks.content:', {
+        albumId,
+        lang,
+        albumDbId,
+        albumUserId,
+        isUserAlbum: albumUserId === userId,
+        isPublicAlbum: albumUserId === null,
+      });
+
+      // Загружаем текст из tracks.content
+      console.log('[synced-lyrics.ts GET] Loading track text from tracks.content:', {
+        albumId,
+        trackId,
+        lang,
+        albumDbId,
+      });
+
+      const trackResult = await query<{ content: string | null; authorship: string | null }>(
+        `SELECT content, authorship 
+         FROM tracks 
+         WHERE album_id = $1 AND track_id = $2
+         LIMIT 1`,
+        [albumDbId, String(trackId)],
+        0
+      );
+
+      if (trackResult.rows.length === 0 || !trackResult.rows[0].content) {
+        console.log('[synced-lyrics.ts GET] No track text found in tracks.content:', {
+          albumId,
+          trackId,
+          lang,
+          albumDbId,
+          rowsFound: trackResult.rows.length,
+          hasContent: trackResult.rows.length > 0 ? !!trackResult.rows[0].content : false,
+        });
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            data: undefined,
+          } as SyncedLyricsResponse),
+        };
+      }
+
+      // Преобразуем content в формат syncedLyrics (массив строк с startTime: 0)
+      const content = trackResult.rows[0].content;
+      const syncedLyrics = content
+        .split('\n')
+        .map((line) => ({ text: line, startTime: 0 }))
+        .filter((line) => line.text.trim().length > 0);
+
+      console.log('[synced-lyrics.ts GET] ✅ Found track text from tracks.content:', {
+        linesCount: syncedLyrics.length,
+        hasAuthorship: !!trackResult.rows[0].authorship,
       });
 
       return {
@@ -148,8 +230,8 @@ export const handler: Handler = async (
         body: JSON.stringify({
           success: true,
           data: {
-            syncedLyrics: row.synced_lyrics,
-            authorship: row.authorship || undefined,
+            syncedLyrics,
+            authorship: trackResult.rows[0].authorship || undefined,
           },
         } as SyncedLyricsResponse),
       };
@@ -185,11 +267,10 @@ export const handler: Handler = async (
         };
       }
 
-      // Сохраняем в таблицу synced_lyrics (UPSERT)
+      // Сохраняем в таблицу synced_lyrics (UPSERT) только как публичные (user_id IS NULL)
       // НЕ обновляем tracks.synced_lyrics и не ищем альбом - это лишние запросы
       // Синхронизации загружаются из synced_lyrics при загрузке альбомов
       console.log('[synced-lyrics.ts POST] Saving synced lyrics:', {
-        userId,
         albumId: data.albumId,
         trackId: data.trackId,
         lang: data.lang,
@@ -200,14 +281,13 @@ export const handler: Handler = async (
       try {
         await query(
           `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+           VALUES (NULL, $1, $2, $3, $4::jsonb, $5, NOW())
            ON CONFLICT ON CONSTRAINT synced_lyrics_user_album_track_lang_unique
            DO UPDATE SET 
-             synced_lyrics = $5::jsonb,
-             authorship = $6,
+             synced_lyrics = $4::jsonb,
+             authorship = $5,
              updated_at = NOW()`,
           [
-            userId,
             data.albumId,
             String(data.trackId),
             data.lang,

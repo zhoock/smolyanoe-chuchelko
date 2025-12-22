@@ -159,54 +159,6 @@ export function EditAlbumModalStep5({
               );
             })}
           </div>
-
-          {editingPurchaseLink === null && (
-            <div className="edit-album-modal__link-add">
-              <select
-                name="purchase-link-service"
-                autoComplete="off"
-                className="edit-album-modal__link-select"
-                value={purchaseLinkService}
-                onChange={(e) => onPurchaseLinkServiceChange(e.target.value)}
-              >
-                <option value="">
-                  {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
-                </option>
-                {PURCHASE_SERVICES.filter(
-                  (s) => !formData.purchaseLinks.some((l) => l.service === s.id)
-                ).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                name="purchase-link-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__link-input"
-                placeholder="URL"
-                value={purchaseLinkUrl}
-                onChange={(e) => onPurchaseLinkUrlChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && purchaseLinkService.trim() && purchaseLinkUrl.trim()) {
-                    e.preventDefault();
-                    onAddPurchaseLink();
-                  }
-                }}
-              />
-
-              <button
-                type="button"
-                className="edit-album-modal__add-button"
-                onClick={onAddPurchaseLink}
-                disabled={!purchaseLinkService.trim() || !purchaseLinkUrl.trim()}
-              >
-                + Add
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="edit-album-modal__links-column">
@@ -269,14 +221,14 @@ export function EditAlbumModalStep5({
                           onClick={onAddStreamingLink}
                           disabled={!streamingLinkService.trim() || !streamingLinkUrl.trim()}
                         >
-                          Save
+                          {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Save'}
                         </button>
                         <button
                           type="button"
                           className="edit-album-modal__link-cancel"
                           onClick={onCancelEditStreamingLink}
                         >
-                          Cancel
+                          {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
                         </button>
                       </div>
                     </div>
@@ -314,54 +266,6 @@ export function EditAlbumModalStep5({
               );
             })}
           </div>
-
-          {editingStreamingLink === null && (
-            <div className="edit-album-modal__link-add">
-              <select
-                name="streaming-link-service"
-                autoComplete="off"
-                className="edit-album-modal__link-select"
-                value={streamingLinkService}
-                onChange={(e) => onStreamingLinkServiceChange(e.target.value)}
-              >
-                <option value="">
-                  {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
-                </option>
-                {STREAMING_SERVICES.filter(
-                  (s) => !formData.streamingLinks.some((l) => l.service === s.id)
-                ).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                name="streaming-link-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__link-input"
-                placeholder="URL"
-                value={streamingLinkUrl}
-                onChange={(e) => onStreamingLinkUrlChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && streamingLinkService.trim() && streamingLinkUrl.trim()) {
-                    e.preventDefault();
-                    onAddStreamingLink();
-                  }
-                }}
-              />
-
-              <button
-                type="button"
-                className="edit-album-modal__add-button"
-                onClick={onAddStreamingLink}
-                disabled={!streamingLinkService.trim() || !streamingLinkUrl.trim()}
-              >
-                + Add
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </>

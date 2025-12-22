@@ -145,6 +145,15 @@
           "yes": "Да",
           "acceptPreorders": "Принимать предзаказы"
         },
+        "step2": {
+          "mood": "Жанр",
+          "tags": "Теги",
+          "selectGenres": "Выберите жанры...",
+          "addTagPlaceholder": "Добавить тег...",
+          "addTagButton": "Добавить +",
+          "maxTagsReached": "Достигнуто максимальное количество тегов: {maxTags}",
+          "removeTag": "Удалить"
+        },
         "step3": {
           "recordedAt": "Запись",
           "mixedAt": "Сведение",
