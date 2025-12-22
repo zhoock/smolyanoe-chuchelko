@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/SyncLyricsModal.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type MouseEvent } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -20,8 +20,7 @@ interface SyncLyricsModalProps {
   trackId: string;
   trackTitle: string;
   trackSrc?: string;
-  lyricsText?: string;
-  authorship?: string;
+  authorship?: string; // Fallback для авторства, если не загрузилось из БД
   onClose: () => void;
   onSave?: () => void;
 }
@@ -49,7 +48,6 @@ export function SyncLyricsModal({
   trackId,
   trackTitle,
   trackSrc,
-  lyricsText: propLyricsText,
   authorship: propAuthorship,
   onClose,
   onSave,
@@ -110,9 +108,28 @@ export function SyncLyricsModal({
       setIsSaved(false);
 
       try {
-        // Используем переданный текст или загружаем из БД
-        const textToUse = propLyricsText || '';
+        // Всегда загружаем текст из БД для актуальности данных
+        const textToUse = await loadTrackTextFromDatabase(albumId, trackId, lang).catch((error) => {
+          console.error('[SyncLyricsModal] Failed to load text from DB:', error);
+          return '';
+        });
+
+        console.log('[SyncLyricsModal] Loaded text from DB:', {
+          albumId,
+          trackId,
+          lang,
+          textLength: textToUse?.length || 0,
+          textPreview: textToUse?.substring(0, 50) || 'empty',
+        });
+
         let linesToDisplay: SyncedLyricsLine[] = [];
+
+        // Вспомогательная функция для создания строки с нулевыми таймкодами
+        const createEmptyLine = (text: string): SyncedLyricsLine => ({
+          text: text.trim(),
+          startTime: 0,
+          endTime: undefined,
+        });
 
         if (textToUse) {
           // Если есть текст, разбиваем на строки
@@ -123,6 +140,7 @@ export function SyncLyricsModal({
           clearSyncedLyricsCache(albumId, trackId, lang);
           try {
             const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
+
             if (storedSync && storedSync.length > 0) {
               // Загружаем авторство для фильтрации
               const storedAuthorship = await loadAuthorshipFromStorage(
@@ -132,67 +150,80 @@ export function SyncLyricsModal({
               ).catch(() => null);
               const trackAuthorship = (storedAuthorship || propAuthorship || '').trim();
 
-              // Фильтруем авторство из сохраненных синхронизаций при сравнении
-              // Сравниваем только первые N строк (без авторства)
+              // Фильтруем авторство из сохраненных синхронизаций
               const storedMain = storedSync.filter((line) => {
                 const lineText = (line.text || '').trim();
                 return !(trackAuthorship && lineText === trackAuthorship);
               });
 
-              // Проверяем, совпадает ли текст с сохраненными синхронизациями
-              const syncTextLines = storedMain
-                .filter((line) => line.text) // Исключаем пустые строки
-                .map((line) => line.text.trim());
-              const currentTextLines = contentLines.map((line) => line.trim());
-
-              // Если тексты совпадают, используем сохраненные синхронизации (без авторства)
-              if (
-                syncTextLines.length === currentTextLines.length &&
-                syncTextLines.every((line, index) => line === currentTextLines[index])
-              ) {
-                linesToDisplay = storedMain;
+              // Используем сохраненные синхронизации
+              // Если количество строк совпадает - используем сохраненные синхронизации напрямую
+              // (текст и таймкоды из БД - это источник истины)
+              if (storedMain.length === contentLines.length) {
+                // Количество строк совпадает - используем сохраненные синхронизации
+                // но обновляем текст из БД (на случай если текст изменился)
+                linesToDisplay = storedMain.map((storedLine, index) => {
+                  const currentLine = contentLines[index];
+                  return {
+                    text: currentLine ? currentLine.trim() : storedLine.text.trim(),
+                    startTime: storedLine.startTime,
+                    endTime: storedLine.endTime,
+                  };
+                });
               } else {
-                // Текст изменился, создаем новые строки
-                linesToDisplay = contentLines.map((line) => ({
-                  text: line.trim(),
-                  startTime: 0,
-                  endTime: undefined,
-                }));
+                // Количество строк не совпадает - сопоставляем по тексту
+                linesToDisplay = contentLines.map((currentLine) => {
+                  // Ищем строку в сохраненных синхронизациях по тексту
+                  const matchedLine = storedMain.find(
+                    (stored) => stored.text.trim() === currentLine.trim()
+                  );
+                  if (matchedLine) {
+                    return {
+                      text: currentLine.trim(),
+                      startTime: matchedLine.startTime,
+                      endTime: matchedLine.endTime,
+                    };
+                  } else {
+                    return createEmptyLine(currentLine);
+                  }
+                });
               }
             } else {
               // Нет сохраненных синхронизаций, создаем новые строки
-              linesToDisplay = contentLines.map((line) => ({
-                text: line.trim(),
-                startTime: 0,
-                endTime: undefined,
-              }));
+              linesToDisplay = contentLines.map(createEmptyLine);
             }
           } catch (syncError) {
             // Если не удалось загрузить синхронизации, просто используем текст
-            console.warn('Не удалось загрузить синхронизации, используем новый текст:', syncError);
-            linesToDisplay = contentLines.map((line) => ({
-              text: line.trim(),
-              startTime: 0,
-              endTime: undefined,
-            }));
+            console.error('[SyncLyricsModal] Error loading synced lyrics:', syncError);
+            linesToDisplay = contentLines.map(createEmptyLine);
           }
         } else {
           // Если нет текста, показываем пустое состояние
           linesToDisplay = [];
         }
 
-        // Пытаемся загрузить авторство (необязательно, не блокируем если таймаут)
-        // Авторство НЕ добавляется в linesToDisplay
-        // Оно хранится отдельным полем authorship в БД
-        // В UI авторство показывается отдельно, не как часть синхронизированных строк
+        // Загружаем авторство и добавляем его в конец списка строк (для отображения)
+        // При сохранении авторство будет отфильтровано из syncedLyrics и сохранено отдельным полем
         try {
           const storedAuthorship = await Promise.race([
             loadAuthorshipFromStorage(albumId, trackId, lang),
             new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 5000)),
           ]);
 
-          // Авторство используется только для отображения в UI, но не добавляется в syncedLyrics
           const authorshipToUse = storedAuthorship || propAuthorship || null;
+
+          // Добавляем авторство как последнюю строку (с таймкодом = duration или 0)
+          if (authorshipToUse && authorshipToUse.trim()) {
+            const lastLine = linesToDisplay[linesToDisplay.length - 1];
+            // Проверяем, не добавлено ли авторство уже (чтобы не дублировать)
+            if (!lastLine || lastLine.text.trim() !== authorshipToUse.trim()) {
+              linesToDisplay.push({
+                text: authorshipToUse.trim(),
+                startTime: duration || 0,
+                endTime: undefined,
+              });
+            }
+          }
         } catch (authorshipError) {
           // Игнорируем ошибки загрузки авторства
           console.warn('Не удалось загрузить авторство:', authorshipError);
@@ -208,7 +239,7 @@ export function SyncLyricsModal({
     };
 
     loadData();
-  }, [isOpen, albumId, trackId, lang, propLyricsText, duration]);
+  }, [isOpen, albumId, trackId, lang, duration]);
 
   // Установить тайм-код для конкретной строки
   const setLineTime = useCallback(
@@ -249,15 +280,6 @@ export function SyncLyricsModal({
       const { endTime, ...rest } = newLines[lineIndex];
       newLines[lineIndex] = rest;
 
-      setIsDirty(true);
-      return newLines;
-    });
-  }, []);
-
-  // Удалить строку
-  const removeLine = useCallback((lineIndex: number) => {
-    setSyncedLines((prev) => {
-      const newLines = prev.filter((_, index) => index !== lineIndex);
       setIsDirty(true);
       return newLines;
     });
@@ -337,7 +359,7 @@ export function SyncLyricsModal({
 
   // Обработка клика по прогресс-бару
   const handleProgressClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: MouseEvent<HTMLDivElement>) => {
       if (!audioRef.current || !duration) return;
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -439,7 +461,7 @@ export function SyncLyricsModal({
                   <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
                     End
                   </div>
-                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--remove"></div>
+                  <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--clear"></div>
                 </div>
                 <div className="sync-lyrics-modal__table-body">
                   {syncedLines.map((line, index) => (
@@ -462,24 +484,14 @@ export function SyncLyricsModal({
                       </div>
                       <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
                         {line.endTime !== undefined && line.endTime > 0 ? (
-                          <div className="sync-lyrics-modal__end-time-wrapper">
-                            <button
-                              type="button"
-                              onClick={() => setLineTime(index, 'endTime')}
-                              className="sync-lyrics-modal__time-btn"
-                              disabled={currentTime === 0 && !isPlaying}
-                            >
-                              {formatTime(line.endTime)}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => clearEndTime(index)}
-                              className="sync-lyrics-modal__clear-btn"
-                              title="Сбросить конец строки"
-                            >
-                              ×
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLineTime(index, 'endTime')}
+                            className="sync-lyrics-modal__time-btn"
+                            disabled={currentTime === 0 && !isPlaying}
+                          >
+                            {formatTime(line.endTime)}
+                          </button>
                         ) : (
                           <button
                             type="button"
@@ -491,16 +503,17 @@ export function SyncLyricsModal({
                           </button>
                         )}
                       </div>
-                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--remove">
-                        <button
-                          type="button"
-                          onClick={() => removeLine(index)}
-                          className="sync-lyrics-modal__remove-btn"
-                          aria-label="Удалить строку"
-                          title="Удалить строку"
-                        >
-                          ×
-                        </button>
+                      <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--clear">
+                        {line.endTime !== undefined && line.endTime > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => clearEndTime(index)}
+                            className="sync-lyrics-modal__clear-btn"
+                            title="Сбросить конец строки"
+                          >
+                            ×
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

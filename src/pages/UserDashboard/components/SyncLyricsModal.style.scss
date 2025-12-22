@@ -246,38 +246,9 @@ dialog {
         flex-shrink: 0;
       }
 
-      &--remove {
+      &--clear {
         justify-content: center;
         flex-shrink: 0;
-      }
-    }
-
-    &__remove-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: calc(var(--ms-0) * 1.5);
-      height: calc(var(--ms-0) * 1.5);
-      padding: 0;
-      color: var(--white);
-      font-size: var(--ms-0);
-      font-weight: 300;
-      line-height: 1;
-      background: transparent;
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      transition: all 0.2s;
-      flex-shrink: 0;
-
-      &:hover {
-        color: var(--white);
-        background: var(--pink-terracotta);
-        border-color: var(--pink-terracotta);
-      }
-
-      &:focus {
-        outline: none;
       }
     }
 
@@ -306,12 +277,6 @@ dialog {
       &--set {
         min-width: calc(var(--ms-0) * 5);
       }
-    }
-
-    &__end-time-wrapper {
-      display: flex;
-      align-items: center;
-      gap: var(--ms-02);
     }
 
     &__clear-btn {

@@ -19,7 +19,7 @@ import {
 } from '@entities/album';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
-import { loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
+import { loadAuthorshipFromStorage, loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import { uploadTracks, prepareAndUploadTrack, type TrackUploadData } from '@shared/api/tracks';
 import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
@@ -510,21 +510,32 @@ function UserDashboard() {
       }
     } else if (action === 'prev') {
       const lyrics = getTrackLyricsText(albumId, trackId);
-      const syncedLyrics = getTrackSyncedLyrics(albumId, trackId);
+
+      // Загружаем синхронизированные тексты из БД
+      const syncedLyrics = await loadSyncedLyricsFromStorage(albumId, trackId, lang).catch(
+        () => null
+      );
+
+      // Загружаем авторство из БД
+      const authorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(() => null);
+
       const album = albumsData.find((a) => a.id === albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
+
       console.log('[UserDashboard] Opening Preview Lyrics:', {
         albumId,
         trackId,
         trackSrc: track?.src,
         hasTrack: !!track,
         albumTracks: album?.tracks.map((t) => ({ id: t.id, src: t.src })),
+        syncedLyricsCount: syncedLyrics?.length || 0,
       });
+
       setPreviewLyricsModal({
         isOpen: true,
         lyrics,
-        syncedLyrics,
-        authorship: track?.authorship,
+        syncedLyrics: syncedLyrics || undefined,
+        authorship: authorship || undefined,
         trackSrc: track?.src,
       });
     } else if (action === 'sync') {
@@ -673,30 +684,27 @@ function UserDashboard() {
     return track?.authorship;
   };
 
-  const getTrackSyncedLyrics = (
-    albumId: string,
-    trackId: string
-  ): { text: string; startTime: number; endTime?: number }[] | undefined => {
-    const album = albumsData.find((a) => a.id === albumId);
-    const track = album?.tracks.find((t) => t.id === trackId);
-    if (track?.syncedLyrics && track.syncedLyrics.length > 0) {
-      return track.syncedLyrics;
-    }
-    return undefined;
-  };
-
-  const handlePreviewLyrics = () => {
+  const handlePreviewLyrics = async () => {
     if (!editLyricsModal) return;
     const { albumId, trackId } = editLyricsModal;
     const lyrics = getTrackLyricsText(albumId, trackId);
-    const syncedLyrics = getTrackSyncedLyrics(albumId, trackId);
+
+    // Загружаем синхронизированные тексты из БД
+    const syncedLyrics = await loadSyncedLyricsFromStorage(albumId, trackId, lang).catch(
+      () => null
+    );
+
+    // Загружаем авторство из БД
+    const authorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(() => null);
+
     const album = albumsData.find((a) => a.id === albumId);
     const track = album?.tracks.find((t) => t.id === trackId);
+
     setPreviewLyricsModal({
       isOpen: true,
       lyrics,
-      syncedLyrics,
-      authorship: track?.authorship,
+      syncedLyrics: syncedLyrics || undefined,
+      authorship: authorship || undefined,
       trackSrc: track?.src,
     });
   };
@@ -1242,7 +1250,6 @@ function UserDashboard() {
           trackId={syncLyricsModal.trackId}
           trackTitle={syncLyricsModal.trackTitle}
           trackSrc={syncLyricsModal.trackSrc}
-          lyricsText={syncLyricsModal.lyricsText}
           authorship={syncLyricsModal.authorship}
           onClose={() => setSyncLyricsModal(null)}
           onSave={async () => {

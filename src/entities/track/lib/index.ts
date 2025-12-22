@@ -147,6 +147,8 @@ export async function loadTrackTextFromDatabase(
     }
 
     const result = await response.json();
+
+    // Если есть синхронизированный текст
     if (result.success && result.data && result.data.syncedLyrics) {
       const syncedLyrics = result.data.syncedLyrics as Array<{ text: string; startTime: number }>;
 
@@ -156,6 +158,18 @@ export async function loadTrackTextFromDatabase(
       if (isPlainText && syncedLyrics.length > 0) {
         return syncedLyrics.map((line) => line.text).join('\n');
       }
+
+      // Если есть синхронизированный текст, но не все строки с startTime: 0
+      // Все равно возвращаем текст (для модалки синхронизации нужен исходный текст)
+      if (syncedLyrics.length > 0) {
+        return syncedLyrics.map((line) => line.text).join('\n');
+      }
+    }
+
+    // Если синхронизированного текста нет, но есть текст в tracks.content
+    // endpoint может вернуть его в другом формате - проверяем content напрямую
+    if (result.success && result.data && typeof result.data.content === 'string') {
+      return result.data.content;
     }
 
     return null;

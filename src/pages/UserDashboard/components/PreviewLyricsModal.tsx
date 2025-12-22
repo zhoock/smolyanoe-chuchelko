@@ -184,20 +184,29 @@ export function PreviewLyricsModal({
     if (!lineElement) return;
 
     const container = lyricsContainerRef.current;
-    const lineTop = lineElement.offsetTop;
-    const lineHeight = lineElement.offsetHeight;
-    const containerHeight = container.clientHeight;
-    const scrollTop = container.scrollTop;
 
-    // Проверяем, видна ли строка
-    const isVisible = lineTop >= scrollTop && lineTop + lineHeight <= scrollTop + containerHeight;
+    // Используем getBoundingClientRect для проверки видимости
+    const containerRect = container.getBoundingClientRect();
+    const lineRect = lineElement.getBoundingClientRect();
+
+    const containerTop = containerRect.top;
+    const containerBottom = containerRect.bottom;
+    const containerHeight = containerBottom - containerTop;
+
+    const lineTop = lineRect.top;
+    const lineBottom = lineRect.bottom;
+
+    // Проверяем, видна ли строка в контейнере (с небольшим отступом)
+    const padding = 30;
+    const isVisible = lineTop >= containerTop + padding && lineBottom <= containerBottom - padding;
 
     if (!isVisible) {
-      // Скроллим так, чтобы строка была в центре видимой области
-      const targetScrollTop = lineTop - containerHeight / 2 + lineHeight / 2;
-      container.scrollTo({
-        top: Math.max(0, targetScrollTop),
+      // Используем scrollIntoView для надежного скролла
+      // block: 'center' позиционирует элемент в центре видимой области
+      lineElement.scrollIntoView({
         behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
       });
     }
   }, [currentLineIndex]);
