@@ -1,5 +1,6 @@
 // src/pages/UserDashboard/components/shared/EditableCardField.tsx
 import React from 'react';
+import type { IInterface } from '@models';
 import './EditableCardField.style.scss';
 
 export interface EditableCardFieldData {
@@ -25,6 +26,7 @@ export interface EditableCardFieldProps {
   descriptionPlaceholder?: string;
   urlPlaceholder?: string;
   showCancel?: boolean; // Если false, только save + remove
+  ui?: IInterface;
 }
 
 export function EditableCardField({
@@ -44,11 +46,12 @@ export function EditableCardField({
   descriptionPlaceholder = 'Description (optional)',
   urlPlaceholder = 'URL (optional)',
   showCancel = true,
+  ui,
 }: EditableCardFieldProps) {
   if (isEditing) {
     return (
       <div className="edit-album-modal__list-item edit-album-modal__list-item--editing">
-        <div className="edit-album-modal__list-item-content">
+        <div className="edit-album-modal__list-item-edit-wrapper">
           <input
             type="text"
             className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
@@ -103,24 +106,20 @@ export function EditableCardField({
               }
             }}
           />
-        </div>
-        <div className="edit-album-modal__list-item-actions">
-          <button
-            type="button"
-            className="edit-album-modal__list-item-save"
-            onClick={onSave}
-            aria-label="Save"
-          >
-            ✔
-          </button>
-          <button
-            type="button"
-            className="edit-album-modal__list-item-remove"
-            onClick={onRemove}
-            aria-label="Remove"
-          >
-            ×
-          </button>
+          <div className="edit-album-modal__list-item-actions">
+            <button type="button" className="edit-album-modal__list-item-save" onClick={onSave}>
+              {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Save'}
+            </button>
+            {showCancel && (
+              <button
+                type="button"
+                className="edit-album-modal__list-item-cancel"
+                onClick={onCancel}
+              >
+                {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

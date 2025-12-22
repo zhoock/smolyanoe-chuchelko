@@ -69,6 +69,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   titlePlaceholder="Recording info (e.g., SEP. 28, 2021: Studio Name, Location.)"
                   descriptionPlaceholder=""
                   urlPlaceholder="URL (optional)"
+                  ui={ui}
                 />
               );
             })}
@@ -218,6 +219,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   titlePlaceholder="Mixing info (e.g., JAN. 14, 2024—SEP. 22, 2024: Studio Name, Location.)"
                   descriptionPlaceholder=""
                   urlPlaceholder="URL (optional)"
+                  ui={ui}
                 />
               );
             })}
@@ -367,6 +369,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   titlePlaceholder="Mastering info (e.g., JAN. 14, 2025—FEB. 7, 2025: Chicago Mastering Service, Chicago, USA.)"
                   descriptionPlaceholder=""
                   urlPlaceholder="URL (optional)"
+                  ui={ui}
                 />
               );
             })}

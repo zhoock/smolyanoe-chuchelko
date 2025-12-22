@@ -150,6 +150,7 @@ export function EditAlbumModalStep4({
                 titlePlaceholder="Name"
                 descriptionPlaceholder="Role"
                 urlPlaceholder="URL (optional)"
+                ui={ui}
               />
             ))}
           </div>
@@ -276,6 +277,7 @@ export function EditAlbumModalStep4({
                 titlePlaceholder="Name"
                 descriptionPlaceholder="Role"
                 urlPlaceholder="URL (optional)"
+                ui={ui}
               />
             ))}
           </div>
@@ -439,6 +441,7 @@ export function EditAlbumModalStep4({
                   titlePlaceholder="Producer info (e.g., Yaroslav Zhuk — producer.)"
                   descriptionPlaceholder=""
                   urlPlaceholder="URL (optional)"
+                  ui={ui}
                 />
               );
             })}

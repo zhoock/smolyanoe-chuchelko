@@ -3,21 +3,56 @@
 
 .edit-album-modal__list-item {
   &--editing {
-    .edit-album-modal__list-item-content {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: var(--ms-01) var(--ms-0) !important;
+    background: var(--deep-black) !important;
+
+    .edit-album-modal__list-item-edit-wrapper {
+      display: flex;
+      flex-direction: column;
       gap: var(--ms-01);
+      width: 100%;
+    }
+
+    .edit-album-modal__list-item-actions {
+      display: flex !important;
+      gap: var(--ms-01) !important;
+      align-items: center !important;
+
+      @include breakpoint(phones) {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+      }
+    }
+
+    .edit-album-modal__list-item-save {
+      @include breakpoint(phones) {
+        width: 100% !important;
+        padding: var(--ms-01) !important;
+      }
+    }
+
+    .edit-album-modal__list-item-cancel {
+      @include breakpoint(phones) {
+        width: 100% !important;
+        padding: var(--ms-01) !important;
+      }
     }
   }
 }
 
 .edit-album-modal__list-item-input {
   width: 100%;
-  padding: var(--ms-01);
+  padding: var(--ms-01) var(--ms-0);
   color: var(--white) !important;
   font-size: var(--ms-0) !important;
+  font-family: inherit;
   background: var(--deep-black) !important;
   border: 1px solid var(--iron-slate) !important;
   border-radius: var(--ms-01) !important;
-  transition: all 0.2s;
+  transition: border-color 0.2s;
   box-sizing: border-box !important;
 
   &::placeholder {
@@ -26,7 +61,7 @@
 
   &:focus {
     outline: none !important;
-    border-color: var(--dark-greenish-yellow) !important;
+    border-color: var(--graphite-green) !important;
   }
 
   &--title {
@@ -46,51 +81,32 @@
 }
 
 .edit-album-modal__list-item-save {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(var(--ms-0) * 1.2);
-  height: calc(var(--ms-0) * 1.2);
-  padding: 0;
-  color: var(--dark-greenish-yellow);
-  font-size: var(--ms-01);
-  line-height: 1;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
-  flex-shrink: 0;
+  @include button-variant(
+    $color: var(--white),
+    $background: var(--iron-slate),
+    $hover-color: var(--white),
+    $hover-background: var(--graphite-green),
+    $margin: 0,
+    $padding: var(--ms-01) var(--ms-0),
+    $border: 1px solid var(--iron-slate),
+    $border-radius: var(--ms-01)
+  );
 
-  &:hover {
-    color: var(--white);
-    background: var(--dark-greenish-yellow);
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
 .edit-album-modal__list-item-cancel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(var(--ms-0) * 1.2);
-  height: calc(var(--ms-0) * 1.2);
-  padding: 0;
-  color: var(--warm-concrete);
-  font-size: var(--ms-0);
-  line-height: 1;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
-  flex-shrink: 0;
-
-  &:hover {
-    color: var(--white);
-    background: var(--iron-slate);
-  }
+  @include button-variant(
+    $color: var(--white),
+    $background: transparent,
+    $hover-color: var(--white),
+    $hover-background: var(--graphite-green),
+    $margin: 0,
+    $padding: var(--ms-01) var(--ms-0),
+    $border: 1px solid var(--iron-slate),
+    $border-radius: var(--ms-01)
+  );
 }
