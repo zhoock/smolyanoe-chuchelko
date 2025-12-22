@@ -17,6 +17,9 @@ export interface BandMember {
 export interface RecordingEntry {
   text: string; // Полный текст записи (например, "SEP. 28, 2021: Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.")
   url?: string;
+  dateFrom?: string; // Дата начала в формате YYYY-MM-DD
+  dateTo?: string; // Дата конца в формате YYYY-MM-DD
+  studioText?: string; // Текст студии без дат (например, "Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.")
 }
 
 export interface ProducingCredits {
@@ -56,18 +59,24 @@ export interface AlbumFormData {
   editingProducerIndex?: number | null; // Индекс редактируемой записи
   showAddProducerInputs?: boolean; // Показывать поля для добавления новой записи
   mastering: RecordingEntry[];
-  masteringText?: string; // Временное поле для ввода текста
+  masteringDateFrom?: string; // Временное поле для даты начала
+  masteringDateTo?: string; // Временное поле для даты конца
+  masteringText?: string; // Временное поле для текста студии
   masteringURL?: string; // Временное поле для ввода URL
   editingMasteringIndex?: number | null; // Индекс редактируемой записи
   showAddMasteringInputs?: boolean; // Показывать поля для добавления новой записи
   producingCredits: ProducingCredits; // Оставляем для обратной совместимости, но больше не используем
   recordedAt: RecordingEntry[];
-  recordedAtText?: string; // Временное поле для ввода текста
+  recordedAtDateFrom?: string; // Временное поле для даты начала
+  recordedAtDateTo?: string; // Временное поле для даты конца
+  recordedAtText?: string; // Временное поле для текста студии
   recordedAtURL?: string; // Временное поле для ввода URL
   editingRecordedAtIndex?: number | null; // Индекс редактируемой записи
   showAddRecordedAtInputs?: boolean; // Показывать поля для добавления новой записи
   mixedAt: RecordingEntry[];
-  mixedAtText?: string; // Временное поле для ввода текста
+  mixedAtDateFrom?: string; // Временное поле для даты начала
+  mixedAtDateTo?: string; // Временное поле для даты конца
+  mixedAtText?: string; // Временное поле для текста студии
   mixedAtURL?: string; // Временное поле для ввода URL
   editingMixedAtIndex?: number | null; // Индекс редактируемой записи
   showAddMixedAtInputs?: boolean; // Показывать поля для добавления новой записи

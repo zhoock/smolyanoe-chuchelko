@@ -34,6 +34,7 @@ import {
   formatDateFromISO,
   formatDateToISO,
   formatDateInput,
+  parseRecordingText,
 } from './EditAlbumModal.utils';
 import { EditAlbumModalStep1 } from './steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from './steps/EditAlbumModalStep2';
@@ -339,7 +340,7 @@ export function EditAlbumModal({
     }
 
     // --- парсинг Recorded At ---
-    const recordedAt: Array<{ text: string; url?: string }> = [];
+    const recordedAt: RecordingEntry[] = [];
     const recordedAtDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
           (detail) => detail && (detail.title === 'Recorded At' || detail.title === 'Запись')
@@ -350,20 +351,32 @@ export function EditAlbumModal({
       for (const item of (recordedAtDetail as any).content) {
         if (!item) continue;
 
+        let text = '';
+        let url: string | undefined = undefined;
+
         if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          const text = item.text.join('').trim();
-          const url = item.link ? String(item.link).trim() : undefined;
-          if (text) {
-            recordedAt.push({ text, url });
-          }
+          text = item.text.join('').trim();
+          url = item.link ? String(item.link).trim() : undefined;
         } else if (typeof item === 'string' && item.trim()) {
-          recordedAt.push({ text: item.trim() });
+          text = item.trim();
+        }
+
+        if (text) {
+          // Парсим текст для извлечения дат
+          const parsed = parseRecordingText(text);
+          recordedAt.push({
+            text,
+            url,
+            dateFrom: parsed.dateFrom,
+            dateTo: parsed.dateTo,
+            studioText: parsed.studioText,
+          });
         }
       }
     }
 
     // --- парсинг Mixed At ---
-    const mixedAt: Array<{ text: string; url?: string }> = [];
+    const mixedAt: RecordingEntry[] = [];
     const mixedAtDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
           (detail) => detail && (detail.title === 'Mixed At' || detail.title === 'Сведение')
@@ -374,14 +387,26 @@ export function EditAlbumModal({
       for (const item of (mixedAtDetail as any).content) {
         if (!item) continue;
 
+        let text = '';
+        let url: string | undefined = undefined;
+
         if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          const text = item.text.join('').trim();
-          const url = item.link ? String(item.link).trim() : undefined;
-          if (text) {
-            mixedAt.push({ text, url });
-          }
+          text = item.text.join('').trim();
+          url = item.link ? String(item.link).trim() : undefined;
         } else if (typeof item === 'string' && item.trim()) {
-          mixedAt.push({ text: item.trim() });
+          text = item.trim();
+        }
+
+        if (text) {
+          // Парсим текст для извлечения дат
+          const parsed = parseRecordingText(text);
+          mixedAt.push({
+            text,
+            url,
+            dateFrom: parsed.dateFrom,
+            dateTo: parsed.dateTo,
+            studioText: parsed.studioText,
+          });
         }
       }
     }
@@ -425,7 +450,7 @@ export function EditAlbumModal({
     }
 
     // --- парсинг Mastered By ---
-    const mastering: Array<{ text: string; url?: string }> = [];
+    const mastering: RecordingEntry[] = [];
 
     // Сначала ищем отдельный блок "Mastered By" / "Мастеринг"
     const masteredByDetail = Array.isArray(parsedDetails)
@@ -438,14 +463,26 @@ export function EditAlbumModal({
       for (const item of (masteredByDetail as any).content) {
         if (!item) continue;
 
+        let text = '';
+        let url: string | undefined = undefined;
+
         if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          const text = item.text.join('').trim();
-          const url = item.link ? String(item.link).trim() : undefined;
-          if (text) {
-            mastering.push({ text, url });
-          }
+          text = item.text.join('').trim();
+          url = item.link ? String(item.link).trim() : undefined;
         } else if (typeof item === 'string' && item.trim()) {
-          mastering.push({ text: item.trim() });
+          text = item.trim();
+        }
+
+        if (text) {
+          // Парсим текст для извлечения дат
+          const parsed = parseRecordingText(text);
+          mastering.push({
+            text,
+            url,
+            dateFrom: parsed.dateFrom,
+            dateTo: parsed.dateTo,
+            studioText: parsed.studioText,
+          });
         }
       }
     } else if (producingDetail && (producingDetail as any).content) {

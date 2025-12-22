@@ -4,6 +4,152 @@ import { DEFAULT_PRODUCING_CREDIT_TYPES } from './EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 
 /**
+ * Форматирует дату из формата YYYY-MM-DD в формат "MON. DD, YYYY"
+ */
+export function formatDateToDisplay(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+
+    return `${month}. ${day}, ${year}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
+ * Парсит дату из формата "MON. DD, YYYY" в формат YYYY-MM-DD
+ */
+export function parseDateFromDisplay(dateStr: string | undefined): string | undefined {
+  if (!dateStr) return undefined;
+
+  try {
+    // Формат: "OCT. 16, 2018" или "OCT 16, 2018"
+    const match = dateStr.match(/([A-Z]{3})\.?\s+(\d{1,2}),\s+(\d{4})/);
+    if (!match) return undefined;
+
+    const months: Record<string, number> = {
+      JAN: 0,
+      FEB: 1,
+      MAR: 2,
+      APR: 3,
+      MAY: 4,
+      JUN: 5,
+      JUL: 6,
+      AUG: 7,
+      SEP: 8,
+      OCT: 9,
+      NOV: 10,
+      DEC: 11,
+    };
+
+    const month = months[match[1]];
+    const day = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+
+    if (month === undefined || isNaN(day) || isNaN(year)) return undefined;
+
+    const date = new Date(year, month, day);
+    const yearStr = String(date.getFullYear());
+    const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(date.getDate()).padStart(2, '0');
+
+    return `${yearStr}-${monthStr}-${dayStr}`;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Извлекает даты и текст студии из полного текста записи
+ * Формат: "OCT. 16, 2018—DEC. 28, 2018: Studio Name" или "OCT. 16, 2018: Studio Name"
+ */
+export function parseRecordingText(text: string): {
+  dateFrom?: string;
+  dateTo?: string;
+  studioText?: string;
+} {
+  if (!text) return {};
+
+  // Пытаемся найти диапазон дат: "DATE1—DATE2:"
+  const rangeMatch = text.match(
+    /^([A-Z]{3}\.?\s+\d{1,2},\s+\d{4})—([A-Z]{3}\.?\s+\d{1,2},\s+\d{4}):\s*(.+)$/
+  );
+  if (rangeMatch) {
+    return {
+      dateFrom: parseDateFromDisplay(rangeMatch[1]),
+      dateTo: parseDateFromDisplay(rangeMatch[2]),
+      studioText: rangeMatch[3].trim(),
+    };
+  }
+
+  // Пытаемся найти одну дату: "DATE:"
+  const singleMatch = text.match(/^([A-Z]{3}\.?\s+\d{1,2},\s+\d{4}):\s*(.+)$/);
+  if (singleMatch) {
+    return {
+      dateFrom: parseDateFromDisplay(singleMatch[1]),
+      studioText: singleMatch[2].trim(),
+    };
+  }
+
+  // Если не нашли дату, весь текст - это текст студии
+  return {
+    studioText: text.trim(),
+  };
+}
+
+/**
+ * Строит текст записи из дат и текста студии
+ */
+export function buildRecordingText(
+  dateFrom: string | undefined,
+  dateTo: string | undefined,
+  studioText: string | undefined
+): string {
+  const parts: string[] = [];
+
+  if (dateFrom && dateTo) {
+    const fromFormatted = formatDateToDisplay(dateFrom);
+    const toFormatted = formatDateToDisplay(dateTo);
+    parts.push(`${fromFormatted}—${toFormatted}`);
+  } else if (dateFrom) {
+    parts.push(formatDateToDisplay(dateFrom));
+  } else if (dateTo) {
+    parts.push(formatDateToDisplay(dateTo));
+  }
+
+  if (studioText) {
+    if (parts.length > 0) {
+      parts.push(`: ${studioText}`);
+    } else {
+      parts.push(studioText);
+    }
+  }
+
+  return parts.join('');
+}
+
+/**
  * Конвертирует дату из формата DD/MM/YYYY в ISO формат YYYY-MM-DD для сохранения в БД
  */
 export function formatDateToISO(dateStr: string): string {
@@ -123,6 +269,8 @@ export const makeEmptyForm = (): AlbumFormData => ({
   producerURL: '',
   showAddProducerInputs: false,
   mastering: [],
+  masteringDateFrom: '',
+  masteringDateTo: '',
   masteringText: '',
   masteringURL: '',
   showAddMasteringInputs: false,
@@ -131,10 +279,14 @@ export const makeEmptyForm = (): AlbumFormData => ({
     return acc;
   }, {} as ProducingCredits),
   recordedAt: [],
+  recordedAtDateFrom: '',
+  recordedAtDateTo: '',
   recordedAtText: '',
   recordedAtURL: '',
   showAddRecordedAtInputs: false,
   mixedAt: [],
+  mixedAtDateFrom: '',
+  mixedAtDateTo: '',
   mixedAtText: '',
   mixedAtURL: '',
   showAddMixedAtInputs: false,
