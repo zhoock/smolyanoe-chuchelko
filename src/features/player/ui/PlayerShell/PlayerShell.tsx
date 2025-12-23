@@ -112,6 +112,24 @@ export const PlayerShell: React.FC = () => {
       currentState.albumMeta &&
       currentState.albumMeta.albumId
     ) {
+      // Состояние уже восстановлено, но нужно убедиться, что источник установлен
+      const track = currentState.playlist[currentState.currentTrackIndex];
+      if (track?.src && !audioController.element.src) {
+        // Источник не установлен, устанавливаем его
+        audioController.setSource(track.src, currentState.isPlaying);
+        if (currentState.time?.current && currentState.time.current > 0) {
+          const el = audioController.element;
+          if (el.readyState >= 1) {
+            setTimeout(() => {
+              const duration = el.duration;
+              if (Number.isFinite(duration) && duration > 0) {
+                const timeToSet = Math.min(currentState.time.current, duration);
+                audioController.setCurrentTime(timeToSet);
+              }
+            }, 50);
+          }
+        }
+      }
       hasHydratedFromStorageRef.current = true;
       return;
     }
@@ -162,14 +180,45 @@ export const PlayerShell: React.FC = () => {
     );
 
     audioController.setVolume(savedState.volume ?? 50);
-    // НЕ вызываем setSource здесь - он уже установлен через setCurrentTrackIndex listener
-    // Просто устанавливаем время, если нужно
-    if (playbackTime.current && playbackTime.current > 0) {
-      audioController.setCurrentTime(playbackTime.current);
+
+    // ВАЖНО: hydrateFromPersistedState не вызывает listener для setCurrentTrackIndex,
+    // поэтому нужно явно установить источник аудио после восстановления состояния
+    const track = playlist[safeIndex];
+    if (track?.src) {
+      // Устанавливаем источник, но не запускаем автоплей (isPlaying будет обработан отдельно)
+      audioController.setSource(track.src, false);
+
+      // Устанавливаем время после загрузки метаданных
+      // loadedmetadataHandler также восстановит время, но на случай если событие уже произошло,
+      // устанавливаем время здесь тоже
+      const el = audioController.element;
+      const restoreTime = () => {
+        if (playbackTime.current && playbackTime.current > 0) {
+          const duration = el.duration;
+          if (Number.isFinite(duration) && duration > 0) {
+            const timeToSet = Math.min(playbackTime.current, duration);
+            audioController.setCurrentTime(timeToSet);
+          }
+        }
+      };
+
+      // Если метаданные уже загружены, устанавливаем время сразу
+      if (el.readyState >= 1) {
+        // Метаданные загружены, но может потребоваться небольшая задержка
+        setTimeout(restoreTime, 50);
+      } else {
+        // Ждем загрузки метаданных
+        const onLoadedMetadata = () => {
+          el.removeEventListener('loadedmetadata', onLoadedMetadata);
+          restoreTime();
+        };
+        el.addEventListener('loadedmetadata', onLoadedMetadata);
+      }
     }
 
     if (savedState.isPlaying) {
-      dispatch(playerActions.play());
+      // Используем requestPlay вместо play, чтобы убедиться, что метаданные загружены
+      dispatch(playerActions.requestPlay());
     } else {
       dispatch(playerActions.pause());
     }
