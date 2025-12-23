@@ -21,10 +21,12 @@ interface RecordingEntryEditorProps {
   dateFrom: string;
   dateTo: string;
   studioText: string;
+  city: string;
   url: string;
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
   onStudioTextChange: (value: string) => void;
+  onCityChange: (value: string) => void;
   onUrlChange: (value: string) => void;
   onEdit: () => void;
   onSave: () => void;
@@ -39,10 +41,12 @@ function RecordingEntryEditor({
   dateFrom,
   dateTo,
   studioText,
+  city,
   url,
   onDateFromChange,
   onDateToChange,
   onStudioTextChange,
+  onCityChange,
   onUrlChange,
   onEdit,
   onSave,
@@ -96,6 +100,23 @@ function RecordingEntryEditor({
             placeholder="Studio info"
             value={studioText}
             onChange={(e) => onStudioTextChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onSave();
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                onCancel();
+              }
+            }}
+          />
+          <input
+            type="text"
+            className="edit-album-modal__list-item-input edit-album-modal__list-item-input--description"
+            placeholder="City"
+            value={city}
+            onChange={(e) => onCityChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -180,7 +201,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
           <div className="edit-album-modal__list">
             {formData.recordedAt.map((entry, index) => {
               const isEditing = formData.editingRecordedAtIndex === index;
-              const parsed = parseRecordingText(entry.text);
+              // Парсим только если нет прямых полей (для обратной совместимости)
+              const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
 
               return (
                 <RecordingEntryEditor
@@ -190,23 +212,44 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     url: entry.url,
                   }}
                   isEditing={isEditing}
-                  dateFrom={formData.recordedAtDateFrom || entry.dateFrom || parsed.dateFrom || ''}
-                  dateTo={formData.recordedAtDateTo || entry.dateTo || parsed.dateTo || ''}
-                  studioText={
-                    formData.recordedAtText || entry.studioText || parsed.studioText || ''
+                  dateFrom={
+                    isEditing
+                      ? (formData.recordedAtDateFrom ?? '')
+                      : formData.recordedAtDateFrom || entry.dateFrom || parsed.dateFrom || ''
                   }
-                  url={formData.recordedAtURL || entry.url || ''}
+                  dateTo={
+                    isEditing
+                      ? (formData.recordedAtDateTo ?? '')
+                      : formData.recordedAtDateTo || entry.dateTo || parsed.dateTo || ''
+                  }
+                  studioText={
+                    isEditing
+                      ? (formData.recordedAtText ?? '')
+                      : formData.recordedAtText || entry.studioText || parsed.studioText || ''
+                  }
+                  city={
+                    isEditing
+                      ? (formData.recordedAtCity ?? '')
+                      : formData.recordedAtCity || entry.city || ''
+                  }
+                  url={
+                    isEditing
+                      ? (formData.recordedAtURL ?? '')
+                      : formData.recordedAtURL || entry.url || ''
+                  }
                   onDateFromChange={(value: string) =>
                     onFormDataChange('recordedAtDateFrom', value)
                   }
                   onDateToChange={(value: string) => onFormDataChange('recordedAtDateTo', value)}
                   onStudioTextChange={(value: string) => onFormDataChange('recordedAtText', value)}
+                  onCityChange={(value: string) => onFormDataChange('recordedAtCity', value)}
                   onUrlChange={(value: string) => onFormDataChange('recordedAtURL', value)}
                   onEdit={() => {
                     onFormDataChange('editingRecordedAtIndex', index);
                     onFormDataChange('recordedAtDateFrom', entry.dateFrom || parsed.dateFrom || '');
                     onFormDataChange('recordedAtDateTo', entry.dateTo || parsed.dateTo || '');
                     onFormDataChange('recordedAtText', entry.studioText || parsed.studioText || '');
+                    onFormDataChange('recordedAtCity', entry.city || '');
                     onFormDataChange('recordedAtURL', entry.url || '');
                   }}
                   onSave={() => {
@@ -214,7 +257,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.recordedAtDateFrom,
                       formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim()
+                      formData.recordedAtText?.trim(),
+                      formData.recordedAtCity?.trim()
                     );
                     updated[index] = {
                       text,
@@ -222,11 +266,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.recordedAtDateFrom,
                       dateTo: formData.recordedAtDateTo,
                       studioText: formData.recordedAtText?.trim(),
+                      city: formData.recordedAtCity?.trim(),
                     };
                     onFormDataChange('recordedAt', updated);
                     onFormDataChange('recordedAtDateFrom', '');
                     onFormDataChange('recordedAtDateTo', '');
                     onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('editingRecordedAtIndex', null);
                   }}
@@ -234,6 +280,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('recordedAtDateFrom', '');
                     onFormDataChange('recordedAtDateTo', '');
                     onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('editingRecordedAtIndex', null);
                     onFormDataChange('showAddRecordedAtInputs', false);
@@ -275,13 +322,14 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                 name="recorded-at-text"
                 type="text"
                 className="edit-album-modal__input"
-                placeholder="Studio info (e.g., Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.)"
+                placeholder="Studio info (e.g., Igor Matvienko's recording studio M.A.M.A, Big studio)"
                 value={formData.recordedAtText || ''}
                 onChange={(e) => onFormDataChange('recordedAtText', e.target.value)}
                 onKeyDown={(e) => {
                   if (
                     e.key === 'Enter' &&
                     (formData.recordedAtText?.trim() ||
+                      formData.recordedAtCity?.trim() ||
                       formData.recordedAtDateFrom ||
                       formData.recordedAtDateTo)
                   ) {
@@ -289,7 +337,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.recordedAtDateFrom,
                       formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim()
+                      formData.recordedAtText?.trim(),
+                      formData.recordedAtCity?.trim()
                     );
                     const url = formData.recordedAtURL?.trim() || undefined;
                     const newEntry = {
@@ -298,11 +347,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.recordedAtDateFrom,
                       dateTo: formData.recordedAtDateTo,
                       studioText: formData.recordedAtText?.trim(),
+                      city: formData.recordedAtCity?.trim(),
                     };
                     onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
                     onFormDataChange('recordedAtDateFrom', '');
                     onFormDataChange('recordedAtDateTo', '');
                     onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('showAddRecordedAtInputs', false);
                   }
@@ -310,6 +361,56 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('recordedAtDateFrom', '');
                     onFormDataChange('recordedAtDateTo', '');
                     onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
+                    onFormDataChange('recordedAtURL', '');
+                    onFormDataChange('showAddRecordedAtInputs', false);
+                  }
+                }}
+              />
+              <input
+                name="recorded-at-city"
+                type="text"
+                className="edit-album-modal__input"
+                placeholder="City (e.g., Moscow)"
+                value={formData.recordedAtCity || ''}
+                onChange={(e) => onFormDataChange('recordedAtCity', e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    (formData.recordedAtText?.trim() ||
+                      formData.recordedAtCity?.trim() ||
+                      formData.recordedAtDateFrom ||
+                      formData.recordedAtDateTo)
+                  ) {
+                    e.preventDefault();
+                    const text = buildRecordingText(
+                      formData.recordedAtDateFrom,
+                      formData.recordedAtDateTo,
+                      formData.recordedAtText?.trim(),
+                      formData.recordedAtCity?.trim()
+                    );
+                    const url = formData.recordedAtURL?.trim() || undefined;
+                    const newEntry = {
+                      text,
+                      url,
+                      dateFrom: formData.recordedAtDateFrom,
+                      dateTo: formData.recordedAtDateTo,
+                      studioText: formData.recordedAtText?.trim(),
+                      city: formData.recordedAtCity?.trim(),
+                    };
+                    onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
+                    onFormDataChange('recordedAtDateFrom', '');
+                    onFormDataChange('recordedAtDateTo', '');
+                    onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
+                    onFormDataChange('recordedAtURL', '');
+                    onFormDataChange('showAddRecordedAtInputs', false);
+                  }
+                  if (e.key === 'Escape') {
+                    onFormDataChange('recordedAtDateFrom', '');
+                    onFormDataChange('recordedAtDateTo', '');
+                    onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('showAddRecordedAtInputs', false);
                   }
@@ -334,7 +435,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.recordedAtDateFrom,
                       formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim()
+                      formData.recordedAtText?.trim(),
+                      formData.recordedAtCity?.trim()
                     );
                     const url = formData.recordedAtURL?.trim() || undefined;
                     const newEntry = {
@@ -361,6 +463,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                 }}
               />
               {(formData.recordedAtText?.trim() ||
+                formData.recordedAtCity?.trim() ||
                 formData.recordedAtDateFrom ||
                 formData.recordedAtDateTo) && (
                 <button
@@ -370,7 +473,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.recordedAtDateFrom,
                       formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim()
+                      formData.recordedAtText?.trim(),
+                      formData.recordedAtCity?.trim()
                     );
                     const url = formData.recordedAtURL?.trim() || undefined;
                     const newEntry = {
@@ -379,11 +483,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.recordedAtDateFrom,
                       dateTo: formData.recordedAtDateTo,
                       studioText: formData.recordedAtText?.trim(),
+                      city: formData.recordedAtCity?.trim(),
                     };
                     onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
                     onFormDataChange('recordedAtDateFrom', '');
                     onFormDataChange('recordedAtDateTo', '');
                     onFormDataChange('recordedAtText', '');
+                    onFormDataChange('recordedAtCity', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('showAddRecordedAtInputs', false);
                   }}
@@ -418,7 +524,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
           <div className="edit-album-modal__list">
             {formData.mixedAt.map((entry, index) => {
               const isEditing = formData.editingMixedAtIndex === index;
-              const parsed = parseRecordingText(entry.text);
+              // Парсим только если нет прямых полей (для обратной совместимости)
+              const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
 
               return (
                 <RecordingEntryEditor
@@ -428,19 +535,40 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     url: entry.url,
                   }}
                   isEditing={isEditing}
-                  dateFrom={formData.mixedAtDateFrom || entry.dateFrom || parsed.dateFrom || ''}
-                  dateTo={formData.mixedAtDateTo || entry.dateTo || parsed.dateTo || ''}
-                  studioText={formData.mixedAtText || entry.studioText || parsed.studioText || ''}
-                  url={formData.mixedAtURL || entry.url || ''}
+                  dateFrom={
+                    isEditing
+                      ? (formData.mixedAtDateFrom ?? '')
+                      : formData.mixedAtDateFrom || entry.dateFrom || parsed.dateFrom || ''
+                  }
+                  dateTo={
+                    isEditing
+                      ? (formData.mixedAtDateTo ?? '')
+                      : formData.mixedAtDateTo || entry.dateTo || parsed.dateTo || ''
+                  }
+                  studioText={
+                    isEditing
+                      ? (formData.mixedAtText ?? '')
+                      : formData.mixedAtText || entry.studioText || parsed.studioText || ''
+                  }
+                  city={
+                    isEditing
+                      ? (formData.mixedAtCity ?? '')
+                      : formData.mixedAtCity || entry.city || ''
+                  }
+                  url={
+                    isEditing ? (formData.mixedAtURL ?? '') : formData.mixedAtURL || entry.url || ''
+                  }
                   onDateFromChange={(value: string) => onFormDataChange('mixedAtDateFrom', value)}
                   onDateToChange={(value: string) => onFormDataChange('mixedAtDateTo', value)}
                   onStudioTextChange={(value: string) => onFormDataChange('mixedAtText', value)}
+                  onCityChange={(value: string) => onFormDataChange('mixedAtCity', value)}
                   onUrlChange={(value: string) => onFormDataChange('mixedAtURL', value)}
                   onEdit={() => {
                     onFormDataChange('editingMixedAtIndex', index);
                     onFormDataChange('mixedAtDateFrom', entry.dateFrom || parsed.dateFrom || '');
                     onFormDataChange('mixedAtDateTo', entry.dateTo || parsed.dateTo || '');
                     onFormDataChange('mixedAtText', entry.studioText || parsed.studioText || '');
+                    onFormDataChange('mixedAtCity', entry.city || '');
                     onFormDataChange('mixedAtURL', entry.url || '');
                   }}
                   onSave={() => {
@@ -448,7 +576,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.mixedAtDateFrom,
                       formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim()
+                      formData.mixedAtText?.trim(),
+                      formData.mixedAtCity?.trim()
                     );
                     updated[index] = {
                       text,
@@ -456,11 +585,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.mixedAtDateFrom,
                       dateTo: formData.mixedAtDateTo,
                       studioText: formData.mixedAtText?.trim(),
+                      city: formData.mixedAtCity?.trim(),
                     };
                     onFormDataChange('mixedAt', updated);
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('editingMixedAtIndex', null);
                   }}
@@ -468,6 +599,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('editingMixedAtIndex', null);
                     onFormDataChange('showAddMixedAtInputs', false);
@@ -509,13 +641,14 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                 name="mixed-at-text"
                 type="text"
                 className="edit-album-modal__input"
-                placeholder="Studio info (e.g., DTH Studios, Studio A, Moscow.)"
+                placeholder="Studio info (e.g., DTH Studios, Studio A)"
                 value={formData.mixedAtText || ''}
                 onChange={(e) => onFormDataChange('mixedAtText', e.target.value)}
                 onKeyDown={(e) => {
                   if (
                     e.key === 'Enter' &&
                     (formData.mixedAtText?.trim() ||
+                      formData.mixedAtCity?.trim() ||
                       formData.mixedAtDateFrom ||
                       formData.mixedAtDateTo)
                   ) {
@@ -523,7 +656,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.mixedAtDateFrom,
                       formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim()
+                      formData.mixedAtText?.trim(),
+                      formData.mixedAtCity?.trim()
                     );
                     const url = formData.mixedAtURL?.trim() || undefined;
                     const newEntry = {
@@ -532,11 +666,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.mixedAtDateFrom,
                       dateTo: formData.mixedAtDateTo,
                       studioText: formData.mixedAtText?.trim(),
+                      city: formData.mixedAtCity?.trim(),
                     };
                     onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('showAddMixedAtInputs', false);
                   }
@@ -544,6 +680,56 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
+                    onFormDataChange('mixedAtURL', '');
+                    onFormDataChange('showAddMixedAtInputs', false);
+                  }
+                }}
+              />
+              <input
+                name="mixed-at-city"
+                type="text"
+                className="edit-album-modal__input"
+                placeholder="City (e.g., Moscow)"
+                value={formData.mixedAtCity || ''}
+                onChange={(e) => onFormDataChange('mixedAtCity', e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    (formData.mixedAtText?.trim() ||
+                      formData.mixedAtCity?.trim() ||
+                      formData.mixedAtDateFrom ||
+                      formData.mixedAtDateTo)
+                  ) {
+                    e.preventDefault();
+                    const text = buildRecordingText(
+                      formData.mixedAtDateFrom,
+                      formData.mixedAtDateTo,
+                      formData.mixedAtText?.trim(),
+                      formData.mixedAtCity?.trim()
+                    );
+                    const url = formData.mixedAtURL?.trim() || undefined;
+                    const newEntry = {
+                      text,
+                      url,
+                      dateFrom: formData.mixedAtDateFrom,
+                      dateTo: formData.mixedAtDateTo,
+                      studioText: formData.mixedAtText?.trim(),
+                      city: formData.mixedAtCity?.trim(),
+                    };
+                    onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
+                    onFormDataChange('mixedAtDateFrom', '');
+                    onFormDataChange('mixedAtDateTo', '');
+                    onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
+                    onFormDataChange('mixedAtURL', '');
+                    onFormDataChange('showAddMixedAtInputs', false);
+                  }
+                  if (e.key === 'Escape') {
+                    onFormDataChange('mixedAtDateFrom', '');
+                    onFormDataChange('mixedAtDateTo', '');
+                    onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('showAddMixedAtInputs', false);
                   }
@@ -561,6 +747,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   if (
                     e.key === 'Enter' &&
                     (formData.mixedAtText?.trim() ||
+                      formData.mixedAtCity?.trim() ||
                       formData.mixedAtDateFrom ||
                       formData.mixedAtDateTo)
                   ) {
@@ -568,7 +755,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.mixedAtDateFrom,
                       formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim()
+                      formData.mixedAtText?.trim(),
+                      formData.mixedAtCity?.trim()
                     );
                     const url = formData.mixedAtURL?.trim() || undefined;
                     const newEntry = {
@@ -577,11 +765,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.mixedAtDateFrom,
                       dateTo: formData.mixedAtDateTo,
                       studioText: formData.mixedAtText?.trim(),
+                      city: formData.mixedAtCity?.trim(),
                     };
                     onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('showAddMixedAtInputs', false);
                   }
@@ -589,12 +779,14 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('showAddMixedAtInputs', false);
                   }
                 }}
               />
               {(formData.mixedAtText?.trim() ||
+                formData.mixedAtCity?.trim() ||
                 formData.mixedAtDateFrom ||
                 formData.mixedAtDateTo) && (
                 <button
@@ -604,7 +796,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.mixedAtDateFrom,
                       formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim()
+                      formData.mixedAtText?.trim(),
+                      formData.mixedAtCity?.trim()
                     );
                     const url = formData.mixedAtURL?.trim() || undefined;
                     const newEntry = {
@@ -613,11 +806,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.mixedAtDateFrom,
                       dateTo: formData.mixedAtDateTo,
                       studioText: formData.mixedAtText?.trim(),
+                      city: formData.mixedAtCity?.trim(),
                     };
                     onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
                     onFormDataChange('mixedAtText', '');
+                    onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('showAddMixedAtInputs', false);
                   }}
@@ -652,7 +847,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
           <div className="edit-album-modal__list">
             {formData.mastering.map((entry, index) => {
               const isEditing = formData.editingMasteringIndex === index;
-              const parsed = parseRecordingText(entry.text);
+              // Парсим только если нет прямых полей (для обратной совместимости)
+              const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
 
               return (
                 <RecordingEntryEditor
@@ -662,19 +858,42 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     url: entry.url,
                   }}
                   isEditing={isEditing}
-                  dateFrom={formData.masteringDateFrom || entry.dateFrom || parsed.dateFrom || ''}
-                  dateTo={formData.masteringDateTo || entry.dateTo || parsed.dateTo || ''}
-                  studioText={formData.masteringText || entry.studioText || parsed.studioText || ''}
-                  url={formData.masteringURL || entry.url || ''}
+                  dateFrom={
+                    isEditing
+                      ? (formData.masteringDateFrom ?? '')
+                      : formData.masteringDateFrom || entry.dateFrom || parsed.dateFrom || ''
+                  }
+                  dateTo={
+                    isEditing
+                      ? (formData.masteringDateTo ?? '')
+                      : formData.masteringDateTo || entry.dateTo || parsed.dateTo || ''
+                  }
+                  studioText={
+                    isEditing
+                      ? (formData.masteringText ?? '')
+                      : formData.masteringText || entry.studioText || parsed.studioText || ''
+                  }
+                  city={
+                    isEditing
+                      ? (formData.masteringCity ?? '')
+                      : formData.masteringCity || entry.city || ''
+                  }
+                  url={
+                    isEditing
+                      ? (formData.masteringURL ?? '')
+                      : formData.masteringURL || entry.url || ''
+                  }
                   onDateFromChange={(value: string) => onFormDataChange('masteringDateFrom', value)}
                   onDateToChange={(value: string) => onFormDataChange('masteringDateTo', value)}
                   onStudioTextChange={(value: string) => onFormDataChange('masteringText', value)}
+                  onCityChange={(value: string) => onFormDataChange('masteringCity', value)}
                   onUrlChange={(value: string) => onFormDataChange('masteringURL', value)}
                   onEdit={() => {
                     onFormDataChange('editingMasteringIndex', index);
                     onFormDataChange('masteringDateFrom', entry.dateFrom || parsed.dateFrom || '');
                     onFormDataChange('masteringDateTo', entry.dateTo || parsed.dateTo || '');
                     onFormDataChange('masteringText', entry.studioText || parsed.studioText || '');
+                    onFormDataChange('masteringCity', entry.city || '');
                     onFormDataChange('masteringURL', entry.url || '');
                   }}
                   onSave={() => {
@@ -682,7 +901,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.masteringDateFrom,
                       formData.masteringDateTo,
-                      formData.masteringText?.trim()
+                      formData.masteringText?.trim(),
+                      formData.masteringCity?.trim()
                     );
                     updated[index] = {
                       text,
@@ -690,11 +910,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.masteringDateFrom,
                       dateTo: formData.masteringDateTo,
                       studioText: formData.masteringText?.trim(),
+                      city: formData.masteringCity?.trim(),
                     };
                     onFormDataChange('mastering', updated);
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('editingMasteringIndex', null);
                   }}
@@ -702,6 +924,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('editingMasteringIndex', null);
                     onFormDataChange('showAddMasteringInputs', false);
@@ -743,13 +966,14 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                 name="mastering-text"
                 type="text"
                 className="edit-album-modal__input"
-                placeholder="Studio info (e.g., Chicago Mastering Service, Chicago, USA.)"
+                placeholder="Studio info (e.g., Chicago Mastering Service)"
                 value={formData.masteringText || ''}
                 onChange={(e) => onFormDataChange('masteringText', e.target.value)}
                 onKeyDown={(e) => {
                   if (
                     e.key === 'Enter' &&
                     (formData.masteringText?.trim() ||
+                      formData.masteringCity?.trim() ||
                       formData.masteringDateFrom ||
                       formData.masteringDateTo)
                   ) {
@@ -757,7 +981,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.masteringDateFrom,
                       formData.masteringDateTo,
-                      formData.masteringText?.trim()
+                      formData.masteringText?.trim(),
+                      formData.masteringCity?.trim()
                     );
                     const url = formData.masteringURL?.trim() || undefined;
                     const newEntry = {
@@ -766,11 +991,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.masteringDateFrom,
                       dateTo: formData.masteringDateTo,
                       studioText: formData.masteringText?.trim(),
+                      city: formData.masteringCity?.trim(),
                     };
                     onFormDataChange('mastering', [...formData.mastering, newEntry]);
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('showAddMasteringInputs', false);
                   }
@@ -778,6 +1005,56 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
+                    onFormDataChange('masteringURL', '');
+                    onFormDataChange('showAddMasteringInputs', false);
+                  }
+                }}
+              />
+              <input
+                name="mastering-city"
+                type="text"
+                className="edit-album-modal__input"
+                placeholder="City (e.g., Chicago, USA)"
+                value={formData.masteringCity || ''}
+                onChange={(e) => onFormDataChange('masteringCity', e.target.value)}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    (formData.masteringText?.trim() ||
+                      formData.masteringCity?.trim() ||
+                      formData.masteringDateFrom ||
+                      formData.masteringDateTo)
+                  ) {
+                    e.preventDefault();
+                    const text = buildRecordingText(
+                      formData.masteringDateFrom,
+                      formData.masteringDateTo,
+                      formData.masteringText?.trim(),
+                      formData.masteringCity?.trim()
+                    );
+                    const url = formData.masteringURL?.trim() || undefined;
+                    const newEntry = {
+                      text,
+                      url,
+                      dateFrom: formData.masteringDateFrom,
+                      dateTo: formData.masteringDateTo,
+                      studioText: formData.masteringText?.trim(),
+                      city: formData.masteringCity?.trim(),
+                    };
+                    onFormDataChange('mastering', [...formData.mastering, newEntry]);
+                    onFormDataChange('masteringDateFrom', '');
+                    onFormDataChange('masteringDateTo', '');
+                    onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
+                    onFormDataChange('masteringURL', '');
+                    onFormDataChange('showAddMasteringInputs', false);
+                  }
+                  if (e.key === 'Escape') {
+                    onFormDataChange('masteringDateFrom', '');
+                    onFormDataChange('masteringDateTo', '');
+                    onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('showAddMasteringInputs', false);
                   }
@@ -795,6 +1072,7 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   if (
                     e.key === 'Enter' &&
                     (formData.masteringText?.trim() ||
+                      formData.masteringCity?.trim() ||
                       formData.masteringDateFrom ||
                       formData.masteringDateTo)
                   ) {
@@ -802,7 +1080,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.masteringDateFrom,
                       formData.masteringDateTo,
-                      formData.masteringText?.trim()
+                      formData.masteringText?.trim(),
+                      formData.masteringCity?.trim()
                     );
                     const url = formData.masteringURL?.trim() || undefined;
                     const newEntry = {
@@ -811,11 +1090,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.masteringDateFrom,
                       dateTo: formData.masteringDateTo,
                       studioText: formData.masteringText?.trim(),
+                      city: formData.masteringCity?.trim(),
                     };
                     onFormDataChange('mastering', [...formData.mastering, newEntry]);
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('showAddMasteringInputs', false);
                   }
@@ -823,12 +1104,14 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('showAddMasteringInputs', false);
                   }
                 }}
               />
               {(formData.masteringText?.trim() ||
+                formData.masteringCity?.trim() ||
                 formData.masteringDateFrom ||
                 formData.masteringDateTo) && (
                 <button
@@ -838,7 +1121,8 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     const text = buildRecordingText(
                       formData.masteringDateFrom,
                       formData.masteringDateTo,
-                      formData.masteringText?.trim()
+                      formData.masteringText?.trim(),
+                      formData.masteringCity?.trim()
                     );
                     const url = formData.masteringURL?.trim() || undefined;
                     const newEntry = {
@@ -847,11 +1131,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                       dateFrom: formData.masteringDateFrom,
                       dateTo: formData.masteringDateTo,
                       studioText: formData.masteringText?.trim(),
+                      city: formData.masteringCity?.trim(),
                     };
                     onFormDataChange('mastering', [...formData.mastering, newEntry]);
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');
                     onFormDataChange('masteringText', '');
+                    onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('showAddMasteringInputs', false);
                   }}

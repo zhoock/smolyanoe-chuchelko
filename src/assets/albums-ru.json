@@ -38,12 +38,14 @@
         "content": [
           {
             "dateFrom": "2021-09-28",
-            "studioText": "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия, Москва.",
+            "studioText": "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
+            "city": "Москва",
             "url": "https://studio-mama.ru/"
           },
           {
             "dateFrom": "2021-11-01",
-            "studioText": "DTH Studios, Студия A, Москва.",
+            "studioText": "DTH Studios, Студия A",
+            "city": "Москва",
             "url": "http://dthstudios.com/studios"
           }
         ]
@@ -55,7 +57,8 @@
           {
             "dateFrom": "2024-01-24",
             "dateTo": "2024-09-22",
-            "studioText": "DTH Studios, Студия A, Москва.",
+            "studioText": "DTH Studios, Студия A",
+            "city": "Москва",
             "url": "http://dthstudios.com/studios"
           }
         ]
@@ -67,7 +70,8 @@
           {
             "dateFrom": "2025-01-14",
             "dateTo": "2025-02-07",
-            "studioText": "Chicago Mastering Service, Chicago, USA.",
+            "studioText": "Chicago Mastering Service",
+            "city": "Chicago, USA",
             "url": "https://chicagomasteringservice.com/"
           }
         ]
@@ -578,12 +582,14 @@
         "content": [
           {
             "dateFrom": "2021-09-28",
-            "studioText": "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия, Москва.",
+            "studioText": "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
+            "city": "Москва",
             "url": "https://studio-mama.ru/"
           },
           {
             "dateFrom": "2021-11-01",
-            "studioText": "DTH Studios, Студия A, Москва.",
+            "studioText": "DTH Studios, Студия A",
+            "city": "Москва",
             "url": "http://dthstudios.com/studios"
           }
         ]
@@ -595,7 +601,8 @@
           {
             "dateFrom": "2021-11-16",
             "dateTo": "2021-11-17",
-            "studioText": "Студия звукозаписи \"Vintage Records\", Москва.",
+            "studioText": "Студия звукозаписи \"Vintage Records\"",
+            "city": "Москва",
             "url": "https://vintage.studio/about/large-equipment-room"
           }
         ]
@@ -607,7 +614,8 @@
           {
             "dateFrom": "2021-11-30",
             "dateTo": "2021-12-04",
-            "studioText": "Chicago Mastering Service, Chicago, USA.",
+            "studioText": "Chicago Mastering Service",
+            "city": "Chicago, USA",
             "url": "https://chicagomasteringservice.com/"
           }
         ]
@@ -710,23 +718,27 @@
           {
             "dateFrom": "2018-10-16",
             "dateTo": "2018-12-28",
-            "studioText": "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия, Москва.",
+            "studioText": "Студия звукозаписи Игоря Матвиенко М.А.М.А, Большая студия",
+            "city": "Москва",
             "url": "https://studio-mama.ru/"
           },
           {
             "dateFrom": "2018-11-02",
-            "studioText": "Продюсерский центр Алексея Мускатина, Москва.",
+            "studioText": "Продюсерский центр Алексея Мускатина",
+            "city": "Москва",
             "url": null
           },
           {
             "dateFrom": "2019-10-04",
-            "studioText": "Студия Космос, Москва.",
+            "studioText": "Студия Космос",
+            "city": "Москва",
             "url": null
           },
           {
             "dateFrom": "2019-10-09",
             "dateTo": "2019-12-14",
-            "studioText": "495 Studio Records, Москва.",
+            "studioText": "495 Studio Records",
+            "city": "Москва",
             "url": null
           }
         ]
@@ -738,7 +750,8 @@
           {
             "dateFrom": "2019-12-15",
             "dateTo": "2020-03-02",
-            "studioText": "DTH Studios, Студия A, Студия B, Москва.",
+            "studioText": "DTH Studios, Студия A, Студия B",
+            "city": "Москва",
             "url": "http://dthstudios.com/studios"
           }
         ]
@@ -750,7 +763,8 @@
           {
             "dateFrom": "2020-03-31",
             "dateTo": "2020-04-10",
-            "studioText": "Chicago Mastering Service, Chicago, USA.",
+            "studioText": "Chicago Mastering Service",
+            "city": "Chicago, USA",
             "url": "https://chicagomasteringservice.com/"
           }
         ]

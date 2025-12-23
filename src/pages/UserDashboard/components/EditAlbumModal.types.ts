@@ -19,7 +19,8 @@ export interface RecordingEntry {
   url?: string;
   dateFrom?: string; // Дата начала в формате YYYY-MM-DD
   dateTo?: string; // Дата конца в формате YYYY-MM-DD
-  studioText?: string; // Текст студии без дат (например, "Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.")
+  studioText?: string; // Текст студии без дат и города (например, "Igor Matvienko's recording studio M.A.M.A, Big studio")
+  city?: string; // Город (например, "Moscow")
 }
 
 export interface ProducingCredits {
@@ -62,6 +63,7 @@ export interface AlbumFormData {
   masteringDateFrom?: string; // Временное поле для даты начала
   masteringDateTo?: string; // Временное поле для даты конца
   masteringText?: string; // Временное поле для текста студии
+  masteringCity?: string; // Временное поле для города
   masteringURL?: string; // Временное поле для ввода URL
   editingMasteringIndex?: number | null; // Индекс редактируемой записи
   showAddMasteringInputs?: boolean; // Показывать поля для добавления новой записи
@@ -70,6 +72,7 @@ export interface AlbumFormData {
   recordedAtDateFrom?: string; // Временное поле для даты начала
   recordedAtDateTo?: string; // Временное поле для даты конца
   recordedAtText?: string; // Временное поле для текста студии
+  recordedAtCity?: string; // Временное поле для города
   recordedAtURL?: string; // Временное поле для ввода URL
   editingRecordedAtIndex?: number | null; // Индекс редактируемой записи
   showAddRecordedAtInputs?: boolean; // Показывать поля для добавления новой записи
@@ -77,6 +80,7 @@ export interface AlbumFormData {
   mixedAtDateFrom?: string; // Временное поле для даты начала
   mixedAtDateTo?: string; // Временное поле для даты конца
   mixedAtText?: string; // Временное поле для текста студии
+  mixedAtCity?: string; // Временное поле для города
   mixedAtURL?: string; // Временное поле для ввода URL
   editingMixedAtIndex?: number | null; // Индекс редактируемой записи
   showAddMixedAtInputs?: boolean; // Показывать поля для добавления новой записи

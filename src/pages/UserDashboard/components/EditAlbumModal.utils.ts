@@ -166,6 +166,7 @@ export function buildRecordingText(
   dateFrom: string | undefined,
   dateTo: string | undefined,
   studioText: string | undefined,
+  city: string | undefined,
   lang: 'en' | 'ru' = 'en'
 ): string {
   const parts: string[] = [];
@@ -180,11 +181,21 @@ export function buildRecordingText(
     parts.push(formatDateToDisplay(dateTo, lang));
   }
 
-  if (studioText) {
+  // Формируем текст студии с городом
+  let studioAndCity = '';
+  if (studioText && city) {
+    studioAndCity = `${studioText}, ${city}`;
+  } else if (studioText) {
+    studioAndCity = studioText;
+  } else if (city) {
+    studioAndCity = city;
+  }
+
+  if (studioAndCity) {
     if (parts.length > 0) {
-      parts.push(`: ${studioText}`);
+      parts.push(`: ${studioAndCity}`);
     } else {
-      parts.push(studioText);
+      parts.push(studioAndCity);
     }
   }
 
@@ -314,6 +325,7 @@ export const makeEmptyForm = (): AlbumFormData => ({
   masteringDateFrom: '',
   masteringDateTo: '',
   masteringText: '',
+  masteringCity: '',
   masteringURL: '',
   showAddMasteringInputs: false,
   producingCredits: DEFAULT_PRODUCING_CREDIT_TYPES.reduce((acc, type) => {
@@ -324,12 +336,14 @@ export const makeEmptyForm = (): AlbumFormData => ({
   recordedAtDateFrom: '',
   recordedAtDateTo: '',
   recordedAtText: '',
+  recordedAtCity: '',
   recordedAtURL: '',
   showAddRecordedAtInputs: false,
   mixedAt: [],
   mixedAtDateFrom: '',
   mixedAtDateTo: '',
   mixedAtText: '',
+  mixedAtCity: '',
   mixedAtURL: '',
   showAddMixedAtInputs: false,
   purchaseLinks: [],
@@ -623,11 +637,12 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
       content: formData.mastering.map((entry) => {
-        // Сохраняем в новом формате с dateFrom, dateTo, studioText, url
+        // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
         if (entry.dateFrom) result.dateFrom = entry.dateFrom;
         if (entry.dateTo) result.dateTo = entry.dateTo;
         if (entry.studioText) result.studioText = entry.studioText;
+        if (entry.city) result.city = entry.city;
         if (entry.url && entry.url.trim()) {
           result.url = entry.url.trim();
         } else {
@@ -644,11 +659,12 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Запись' : 'Recorded At',
       content: formData.recordedAt.map((entry) => {
-        // Сохраняем в новом формате с dateFrom, dateTo, studioText, url
+        // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
         if (entry.dateFrom) result.dateFrom = entry.dateFrom;
         if (entry.dateTo) result.dateTo = entry.dateTo;
         if (entry.studioText) result.studioText = entry.studioText;
+        if (entry.city) result.city = entry.city;
         if (entry.url && entry.url.trim()) {
           result.url = entry.url.trim();
         } else {
@@ -665,11 +681,12 @@ export const transformFormDataToAlbumFormat = (
       id: nextId++,
       title: lang === 'ru' ? 'Сведение' : 'Mixed At',
       content: formData.mixedAt.map((entry) => {
-        // Сохраняем в новом формате с dateFrom, dateTo, studioText, url
+        // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
         if (entry.dateFrom) result.dateFrom = entry.dateFrom;
         if (entry.dateTo) result.dateTo = entry.dateTo;
         if (entry.studioText) result.studioText = entry.studioText;
+        if (entry.city) result.city = entry.city;
         if (entry.url && entry.url.trim()) {
           result.url = entry.url.trim();
         } else {

@@ -1,5 +1,5 @@
 import { useLang } from '@app/providers/lang';
-import { buildRecordingText } from '@pages/UserDashboard/components/EditAlbumModal.utils';
+import { formatDateToDisplay } from '@pages/UserDashboard/components/EditAlbumModal.utils';
 import type { IAlbums, detailsProps } from '@models';
 
 /**
@@ -50,6 +50,7 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
     }
 
     // Проверяем, является ли это блоком Recorded At, Mixed At или Mastered By
+    // (блоки, которые используют новый формат с датами)
     const isRecordingBlock =
       title === 'Recorded At' ||
       title === 'Запись' ||
@@ -58,6 +59,14 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
       title === 'Mastered By' ||
       title === 'Мастеринг';
 
+    // Функция для добавления точки в конце текста, если её нет
+    const ensurePeriod = (text: string): string => {
+      const trimmed = text.trim();
+      if (!trimmed) return trimmed;
+      // Убираем все точки в конце и добавляем одну
+      return trimmed.replace(/\.+$/, '') + '.';
+    };
+
     // Для остальных блоков - стандартная логика
     return (
       <>
@@ -65,6 +74,7 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
         <ul>
           {items.map((item, i) => {
             // Новый формат: { dateFrom, dateTo?, studioText, url }
+            // Проверяем наличие dateFrom (может быть null, но поле должно существовать)
             if (
               typeof item === 'object' &&
               item !== null &&
@@ -72,63 +82,121 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
               !('text' in item)
             ) {
               const recordingItem = item as {
-                dateFrom: string;
-                dateTo?: string;
-                studioText?: string;
-                url?: string | null;
+                dateFrom: string | null | undefined;
+                dateTo?: string | null | undefined;
+                studioText?: string | null | undefined;
+                city?: string | null | undefined;
+                url?: string | null | undefined;
               };
 
-              const displayText = buildRecordingText(
-                recordingItem.dateFrom,
-                recordingItem.dateTo,
-                recordingItem.studioText,
-                lang
-              );
+              // Если dateFrom есть (не null и не undefined), используем новый формат
+              if (recordingItem.dateFrom !== null && recordingItem.dateFrom !== undefined) {
+                // Формируем даты отдельно
+                let datesText = '';
+                if (recordingItem.dateFrom && recordingItem.dateTo) {
+                  const fromFormatted = formatDateToDisplay(recordingItem.dateFrom, lang);
+                  const toFormatted = formatDateToDisplay(recordingItem.dateTo, lang);
+                  datesText = `${fromFormatted}—${toFormatted}`;
+                } else if (recordingItem.dateFrom) {
+                  datesText = formatDateToDisplay(recordingItem.dateFrom, lang);
+                } else if (recordingItem.dateTo) {
+                  datesText = formatDateToDisplay(recordingItem.dateTo, lang);
+                }
 
-              if (recordingItem.url) {
-                return (
-                  <li key={i}>
-                    <a
-                      className="album-details__link"
-                      href={recordingItem.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {displayText}
-                    </a>
-                  </li>
-                );
+                // Формируем текст студии и города отдельно
+                let studioText = recordingItem.studioText || '';
+                let cityText = recordingItem.city || '';
+
+                // Если есть URL, ссылка только на текст студии, город после ссылки через запятую
+                if (recordingItem.url && studioText) {
+                  // Формируем текст после ссылки (город с точкой в конце)
+                  let afterLinkText = '';
+                  if (cityText) {
+                    afterLinkText = `, ${ensurePeriod(cityText)}`;
+                  } else {
+                    // Если нет города, добавляем точку после ссылки
+                    afterLinkText = '.';
+                  }
+
+                  return (
+                    <li key={i}>
+                      {datesText && `${datesText}: `}
+                      <a
+                        className="album-details__link"
+                        href={recordingItem.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {studioText}
+                      </a>
+                      {afterLinkText}
+                    </li>
+                  );
+                }
+
+                // Если нет URL, но есть текст студии или город
+                let studioAndCity = '';
+                if (studioText && cityText) {
+                  studioAndCity = `${studioText}, ${cityText}`;
+                } else if (studioText) {
+                  studioAndCity = studioText;
+                } else if (cityText) {
+                  studioAndCity = cityText;
+                }
+
+                studioAndCity = ensurePeriod(studioAndCity);
+
+                if (studioAndCity) {
+                  const fullText = datesText ? `${datesText}: ${studioAndCity}` : studioAndCity;
+                  return <li key={i}>{fullText}</li>;
+                }
+
+                // Если только даты
+                return <li key={i}>{datesText}</li>;
               }
-
-              return <li key={i}>{displayText}</li>;
             }
 
-            // Старый формат для других блоков: строка или { text: [], link }
+            // Для остальных блоков обрабатываем старый формат
+            // (строки и объекты с { text: [], link })
+
+            // Строки
             if (typeof item === 'string') {
-              return <li key={i}>{item}</li>;
+              const text = item.trim();
+              // Добавляем точку в конце для всех блоков
+              const finalText = ensurePeriod(text);
+              return finalText ? <li key={i}>{finalText}</li> : null;
             }
 
-            // Старый формат с text и link
+            // Объекты с text и link
             if (typeof item === 'object' && item !== null && 'text' in item && 'link' in item) {
               const oldItem = item as { text: string[]; link: string };
+
+              // Формируем текст
+              let textBefore = oldItem.text[0] || '';
+              let textAfter = oldItem.text[2] || '';
+
+              // Добавляем точку в конце для всех блоков
+              textAfter = ensurePeriod(textAfter);
+
               return (
                 <li key={i}>
-                  {oldItem.text[0]}{' '}
-                  {
-                    <a
-                      className="album-details__link"
-                      href={oldItem.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {oldItem.text[1]}
-                    </a>
-                  }
-                  {oldItem.text[2]}
+                  {textBefore}
+                  {textBefore && ' '}
+                  <a
+                    className="album-details__link"
+                    href={oldItem.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {oldItem.text[1]}
+                  </a>
+                  {textAfter && ' '}
+                  {textAfter}
                 </li>
               );
             }
 
+            // Если формат не распознан, пропускаем
             return null;
           })}
         </ul>

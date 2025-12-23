@@ -352,13 +352,14 @@ export function EditAlbumModal({
       for (const item of (recordedAtDetail as any).content) {
         if (!item || typeof item !== 'object' || !item.dateFrom) continue;
 
-        // Новый формат: { dateFrom, dateTo?, studioText, url }
+        // Новый формат: { dateFrom, dateTo?, studioText, city?, url }
         recordedAt.push({
-          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, lang),
+          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, item.city, lang),
           url: item.url || undefined,
           dateFrom: item.dateFrom,
           dateTo: item.dateTo,
           studioText: item.studioText,
+          city: item.city,
         });
       }
     }
@@ -375,13 +376,14 @@ export function EditAlbumModal({
       for (const item of (mixedAtDetail as any).content) {
         if (!item || typeof item !== 'object' || !item.dateFrom) continue;
 
-        // Новый формат: { dateFrom, dateTo?, studioText, url }
+        // Новый формат: { dateFrom, dateTo?, studioText, city?, url }
         mixedAt.push({
-          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, lang),
+          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, item.city, lang),
           url: item.url || undefined,
           dateFrom: item.dateFrom,
           dateTo: item.dateTo,
           studioText: item.studioText,
+          city: item.city,
         });
       }
     }
@@ -438,13 +440,14 @@ export function EditAlbumModal({
       for (const item of (masteredByDetail as any).content) {
         if (!item || typeof item !== 'object' || !item.dateFrom) continue;
 
-        // Новый формат: { dateFrom, dateTo?, studioText, url }
+        // Новый формат: { dateFrom, dateTo?, studioText, city?, url }
         mastering.push({
-          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, lang),
+          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, item.city, lang),
           url: item.url || undefined,
           dateFrom: item.dateFrom,
           dateTo: item.dateTo,
           studioText: item.studioText,
+          city: item.city,
         });
       }
     }

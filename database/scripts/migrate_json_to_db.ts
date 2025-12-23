@@ -2,13 +2,31 @@
  * Скрипт миграции данных из JSON файлов в базу данных
  *
  * Использование:
- *   npx ts-node database/scripts/migrate_json_to_db.ts
+ *   npm run migrate-json-to-db
  *
  * Или через Netlify Functions:
  *   netlify functions:invoke migrate-json-to-db
  */
 
-import { query } from '../../netlify/functions/lib/db';
+import { query, closePool } from '../../netlify/functions/lib/db';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Загружаем переменные окружения из .env файла
+const envPath = path.resolve(__dirname, '../../.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const [key, ...valueParts] = trimmedLine.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+        process.env[key.trim()] = value.trim();
+      }
+    }
+  });
+}
 
 // Импортируем JSON файлы
 // В production эти файлы будут загружаться динамически
@@ -87,40 +105,71 @@ async function migrateAlbumsToDb(
       }
 
       // 1. Создаём альбом
-      const albumResult = await query(
-        `INSERT INTO albums (
-          user_id, album_id, artist, album, full_name, description,
-          cover, release, buttons, details, lang, is_public
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        ON CONFLICT (user_id, album_id, lang) 
-        DO UPDATE SET
-          artist = EXCLUDED.artist,
-          album = EXCLUDED.album,
-          full_name = EXCLUDED.full_name,
-          description = EXCLUDED.description,
-          cover = EXCLUDED.cover,
-          release = EXCLUDED.release,
-          buttons = EXCLUDED.buttons,
-          details = EXCLUDED.details,
-          updated_at = CURRENT_TIMESTAMP
-        RETURNING id`,
-        [
-          userId,
-          albumId,
-          album.artist,
-          album.album,
-          album.fullName,
-          album.description,
-          coverValue, // cover теперь TEXT, не JSONB
-          JSON.stringify(album.release),
-          JSON.stringify(album.buttons),
-          JSON.stringify(album.details),
-          lang,
-          userId === null, // публичный, если user_id NULL
-        ]
+      // Сначала проверяем, существует ли альбом с таким же album_id и lang для данного user_id
+      // Если user_id = NULL, ищем публичные альбомы (user_id IS NULL)
+      const existingAlbum = await query<{ id: string }>(
+        `SELECT id FROM albums 
+         WHERE album_id = $1 AND lang = $2 
+         AND (user_id = $3 OR ($3 IS NULL AND user_id IS NULL))
+         LIMIT 1`,
+        [albumId, lang, userId]
       );
 
-      const albumDbId = albumResult.rows[0].id;
+      let albumDbId: string;
+
+      if (existingAlbum.rows.length > 0) {
+        // Альбом существует, обновляем его
+        albumDbId = existingAlbum.rows[0].id;
+        await query(
+          `UPDATE albums SET
+            artist = $1,
+            album = $2,
+            full_name = $3,
+            description = $4,
+            cover = $5,
+            release = $6,
+            buttons = $7,
+            details = $8,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $9`,
+          [
+            album.artist,
+            album.album,
+            album.fullName,
+            album.description,
+            coverValue,
+            JSON.stringify(album.release),
+            JSON.stringify(album.buttons),
+            JSON.stringify(album.details),
+            albumDbId,
+          ]
+        );
+      } else {
+        // Альбом не существует, создаём новый
+        const albumResult = await query<{ id: string }>(
+          `INSERT INTO albums (
+            user_id, album_id, artist, album, full_name, description,
+            cover, release, buttons, details, lang, is_public
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING id`,
+          [
+            userId,
+            albumId,
+            album.artist,
+            album.album,
+            album.fullName,
+            album.description,
+            coverValue,
+            JSON.stringify(album.release),
+            JSON.stringify(album.buttons),
+            JSON.stringify(album.details),
+            lang,
+            userId === null,
+          ]
+        );
+        albumDbId = albumResult.rows[0].id;
+      }
+
       result.albumsCreated++;
 
       // 2. Создаём треки
@@ -227,11 +276,50 @@ async function migrateArticlesToDb(
   return result;
 }
 
+// Функция для очистки дубликатов перед миграцией
+async function removeDuplicateAlbumsBeforeMigration(): Promise<void> {
+  console.log('🧹 Очищаем дубликаты альбомов перед миграцией...\n');
+
+  try {
+    // Удаляем дубликаты, оставляя только одну запись для каждого album_id + lang
+    // Приоритет: публичные (user_id IS NULL), затем самые старые по created_at
+    const deleteResult = await query(
+      `DELETE FROM albums
+       WHERE id IN (
+         SELECT id
+         FROM (
+           SELECT id,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY album_id, lang 
+                    ORDER BY 
+                      CASE WHEN user_id IS NULL THEN 0 ELSE 1 END,
+                      created_at ASC
+                  ) as rn
+           FROM albums
+         ) t
+         WHERE rn > 1
+       )`
+    );
+
+    if (deleteResult.rowCount && deleteResult.rowCount > 0) {
+      console.log(`✅ Удалено ${deleteResult.rowCount} дубликатов перед миграцией\n`);
+    } else {
+      console.log('✅ Дубликатов не найдено\n');
+    }
+  } catch (error) {
+    console.error('⚠️  Ошибка при очистке дубликатов (продолжаем миграцию):', error);
+    // Не прерываем миграцию, если очистка не удалась
+  }
+}
+
 // Основная функция миграции
 export async function migrateJsonToDatabase(): Promise<void> {
   console.log('🚀 Начинаем миграцию JSON → БД...');
 
   try {
+    // Сначала очищаем дубликаты
+    await removeDuplicateAlbumsBeforeMigration();
+
     // Загружаем JSON файлы
     // В Node.js окружении используем require или fs
     let albumsRu: AlbumData[];
@@ -297,7 +385,30 @@ export async function migrateJsonToDatabase(): Promise<void> {
       allErrors.forEach((error) => console.warn('  -', error));
     }
 
-    console.log('🎉 Миграция завершена!');
+    // Финальная проверка на дубликаты
+    console.log('\n🔍 Проверяем наличие дубликатов после миграции...');
+    const finalCheck = await query<{
+      album_id: string;
+      lang: string;
+      count: number;
+    }>(
+      `SELECT album_id, lang, COUNT(*) as count
+       FROM albums
+       GROUP BY album_id, lang
+       HAVING COUNT(*) > 1`
+    );
+
+    if (finalCheck.rows.length > 0) {
+      console.warn(`⚠️  Обнаружено ${finalCheck.rows.length} групп дубликатов после миграции:`);
+      for (const row of finalCheck.rows) {
+        console.warn(`  - ${row.album_id} (${row.lang}): ${row.count} записей`);
+      }
+      console.warn('\n💡 Запустите скрипт remove-duplicate-albums для очистки дубликатов');
+    } else {
+      console.log('✅ Дубликатов не обнаружено');
+    }
+
+    console.log('\n🎉 Миграция завершена!');
     console.log('📊 Итого:');
     console.log(`  - Альбомы RU: ${ruResult.albumsCreated}`);
     console.log(`  - Треки RU: ${ruResult.tracksCreated}`);
@@ -317,10 +428,12 @@ if (require.main === module) {
   migrateJsonToDatabase()
     .then(() => {
       console.log('✅ Скрипт завершён успешно');
+      closePool();
       process.exit(0);
     })
     .catch((error) => {
       console.error('❌ Скрипт завершён с ошибкой:', error);
+      closePool();
       process.exit(1);
     });
 }
