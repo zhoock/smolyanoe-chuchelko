@@ -74,14 +74,14 @@ export const handler: Handler = async (
         };
       }
 
-      // Находим публичный альбом (user_id IS NULL) - единственная версия альбома в БД
+      // Находим альбом пользователя
       const albumResult = await query<{ id: string; user_id: string | null }>(
         `SELECT id, user_id FROM albums 
          WHERE album_id = $1 AND lang = $2
-           AND user_id IS NULL
+           AND user_id = $3
          ORDER BY created_at DESC
          LIMIT 1`,
-        [data.albumId, data.lang]
+        [data.albumId, data.lang, userId]
       );
 
       if (albumResult.rows.length === 0) {
@@ -188,13 +188,14 @@ export const handler: Handler = async (
       try {
         await query(
           `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-           VALUES (NULL, $1, $2, $3, $4::jsonb, $5, NOW())
-           ON CONFLICT (album_id, track_id, lang) WHERE user_id IS NULL
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+           ON CONFLICT (user_id, album_id, track_id, lang)
            DO UPDATE SET 
              synced_lyrics = EXCLUDED.synced_lyrics,
              authorship = EXCLUDED.authorship,
              updated_at = NOW()`,
           [
+            userId,
             data.albumId,
             String(data.trackId),
             data.lang,

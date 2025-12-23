@@ -104,16 +104,16 @@ export const handler: Handler = async (
       });
 
       // Сначала ищем синхронизированный текст в таблице synced_lyrics
-      // Загружаем только публичные синхронизации (user_id IS NULL)
+      // Загружаем синхронизации пользователя
       // ORDER BY updated_at DESC для получения самой свежей записи
       const syncedResult = await query<SyncedLyricsRow>(
         `SELECT synced_lyrics, authorship 
          FROM synced_lyrics 
          WHERE album_id = $1 AND track_id = $2 AND lang = $3
-           AND user_id IS NULL
+           AND user_id = $4
          ORDER BY updated_at DESC
          LIMIT 1`,
-        [albumId, String(trackId), lang],
+        [albumId, String(trackId), lang, userId],
         0 // Без retry для GET запросов - они должны быть быстрыми
       );
 
@@ -139,15 +139,14 @@ export const handler: Handler = async (
       }
 
       // Если синхронизированного текста нет, проверяем tracks.content
-      // Находим публичный альбом (user_id IS NULL) - единственная версия альбома в БД
-      // Та же логика, что и при сохранении
+      // Находим альбом пользователя
       const albumResult = await query<{ id: string; user_id: string | null }>(
         `SELECT id, user_id FROM albums 
          WHERE album_id = $1 AND lang = $2
-           AND user_id IS NULL
+           AND user_id = $3
          ORDER BY created_at DESC
          LIMIT 1`,
-        [albumId, lang],
+        [albumId, lang, userId],
         0
       );
 
@@ -269,13 +268,14 @@ export const handler: Handler = async (
         };
       }
 
-      // Сохраняем в таблицу synced_lyrics (UPSERT) только как публичные (user_id IS NULL)
+      // Сохраняем в таблицу synced_lyrics (UPSERT) для пользователя
       // НЕ обновляем tracks.synced_lyrics и не ищем альбом - это лишние запросы
       // Синхронизации загружаются из synced_lyrics при загрузке альбомов
       console.log('[synced-lyrics.ts POST] Saving synced lyrics:', {
         albumId: data.albumId,
         trackId: data.trackId,
         lang: data.lang,
+        userId,
         linesCount: data.syncedLyrics.length,
         hasAuthorship: data.authorship !== undefined,
       });
@@ -283,14 +283,15 @@ export const handler: Handler = async (
       try {
         const result = await query(
           `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-           VALUES (NULL, $1, $2, $3, $4::jsonb, $5, NOW())
-           ON CONFLICT (album_id, track_id, lang) WHERE user_id IS NULL
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+           ON CONFLICT (user_id, album_id, track_id, lang)
            DO UPDATE SET 
              synced_lyrics = EXCLUDED.synced_lyrics,
              authorship = EXCLUDED.authorship,
              updated_at = NOW()
            RETURNING id, user_id, album_id, track_id, lang`,
           [
+            userId,
             data.albumId,
             String(data.trackId),
             data.lang,

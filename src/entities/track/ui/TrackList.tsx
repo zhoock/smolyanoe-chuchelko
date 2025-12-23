@@ -4,11 +4,11 @@ import type { TracksProps, IAlbums } from '@models';
 import type { AppStore, RootState } from '@shared/model/appStore/types';
 
 function formatDuration(duration?: number): string {
-  if (duration == null) return '';
-  const [minutes, rawSeconds = '0'] = duration.toString().split('.');
-  const normalizedSeconds =
-    rawSeconds.length === 1 ? `${rawSeconds}0` : rawSeconds.slice(0, 2).padEnd(2, '0');
-  return `${minutes}:${normalizedSeconds}`;
+  if (duration == null || !Number.isFinite(duration)) return '--:--';
+  // duration хранится в секундах в БД
+  const mins = Math.floor(duration / 60);
+  const secs = Math.floor(duration % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 type TrackListProps = {

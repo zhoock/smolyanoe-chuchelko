@@ -97,15 +97,12 @@ export const handler: Handler = async (
       return createErrorResponse(400, 'Missing required fields: albumId, fileName');
     }
 
-    // Используем userId напрямую для пути
-    // ВАЖНО: RLS политики должны быть настроены так, чтобы разрешать загрузку
-    // для пользователей с соответствующим userId в пути
-    // Если используется Supabase Auth, нужно будет получать UUID из auth.users
-    // Пока используем userId как есть
-    const authUserId = userId;
+    // ВАЖНО: Используем 'zhoock' вместо userId (UUID) для единообразия с фронтендом
+    // Все файлы пользователя должны храниться в users/zhoock/
+    const storageUserId = 'zhoock';
 
-    // Формируем путь в Storage: users/{authUserId}/audio/{albumId}/{fileName}
-    const storagePath = `users/${authUserId}/audio/${albumId}/${fileName}`;
+    // Формируем путь в Storage: users/zhoock/audio/{albumId}/{fileName}
+    const storagePath = `users/${storageUserId}/audio/${albumId}/${fileName}`;
 
     // Создаём Supabase клиент с service role key
     const supabase = createSupabaseAdminClient();
@@ -132,7 +129,7 @@ export const handler: Handler = async (
       {
         signedUrl: signedUrlData.signedUrl,
         storagePath,
-        authUserId,
+        authUserId: storageUserId,
       },
       200
     );

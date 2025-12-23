@@ -158,6 +158,71 @@ export function EditAlbumModalStep5({
                 </div>
               );
             })}
+
+            {/* Форма для добавления новой ссылки покупки */}
+            {editingPurchaseLink === null && (
+              <div className="edit-album-modal__link-item">
+                <div className="edit-album-modal__link-edit">
+                  <select
+                    name="purchase-link-service"
+                    autoComplete="off"
+                    className="edit-album-modal__link-select"
+                    value={purchaseLinkService}
+                    onChange={(e) => onPurchaseLinkServiceChange(e.target.value)}
+                  >
+                    <option value="">
+                      {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
+                    </option>
+                    {PURCHASE_SERVICES.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    name="purchase-link-url"
+                    type="url"
+                    autoComplete="url"
+                    className="edit-album-modal__link-input"
+                    placeholder={ui?.dashboard?.editAlbumModal?.step5?.url ?? 'URL'}
+                    value={purchaseLinkUrl}
+                    onChange={(e) => onPurchaseLinkUrlChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        purchaseLinkService.trim() &&
+                        purchaseLinkUrl.trim()
+                      ) {
+                        e.preventDefault();
+                        onAddPurchaseLink();
+                      }
+                      if (e.key === 'Escape') onCancelEditPurchaseLink();
+                    }}
+                  />
+
+                  <div className="edit-album-modal__link-actions">
+                    <button
+                      type="button"
+                      className="edit-album-modal__link-save"
+                      onClick={onAddPurchaseLink}
+                      disabled={!purchaseLinkService.trim() || !purchaseLinkUrl.trim()}
+                    >
+                      {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Add'}
+                    </button>
+                    {purchaseLinkService.trim() || purchaseLinkUrl.trim() ? (
+                      <button
+                        type="button"
+                        className="edit-album-modal__link-cancel"
+                        onClick={onCancelEditPurchaseLink}
+                      >
+                        {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -265,6 +330,71 @@ export function EditAlbumModalStep5({
                 </div>
               );
             })}
+
+            {/* Форма для добавления новой ссылки стриминга */}
+            {editingStreamingLink === null && (
+              <div className="edit-album-modal__link-item">
+                <div className="edit-album-modal__link-edit">
+                  <select
+                    name="streaming-link-service"
+                    autoComplete="off"
+                    className="edit-album-modal__link-select"
+                    value={streamingLinkService}
+                    onChange={(e) => onStreamingLinkServiceChange(e.target.value)}
+                  >
+                    <option value="">
+                      {ui?.dashboard?.editAlbumModal?.step5?.selectService ?? 'Select service'}
+                    </option>
+                    {STREAMING_SERVICES.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    name="streaming-link-url"
+                    type="url"
+                    autoComplete="url"
+                    className="edit-album-modal__link-input"
+                    placeholder={ui?.dashboard?.editAlbumModal?.step5?.url ?? 'URL'}
+                    value={streamingLinkUrl}
+                    onChange={(e) => onStreamingLinkUrlChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        streamingLinkService.trim() &&
+                        streamingLinkUrl.trim()
+                      ) {
+                        e.preventDefault();
+                        onAddStreamingLink();
+                      }
+                      if (e.key === 'Escape') onCancelEditStreamingLink();
+                    }}
+                  />
+
+                  <div className="edit-album-modal__link-actions">
+                    <button
+                      type="button"
+                      className="edit-album-modal__link-save"
+                      onClick={onAddStreamingLink}
+                      disabled={!streamingLinkService.trim() || !streamingLinkUrl.trim()}
+                    >
+                      {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Add'}
+                    </button>
+                    {streamingLinkService.trim() || streamingLinkUrl.trim() ? (
+                      <button
+                        type="button"
+                        className="edit-album-modal__link-cancel"
+                        onClick={onCancelEditStreamingLink}
+                      >
+                        {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

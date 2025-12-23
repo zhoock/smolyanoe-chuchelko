@@ -105,12 +105,10 @@ async function migrateAlbumsToDb(
       }
 
       // 1. Создаём альбом
-      // Сначала проверяем, существует ли альбом с таким же album_id и lang для данного user_id
-      // Если user_id = NULL, ищем публичные альбомы (user_id IS NULL)
+      // Проверяем, существует ли альбом с таким же album_id и lang для данного user_id
       const existingAlbum = await query<{ id: string }>(
         `SELECT id FROM albums 
-         WHERE album_id = $1 AND lang = $2 
-         AND (user_id = $3 OR ($3 IS NULL AND user_id IS NULL))
+         WHERE album_id = $1 AND lang = $2 AND user_id = $3
          LIMIT 1`,
         [albumId, lang, userId]
       );
@@ -164,7 +162,7 @@ async function migrateAlbumsToDb(
             JSON.stringify(album.buttons),
             JSON.stringify(album.details),
             lang,
-            userId === null,
+            false, // is_public всегда false, так как все альбомы принадлежат пользователю
           ]
         );
         albumDbId = albumResult.rows[0].id;
@@ -260,7 +258,7 @@ async function migrateArticlesToDb(
           article.date,
           JSON.stringify(article.details || []),
           lang,
-          userId === null, // публичный, если user_id NULL
+          false, // is_public всегда false, так как все статьи принадлежат пользователю
         ]
       );
       result.articlesCreated++;
@@ -277,12 +275,12 @@ async function migrateArticlesToDb(
 }
 
 // Функция для очистки дубликатов перед миграцией
-async function removeDuplicateAlbumsBeforeMigration(): Promise<void> {
+async function removeDuplicateAlbumsBeforeMigration(userId: string): Promise<void> {
   console.log('🧹 Очищаем дубликаты альбомов перед миграцией...\n');
 
   try {
-    // Удаляем дубликаты, оставляя только одну запись для каждого album_id + lang
-    // Приоритет: публичные (user_id IS NULL), затем самые старые по created_at
+    // Удаляем дубликаты для конкретного пользователя, оставляя только одну запись для каждого album_id + lang + user_id
+    // Приоритет: самые старые по created_at
     const deleteResult = await query(
       `DELETE FROM albums
        WHERE id IN (
@@ -290,15 +288,15 @@ async function removeDuplicateAlbumsBeforeMigration(): Promise<void> {
          FROM (
            SELECT id,
                   ROW_NUMBER() OVER (
-                    PARTITION BY album_id, lang 
-                    ORDER BY 
-                      CASE WHEN user_id IS NULL THEN 0 ELSE 1 END,
-                      created_at ASC
+                    PARTITION BY album_id, lang, user_id 
+                    ORDER BY created_at ASC
                   ) as rn
            FROM albums
+           WHERE user_id = $1
          ) t
          WHERE rn > 1
-       )`
+       )`,
+      [userId]
     );
 
     if (deleteResult.rowCount && deleteResult.rowCount > 0) {
@@ -317,8 +315,35 @@ export async function migrateJsonToDatabase(): Promise<void> {
   console.log('🚀 Начинаем миграцию JSON → БД...');
 
   try {
+    // Получаем user_id пользователя zhoock@zhoock.ru
+    console.log('👤 Ищем пользователя zhoock@zhoock.ru...');
+    const userResult = await query<{ id: string }>(
+      `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+      ['zhoock@zhoock.ru']
+    );
+
+    let userId: string | null = null;
+    if (userResult.rows.length > 0) {
+      userId = userResult.rows[0].id;
+      console.log(`✅ Найден пользователь: ${userId}`);
+    } else {
+      console.log('⚠️  Пользователь zhoock@zhoock.ru не найден. Создаём...');
+      const newUserResult = await query<{ id: string }>(
+        `INSERT INTO users (email, name, is_active) 
+         VALUES ($1, $2, $3) 
+         RETURNING id`,
+        ['zhoock@zhoock.ru', 'Site Owner', true]
+      );
+      userId = newUserResult.rows[0].id;
+      console.log(`✅ Создан пользователь: ${userId}`);
+    }
+
+    if (!userId) {
+      throw new Error('Не удалось получить или создать пользователя');
+    }
+
     // Сначала очищаем дубликаты
-    await removeDuplicateAlbumsBeforeMigration();
+    await removeDuplicateAlbumsBeforeMigration(userId);
 
     // Загружаем JSON файлы
     // В Node.js окружении используем require или fs
@@ -339,35 +364,35 @@ export async function migrateJsonToDatabase(): Promise<void> {
       throw new Error('JSON файлы должны быть загружены через require() или fetch()');
     }
 
-    // Мигрируем русские альбомы (публичные, user_id = NULL)
+    // Мигрируем русские альбомы в профиль пользователя
     console.log('📦 Мигрируем русские альбомы...');
-    const ruResult = await migrateAlbumsToDb(albumsRu, 'ru', null);
+    const ruResult = await migrateAlbumsToDb(albumsRu, 'ru', userId);
     console.log('✅ RU:', {
       albums: ruResult.albumsCreated,
       tracks: ruResult.tracksCreated,
       errors: ruResult.errors.length,
     });
 
-    // Мигрируем английские альбомы (публичные, user_id = NULL)
+    // Мигрируем английские альбомы в профиль пользователя
     console.log('📦 Мигрируем английские альбомы...');
-    const enResult = await migrateAlbumsToDb(albumsEn, 'en', null);
+    const enResult = await migrateAlbumsToDb(albumsEn, 'en', userId);
     console.log('✅ EN:', {
       albums: enResult.albumsCreated,
       tracks: enResult.tracksCreated,
       errors: enResult.errors.length,
     });
 
-    // Мигрируем русские статьи (публичные, user_id = NULL)
+    // Мигрируем русские статьи в профиль пользователя
     console.log('📰 Мигрируем русские статьи...');
-    const articlesRuResult = await migrateArticlesToDb(articlesRu, 'ru', null);
+    const articlesRuResult = await migrateArticlesToDb(articlesRu, 'ru', userId);
     console.log('✅ Статьи RU:', {
       articles: articlesRuResult.articlesCreated,
       errors: articlesRuResult.errors.length,
     });
 
-    // Мигрируем английские статьи (публичные, user_id = NULL)
+    // Мигрируем английские статьи в профиль пользователя
     console.log('📰 Мигрируем английские статьи...');
-    const articlesEnResult = await migrateArticlesToDb(articlesEn, 'en', null);
+    const articlesEnResult = await migrateArticlesToDb(articlesEn, 'en', userId);
     console.log('✅ Статьи EN:', {
       articles: articlesEnResult.articlesCreated,
       errors: articlesEnResult.errors.length,
@@ -394,8 +419,10 @@ export async function migrateJsonToDatabase(): Promise<void> {
     }>(
       `SELECT album_id, lang, COUNT(*) as count
        FROM albums
-       GROUP BY album_id, lang
-       HAVING COUNT(*) > 1`
+       WHERE user_id = $1
+       GROUP BY album_id, lang, user_id
+       HAVING COUNT(*) > 1`,
+      [userId]
     );
 
     if (finalCheck.rows.length > 0) {

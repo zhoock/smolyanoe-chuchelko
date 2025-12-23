@@ -213,19 +213,20 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Извлекаем user_id из токена (если есть)
-      const userId = getUserIdFromEvent(event);
+      // Извлекаем user_id из токена (обязательно требуется авторизация)
+      const userId = requireAuth(event);
+      if (!userId) {
+        return createErrorResponse(401, 'Unauthorized. Authentication required.');
+      }
 
-      // Загружаем только публичные альбомы (user_id IS NULL, is_public = true)
-      // Единственная версия альбома в БД
+      // Загружаем только альбомы пользователя
       const albumsResult = await query<AlbumRow>(
         `SELECT a.*
         FROM albums a
         WHERE a.lang = $1 
-          AND a.user_id IS NULL
-          AND a.is_public = true
+          AND a.user_id = $2
         ORDER BY a.created_at DESC`,
-        [lang]
+        [lang, userId]
       );
 
       // Загружаем треки для каждого альбома
@@ -235,6 +236,7 @@ export const handler: Handler = async (
             // Загружаем треки по строковому album_id, а не по UUID
             // Это позволяет находить треки для всех языковых версий альбома
             // Используем подзапрос с ROW_NUMBER для исключения дубликатов
+            // ВАЖНО: Загружаем треки из того же альбома (по album_id, lang и user_id)
             const tracksResult = await query<TrackRow>(
               `SELECT 
                 ranked.track_id,
@@ -262,11 +264,12 @@ export const handler: Handler = async (
                 FROM tracks t
                 INNER JOIN albums a ON t.album_id = a.id
                 WHERE a.album_id = $1
-                  AND a.user_id IS NULL
+                  AND a.lang = $2
+                  AND a.user_id = $3
               ) ranked
               WHERE ranked.rn = 1
               ORDER BY ranked.order_index ASC`,
-              [album.album_id]
+              [album.album_id, album.lang, album.user_id]
             );
 
             // 🔍 DEBUG: Логируем треки из БД
@@ -308,6 +311,7 @@ export const handler: Handler = async (
                 // Загружаем все синхронизации для всех треков альбома одним запросом
                 // Используем DISTINCT ON для получения одной записи на трек (приоритет: пользовательские)
                 // ВАЖНО: DISTINCT ON требует, чтобы первая колонка в ORDER BY была такой же, как в DISTINCT ON
+                // ВАЖНО: Загружаем синхронизированные тексты из того же альбома (по album_id, lang и user_id)
                 const syncedLyricsResult = await query<{
                   track_id: string;
                   synced_lyrics: unknown;
@@ -317,9 +321,9 @@ export const handler: Handler = async (
                      track_id, synced_lyrics, authorship
                    FROM synced_lyrics 
                    WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
-                     AND user_id IS NULL
+                     AND user_id = $4
                    ORDER BY track_id, updated_at DESC NULLS LAST`,
-                  [album.album_id, trackIds, lang]
+                  [album.album_id, trackIds, lang, album.user_id]
                 );
 
                 // Создаём Map для быстрого поиска
@@ -410,11 +414,10 @@ export const handler: Handler = async (
         );
       }
 
-      // Для публичных альбомов (isPublic: true) устанавливаем user_id = NULL
-      // Для приватных альбомов используем userId текущего пользователя
-      const albumUserId = data.isPublic ? null : userId;
+      // Все альбомы принадлежат пользователю
+      const albumUserId = userId;
 
-      // Создаём альбом
+      // Создаём альбом пользователя
       const albumResult = await query<AlbumRow>(
         `INSERT INTO albums (
           user_id, album_id, artist, album, full_name, description,
@@ -444,7 +447,7 @@ export const handler: Handler = async (
           JSON.stringify(data.buttons || {}),
           JSON.stringify(data.details || []),
           data.lang,
-          data.isPublic || false,
+          false, // is_public всегда false, так как все альбомы принадлежат пользователю
         ]
       );
 
@@ -513,10 +516,10 @@ export const handler: Handler = async (
           existingAlbumResult = await query<AlbumRow>(
             `SELECT * FROM albums 
             WHERE album_id = $1 AND lang = $2 
-            AND user_id IS NULL
+            AND user_id = $3
             ORDER BY created_at DESC
             LIMIT 1`,
-            [data.albumId, data.lang]
+            [data.albumId, data.lang, userId]
           );
           console.log('[albums.ts PUT] Album search result:', {
             found: existingAlbumResult.rows.length > 0,
@@ -599,10 +602,7 @@ export const handler: Handler = async (
           updateFields.push(`details = $${paramIndex++}::jsonb`);
           updateValues.push(JSON.stringify(data.details));
         }
-        if (data.isPublic !== undefined) {
-          updateFields.push(`is_public = $${paramIndex++}`);
-          updateValues.push(data.isPublic);
-        }
+        // is_public больше не используется, все альбомы принадлежат пользователю
 
         if (updateFields.length === 0) {
           return createErrorResponse(400, 'No fields to update.');
@@ -736,15 +736,14 @@ export const handler: Handler = async (
         // Сохраняем в JSON через GitHub API (асинхронно, не блокируем ответ)
         const githubToken = process.env.GITHUB_TOKEN;
         if (githubToken) {
-          // Загружаем все альбомы для обновления JSON
+          // Загружаем все альбомы пользователя для обновления JSON
           const allAlbumsResult = await query<AlbumRow>(
             `SELECT a.*
           FROM albums a
           WHERE a.lang = $1 
-            AND a.user_id IS NULL
-            AND a.is_public = true
+            AND a.user_id = $2
           ORDER BY a.created_at DESC`,
-            [data.lang]
+            [data.lang, userId]
           );
 
           // Загружаем треки для всех альбомов
@@ -869,14 +868,14 @@ export const handler: Handler = async (
             userId,
           });
 
-          // Находим публичный альбом по album_id и lang
+          // Находим альбом пользователя по album_id и lang
           const albumResult = await query<AlbumRow>(
             `SELECT id, album_id, lang, user_id FROM albums
              WHERE album_id = $1 AND lang = $2
-             AND user_id IS NULL
+             AND user_id = $3
              ORDER BY created_at DESC
              LIMIT 1`,
-            [albumIdFromQuery, langFromQuery]
+            [albumIdFromQuery, langFromQuery, userId]
           );
 
           if (albumResult.rows.length === 0) {
@@ -947,11 +946,11 @@ export const handler: Handler = async (
           userId,
         });
 
-        // Сначала находим все записи альбома (все языковые версии)
+        // Сначала находим все записи альбома пользователя (все языковые версии)
         const findAlbumsResult = await query<AlbumRow>(
           `SELECT id, album_id, lang, user_id, cover FROM albums 
           WHERE album_id = $1 
-            AND (user_id IS NULL OR user_id = $2)`,
+            AND user_id = $2`,
           [data.albumId, userId]
         );
 
@@ -972,19 +971,19 @@ export const handler: Handler = async (
           await query(`DELETE FROM tracks WHERE album_id = ANY($1::uuid[])`, [albumIds]);
         }
 
-        // Удаляем все синхронизированные тексты альбома (для всех языковых версий)
+        // Удаляем все синхронизированные тексты альбома пользователя (для всех языковых версий)
         await query(
           `DELETE FROM synced_lyrics 
           WHERE album_id = $1 
-            AND (user_id IS NULL OR user_id = $2)`,
+            AND user_id = $2`,
           [data.albumId, userId]
         );
 
-        // Удаляем все языковые версии альбома
+        // Удаляем все языковые версии альбома пользователя
         const deleteResult = await query<AlbumRow>(
           `DELETE FROM albums 
           WHERE album_id = $1 
-            AND (user_id IS NULL OR user_id = $2)
+            AND user_id = $2
           RETURNING *`,
           [data.albumId, userId]
         );

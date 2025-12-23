@@ -73,6 +73,7 @@ function UserDashboard() {
     trackId: string;
     trackTitle: string;
     trackStatus: TrackData['lyricsStatus'];
+    hasSyncedLyrics?: boolean; // Есть ли синхронизированный текст
     initialLyrics?: string;
     initialAuthorship?: string;
   } | null>(null);
@@ -358,81 +359,44 @@ function UserDashboard() {
         // Обновляем прогресс: завершение (100%)
         setUploadProgress((prev) => ({ ...prev, [albumId]: 100 }));
 
-        // Обновляем список альбомов
+        // Оптимистичное обновление: сразу добавляем новые треки в локальное состояние
+        setAlbumsData((prevAlbums) => {
+          return prevAlbums.map((album) => {
+            if (album.albumId === albumId || album.id === albumId) {
+              // Добавляем новые треки к существующим
+              const newTracks: TrackData[] = tracksData.map((trackData) => ({
+                id: trackData.trackId,
+                title: trackData.title,
+                duration: `${Math.floor(trackData.duration / 60)}:${Math.floor(
+                  trackData.duration % 60
+                )
+                  .toString()
+                  .padStart(2, '0')}`,
+                lyricsStatus: 'empty' as const,
+              }));
+
+              return {
+                ...album,
+                tracks: [...album.tracks, ...newTracks],
+              };
+            }
+            return album;
+          });
+        });
+
+        // Обновляем список альбомов из БД для синхронизации
+        // useEffect автоматически обновит albumsData когда albumsFromStore изменится
         try {
+          // Небольшая задержка для гарантии обновления БД
+          await new Promise((resolve) => setTimeout(resolve, 300));
           await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+          console.log('✅ [handleTrackUpload] Albums refreshed from database');
         } catch (fetchError: any) {
           // ConditionError - это нормально, condition отменил запрос
           if (fetchError?.name !== 'ConditionError') {
             console.error('⚠️ Failed to refresh albums:', fetchError);
           }
         }
-
-        // Принудительно обновляем локальное состояние, если нужно
-        // Это гарантирует, что новые треки появятся в UI
-        setTimeout(() => {
-          // Даем время на обновление Redux store, затем обновляем локальное состояние
-          const updatedAlbums = albumsFromStore.map((album) => {
-            if (album.albumId === albumId) {
-              // Альбом уже обновлен через fetchAlbums, просто возвращаем его
-              return album;
-            }
-            return album;
-          });
-
-          // Преобразуем в формат AlbumData
-          const transformedAlbums: AlbumData[] = updatedAlbums.map((album) => {
-            const releaseDate = album.release?.date ? new Date(album.release.date) : null;
-            const tracks: TrackData[] = (album.tracks || []).map((track) => {
-              // Преобразуем duration в строку (формат "M:SS" или "MM:SS")
-              let durationStr = '0:00';
-              if (track.duration) {
-                if (typeof track.duration === 'string') {
-                  durationStr = track.duration;
-                } else if (typeof track.duration === 'number') {
-                  const minutes = Math.floor(track.duration / 60);
-                  const seconds = Math.floor(track.duration % 60);
-                  durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                }
-              }
-
-              // Определяем статус текста
-              let lyricsStatus: TrackData['lyricsStatus'] = 'empty';
-              if (track.syncedLyrics && track.syncedLyrics.length > 0) {
-                const isActuallySynced = track.syncedLyrics.some((line) => line.startTime > 0);
-                lyricsStatus = isActuallySynced ? 'synced' : 'text-only';
-              } else if (track.content && track.content.trim() !== '') {
-                lyricsStatus = 'text-only';
-              }
-
-              return {
-                id: String(track.id || ''),
-                title: track.title || '',
-                duration: durationStr,
-                lyricsStatus,
-              };
-            });
-
-            return {
-              id: album.albumId || '',
-              albumId: album.albumId || '', // Сохраняем строковый ID альбома
-              title: album.album,
-              artist: album.artist || '',
-              year: releaseDate ? releaseDate.getFullYear().toString() : '',
-              cover: album.cover || '',
-              releaseDate: releaseDate
-                ? releaseDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })
-                : undefined,
-              tracks,
-            };
-          });
-
-          setAlbumsData(transformedAlbums);
-        }, 500);
 
         alert(`Successfully uploaded ${uploadedCount} track(s)`);
       } else {
@@ -468,14 +432,20 @@ function UserDashboard() {
     }
   };
 
-  const getLyricsActions = (status: TrackData['lyricsStatus']) => {
+  const getLyricsActions = (
+    status: TrackData['lyricsStatus'],
+    hasSyncedLyrics: boolean = false
+  ) => {
     switch (status) {
-      case 'synced':
-        return [
-          { label: ui?.dashboard?.edit ?? 'Edit', action: 'edit' },
-          { label: ui?.dashboard?.prev ?? 'Prev', action: 'prev' },
-          { label: ui?.dashboard?.sync ?? 'Sync', action: 'sync' },
-        ];
+      case 'synced': {
+        const actions = [{ label: ui?.dashboard?.edit ?? 'Edit', action: 'edit' }];
+        // Показываем Prev только если есть синхронизированный текст
+        if (hasSyncedLyrics) {
+          actions.push({ label: ui?.dashboard?.prev ?? 'Prev', action: 'prev' });
+        }
+        actions.push({ label: ui?.dashboard?.sync ?? 'Sync', action: 'sync' });
+        return actions;
+      }
       case 'text-only':
         return [
           { label: ui?.dashboard?.edit ?? 'Edit', action: 'edit' },
@@ -523,12 +493,17 @@ function UserDashboard() {
           });
         }
 
+        // Проверяем наличие синхронизированного текста
+        const hasSyncedLyrics =
+          track.syncedLyrics && track.syncedLyrics.some((line) => line.startTime > 0);
+
         setEditLyricsModal({
           isOpen: true,
           albumId,
           trackId,
           trackTitle,
           trackStatus: track.lyricsStatus,
+          hasSyncedLyrics,
           initialLyrics: finalText,
           initialAuthorship: storedAuthorship || fallbackAuthorship || undefined,
         });
@@ -1173,25 +1148,30 @@ function UserDashboard() {
                                             {getLyricsStatusText(track.lyricsStatus)}
                                           </div>
                                           <div className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions">
-                                            {getLyricsActions(track.lyricsStatus).map(
-                                              (action, idx) => (
-                                                <button
-                                                  key={idx}
-                                                  type="button"
-                                                  className="user-dashboard__lyrics-action-button"
-                                                  onClick={() =>
-                                                    handleLyricsAction(
-                                                      action.action,
-                                                      album.id,
-                                                      track.id,
-                                                      track.title
-                                                    )
-                                                  }
-                                                >
-                                                  {action.label}
-                                                </button>
-                                              )
-                                            )}
+                                            {getLyricsActions(
+                                              track.lyricsStatus,
+                                              track.syncedLyrics
+                                                ? track.syncedLyrics.some(
+                                                    (line) => line.startTime > 0
+                                                  )
+                                                : false
+                                            ).map((action, idx) => (
+                                              <button
+                                                key={idx}
+                                                type="button"
+                                                className="user-dashboard__lyrics-action-button"
+                                                onClick={() =>
+                                                  handleLyricsAction(
+                                                    action.action,
+                                                    album.id,
+                                                    track.id,
+                                                    track.title
+                                                  )
+                                                }
+                                              >
+                                                {action.label}
+                                              </button>
+                                            ))}
                                           </div>
                                         </div>
                                       ))}
@@ -1282,8 +1262,8 @@ function UserDashboard() {
           }
           onClose={() => setEditLyricsModal(null)}
           onSave={handleSaveLyrics}
-          onPreview={editLyricsModal.trackStatus === 'synced' ? handlePreviewLyrics : undefined}
-          onSync={editLyricsModal.trackStatus === 'synced' ? handleSyncLyricsFromEdit : undefined}
+          onPreview={editLyricsModal.hasSyncedLyrics ? handlePreviewLyrics : undefined}
+          onSync={handleSyncLyricsFromEdit}
         />
       )}
 

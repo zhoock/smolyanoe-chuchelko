@@ -99,8 +99,11 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Получаем публичные статьи или статьи текущего пользователя
-      // Публичные статьи имеют user_id = NULL и is_public = true
+      // Получаем статьи пользователя (обязательно требуется авторизация)
+      if (!userId) {
+        return createErrorResponse(401, 'Unauthorized. Authentication required.');
+      }
+
       // Важно: используем DISTINCT ON для исключения дубликатов по article_id
       const articlesResult = await query<ArticleRow>(
         `SELECT DISTINCT ON (article_id)
@@ -113,12 +116,9 @@ export const handler: Handler = async (
           lang
         FROM articles
         WHERE lang = $1
-          AND (
-            (user_id IS NULL AND is_public = true)
-            OR (user_id IS NOT NULL AND user_id = $2)
-          )
-        ORDER BY article_id, user_id NULLS LAST, date DESC`,
-        [lang, userId || null]
+          AND user_id = $2
+        ORDER BY article_id, date DESC`,
+        [lang, userId]
       );
 
       const articles = articlesResult.rows.map(mapArticleToApiFormat);
@@ -159,7 +159,7 @@ export const handler: Handler = async (
           data.date,
           JSON.stringify(data.details),
           data.lang,
-          data.isPublic || false,
+          false, // is_public всегда false, так как все статьи принадлежат пользователю
         ]
       );
 
@@ -215,10 +215,7 @@ export const handler: Handler = async (
         updates.push(`details = $${paramIndex++}::jsonb`);
         values.push(JSON.stringify(data.details));
       }
-      if (data.isPublic !== undefined) {
-        updates.push(`is_public = $${paramIndex++}`);
-        values.push(data.isPublic);
-      }
+      // is_public больше не используется, все статьи принадлежат пользователю
 
       if (updates.length === 0) {
         return createErrorResponse(400, 'No fields to update');

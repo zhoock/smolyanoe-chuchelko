@@ -55,15 +55,38 @@ export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
       lyricsStatus = 'text-only';
     }
 
+    // Форматируем duration: если это число (секунды), преобразуем в MM:SS
+    let durationStr = '0:00';
+    const trackDuration = track.duration;
+    if (trackDuration != null) {
+      if (typeof trackDuration === 'string') {
+        // Если уже строка, проверяем формат
+        // Если это формат MM:SS, оставляем как есть
+        if (/^\d+:\d{2}$/.test(trackDuration)) {
+          durationStr = trackDuration;
+        } else {
+          // Если это число в виде строки, пытаемся преобразовать
+          const numDuration = parseFloat(trackDuration);
+          if (!isNaN(numDuration)) {
+            const mins = Math.floor(numDuration / 60);
+            const secs = Math.floor(numDuration % 60);
+            durationStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+          } else {
+            durationStr = trackDuration;
+          }
+        }
+      } else if (typeof trackDuration === 'number') {
+        // duration хранится в секундах в БД
+        const mins = Math.floor(trackDuration / 60);
+        const secs = Math.floor(trackDuration % 60);
+        durationStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+    }
+
     return {
       id: String(track.id),
       title: track.title,
-      duration:
-        typeof track.duration === 'string'
-          ? track.duration
-          : track.duration
-            ? String(track.duration)
-            : '0:00',
+      duration: durationStr,
       lyricsStatus,
       lyricsText: track.content, // Используем текст из альбома, если есть
       src: track.src,

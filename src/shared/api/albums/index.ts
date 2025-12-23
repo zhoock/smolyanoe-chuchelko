@@ -98,6 +98,11 @@ export function getUserImageUrl(
  * getUserAudioUrl('EP_Mixer/01_PPB_drums.mp3', true) // Supabase Storage URL
  */
 export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean): string {
+  // Если это уже полный URL (http:// или https://), возвращаем как есть
+  if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
+    return audioPath;
+  }
+
   // Убираем префикс /audio/ если он есть
   const normalizedPath = audioPath.startsWith('/audio/') ? audioPath.slice(7) : audioPath;
 

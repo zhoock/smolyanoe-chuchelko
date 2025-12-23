@@ -44,6 +44,7 @@ export function EditLyricsModal({
       setLyricsText(initialLyrics);
       setAuthorship(initialAuthorship || '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLyrics, initialAuthorship, isOpen]);
 
   // Проверяем, изменился ли текст относительно исходного
@@ -74,23 +75,23 @@ export function EditLyricsModal({
             <h2 className="edit-lyrics-modal__title">
               {ui?.dashboard?.editLyrics ?? 'Edit Lyrics'}
             </h2>
-            {/* Показываем Sync, если текст изменился, иначе Preview (если есть) */}
-            {hasTextChanged && onSync ? (
+            {/* Показываем Preview, если есть синхронизированный текст, иначе Sync (если доступен) */}
+            {onPreview ? (
               <button
                 type="button"
                 className="edit-lyrics-modal__preview-button"
-                onClick={() => onSync(lyricsText, authorship.trim() || undefined)}
+                onClick={onPreview}
               >
-                {ui?.dashboard?.sync ?? 'Sync'}
+                {ui?.dashboard?.preview ?? 'Preview'}
               </button>
             ) : (
-              onPreview && (
+              onSync && (
                 <button
                   type="button"
                   className="edit-lyrics-modal__preview-button"
-                  onClick={onPreview}
+                  onClick={() => onSync(lyricsText, authorship.trim() || undefined)}
                 >
-                  {ui?.dashboard?.preview ?? 'Preview'}
+                  {ui?.dashboard?.sync ?? 'Sync'}
                 </button>
               )
             )}
