@@ -3,11 +3,26 @@ import clsx from 'clsx';
 import type { TracksProps, IAlbums } from '@models';
 import type { AppStore, RootState } from '@shared/model/appStore/types';
 
-function formatDuration(duration?: number): string {
-  if (duration == null || !Number.isFinite(duration)) return '--:--';
+function formatDuration(duration?: number | string): string {
+  // Если duration не задан или не является валидным числом
+  if (duration == null) return '--:--';
+
+  // Преобразуем в число, если это строка
+  let durationNum: number;
+  if (typeof duration === 'string') {
+    durationNum = parseFloat(duration);
+    if (isNaN(durationNum) || !Number.isFinite(durationNum)) return '--:--';
+  } else {
+    durationNum = duration;
+    if (!Number.isFinite(durationNum)) return '--:--';
+  }
+
   // duration хранится в секундах в БД
-  const mins = Math.floor(duration / 60);
-  const secs = Math.floor(duration % 60);
+  // Убеждаемся, что это положительное число
+  if (durationNum < 0) return '--:--';
+
+  const mins = Math.floor(durationNum / 60);
+  const secs = Math.floor(durationNum % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
