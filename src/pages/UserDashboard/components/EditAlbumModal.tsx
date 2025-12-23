@@ -94,6 +94,11 @@ export function EditAlbumModal({
     null
   );
 
+  const [producerName, setProducerName] = useState('');
+  const [producerRole, setProducerRole] = useState('');
+  const [producerURL, setProducerURL] = useState('');
+  const [editingProducerIndex, setEditingProducerIndex] = useState<number | null>(null);
+
   const [editingPurchaseLink, setEditingPurchaseLink] = useState<number | null>(null);
   const [purchaseLinkService, setPurchaseLinkService] = useState('');
   const [purchaseLinkUrl, setPurchaseLinkUrl] = useState('');
@@ -389,7 +394,7 @@ export function EditAlbumModal({
     }
 
     // --- парсинг Producer ---
-    const producer: Array<{ text: string; url?: string }> = [];
+    const producer: BandMember[] = [];
     const producingDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
           (detail) => detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
@@ -400,27 +405,66 @@ export function EditAlbumModal({
       for (const item of (producingDetail as any).content) {
         if (!item) continue;
 
-        let fullText = '';
+        // Новый формат: объект с text: ["Имя", "роль"]
         if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          fullText = item.text.join('');
-        } else if (typeof item === 'string') {
-          fullText = item;
-        }
+          const textArray = item.text;
 
-        if (!fullText.trim()) continue;
+          // Формат ["Имя", "роль"]
+          if (textArray.length === 2) {
+            const name = String(textArray[0]).trim();
+            const role = String(textArray[1]).trim();
 
-        // Добавляем все записи из блока Producing, кроме тех, что содержат mastering/мастеринг
-        // (они будут обработаны в блоке Mastered By)
-        const roleTextLower = fullText.toLowerCase();
-        if (!roleTextLower.includes('mastering') && !roleTextLower.includes('мастеринг')) {
-          if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-            const text = item.text.join('').trim();
-            const url = item.link ? String(item.link).trim() : undefined;
-            if (text) {
-              producer.push({ text, url });
+            // Пропускаем записи с mastering/мастеринг (они обрабатываются в блоке Mastered By)
+            const roleLower = role.toLowerCase();
+            if (!roleLower.includes('mastering') && !roleLower.includes('мастеринг')) {
+              if (name && role) {
+                producer.push({
+                  name,
+                  role,
+                  url: item.link ? String(item.link).trim() : undefined,
+                });
+              }
             }
-          } else if (typeof item === 'string' && item.trim()) {
-            producer.push({ text: item.trim() });
+          }
+          // Старый формат ["", "Имя", " — роль"] для обратной совместимости
+          else if (
+            textArray.length === 3 &&
+            textArray[0] === '' &&
+            textArray[2].startsWith(' — ')
+          ) {
+            const name = String(textArray[1]).trim();
+            const role = String(textArray[2]).replace(/^ — /, '').trim();
+            const roleLower = role.toLowerCase();
+            if (!roleLower.includes('mastering') && !roleLower.includes('мастеринг')) {
+              if (name && role) {
+                producer.push({
+                  name,
+                  role,
+                  url: item.link ? String(item.link).trim() : undefined,
+                });
+              }
+            }
+          }
+        }
+        // Старый формат: строка (для обратной совместимости)
+        else if (typeof item === 'string' && item.trim()) {
+          const fullText = item.trim();
+          const roleTextLower = fullText.toLowerCase();
+          if (!roleTextLower.includes('mastering') && !roleTextLower.includes('мастеринг')) {
+            // Пытаемся разбить строку "Имя — роль"
+            const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+            if (match) {
+              producer.push({
+                name: match[1].trim(),
+                role: match[2].trim(),
+              });
+            } else {
+              // Если не удалось разбить, сохраняем как роль без имени
+              producer.push({
+                name: '',
+                role: fullText,
+              });
+            }
           }
         }
       }
@@ -833,6 +877,68 @@ export function EditAlbumModal({
       bandMembers: (prev.bandMembers || []).filter((_, i) => i !== index),
     }));
     if (editingBandMemberIndex === index) handleCancelEditBandMember();
+  };
+
+  const handleAddProducer = () => {
+    if (!producerName.trim() || !producerRole.trim()) return;
+
+    // Если URL пустой или только пробелы, устанавливаем undefined (не пустую строку)
+    const url =
+      producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
+
+    if (editingProducerIndex !== null) {
+      // Редактирование существующего элемента - закрываем поля после сохранения
+      setFormData((prev) => {
+        const updated = [...(prev.producer || [])];
+        updated[editingProducerIndex] = {
+          name: producerName.trim(),
+          role: producerRole.trim(),
+          url, // undefined если пустой
+        };
+        return { ...prev, producer: updated, showAddProducerInputs: false };
+      });
+      setEditingProducerIndex(null);
+      setProducerName('');
+      setProducerRole('');
+      setProducerURL('');
+    } else {
+      // Добавление нового элемента - закрываем поля после добавления
+      setFormData((prev) => ({
+        ...prev,
+        producer: [
+          ...(prev.producer || []),
+          { name: producerName.trim(), role: producerRole.trim(), url },
+        ],
+        showAddProducerInputs: false,
+      }));
+      setProducerName('');
+      setProducerRole('');
+      setProducerURL('');
+    }
+  };
+
+  const handleEditProducer = (index: number) => {
+    const member = formData.producer[index];
+    setProducerName(member.name);
+    setProducerRole(member.role);
+    setProducerURL(member.url || '');
+    setEditingProducerIndex(index);
+  };
+
+  const handleCancelEditProducer = () => {
+    setProducerName('');
+    setProducerRole('');
+    setProducerURL('');
+    setEditingProducerIndex(null);
+    handleInputChange('showAddProducerInputs', false);
+  };
+
+  const handleRemoveProducer = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      producer: (prev.producer || []).filter((_, i) => i !== index),
+    }));
+    if (editingProducerIndex === index) handleCancelEditProducer();
   };
 
   const handleAddSessionMusician = () => {
@@ -1946,6 +2052,17 @@ export function EditAlbumModal({
           onEditSessionMusician={handleEditSessionMusician}
           onRemoveSessionMusician={handleRemoveSessionMusician}
           onCancelEditSessionMusician={handleCancelEditSessionMusician}
+          producerName={producerName}
+          producerRole={producerRole}
+          producerURL={producerURL}
+          editingProducerIndex={editingProducerIndex}
+          onProducerNameChange={setProducerName}
+          onProducerRoleChange={setProducerRole}
+          onProducerURLChange={setProducerURL}
+          onAddProducer={handleAddProducer}
+          onEditProducer={handleEditProducer}
+          onRemoveProducer={handleRemoveProducer}
+          onCancelEditProducer={handleCancelEditProducer}
           ui={ui ?? undefined}
         />
       );

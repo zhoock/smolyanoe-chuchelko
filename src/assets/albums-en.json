@@ -98,13 +98,15 @@
         "id": 6,
         "title": "Producing",
         "content": [
-          "Yaroslav Zhuk — producer.",
           {
-            "text": ["", "Ilya Marvel Gorokhvodatsky", " — recording/mixing."],
+            "text": ["Yaroslav Zhuk", "producer."]
+          },
+          {
+            "text": ["Ilya Marvel Gorokhvodatsky", "recording/mixing."],
             "link": "https://www.instagram.com/ilya_marvel/"
           },
           {
-            "text": ["", "Mettew J. Barnhart", " — mastering."],
+            "text": ["Mettew J. Barnhart", "mastering."],
             "link": "https://www.matthewbarnhart.com/"
           }
         ]
@@ -639,13 +641,15 @@
         "id": 6,
         "title": "Producing",
         "content": [
-          "Yaroslav Zhuk — producer.",
           {
-            "text": ["", "Ilya Marvel Gorokhvodatsky", " — recording/mixing."],
+            "text": ["Yaroslav Zhuk", "producer."]
+          },
+          {
+            "text": ["Ilya Marvel Gorokhvodatsky", "recording/mixing."],
             "link": "https://www.instagram.com/ilya_marvel/"
           },
           {
-            "text": ["", "Mettew J. Barnhart", " — mastering."],
+            "text": ["Mettew J. Barnhart", "mastering."],
             "link": "https://www.matthewbarnhart.com/"
           }
         ]
@@ -790,17 +794,27 @@
         "id": 7,
         "title": "Producing",
         "content": [
-          "Yaroslav Zhuk — producer.",
-          "Ilya Lukashev — sound engineer.",
-          "Yuri Kateshev — sound engineer (cello recording).",
-          "Anton Artisyuk — sound engineer (acoustic guitar recording).",
-          "Alexander Kolesnikov — sound engineer (vocals recording).",
+          {
+            "text": ["Yaroslav Zhuk", "producer."]
+          },
+          {
+            "text": ["Ilya Lukashev", "sound engineer."]
+          },
+          {
+            "text": ["Yuri Kateshev", "sound engineer (cello recording)."]
+          },
+          {
+            "text": ["Anton Artisyuk", "sound engineer (acoustic guitar recording)."]
+          },
+          {
+            "text": ["Alexander Kolesnikov", "sound engineer (vocals recording)."]
+          },
           {
             "text": ["", "Ilya Marvel Gorokhvodatsky", " - mixing."],
             "link": "https://www.instagram.com/ilya_marvel/"
           },
           {
-            "text": ["", "Mettew J. Barnhart", " — mastering."],
+            "text": ["Mettew J. Barnhart", "mastering."],
             "link": "https://www.matthewbarnhart.com/"
           }
         ]

@@ -54,8 +54,9 @@ export interface AlbumFormData {
   showAddBandMemberInputs?: boolean; // Показывать поля для добавления нового участника
   sessionMusicians: BandMember[];
   showAddSessionMusicianInputs?: boolean; // Показывать поля для добавления нового музыканта
-  producer: RecordingEntry[];
-  producerText?: string; // Временное поле для ввода текста
+  producer: BandMember[]; // Изменено с RecordingEntry[] на BandMember[] для единообразия
+  producerName?: string; // Временное поле для ввода имени
+  producerRole?: string; // Временное поле для ввода роли
   producerURL?: string; // Временное поле для ввода URL
   editingProducerIndex?: number | null; // Индекс редактируемой записи
   showAddProducerInputs?: boolean; // Показывать поля для добавления новой записи

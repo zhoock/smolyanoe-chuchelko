@@ -16,6 +16,10 @@ interface EditAlbumModalStep4Props {
   sessionMusicianRole: string;
   sessionMusicianURL: string;
   editingSessionMusicianIndex: number | null;
+  producerName: string;
+  producerRole: string;
+  producerURL: string;
+  editingProducerIndex: number | null;
   onFormDataChange: (field: keyof AlbumFormData, value: any) => void;
   onBandMemberNameChange: (value: string) => void;
   onBandMemberRoleChange: (value: string) => void;
@@ -31,6 +35,13 @@ interface EditAlbumModalStep4Props {
   onEditSessionMusician: (index: number) => void;
   onRemoveSessionMusician: (index: number) => void;
   onCancelEditSessionMusician: () => void;
+  onProducerNameChange: (value: string) => void;
+  onProducerRoleChange: (value: string) => void;
+  onProducerURLChange: (value: string) => void;
+  onAddProducer: () => void;
+  onEditProducer: (index: number) => void;
+  onRemoveProducer: (index: number) => void;
+  onCancelEditProducer: () => void;
   ui?: IInterface;
 }
 
@@ -44,6 +55,10 @@ export function EditAlbumModalStep4({
   sessionMusicianRole,
   sessionMusicianURL,
   editingSessionMusicianIndex,
+  producerName,
+  producerRole,
+  producerURL,
+  editingProducerIndex,
   onFormDataChange,
   onBandMemberNameChange,
   onBandMemberRoleChange,
@@ -59,6 +74,13 @@ export function EditAlbumModalStep4({
   onEditSessionMusician,
   onRemoveSessionMusician,
   onCancelEditSessionMusician,
+  onProducerNameChange,
+  onProducerRoleChange,
+  onProducerURLChange,
+  onAddProducer,
+  onEditProducer,
+  onRemoveProducer,
+  onCancelEditProducer,
   ui,
 }: EditAlbumModalStep4Props) {
   return (
@@ -395,130 +417,105 @@ export function EditAlbumModalStep4({
 
         {formData.producer.length > 0 && (
           <div className="edit-album-modal__list">
-            {formData.producer.map((entry, index) => {
-              const isEditing = formData.editingProducerIndex === index;
-              return (
-                <EditableCardField
-                  key={index}
-                  data={{
-                    title: entry.text,
-                    url: entry.url,
-                  }}
-                  isEditing={isEditing}
-                  editTitle={formData.producerText || ''}
-                  editDescription=""
-                  editUrl={formData.producerURL || ''}
-                  onTitleChange={(value) => onFormDataChange('producerText', value)}
-                  onDescriptionChange={() => {}}
-                  onUrlChange={(value) => onFormDataChange('producerURL', value)}
-                  onEdit={() => {
-                    onFormDataChange('editingProducerIndex', index);
-                    onFormDataChange('producerText', entry.text);
-                    onFormDataChange('producerURL', entry.url || '');
-                  }}
-                  onSave={() => {
-                    const updated = [...formData.producer];
-                    updated[index] = {
-                      text: formData.producerText!.trim(),
-                      url: formData.producerURL?.trim() || undefined,
-                    };
-                    onFormDataChange('producer', updated);
-                    onFormDataChange('producerText', '');
-                    onFormDataChange('producerURL', '');
-                    onFormDataChange('editingProducerIndex', null);
-                  }}
-                  onCancel={() => {
-                    onFormDataChange('producerText', '');
-                    onFormDataChange('producerURL', '');
-                    onFormDataChange('editingProducerIndex', null);
-                    onFormDataChange('showAddProducerInputs', false);
-                  }}
-                  onRemove={() => {
-                    const updated = [...formData.producer];
-                    updated.splice(index, 1);
-                    onFormDataChange('producer', updated);
-                  }}
-                  titlePlaceholder="Producer info (e.g., Yaroslav Zhuk — producer.)"
-                  descriptionPlaceholder=""
-                  urlPlaceholder="URL (optional)"
-                  ui={ui}
-                />
-              );
-            })}
+            {formData.producer.map((member, index) => (
+              <EditableCardField
+                key={index}
+                data={{
+                  title: member.name,
+                  description: member.role,
+                  url: member.url,
+                }}
+                isEditing={editingProducerIndex === index}
+                editTitle={producerName}
+                editDescription={producerRole}
+                editUrl={producerURL}
+                onTitleChange={onProducerNameChange}
+                onDescriptionChange={onProducerRoleChange}
+                onUrlChange={onProducerURLChange}
+                onEdit={() => onEditProducer(index)}
+                onSave={onAddProducer}
+                onCancel={onCancelEditProducer}
+                onRemove={() => onRemoveProducer(index)}
+                titlePlaceholder="Name"
+                descriptionPlaceholder="Role"
+                urlPlaceholder="URL (optional)"
+                ui={ui}
+              />
+            ))}
+          </div>
+        )}
+
+        {formData.producer.length >= MAX_BAND_MEMBERS && (
+          <div className="edit-album-modal__help-text">
+            Maximum {MAX_BAND_MEMBERS} producers reached
           </div>
         )}
 
         {(formData.producer.length === 0 || formData.showAddProducerInputs === true) &&
-          !formData.editingProducerIndex && (
+          formData.producer.length < MAX_BAND_MEMBERS &&
+          !editingProducerIndex && (
             <>
               <div className="edit-album-modal__two-column-inputs">
                 <input
-                  name="producer-text"
+                  name="producer-name"
                   type="text"
+                  autoComplete="name"
                   className="edit-album-modal__input"
-                  placeholder="Producer info (e.g., Yaroslav Zhuk — producer.)"
-                  value={formData.producerText || ''}
-                  onChange={(e) => onFormDataChange('producerText', e.target.value)}
+                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
+                  value={producerName}
+                  onChange={(e) => onProducerNameChange(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && formData.producerText?.trim()) {
+                    if (e.key === 'Enter' && producerName.trim() && producerRole.trim()) {
                       e.preventDefault();
-                      const text = formData.producerText.trim();
-                      const url = formData.producerURL?.trim() || undefined;
-                      const newEntry = { text, url };
-                      onFormDataChange('producer', [...formData.producer, newEntry]);
-                      onFormDataChange('producerText', '');
-                      onFormDataChange('producerURL', '');
-                      onFormDataChange('showAddProducerInputs', false);
+                      onAddProducer();
                     }
                     if (e.key === 'Escape') {
-                      onFormDataChange('producerText', '');
-                      onFormDataChange('producerURL', '');
-                      onFormDataChange('showAddProducerInputs', false);
+                      onCancelEditProducer();
                     }
                   }}
                 />
                 <input
-                  name="producer-url"
-                  type="url"
-                  autoComplete="url"
+                  name="producer-role"
+                  type="text"
+                  autoComplete="organization-title"
                   className="edit-album-modal__input"
-                  placeholder={
-                    ui?.dashboard?.editAlbumModal?.step4?.urlOptional ?? 'URL (optional)'
-                  }
-                  value={formData.producerURL || ''}
-                  onChange={(e) => onFormDataChange('producerURL', e.target.value)}
+                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
+                  value={producerRole}
+                  onChange={(e) => onProducerRoleChange(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && formData.producerText?.trim()) {
+                    if (e.key === 'Enter' && producerName.trim() && producerRole.trim()) {
                       e.preventDefault();
-                      const text = formData.producerText.trim();
-                      const url = formData.producerURL?.trim() || undefined;
-                      const newEntry = { text, url };
-                      onFormDataChange('producer', [...formData.producer, newEntry]);
-                      onFormDataChange('producerText', '');
-                      onFormDataChange('producerURL', '');
-                      onFormDataChange('showAddProducerInputs', false);
+                      onAddProducer();
                     }
                     if (e.key === 'Escape') {
-                      onFormDataChange('producerText', '');
-                      onFormDataChange('producerURL', '');
-                      onFormDataChange('showAddProducerInputs', false);
+                      onCancelEditProducer();
                     }
                   }}
                 />
               </div>
-              {formData.producerText?.trim() && (
+              <input
+                name="producer-url"
+                type="url"
+                autoComplete="url"
+                className="edit-album-modal__input"
+                placeholder="URL (optional)"
+                value={producerURL}
+                onChange={(e) => onProducerURLChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && producerName.trim() && producerRole.trim()) {
+                    e.preventDefault();
+                    onAddProducer();
+                  }
+                  if (e.key === 'Escape') {
+                    onCancelEditProducer();
+                  }
+                }}
+              />
+              {producerName.trim() && producerRole.trim() && (
                 <button
                   type="button"
                   className="edit-album-modal__add-button"
-                  onClick={() => {
-                    const text = formData.producerText!.trim();
-                    const url = formData.producerURL?.trim() || undefined;
-                    const newEntry = { text, url };
-                    onFormDataChange('producer', [...formData.producer, newEntry]);
-                    onFormDataChange('producerText', '');
-                    onFormDataChange('producerURL', '');
-                    onFormDataChange('showAddProducerInputs', false);
-                  }}
+                  onClick={onAddProducer}
                 >
                   {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
                 </button>
@@ -526,10 +523,10 @@ export function EditAlbumModalStep4({
             </>
           )}
 
-        {formData.producer &&
-          formData.producer.length > 0 &&
+        {formData.producer.length > 0 &&
           formData.showAddProducerInputs !== true &&
-          !formData.editingProducerIndex && (
+          formData.producer.length < MAX_BAND_MEMBERS &&
+          !editingProducerIndex && (
             <button
               type="button"
               className="edit-album-modal__add-button"

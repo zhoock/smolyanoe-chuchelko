@@ -29,6 +29,7 @@
     "migrate-recording-entries": "tsx database/scripts/migrate-recording-entries-to-new-format.ts",
     "fix-album-23-en": "tsx database/scripts/fix-album-23-en.ts",
     "migrate-json-to-db": "tsx database/scripts/migrate_json_to_db.ts",
+    "migrate-producing-format": "tsx database/scripts/migrate-producing-format.ts",
     "remove-duplicate-albums": "tsx database/scripts/remove-duplicate-albums.ts",
     "dev": "netlify dev",
     "dev:local": "npm start"
