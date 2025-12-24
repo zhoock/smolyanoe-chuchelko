@@ -602,9 +602,42 @@ dialog {
     &__track-item {
       display: flex;
       align-items: center;
-      gap: var(--ms-0);
+      gap: var(--ms-01);
       padding: var(--ms-01) 0;
       color: var(--white);
+      cursor: default;
+      transition: opacity 0.2s ease;
+
+      &--dragging {
+        opacity: 0.5;
+      }
+    }
+
+    &__track-drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      padding: var(--ms-01);
+      color: var(--warm-concrete);
+      user-select: none;
+      touch-action: none;
+      min-width: 24px;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: var(--white);
+      }
+
+      &:active {
+        cursor: grabbing;
+      }
+    }
+
+    &__track-drag-icon {
+      font-size: 14px;
+      line-height: 1;
+      letter-spacing: -2px;
     }
 
     &__track-number {

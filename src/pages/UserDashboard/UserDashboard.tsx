@@ -9,6 +9,23 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { SupportedLang } from '@shared/model/lang';
 import clsx from 'clsx';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { getUserImageUrl } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
@@ -41,6 +58,62 @@ import {
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import './UserDashboard.style.scss';
 const LANG_OPTIONS: SupportedLang[] = ['en', 'ru'];
+
+// Компонент для сортируемого трека
+interface SortableTrackItemProps {
+  track: TrackData;
+  albumId: string;
+  onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
+}
+
+function SortableTrackItem({ track, albumId, onDelete }: SortableTrackItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: track.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={clsx('user-dashboard__track-item', {
+        'user-dashboard__track-item--dragging': isDragging,
+      })}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="user-dashboard__track-drag-handle"
+        title="Перетащите для изменения порядка"
+        aria-label="Перетащите для изменения порядка"
+      >
+        <span className="user-dashboard__track-drag-icon">⋮⋮</span>
+      </div>
+      <div className="user-dashboard__track-number">{track.id.padStart(2, '0')}</div>
+      <div className="user-dashboard__track-title">{track.title}</div>
+      <div className="user-dashboard__track-duration-container">
+        <div className="user-dashboard__track-duration">{track.duration}</div>
+        <button
+          type="button"
+          className="user-dashboard__track-delete-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(albumId, track.id, track.title);
+          }}
+          title="Удалить трек"
+          aria-label="Удалить трек"
+        >
+          Удалить трек
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function UserDashboard() {
   const { lang, setLang } = useLang();
@@ -200,6 +273,99 @@ function UserDashboard() {
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
+  };
+
+  // Настройка сенсоров для drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Минимальное расстояние для начала перетаскивания (в пикселях)
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Обработка завершения перетаскивания трека
+  const handleDragEnd = async (event: DragEndEvent, albumId: string) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const album = albumsData.find((a) => a.id === albumId);
+    if (!album) return;
+
+    const oldIndex = album.tracks.findIndex((track) => track.id === active.id);
+    const newIndex = album.tracks.findIndex((track) => track.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Оптимистичное обновление UI
+    const newTracks = arrayMove(album.tracks, oldIndex, newIndex);
+    setAlbumsData((prevAlbums) =>
+      prevAlbums.map((a) => (a.id === albumId ? { ...a, tracks: newTracks } : a))
+    );
+
+    // Сохраняем новый порядок в БД
+    try {
+      const token = getToken();
+      if (!token) {
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          variant: 'error',
+        });
+        // Откатываем изменения
+        setAlbumsData((prevAlbums) =>
+          prevAlbums.map((a) => (a.id === albumId ? { ...a, tracks: album.tracks } : a))
+        );
+        return;
+      }
+
+      // Формируем массив с новыми order_index
+      const trackOrders = newTracks.map((track, index) => ({
+        trackId: track.id,
+        orderIndex: index,
+      }));
+
+      const response = await fetch('/api/albums', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          albumId: album.albumId,
+          lang,
+          trackOrders,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      // Обновляем данные из БД для синхронизации
+      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      console.log('✅ Tracks reordered successfully');
+    } catch (error) {
+      console.error('❌ Error reordering tracks:', error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message: `Ошибка при изменении порядка треков: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
+      // Откатываем изменения
+      setAlbumsData((prevAlbums) =>
+        prevAlbums.map((a) => (a.id === albumId ? { ...a, tracks: album.tracks } : a))
+      );
+    }
   };
 
   // Удаление трека
@@ -1148,40 +1314,28 @@ function UserDashboard() {
                                     )}
                                   </div>
 
-                                  {/* Tracks list */}
-                                  <div className="user-dashboard__tracks-list">
-                                    {album.tracks.map((track) => (
-                                      <div key={track.id} className="user-dashboard__track-item">
-                                        <div className="user-dashboard__track-number">
-                                          {track.id.padStart(2, '0')}
-                                        </div>
-                                        <div className="user-dashboard__track-title">
-                                          {track.title}
-                                        </div>
-                                        <div className="user-dashboard__track-duration-container">
-                                          <div className="user-dashboard__track-duration">
-                                            {track.duration}
-                                          </div>
-                                          <button
-                                            type="button"
-                                            className="user-dashboard__track-delete-button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeleteTrack(
-                                                album.albumId,
-                                                track.id,
-                                                track.title
-                                              );
-                                            }}
-                                            title="Удалить трек"
-                                            aria-label="Удалить трек"
-                                          >
-                                            Удалить трек
-                                          </button>
-                                        </div>
+                                  {/* Tracks list with drag-and-drop */}
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(event) => handleDragEnd(event, album.id)}
+                                  >
+                                    <SortableContext
+                                      items={album.tracks.map((track) => track.id)}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      <div className="user-dashboard__tracks-list">
+                                        {album.tracks.map((track) => (
+                                          <SortableTrackItem
+                                            key={track.id}
+                                            track={track}
+                                            albumId={album.albumId}
+                                            onDelete={handleDeleteTrack}
+                                          />
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
+                                    </SortableContext>
+                                  </DndContext>
 
                                   {/* Lyrics section */}
                                   <div className="user-dashboard__lyrics-section">

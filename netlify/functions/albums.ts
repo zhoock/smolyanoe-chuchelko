@@ -841,6 +841,82 @@ export const handler: Handler = async (
     }
 
     // DELETE: удаление трека или альбома (требует авторизации)
+    // PATCH: обновление порядка треков
+    if (event.httpMethod === 'PATCH') {
+      try {
+        const userId = requireAuth(event);
+        if (!userId) {
+          return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
+        }
+
+        const data = parseJsonBody<{
+          albumId: string;
+          lang: SupportedLang;
+          trackOrders: Array<{ trackId: string; orderIndex: number }>;
+        }>(event.body, {} as any);
+
+        if (!data.albumId || !data.lang || !Array.isArray(data.trackOrders)) {
+          return createErrorResponse(
+            400,
+            'Missing required fields: albumId, lang, trackOrders (array of {trackId, orderIndex})'
+          );
+        }
+
+        console.log('🔄 PATCH /api/albums - Reorder tracks request:', {
+          albumId: data.albumId,
+          lang: data.lang,
+          trackOrders: data.trackOrders,
+          userId,
+        });
+
+        // Находим альбом пользователя
+        const albumResult = await query<AlbumRow>(
+          `SELECT id, album_id, lang, user_id FROM albums
+           WHERE album_id = $1 AND lang = $2 AND user_id = $3
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [data.albumId, data.lang, userId]
+        );
+
+        if (albumResult.rows.length === 0) {
+          return createErrorResponse(404, 'Album not found.');
+        }
+
+        const album = albumResult.rows[0];
+
+        // Обновляем order_index для каждого трека
+        const updatePromises = data.trackOrders.map(({ trackId, orderIndex }) =>
+          query(
+            `UPDATE tracks 
+             SET order_index = $1, updated_at = CURRENT_TIMESTAMP
+             WHERE album_id = $2 AND track_id = $3
+             RETURNING id`,
+            [orderIndex, album.id, String(trackId)]
+          )
+        );
+
+        await Promise.all(updatePromises);
+
+        console.log('✅ PATCH /api/albums - Tracks reordered:', {
+          albumId: data.albumId,
+          lang: data.lang,
+          tracksCount: data.trackOrders.length,
+        });
+
+        return {
+          statusCode: 200,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({
+            success: true,
+            message: 'Tracks reordered successfully',
+          }),
+        };
+      } catch (reorderError) {
+        console.error('❌ Error in PATCH /api/albums:', reorderError);
+        return handleError(reorderError, 'albums PATCH function');
+      }
+    }
+
     if (event.httpMethod === 'DELETE') {
       try {
         const userId = requireAuth(event);
@@ -884,7 +960,101 @@ export const handler: Handler = async (
 
           const album = albumResult.rows[0];
 
-          // Удаляем трек
+          // Сначала получаем информацию о треке, чтобы удалить файл из Storage
+          const trackResult = await query<{ src: string | null }>(
+            `SELECT src FROM tracks 
+             WHERE album_id = $1 AND track_id = $2`,
+            [album.id, String(trackId)]
+          );
+
+          if (trackResult.rows.length === 0) {
+            return createErrorResponse(404, 'Track not found.');
+          }
+
+          const track = trackResult.rows[0];
+
+          // Удаляем аудиофайл из Supabase Storage, если он есть
+          if (track.src) {
+            try {
+              const { createClient } = await import('@supabase/supabase-js');
+              const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+              const serviceRoleKey =
+                process.env.SUPABASE_SERVICE_ROLE_KEY ||
+                process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+                '';
+
+              if (supabaseUrl && serviceRoleKey) {
+                const supabase = createClient(supabaseUrl, serviceRoleKey, {
+                  auth: {
+                    persistSession: false,
+                    autoRefreshToken: false,
+                    detectSessionInUrl: false,
+                  },
+                });
+
+                const STORAGE_BUCKET_NAME = 'user-media';
+
+                // Извлекаем путь к файлу из src
+                // src может быть полным URL или относительным путем
+                let storagePath: string;
+                if (track.src.startsWith('http://') || track.src.startsWith('https://')) {
+                  // Если это полный URL, извлекаем путь
+                  // Формат Supabase Storage public URL:
+                  // https://{project}.supabase.co/storage/v1/object/public/user-media/users/zhoock/audio/...
+                  const urlMatch = track.src.match(/\/user-media\/(.+)$/);
+                  if (urlMatch) {
+                    storagePath = urlMatch[1];
+                  } else {
+                    // Альтернативный формат: путь после /audio/
+                    const audioMatch = track.src.match(/\/audio\/(.+)$/);
+                    if (audioMatch) {
+                      storagePath = `users/zhoock/audio/${audioMatch[1]}`;
+                    } else {
+                      console.warn('⚠️ Could not extract storage path from src:', track.src);
+                      storagePath = '';
+                    }
+                  }
+                } else {
+                  // Если это относительный путь, добавляем префикс
+                  // Формат: /audio/albumId/fileName или users/zhoock/audio/albumId/fileName
+                  if (track.src.startsWith('/audio/')) {
+                    storagePath = `users/zhoock${track.src}`;
+                  } else if (track.src.startsWith('users/')) {
+                    storagePath = track.src;
+                  } else {
+                    // Если путь начинается не с /, добавляем полный путь
+                    storagePath = `users/zhoock/audio/${track.src}`;
+                  }
+                }
+
+                if (storagePath) {
+                  const { error: deleteError } = await supabase.storage
+                    .from(STORAGE_BUCKET_NAME)
+                    .remove([storagePath]);
+
+                  if (deleteError) {
+                    console.warn('⚠️ Failed to delete audio file from storage:', {
+                      path: storagePath,
+                      error: deleteError,
+                    });
+                  } else {
+                    console.log('✅ Audio file deleted from storage:', {
+                      path: storagePath,
+                      trackId,
+                    });
+                  }
+                }
+              }
+            } catch (storageError) {
+              console.warn(
+                '⚠️ Error deleting audio file from storage (non-critical):',
+                storageError
+              );
+              // Не блокируем удаление трека, если файл не удалился
+            }
+          }
+
+          // Удаляем трек из базы данных
           const deleteTrackResult = await query(
             `DELETE FROM tracks 
              WHERE album_id = $1 AND track_id = $2
@@ -1080,7 +1250,7 @@ export const handler: Handler = async (
     }
 
     // Неподдерживаемый метод
-    return createErrorResponse(405, 'Method not allowed. Use GET, POST, PUT, or DELETE.');
+    return createErrorResponse(405, 'Method not allowed. Use GET, POST, PUT, PATCH, or DELETE.');
   } catch (error) {
     return handleError(error, 'albums function');
   }
