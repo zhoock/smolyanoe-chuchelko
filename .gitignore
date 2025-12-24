@@ -114,6 +114,11 @@ storybook-static/
 tmp/
 temp/
 
+# Export files (temporary diagnostic files)
+*-export.json
+all-tracks-*.json
+tracks-export.json
+
 # Netlify
 .netlify
 
