@@ -102,6 +102,7 @@ export const handler: Handler = async (
     const storageUserId = 'zhoock';
 
     // Формируем путь в Storage: users/zhoock/audio/{albumId}/{fileName}
+    // Используем albumId напрямую - он должен соответствовать имени папки в Storage
     const storagePath = `users/${storageUserId}/audio/${albumId}/${fileName}`;
 
     // Создаём Supabase клиент с service role key
