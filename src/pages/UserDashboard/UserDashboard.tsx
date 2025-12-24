@@ -12,6 +12,8 @@ import clsx from 'clsx';
 import { getUserImageUrl } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
+import { ConfirmationModal } from '@shared/ui/confirmationModal';
+import { AlertModal } from '@shared/ui/alertModal';
 import { logout, isAuthenticated, getUser, getToken } from '@shared/lib/auth';
 import {
   fetchAlbums,
@@ -96,6 +98,19 @@ function UserDashboard() {
   const [editAlbumModal, setEditAlbumModal] = useState<{
     isOpen: boolean;
     albumId?: string;
+  } | null>(null);
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  } | null>(null);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    variant?: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
 
   // Проверка авторизации
@@ -187,21 +202,31 @@ function UserDashboard() {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
   };
 
-  // Удаление альбома
+  // Удаление трека
   const handleDeleteTrack = async (albumId: string, trackId: string, trackTitle: string) => {
-    // Подтверждение удаления
-    const confirmed = window.confirm(
-      `Вы уверены, что хотите удалить трек "${trackTitle}"?\n\nЭто действие нельзя отменить.`
-    );
+    // Показываем модальное окно подтверждения
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Подтвердите действие',
+      message: `Вы уверены, что хотите удалить трек "${trackTitle}"?`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmationModal(null);
+        await performDeleteTrack(albumId, trackId);
+      },
+    });
+  };
 
-    if (!confirmed) {
-      return;
-    }
-
+  const performDeleteTrack = async (albumId: string, trackId: string) => {
     try {
       const token = getToken();
       if (!token) {
-        alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          variant: 'error',
+        });
         return;
       }
 
@@ -228,9 +253,12 @@ function UserDashboard() {
       console.log('✅ Track deleted successfully:', { albumId, trackId });
     } catch (error) {
       console.error('❌ Error deleting track:', error);
-      alert(
-        `Ошибка при удалении трека: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message: `Ошибка при удалении трека: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
     }
   };
 
@@ -239,19 +267,29 @@ function UserDashboard() {
     const album = albumsData.find((a) => a.id === albumId);
     const albumTitle = album?.title || albumId;
 
-    // Подтверждение удаления
-    const confirmed = window.confirm(
-      `Вы уверены, что хотите удалить альбом "${albumTitle}"?\n\nЭто действие нельзя отменить.`
-    );
+    // Показываем модальное окно подтверждения
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Подтвердите действие',
+      message: `Вы уверены, что хотите удалить альбом "${albumTitle}"?`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmationModal(null);
+        await performDeleteAlbum(albumId);
+      },
+    });
+  };
 
-    if (!confirmed) {
-      return;
-    }
-
+  const performDeleteAlbum = async (albumId: string) => {
     try {
       const token = getToken();
       if (!token) {
-        alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          variant: 'error',
+        });
         return;
       }
 
@@ -287,9 +325,12 @@ function UserDashboard() {
       console.log('✅ Album deleted successfully:', albumId);
     } catch (error) {
       console.error('❌ Error deleting album:', error);
-      alert(
-        `Ошибка при удалении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message: `Ошибка при удалении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
     }
   };
 
@@ -398,13 +439,23 @@ function UserDashboard() {
           }
         }
 
-        alert(`Successfully uploaded ${uploadedCount} track(s)`);
+        setAlertModal({
+          isOpen: true,
+          title: 'Успешно',
+          message: `Successfully uploaded ${uploadedCount} track(s)`,
+          variant: 'success',
+        });
       } else {
         throw new Error(result.error || 'Failed to upload tracks');
       }
     } catch (error) {
       console.error('❌ Error uploading tracks:', error);
-      alert(`Error uploading tracks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message: `Error uploading tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
     } finally {
       setIsUploadingTracks((prev) => {
         const newState = { ...prev };
@@ -593,7 +644,12 @@ function UserDashboard() {
           })
         );
       } else {
-        alert(result.message || 'Ошибка при сохранении текста');
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: result.message || 'Ошибка при сохранении текста',
+          variant: 'error',
+        });
       }
     }
 
@@ -669,7 +725,12 @@ function UserDashboard() {
           finalText: finalText.substring(0, 50) + '...',
         });
       } else {
-        alert(result.message || 'Ошибка при сохранении текста');
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: result.message || 'Ошибка при сохранении текста',
+          variant: 'error',
+        });
       }
     }
   };
@@ -1391,6 +1452,29 @@ function UserDashboard() {
               setEditAlbumModal(null);
             }
           }}
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmationModal && (
+        <ConfirmationModal
+          isOpen={confirmationModal.isOpen}
+          title={confirmationModal.title}
+          message={confirmationModal.message}
+          variant={confirmationModal.variant}
+          onConfirm={confirmationModal.onConfirm}
+          onCancel={() => setConfirmationModal(null)}
+        />
+      )}
+
+      {/* Alert Modal */}
+      {alertModal && (
+        <AlertModal
+          isOpen={alertModal.isOpen}
+          title={alertModal.title}
+          message={alertModal.message}
+          variant={alertModal.variant}
+          onClose={() => setAlertModal(null)}
         />
       )}
     </>

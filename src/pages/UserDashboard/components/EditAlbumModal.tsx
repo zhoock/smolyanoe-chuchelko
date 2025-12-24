@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/EditAlbumModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Popup } from '@shared/ui/popup';
+import { AlertModal } from '@shared/ui/alertModal';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -115,6 +116,12 @@ export function EditAlbumModal({
     'idle'
   );
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    variant?: 'success' | 'error' | 'warning' | 'info';
+  } | null>(null);
 
   // ========= FIX: objectURL lifecycle =========
   const localPreviewUrlRef = useRef<string | null>(null);
@@ -1133,9 +1140,13 @@ export function EditAlbumModal({
     if (!finalAlbumId) {
       // Проверяем, что есть минимальные данные для генерации albumId
       if (!formData.artist || !formData.title) {
-        alert(
-          'Ошибка: для создания нового альбома необходимо заполнить поля "Artist / Group name" и "Album title".'
-        );
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message:
+            'Ошибка: для создания нового альбома необходимо заполнить поля "Artist / Group name" и "Album title".',
+          variant: 'error',
+        });
         setIsSaving(false);
         return;
       }
@@ -1245,9 +1256,13 @@ export function EditAlbumModal({
 
     // Если версии нет, нужен хотя бы минимальный набор данных для создания
     if (!exists && (!formData.artist || !formData.title)) {
-      alert(
-        'Ошибка: для создания новой версии альбома необходимо заполнить поля "Artist / Group name" и "Album title".'
-      );
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message:
+          'Ошибка: для создания новой версии альбома необходимо заполнить поля "Artist / Group name" и "Album title".',
+        variant: 'error',
+      });
       setIsSaving(false);
       return;
     }
@@ -1255,17 +1270,25 @@ export function EditAlbumModal({
     // Если версия существует, проверяем обязательные поля
     if (exists) {
       if (!formData.artist && !originalAlbum.artist) {
-        alert(
-          'Ошибка: не найдено название группы для альбома. Заполните поле "Artist / Group name" и попробуйте снова.'
-        );
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message:
+            'Ошибка: не найдено название группы для альбома. Заполните поле "Artist / Group name" и попробуйте снова.',
+          variant: 'error',
+        });
         setIsSaving(false);
         return;
       }
 
       if (!formData.title && !originalAlbum.album) {
-        alert(
-          'Ошибка: не найдено название альбома. Заполните поле "Album title" и попробуйте снова.'
-        );
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message:
+            'Ошибка: не найдено название альбома. Заполните поле "Album title" и попробуйте снова.',
+          variant: 'error',
+        });
         setIsSaving(false);
         return;
       }
@@ -1497,7 +1520,12 @@ export function EditAlbumModal({
 
       if (!token) {
         console.error('❌ [EditAlbumModal] No token found! Cannot save album.');
-        alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          variant: 'error',
+        });
         setIsSaving(false);
         return;
       }
@@ -1585,9 +1613,12 @@ export function EditAlbumModal({
       return result;
     } catch (error) {
       console.error('❌ Error updating album:', error);
-      alert(
-        `Ошибка при сохранении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message: `Ошибка при сохранении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -2118,61 +2149,74 @@ export function EditAlbumModal({
   };
 
   return (
-    <Popup isActive={isOpen} onClose={handleClose}>
-      <div className="edit-album-modal">
-        <div className="edit-album-modal__card">
-          <div className="edit-album-modal__header">
-            <h2 className="edit-album-modal__title">{getStepTitle()}</h2>
-          </div>
+    <>
+      <Popup isActive={isOpen} onClose={handleClose}>
+        <div className="edit-album-modal">
+          <div className="edit-album-modal__card">
+            <div className="edit-album-modal__header">
+              <h2 className="edit-album-modal__title">{getStepTitle()}</h2>
+            </div>
 
-          <div className="edit-album-modal__form">
-            {renderStepContent()}
+            <div className="edit-album-modal__form">
+              {renderStepContent()}
 
-            <div className="edit-album-modal__actions">
-              {currentStep > 1 ? (
-                <button
-                  type="button"
-                  className="edit-album-modal__button edit-album-modal__button--secondary"
-                  onClick={handlePrevious}
-                >
-                  {ui?.dashboard?.editAlbumModal?.buttons?.previous ?? 'Previous'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="edit-album-modal__button edit-album-modal__button--cancel"
-                  onClick={handleClose}
-                >
-                  {ui?.dashboard?.cancel ?? 'Cancel'}
-                </button>
-              )}
+              <div className="edit-album-modal__actions">
+                {currentStep > 1 ? (
+                  <button
+                    type="button"
+                    className="edit-album-modal__button edit-album-modal__button--secondary"
+                    onClick={handlePrevious}
+                  >
+                    {ui?.dashboard?.editAlbumModal?.buttons?.previous ?? 'Previous'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="edit-album-modal__button edit-album-modal__button--cancel"
+                    onClick={handleClose}
+                  >
+                    {ui?.dashboard?.cancel ?? 'Cancel'}
+                  </button>
+                )}
 
-              {currentStep === 5 ? (
-                <button
-                  type="button"
-                  className="edit-album-modal__button edit-album-modal__button--primary"
-                  onClick={handlePublish}
-                  disabled={isSaving}
-                >
-                  {isSaving
-                    ? (ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...')
-                    : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId)
-                      ? (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
-                      : (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="edit-album-modal__button edit-album-modal__button--primary"
-                  onClick={handleNext}
-                >
-                  {ui?.dashboard?.editAlbumModal?.buttons?.next ?? 'Next'}
-                </button>
-              )}
+                {currentStep === 5 ? (
+                  <button
+                    type="button"
+                    className="edit-album-modal__button edit-album-modal__button--primary"
+                    onClick={handlePublish}
+                    disabled={isSaving}
+                  >
+                    {isSaving
+                      ? (ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...')
+                      : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId)
+                        ? (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
+                        : (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="edit-album-modal__button edit-album-modal__button--primary"
+                    onClick={handleNext}
+                  >
+                    {ui?.dashboard?.editAlbumModal?.buttons?.next ?? 'Next'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </Popup>
+      </Popup>
+
+      {/* Alert Modal */}
+      {alertModal && (
+        <AlertModal
+          isOpen={alertModal.isOpen}
+          title={alertModal.title}
+          message={alertModal.message}
+          variant={alertModal.variant}
+          onClose={() => setAlertModal(null)}
+        />
+      )}
+    </>
   );
 }
