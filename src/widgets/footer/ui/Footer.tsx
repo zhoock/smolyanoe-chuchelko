@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Link } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -45,6 +46,13 @@ function FooterComponent() {
           </li>
           <li>
             <small>{supportLink(ui?.titles?.support ?? 'Поддержка')}</small>
+          </li>
+          <li>
+            <small>
+              <Link to="/offer" className="footer__link">
+                {lang === 'ru' ? 'Публичная оферта' : 'Public Offer'}
+              </Link>
+            </small>
           </li>
         </ul>
       </div>

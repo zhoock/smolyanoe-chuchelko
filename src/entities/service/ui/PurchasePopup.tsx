@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import type { IAlbums } from '@models';
@@ -206,6 +207,8 @@ interface CheckoutFormData {
   lastName: string;
   notes: string;
   joinMailingList: boolean;
+  agreeToOffer: boolean;
+  agreeToPrivacy: boolean;
 }
 
 function CheckoutStep({
@@ -226,6 +229,8 @@ function CheckoutStep({
   const [lastName, setLastName] = useState(formData.lastName);
   const [notes, setNotes] = useState(formData.notes);
   const [joinMailingList, setJoinMailingList] = useState(formData.joinMailingList);
+  const [agreeToOffer, setAgreeToOffer] = useState(formData.agreeToOffer);
+  const [agreeToPrivacy, setAgreeToPrivacy] = useState(formData.agreeToPrivacy);
   const [discountCode, setDiscountCode] = useState('');
   const [errors, setErrors] = useState<ValidationErrors>({});
 
@@ -241,13 +246,29 @@ function CheckoutStep({
     const lastNameError = validateRequired(lastName, 'Last name');
     if (lastNameError) newErrors.lastName = lastNameError;
 
+    if (!agreeToOffer) {
+      newErrors.agreeToOffer = 'You must agree to the offer';
+    }
+
+    if (!agreeToPrivacy) {
+      newErrors.agreeToPrivacy = 'You must agree to the privacy policy';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleContinue = () => {
     if (validateForm()) {
-      onFormDataChange({ email, firstName, lastName, notes, joinMailingList });
+      onFormDataChange({
+        email,
+        firstName,
+        lastName,
+        notes,
+        joinMailingList,
+        agreeToOffer,
+        agreeToPrivacy,
+      });
       onContinueToPayment();
     }
   };
@@ -353,6 +374,58 @@ function CheckoutStep({
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
             />
+          </div>
+
+          <div className="purchase-popup__form-field purchase-popup__form-field--toggle">
+            <label className="purchase-popup__toggle-label">
+              <input
+                type="checkbox"
+                className="purchase-popup__toggle-input"
+                checked={agreeToOffer}
+                onChange={(e) => {
+                  setAgreeToOffer(e.target.checked);
+                  if (errors.agreeToOffer) {
+                    setErrors({ ...errors, agreeToOffer: '' });
+                  }
+                }}
+                required
+              />
+              <span className="purchase-popup__toggle-text">
+                Согласен с{' '}
+                <Link to="/offer" target="_blank" className="purchase-popup__link">
+                  Публичной офертой
+                </Link>
+                {errors.agreeToOffer && (
+                  <span className="purchase-popup__form-error">{errors.agreeToOffer}</span>
+                )}
+              </span>
+            </label>
+          </div>
+
+          <div className="purchase-popup__form-field purchase-popup__form-field--toggle">
+            <label className="purchase-popup__toggle-label">
+              <input
+                type="checkbox"
+                className="purchase-popup__toggle-input"
+                checked={agreeToPrivacy}
+                onChange={(e) => {
+                  setAgreeToPrivacy(e.target.checked);
+                  if (errors.agreeToPrivacy) {
+                    setErrors({ ...errors, agreeToPrivacy: '' });
+                  }
+                }}
+                required
+              />
+              <span className="purchase-popup__toggle-text">
+                Даю согласие на{' '}
+                <Link to="/privacy" target="_blank" className="purchase-popup__link">
+                  обработку персональных данных
+                </Link>
+                {errors.agreeToPrivacy && (
+                  <span className="purchase-popup__form-error">{errors.agreeToPrivacy}</span>
+                )}
+              </span>
+            </label>
           </div>
 
           <div className="purchase-popup__checkout-actions">
@@ -589,6 +662,15 @@ function PaymentStep({
     if (mobileError) newErrors.mobile = mobileError;
 
     if (!confirmAge) newErrors.confirmAge = 'You must confirm you are 18 years or older';
+
+    // Проверяем согласие с офертой и политикой конфиденциальности
+    if (!formData.agreeToOffer) {
+      newErrors.agreeToOffer = 'You must agree to the offer';
+    }
+
+    if (!formData.agreeToPrivacy) {
+      newErrors.agreeToPrivacy = 'You must agree to the privacy policy';
+    }
 
     setCardErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1197,6 +1279,8 @@ export function PurchasePopup({
     lastName: '',
     notes: '',
     joinMailingList: false,
+    agreeToOffer: false,
+    agreeToPrivacy: false,
   });
   const [discountCode, setDiscountCode] = useState('');
 

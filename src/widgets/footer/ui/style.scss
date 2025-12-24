@@ -42,5 +42,22 @@
         content: '|';
       }
     }
+
+    li:not(:last-child) {
+      &::after {
+        padding: 0 var(--ms-01);
+        content: '|';
+      }
+    }
+  }
+
+  &__link {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--link-color, #998238);
+      text-decoration: underline;
+    }
   }
 }

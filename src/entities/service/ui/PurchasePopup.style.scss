@@ -1006,6 +1006,20 @@
       }
     }
 
+    .purchase-popup__link {
+      color: var(--white, #ffffff);
+      text-decoration: underline;
+      transition: opacity 0.2s ease;
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &:visited {
+        color: var(--white, #ffffff);
+      }
+    }
+
     .purchase-popup__toggle-text {
       color: var(--white, #ffffff);
     }
