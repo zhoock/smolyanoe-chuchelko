@@ -145,6 +145,15 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     visible: boolean; // Для анимации
   }>({ show: false, x: 0, y: 0, selectedText: '', visible: false });
 
+  // История изменений для undo/redo
+  const [undoStack, setUndoStack] = useState<
+    Array<{ blocks: SimplifiedBlock[]; contentHtml: string }>
+  >([]);
+  const [redoStack, setRedoStack] = useState<
+    Array<{ blocks: SimplifiedBlock[]; contentHtml: string }>
+  >([]);
+  const isUndoRedoRef = useRef(false);
+
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);
   // Флаг для отслеживания размонтирования компонента
@@ -210,6 +219,10 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   useEffect(() => {
     if (!isOpen) {
       didInitRef.current = false;
+      // Очищаем историю undo/redo при закрытии модалки
+      setUndoStack([]);
+      setRedoStack([]);
+      isUndoRedoRef.current = false;
       return;
     }
 
@@ -604,16 +617,70 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   // Удаление блока (объявляем здесь, чтобы использовать в useEffect ниже)
   const deleteBlockRef = useRef<(index: number) => void>();
 
-  // Обработчик нажатия клавиши Delete для удаления выбранного изображения
+  // Сохранение состояния в историю для undo (объявляем здесь, чтобы использовать в useEffect ниже)
+  const saveToHistoryRef = useRef<() => void>();
+  const handleUndoRef = useRef<() => void>();
+  const handleRedoRef = useRef<() => void>();
+
+  // Обработчик нажатия клавиши Delete для удаления выбранного изображения и Command+Z для undo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedImageIndex !== null) {
-        // Проверяем, что фокус не в поле ввода
+      // Обработка Command+Z (Mac) или Ctrl+Z (Windows/Linux) для undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         const target = e.target as HTMLElement;
+        // Не обрабатываем, если фокус в поле ввода
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        if (handleUndoRef.current) {
+          handleUndoRef.current();
+        }
+        return;
+      }
+
+      // Обработка Command+Shift+Z или Ctrl+Shift+Z для redo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        const target = e.target as HTMLElement;
+        // Не обрабатываем, если фокус в поле ввода
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        if (handleRedoRef.current) {
+          handleRedoRef.current();
+        }
+        return;
+      }
+
+      // Обработка Command+Y или Ctrl+Y для redo (альтернативный способ)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        const target = e.target as HTMLElement;
+        // Не обрабатываем, если фокус в поле ввода
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        if (handleRedoRef.current) {
+          handleRedoRef.current();
+        }
+        return;
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedImageIndex !== null) {
+        // Проверяем, что фокус не в поле ввода (INPUT или TEXTAREA)
+        // НО разрешаем удаление, если выбрано изображение, даже если фокус в contentEditable
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          return;
+        }
+
+        // Если фокус в contentEditable, но выбрано изображение, разрешаем удаление
+        // Проверяем, что активный элемент не является input или textarea
+        const activeElement = document.activeElement;
         if (
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable
+          activeElement &&
+          (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')
         ) {
           return;
         }
@@ -621,6 +688,26 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         e.preventDefault();
         const block = blocks[selectedImageIndex];
         if (block && (block.type === 'image' || block.type === 'carousel')) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: 'EditArticleModal.tsx:628',
+              message: 'Deleting image block',
+              data: {
+                selectedImageIndex,
+                blockType: block.type,
+                blockId: block.id,
+                blocksCount: blocks.length,
+              },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'run1',
+              hypothesisId: 'J',
+            }),
+          }).catch(() => {});
+          // #endregion
           if (deleteBlockRef.current) {
             deleteBlockRef.current(selectedImageIndex);
           }
@@ -640,6 +727,168 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       };
     }
   }, [isOpen, selectedImageIndex, blocks]);
+
+  // Применяем класс --selected к выбранному изображению
+  useEffect(() => {
+    if (!contentEditableRef.current) return;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'EditArticleModal.tsx:651',
+        message: 'Applying --selected class - start',
+        data: {
+          selectedImageIndex,
+          blocksCount: blocks.length,
+          hasContentEditable: !!contentEditableRef.current,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'D',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // Убираем класс --selected со всех изображений
+    const allImages = contentEditableRef.current.querySelectorAll(
+      '.edit-article-modal__inline-image, .edit-article-modal__inline-carousel'
+    );
+    allImages.forEach((img) => {
+      img.classList.remove('edit-article-modal__inline-image--selected');
+      img.classList.remove('edit-article-modal__inline-carousel--selected');
+    });
+
+    // Добавляем класс --selected к выбранному изображению
+    if (selectedImageIndex !== null) {
+      const block = blocks[selectedImageIndex];
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:675',
+          message: 'Applying --selected class - block found',
+          data: {
+            selectedImageIndex,
+            hasBlock: !!block,
+            blockType: block?.type,
+            blockId: block?.id,
+            blocksCount: blocks.length,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'E',
+        }),
+      }).catch(() => {});
+      // #endregion
+
+      if (block && (block.type === 'image' || block.type === 'carousel')) {
+        // Ищем изображение по data-block-id или по позиции
+        let targetElement: Element | null = null;
+
+        if (block.id) {
+          targetElement = contentEditableRef.current.querySelector(
+            `[data-block-type="${block.type}"][data-block-id="${block.id}"]`
+          );
+        }
+
+        // Если не нашли по id, ищем по позиции
+        if (!targetElement) {
+          const allImageBlocks = Array.from(
+            contentEditableRef.current.querySelectorAll(
+              '.edit-article-modal__inline-image, .edit-article-modal__inline-carousel'
+            )
+          );
+          let imageBlockCount = 0;
+          for (let i = 0; i < blocks.length; i++) {
+            if (blocks[i].type === 'image' || blocks[i].type === 'carousel') {
+              if (i === selectedImageIndex) {
+                targetElement = allImageBlocks[imageBlockCount] || null;
+                break;
+              }
+              imageBlockCount++;
+            }
+          }
+        }
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:705',
+            message: 'Applying --selected class - targetElement found',
+            data: {
+              selectedImageIndex,
+              hasTargetElement: !!targetElement,
+              targetElementClassName: targetElement?.className,
+              willAddClass: !!targetElement,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'F',
+          }),
+        }).catch(() => {});
+        // #endregion
+
+        if (targetElement) {
+          if (block.type === 'image') {
+            targetElement.classList.add('edit-article-modal__inline-image--selected');
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                location: 'EditArticleModal.tsx:738',
+                message: 'Class added to image element',
+                data: {
+                  selectedImageIndex,
+                  hasClass: targetElement.classList.contains(
+                    'edit-article-modal__inline-image--selected'
+                  ),
+                  elementClassName: targetElement.className,
+                },
+                timestamp: Date.now(),
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'I',
+              }),
+            }).catch(() => {});
+            // #endregion
+          } else {
+            targetElement.classList.add('edit-article-modal__inline-carousel--selected');
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                location: 'EditArticleModal.tsx:750',
+                message: 'Class added to carousel element',
+                data: {
+                  selectedImageIndex,
+                  hasClass: targetElement.classList.contains(
+                    'edit-article-modal__inline-carousel--selected'
+                  ),
+                  elementClassName: targetElement.className,
+                },
+                timestamp: Date.now(),
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'I',
+              }),
+            }).catch(() => {});
+            // #endregion
+          }
+        }
+      }
+    }
+  }, [selectedImageIndex, blocks, contentHtml]);
 
   // Извлечение имени файла из URL
   const extractFileNameFromUrl = (url: string, fallback: string): string => {
@@ -1720,13 +1969,103 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     // #endregion
   }, [autoSaveDraft]);
 
+  // Сохранение состояния в историю для undo
+  const saveToHistory = useCallback(() => {
+    if (isUndoRedoRef.current) {
+      return; // Не сохраняем в историю, если это операция undo/redo
+    }
+    setUndoStack((prev) => {
+      const newStack = [...prev, { blocks: [...blocks], contentHtml: contentHtml }];
+      // Ограничиваем размер истории до 50 операций
+      return newStack.slice(-50);
+    });
+    // Очищаем redo stack при новом изменении
+    setRedoStack([]);
+  }, [blocks, contentHtml]);
+
+  // Undo - отмена последнего действия
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+
+    isUndoRedoRef.current = true;
+    const lastState = undoStack[undoStack.length - 1];
+    const currentState = { blocks: [...blocks], contentHtml: contentHtml };
+
+    // Сохраняем текущее состояние в redo stack
+    setRedoStack((prev) => [...prev, currentState]);
+
+    // Восстанавливаем предыдущее состояние
+    setBlocks(lastState.blocks);
+    setContentHtml(lastState.contentHtml);
+    if (contentEditableRef.current) {
+      contentEditableRef.current.innerHTML = lastState.contentHtml;
+      lastContentHtmlRef.current = lastState.contentHtml;
+    }
+
+    // Удаляем последнее состояние из undo stack
+    setUndoStack((prev) => prev.slice(0, -1));
+
+    setTimeout(() => {
+      isUndoRedoRef.current = false;
+    }, 0);
+  }, [undoStack, blocks, contentHtml]);
+
+  // Redo - повтор последнего отмененного действия
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+
+    isUndoRedoRef.current = true;
+    const lastState = redoStack[redoStack.length - 1];
+    const currentState = { blocks: [...blocks], contentHtml: contentHtml };
+
+    // Сохраняем текущее состояние в undo stack
+    setUndoStack((prev) => [...prev, currentState]);
+
+    // Восстанавливаем состояние из redo
+    setBlocks(lastState.blocks);
+    setContentHtml(lastState.contentHtml);
+    if (contentEditableRef.current) {
+      contentEditableRef.current.innerHTML = lastState.contentHtml;
+      lastContentHtmlRef.current = lastState.contentHtml;
+    }
+
+    // Удаляем последнее состояние из redo stack
+    setRedoStack((prev) => prev.slice(0, -1));
+
+    setTimeout(() => {
+      isUndoRedoRef.current = false;
+    }, 0);
+  }, [redoStack, blocks, contentHtml]);
+
+  // Сохраняем функции в ref для использования в useEffect
+  useEffect(() => {
+    saveToHistoryRef.current = saveToHistory;
+    handleUndoRef.current = handleUndo;
+    handleRedoRef.current = handleRedo;
+  }, [saveToHistory, handleUndo, handleRedo]);
+
   // Удаление блока
   const deleteBlock = useCallback(
     (index: number) => {
-      setBlocks((prev) => prev.filter((_, i) => i !== index));
+      // Сохраняем текущее состояние в историю перед удалением
+      if (saveToHistoryRef.current) {
+        saveToHistoryRef.current();
+      }
+
+      setBlocks((prev) => {
+        const newBlocks = prev.filter((_, i) => i !== index);
+        // Обновляем contentHtml после удаления блока
+        const newHtml = blocksToHtml(newBlocks);
+        setContentHtml(newHtml);
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = newHtml;
+          lastContentHtmlRef.current = newHtml;
+        }
+        return newBlocks;
+      });
       scheduleAutoSave();
     },
-    [scheduleAutoSave]
+    [scheduleAutoSave, saveToHistory]
   );
 
   // Сохраняем deleteBlock в ref для использования в useEffect
@@ -1958,11 +2297,12 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
               className="article edit-article-modal__article"
               onClick={(e) => {
                 // Сбрасываем выбор, если клик не по изображению или разделителю
+                const target = e.target as HTMLElement;
                 if (
                   selectedImageIndex !== null &&
-                  !(e.target as HTMLElement).closest('.edit-article-modal__image-wrapper') &&
-                  !(e.target as HTMLElement).closest('.edit-article-modal__carousel-wrapper') &&
-                  !(e.target as HTMLElement).classList.contains('edit-article-modal__divider')
+                  !target.closest('.edit-article-modal__inline-image') &&
+                  !target.closest('.edit-article-modal__inline-carousel') &&
+                  !target.classList.contains('edit-article-modal__divider')
                 ) {
                   setSelectedImageIndex(null);
                 }
@@ -2007,6 +2347,189 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                   className="edit-article-modal__content-editable"
                   contentEditable
                   suppressContentEditableWarning
+                  onMouseDown={(e) => {
+                    // Предотвращаем выделение текста при клике на изображения
+                    const target = e.target as HTMLElement;
+                    if (
+                      target.closest('.edit-article-modal__inline-image') ||
+                      target.closest('.edit-article-modal__inline-carousel')
+                    ) {
+                      e.preventDefault();
+                      // Очищаем любое существующее выделение
+                      const selection = window.getSelection();
+                      if (selection) {
+                        selection.removeAllRanges();
+                      }
+                    }
+                  }}
+                  onClick={(e) => {
+                    // Обработка клика на изображения и карусели для установки selectedImageIndex
+                    const target = e.target as HTMLElement;
+                    const imageWrapper = target.closest('.edit-article-modal__inline-image');
+                    const carouselWrapper = target.closest('.edit-article-modal__inline-carousel');
+
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        location: 'EditArticleModal.tsx:2074',
+                        message: 'Image click handler - start',
+                        data: {
+                          targetTagName: target.tagName,
+                          targetClassName: target.className,
+                          hasImageWrapper: !!imageWrapper,
+                          hasCarouselWrapper: !!carouselWrapper,
+                          blocksCount: blocks.length,
+                        },
+                        timestamp: Date.now(),
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'A',
+                      }),
+                    }).catch(() => {});
+                    // #endregion
+
+                    if (imageWrapper || carouselWrapper) {
+                      e.preventDefault();
+                      e.stopPropagation();
+
+                      // Очищаем выделение текста, если оно есть
+                      const selection = window.getSelection();
+                      if (selection) {
+                        selection.removeAllRanges();
+                      }
+
+                      // Находим индекс блока по data-block-id
+                      const wrapper = imageWrapper || carouselWrapper;
+                      if (!wrapper) return;
+
+                      const blockId = wrapper.getAttribute('data-block-id');
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:2095',
+                          message: 'Image click - found wrapper',
+                          data: {
+                            blockId,
+                            wrapperClassName: wrapper.className,
+                            blocksCount: blocks.length,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'B',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      // Ищем блок по data-block-id или по порядковому номеру в DOM
+                      let blockIndex = -1;
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:2217',
+                          message: 'Image click - searching by blockId',
+                          data: {
+                            blockId,
+                            blocksWithIds: blocks.map((b, idx) => ({
+                              index: idx,
+                              id: b.id,
+                              type: b.type,
+                            })),
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'G',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      if (blockId && blockId !== '') {
+                        // Ищем по data-block-id, но только среди блоков типа image или carousel
+                        blockIndex = blocks.findIndex(
+                          (block) =>
+                            String(block.id) === blockId &&
+                            (block.type === 'image' || block.type === 'carousel')
+                        );
+
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            location: 'EditArticleModal.tsx:2222',
+                            message: 'Image click - blockIndex after findIndex',
+                            data: {
+                              blockId,
+                              blockIndex,
+                              foundBlockType: blockIndex >= 0 ? blocks[blockIndex]?.type : null,
+                              foundBlockId: blockIndex >= 0 ? blocks[blockIndex]?.id : null,
+                            },
+                            timestamp: Date.now(),
+                            sessionId: 'debug-session',
+                            runId: 'run1',
+                            hypothesisId: 'H',
+                          }),
+                        }).catch(() => {});
+                        // #endregion
+                      }
+
+                      // Если не нашли по id, ищем по позиции в DOM
+                      if (blockIndex === -1 && contentEditableRef.current) {
+                        const allImageBlocks = Array.from(
+                          contentEditableRef.current.querySelectorAll(
+                            '.edit-article-modal__inline-image, .edit-article-modal__inline-carousel'
+                          )
+                        );
+                        const domIndex = allImageBlocks.indexOf(wrapper);
+                        if (domIndex >= 0) {
+                          // Находим индекс в массиве blocks, считая только image и carousel блоки
+                          let imageBlockCount = 0;
+                          for (let i = 0; i < blocks.length; i++) {
+                            if (blocks[i].type === 'image' || blocks[i].type === 'carousel') {
+                              if (imageBlockCount === domIndex) {
+                                blockIndex = i;
+                                break;
+                              }
+                              imageBlockCount++;
+                            }
+                          }
+                        }
+                      }
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:2130',
+                          message: 'Image click - blockIndex found',
+                          data: {
+                            blockIndex,
+                            willSetSelectedImageIndex: blockIndex >= 0,
+                            currentSelectedImageIndex: selectedImageIndex,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'C',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      if (blockIndex >= 0) {
+                        setSelectedImageIndex(blockIndex);
+                      }
+                    }
+                  }}
                   onKeyDown={(e) => {
                     // Обработка Enter: по умолчанию создаем параграф, Shift+Enter - тот же тег
                     // Не блокируем стандартные комбинации клавиш для выделения текста
@@ -2636,6 +3159,51 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     }
                     // Shift+Enter - оставляем стандартное поведение браузера (создает <br> или тот же тег)
                   }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+
+                    // Получаем только текстовое содержимое из буфера обмена
+                    const pastedText = e.clipboardData.getData('text/plain');
+
+                    if (!pastedText || !contentEditableRef.current) {
+                      return;
+                    }
+
+                    const selection = window.getSelection();
+                    if (!selection || selection.rangeCount === 0) {
+                      return;
+                    }
+
+                    const range = selection.getRangeAt(0);
+
+                    // Проверяем, что курсор находится внутри нашего contentEditable
+                    if (!contentEditableRef.current.contains(range.commonAncestorContainer)) {
+                      return;
+                    }
+
+                    // Удаляем выделенный текст (если есть)
+                    range.deleteContents();
+
+                    // Вставляем чистый текст
+                    const textNode = document.createTextNode(pastedText);
+                    range.insertNode(textNode);
+
+                    // Перемещаем курсор в конец вставленного текста
+                    range.setStartAfter(textNode);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+
+                    // Обновляем HTML и блоки
+                    const html = contentEditableRef.current.innerHTML;
+                    lastContentHtmlRef.current = html;
+                    setContentHtml(html);
+                    const parsedBlocks = htmlToBlocks(html);
+                    setBlocks(parsedBlocks);
+
+                    // Планируем автосохранение
+                    scheduleAutoSave();
+                  }}
                   onFocus={() => {
                     // #region agent log
                     fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
@@ -2703,6 +3271,27 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       }),
                     }).catch(() => {});
                     // #endregion
+
+                    // Проверяем, изменилось ли количество блоков или структура (например, удалили изображение)
+                    // Сравниваем количество блоков и их типы
+                    let blocksChanged = false;
+                    if (parsedBlocks.length !== blocks.length) {
+                      blocksChanged = true;
+                    } else {
+                      // Проверяем, изменились ли типы блоков
+                      for (let i = 0; i < parsedBlocks.length; i++) {
+                        if (parsedBlocks[i].type !== blocks[i]?.type) {
+                          blocksChanged = true;
+                          break;
+                        }
+                      }
+                    }
+
+                    // Сохраняем в историю только при значимых изменениях (удаление/добавление блоков)
+                    if (blocksChanged && saveToHistoryRef.current) {
+                      saveToHistoryRef.current();
+                    }
+
                     setBlocks(parsedBlocks);
                     scheduleAutoSave();
                   }}

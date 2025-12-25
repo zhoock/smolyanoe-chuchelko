@@ -513,7 +513,46 @@
   &__formatting-separator {
     width: 1px;
     height: 20px;
-    margin: 0 var(--ms-01);
+    margin: var(--ms-01);
     background: rgb(255 255 255 / 20%);
+  }
+
+  &__inline-image,
+  &__inline-carousel {
+    position: relative;
+    display: inline-block;
+    margin: var(--ms-1) 0;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: var(--ms-01);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+
+    &--selected {
+      border: 2px solid var(--white-rgb) !important;
+      box-shadow: 0 0 0 4px rgba(var(--graphite-green-rgb) / 20%) !important;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+  }
+
+  &__inline-carousel {
+    position: relative;
+
+    &__carousel-indicator {
+      position: absolute;
+      right: var(--ms-01);
+      bottom: var(--ms-01);
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--white);
+      font-size: var(--ms-0);
+      background: rgba(var(--black-rgb) / 70%);
+      border-radius: var(--ms-01);
+    }
   }
 }

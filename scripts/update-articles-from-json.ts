@@ -48,45 +48,36 @@ async function updateArticlesFromJson(
 
   for (const article of articles) {
     try {
+      // Используем INSERT ... ON CONFLICT для создания или полного обновления статьи
       await query(
-        `UPDATE articles 
-         SET details = $1::jsonb,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE article_id = $2 AND lang = $3 AND user_id IS NULL`,
-        [JSON.stringify(article.details || []), article.articleId, lang],
+        `INSERT INTO articles (
+          user_id, article_id, name_article, description, img, date, details, lang, is_public
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+        ON CONFLICT (user_id, article_id, lang)
+        DO UPDATE SET
+          name_article = EXCLUDED.name_article,
+          description = EXCLUDED.description,
+          img = EXCLUDED.img,
+          date = EXCLUDED.date,
+          details = EXCLUDED.details,
+          is_public = EXCLUDED.is_public,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id`,
+        [
+          null, // публичная статья (user_id = NULL)
+          article.articleId,
+          article.nameArticle,
+          article.description || null,
+          article.img || null,
+          article.date,
+          JSON.stringify(article.details || []),
+          lang,
+          true, // публичная
+        ],
         0
       );
 
-      const rowCount = await query(
-        `SELECT COUNT(*) as count FROM articles WHERE article_id = $1 AND lang = $2 AND user_id IS NULL`,
-        [article.articleId, lang],
-        0
-      );
-
-      if (parseInt(rowCount.rows[0].count, 10) === 0) {
-        // Статья не существует, создаём её
-        await query(
-          `INSERT INTO articles (
-            user_id, article_id, name_article, description, img, date, details, lang, is_public
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)`,
-          [
-            null, // публичная статья
-            article.articleId,
-            article.nameArticle,
-            article.description || null,
-            article.img || null,
-            article.date,
-            JSON.stringify(article.details || []),
-            lang,
-            true, // публичная
-          ],
-          0
-        );
-        console.log(`✅ Created article ${article.articleId} (${lang})`);
-      } else {
-        console.log(`✅ Updated article ${article.articleId} (${lang})`);
-      }
-
+      console.log(`✅ Migrated article ${article.articleId} (${lang}): ${article.nameArticle}`);
       result.updated++;
     } catch (error) {
       const errorMsg = `Article ${article.articleId} (${lang}): ${
