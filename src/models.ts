@@ -112,18 +112,22 @@ export interface String {
 }
 
 export type IArticles = {
-  articleId: string;
+  id?: string; // UUID из БД (опционально для обратной совместимости)
+  articleId: string; // строковый идентификатор (article_id)
   nameArticle: string;
   img: string;
   date: string;
   details: ArticledetailsProps[];
   description: string;
+  isDraft?: boolean; // Статус черновика (опционально для обратной совместимости)
 };
 
 export interface ArticledetailsProps {
-  id: number;
+  id?: number; // опционально, может отсутствовать в новой структуре
+  type?: 'text' | 'image' | 'carousel'; // тип блока
   title?: string;
-  img?: string | string[]; // single image or array for carousel
+  img?: string; // для одиночного изображения
+  images?: string[]; // для карусели (массив изображений)
   subtitle?: string;
   strong?: string;
   content?: string | string[]; // union type

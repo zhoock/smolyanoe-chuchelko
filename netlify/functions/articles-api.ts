@@ -33,17 +33,20 @@ interface ArticleRow {
   details: unknown[];
   lang: string;
   is_public: boolean;
+  is_draft: boolean;
   created_at: Date;
   updated_at: Date;
 }
 
 interface ArticleData {
-  articleId: string;
+  id: string; // UUID из БД
+  articleId: string; // строковый идентификатор (article_id)
   nameArticle: string;
   img: string;
   date: string;
   details: unknown[];
   description: string;
+  isDraft?: boolean; // Статус черновика (опционально для обратной совместимости)
 }
 
 interface CreateArticleRequest {
@@ -64,6 +67,7 @@ interface UpdateArticleRequest {
   date?: string;
   details?: unknown[];
   isPublic?: boolean;
+  isDraft?: boolean;
 }
 
 type ArticlesResponse = ApiResponse<ArticleData[]>;
@@ -72,14 +76,38 @@ type ArticlesResponse = ApiResponse<ArticleData[]>;
  * Преобразует данные статьи из БД в формат API
  */
 function mapArticleToApiFormat(article: ArticleRow): ArticleData {
-  return {
-    articleId: article.article_id,
+  // Парсим details, если это строка (JSONB из базы может приходить как строка)
+  let details = article.details;
+  if (typeof details === 'string') {
+    try {
+      details = JSON.parse(details);
+    } catch (e) {
+      console.error('[mapArticleToApiFormat] Error parsing details:', e);
+      details = [];
+    }
+  }
+
+  const result = {
+    id: article.id, // UUID из БД
+    articleId: article.article_id, // строковый идентификатор
     nameArticle: article.name_article,
     img: article.img || '',
     date: article.date.toISOString().split('T')[0], // YYYY-MM-DD
-    details: (article.details as unknown[]) || [],
+    details: (details as unknown[]) || [],
     description: article.description || '',
+    isDraft: article.is_draft ?? false, // Статус черновика
   };
+
+  console.log('[mapArticleToApiFormat] Mapped article:', {
+    articleId: result.articleId,
+    nameArticle: result.nameArticle,
+    detailsType: typeof article.details,
+    detailsLength: Array.isArray(result.details) ? result.details.length : 'not array',
+    firstDetail:
+      Array.isArray(result.details) && result.details.length > 0 ? result.details[0] : null,
+  });
+
+  return result;
 }
 
 export const handler: Handler = async (
@@ -104,20 +132,28 @@ export const handler: Handler = async (
         return createErrorResponse(401, 'Unauthorized. Authentication required.');
       }
 
+      // Проверяем, нужно ли включать черновики (для редактирования)
+      const includeDrafts = event.queryStringParameters?.includeDrafts === 'true';
+
       // Важно: используем DISTINCT ON для исключения дубликатов по article_id
+      // По умолчанию получаем только опубликованные статьи, но можно включить черновики
+      // Сортируем по updated_at DESC, чтобы получить последнюю версию статьи
       const articlesResult = await query<ArticleRow>(
         `SELECT DISTINCT ON (article_id)
+          id,
           article_id,
           name_article,
           description,
           img,
           date,
           details,
-          lang
+          lang,
+          is_draft
         FROM articles
         WHERE lang = $1
           AND user_id = $2
-        ORDER BY article_id, date DESC`,
+          ${includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)'}
+        ORDER BY article_id, updated_at DESC`,
         [lang, userId]
       );
 
@@ -147,9 +183,12 @@ export const handler: Handler = async (
         );
       }
 
-      await query(
-        `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_public, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, NOW(), NOW())`,
+      // Используем RETURNING чтобы получить UUID созданной статьи
+      // По умолчанию создаем как черновик (is_draft = true)
+      const result = await query<ArticleRow>(
+        `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_public, is_draft, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, NOW(), NOW())
+         RETURNING id, article_id, name_article, description, img, date, details, lang, is_draft`,
         [
           userId,
           data.articleId,
@@ -160,8 +199,14 @@ export const handler: Handler = async (
           JSON.stringify(data.details),
           data.lang,
           false, // is_public всегда false, так как все статьи принадлежат пользователю
+          true, // is_draft = true по умолчанию (черновик)
         ]
       );
+
+      // Возвращаем созданную статью с UUID
+      if (result.rows.length > 0) {
+        return createSuccessResponse([mapArticleToApiFormat(result.rows[0])]);
+      }
 
       return createSuccessMessageResponse('Article created successfully', 201);
     }
@@ -172,23 +217,41 @@ export const handler: Handler = async (
       }
 
       const { id } = event.queryStringParameters || {};
-      const articleId = id;
 
-      if (!articleId) {
+      if (!id) {
         return createErrorResponse(400, 'Article ID is required (query parameter: id)');
       }
 
       const data = parseJsonBody<UpdateArticleRequest>(event.body, {} as UpdateArticleRequest);
 
+      // Валидация UUID
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const isUUID = UUID_RE.test(id);
+
       // Проверяем, что статья принадлежит пользователю
-      const checkResult = await query<ArticleRow>(
-        `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
-        [articleId, userId]
-      );
+      // Поддерживаем как UUID id, так и article_id для обратной совместимости
+      let checkResult: Awaited<ReturnType<typeof query<ArticleRow>>>;
+
+      if (isUUID) {
+        // Используем UUID id для поиска
+        checkResult = await query<ArticleRow>(
+          `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
+          [id, userId]
+        );
+      } else {
+        // Fallback: используем article_id для старых данных без UUID
+        checkResult = await query<ArticleRow>(
+          `SELECT id FROM articles WHERE article_id = $1 AND user_id = $2`,
+          [id, userId]
+        );
+      }
 
       if (checkResult.rows.length === 0) {
         return createErrorResponse(404, 'Article not found or access denied');
       }
+
+      // Получаем реальный UUID для обновления
+      const realId = checkResult.rows[0].id;
 
       // Формируем динамический UPDATE запрос
       const updates: string[] = [];
@@ -213,7 +276,19 @@ export const handler: Handler = async (
       }
       if (data.details !== undefined) {
         updates.push(`details = $${paramIndex++}::jsonb`);
-        values.push(JSON.stringify(data.details));
+        const detailsJson = JSON.stringify(data.details);
+        values.push(detailsJson);
+
+        console.log('[articles-api PUT] Обновление details:', {
+          detailsLength: Array.isArray(data.details) ? data.details.length : 'not array',
+          firstDetail:
+            Array.isArray(data.details) && data.details.length > 0 ? data.details[0] : null,
+          detailsJsonLength: detailsJson.length,
+        });
+      }
+      if (data.isDraft !== undefined) {
+        updates.push(`is_draft = $${paramIndex++}`);
+        values.push(data.isDraft);
       }
       // is_public больше не используется, все статьи принадлежат пользователю
 
@@ -222,14 +297,32 @@ export const handler: Handler = async (
       }
 
       updates.push(`updated_at = NOW()`);
-      values.push(articleId, userId);
+      values.push(realId, userId);
 
-      await query(
+      console.log('[articles-api PUT] SQL UPDATE:', {
+        updates: updates.join(', '),
+        valuesCount: values.length,
+        realId,
+        userId,
+      });
+
+      // Используем реальный UUID id и user_id для обновления
+      const updateResult = await query(
         `UPDATE articles 
          SET ${updates.join(', ')}
-         WHERE id = $${paramIndex++} AND user_id = $${paramIndex++}`,
+         WHERE id = $${paramIndex++} AND user_id = $${paramIndex++}
+         RETURNING id, article_id, name_article, details`,
         values
       );
+
+      console.log('[articles-api PUT] Результат обновления:', {
+        rowsAffected: updateResult.rowCount,
+        updatedArticle: updateResult.rows[0] || null,
+      });
+
+      if (updateResult.rowCount === 0) {
+        return createErrorResponse(404, 'Article not found or update failed');
+      }
 
       return createSuccessMessageResponse('Article updated successfully');
     }
@@ -240,23 +333,28 @@ export const handler: Handler = async (
       }
 
       const { id } = event.queryStringParameters || {};
-      const articleId = id;
 
-      if (!articleId) {
+      if (!id) {
         return createErrorResponse(400, 'Article ID is required (query parameter: id)');
+      }
+
+      // Валидация UUID
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!UUID_RE.test(id)) {
+        return createErrorResponse(400, `Invalid id. Expected UUID, got "${id}"`);
       }
 
       // Проверяем, что статья принадлежит пользователю
       const checkResult = await query<ArticleRow>(
         `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
-        [articleId, userId]
+        [id, userId]
       );
 
       if (checkResult.rows.length === 0) {
         return createErrorResponse(404, 'Article not found or access denied');
       }
 
-      await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [articleId, userId]);
+      await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [id, userId]);
 
       return createSuccessMessageResponse('Article deleted successfully');
     }

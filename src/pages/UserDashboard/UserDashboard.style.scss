@@ -518,6 +518,208 @@ dialog {
       border-top: 1px solid var(--iron-slate);
     }
 
+    &__article-description {
+      color: var(--light-grey);
+      font-size: var(--ms-0);
+      line-height: 1.6;
+      margin-bottom: var(--ms-0);
+    }
+
+    &__article-actions {
+      display: flex;
+      gap: var(--ms-01);
+      margin-top: var(--ms-0);
+    }
+
+    // Статьи в стиле ВКонтакте
+    &__articles-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-0);
+    }
+
+    &__article {
+      display: flex;
+      padding: var(--ms-1);
+      background: var(--deep-black);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      flex-direction: column;
+      gap: var(--ms-0);
+    }
+
+    &__article-header {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-0);
+      margin-bottom: var(--ms-0);
+    }
+
+    &__article-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    &__article-avatar-placeholder {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      color: var(--white);
+      font-size: var(--ms-1);
+      background: var(--graphite-green);
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    &__article-meta {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__article-author {
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-weight: 600;
+    }
+
+    &__article-date {
+      color: var(--warm-concrete);
+      font-size: var(--ms-01);
+    }
+
+    &__article-actions-header {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+    }
+
+    &__article-edit-link {
+      padding: 0;
+      color: var(--graphite-green);
+      font-size: var(--ms-0);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+
+      &:hover {
+        color: var(--dark-greenish-yellow);
+      }
+    }
+
+    &__article-edit-actions {
+      display: flex;
+      gap: var(--ms-01);
+    }
+
+    &__article-save-button,
+    &__article-cancel-button {
+      padding: var(--ms-01) var(--ms-0);
+      font-size: var(--ms-0);
+      border: 1px solid;
+      border-radius: var(--ms-01);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    &__article-save-button {
+      color: var(--white);
+      background: var(--graphite-green);
+      border-color: var(--graphite-green);
+
+      &:hover {
+        background: var(--iron-slate);
+        border-color: var(--iron-slate);
+      }
+    }
+
+    &__article-cancel-button {
+      color: var(--white);
+      background: transparent;
+      border-color: var(--iron-slate);
+
+      &:hover {
+        background: var(--iron-slate);
+      }
+    }
+
+    &__article-content {
+      margin-bottom: var(--ms-0);
+    }
+
+    &__article-title {
+      margin: 0 0 var(--ms-0) 0;
+      color: var(--white);
+      font-size: var(--ms-1);
+      line-height: 1.3;
+      font-weight: 700;
+    }
+
+    &__article-title-input {
+      width: 100%;
+      padding: var(--ms-01) var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-1);
+      background: var(--iron-slate);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      font-weight: 700;
+      font-family: inherit;
+      margin-bottom: var(--ms-0);
+
+      &:focus {
+        outline: none;
+        border-color: var(--graphite-green);
+      }
+    }
+
+    &__article-description-input {
+      width: 100%;
+      padding: var(--ms-01) var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-0);
+      background: var(--iron-slate);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      font-family: inherit;
+      resize: vertical;
+      min-height: 100px;
+
+      &:focus {
+        outline: none;
+        border-color: var(--graphite-green);
+      }
+    }
+
+    &__article-image {
+      width: 100%;
+      margin-top: var(--ms-0);
+
+      img {
+        width: 100%;
+        height: auto;
+        border-radius: var(--ms-01);
+      }
+    }
+
+    &__article-divider {
+      height: 1px;
+      margin: var(--ms-0) 0;
+      background: var(--iron-slate);
+    }
+
     &__edit-album-button {
       margin-bottom: var(--ms-0);
 

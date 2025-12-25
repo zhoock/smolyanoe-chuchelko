@@ -61,22 +61,81 @@ export function ArticlePage() {
     }
   }, []);
 
-  function Block({ title, subtitle, strong, content, img, alt }: ArticledetailsProps) {
+  function Block({
+    title,
+    subtitle,
+    strong,
+    content,
+    img,
+    alt,
+    images,
+    type,
+  }: ArticledetailsProps) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'ArticlePage.tsx:64',
+        message: 'Block render',
+        data: {
+          hasTitle: !!title,
+          hasImg: !!img,
+          hasImages: !!images,
+          imgType: typeof img,
+          imgIsArray: Array.isArray(img),
+          imagesIsArray: Array.isArray(images),
+          imagesLength: Array.isArray(images) ? images.length : 0,
+          type,
+          alt,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // Определяем, есть ли карусель: проверяем images или img как массив
+    const carouselImages =
+      images && Array.isArray(images) ? images : Array.isArray(img) ? img : null;
+    const singleImage = !carouselImages && img && typeof img === 'string' ? img : null;
+
     return (
       <>
         {title && <h3>{title}</h3>}
-        {img && (
+        {carouselImages && carouselImages.length > 0 && (
           <div className="uncollapse">
-            {Array.isArray(img) ? (
-              <ImageCarousel images={img} alt={alt ?? ''} category="articles" />
-            ) : (
-              <img
-                src={getUserImageUrl(img, 'articles')}
-                alt={alt ?? ''}
-                loading="lazy"
-                decoding="async"
-              />
-            )}
+            {/* #region agent log */}
+            {(() => {
+              fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  location: 'ArticlePage.tsx:71',
+                  message: 'Rendering ImageCarousel',
+                  data: { imagesCount: carouselImages.length, images: carouselImages },
+                  timestamp: Date.now(),
+                  sessionId: 'debug-session',
+                  runId: 'run1',
+                  hypothesisId: 'H',
+                }),
+              }).catch(() => {});
+              return null;
+            })()}
+            {/* #endregion */}
+            <ImageCarousel images={carouselImages} alt={alt ?? ''} category="articles" />
+          </div>
+        )}
+        {singleImage && (
+          <div className="uncollapse">
+            <img
+              src={getUserImageUrl(singleImage, 'articles')}
+              alt={alt ?? ''}
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         )}
         {subtitle && <h4>{subtitle}</h4>}
@@ -190,8 +249,8 @@ function ArticleContent({
       </time>
       <h2>{article.nameArticle}</h2>
 
-      {article.details.map((d) => (
-        <Fragment key={d.id}>{renderBlock(d)}</Fragment>
+      {article.details.map((d, index) => (
+        <Fragment key={d.id ?? `detail-${index}`}>{renderBlock(d)}</Fragment>
       ))}
     </>
   );

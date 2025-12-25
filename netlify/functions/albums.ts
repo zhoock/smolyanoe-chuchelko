@@ -229,6 +229,13 @@ export const handler: Handler = async (
       // Извлекаем user_id из токена (опционально - для публичных альбомов не требуется)
       const userId = getUserIdFromEvent(event);
 
+      console.log('[albums.ts GET] Request:', {
+        lang,
+        hasUserId: !!userId,
+        userId: userId || 'null',
+        path: event.path,
+      });
+
       // Загружаем альбомы: если есть userId - только пользовательские, иначе - публичные
       const albumsResult = await query<AlbumRow>(
         userId
@@ -244,6 +251,14 @@ export const handler: Handler = async (
              ORDER BY a.created_at DESC`,
         userId ? [lang, userId] : [lang]
       );
+
+      console.log('[albums.ts GET] Albums found:', {
+        count: albumsResult.rows.length,
+        hasUserId: !!userId,
+        firstAlbum: albumsResult.rows[0]
+          ? { albumId: albumsResult.rows[0].album_id, userId: albumsResult.rows[0].user_id }
+          : null,
+      });
 
       // Загружаем треки для каждого альбома
       const albumsWithTracks = await Promise.all(

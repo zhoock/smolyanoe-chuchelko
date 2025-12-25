@@ -7,123 +7,123 @@
     "date": "2022-09-08",
     "details": [
       {
-        "id": 1,
+        "type": "text",
         "content": "Musician. Vocalist, guitarist, and leader of the band Смоляное Чучелко. 43 years old. Moscow."
       },
       {
-        "id": 2,
+        "type": "image",
         "img": "yaroslav_zhoock",
-        "alt": "Yaroslav Zhuk.",
         "strong": "I don't like people.",
+        "alt": "Yaroslav Zhuk.",
         "content": "Especially stupid people. I laugh at them and humiliate them. It amuses me. That's why I write music that reflects the way I prefer to communicate. It's not the best way to achieve success if you're in a rock band."
       },
       {
-        "id": 3,
+        "type": "text",
         "strong": "Grunge is a punch to the face.",
         "content": "Not a martial arts philosophy. Grunge is like walking up to someone and just punching them in the face."
       },
       {
-        "id": 4,
+        "type": "text",
         "strong": "Singing grunge is like having sex with a torn-up dick.",
         "content": "It hurts, and it feels good at the same time."
       },
       {
-        "id": 5,
+        "type": "text",
         "strong": "We all must know that one day we will die.",
         "content": "Our entire existence is meaningless. Each person must create this meaning for themselves. Like Sisyphus knows that the stone he lifts to the top of the mountain will inevitably roll back down. Sisyphus knows this but continues his work because in it he finds his own path. A rebellion against the absurd. Through rebellion, we create value, we create, we become free. Only in this does the true meaning of existence manifest. Knowing in advance that you will fail, yet continuing to move forward. Like an unarmed military drummer. The madness of the brave."
       },
       {
-        "id": 6,
+        "type": "text",
         "strong": "The psychologist said my problem is that I get too fixated on what I do.",
         "content": "I think that if everyone were fixated on what they do, did it well, and didn’t poke their noses into other people’s business, people would finally receive their divine grace."
       },
       {
-        "id": 7,
+        "type": "text",
         "strong": "Those who are still trying to find meaning in my songs,",
         "content": "can barely find their own ass to wipe it."
       },
       {
-        "id": 8,
+        "type": "text",
         "strong": "I never speak seriously, and I never joke.",
         "content": "I'm like a power chord — not major and not minor. Everything I say has no coloration, so everyone is free to interpret what they hear as they see fit."
       },
       {
-        "id": 9,
+        "type": "text",
         "strong": "The underground in Russia exists.",
         "content": "A real underground. Poor and unclaimed."
       },
       {
-        "id": 10,
+        "type": "text",
         "strong": "The essence of modern sound recording is that,",
         "content": "work only begins at the mixing stage. If you want to get a truly live sound, then mixing should only be about balancing. The real work happens when the band is recording in the studio and ends when the sound engineer turns off the console."
       },
       {
-        "id": 11,
+        "type": "text",
         "strong": "All of Russian rock",
         "content": "is one big, stinking pile of pig shit."
       },
       {
-        "id": 12,
+        "type": "text",
         "strong": "I love asking what is the most important thing in music?",
         "content": "People answer: 'Innovation, style…' No one has yet said that the most important thing in music is melody. Perhaps this is the problem of modern pop culture."
       },
       {
-        "id": 13,
+        "type": "text",
         "strong": "People living in Russia,",
         "content": "display all types of depressive disorders. Simply put — they are all mentally ill."
       },
       {
-        "id": 14,
+        "type": "text",
         "strong": "I used to think about how to get laid,",
         "content": "now I think about having to die. Seems like I missed the intermediate stage where people think about something else. In reality, everyone thinks about death; they just get dogs or kids to distract their brains with something."
       },
       {
-        "id": 15,
+        "type": "text",
         "strong": "It was in elementary school.",
         "content": "We had to write a composition based on pictures from a textbook. A boy catches a fish. The boy lays the fish on his chest and sunbathes. The boy, with a fish silhouette on his chest, happily walks home. I remember how the Russian language teacher was trying to get an answer from two of my classmates. They were twin sisters: ugly and cross-eyed. Why was the middle picture missing from their compositions? They had written something like: the boy caught a fish, the boy is very happy, the boy walks home… So many years have passed, but I still remember this case. Every day I see people looking at something and not understanding what they are seeing. Not understanding the meaning of what is happening. Not understanding what is expected of them. Not understanding anything at all."
       },
       {
-        "id": 16,
+        "type": "text",
         "strong": "I've stuttered since childhood.",
         "content": "I thought that was the root of my problems. One day, I stumbled upon a portal dedicated to stuttering. Like a support group. All these tearful stories of people forced to ride public transport to the last stop because they were too shy or unable to say their stop out loud. In the end, my fellow sufferers kicked me out of that site for disrespect, profanity, and inappropriate behavior. At the very least, I realized that this was no longer my problem. I think my stuttering is divine providence — a chance for people not to hear what I might have said to them."
       },
       {
-        "id": 17,
+        "type": "text",
         "strong": "I played the violin in restaurants for two years.",
         "content": "Celtic music. No one got Celtic music, so I had to change 9 or 10 bars. By the end, I had learned to play drunk, with a cigarette in my teeth, and my violin reeked of smoke. Our last gig was a banquet for Police Day. First, we played for prosecutors and judges. Then we went down to the basement and played for the middle ranks (someone was awarded a medal there, and we were given a bottle of vodka as a gift). After that, we played in the bar for the regular officers. After that, I decided I’d had enough."
       },
       {
-        "id": 18,
+        "type": "text",
         "strong": "High-speed porn-broadband internet has proven what",
         "content": "was once only suspected — most people have absolutely nothing to say, even when they speak."
       },
       {
-        "id": 19,
+        "type": "text",
         "strong": "I don’t believe in talent or giftedness.",
         "content": "If a talented person decides to ski jump from the highest ramp without preparation, they will either break their bones or die. My first songs were terrible: the music was awful, and the lyrics were even worse. I came up with hundreds of melodies before they started sounding at least somewhat decent."
       },
       {
-        "id": 20,
+        "type": "text",
         "strong": "Station for the Control of Animal Diseases.",
         "content": "My first creative job. The smoking room was covered with photos from corporate parties, and there was a dog skeleton standing there with a cigarette in its teeth. You could also hear things like: 'Let’s go watch them drown puppies!' I tried to blend into the team: got a haircut, started wearing a suit and tie. At one corporate party, when I was laughing at other people’s jokes, an old security guard was staring at me. When we were alone, he said, 'You’re lying!' and started choking me. I got out from under his bulk, staggered into the main hall, and while everyone stared at me with bulging eyes as I rasped that the guard should be fired, he burst in, gun in hand, fired, but missed. Of course, I was upset that I nearly died twice in five minutes, but worse was realizing that I’d never fit into any team. Not this one, nor any other. And even if no one shoots at me or strangles me, who I really am will be as obvious as the sky on the sunniest summer day."
       },
       {
-        "id": 21,
+        "type": "text",
         "strong": "Human life is a game with a set of rules,",
         "content": "by strictly following which, a person gets a chance to win this game. As in any game, there is an element of randomness. No one can explain the nature of randomness. Why does a brick fall on someone’s head and not on someone else’s? This is where the roots of religion lie. Religion is categorical; at its core is punishment. But the devil himself does not suffer. He feels neither remorse nor guilt; he cannot be harmed because he is evil itself. In this sense, I see no difference between black and white. A drawing on white paper is made with charcoal. To make a drawing on a slate board, we use white chalk."
       },
       {
-        "id": 22,
+        "type": "text",
         "strong": "Everything depends entirely on how you look.",
         "content": "Once, I was completely shaved due to scars on my head and dressed all in black. A sad sight. A skinhead riding with me in a minibus mistook me for one of his own, and we spent half the night drinking and chatting. If your intelligence is above average, you can easily support any conversation. The main thing is that you look like your opponent."
       },
       {
-        "id": 23,
+        "type": "text",
         "strong": "I went to gyms starting from basements,",
         "content": "where instead of windows there were holes in the walls, and instead of a shower—a hose with cold water, and ending with places where you are given a clean, white towel for free. Nowhere else have I seen such a concentration of insecure men per square meter. But when I had my legal practice and attended my first operational meeting at the homicide division of the police at 7 AM, and saw all these guys who had recently returned from Chechnya… I sat down on a chair, and my ego said: 'Thank you all. We’re done here.'"
       },
       {
-        "id": 24,
+        "type": "text",
         "strong": "I was about 18 years old,",
         "content": "once I was recording a track at a studio at night and needed a bass part. A drunk man was sleeping on the studio floor, in the hallway — I was told he was a good bassist. I woke him up and convinced him to record the bass for me. Then we sat outside in the early summer morning, sipping beer, and he asked me: 'What do you want?' I answered: 'To become famous.' And then he said: 'Becoming famous is very simple — just put up pictures of yourself with a bare ass on every lamppost and bus stop, and by morning, you’ll be famous.' So I’m keeping that option in reserve for now."
       }
@@ -137,138 +137,145 @@
     "date": "2022-02-15",
     "details": [
       {
-        "id": 1,
+        "type": "text",
         "content": "The main difference between this album and the previous one is that it was recorded entirely live (except for the vocals). We arrived at the M.A.M.A studio, set up, tuned everything, and ran through the first two tracks three times each. We had some tea, then finished the last track, immediately picked the best takes, and I recorded guitar doubles over them. That’s it."
       },
       {
-        "id": 2,
+        "type": "text",
         "title": "vocals",
         "content": "Later, I recorded the vocals in the same studio, but it didn’t quite work out — maybe because of the mixing console (which is pretty old there), Maybe because of the microphone (which is too expensive there), or maybe I just sang poorly. So the second time, I recorded the vocals at DTH. I also recorded the backing vocals there."
       },
       {
-        "id": 3,
+        "type": "image",
         "img": "recording_vocals_album_session_23",
-        "alt": "vocal recording, album session 23.",
         "subtitle": "microphone",
+        "alt": "vocal recording, album session 23.",
         "content": "GoodFly 251"
       },
       {
-        "id": 4,
+        "type": "text",
         "title": "guitar",
         "content": "The backline on the recording was almost the same as on the first album, with the only difference being that this time, Ilya brought me a Marshall guitar cabinet with Vintage 30 speakers from DTH. After that, I ended up with Kurt Cobain’s live rig from ‘93–‘94. I had been working towards this for a long time, but when it finally happened, it almost felt wrong… But in any case, it sounded awesome. It’s not about being the “heaviest” or the “most aggressive” sound you can achieve. It’s more like the sound of a live pig being hung on a hook and slowly cut open.         Technically, a guitar isn’t supposed to make that kind of sound, because it doesn’t really resemble a typical guitar tone. But if someone doesn’t like it, they can always listen to something else. The guitar sound was captured both close to the speaker and from a distance of two meters in the room."
       },
       {
-        "id": 5,
+        "type": "image",
         "img": "recording_guitar_cabinet_album_session_23",
-        "alt": "Guitar Cabinet Recording, Album Session 23.",
         "subtitle": "guitar",
+        "alt": "Guitar Cabinet Recording, Album Session 23.",
         "content": ["Fender Mustang"]
       },
       {
-        "id": 6,
+        "type": "text",
         "subtitle": "effect pedals",
         "content": ["BOSS DS-1", "EHX Polychorus"]
       },
       {
-        "id": 7,
+        "type": "text",
         "subtitle": "amplifiers",
         "content": [
           "Mesa boogie studio preamp .22 & Crest Audio 4801 + Marshall 1960 Vintage AV 4×12 (Vintage 30)"
         ]
       },
-      { "id": 8, "subtitle": "microphones" },
       {
-        "id": 9,
+        "type": "text",
+        "subtitle": "microphones"
+      },
+      {
+        "type": "text",
         "subtitle": "close mics",
         "content": ["Neumann U67", "Sennheiser MD 421", "Beyerdynamic M160"]
       },
       {
-        "id": 10,
+        "type": "text",
         "subtitle": "room mics",
         "content": ["Vintage Ribbon RCA (2 pcs.)"]
       },
       {
-        "id": 11,
+        "type": "text",
         "subtitle": "cables",
         "content": ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"]
       },
       {
-        "id": 12,
+        "type": "text",
         "title": "drums",
         "content": "We put the drum kit together once again from the same pile that’s always lying in the corner of the studio. It’s kind of like how we used to put together our ski gear in gym class as kids — one boot from one pair, the other from another, mismatched poles, and completely different skis. On the album, the drums sound exactly like they looked. Which is to say — awesome, of course… how else? No one fixed anything, moved anything around, or added anything later. I’m a huge fan of Albini’s drum sound, so I absolutely wore Ilya out talking about it. But he’s already on the same page. So the mics were lying on the floor (if you know, you know)."
       },
       {
-        "id": 13,
+        "type": "image",
         "img": "drum_recording_album_session_23",
-        "alt": "drum recording, album session 23",
         "subtitle": "overheads",
+        "alt": "drum recording, album session 23",
         "content": ["Stereo Pair: COLES 4038 + Mono: GoodFly 251"]
       },
       {
-        "id": 14,
+        "type": "text",
         "subtitle": "Front Microphone",
         "content": ["Ribbon Stereo Microphone in Blumlein Configuration: AEA R88 MK2"]
       },
-      { "id": 15, "subtitle": "Ride Mic", "content": ["Neumann KM84"] },
       {
-        "id": 16,
+        "type": "text",
+        "subtitle": "Ride Mic",
+        "content": ["Neumann KM84"]
+      },
+      {
+        "type": "text",
         "subtitle": "Neumann TLM 170 (outside)",
         "content": ["AKG D112 (inside) + Built-in Dynamic Microphone (inside)"]
       },
       {
-        "id": 17,
+        "type": "text",
         "subtitle": "Snare Drum",
         "content": ["Shure SM57 (top & bottom)"]
       },
       {
-        "id": 18,
+        "type": "text",
         "subtitle": "Tom-Toms",
         "content": ["Sennheiser MD 421 (top), AKG 414 B-ULS (bottom)"]
       },
       {
-        "id": 19,
+        "type": "text",
         "subtitle": "Hi-Hat",
         "content": ["Hypercardioid Ribbon Microphone: Beyerdynamic M160"]
       },
       {
-        "id": 20,
+        "type": "text",
         "subtitle": "Room Mics",
         "content": ["AKG C 460 B (2 pcs. on the floor, 3–4 meters away)"]
       },
       {
-        "id": 21,
+        "type": "text",
         "title": "bass",
         "content": "I don’t have much to say about the bass. I gave the bassist a RAT, but he gave it back later. What he had under his feet — I have no idea. There was a bassist. We don’t deny that. But he self-destructed."
       },
       {
-        "id": 22,
+        "type": "image",
         "img": "bass_guitar_recording_album_session_23",
-        "alt": "Bass Cabinet Recording, Album Session 23.",
         "subtitle": "amplifiers",
+        "alt": "Bass Cabinet Recording, Album Session 23.",
         "content": ["Ampeg SVT Classic head + Ampeg SVT Classic 8×10 cab"]
       },
       {
-        "id": 23,
+        "type": "text",
         "subtitle": "microphones",
         "content": ["Neumann U87 + линия"]
       },
       {
-        "id": 24,
+        "type": "text",
         "title": "mixing",
         "content": "We mixed the album at Vintage Records. I had wanted to try mixing there for a while because it’s the only studio I know that has fully analog equipment. So we mixed the album on analog gear — no digital at all. A console that needs to warm up, weird noises in the speakers from all that old hardware, and so on. It was the first time any of us had been there, including Ilya, so it was a bit nerve-wracking, but I think we handled it well. We wrapped it up in two sessions. We left all the settings on the console overnight to avoid recalling everything, and in the morning, we finished it up. In my opinion, we kind of messed up the balance on two tracks (pushed the guitar too high), but that’s the risk of analog mixing. We knew what we were getting into. Overall, it turned out pretty good. DIY."
       },
       {
-        "id": 25,
+        "type": "image",
         "img": "mixing_process_album_session_23",
         "alt": "Mixing Process, Album Session 23"
       },
       {
-        "id": 26,
+        "type": "text",
         "title": "mastering",
         "content": "The mastering was done again at Chicago Mastering Service in Chicago, with the same guy, Matthew J Barnhart. There’s nothing to explain there — they’ll explain everything to you themselves. No questions about this stage."
       },
       {
-        "id": 27,
+        "type": "text",
         "title": "distribution",
         "content": "Still CD Baby. Two versions of the album: For all streaming services — CD quality (16-bit, 44.1 kHz files). For Apple Music and iTunes — Apple Digital Masters (24-bit audio files)."
       }
@@ -282,21 +289,21 @@
     "date": "2022-02-14",
     "details": [
       {
-        "id": 1,
+        "type": "image",
         "img": "album_cover_smolyanoe_chuchelko_23",
         "alt": "обложка альбома Смоляное чучелко — 23.",
         "content": "I decided that this time the cover should feature a photograph. I tried taking the photos myself but was not satisfied with the result. Then I started browsing Instagram, and I liked the works of Hans Jacob Haarseth. Hans lives in Norway. He is a graphic designer and photographer. I immediately realized that I had found exactly what I needed. There’s a reference to the first album cover and a hint at the meaningless work immortalized by Sisyphus."
       },
       {
-        "id": 2,
+        "type": "text",
         "content": "The location in the photograph is a small town called Vardø (quite close to the border with Russia), where he and a friend spent a few days in an abandoned campsite in an industrial zone. It was there that Hans took a series of photographs, one of which now adorns the cover."
       },
       {
-        "id": 3,
+        "type": "text",
         "content": "In creating this photo, Hans used a Lensbaby Composer. This is quite an interesting lens with the ability to tilt the optical axis, which allows you to shift the focus area in the photograph (the first such lens was created by American photographer Craig Strong using a corrugated hose from a vacuum cleaner). After that, Hans converted the image to black and white in the Canon RAW converter. A small adjustment of contrast — and that’s it."
       },
       {
-        "id": 4,
+        "type": "text",
         "content": "When adding text to the photograph, I used the Futura-ExtraBold CY font. This is the same font used for the ILFORD film logo. A little Easter egg."
       }
     ]
@@ -309,17 +316,17 @@
     "date": "2022-02-03",
     "details": [
       {
-        "id": 1,
+        "type": "image",
         "img": "album_cover_smolyanoe_chuchelko_EP",
         "alt": "обложка альбома Смоляное чучелко — смоляное чучелко.",
         "content": "The album cover was created by French artist Blexbolex (Bernard Granger) — the author of the cult book L'Imagier des gens (2008), which was awarded the title of “Best Book Design in the World” at the Leipzig Book Fair in 2009. This illustration was conceived as a “missing page” from the original edition, continuing its visual language and preserving the distinctive Blexbolex harmony of hand drawing and stencil printing."
       },
       {
-        "id": 2,
+        "type": "text",
         "content": "Bernard is a very private person, and no contact information for him is publicly available. Finding a way to reach him took quite a bit of time and effort, but the result exceeded all expectations."
       },
       {
-        "id": 3,
+        "type": "text",
         "content": "The price for the work turned out to be astronomical — roughly the cost of a used car. However, his agent liked the music and promised to pass my proposal on to Blexbolex. Just as I was about to give up on the idea, Bernard reached out to me himself. He said he had done a bit of online research on the term tar-baby (“Смоляное чучелко”) and found the concept intriguing, and he also mentioned that he enjoyed our music. In the end, we agreed on a reasonable price, and Bernard provided two cover options to choose from."
       }
     ]
@@ -332,32 +339,32 @@
     "date": "2020-07-22",
     "details": [
       {
-        "id": 1,
-        "title": "BOSS DS-1",
-        "content": "Silver screw, first version with long dash. Serial number 9900. Japan, October 1980. Main distortion.",
+        "type": "image",
         "img": "effects_pedal_BOSS_DS-1",
-        "alt": "effects pedal BOSS DS-1."
+        "title": "BOSS DS-1",
+        "alt": "effects pedal BOSS DS-1.",
+        "content": "Silver screw, first version with long dash. Serial number 9900. Japan, October 1980. Main distortion."
       },
       {
-        "id": 2,
-        "title": "RAT",
-        "content": "Small Box RAT '84 Whiteface. With LM308 chip. The Sound of the Underground. Used on bass.",
+        "type": "image",
         "img": "effects_pedal_RAT",
-        "alt": "effects pedal RAT."
+        "title": "RAT",
+        "alt": "effects pedal RAT.",
+        "content": "Small Box RAT '84 Whiteface. With LM308 chip. The Sound of the Underground. Used on bass."
       },
       {
-        "id": 3,
-        "title": "Electro-Harmonix Polychorus",
-        "content": "Early 80s. Bought in the US, went through diagnostics by Howard Davis, an EHX engineer. I'm not sure if Howard participated in creating the Polychorus, but he is the author of the Deluxe Memory Man. Both pedals came out in '81.",
+        "type": "image",
         "img": "effects_pedal_Electro_Harmonix_Polychorus",
-        "alt": "effects pedal Electro-Harmonix Polychorus."
+        "title": "Electro-Harmonix Polychorus",
+        "alt": "effects pedal Electro-Harmonix Polychorus.",
+        "content": "Early 80s. Bought in the US, went through diagnostics by Howard Davis, an EHX engineer. I'm not sure if Howard participated in creating the Polychorus, but he is the author of the Deluxe Memory Man. Both pedals came out in '81."
       },
       {
-        "id": 4,
-        "title": "Electro-Harmonix Small Clone",
-        "content": "The pedal can be identified by the date code on the potentiometer (has a plastic shaft (as a feature — the pedal doesn’t hum when touched by hand)), the last 4 digits (8339) mean year '83, week 39. Vintage pedals have a clear and smaller (3mm) LED compared to the red and larger (5mm) LED in reissues. Also, originals don’t have a dash (-) separating the words FULL and CHORUS. EHX from '79 to the early '80s used chips: MN3007 or RETICON SAD1024 (the rarest and most in-demand due to being used by 'you-know-who'). But of course, the point is just that the reissue sounds like crap.",
+        "type": "image",
         "img": "effects_pedal_Electro-Harmonix_Small_Clone",
-        "alt": "effects pedal Electro-Harmonix Small Clone."
+        "title": "Electro-Harmonix Small Clone",
+        "alt": "effects pedal Electro-Harmonix Small Clone.",
+        "content": "The pedal can be identified by the date code on the potentiometer (has a plastic shaft (as a feature — the pedal doesn’t hum when touched by hand)), the last 4 digits (8339) mean year '83, week 39. Vintage pedals have a clear and smaller (3mm) LED compared to the red and larger (5mm) LED in reissues. Also, originals don’t have a dash (-) separating the words FULL and CHORUS. EHX from '79 to the early '80s used chips: MN3007 or RETICON SAD1024 (the rarest and most in-demand due to being used by 'you-know-who'). But of course, the point is just that the reissue sounds like crap."
       }
     ]
   },
@@ -369,73 +376,93 @@
     "img": "recording_album_EP_equipment",
     "details": [
       {
-        "id": 1,
-        "title": "Mixing console",
-        "content": ["Solid State Logic SSL 6000 E (32 channels)"],
+        "type": "image",
         "img": "mixing_console_Solid_State_Logic_SSL_6000_E",
-        "alt": "Solid State Logic SSL 6000 E console (32 channels)."
+        "title": "Mixing console",
+        "alt": "Solid State Logic SSL 6000 E console (32 channels).",
+        "content": ["Solid State Logic SSL 6000 E (32 channels)"]
       },
       {
-        "id": 2,
+        "type": "image",
+        "img": "drum_recording_album_session_EP",
         "title": "Drums",
         "subtitle": "Ambient mic",
-        "content": ["Neumann TLM 170"],
-        "img": "drum_recording_album_session_EP",
-        "alt": "drum recording, EP album session."
+        "alt": "drum recording, EP album session.",
+        "content": ["Neumann TLM 170"]
       },
-      { "id": 3, "subtitle": "Overheads", "content": ["COLES 4038"] },
-      { "id": 4, "subtitle": "Front mic", "content": ["AKG C24"] },
-      { "id": 5, "subtitle": "Ride", "content": ["Neumann KM84"] },
       {
-        "id": 6,
+        "type": "text",
+        "subtitle": "Overheads",
+        "content": ["COLES 4038"]
+      },
+      {
+        "type": "text",
+        "subtitle": "Front mic",
+        "content": ["AKG C24"]
+      },
+      {
+        "type": "text",
+        "subtitle": "Ride",
+        "content": ["Neumann KM84"]
+      },
+      {
+        "type": "text",
         "subtitle": "Kick drum",
         "content": ["Neumann TLM 170 deep-black ones (inside)", "Sennheiser MKH 40 (outside)"]
       },
       {
-        "id": 7,
+        "type": "text",
         "subtitle": "Snare drum",
         "content": ["Shure SM57 (top)", "AKG 414 B-ULS (top)"]
       },
       {
-        "id": 8,
+        "type": "text",
         "subtitle": "Toms",
         "content": ["AKG 414 B-ULS (top)", "Shure SM57 (top)"]
       },
-      { "id": 9, "subtitle": "Hi-hat", "content": ["AKG C451"] },
       {
-        "id": 10,
+        "type": "text",
+        "subtitle": "Hi-hat",
+        "content": ["AKG C451"]
+      },
+      {
+        "type": "image",
+        "img": "bass_guitar_recording_album_session_EP",
         "title": "Bass",
         "subtitle": "Guitars",
-        "content": ["Gibson Thunderbird", "Fender Jazz Bass"],
-        "img": "bass_guitar_recording_album_session_EP",
-        "alt": "bass guitar recording, EP album session."
+        "alt": "bass guitar recording, EP album session.",
+        "content": ["Gibson Thunderbird", "Fender Jazz Bass"]
       },
-      { "id": 11, "subtitle": "Effects pedals", "content": ["Rat"] },
       {
-        "id": 12,
+        "type": "text",
+        "subtitle": "Effects pedals",
+        "content": ["Rat"]
+      },
+      {
+        "type": "text",
         "subtitle": "Effects pedals",
         "content": ["Ampeg SVT Classic head + Ampeg SVT Classic 8×10 cab"]
       },
       {
-        "id": 13,
+        "type": "text",
         "subtitle": "Microphones",
         "content": ["GoodFly C12", "AKG C24 or Shure SM7 (room)"]
       },
       {
-        "id": 14,
+        "type": "image",
+        "img": "guitar_recording_album_session_EP",
         "title": "Guitar",
         "subtitle": "Guitars",
-        "content": ["Fender Mustang", "Fender Jaguar", "Takamine acoustic guitar"],
-        "img": "guitar_recording_album_session_EP",
-        "alt": "guitar recording, EP album session."
+        "alt": "guitar recording, EP album session.",
+        "content": ["Fender Mustang", "Fender Jaguar", "Takamine acoustic guitar"]
       },
       {
-        "id": 15,
+        "type": "text",
         "subtitle": "Effects pedals",
         "content": ["BOSS DS-1", "EHX Polychorus", "EHX Small Clone"]
       },
       {
-        "id": 16,
+        "type": "text",
         "subtitle": "Amplifiers",
         "content": [
           "Fender Twin Reverb (Black Face)",
@@ -443,14 +470,17 @@
           "(Celestion G12M-25 Greenback)& Marshall 6960 ALE 4x12 (Celestion G12T-75)"
         ]
       },
-      { "id": 17, "subtitle": "Microphones" },
       {
-        "id": 18,
+        "type": "text",
+        "subtitle": "Microphones"
+      },
+      {
+        "type": "text",
         "subtitle": "Fender Twin Reverb",
         "content": ["Shure SM57", "Coles 4038", "Neumann U67 (room)"]
       },
       {
-        "id": 19,
+        "type": "text",
         "subtitle": "Mesa",
         "content": [
           "Electro-Voice PL20 (Marshall 6960 ALE 4x12)",
@@ -460,26 +490,30 @@
         ]
       },
       {
-        "id": 20,
+        "type": "text",
         "subtitle": "Acoustic guitar",
         "content": ["Октава МК-012", "AKG SolidTube"]
       },
       {
-        "id": 21,
+        "type": "text",
         "subtitle": "Cables",
         "content": ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"]
       },
       {
-        "id": 22,
+        "type": "image",
+        "img": "mixing_process_album_session_EP",
         "title": "Vocals",
         "subtitle": "Microphone",
-        "content": ["Joemeek jm47 Black"],
-        "img": "mixing_process_album_session_EP",
-        "alt": "mixing process, EP album session."
+        "alt": "mixing process, EP album session.",
+        "content": ["Joemeek jm47 Black"]
       },
-      { "id": 23, "subtitle": "Preamp", "content": ["Nagra IV"] },
       {
-        "id": 24,
+        "type": "text",
+        "subtitle": "Preamp",
+        "content": ["Nagra IV"]
+      },
+      {
+        "type": "text",
         "subtitle": "Effects processor",
         "content": ["Lexicon 300 Digital Effects System"]
       }

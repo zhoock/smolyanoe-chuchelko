@@ -502,6 +502,23 @@ ON synced_lyrics (user_id, album_id, track_id, lang)
 WHERE user_id IS NOT NULL;
 `;
 
+const MIGRATION_017 = `
+-- Миграция: Добавление поля is_draft в таблицу articles
+-- Позволяет сохранять статьи как черновики
+
+ALTER TABLE articles
+ADD COLUMN IF NOT EXISTS is_draft BOOLEAN DEFAULT false;
+
+-- Индекс для быстрого поиска черновиков
+CREATE INDEX IF NOT EXISTS idx_articles_is_draft ON articles(is_draft);
+
+-- Комментарий
+COMMENT ON COLUMN articles.is_draft IS 'Черновик статьи (true) или опубликованная статья (false)';
+
+-- Устанавливаем is_draft = false для всех существующих статей (они уже опубликованы)
+UPDATE articles SET is_draft = false WHERE is_draft IS NULL;
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -516,6 +533,7 @@ const MIGRATIONS: Record<string, string> = {
   '013_direct_update_album_covers.sql': MIGRATION_013,
   '014_force_all_covers.sql': MIGRATION_014,
   '015_fix_synced_lyrics_null_duplicates.sql': MIGRATION_015,
+  '017_add_is_draft_to_articles.sql': MIGRATION_017,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -656,6 +674,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '013_direct_update_album_covers.sql',
       '014_force_all_covers.sql',
       '015_fix_synced_lyrics_null_duplicates.sql',
+      '017_add_is_draft_to_articles.sql',
     ];
 
     const results: MigrationResult[] = [];

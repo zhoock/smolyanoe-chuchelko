@@ -26,7 +26,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getUserImageUrl, formatDate } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
@@ -38,6 +38,12 @@ import {
   selectAlbumsData,
   selectAlbumsError,
 } from '@entities/album';
+import {
+  fetchArticles,
+  selectArticlesStatus,
+  selectArticlesData,
+  selectArticlesError,
+} from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
 import { loadAuthorshipFromStorage, loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
@@ -46,9 +52,10 @@ import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
 import { PreviewLyricsModal } from './components/PreviewLyricsModal';
 import { EditAlbumModal, type AlbumFormData } from './components/EditAlbumModal';
+import { EditArticleModal } from './components/EditArticleModal';
 import { SyncLyricsModal } from './components/SyncLyricsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
-import type { IAlbums } from '@models';
+import type { IAlbums, IArticles } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
   transformAlbumsToAlbumData,
@@ -123,13 +130,21 @@ function UserDashboard() {
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
+  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
+  const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
+  const articlesFromStore = useAppSelector((state) => selectArticlesData(state, lang));
   const user = getUser();
 
   const [activeTab, setActiveTab] = useState<'albums' | 'posts' | 'payment-settings'>('albums');
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
+  const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
+  const [editArticleModal, setEditArticleModal] = useState<{
+    isOpen: boolean;
+    article: IArticles | null;
+  } | null>(null);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(false);
   const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
   const [uploadProgress, setUploadProgress] = useState<{ [albumId: string]: number }>({});
@@ -172,6 +187,7 @@ function UserDashboard() {
     isOpen: boolean;
     albumId?: string;
   } | null>(null);
+
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean;
     title?: string;
@@ -205,6 +221,18 @@ function UserDashboard() {
       });
     }
   }, [dispatch, lang, albumsStatus]);
+
+  // Загрузка статей при переключении на вкладку posts
+  useEffect(() => {
+    if (activeTab === 'posts' && (articlesStatus === 'idle' || articlesStatus === 'failed')) {
+      dispatch(fetchArticles({ lang })).catch((error: any) => {
+        if (error?.name === 'ConditionError') {
+          return;
+        }
+        console.error('Error fetching articles:', error);
+      });
+    }
+  }, [dispatch, lang, articlesStatus, activeTab]);
 
   // Преобразование данных из IAlbums[] в AlbumData[] и загрузка статусов треков
   useEffect(() => {
@@ -1429,6 +1457,140 @@ function UserDashboard() {
                       </button>
                     </div>
                   </>
+                ) : activeTab === 'posts' ? (
+                  <>
+                    <h3 className="user-dashboard__section-title">
+                      {ui?.dashboard?.tabs?.posts ?? 'Posts'}
+                    </h3>
+                    <div className="user-dashboard__section">
+                      {articlesStatus === 'loading' ? (
+                        <div className="user-dashboard__loading">
+                          {lang === 'ru' ? 'Загрузка...' : 'Loading...'}
+                        </div>
+                      ) : articlesError ? (
+                        <div className="user-dashboard__error">
+                          {lang === 'ru' ? 'Ошибка загрузки статей' : 'Error loading articles'}:{' '}
+                          {articlesError}
+                        </div>
+                      ) : articlesFromStore && articlesFromStore.length > 0 ? (
+                        <div className="user-dashboard__albums-list">
+                          {articlesFromStore.map((article, index) => {
+                            const isExpanded = expandedArticleId === article.articleId;
+                            return (
+                              <React.Fragment key={article.articleId}>
+                                <div
+                                  className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
+                                  onClick={() =>
+                                    setExpandedArticleId(isExpanded ? null : article.articleId)
+                                  }
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setExpandedArticleId(isExpanded ? null : article.articleId);
+                                    }
+                                  }}
+                                  aria-label={isExpanded ? 'Collapse article' : 'Expand article'}
+                                >
+                                  <div className="user-dashboard__album-thumbnail">
+                                    {article.img ? (
+                                      <img
+                                        src={getUserImageUrl(article.img, 'articles')}
+                                        alt={article.nameArticle}
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={(e) => {
+                                          const img = e.target as HTMLImageElement;
+                                          const currentSrc = img.src;
+                                          if (!currentSrc.includes('&_retry=')) {
+                                            img.src = `${currentSrc}&_retry=${Date.now()}`;
+                                          }
+                                        }}
+                                      />
+                                    ) : (
+                                      <img
+                                        src="/images/album-placeholder.png"
+                                        alt={article.nameArticle}
+                                      />
+                                    )}
+                                  </div>
+                                  <div className="user-dashboard__album-info">
+                                    <div className="user-dashboard__album-title">
+                                      {article.nameArticle}
+                                    </div>
+                                    {article.date ? (
+                                      <div className="user-dashboard__album-date">
+                                        {formatDate(article.date)}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <div
+                                    className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
+                                  >
+                                    {isExpanded ? '⌃' : '›'}
+                                  </div>
+                                </div>
+
+                                {isExpanded && (
+                                  <div className="user-dashboard__album-expanded">
+                                    {article.description && (
+                                      <div className="user-dashboard__article-description">
+                                        {article.description}
+                                      </div>
+                                    )}
+                                    <div className="user-dashboard__article-actions">
+                                      <button
+                                        type="button"
+                                        className="user-dashboard__edit-button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditArticleModal({
+                                            isOpen: true,
+                                            article: article,
+                                          });
+                                        }}
+                                      >
+                                        {lang === 'ru' ? 'Редактировать' : 'Edit'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {index < articlesFromStore.length - 1 && (
+                                  <div className="user-dashboard__album-divider"></div>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="user-dashboard__posts-prompt">
+                          <div className="user-dashboard__posts-prompt-text">
+                            {ui?.dashboard?.writeAndPublishArticles ?? 'Write and publish articles'}
+                          </div>
+                          <button
+                            type="button"
+                            className="user-dashboard__new-post-button"
+                            onClick={() => {
+                              // TODO: Implement create new article
+                              setAlertModal({
+                                isOpen: true,
+                                title: lang === 'ru' ? 'Информация' : 'Info',
+                                message:
+                                  lang === 'ru'
+                                    ? 'Создание новой статьи будет реализовано позже'
+                                    : 'Creating new articles will be implemented later',
+                                variant: 'info',
+                              });
+                            }}
+                          >
+                            {ui?.dashboard?.newPost ?? 'New Post'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <>
                     <h3 className="user-dashboard__section-title">
@@ -1439,7 +1601,22 @@ function UserDashboard() {
                         <div className="user-dashboard__posts-prompt-text">
                           {ui?.dashboard?.writeAndPublishArticles ?? 'Write and publish articles'}
                         </div>
-                        <button type="button" className="user-dashboard__new-post-button">
+                        <button
+                          type="button"
+                          className="user-dashboard__new-post-button"
+                          onClick={() => {
+                            // TODO: Implement create new article
+                            setAlertModal({
+                              isOpen: true,
+                              title: lang === 'ru' ? 'Информация' : 'Info',
+                              message:
+                                lang === 'ru'
+                                  ? 'Создание новой статьи будет реализовано позже'
+                                  : 'Creating new articles will be implemented later',
+                              variant: 'info',
+                            });
+                          }}
+                        >
                           {ui?.dashboard?.newPost ?? 'New Post'}
                         </button>
                       </div>
@@ -1629,6 +1806,15 @@ function UserDashboard() {
           message={alertModal.message}
           variant={alertModal.variant}
           onClose={() => setAlertModal(null)}
+        />
+      )}
+
+      {/* Edit Article Modal */}
+      {editArticleModal && editArticleModal.article && (
+        <EditArticleModal
+          isOpen={editArticleModal.isOpen}
+          article={editArticleModal.article}
+          onClose={() => setEditArticleModal(null)}
         />
       )}
     </>

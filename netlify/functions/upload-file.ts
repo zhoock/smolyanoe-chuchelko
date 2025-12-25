@@ -140,7 +140,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Ищем все файлы в папке profile, чтобы удалить старые версии (например, profile.png, если загружаем profile.jpg)
     const { data: existingFiles } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
-      .list(`${targetUserId}/${category}`, {
+      .list(`users/${targetUserId}/${category}`, {
         limit: 100, // Получаем все файлы в папке
       });
 

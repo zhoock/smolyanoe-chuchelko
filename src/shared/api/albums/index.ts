@@ -40,11 +40,19 @@ export function getImageUrl(
   format: string = '.jpg',
   options?: ImageUrlOptions
 ): string {
+  // Если это уже полный URL (http:// или https://), возвращаем как есть
+  if (img.startsWith('http://') || img.startsWith('https://')) {
+    return img;
+  }
+
   const { userId, category } = options || {};
+
+  // Проверяем, есть ли уже расширение в имени файла
+  const hasExt = /\.(jpg|jpeg|png|webp|gif)$/i.test(img);
 
   // Если указан userId и category
   if (userId && category) {
-    const fileName = `${img}${format}`;
+    const fileName = hasExt ? img : `${img}${format}`;
 
     // Используем Supabase Storage, если включено
     if (shouldUseSupabaseStorage(options)) {
@@ -56,7 +64,7 @@ export function getImageUrl(
   }
 
   // Старый формат для обратной совместимости
-  return `/images/${img}${format}`;
+  return `/images/${hasExt ? img : `${img}${format}`}`;
 }
 
 /**
