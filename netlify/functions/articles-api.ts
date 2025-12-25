@@ -118,7 +118,9 @@ export const handler: Handler = async (
   }
 
   try {
-    const userId = getUserIdFromEvent(event);
+    // Для GET запросов авторизация не требуется - все статьи публичные
+    // Для POST/PUT/DELETE требуется авторизация (админка)
+    const userId = event.httpMethod === 'GET' ? null : getUserIdFromEvent(event);
 
     if (event.httpMethod === 'GET') {
       const { lang } = event.queryStringParameters || {};
@@ -127,17 +129,14 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Получаем статьи пользователя (обязательно требуется авторизация)
-      if (!userId) {
-        return createErrorResponse(401, 'Unauthorized. Authentication required.');
+      // Проверяем, нужно ли включать черновики (для редактирования в админке, требует авторизации)
+      const includeDrafts = event.queryStringParameters?.includeDrafts === 'true';
+      if (includeDrafts && !userId) {
+        return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
       }
 
-      // Проверяем, нужно ли включать черновики (для редактирования)
-      const includeDrafts = event.queryStringParameters?.includeDrafts === 'true';
-
-      // Важно: используем DISTINCT ON для исключения дубликатов по article_id
-      // По умолчанию получаем только опубликованные статьи, но можно включить черновики
-      // Сортируем по updated_at DESC, чтобы получить последнюю версию статьи
+      // Возвращаем все статьи для указанного языка
+      // Черновики включаются только если includeDrafts=true и пользователь авторизован
       const articlesResult = await query<ArticleRow>(
         `SELECT DISTINCT ON (article_id)
           id,
@@ -151,10 +150,9 @@ export const handler: Handler = async (
           is_draft
         FROM articles
         WHERE lang = $1
-          AND user_id = $2
           ${includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)'}
         ORDER BY article_id, updated_at DESC`,
-        [lang, userId]
+        [lang]
       );
 
       const articles = articlesResult.rows.map(mapArticleToApiFormat);

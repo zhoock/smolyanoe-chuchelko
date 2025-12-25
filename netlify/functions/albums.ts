@@ -226,39 +226,18 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Извлекаем user_id из токена (опционально - для публичных альбомов не требуется)
-      const userId = getUserIdFromEvent(event);
+      // Для GET запросов авторизация не требуется - все альбомы публичные
+      // Для POST/PUT/DELETE требуется авторизация (админка)
+      const userId = event.httpMethod === 'GET' ? null : getUserIdFromEvent(event);
 
-      console.log('[albums.ts GET] Request:', {
-        lang,
-        hasUserId: !!userId,
-        userId: userId || 'null',
-        path: event.path,
-      });
-
-      // Загружаем альбомы: если есть userId - только пользовательские, иначе - публичные
+      // Возвращаем все альбомы для указанного языка
       const albumsResult = await query<AlbumRow>(
-        userId
-          ? `SELECT a.*
-             FROM albums a
-             WHERE a.lang = $1 
-               AND a.user_id = $2
-             ORDER BY a.created_at DESC`
-          : `SELECT a.*
-             FROM albums a
-             WHERE a.lang = $1 
-               AND a.user_id IS NULL
-             ORDER BY a.created_at DESC`,
-        userId ? [lang, userId] : [lang]
+        `SELECT a.*
+         FROM albums a
+         WHERE a.lang = $1 
+         ORDER BY a.created_at DESC`,
+        [lang]
       );
-
-      console.log('[albums.ts GET] Albums found:', {
-        count: albumsResult.rows.length,
-        hasUserId: !!userId,
-        firstAlbum: albumsResult.rows[0]
-          ? { albumId: albumsResult.rows[0].album_id, userId: albumsResult.rows[0].user_id }
-          : null,
-      });
 
       // Загружаем треки для каждого альбома
       const albumsWithTracks = await Promise.all(
@@ -267,7 +246,6 @@ export const handler: Handler = async (
             // Загружаем треки по строковому album_id, а не по UUID
             // Это позволяет находить треки для всех языковых версий альбома
             // Используем подзапрос с ROW_NUMBER для исключения дубликатов
-            // ВАЖНО: Загружаем треки из того же альбома (по album_id, lang и user_id)
             const tracksResult = await query<TrackRow>(
               `SELECT 
                 ranked.track_id,
@@ -296,11 +274,10 @@ export const handler: Handler = async (
                 INNER JOIN albums a ON t.album_id = a.id
                 WHERE a.album_id = $1
                   AND a.lang = $2
-                  ${userId ? 'AND a.user_id = $3' : 'AND a.user_id IS NULL'}
               ) ranked
               WHERE ranked.rn = 1
               ORDER BY ranked.order_index ASC`,
-              userId ? [album.album_id, album.lang, userId] : [album.album_id, album.lang]
+              [album.album_id, album.lang]
             );
 
             // 🔍 DEBUG: Логируем треки из БД
@@ -321,7 +298,7 @@ export const handler: Handler = async (
             }
 
             // Загружаем синхронизации из таблицы synced_lyrics для всех треков одним запросом
-            // Используем DISTINCT ON для приоритета пользовательских синхронизаций
+            // Используем DISTINCT ON для получения одной записи на трек
             const trackIds = tracksResult.rows.map((t) => t.track_id);
             let syncedLyricsMap = new Map<
               string,
@@ -336,13 +313,10 @@ export const handler: Handler = async (
                     albumId: album.album_id,
                     trackIds: trackIds.slice(0, 5), // Логируем только первые 5
                     lang,
-                    userId,
                   }
                 );
                 // Загружаем все синхронизации для всех треков альбома одним запросом
-                // Используем DISTINCT ON для получения одной записи на трек (приоритет: пользовательские)
-                // ВАЖНО: DISTINCT ON требует, чтобы первая колонка в ORDER BY была такой же, как в DISTINCT ON
-                // ВАЖНО: Загружаем синхронизированные тексты из того же альбома (по album_id, lang и user_id)
+                // Используем DISTINCT ON для получения одной записи на трек
                 const syncedLyricsResult = await query<{
                   track_id: string;
                   synced_lyrics: unknown;
@@ -352,11 +326,8 @@ export const handler: Handler = async (
                      track_id, synced_lyrics, authorship
                    FROM synced_lyrics 
                    WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
-                     ${userId ? 'AND user_id = $4' : 'AND user_id IS NULL'}
                    ORDER BY track_id, updated_at DESC NULLS LAST`,
-                  userId
-                    ? [album.album_id, trackIds, lang, userId]
-                    : [album.album_id, trackIds, lang]
+                  [album.album_id, trackIds, lang]
                 );
 
                 // Создаём Map для быстрого поиска
