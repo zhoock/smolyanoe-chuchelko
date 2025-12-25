@@ -226,20 +226,23 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Извлекаем user_id из токена (обязательно требуется авторизация)
-      const userId = requireAuth(event);
-      if (!userId) {
-        return createErrorResponse(401, 'Unauthorized. Authentication required.');
-      }
+      // Извлекаем user_id из токена (опционально - для публичных альбомов не требуется)
+      const userId = getUserIdFromEvent(event);
 
-      // Загружаем только альбомы пользователя
+      // Загружаем альбомы: если есть userId - только пользовательские, иначе - публичные
       const albumsResult = await query<AlbumRow>(
-        `SELECT a.*
-        FROM albums a
-        WHERE a.lang = $1 
-          AND a.user_id = $2
-        ORDER BY a.created_at DESC`,
-        [lang, userId]
+        userId
+          ? `SELECT a.*
+             FROM albums a
+             WHERE a.lang = $1 
+               AND a.user_id = $2
+             ORDER BY a.created_at DESC`
+          : `SELECT a.*
+             FROM albums a
+             WHERE a.lang = $1 
+               AND a.user_id IS NULL
+             ORDER BY a.created_at DESC`,
+        userId ? [lang, userId] : [lang]
       );
 
       // Загружаем треки для каждого альбома
@@ -278,11 +281,11 @@ export const handler: Handler = async (
                 INNER JOIN albums a ON t.album_id = a.id
                 WHERE a.album_id = $1
                   AND a.lang = $2
-                  AND a.user_id = $3
+                  ${userId ? 'AND a.user_id = $3' : 'AND a.user_id IS NULL'}
               ) ranked
               WHERE ranked.rn = 1
               ORDER BY ranked.order_index ASC`,
-              [album.album_id, album.lang, album.user_id]
+              userId ? [album.album_id, album.lang, userId] : [album.album_id, album.lang]
             );
 
             // 🔍 DEBUG: Логируем треки из БД
@@ -334,9 +337,11 @@ export const handler: Handler = async (
                      track_id, synced_lyrics, authorship
                    FROM synced_lyrics 
                    WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
-                     AND user_id = $4
+                     ${userId ? 'AND user_id = $4' : 'AND user_id IS NULL'}
                    ORDER BY track_id, updated_at DESC NULLS LAST`,
-                  [album.album_id, trackIds, lang, album.user_id]
+                  userId
+                    ? [album.album_id, trackIds, lang, userId]
+                    : [album.album_id, trackIds, lang]
                 );
 
                 // Создаём Map для быстрого поиска
