@@ -183,6 +183,46 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
         }
       }
 
+      // Парсим synced_lyrics, если это строка (PostgreSQL может вернуть JSONB как строку)
+      let syncedLyrics: unknown = undefined;
+      if (track.synced_lyrics) {
+        if (typeof track.synced_lyrics === 'string') {
+          try {
+            syncedLyrics = JSON.parse(track.synced_lyrics);
+          } catch (error) {
+            console.error('❌ Error parsing track.synced_lyrics as string:', error);
+            syncedLyrics = track.synced_lyrics;
+          }
+        } else {
+          syncedLyrics = track.synced_lyrics;
+        }
+      }
+
+      // #region agent log
+      if (syncedLyrics) {
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'albums.ts:193',
+            message: 'Track syncedLyrics in mapAlbumToApiFormat',
+            data: {
+              trackId: track.track_id,
+              syncedLyricsType: Array.isArray(syncedLyrics) ? 'array' : typeof syncedLyrics,
+              syncedLyricsLength: Array.isArray(syncedLyrics) ? syncedLyrics.length : 0,
+              hasStartTimeGreaterThanZero: Array.isArray(syncedLyrics)
+                ? syncedLyrics.some((line: any) => line.startTime > 0)
+                : false,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'E',
+          }),
+        }).catch(() => {});
+      }
+      // #endregion
+
       return {
         id: track.track_id,
         title: track.title,
@@ -190,7 +230,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
         src: track.src || undefined,
         content: track.content || undefined,
         authorship: track.authorship || undefined,
-        syncedLyrics: track.synced_lyrics || undefined,
+        syncedLyrics: syncedLyrics || undefined,
       };
     }),
   };
@@ -400,6 +440,34 @@ export const handler: Handler = async (
             const tracksWithSyncedLyrics = tracksResult.rows.map((track) => {
               const syncedData = syncedLyricsMap.get(track.track_id);
               if (syncedData) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    location: 'albums.ts:401',
+                    message: 'Merging synced lyrics with track',
+                    data: {
+                      albumId: album.album_id,
+                      trackId: track.track_id,
+                      hasSyncedData: !!syncedData,
+                      syncedLyricsType: Array.isArray(syncedData.synced_lyrics)
+                        ? 'array'
+                        : typeof syncedData.synced_lyrics,
+                      syncedLyricsLength: Array.isArray(syncedData.synced_lyrics)
+                        ? syncedData.synced_lyrics.length
+                        : 0,
+                      hasStartTimeGreaterThanZero: Array.isArray(syncedData.synced_lyrics)
+                        ? syncedData.synced_lyrics.some((line: any) => line.startTime > 0)
+                        : false,
+                    },
+                    timestamp: Date.now(),
+                    sessionId: 'debug-session',
+                    runId: 'run1',
+                    hypothesisId: 'C',
+                  }),
+                }).catch(() => {});
+                // #endregion
                 return {
                   ...track,
                   synced_lyrics: syncedData.synced_lyrics,
@@ -407,6 +475,25 @@ export const handler: Handler = async (
                   authorship: syncedData.authorship || track.authorship,
                 };
               }
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  location: 'albums.ts:410',
+                  message: 'Track has no synced lyrics data',
+                  data: {
+                    albumId: album.album_id,
+                    trackId: track.track_id,
+                    syncedLyricsMapSize: syncedLyricsMap.size,
+                  },
+                  timestamp: Date.now(),
+                  sessionId: 'debug-session',
+                  runId: 'run1',
+                  hypothesisId: 'D',
+                }),
+              }).catch(() => {});
+              // #endregion
               return track;
             });
 

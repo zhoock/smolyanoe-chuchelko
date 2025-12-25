@@ -715,10 +715,11 @@ function UserDashboard() {
       const album = albumsData.find((a) => a.id === albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
       if (track) {
-        // Загружаем текст и authorship из БД для отображения в модальном окне
-        const [storedText, storedAuthorship] = await Promise.all([
+        // Загружаем текст, authorship и syncedLyrics из БД для отображения в модальном окне
+        const [storedText, storedAuthorship, storedSyncedLyrics] = await Promise.all([
           loadTrackTextFromDatabase(albumId, trackId, lang).catch(() => null),
           loadAuthorshipFromStorage(albumId, trackId, lang).catch(() => null),
+          loadSyncedLyricsFromStorage(albumId, trackId, lang).catch(() => null),
         ]);
 
         const cachedAuthorship = getCachedAuthorship(albumId, trackId, lang);
@@ -735,12 +736,81 @@ function UserDashboard() {
             fallbackTextLength: fallbackText.length,
             finalTextLength: finalText.length,
             loadedFromDb: !!storedText,
+            hasStoredSyncedLyrics: !!storedSyncedLyrics,
+            storedSyncedLyricsLength: storedSyncedLyrics?.length || 0,
           });
         }
 
         // Проверяем наличие синхронизированного текста
+        // Используем загруженные данные из БД, если они есть, иначе используем данные из track
+        const syncedLyrics = storedSyncedLyrics || track.syncedLyrics;
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'UserDashboard.tsx:742',
+            message: 'Checking hasSyncedLyrics',
+            data: {
+              albumId,
+              trackId,
+              hasTrackSyncedLyrics: !!track.syncedLyrics,
+              hasStoredSyncedLyrics: !!storedSyncedLyrics,
+              syncedLyricsType: Array.isArray(syncedLyrics) ? 'array' : typeof syncedLyrics,
+              syncedLyricsLength: Array.isArray(syncedLyrics) ? syncedLyrics.length : 0,
+              syncedLyricsSample:
+                Array.isArray(syncedLyrics) && syncedLyrics.length > 0
+                  ? syncedLyrics.slice(0, 3).map((line: any) => ({
+                      hasStartTime: 'startTime' in line,
+                      startTime: line.startTime,
+                      startTimeType: typeof line.startTime,
+                      hasText: 'text' in line,
+                    }))
+                  : null,
+              lyricsStatus: track.lyricsStatus,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }),
+        }).catch(() => {});
+        // #endregion
+
+        // Проверяем наличие синхронизированного текста
+        // Текст считается синхронизированным только если есть хотя бы одна строка с startTime > 0
+        // (строки с startTime === 0 считаются несинхронизированными)
         const hasSyncedLyrics =
-          track.syncedLyrics && track.syncedLyrics.some((line) => line.startTime > 0);
+          Array.isArray(syncedLyrics) &&
+          syncedLyrics.length > 0 &&
+          syncedLyrics.some((line) => line.startTime > 0);
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'UserDashboard.tsx:785',
+            message: 'hasSyncedLyrics result - fixed check',
+            data: {
+              albumId,
+              trackId,
+              hasSyncedLyrics,
+              willShowPreview: hasSyncedLyrics,
+              willShowSync: !hasSyncedLyrics,
+              syncedLyricsLength: Array.isArray(syncedLyrics) ? syncedLyrics.length : 0,
+              hasStartTimeGreaterThanZero: Array.isArray(syncedLyrics)
+                ? syncedLyrics.some((line) => line.startTime > 0)
+                : false,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }).catch(() => {});
+        // #endregion
 
         setEditLyricsModal({
           isOpen: true,
@@ -1391,14 +1461,60 @@ function UserDashboard() {
                                             {getLyricsStatusText(track.lyricsStatus)}
                                           </div>
                                           <div className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions">
-                                            {getLyricsActions(
-                                              track.lyricsStatus,
-                                              track.syncedLyrics
-                                                ? track.syncedLyrics.some(
-                                                    (line) => line.startTime > 0
-                                                  )
-                                                : false
-                                            ).map((action, idx) => (
+                                            {(() => {
+                                              // Вычисляем hasSyncedLyrics для логирования
+                                              const hasSyncedLyrics =
+                                                Array.isArray(track.syncedLyrics) &&
+                                                track.syncedLyrics.length > 0 &&
+                                                track.syncedLyrics.some(
+                                                  (line) => line.startTime > 0
+                                                );
+
+                                              // #region agent log
+                                              if (track.lyricsStatus === 'synced') {
+                                                fetch(
+                                                  'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
+                                                  {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                      location: 'UserDashboard.tsx:1463',
+                                                      message:
+                                                        'Checking hasSyncedLyrics in dashboard',
+                                                      data: {
+                                                        albumId: album.albumId,
+                                                        trackId: track.id,
+                                                        lyricsStatus: track.lyricsStatus,
+                                                        hasSyncedLyrics: !!track.syncedLyrics,
+                                                        syncedLyricsType: Array.isArray(
+                                                          track.syncedLyrics
+                                                        )
+                                                          ? 'array'
+                                                          : typeof track.syncedLyrics,
+                                                        syncedLyricsLength: Array.isArray(
+                                                          track.syncedLyrics
+                                                        )
+                                                          ? track.syncedLyrics.length
+                                                          : 0,
+                                                        hasStartTimeGreaterThanZero:
+                                                          hasSyncedLyrics,
+                                                        willShowPrev: hasSyncedLyrics,
+                                                      },
+                                                      timestamp: Date.now(),
+                                                      sessionId: 'debug-session',
+                                                      runId: 'run1',
+                                                      hypothesisId: 'F',
+                                                    }),
+                                                  }
+                                                ).catch(() => {});
+                                              }
+                                              // #endregion
+
+                                              return getLyricsActions(
+                                                track.lyricsStatus,
+                                                hasSyncedLyrics
+                                              );
+                                            })().map((action, idx) => (
                                               <button
                                                 key={idx}
                                                 type="button"

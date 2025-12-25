@@ -91,6 +91,7 @@ export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
       lyricsText: track.content, // Используем текст из альбома, если есть
       src: track.src,
       authorship: (track as any).authorship || undefined,
+      syncedLyrics: track.syncedLyrics || undefined, // Добавляем syncedLyrics из альбома
     };
   });
 
