@@ -170,16 +170,29 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
     buttons,
     details,
     lang: album.lang,
-    tracks: tracks.map((track) => ({
-      id: track.track_id,
-      title: track.title,
+    tracks: tracks.map((track) => {
       // PostgreSQL DECIMAL возвращается как строка, конвертируем в число
-      duration: track.duration != null ? Number(track.duration) : undefined,
-      src: track.src || undefined,
-      content: track.content || undefined,
-      authorship: track.authorship || undefined,
-      syncedLyrics: track.synced_lyrics || undefined,
-    })),
+      // Обрабатываем случаи: null, пустая строка, невалидное значение
+      let duration: number | undefined = undefined;
+      if (track.duration != null) {
+        const durationNum =
+          typeof track.duration === 'string' ? parseFloat(track.duration) : Number(track.duration);
+        // Проверяем, что это валидное положительное число
+        if (Number.isFinite(durationNum) && durationNum > 0) {
+          duration = durationNum;
+        }
+      }
+
+      return {
+        id: track.track_id,
+        title: track.title,
+        duration,
+        src: track.src || undefined,
+        content: track.content || undefined,
+        authorship: track.authorship || undefined,
+        syncedLyrics: track.synced_lyrics || undefined,
+      };
+    }),
   };
 }
 
