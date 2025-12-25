@@ -73,15 +73,38 @@ export const fetchAlbums = createAsyncThunk<
 
       return data.filter(isValidAlbum).map((album) => {
         const tracks = Array.isArray(album.tracks)
-          ? album.tracks.filter(isValidTrack).map((track) => ({
-              id: typeof track.id === 'number' ? track.id : parseInt(String(track.id), 10) || 0,
-              title: track.title,
-              duration: track.duration,
-              src: track.src,
-              content: track.content,
-              authorship: track.authorship,
-              syncedLyrics: track.syncedLyrics,
-            }))
+          ? album.tracks.filter(isValidTrack).map((track) => {
+              const normalizedTrack = {
+                id: typeof track.id === 'number' ? track.id : parseInt(String(track.id), 10) || 0,
+                title: track.title,
+                duration: track.duration,
+                src: track.src,
+                content: track.content,
+                authorship: track.authorship,
+                syncedLyrics: track.syncedLyrics,
+              };
+
+              // 🔍 DEBUG: Логируем первый трек первого альбома для диагностики
+              if (
+                album === data[0] &&
+                album.tracks &&
+                album.tracks.length > 0 &&
+                track === album.tracks[0]
+              ) {
+                console.log('[albumsSlice] normalize: первый трек после нормализации:', {
+                  albumId: album.albumId,
+                  track: {
+                    id: normalizedTrack.id,
+                    title: normalizedTrack.title,
+                    hasDuration: 'duration' in normalizedTrack,
+                    duration: normalizedTrack.duration,
+                    durationType: typeof normalizedTrack.duration,
+                  },
+                });
+              }
+
+              return normalizedTrack;
+            })
           : [];
 
         return {
@@ -142,6 +165,24 @@ export const fetchAlbums = createAsyncThunk<
               return [];
             }
 
+            // 🔍 DEBUG: Проверяем наличие duration в данных из API
+            const firstAlbum = result.data[0];
+            const firstTrack = firstAlbum?.tracks?.[0];
+            console.log('[albumsSlice] ✅ Данные из API:', {
+              source: 'API',
+              albumsCount: result.data.length,
+              firstAlbumId: firstAlbum?.albumId,
+              firstTrack: firstTrack
+                ? {
+                    id: firstTrack.id,
+                    title: firstTrack.title,
+                    hasDuration: 'duration' in firstTrack,
+                    duration: firstTrack.duration,
+                    durationType: typeof firstTrack.duration,
+                  }
+                : null,
+            });
+
             // Преобразуем данные из API в формат IAlbums
             return normalize(result.data);
           }
@@ -161,6 +202,24 @@ export const fetchAlbums = createAsyncThunk<
         if (fallback.ok) {
           const data = await fallback.json();
           if (Array.isArray(data)) {
+            // 🔍 DEBUG: Проверяем наличие duration в статическом JSON
+            const firstAlbum = data[0];
+            const firstTrack = firstAlbum?.tracks?.[0];
+            console.warn('[albumsSlice] ⚠️ Используется статический JSON (fallback):', {
+              source: 'STATIC_JSON',
+              albumsCount: data.length,
+              firstAlbumId: firstAlbum?.albumId,
+              firstTrack: firstTrack
+                ? {
+                    id: firstTrack.id,
+                    title: firstTrack.title,
+                    hasDuration: 'duration' in firstTrack,
+                    duration: firstTrack.duration,
+                    durationType: typeof firstTrack.duration,
+                  }
+                : null,
+            });
+
             return normalize(data);
           }
         }
