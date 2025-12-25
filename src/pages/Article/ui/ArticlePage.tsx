@@ -140,7 +140,10 @@ export function ArticlePage() {
         )}
         {subtitle && <h4>{subtitle}</h4>}
 
-        {typeof content === 'string' ? (
+        {/* Разделитель */}
+        {typeof content === 'string' && content === '---' ? (
+          <hr />
+        ) : typeof content === 'string' ? (
           <p>
             {strong && <strong>{strong}</strong>} {content}
           </p>

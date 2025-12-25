@@ -26,33 +26,6 @@ export function AlbumsSection() {
 
   const [initialCount, setInitialCount] = useState(getInitialCount);
 
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'AlbumsSection.tsx:20',
-        message: 'AlbumsSection render',
-        data: {
-          lang,
-          albumsStatus,
-          albumsError,
-          allAlbumsCount: allAlbums.length,
-          initialCount,
-          firstAlbum: allAlbums[0]
-            ? { albumId: allAlbums[0].albumId, title: allAlbums[0].album }
-            : null,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'I',
-      }),
-    }).catch(() => {});
-  }, [lang, albumsStatus, albumsError, allAlbums.length, initialCount]);
-  // #endregion
-
   // Обновляем количество при изменении размера окна
   useEffect(() => {
     const handleResize = () => {
@@ -75,7 +48,7 @@ export function AlbumsSection() {
 
         {albumsStatus === 'loading' || albumsStatus === 'idle' ? (
           <AlbumsSkeleton count={initialCount} />
-        ) : albumsStatus === 'failed' ? (
+        ) : albumsStatus === 'failed' || albumsError ? (
           <ErrorI18n code="albumsLoadFailed" />
         ) : (
           <>

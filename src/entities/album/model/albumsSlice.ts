@@ -246,7 +246,13 @@ export const fetchAlbums = createAsyncThunk<
 
             // Преобразуем данные из API в формат IAlbums
             return normalize(result.data);
+          } else {
+            // Если ответ не успешен или данные некорректны, выбрасываем ошибку
+            throw new Error('Failed to fetch albums. Invalid response format.');
           }
+        } else {
+          // Если ответ не OK, выбрасываем ошибку
+          throw new Error(`Failed to fetch albums. Status: ${response.status}`);
         }
       } catch (apiError) {
         // Если API недоступен или таймаут, пробуем fallback на статику

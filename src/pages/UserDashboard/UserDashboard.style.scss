@@ -527,8 +527,22 @@ dialog {
 
     &__article-actions {
       display: flex;
+      justify-content: flex-end;
       gap: var(--ms-01);
       margin-top: var(--ms-0);
+    }
+
+    &__edit-button {
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--iron-slate),
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0,
+        $padding: var(--ms-01) var(--ms-0),
+        $border: 0,
+        $border-radius: var(--ms-01)
+      );
     }
 
     // Статьи в стиле ВКонтакте

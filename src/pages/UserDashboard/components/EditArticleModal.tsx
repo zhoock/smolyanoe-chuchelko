@@ -1,4 +1,4 @@
-// src/pages/UserDashboard/components/EditArticleModal.tsx
+// src/pages/UserDashboard/components/
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { AlertModal } from '@shared/ui/alertModal';
@@ -14,7 +14,12 @@ import { uploadFile } from '@shared/api/storage';
 import { fetchArticles } from '@entities/article';
 import type { IArticles } from '@models';
 import type { SimplifiedBlock } from './EditArticleModal.utils';
-import { normalizeDetailsToSimplified, simplifiedToDetails } from './EditArticleModal.utils';
+import {
+  normalizeDetailsToSimplified,
+  simplifiedToDetails,
+  blocksToHtml,
+  htmlToBlocks,
+} from './EditArticleModal.utils';
 import '@entities/article/ui/style.scss';
 import './EditArticleModal.style.scss';
 
@@ -59,6 +64,7 @@ const LANG_TEXTS = {
     publishing: 'Публикация...',
     cancel: 'Отмена',
     editCarousel: 'Редактировать карусель',
+    createCarousel: 'Создать карусель',
     autoSaving: 'Сохранение...',
     saved: 'Сохранено',
     draft: 'Черновик',
@@ -89,6 +95,7 @@ const LANG_TEXTS = {
     publishing: 'Publishing...',
     cancel: 'Cancel',
     editCarousel: 'Edit carousel',
+    createCarousel: 'Create carousel',
     autoSaving: 'Saving...',
     saved: 'Saved',
     draft: 'Draft',
@@ -119,10 +126,24 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   });
 
   const [blocks, setBlocks] = useState<SimplifiedBlock[]>([]);
+  const [contentHtml, setContentHtml] = useState<string>('');
+  const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
   const [editingCarouselIndex, setEditingCarouselIndex] = useState<number | null>(null);
+  const [carouselBackup, setCarouselBackup] = useState<SimplifiedBlock | null>(null);
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [newTextContent, setNewTextContent] = useState('');
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [alertModal, setAlertModal] = useState<AlertModalState | null>(null);
+  const [formattingTooltip, setFormattingTooltip] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    selectedText: string;
+    visible: boolean; // Для анимации
+  }>({ show: false, x: 0, y: 0, selectedText: '', visible: false });
 
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);
@@ -212,6 +233,28 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         description: articleToInit.description || '',
       });
       setBlocks(simplified);
+      // Преобразуем блоки в HTML для единого contentEditable
+      const html = blocksToHtml(simplified);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:230',
+          message: 'Initializing contentHtml',
+          data: {
+            blocksCount: simplified.length,
+            htmlLength: html.length,
+            htmlPreview: html.substring(0, 200),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'D',
+        }),
+      }).catch(() => {});
+      // #endregion
+      setContentHtml(html);
 
       // Сохраняем исходный статус статьи
       // Если статья не имеет isDraft:
@@ -231,6 +274,372 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, article.articleId, lang]);
+
+  // Автофокус на поле ввода при открытии модалки
+  useEffect(() => {
+    if (isOpen && textInputRef.current) {
+      textInputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  // Инициализация contentEditable только при первой загрузке
+  // НЕ обновляем при каждом изменении contentHtml, чтобы не перезаписывать пользовательский ввод
+  const isInitialMountRef = useRef(true);
+  const lastContentHtmlRef = useRef<string>('');
+  useEffect(() => {
+    if (contentEditableRef.current && contentHtml) {
+      // Обновляем только если contentHtml изменился извне (не из-за пользовательского ввода)
+      // Проверяем, что это действительно новое значение, а не то же самое
+      if (
+        isInitialMountRef.current ||
+        (contentHtml !== lastContentHtmlRef.current &&
+          contentHtml !== contentEditableRef.current.innerHTML)
+      ) {
+        // #region agent log
+        const selectionBefore = window.getSelection();
+        const selectionInfoBefore = selectionBefore
+          ? {
+              rangeCount: selectionBefore.rangeCount,
+              isCollapsed:
+                selectionBefore.rangeCount > 0 ? selectionBefore.getRangeAt(0).collapsed : null,
+              startContainer:
+                selectionBefore.rangeCount > 0
+                  ? selectionBefore.getRangeAt(0).startContainer.nodeName
+                  : null,
+              startOffset:
+                selectionBefore.rangeCount > 0 ? selectionBefore.getRangeAt(0).startOffset : null,
+            }
+          : null;
+
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:298',
+            message: 'useEffect: Setting innerHTML - BEFORE',
+            data: {
+              isInitialMount: isInitialMountRef.current,
+              contentHtmlLength: contentHtml.length,
+              currentInnerHTMLLength: contentEditableRef.current.innerHTML.length,
+              areDifferent: contentHtml !== contentEditableRef.current.innerHTML,
+              selectionBefore: selectionInfoBefore,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'E',
+          }),
+        }).catch(() => {});
+        // #endregion
+
+        contentEditableRef.current.innerHTML = contentHtml;
+        lastContentHtmlRef.current = contentHtml;
+        isInitialMountRef.current = false;
+
+        // #region agent log
+        const selectionAfter = window.getSelection();
+        const selectionInfoAfter = selectionAfter
+          ? {
+              rangeCount: selectionAfter.rangeCount,
+              isCollapsed:
+                selectionAfter.rangeCount > 0 ? selectionAfter.getRangeAt(0).collapsed : null,
+              startContainer:
+                selectionAfter.rangeCount > 0
+                  ? selectionAfter.getRangeAt(0).startContainer.nodeName
+                  : null,
+              startOffset:
+                selectionAfter.rangeCount > 0 ? selectionAfter.getRangeAt(0).startOffset : null,
+            }
+          : null;
+
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:318',
+            message: 'useEffect: Setting innerHTML - AFTER',
+            data: {
+              selectionAfter: selectionInfoAfter,
+              selectionLost: selectionInfoBefore && !selectionInfoAfter,
+              selectionChanged:
+                JSON.stringify(selectionInfoBefore) !== JSON.stringify(selectionInfoAfter),
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'E',
+          }),
+        }).catch(() => {});
+        // #endregion
+      }
+    }
+  }, [contentHtml]);
+
+  // Сбрасываем флаг при закрытии модалки
+  useEffect(() => {
+    if (!isOpen) {
+      isInitialMountRef.current = true;
+      lastContentHtmlRef.current = '';
+      setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
+    }
+  }, [isOpen]);
+
+  // Обработчик выделения текста для показа тултипа форматирования
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const handleSelectionChange = () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:335',
+          message: 'handleSelectionChange called',
+          data: {
+            isOpen,
+            hasContentEditable: !!contentEditableRef.current,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {});
+      // #endregion
+
+      // Очищаем предыдущий таймаут, если он есть
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || !contentEditableRef.current || !isOpen) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:350',
+            message: 'Selection check failed',
+            data: {
+              hasSelection: !!selection,
+              rangeCount: selection?.rangeCount || 0,
+              hasContentEditable: !!contentEditableRef.current,
+              isOpen,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }).catch(() => {});
+        // #endregion
+        setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      const selectedText = selection.toString().trim();
+
+      // Проверяем, что выделение находится внутри contentEditable
+      if (
+        !contentEditableRef.current.contains(range.commonAncestorContainer) ||
+        selectedText.length === 0 ||
+        range.collapsed
+      ) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:370',
+            message: 'Selection validation failed',
+            data: {
+              isInsideContentEditable: contentEditableRef.current.contains(
+                range.commonAncestorContainer
+              ),
+              selectedTextLength: selectedText.length,
+              isCollapsed: range.collapsed,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'C',
+          }),
+        }).catch(() => {});
+        // #endregion
+        setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
+        return;
+      }
+
+      // Получаем позицию для тултипа
+      const rect = range.getBoundingClientRect();
+      const tooltipX = rect.left + rect.width / 2;
+      const tooltipY = rect.top - 70; // Сдвигаем выше, чтобы не перекрывать текст
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:385',
+          message: 'Setting tooltip position',
+          data: {
+            tooltipX,
+            tooltipY,
+            selectedTextLength: selectedText.length,
+            rectLeft: rect.left,
+            rectTop: rect.top,
+            rectWidth: rect.width,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'D',
+        }),
+      }).catch(() => {});
+      // #endregion
+
+      // Сначала скрываем тултип (сбрасываем visible)
+      setFormattingTooltip({
+        show: true,
+        x: tooltipX,
+        y: tooltipY,
+        selectedText,
+        visible: false,
+      });
+
+      // Затем показываем с задержкой и анимацией
+      timeoutId = setTimeout(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:410',
+            message: 'Setting tooltip visible',
+            data: {
+              willSetVisible: true,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'E',
+          }),
+        }).catch(() => {});
+        // #endregion
+        setFormattingTooltip((prev) => ({
+          ...prev,
+          visible: true,
+        }));
+      }, 200); // Задержка 200мс (доли секунды)
+    };
+
+    // Функция для обновления позиции тултипа при прокрутке
+    const updateTooltipPosition = () => {
+      setFormattingTooltip((prev) => {
+        if (!prev.show || !contentEditableRef.current) {
+          return prev;
+        }
+
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          return prev;
+        }
+
+        const range = selection.getRangeAt(0);
+        if (!contentEditableRef.current.contains(range.commonAncestorContainer)) {
+          return prev;
+        }
+
+        const rect = range.getBoundingClientRect();
+        const tooltipX = rect.left + rect.width / 2;
+        const tooltipY = rect.top - 70;
+
+        return {
+          ...prev,
+          x: tooltipX,
+          y: tooltipY,
+        };
+      });
+    };
+
+    // Обработчики событий для отслеживания выделения
+    const handleMouseUp = () => {
+      setTimeout(handleSelectionChange, 10);
+    };
+
+    const handleKeyUp = () => {
+      setTimeout(handleSelectionChange, 10);
+    };
+
+    // Обработчик прокрутки для обновления позиции тултипа
+    const handleScroll = () => {
+      updateTooltipPosition();
+    };
+
+    if (isOpen) {
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('keyup', handleKeyUp);
+      document.addEventListener('selectionchange', handleSelectionChange);
+      // Добавляем обработчики прокрутки для window и всех возможных прокручиваемых контейнеров
+      window.addEventListener('scroll', handleScroll, true);
+      document.addEventListener('scroll', handleScroll, true);
+
+      return () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('keyup', handleKeyUp);
+        document.removeEventListener('selectionchange', handleSelectionChange);
+        window.removeEventListener('scroll', handleScroll, true);
+        document.removeEventListener('scroll', handleScroll, true);
+      };
+    }
+  }, [isOpen]);
+
+  // Удаление блока (объявляем здесь, чтобы использовать в useEffect ниже)
+  const deleteBlockRef = useRef<(index: number) => void>();
+
+  // Обработчик нажатия клавиши Delete для удаления выбранного изображения
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedImageIndex !== null) {
+        // Проверяем, что фокус не в поле ввода
+        const target = e.target as HTMLElement;
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+
+        e.preventDefault();
+        const block = blocks[selectedImageIndex];
+        if (block && (block.type === 'image' || block.type === 'carousel')) {
+          if (deleteBlockRef.current) {
+            deleteBlockRef.current(selectedImageIndex);
+          }
+          setSelectedImageIndex(null);
+        }
+      }
+      // Сброс выбора при нажатии Escape
+      if (e.key === 'Escape' && selectedImageIndex !== null) {
+        setSelectedImageIndex(null);
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isOpen, selectedImageIndex, blocks]);
 
   // Извлечение имени файла из URL
   const extractFileNameFromUrl = (url: string, fallback: string): string => {
@@ -359,12 +768,6 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     // Автосохранение будет вызвано из onBlur, но на всякий случай планируем его здесь тоже
   };
 
-  // Удаление блока
-  const deleteBlock = (index: number) => {
-    setBlocks((prev) => prev.filter((_, i) => i !== index));
-    scheduleAutoSave();
-  };
-
   // Добавление нового текстового блока
   const addTextBlock = () => {
     const newBlock: SimplifiedBlock = {
@@ -374,6 +777,492 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     };
     setBlocks((prev) => [...prev, newBlock]);
     scheduleAutoSave();
+  };
+
+  // Добавление текстового блока из поля ввода
+  const addTextBlockFromInput = () => {
+    if (newTextContent.trim() && contentEditableRef.current) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:492',
+          message: 'addTextBlockFromInput called',
+          data: {
+            textLength: newTextContent.trim().length,
+            hasContentEditable: !!contentEditableRef.current,
+            currentInnerHTMLLength: contentEditableRef.current.innerHTML.length,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {});
+      // #endregion
+      const textHtml = `<p data-block-type="text">${newTextContent.trim()}</p>`;
+      // Устанавливаем курсор в конец contentEditable, если нет выделения
+      if (contentEditableRef.current) {
+        const selection = window.getSelection();
+        let range: Range | null = null;
+
+        if (selection && selection.rangeCount > 0) {
+          range = selection.getRangeAt(0);
+          // Проверяем, что выделение находится внутри contentEditable
+          if (!contentEditableRef.current.contains(range.commonAncestorContainer)) {
+            range = null;
+          }
+        }
+
+        // Если нет выделения или выделение вне contentEditable, создаем новое в конце
+        if (!range) {
+          range = document.createRange();
+          range.selectNodeContents(contentEditableRef.current);
+          range.collapse(false); // Коллапсируем в конец
+        }
+
+        range.deleteContents();
+        const div = document.createElement('div');
+        div.innerHTML = textHtml;
+        const fragment = document.createDocumentFragment();
+        while (div.firstChild) {
+          fragment.appendChild(div.firstChild);
+        }
+        range.insertNode(fragment);
+
+        // Устанавливаем курсор после вставленного элемента
+        range.setStartAfter(fragment.lastChild || range.endContainer);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:540',
+            message: 'After inserting text via selection',
+            data: {
+              newInnerHTMLLength: contentEditableRef.current.innerHTML.length,
+              insertedHtml: textHtml,
+              hadSelection: !!selection && selection.rangeCount > 0,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }).catch(() => {});
+        // #endregion
+        // Обновляем HTML и блоки
+        const html = contentEditableRef.current.innerHTML;
+        // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
+        lastContentHtmlRef.current = html;
+        setContentHtml(html);
+        const parsedBlocks = htmlToBlocks(html);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:520',
+            message: 'After parsing blocks from inserted text',
+            data: {
+              htmlLength: html.length,
+              parsedBlocksCount: parsedBlocks.length,
+              lastBlockContent: parsedBlocks[parsedBlocks.length - 1]?.content,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'C',
+          }),
+        }).catch(() => {});
+        // #endregion
+        setBlocks(parsedBlocks);
+        scheduleAutoSave();
+      }
+      setNewTextContent('');
+    } else {
+      // Очищаем поле, даже если текст пустой
+      setNewTextContent('');
+    }
+  };
+
+  // Применение форматирования к выделенному тексту
+  const applyFormatting = (
+    formatType:
+      | 'link'
+      | 'h1'
+      | 'h2'
+      | 'h3'
+      | 'h4'
+      | 'paragraph'
+      | 'list'
+      | 'quote'
+      | 'bold'
+      | 'italic'
+  ) => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !contentEditableRef.current) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const selectedText = selection.toString().trim();
+
+    if (!selectedText || !contentEditableRef.current.contains(range.commonAncestorContainer)) {
+      return;
+    }
+
+    // Находим родительский элемент выделения
+    let parentElement: HTMLElement | null = range.commonAncestorContainer as HTMLElement;
+    if (parentElement.nodeType !== Node.ELEMENT_NODE) {
+      parentElement = parentElement.parentElement;
+    }
+
+    // Определяем, какой тег нужно создать
+    let targetTagName = '';
+    let targetBlockType = '';
+    switch (formatType) {
+      case 'h1':
+      case 'h3':
+        targetTagName = 'H3';
+        targetBlockType = 'title';
+        break;
+      case 'h2':
+      case 'h4':
+        targetTagName = 'H4';
+        targetBlockType = 'subtitle';
+        break;
+      case 'paragraph':
+        targetTagName = 'P';
+        targetBlockType = 'text';
+        break;
+      case 'list':
+        targetTagName = 'UL';
+        targetBlockType = 'list';
+        break;
+      case 'quote':
+        targetTagName = 'BLOCKQUOTE';
+        targetBlockType = 'quote';
+        break;
+    }
+
+    // Находим ближайший блок-контейнер (P, H3, H4, UL, BLOCKQUOTE) для замены
+    let blockContainer: HTMLElement | null = null;
+    if (parentElement) {
+      let current: HTMLElement | null = parentElement;
+      while (current && current !== contentEditableRef.current) {
+        const tagName = current.tagName;
+        const blockType = current.getAttribute('data-block-type');
+        // Проверяем, является ли это блоком-контейнером
+        if (
+          (tagName === 'P' && blockType === 'text') ||
+          (tagName === 'H3' && blockType === 'title') ||
+          (tagName === 'H4' && blockType === 'subtitle') ||
+          (tagName === 'UL' && blockType === 'list') ||
+          (tagName === 'BLOCKQUOTE' && blockType === 'quote')
+        ) {
+          blockContainer = current;
+          break;
+        }
+        current = current.parentElement;
+      }
+    }
+
+    // Проверяем, находится ли выделение внутри тега того же типа
+    let existingElement: HTMLElement | null = null;
+    if (blockContainer && targetTagName) {
+      if (
+        blockContainer.tagName === targetTagName &&
+        blockContainer.getAttribute('data-block-type') === targetBlockType
+      ) {
+        existingElement = blockContainer;
+      }
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'EditArticleModal.tsx:910',
+        message: 'applyFormatting: checking containers',
+        data: {
+          formatType,
+          targetTagName,
+          targetBlockType,
+          hasBlockContainer: !!blockContainer,
+          blockContainerTag: blockContainer?.tagName,
+          blockContainerType: blockContainer?.getAttribute('data-block-type'),
+          hasExistingElement: !!existingElement,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'F',
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    // Обработка жирного текста и курсива (inline форматирование)
+    if (formatType === 'bold' || formatType === 'italic') {
+      // Проверяем, не находится ли выделение уже внутри тега того же типа
+      let existingFormatTag: HTMLElement | null = null;
+      let formatParent: HTMLElement | null = parentElement;
+      const targetFormatTag = formatType === 'bold' ? 'STRONG' : 'EM';
+
+      while (formatParent && formatParent !== contentEditableRef.current) {
+        if (formatParent.tagName === targetFormatTag) {
+          existingFormatTag = formatParent;
+          break;
+        }
+        formatParent = formatParent.parentElement;
+      }
+
+      if (existingFormatTag) {
+        // Если уже внутри тега форматирования, убираем форматирование
+        const text = existingFormatTag.textContent || '';
+        const textNode = document.createTextNode(text);
+        existingFormatTag.replaceWith(textNode);
+      } else {
+        // Создаем новый тег форматирования
+        const formatElement = document.createElement(formatType === 'bold' ? 'strong' : 'em');
+        formatElement.textContent = selectedText;
+        range.deleteContents();
+        range.insertNode(formatElement);
+      }
+
+      // Обновляем HTML и блоки
+      const html = contentEditableRef.current.innerHTML;
+      lastContentHtmlRef.current = html;
+      setContentHtml(html);
+      const parsedBlocks = htmlToBlocks(html);
+      setBlocks(parsedBlocks);
+      scheduleAutoSave();
+
+      // Скрываем тултип
+      setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
+      return;
+    } else if (formatType === 'link') {
+      // Обработка ссылок
+      // Проверяем, не находится ли выделение уже внутри ссылки
+      let linkParent: HTMLElement | null = parentElement;
+      while (linkParent && linkParent !== contentEditableRef.current) {
+        if (linkParent.tagName === 'A') {
+          // Если уже внутри ссылки, просто обновляем href
+          const url = prompt(
+            lang === 'ru' ? 'Введите ссылку:' : 'Enter link:',
+            linkParent.getAttribute('href') || 'https://'
+          );
+          if (!url) return;
+          linkParent.setAttribute('href', url);
+          // Обновляем HTML и блоки
+          const html = contentEditableRef.current.innerHTML;
+          lastContentHtmlRef.current = html;
+          setContentHtml(html);
+          const parsedBlocks = htmlToBlocks(html);
+          setBlocks(parsedBlocks);
+          scheduleAutoSave();
+          setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
+          return;
+        }
+        linkParent = linkParent.parentElement;
+      }
+      // Запрашиваем URL для новой ссылки
+      const url = prompt(lang === 'ru' ? 'Введите ссылку:' : 'Enter link:', 'https://');
+      if (!url) return;
+      const linkElement = document.createElement('a');
+      linkElement.href = url;
+      linkElement.target = '_blank';
+      linkElement.rel = 'noopener noreferrer';
+      linkElement.textContent = selectedText;
+      range.deleteContents();
+      range.insertNode(linkElement);
+    } else if (existingElement) {
+      // Если выделение уже внутри тега того же типа, заменяем весь тег
+      const newElement = document.createElement(targetTagName.toLowerCase() as any);
+      newElement.setAttribute('data-block-type', targetBlockType);
+
+      if (formatType === 'list') {
+        const lines = selectedText.split('\n').filter((line) => line.trim());
+        lines.forEach((line) => {
+          const li = document.createElement('li');
+          li.textContent = line.trim();
+          newElement.appendChild(li);
+        });
+      } else {
+        newElement.textContent = selectedText;
+      }
+
+      existingElement.replaceWith(newElement);
+    } else if (blockContainer && blockContainer !== contentEditableRef.current) {
+      // Если выделение внутри другого блока-контейнера, заменяем весь блок
+      const newElement = document.createElement(targetTagName.toLowerCase() as any);
+      newElement.setAttribute('data-block-type', targetBlockType);
+
+      if (formatType === 'list') {
+        const lines = selectedText.split('\n').filter((line) => line.trim());
+        lines.forEach((line) => {
+          const li = document.createElement('li');
+          li.textContent = line.trim();
+          newElement.appendChild(li);
+        });
+      } else {
+        newElement.textContent = selectedText;
+      }
+
+      blockContainer.replaceWith(newElement);
+    } else {
+      // Создаем новый тег
+      let wrapperHtml = '';
+      switch (formatType) {
+        case 'h1':
+        case 'h3':
+          wrapperHtml = `<h3 data-block-type="title">${selectedText}</h3>`;
+          break;
+        case 'h2':
+        case 'h4':
+          wrapperHtml = `<h4 data-block-type="subtitle">${selectedText}</h4>`;
+          break;
+        case 'paragraph':
+          wrapperHtml = `<p data-block-type="text">${selectedText}</p>`;
+          break;
+        case 'list': {
+          const lines = selectedText.split('\n').filter((line) => line.trim());
+          wrapperHtml = `<ul data-block-type="list">${lines.map((line) => `<li>${line.trim()}</li>`).join('')}</ul>`;
+          break;
+        }
+        case 'quote':
+          wrapperHtml = `<blockquote data-block-type="quote">${selectedText}</blockquote>`;
+          break;
+      }
+
+      if (wrapperHtml) {
+        // Удаляем выделенный текст
+        range.deleteContents();
+
+        // Вставляем новый HTML
+        const div = document.createElement('div');
+        div.innerHTML = wrapperHtml;
+        const fragment = document.createDocumentFragment();
+        while (div.firstChild) {
+          fragment.appendChild(div.firstChild);
+        }
+        range.insertNode(fragment);
+      }
+    }
+
+    // Обновляем HTML и блоки
+    const html = contentEditableRef.current.innerHTML;
+    lastContentHtmlRef.current = html;
+    setContentHtml(html);
+    const parsedBlocks = htmlToBlocks(html);
+    setBlocks(parsedBlocks);
+    scheduleAutoSave();
+
+    // Скрываем тултип
+    setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
+  };
+
+  // Добавление разделителя
+  const addDivider = () => {
+    if (contentEditableRef.current) {
+      const dividerHtml =
+        '<hr data-block-type="divider" class="edit-article-modal__inline-divider" />';
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const div = document.createElement('div');
+        div.innerHTML = dividerHtml;
+        const fragment = document.createDocumentFragment();
+        while (div.firstChild) {
+          fragment.appendChild(div.firstChild);
+        }
+        range.insertNode(fragment);
+        // Обновляем HTML и блоки
+        const html = contentEditableRef.current.innerHTML;
+        // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
+        lastContentHtmlRef.current = html;
+        setContentHtml(html);
+        const parsedBlocks = htmlToBlocks(html);
+        setBlocks(parsedBlocks);
+        scheduleAutoSave();
+      }
+    }
+    setShowToolbar(false);
+  };
+
+  // Обработка загрузки изображения из панели инструментов
+  const handleImageFromToolbar = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showAlert(texts.pleaseSelectImage);
+      return;
+    }
+
+    try {
+      const userId = CURRENT_USER_CONFIG.userId;
+      if (!userId) {
+        showAlert(texts.notAuthorized);
+        return;
+      }
+
+      setUploadingImageIndex(-1); // Используем -1 для индикации загрузки из панели
+
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const fileName = `article-${timestamp}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`;
+
+      const imageUrl = await uploadFile({
+        userId,
+        file,
+        fileName,
+        category: 'articles',
+        contentType: file.type,
+      });
+
+      if (!imageUrl) {
+        throw new Error('Failed to upload image');
+      }
+
+      const imageFileName = extractFileNameFromUrl(imageUrl, fileName);
+      // Вставляем изображение в contentEditable
+      if (contentEditableRef.current) {
+        const imageHtml = `<div data-block-type="image" data-image="${imageFileName}" contenteditable="false" class="edit-article-modal__inline-image">
+          <img src="${getUserImageUrl(imageFileName, 'articles')}" alt="" />
+        </div>`;
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const div = document.createElement('div');
+          div.innerHTML = imageHtml;
+          const fragment = document.createDocumentFragment();
+          while (div.firstChild) {
+            fragment.appendChild(div.firstChild);
+          }
+          range.insertNode(fragment);
+          // Обновляем HTML и блоки
+          const html = contentEditableRef.current.innerHTML;
+          // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
+          lastContentHtmlRef.current = html;
+          setContentHtml(html);
+          const parsedBlocks = htmlToBlocks(html);
+          setBlocks(parsedBlocks);
+          scheduleAutoSave();
+        }
+      }
+      setShowToolbar(false);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showAlert(texts.errorUploadingImage);
+    } finally {
+      setUploadingImageIndex(null);
+    }
   };
 
   // Удаление изображения из карусели
@@ -401,6 +1290,52 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       }
     }
     scheduleAutoSave();
+  };
+
+  // Преобразование изображения в карусель
+  const convertImageToCarousel = (blockIndex: number) => {
+    setBlocks((prev) => {
+      const newBlocks = [...prev];
+      const block = newBlocks[blockIndex];
+      if (block.type === 'image' && block.img) {
+        const imageUrl = typeof block.img === 'string' ? block.img : block.img[0];
+        const newCarouselBlock = {
+          ...block,
+          type: 'carousel' as const,
+          img: [imageUrl],
+        };
+        newBlocks[blockIndex] = newCarouselBlock;
+        // Сохраняем резервную копию перед редактированием
+        setCarouselBackup({ ...block });
+        // Открываем панель редактирования карусели
+        setEditingCarouselIndex(blockIndex);
+      }
+      return newBlocks;
+    });
+    scheduleAutoSave();
+  };
+
+  // Открытие панели редактирования карусели
+  const openCarouselEdit = (blockIndex: number) => {
+    const block = blocks[blockIndex];
+    if (block?.type === 'carousel') {
+      // Сохраняем резервную копию перед редактированием
+      setCarouselBackup({ ...block });
+      setEditingCarouselIndex(blockIndex);
+    }
+  };
+
+  // Отмена изменений карусели
+  const cancelCarouselEdit = () => {
+    if (editingCarouselIndex !== null && carouselBackup) {
+      setBlocks((prev) => {
+        const newBlocks = [...prev];
+        newBlocks[editingCarouselIndex] = { ...carouselBackup };
+        return newBlocks;
+      });
+      setCarouselBackup(null);
+      setEditingCarouselIndex(null);
+    }
   };
 
   // Автосохранение (сохраняет изменения без изменения статуса)
@@ -785,6 +1720,20 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     // #endregion
   }, [autoSaveDraft]);
 
+  // Удаление блока
+  const deleteBlock = useCallback(
+    (index: number) => {
+      setBlocks((prev) => prev.filter((_, i) => i !== index));
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave]
+  );
+
+  // Сохраняем deleteBlock в ref для использования в useEffect
+  useEffect(() => {
+    deleteBlockRef.current = deleteBlock;
+  }, [deleteBlock]);
+
   // Очистка таймера при размонтировании
   useEffect(() => {
     return () => {
@@ -1005,7 +1954,20 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
             </div>
 
             {/* Страница статьи в стиле фронтенда */}
-            <section className="article main-background edit-article-modal__article">
+            <section
+              className="article edit-article-modal__article"
+              onClick={(e) => {
+                // Сбрасываем выбор, если клик не по изображению или разделителю
+                if (
+                  selectedImageIndex !== null &&
+                  !(e.target as HTMLElement).closest('.edit-article-modal__image-wrapper') &&
+                  !(e.target as HTMLElement).closest('.edit-article-modal__carousel-wrapper') &&
+                  !(e.target as HTMLElement).classList.contains('edit-article-modal__divider')
+                ) {
+                  setSelectedImageIndex(null);
+                }
+              }}
+            >
               <div className="wrapper">
                 {/* Заголовок статьи - редактируемый */}
                 <h2
@@ -1039,171 +2001,439 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                   {editingData.nameArticle}
                 </h2>
 
-                {/* Блоки контента */}
-                {blocks.map((block, index) => (
-                  <div key={block.id || index}>
-                    {/* Заголовок раздела (h3) - показываем только если есть */}
-                    {block.title !== undefined && (
-                      <h3
-                        className="edit-article-modal__editable-h3"
-                        contentEditable
-                        suppressContentEditableWarning
-                        onBlur={(e) => {
-                          const title = e.currentTarget.textContent || '';
-                          // #region agent log
-                          fetch(
-                            'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                            {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                location: 'EditArticleModal.tsx:718',
-                                message: 'H3 title onBlur',
-                                data: { index, title, oldTitle: block.title },
-                                timestamp: Date.now(),
-                                sessionId: 'debug-session',
-                                runId: 'run1',
-                                hypothesisId: 'D',
-                              }),
-                            }
-                          ).catch(() => {});
-                          // #endregion
-                          updateBlock(index, { title: title || undefined });
-                          scheduleAutoSave();
-                        }}
-                      >
-                        {block.title}
-                      </h3>
-                    )}
+                {/* Единый contentEditable блок для редактирования всего контента */}
+                <div
+                  ref={contentEditableRef}
+                  className="edit-article-modal__content-editable"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onKeyDown={(e) => {
+                    // Обработка Enter: по умолчанию создаем параграф, Shift+Enter - тот же тег
+                    // Не блокируем стандартные комбинации клавиш для выделения текста
+                    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                      // Проверяем, что курсор находится внутри contentEditable
+                      if (!contentEditableRef.current) {
+                        return;
+                      }
 
-                    {/* Изображение или карусель */}
-                    {block.type === 'image' && block.img && (
-                      <div className="uncollapse edit-article-modal__image-wrapper">
-                        <img
-                          src={getUserImageUrl(
-                            typeof block.img === 'string' ? block.img : block.img[0],
-                            'articles'
-                          )}
-                          alt={block.alt || ''}
-                          loading="lazy"
-                          decoding="async"
-                          className="edit-article-modal__image"
-                        />
-                        <div className="edit-article-modal__image-controls">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleImageUpload(file, index);
-                                e.target.value = '';
+                      const selection = window.getSelection();
+                      if (!selection || selection.rangeCount === 0) {
+                        // Если нет выделения, позволяем стандартное поведение
+                        return;
+                      }
+
+                      const range = selection.getRangeAt(0);
+                      // Проверяем, что курсор находится внутри нашего contentEditable
+                      if (!contentEditableRef.current.contains(range.commonAncestorContainer)) {
+                        return;
+                      }
+
+                      e.preventDefault();
+
+                      // Shift+Enter: создаем новый элемент того же типа
+                      if (e.shiftKey) {
+                        // Находим текущий блок-контейнер и элемент списка (если есть)
+                        let blockContainer: HTMLElement | null = null;
+                        let listItem: HTMLElement | null = null;
+                        let current: Node | null = range.commonAncestorContainer;
+
+                        while (current && current !== contentEditableRef.current) {
+                          if (current.nodeType === Node.ELEMENT_NODE) {
+                            const element = current as HTMLElement;
+                            const tagName = element.tagName;
+                            const blockType = element.getAttribute('data-block-type');
+
+                            // Проверяем, является ли это элементом списка
+                            if (tagName === 'LI') {
+                              listItem = element;
+                            }
+
+                            // Проверяем, является ли это блоком-контейнером
+                            if (
+                              (tagName === 'P' && blockType === 'text') ||
+                              (tagName === 'H3' && blockType === 'title') ||
+                              (tagName === 'H4' && blockType === 'subtitle') ||
+                              (tagName === 'UL' && blockType === 'list') ||
+                              (tagName === 'BLOCKQUOTE' && blockType === 'quote')
+                            ) {
+                              blockContainer = element;
+                              break;
+                            }
+                          }
+                          current = current.parentNode;
+                        }
+
+                        let newElement: HTMLElement | null = null;
+
+                        // Если находимся внутри списка, создаем новый элемент списка
+                        if (listItem && blockContainer && blockContainer.tagName === 'UL') {
+                          const newLi = document.createElement('li');
+                          const textNode = document.createTextNode('');
+                          newLi.appendChild(textNode);
+
+                          // Вставляем новый элемент списка после текущего
+                          if (listItem.nextSibling) {
+                            listItem.parentNode?.insertBefore(newLi, listItem.nextSibling);
+                          } else {
+                            listItem.parentNode?.appendChild(newLi);
+                          }
+
+                          newElement = newLi;
+                        } else if (blockContainer) {
+                          // Создаем новый элемент того же типа, что и текущий блок
+                          const tagName = blockContainer.tagName;
+                          const blockType = blockContainer.getAttribute('data-block-type');
+
+                          if (tagName === 'P' && blockType === 'text') {
+                            newElement = document.createElement('p');
+                            newElement.setAttribute('data-block-type', 'text');
+                          } else if (tagName === 'H3' && blockType === 'title') {
+                            newElement = document.createElement('h3');
+                            newElement.setAttribute('data-block-type', 'title');
+                          } else if (tagName === 'H4' && blockType === 'subtitle') {
+                            newElement = document.createElement('h4');
+                            newElement.setAttribute('data-block-type', 'subtitle');
+                          } else if (tagName === 'BLOCKQUOTE' && blockType === 'quote') {
+                            newElement = document.createElement('blockquote');
+                            newElement.setAttribute('data-block-type', 'quote');
+                          }
+
+                          if (newElement) {
+                            const textNode = document.createTextNode('');
+                            newElement.appendChild(textNode);
+
+                            // Вставляем новый элемент после текущего блока
+                            if (blockContainer.nextSibling) {
+                              blockContainer.parentNode?.insertBefore(
+                                newElement,
+                                blockContainer.nextSibling
+                              );
+                            } else {
+                              blockContainer.parentNode?.appendChild(newElement);
+                            }
+                          }
+                        } else {
+                          // Если не нашли блок-контейнер, создаем новый параграф
+                          newElement = document.createElement('p');
+                          newElement.setAttribute('data-block-type', 'text');
+                          const textNode = document.createTextNode('');
+                          newElement.appendChild(textNode);
+                          contentEditableRef.current.appendChild(newElement);
+                        }
+
+                        // Обновляем HTML и блоки
+                        if (newElement && contentEditableRef.current) {
+                          const html = contentEditableRef.current.innerHTML;
+                          lastContentHtmlRef.current = html;
+                          setContentHtml(html);
+                          const parsedBlocks = htmlToBlocks(html);
+                          setBlocks(parsedBlocks);
+
+                          // Устанавливаем курсор в новый элемент
+                          setTimeout(() => {
+                            const currentSelection = window.getSelection();
+                            if (!currentSelection || !contentEditableRef.current || !newElement)
+                              return;
+
+                            // Находим новый элемент в обновленном DOM
+                            let targetElement: HTMLElement | null = null;
+
+                            if (newElement.tagName === 'LI') {
+                              // Для элементов списка ищем по родителю и позиции
+                              const allLists = Array.from(
+                                contentEditableRef.current.querySelectorAll(
+                                  'ul[data-block-type="list"]'
+                                )
+                              );
+                              for (const ul of allLists) {
+                                const lis = Array.from(ul.querySelectorAll('li'));
+                                if (lis.length > 0) {
+                                  // Берем последний элемент списка
+                                  targetElement = lis[lis.length - 1] as HTMLElement;
+                                  break;
+                                }
                               }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="edit-article-modal__control-button"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploadingImageIndex === index}
-                          >
-                            {uploadingImageIndex === index ? texts.uploading : texts.replace}
-                          </button>
-                          <button
-                            type="button"
-                            className="edit-article-modal__control-button"
-                            onClick={() => deleteBlock(index)}
-                          >
-                            {texts.delete}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                            } else {
+                              // Для других элементов ищем по типу и позиции
+                              const allElements = contentEditableRef.current.querySelectorAll(
+                                `${newElement.tagName.toLowerCase()}[data-block-type="${newElement.getAttribute('data-block-type')}"]`
+                              );
+                              if (allElements.length > 0) {
+                                targetElement = allElements[allElements.length - 1] as HTMLElement;
+                              }
+                            }
 
-                    {block.type === 'carousel' && Array.isArray(block.img) && (
-                      <div className="uncollapse edit-article-modal__carousel-wrapper">
-                        {editingCarouselIndex === index ? (
-                          <div className="edit-article-modal__carousel-edit">
-                            <div className="edit-article-modal__carousel-grid">
-                              {block.img.map((img, imgIndex) => (
-                                <div key={imgIndex} className="edit-article-modal__carousel-item">
-                                  <img
-                                    src={getUserImageUrl(img, 'articles')}
-                                    alt={block.alt || ''}
-                                    className="edit-article-modal__carousel-img"
-                                  />
-                                  <button
-                                    type="button"
-                                    className="edit-article-modal__carousel-remove"
-                                    onClick={() => removeImageFromCarousel(index, imgIndex)}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
-                              <div className="edit-article-modal__carousel-add">
-                                <input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  accept="image/*"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      handleImageUpload(file, index);
-                                      e.target.value = '';
-                                    }
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  className="edit-article-modal__control-button"
-                                  onClick={() => fileInputRef.current?.click()}
-                                  disabled={uploadingImageIndex === index}
-                                >
-                                  {uploadingImageIndex === index ? texts.uploading : texts.addPhoto}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="edit-article-modal__carousel-actions">
-                              <button
-                                type="button"
-                                className="edit-article-modal__control-button"
-                                onClick={() => setEditingCarouselIndex(null)}
-                              >
-                                {texts.save}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ position: 'relative' }}>
-                            <ImageCarousel
-                              images={block.img}
-                              alt={block.alt || ''}
-                              category="articles"
-                            />
-                            <button
-                              type="button"
-                              className="edit-article-modal__carousel-edit-button"
-                              onClick={() => setEditingCarouselIndex(index)}
-                            >
-                              {texts.editCarousel}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                            if (targetElement) {
+                              let textNode: Text | null = null;
+                              if (
+                                targetElement.firstChild &&
+                                targetElement.firstChild.nodeType === Node.TEXT_NODE
+                              ) {
+                                textNode = targetElement.firstChild as Text;
+                              } else {
+                                textNode = document.createTextNode('');
+                                targetElement.appendChild(textNode);
+                              }
 
-                    {/* Подзаголовок (h4) - показываем только если есть непустое значение */}
-                    {block.subtitle && block.subtitle.trim() && (
-                      <h4
-                        className="edit-article-modal__editable-h4"
-                        contentEditable
-                        suppressContentEditableWarning
-                        onBlur={(e) => {
-                          const subtitle = e.currentTarget.textContent || '';
+                              const finalRange = document.createRange();
+                              finalRange.setStart(textNode, 0);
+                              finalRange.collapse(true);
+                              currentSelection.removeAllRanges();
+                              currentSelection.addRange(finalRange);
+                              contentEditableRef.current.focus();
+                            }
+                          }, 0);
+                        }
+
+                        return; // Завершаем обработку Shift+Enter
+                      }
+
+                      // Enter (без Shift): создаем новый параграф
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:1946',
+                          message: 'Enter key pressed - start (no shift)',
+                          data: {
+                            hasContentEditable: !!contentEditableRef.current,
+                            innerHTMLLength: contentEditableRef.current?.innerHTML?.length || 0,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'A',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:1964',
+                          message: 'Enter key - before preventDefault (no shift)',
+                          data: {
+                            rangeStartContainer: range.startContainer.nodeName,
+                            rangeStartOffset: range.startOffset,
+                            rangeCollapsed: range.collapsed,
+                            selectionRangeCount: selection.rangeCount,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'A',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      e.preventDefault();
+
+                      // Используем стандартное поведение браузера для разбивки блока
+                      // document.execCommand('insertParagraph') создает новый блок того же типа
+                      // Но мы хотим создать параграф, поэтому делаем это вручную
+
+                      // Находим родительский блок-контейнер
+                      let blockContainer: HTMLElement | null = null;
+                      let current: Node | null = range.commonAncestorContainer;
+                      while (current && current !== contentEditableRef.current) {
+                        if (current.nodeType === Node.ELEMENT_NODE) {
+                          const element = current as HTMLElement;
+                          const tagName = element.tagName;
+                          const blockType = element.getAttribute('data-block-type');
+                          if (
+                            (tagName === 'P' && blockType === 'text') ||
+                            (tagName === 'H3' && blockType === 'title') ||
+                            (tagName === 'H4' && blockType === 'subtitle') ||
+                            (tagName === 'UL' && blockType === 'list') ||
+                            (tagName === 'BLOCKQUOTE' && blockType === 'quote')
+                          ) {
+                            blockContainer = element;
+                            break;
+                          }
+                        }
+                        current = current.parentNode;
+                      }
+
+                      let newParagraph: HTMLParagraphElement | null = null;
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:1992',
+                          message: 'Before creating paragraph',
+                          data: {
+                            hasBlockContainer: !!blockContainer,
+                            blockContainerTag: blockContainer?.tagName,
+                            blockContainerType: blockContainer?.getAttribute('data-block-type'),
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'B',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      if (blockContainer) {
+                        // Используем стандартное поведение для разбивки блока
+                        // Но затем заменяем созданный блок на параграф
+                        const startContainer = range.startContainer;
+                        const startOffset = range.startOffset;
+
+                        // Извлекаем содержимое после курсора
+                        const afterRange = range.cloneRange();
+                        afterRange.setStart(startContainer, startOffset);
+                        afterRange.setEnd(blockContainer, blockContainer.childNodes.length);
+                        const afterContents = afterRange.extractContents();
+
+                        // Создаем новый параграф
+                        newParagraph = document.createElement('p');
+                        newParagraph.setAttribute('data-block-type', 'text');
+
+                        // Перемещаем содержимое после курсора в новый параграф
+                        if (afterContents.textContent) {
+                          newParagraph.textContent = afterContents.textContent;
+                        }
+
+                        // Вставляем новый параграф после текущего блока
+                        if (blockContainer.nextSibling) {
+                          blockContainer.parentNode?.insertBefore(
+                            newParagraph,
+                            blockContainer.nextSibling
+                          );
+                        } else {
+                          blockContainer.parentNode?.appendChild(newParagraph);
+                        }
+                      } else {
+                        // Если не нашли блок-контейнер, создаем новый параграф в конце
+                        newParagraph = document.createElement('p');
+                        newParagraph.setAttribute('data-block-type', 'text');
+                        // Создаем пустой текстовый узел для курсора
+                        const textNode = document.createTextNode('');
+                        newParagraph.appendChild(textNode);
+                        contentEditableRef.current.appendChild(newParagraph);
+                      }
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:2033',
+                          message: 'Paragraph created, before HTML update',
+                          data: {
+                            hasNewParagraph: !!newParagraph,
+                            newParagraphText: newParagraph?.textContent || '',
+                            newParagraphHasTextNode: !!newParagraph?.firstChild,
+                            newParagraphTextNodeType: newParagraph?.firstChild?.nodeType,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'A',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      // Обновляем HTML и блоки
+                      const html = contentEditableRef.current.innerHTML;
+                      lastContentHtmlRef.current = html;
+                      setContentHtml(html);
+                      const parsedBlocks = htmlToBlocks(html);
+                      setBlocks(parsedBlocks);
+
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          location: 'EditArticleModal.tsx:2040',
+                          message: 'After HTML/Blocks update, before cursor setup',
+                          data: {
+                            htmlLength: html.length,
+                            parsedBlocksCount: parsedBlocks.length,
+                            currentSelectionRangeCount: window.getSelection()?.rangeCount || 0,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: 'debug-session',
+                          runId: 'run1',
+                          hypothesisId: 'A',
+                        }),
+                      }).catch(() => {});
+                      // #endregion
+
+                      // Устанавливаем курсор в новый параграф после обновления DOM
+                      if (newParagraph && contentEditableRef.current) {
+                        // Находим параграф в обновленном DOM (он может быть пересоздан)
+                        const allParagraphs = contentEditableRef.current.querySelectorAll(
+                          'p[data-block-type="text"]'
+                        );
+                        let targetParagraph: HTMLParagraphElement | null = null;
+
+                        // Ищем параграф, который находится после blockContainer (если он был)
+                        if (blockContainer) {
+                          // Находим индекс blockContainer
+                          const allBlocks = Array.from(contentEditableRef.current.children);
+                          const blockIndex = allBlocks.indexOf(blockContainer);
+                          if (blockIndex >= 0 && blockIndex < allBlocks.length - 1) {
+                            // Берем следующий параграф
+                            const nextBlock = allBlocks[blockIndex + 1];
+                            if (
+                              nextBlock.tagName === 'P' &&
+                              nextBlock.getAttribute('data-block-type') === 'text'
+                            ) {
+                              targetParagraph = nextBlock as HTMLParagraphElement;
+                            }
+                          }
+                        }
+
+                        // Если не нашли, берем последний параграф
+                        if (!targetParagraph && allParagraphs.length > 0) {
+                          targetParagraph = allParagraphs[
+                            allParagraphs.length - 1
+                          ] as HTMLParagraphElement;
+                        }
+
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            location: 'EditArticleModal.tsx:2042',
+                            message: 'Finding target paragraph',
+                            data: {
+                              allParagraphsCount: allParagraphs.length,
+                              hasBlockContainer: !!blockContainer,
+                              foundTargetParagraph: !!targetParagraph,
+                              targetParagraphText:
+                                targetParagraph?.textContent?.substring(0, 20) || '',
+                            },
+                            timestamp: Date.now(),
+                            sessionId: 'debug-session',
+                            runId: 'run1',
+                            hypothesisId: 'B',
+                          }),
+                        }).catch(() => {});
+                        // #endregion
+
+                        if (targetParagraph) {
+                          // Создаем текстовый узел, если его нет
+                          let textNode: Text | null = null;
+                          if (
+                            targetParagraph.firstChild &&
+                            targetParagraph.firstChild.nodeType === Node.TEXT_NODE
+                          ) {
+                            textNode = targetParagraph.firstChild as Text;
+                          } else {
+                            textNode = document.createTextNode('');
+                            targetParagraph.appendChild(textNode);
+                          }
+
                           // #region agent log
                           fetch(
                             'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
@@ -1211,45 +2441,137 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                location: 'EditArticleModal.tsx:857',
-                                message: 'H4 subtitle onBlur',
-                                data: { index, subtitle, oldSubtitle: block.subtitle },
+                                location: 'EditArticleModal.tsx:2073',
+                                message: 'Before setting cursor',
+                                data: {
+                                  hasTextNode: !!textNode,
+                                  textNodeLength: textNode?.textContent?.length || 0,
+                                  targetParagraphHasFocus:
+                                    document.activeElement === contentEditableRef.current,
+                                },
                                 timestamp: Date.now(),
                                 sessionId: 'debug-session',
                                 runId: 'run1',
-                                hypothesisId: 'D',
+                                hypothesisId: 'C',
                               }),
                             }
                           ).catch(() => {});
                           // #endregion
-                          updateBlock(index, { subtitle: subtitle.trim() || undefined });
-                          scheduleAutoSave();
-                        }}
-                      >
-                        {block.subtitle}
-                      </h4>
-                    )}
 
-                    {/* Контент - параграф или список */}
-                    {(block.content || block.type === 'text') && (
-                      <>
-                        {typeof block.content === 'string' || !block.content ? (
-                          <p
-                            className="edit-article-modal__editable-p"
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={(e) => {
-                              const pElement = e.currentTarget;
-                              const strongElement = pElement.querySelector('strong');
+                          // Устанавливаем курсор после обновления React (используем setTimeout для следующего тика)
+                          // Это гарантирует, что React завершил обновление DOM перед установкой курсора
+                          setTimeout(() => {
+                            const currentSelection = window.getSelection();
+                            if (!currentSelection || !contentEditableRef.current) return;
 
-                              // Извлекаем значения ДО вызова updateBlock
-                              const strongText = strongElement?.textContent?.trim() || '';
-                              const fullText = pElement.textContent || '';
+                            // Находим параграф снова (он мог быть пересоздан React после setBlocks)
+                            const allParagraphsAfter = contentEditableRef.current.querySelectorAll(
+                              'p[data-block-type="text"]'
+                            );
+                            let finalTargetParagraph: HTMLParagraphElement | null = null;
 
-                              // Убираем strong текст из content
-                              const contentText = strongText
-                                ? fullText.replace(strongText, '').trim()
-                                : fullText.trim();
+                            if (blockContainer) {
+                              const allBlocksAfter = Array.from(
+                                contentEditableRef.current.children
+                              );
+                              const blockIndexAfter = allBlocksAfter.indexOf(blockContainer);
+                              if (
+                                blockIndexAfter >= 0 &&
+                                blockIndexAfter < allBlocksAfter.length - 1
+                              ) {
+                                const nextBlockAfter = allBlocksAfter[blockIndexAfter + 1];
+                                if (
+                                  nextBlockAfter.tagName === 'P' &&
+                                  nextBlockAfter.getAttribute('data-block-type') === 'text'
+                                ) {
+                                  finalTargetParagraph = nextBlockAfter as HTMLParagraphElement;
+                                }
+                              }
+                            }
+
+                            if (!finalTargetParagraph && allParagraphsAfter.length > 0) {
+                              finalTargetParagraph = allParagraphsAfter[
+                                allParagraphsAfter.length - 1
+                              ] as HTMLParagraphElement;
+                            }
+
+                            if (finalTargetParagraph) {
+                              // #region agent log
+                              fetch(
+                                'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
+                                {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    location: 'EditArticleModal.tsx:2323',
+                                    message: 'Found target paragraph in setTimeout',
+                                    data: {
+                                      paragraphText:
+                                        finalTargetParagraph.textContent?.substring(0, 20) || '',
+                                      paragraphHasChildren: finalTargetParagraph.hasChildNodes(),
+                                      paragraphFirstChildType:
+                                        finalTargetParagraph.firstChild?.nodeType,
+                                      paragraphIndex: Array.from(
+                                        contentEditableRef.current.children
+                                      ).indexOf(finalTargetParagraph),
+                                      allParagraphsCount: allParagraphsAfter.length,
+                                    },
+                                    timestamp: Date.now(),
+                                    sessionId: 'debug-session',
+                                    runId: 'run1',
+                                    hypothesisId: 'B',
+                                  }),
+                                }
+                              ).catch(() => {});
+                              // #endregion
+
+                              let finalTextNode: Text | null = null;
+                              if (
+                                finalTargetParagraph.firstChild &&
+                                finalTargetParagraph.firstChild.nodeType === Node.TEXT_NODE
+                              ) {
+                                finalTextNode = finalTargetParagraph.firstChild as Text;
+                              } else {
+                                finalTextNode = document.createTextNode('');
+                                finalTargetParagraph.appendChild(finalTextNode);
+                              }
+
+                              const finalRange = document.createRange();
+                              finalRange.setStart(finalTextNode, 0);
+                              finalRange.collapse(true);
+                              currentSelection.removeAllRanges();
+                              currentSelection.addRange(finalRange);
+
+                              // Убеждаемся, что параграф виден (не пустой и не скрыт)
+                              if (
+                                finalTargetParagraph.textContent === '' &&
+                                !finalTextNode.textContent
+                              ) {
+                                // Добавляем неразрывный пробел, чтобы параграф был виден
+                                finalTextNode.textContent = '\u00A0'; // &nbsp;
+                                finalRange.setStart(finalTextNode, 0);
+                                finalRange.collapse(true);
+                                currentSelection.removeAllRanges();
+                                currentSelection.addRange(finalRange);
+                              }
+
+                              contentEditableRef.current.focus();
+
+                              // Устанавливаем курсор еще раз через requestAnimationFrame для надежности
+                              requestAnimationFrame(() => {
+                                const rafSelection = window.getSelection();
+                                if (rafSelection && finalTargetParagraph && finalTextNode) {
+                                  // Проверяем, что текстовый узел все еще существует
+                                  if (finalTargetParagraph.contains(finalTextNode)) {
+                                    const rafRange = document.createRange();
+                                    rafRange.setStart(finalTextNode, 0);
+                                    rafRange.collapse(true);
+                                    rafSelection.removeAllRanges();
+                                    rafSelection.addRange(rafRange);
+                                    contentEditableRef.current?.focus();
+                                  }
+                                }
+                              });
 
                               // #region agent log
                               fetch(
@@ -1258,100 +2580,389 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({
-                                    location: 'EditArticleModal.tsx:887',
-                                    message: 'Paragraph onBlur',
+                                    location: 'EditArticleModal.tsx:2286',
+                                    message: 'After setting cursor (delayed after React update)',
                                     data: {
-                                      index,
-                                      strongText,
-                                      contentText,
-                                      oldStrong: block.strong,
-                                      oldContent: block.content,
+                                      selectionRangeCount: window.getSelection()?.rangeCount || 0,
+                                      selectionIsCollapsed: window.getSelection()?.getRangeAt(0)
+                                        ?.collapsed,
+                                      selectionStartContainer: window.getSelection()?.getRangeAt(0)
+                                        ?.startContainer?.nodeName,
+                                      selectionStartOffset: window.getSelection()?.getRangeAt(0)
+                                        ?.startOffset,
+                                      hasFocus:
+                                        document.activeElement === contentEditableRef.current,
+                                      activeElementTag: document.activeElement?.tagName,
+                                      paragraphText: finalTargetParagraph.textContent || '',
+                                      paragraphHasContent:
+                                        (finalTargetParagraph.textContent?.length || 0) > 0,
                                     },
                                     timestamp: Date.now(),
                                     sessionId: 'debug-session',
                                     runId: 'run1',
-                                    hypothesisId: 'D',
+                                    hypothesisId: 'C',
                                   }),
                                 }
                               ).catch(() => {});
                               // #endregion
-                              updateBlock(index, {
-                                strong: strongText || undefined,
-                                content: contentText || undefined,
-                              });
-                              scheduleAutoSave();
-                            }}
-                          >
-                            {block.strong && (
-                              <strong
-                                className="edit-article-modal__editable-strong"
-                                contentEditable
-                                suppressContentEditableWarning
-                                onBlur={(e) => {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                {block.strong}
-                              </strong>
-                            )}
-                            {block.strong && block.content && ' '}
-                            {block.content
-                              ? block.strong
-                                ? block.content.replace(block.strong, '').trim()
-                                : block.content
-                              : ''}
-                          </p>
-                        ) : (
-                          <ul className="edit-article-modal__editable-ul">
-                            {block.content.map((item, i) => (
-                              <li
-                                key={i}
-                                className="edit-article-modal__editable-li"
-                                contentEditable
-                                suppressContentEditableWarning
-                                onBlur={(e) => {
-                                  const itemValue = e.currentTarget.textContent ?? '';
-                                  // #region agent log
-                                  fetch(
-                                    'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                                    {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        location: 'EditArticleModal.tsx:922',
-                                        message: 'List item onBlur',
-                                        data: {
-                                          index,
-                                          itemIndex: i,
-                                          itemValue,
-                                          oldContent: block.content,
-                                        },
-                                        timestamp: Date.now(),
-                                        sessionId: 'debug-session',
-                                        runId: 'run1',
-                                        hypothesisId: 'D',
-                                      }),
-                                    }
-                                  ).catch(() => {});
-                                  // #endregion
-                                  const newContent = [...(block.content as string[])];
-                                  newContent[i] = itemValue;
-                                  updateBlock(index, { content: newContent });
-                                  scheduleAutoSave();
-                                }}
-                              >
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
+                            }
+                          }, 0);
+                        } else {
+                          // #region agent log
+                          fetch(
+                            'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
+                            {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                location: 'EditArticleModal.tsx:2094',
+                                message: 'Target paragraph not found',
+                                data: {
+                                  allParagraphsCount: allParagraphs.length,
+                                  hasNewParagraph: !!newParagraph,
+                                },
+                                timestamp: Date.now(),
+                                sessionId: 'debug-session',
+                                runId: 'run1',
+                                hypothesisId: 'B',
+                              }),
+                            }
+                          ).catch(() => {});
+                          // #endregion
+                        }
+                      }
 
-                {/* Кнопки добавления блоков */}
+                      scheduleAutoSave();
+                    }
+                    // Shift+Enter - оставляем стандартное поведение браузера (создает <br> или тот же тег)
+                  }}
+                  onFocus={() => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        location: 'EditArticleModal.tsx:1293',
+                        message: 'ContentEditable onFocus',
+                        data: {
+                          hasRef: !!contentEditableRef.current,
+                          contentHtmlLength: contentHtml.length,
+                          innerHTML: contentEditableRef.current?.innerHTML?.substring(0, 100),
+                          isContentEditable: contentEditableRef.current?.isContentEditable,
+                        },
+                        timestamp: Date.now(),
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'A',
+                      }),
+                    }).catch(() => {});
+                    // #endregion
+                  }}
+                  onInput={(e) => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        location: 'EditArticleModal.tsx:1350',
+                        message: 'ContentEditable onInput triggered',
+                        data: {
+                          newHtmlLength: e.currentTarget.innerHTML.length,
+                          newHtmlPreview: e.currentTarget.innerHTML.substring(0, 100),
+                          oldContentHtmlLength: contentHtml.length,
+                          isInitialMount: isInitialMountRef.current,
+                        },
+                        timestamp: Date.now(),
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'B',
+                      }),
+                    }).catch(() => {});
+                    // #endregion
+                    const html = e.currentTarget.innerHTML;
+                    // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
+                    lastContentHtmlRef.current = html;
+                    setContentHtml(html);
+                    // Парсим HTML обратно в блоки
+                    const parsedBlocks = htmlToBlocks(html);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        location: 'EditArticleModal.tsx:1370',
+                        message: 'After htmlToBlocks',
+                        data: {
+                          parsedBlocksCount: parsedBlocks.length,
+                          htmlLength: html.length,
+                        },
+                        timestamp: Date.now(),
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'B',
+                      }),
+                    }).catch(() => {});
+                    // #endregion
+                    setBlocks(parsedBlocks);
+                    scheduleAutoSave();
+                  }}
+                  onBlur={() => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        location: 'EditArticleModal.tsx:1306',
+                        message: 'ContentEditable onBlur',
+                        data: {
+                          hasRef: !!contentEditableRef.current,
+                          finalHtmlLength: contentEditableRef.current?.innerHTML?.length,
+                        },
+                        timestamp: Date.now(),
+                        sessionId: 'debug-session',
+                        runId: 'run1',
+                        hypothesisId: 'C',
+                      }),
+                    }).catch(() => {});
+                    // #endregion
+                    // При потере фокуса также обновляем блоки
+                    if (contentEditableRef.current) {
+                      const html = contentEditableRef.current.innerHTML;
+                      const parsedBlocks = htmlToBlocks(html);
+                      setBlocks(parsedBlocks);
+                      scheduleAutoSave();
+                    }
+                  }}
+                />
+
+                {/* Тултип форматирования при выделении текста */}
+                {formattingTooltip.show && (
+                  <div
+                    className={`edit-article-modal__formatting-tooltip ${
+                      formattingTooltip.visible
+                        ? 'edit-article-modal__formatting-tooltip--visible'
+                        : ''
+                    }`}
+                    style={{
+                      left: `${formattingTooltip.x}px`,
+                      top: `${formattingTooltip.y}px`,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('link')}
+                      title={lang === 'ru' ? 'Сделать ссылкой' : 'Make link'}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
+                    </button>
+                    <div className="edit-article-modal__formatting-separator" />
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('h1')}
+                      title={lang === 'ru' ? 'Заголовок первого уровня' : 'Heading 1'}
+                    >
+                      <strong>H</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button edit-article-modal__formatting-button--active"
+                      onClick={() => applyFormatting('h2')}
+                      title={lang === 'ru' ? 'Заголовок второго уровня' : 'Heading 2'}
+                    >
+                      H
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('h3')}
+                      title={lang === 'ru' ? 'Заголовок третьего уровня' : 'Heading 3'}
+                    >
+                      <span style={{ fontSize: '12px' }}>H3</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('h4')}
+                      title={lang === 'ru' ? 'Заголовок четвёртого уровня' : 'Heading 4'}
+                    >
+                      <span style={{ fontSize: '12px' }}>H4</span>
+                    </button>
+                    <div className="edit-article-modal__formatting-separator" />
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('paragraph')}
+                      title={lang === 'ru' ? 'Параграф' : 'Paragraph'}
+                    >
+                      <span style={{ fontSize: '12px' }}>P</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('bold')}
+                      title={lang === 'ru' ? 'Жирный текст' : 'Bold'}
+                    >
+                      <strong>B</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('italic')}
+                      title={lang === 'ru' ? 'Курсив' : 'Italic'}
+                    >
+                      <em>I</em>
+                    </button>
+                    <div className="edit-article-modal__formatting-separator" />
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('list')}
+                      title={lang === 'ru' ? 'Элемент списка' : 'List item'}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="8" y1="6" x2="21" y2="6" />
+                        <line x1="8" y1="12" x2="21" y2="12" />
+                        <line x1="8" y1="18" x2="21" y2="18" />
+                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__formatting-button"
+                      onClick={() => applyFormatting('quote')}
+                      title={lang === 'ru' ? 'Цитата' : 'Quote'}
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+                        <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* Поле ввода с плюсиком и панель инструментов */}
                 <div className="edit-article-modal__add-blocks">
+                  <div className="edit-article-modal__text-input-wrapper">
+                    <button
+                      type="button"
+                      className="edit-article-modal__add-button"
+                      onClick={() => setShowToolbar(!showToolbar)}
+                    >
+                      +
+                    </button>
+                    <textarea
+                      ref={textInputRef}
+                      className="edit-article-modal__text-input"
+                      placeholder={lang === 'ru' ? 'Начните вводить текст...' : 'Start typing...'}
+                      value={newTextContent}
+                      onChange={(e) => setNewTextContent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          addTextBlockFromInput();
+                        }
+                      }}
+                      onBlur={() => {
+                        // Сохраняем текст при потере фокуса
+                        if (newTextContent.trim()) {
+                          addTextBlockFromInput();
+                        }
+                      }}
+                      rows={1}
+                      style={{
+                        minHeight: '40px',
+                        resize: 'none',
+                        overflow: 'hidden',
+                      }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = `${target.scrollHeight}px`;
+                      }}
+                    />
+                  </div>
+                  {showToolbar && (
+                    <div className="edit-article-modal__toolbar">
+                      <button
+                        type="button"
+                        className="edit-article-modal__toolbar-button"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                          setShowToolbar(false);
+                        }}
+                        title={lang === 'ru' ? 'Добавить изображение' : 'Add image'}
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="edit-article-modal__toolbar-button"
+                        onClick={addDivider}
+                        title={lang === 'ru' ? 'Добавить разделитель' : 'Add divider'}
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="3" y1="12" x2="21" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1360,25 +2971,11 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        handleImageUpload(file);
+                        handleImageFromToolbar(file);
                         e.target.value = '';
                       }
                     }}
                   />
-                  <button
-                    type="button"
-                    className="edit-article-modal__control-button"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {texts.addPhoto}
-                  </button>
-                  <button
-                    type="button"
-                    className="edit-article-modal__control-button"
-                    onClick={addTextBlock}
-                  >
-                    {texts.addText}
-                  </button>
                 </div>
               </div>
             </section>

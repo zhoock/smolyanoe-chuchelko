@@ -110,93 +110,8 @@
     min-height: auto;
 
     .wrapper {
+      max-width: 720px;
       padding-inline: var(--ms-1);
-    }
-
-    h2 {
-      margin: 0 0 var(--ms-2);
-      color: var(--text-color, #ffffff);
-      font-size: 2rem;
-      line-height: 1.3;
-      font-weight: 700;
-      font-family: var(--base-font-family, arial, sans-serif);
-
-      @include breakpoint(tablet) {
-        font-size: 2.5rem;
-      }
-    }
-
-    h3 {
-      margin: var(--ms-4) 0 var(--ms-2);
-      color: var(--text-color, #ffffff);
-      font-size: 1.5rem;
-      line-height: 1.3;
-      font-weight: 700;
-      font-family: var(--base-font-family, arial, sans-serif);
-
-      &:first-child {
-        margin-block-start: 0;
-      }
-
-      @include breakpoint(tablet) {
-        font-size: 1.75rem;
-      }
-    }
-
-    h4 {
-      margin: var(--ms-3) 0 var(--ms-2);
-      color: var(--text-color, #ffffff);
-      font-size: 1.25rem;
-      line-height: 1.3;
-      font-weight: 700;
-      font-family: var(--base-font-family, arial, sans-serif);
-
-      @include breakpoint(tablet) {
-        font-size: 1.5rem;
-      }
-    }
-
-    p {
-      margin: 0 0 var(--ms-2);
-      color: var(--text-color, #ffffff);
-      line-height: 1.6;
-
-      // &:last-child {
-      //   margin-block-end: 0;
-      // }
-
-      strong {
-        font-weight: 700;
-        color: var(--text-color, #ffffff);
-      }
-    }
-
-    ul {
-      margin: 0 0 var(--ms-2);
-      list-style-type: disc;
-
-      &:last-child {
-        margin-block-end: 0;
-      }
-
-      li {
-        margin: 0 0 var(--ms-01);
-        color: var(--text-color, #ffffff);
-
-        &:last-child {
-          margin-block-end: 0;
-        }
-      }
-    }
-
-    .uncollapse {
-      margin: var(--ms-3) 0;
-
-      img {
-        max-inline-size: 100%;
-        block-size: auto;
-        display: block;
-      }
     }
   }
 
@@ -207,17 +122,7 @@
   &__editable-p,
   &__editable-strong,
   &__editable-li {
-    outline: none;
-    cursor: text;
-    transition: background 0.2s;
-
     &:hover {
-      // background: rgba(255, 255, 255, 0.05);
-      border-radius: 2px;
-    }
-
-    &:focus {
-      // background: rgba(255, 255, 255, 0.08);
       border-radius: 2px;
     }
   }
@@ -226,23 +131,44 @@
   &__image-wrapper,
   &__carousel-wrapper {
     position: relative;
+    cursor: pointer;
+    outline: 2px solid transparent;
+    outline-offset: 4px;
+    border-radius: var(--ms-01);
+    transition:
+      outline 0.2s,
+      box-shadow 0.2s;
 
-    &:hover &-controls,
-    &:hover &-edit-button {
-      opacity: 1;
+    &--selected {
+      outline: 2px solid var(--graphite-green);
+      box-shadow: 0 0 0 4px rgba(var(--graphite-green-rgb) / 20%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--graphite-green);
+      box-shadow: 0 0 0 4px rgba(var(--graphite-green-rgb) / 20%);
     }
   }
 
-  &__image-controls,
-  &__carousel-edit-button {
+  &__create-carousel-button {
     position: absolute;
     top: var(--ms-01);
     right: var(--ms-01);
-    z-index: 5;
-    display: flex;
-    gap: var(--ms-01);
+    z-index: 6;
     opacity: 0;
+    font-size: var(--ms-0);
     transition: opacity 0.2s;
+
+    @include button-variant(
+      $color: var(--white),
+      $background: rgba(var(--black-rgb) / 80%),
+      $hover-color: var(--white),
+      $hover-background: rgba(var(--black-rgb) / 90%),
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $border: 0,
+      $border-radius: var(--ms-01)
+    );
   }
 
   &__carousel-edit-button {
@@ -250,28 +176,32 @@
     top: var(--ms-01);
     right: var(--ms-01);
     z-index: 5;
-    padding: var(--ms-01) var(--ms-0);
-    color: var(--white);
-    font-size: var(--ms-0);
-    background: rgba(var(--black-rgb) / 80%);
-    border: none;
-    border-radius: var(--ms-01);
     opacity: 0;
-    cursor: pointer;
-    transition:
-      background 0.2s,
-      opacity 0.2s;
+    font-size: var(--ms-0);
+    transition: opacity 0.2s;
+
+    @include button-variant(
+      $color: var(--white),
+      $background: rgba(var(--black-rgb) / 80%),
+      $hover-color: var(--white),
+      $hover-background: rgba(var(--black-rgb) / 90%),
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $border: 0,
+      $border-radius: var(--ms-01)
+    );
 
     &:hover {
-      background: rgba(var(--black-rgb) / 90%);
       opacity: 1;
     }
   }
 
-  &__carousel-wrapper {
-    &:hover .edit-article-modal__carousel-edit-button {
-      opacity: 1;
-    }
+  &__image-wrapper:hover &__create-carousel-button {
+    opacity: 1;
+  }
+
+  &__carousel-wrapper:hover &__carousel-edit-button {
+    opacity: 1;
   }
 
   &__carousel-edit {
@@ -349,11 +279,129 @@
   }
 
   &__add-blocks {
-    display: flex;
-    gap: var(--ms-01);
+    position: relative;
     margin-top: var(--ms-2);
     padding-top: var(--ms-2);
     border-top: 1px solid var(--iron-slate);
+  }
+
+  &__text-input-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ms-01);
+  }
+
+  &__text-input {
+    flex: 1;
+    padding: var(--ms-01) var(--ms-0);
+    color: var(--white);
+    font-size: var(--ms-0);
+    font-family: inherit;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--iron-slate);
+    border-radius: 0;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-bottom-color: var(--graphite-green);
+    }
+
+    &::placeholder {
+      color: var(--warm-concrete);
+      opacity: 0.7;
+    }
+  }
+
+  &__add-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    color: var(--white);
+    font-size: 24px;
+    line-height: 1;
+    background: var(--iron-slate);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      transform 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+      background: var(--graphite-green);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-01);
+    margin-top: var(--ms-01);
+    padding: var(--ms-01);
+    background: rgba(var(--white-rgb) / 5%);
+    border-radius: var(--ms-01);
+  }
+
+  &__toolbar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    color: var(--white);
+    background: transparent;
+    border: none;
+    border-radius: var(--ms-01);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      transform 0.2s;
+
+    &:hover {
+      background: rgba(var(--white-rgb) / 10%);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__divider {
+    margin: var(--ms-2) 0;
+    border: none;
+    border-top: 1px solid var(--iron-slate);
+  }
+
+  &__control-button {
+    @include button-variant(
+      $color: var(--white),
+      $background: var(--iron-slate),
+      $hover-color: var(--white),
+      $hover-background: rgba(var(--white-rgb) / 10%),
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $border: 0,
+      $border-radius: var(--ms-01)
+    );
   }
 
   &__button {
@@ -401,5 +449,71 @@
     padding: var(--ms-1);
     border-top: 1px solid var(--iron-slate);
     background: var(--deep-black);
+  }
+
+  &__formatting-tooltip {
+    position: fixed;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: var(--ms-01);
+    background: var(--iron-slate);
+    border-radius: var(--ms-01);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
+    pointer-events: auto;
+    opacity: 0;
+    transition:
+      opacity 0.2s ease-out,
+      transform 0.2s ease-out;
+    transform: translate(-50%, 10px);
+
+    &--visible {
+      opacity: 1;
+      transform: translate(-50%, 20%);
+    }
+  }
+
+  &__formatting-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    font-size: var(--ms-0);
+    font-weight: 400;
+    border-radius: var(--ms-01);
+    cursor: pointer;
+
+    @include button-variant(
+      $color: var(--white),
+      $background: transparent,
+      $hover-color: var(--white),
+      $hover-background: var(--graphite-green),
+      $border: none,
+      $padding: var(--ms-01),
+      $margin: 0олж
+    );
+
+    &--active {
+      color: var(--white);
+      background: var(--graphite-green);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    strong {
+      font-weight: 700;
+    }
+  }
+
+  &__formatting-separator {
+    width: 1px;
+    height: 20px;
+    margin: 0 var(--ms-01);
+    background: rgb(255 255 255 / 20%);
   }
 }

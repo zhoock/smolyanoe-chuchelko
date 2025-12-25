@@ -94,10 +94,33 @@ export const handler: Handler = async (
 
     // Проверяем, что альбом существует и принадлежит пользователю
     // Ищем по album_id (строка) и lang, так как альбомы уникальны по (user_id, album_id, lang)
-    const albumResult = await query<{ id: string; user_id: string | null }>(
-      'SELECT id, user_id FROM albums WHERE album_id = $1 AND lang = $2 AND user_id = $3',
+    const albumResult = await query<{ id: string; user_id: string | null; album_id: string }>(
+      'SELECT id, user_id, album_id FROM albums WHERE album_id = $1 AND lang = $2 AND user_id = $3',
       [albumId, lang, userId]
     );
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'upload-tracks.ts:97',
+        message: 'Album lookup result',
+        data: {
+          albumId,
+          lang,
+          userId,
+          found: albumResult.rows.length > 0,
+          albumDbId: albumResult.rows[0]?.id,
+          albumStringId: albumResult.rows[0]?.album_id,
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'D',
+      }),
+    }).catch(() => {});
+    // #endregion
 
     if (albumResult.rows.length === 0) {
       return createErrorResponse(404, 'Album not found');
@@ -158,6 +181,31 @@ export const handler: Handler = async (
           orderIndex,
         });
 
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'upload-tracks.ts:161',
+            message: 'Saving track to DB - before insert',
+            data: {
+              albumDbId: album.id,
+              albumStringId: album.album_id,
+              trackId,
+              title,
+              duration,
+              url,
+              orderIndex,
+              hasUrl: !!url,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'E',
+          }),
+        }).catch(() => {});
+        // #endregion
+
         const insertResult = await query(
           `INSERT INTO tracks (
         album_id, track_id, title, duration, src, order_index
@@ -172,6 +220,30 @@ export const handler: Handler = async (
       RETURNING id, track_id, title`,
           [album.id, trackId, title, duration, url, orderIndex]
         );
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'upload-tracks.ts:176',
+            message: 'Track saved to DB - after insert',
+            data: {
+              albumDbId: album.id,
+              albumStringId: album.album_id,
+              trackId,
+              title,
+              saved: insertResult.rows.length > 0,
+              savedTrackId: insertResult.rows[0]?.track_id,
+              savedDbId: insertResult.rows[0]?.id,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'F',
+          }),
+        }).catch(() => {});
+        // #endregion
 
         if (insertResult.rows.length > 0) {
           const savedTrack = insertResult.rows[0];

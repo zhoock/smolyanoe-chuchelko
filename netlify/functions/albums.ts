@@ -233,9 +233,9 @@ export const handler: Handler = async (
       // Возвращаем все альбомы для указанного языка
       const albumsResult = await query<AlbumRow>(
         `SELECT a.*
-         FROM albums a
-         WHERE a.lang = $1 
-         ORDER BY a.created_at DESC`,
+             FROM albums a
+             WHERE a.lang = $1 
+             ORDER BY a.created_at DESC`,
         [lang]
       );
 
@@ -243,6 +243,27 @@ export const handler: Handler = async (
       const albumsWithTracks = await Promise.all(
         albumsResult.rows.map(async (album) => {
           try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                location: 'albums.ts:243',
+                message: 'Loading tracks for album - start',
+                data: {
+                  albumId: album.album_id,
+                  albumDbId: album.id,
+                  lang: album.lang,
+                  userId: album.user_id,
+                },
+                timestamp: Date.now(),
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'A',
+              }),
+            }).catch(() => {});
+            // #endregion
+
             // Загружаем треки по строковому album_id, а не по UUID
             // Это позволяет находить треки для всех языковых версий альбома
             // Используем подзапрос с ROW_NUMBER для исключения дубликатов
@@ -279,6 +300,35 @@ export const handler: Handler = async (
               ORDER BY ranked.order_index ASC`,
               [album.album_id, album.lang]
             );
+
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                location: 'albums.ts:281',
+                message: 'Tracks loaded from DB',
+                data: {
+                  albumId: album.album_id,
+                  albumDbId: album.id,
+                  lang: album.lang,
+                  tracksCount: tracksResult.rows.length,
+                  tracks: tracksResult.rows.map((t) => ({
+                    trackId: t.track_id,
+                    title: t.title,
+                    src: t.src,
+                    orderIndex: t.order_index,
+                    hasTitle: !!t.title,
+                    hasSrc: !!t.src,
+                  })),
+                },
+                timestamp: Date.now(),
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'B',
+              }),
+            }).catch(() => {});
+            // #endregion
 
             // 🔍 DEBUG: Логируем треки из БД
             if (album.album_id === '23-remastered') {
@@ -361,6 +411,33 @@ export const handler: Handler = async (
             });
 
             const mapped = mapAlbumToApiFormat(album, tracksWithSyncedLyrics);
+
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                location: 'albums.ts:363',
+                message: 'Album mapped to API format',
+                data: {
+                  albumId: mapped.albumId,
+                  lang: mapped.lang,
+                  tracksCount: mapped.tracks.length,
+                  tracks: mapped.tracks.map((t) => ({
+                    id: t.id,
+                    title: t.title,
+                    src: t.src,
+                    hasTitle: !!t.title,
+                    hasSrc: !!t.src,
+                  })),
+                },
+                timestamp: Date.now(),
+                sessionId: 'debug-session',
+                runId: 'run1',
+                hypothesisId: 'C',
+              }),
+            }).catch(() => {});
+            // #endregion
 
             return mapped;
           } catch (trackError) {
