@@ -185,6 +185,87 @@
           "cancel": "Cancel"
         }
       }
+    },
+    "checkout": {
+      "steps": {
+        "cart": "Cart",
+        "checkout": "Checkout",
+        "payment": "Payment"
+      },
+      "cart": {
+        "title": "Your cart",
+        "albumDownload": "Album download",
+        "remove": "Remove",
+        "subtotal": "Subtotal",
+        "checkout": "CHECKOUT",
+        "continueShopping": "Continue shopping"
+      },
+      "checkout": {
+        "title": "Checkout",
+        "customerInformation": "Customer Information",
+        "emailAddress": "Email address",
+        "joinMailingList": "Join the mailing list",
+        "joinMailingListSubtitle": "You can unsubscribe at any time",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "notes": "Notes",
+        "agreeToOffer": "Agree to",
+        "agreeToPrivacy": "I consent to",
+        "publicOffer": "Public Offer",
+        "privacyPolicy": "processing of personal data",
+        "backToCart": "< Back to cart",
+        "continueToPayment": "Continue to payment method",
+        "orderSummary": "Order Summary",
+        "desc": "DESC",
+        "qty": "QTY",
+        "price": "PRICE",
+        "singleDownload": "Single download",
+        "discountCode": "Discount code or gift card",
+        "apply": "Apply",
+        "total": "Total",
+        "backToSite": "< Back to"
+      },
+      "payment": {
+        "title": "Payment",
+        "customerInformation": "Customer Information",
+        "edit": "Edit",
+        "email": "Email:",
+        "name": "Name:",
+        "paypal": "PayPal",
+        "debitOrCreditCard": "Debit or Credit Card",
+        "bankCardRussia": "Bank Card (Russia, CIS)",
+        "cardNumber": "Card number",
+        "expires": "Expires",
+        "csc": "CSC",
+        "billingAddress": "Billing address",
+        "zipCode": "ZIP code",
+        "country": "Country",
+        "mobile": "Mobile",
+        "confirmAge": "By continuing, you confirm you're 18 years or older.",
+        "pay": "Pay",
+        "processing": "Processing...",
+        "poweredBy": "Powered by",
+        "yooKassa": "YooKassa",
+        "backToCart": "< Back to cart"
+      },
+      "validation": {
+        "emailRequired": "Email is required",
+        "emailInvalid": "Please enter a valid email address",
+        "firstNameRequired": "First name is required",
+        "lastNameRequired": "Last name is required",
+        "cardNumberRequired": "Card number is required",
+        "cardNumberInvalid": "Card number must be 13-19 digits",
+        "expiryRequired": "Expiry date is required",
+        "expiryInvalid": "Please enter a valid expiry date (MM/YY)",
+        "expiryMonthInvalid": "Month must be between 01 and 12",
+        "cscRequired": "CSC is required",
+        "cscInvalid": "CSC must be 3-4 digits",
+        "zipCodeRequired": "ZIP code is required",
+        "mobileRequired": "Mobile is required",
+        "confirmAgeRequired": "You must confirm you are 18 years or older",
+        "agreeToOfferRequired": "You must agree to the offer",
+        "agreeToPrivacyRequired": "You must agree to the privacy policy"
+      }
     }
   }
 ]

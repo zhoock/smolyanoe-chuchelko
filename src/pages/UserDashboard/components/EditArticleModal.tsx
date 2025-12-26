@@ -134,6 +134,8 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   const [editingCarouselIndex, setEditingCarouselIndex] = useState<number | null>(null);
   const [carouselBackup, setCarouselBackup] = useState<SimplifiedBlock | null>(null);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [paragraphToolbarIndex, setParagraphToolbarIndex] = useState<number | null>(null);
+  const paragraphToolbarPositionRef = useRef<{ x: number; y: number } | null>(null);
   const [newTextContent, setNewTextContent] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [alertModal, setAlertModal] = useState<AlertModalState | null>(null);
@@ -621,6 +623,159 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   const saveToHistoryRef = useRef<() => void>();
   const handleUndoRef = useRef<() => void>();
   const handleRedoRef = useRef<() => void>();
+
+  // Добавляем кнопки слева от каждого параграфа
+  useEffect(() => {
+    if (!contentEditableRef.current) return;
+
+    const addButtonsToParagraphs = () => {
+      const paragraphs = contentEditableRef.current?.querySelectorAll('p[data-block-type="text"]');
+      if (!paragraphs) return;
+
+      paragraphs.forEach((paragraph) => {
+        const paragraphElement = paragraph as HTMLParagraphElement;
+        // Проверяем, есть ли уже кнопка
+        if (paragraphElement.querySelector('.edit-article-modal__paragraph-button')) {
+          return;
+        }
+
+        // Создаем кнопку
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'edit-article-modal__paragraph-button';
+        button.innerHTML = '+';
+        button.setAttribute('tabindex', '-1');
+        button.setAttribute('contenteditable', 'false');
+
+        // Обработчик клика на кнопку
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Находим индекс параграфа в DOM
+          const allParagraphs = contentEditableRef.current?.querySelectorAll(
+            'p[data-block-type="text"]'
+          );
+          if (!allParagraphs) return;
+
+          const paragraphIndex = Array.from(allParagraphs).indexOf(paragraphElement);
+          if (paragraphIndex === -1) return;
+
+          // Получаем позицию кнопки для позиционирования тултипа
+          const buttonRect = button.getBoundingClientRect();
+          const contentEditableRect = contentEditableRef.current?.getBoundingClientRect();
+          if (contentEditableRect) {
+            paragraphToolbarPositionRef.current = {
+              x: buttonRect.left - contentEditableRect.left + buttonRect.width / 2,
+              y: buttonRect.top - contentEditableRect.top,
+            };
+          }
+
+          // Устанавливаем курсор в начало параграфа
+          const selection = window.getSelection();
+          if (selection && paragraphElement.firstChild) {
+            const range = document.createRange();
+            range.setStart(paragraphElement.firstChild, 0);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+
+          // Показываем тултип для этого параграфа
+          setParagraphToolbarIndex(paragraphIndex);
+        });
+
+        // Вставляем кнопку в начало параграфа
+        paragraphElement.insertBefore(button, paragraphElement.firstChild);
+      });
+    };
+
+    // Добавляем кнопки после обновления DOM
+    const timeoutId = setTimeout(addButtonsToParagraphs, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [blocks, contentHtml]);
+
+  // Закрытие тултипа параграфа при клике вне его
+  useEffect(() => {
+    if (paragraphToolbarIndex === null) {
+      return undefined;
+    }
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Проверяем, что клик был вне тултипа и кнопки
+      if (
+        !target.closest('.edit-article-modal__paragraph-toolbar') &&
+        !target.closest('.edit-article-modal__paragraph-button')
+      ) {
+        // Восстанавливаем курсор в параграф перед закрытием тултипа
+        if (contentEditableRef.current) {
+          const allParagraphs = contentEditableRef.current.querySelectorAll(
+            'p[data-block-type="text"]'
+          );
+          if (
+            allParagraphs &&
+            paragraphToolbarIndex >= 0 &&
+            paragraphToolbarIndex < allParagraphs.length
+          ) {
+            const paragraph = allParagraphs[paragraphToolbarIndex] as HTMLParagraphElement;
+            const selection = window.getSelection();
+            if (selection && paragraph) {
+              // Находим первый текстовый узел или создаем его
+              let textNode: Node | null = null;
+              if (paragraph.firstChild && paragraph.firstChild.nodeType === Node.TEXT_NODE) {
+                textNode = paragraph.firstChild;
+              } else {
+                // Пропускаем кнопку и ищем текстовый узел
+                for (let i = 0; i < paragraph.childNodes.length; i++) {
+                  const node = paragraph.childNodes[i];
+                  if (node.nodeType === Node.TEXT_NODE) {
+                    textNode = node;
+                    break;
+                  }
+                }
+                // Если текстового узла нет, создаем его
+                if (!textNode) {
+                  textNode = document.createTextNode('');
+                  // Вставляем после кнопки, если она есть
+                  const button = paragraph.querySelector('.edit-article-modal__paragraph-button');
+                  if (button && button.nextSibling) {
+                    paragraph.insertBefore(textNode, button.nextSibling);
+                  } else if (button) {
+                    paragraph.appendChild(textNode);
+                  } else {
+                    paragraph.appendChild(textNode);
+                  }
+                }
+              }
+
+              if (textNode) {
+                const range = document.createRange();
+                range.setStart(textNode, 0);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                contentEditableRef.current.focus();
+              }
+            }
+          }
+        }
+
+        setParagraphToolbarIndex(null);
+      }
+    };
+
+    // Используем mousedown вместо click для более быстрой реакции
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [paragraphToolbarIndex]);
 
   // Обработчик нажатия клавиши Delete для удаления выбранного изображения и Command+Z для undo
   useEffect(() => {
@@ -1433,6 +1588,37 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
           fragment.appendChild(div.firstChild);
         }
         range.insertNode(fragment);
+
+        // Устанавливаем курсор после разделителя
+        setTimeout(() => {
+          const newSelection = window.getSelection();
+          if (newSelection && contentEditableRef.current) {
+            const divider = contentEditableRef.current.querySelector(
+              '.edit-article-modal__inline-divider:last-of-type'
+            );
+            if (divider && divider.nextSibling) {
+              const range = document.createRange();
+              if (divider.nextSibling.nodeType === Node.TEXT_NODE) {
+                range.setStart(divider.nextSibling, 0);
+              } else if (divider.nextSibling.nodeType === Node.ELEMENT_NODE) {
+                const element = divider.nextSibling as HTMLElement;
+                const firstTextNode = element.firstChild;
+                if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                  range.setStart(firstTextNode, 0);
+                } else {
+                  range.setStart(element, 0);
+                }
+              } else {
+                range.setStartAfter(divider);
+              }
+              range.collapse(true);
+              newSelection.removeAllRanges();
+              newSelection.addRange(range);
+              contentEditableRef.current.focus();
+            }
+          }
+        }, 0);
+
         // Обновляем HTML и блоки
         const html = contentEditableRef.current.innerHTML;
         // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
@@ -1444,6 +1630,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       }
     }
     setShowToolbar(false);
+    setParagraphToolbarIndex(null);
   };
 
   // Обработка загрузки изображения из панели инструментов
@@ -1495,6 +1682,48 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
             fragment.appendChild(div.firstChild);
           }
           range.insertNode(fragment);
+
+          // Устанавливаем курсор после изображения
+          setTimeout(() => {
+            const newSelection = window.getSelection();
+            if (newSelection && contentEditableRef.current) {
+              const image = contentEditableRef.current.querySelector(
+                '.edit-article-modal__inline-image:last-of-type'
+              );
+              if (image) {
+                const range = document.createRange();
+                // Ищем следующий элемент после изображения
+                if (image.nextSibling) {
+                  if (image.nextSibling.nodeType === Node.TEXT_NODE) {
+                    range.setStart(image.nextSibling, 0);
+                  } else if (image.nextSibling.nodeType === Node.ELEMENT_NODE) {
+                    const element = image.nextSibling as HTMLElement;
+                    const firstTextNode = element.firstChild;
+                    if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+                      range.setStart(firstTextNode, 0);
+                    } else {
+                      range.setStart(element, 0);
+                    }
+                  } else {
+                    range.setStartAfter(image);
+                  }
+                } else {
+                  // Если следующего элемента нет, создаем новый параграф
+                  const newParagraph = document.createElement('p');
+                  newParagraph.setAttribute('data-block-type', 'text');
+                  const textNode = document.createTextNode('');
+                  newParagraph.appendChild(textNode);
+                  image.parentNode?.insertBefore(newParagraph, image.nextSibling);
+                  range.setStart(textNode, 0);
+                }
+                range.collapse(true);
+                newSelection.removeAllRanges();
+                newSelection.addRange(range);
+                contentEditableRef.current.focus();
+              }
+            }
+          }, 0);
+
           // Обновляем HTML и блоки
           const html = contentEditableRef.current.innerHTML;
           // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
@@ -1506,6 +1735,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         }
       }
       setShowToolbar(false);
+      setParagraphToolbarIndex(null);
     } catch (error) {
       console.error('Error uploading image:', error);
       showAlert(texts.errorUploadingImage);
@@ -2000,6 +2230,92 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     if (contentEditableRef.current) {
       contentEditableRef.current.innerHTML = lastState.contentHtml;
       lastContentHtmlRef.current = lastState.contentHtml;
+
+      // Устанавливаем курсор в последний параграф с содержимым после восстановления
+      setTimeout(() => {
+        if (!contentEditableRef.current) return;
+
+        const paragraphs = Array.from(
+          contentEditableRef.current.querySelectorAll('p[data-block-type="text"]')
+        ) as HTMLParagraphElement[];
+
+        if (paragraphs.length > 0) {
+          // Ищем последний параграф с содержимым (или просто последний, если все пустые)
+          let targetParagraph: HTMLParagraphElement | null = null;
+
+          // Проходим с конца и ищем параграф с текстом
+          for (let i = paragraphs.length - 1; i >= 0; i--) {
+            const paragraph = paragraphs[i];
+            // Получаем текст без учета кнопки
+            const button = paragraph.querySelector('.edit-article-modal__paragraph-button');
+            const textContent = paragraph.textContent || '';
+            const textWithoutButton = button
+              ? textContent.replace(button.textContent || '', '').trim()
+              : textContent.trim();
+
+            if (textWithoutButton.length > 0 || i === 0) {
+              targetParagraph = paragraph;
+              break;
+            }
+          }
+
+          // Если не нашли параграф с текстом, берем последний
+          if (!targetParagraph && paragraphs.length > 0) {
+            targetParagraph = paragraphs[paragraphs.length - 1];
+          }
+
+          if (targetParagraph) {
+            // Находим все текстовые узлы в параграфе (пропускаем кнопку)
+            let lastTextNode: Node | null = null;
+            let lastTextNodeLength = 0;
+
+            for (let i = 0; i < targetParagraph.childNodes.length; i++) {
+              const node = targetParagraph.childNodes[i];
+              if (node.nodeType === Node.TEXT_NODE) {
+                lastTextNode = node;
+                lastTextNodeLength = node.textContent?.length || 0;
+              } else if (
+                node.nodeType === Node.ELEMENT_NODE &&
+                !(node as HTMLElement).classList.contains('edit-article-modal__paragraph-button')
+              ) {
+                const element = node as HTMLElement;
+                // Ищем текстовые узлы внутри элемента
+                const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+                let textNode: Node | null = null;
+                while ((textNode = walker.nextNode())) {
+                  lastTextNode = textNode;
+                  lastTextNodeLength = textNode.textContent?.length || 0;
+                }
+              }
+            }
+
+            // Если текстового узла нет, создаем его
+            if (!lastTextNode) {
+              lastTextNode = document.createTextNode('');
+              const button = targetParagraph.querySelector('.edit-article-modal__paragraph-button');
+              if (button && button.nextSibling) {
+                targetParagraph.insertBefore(lastTextNode, button.nextSibling);
+              } else if (button) {
+                targetParagraph.appendChild(lastTextNode);
+              } else {
+                targetParagraph.appendChild(lastTextNode);
+              }
+              lastTextNodeLength = 0;
+            }
+
+            // Устанавливаем курсор в конец последнего текстового узла
+            const selection = window.getSelection();
+            if (selection && lastTextNode) {
+              const range = document.createRange();
+              range.setStart(lastTextNode, lastTextNodeLength);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              contentEditableRef.current.focus();
+            }
+          }
+        }
+      }, 0);
     }
 
     // Удаляем последнее состояние из undo stack
@@ -2027,6 +2343,59 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     if (contentEditableRef.current) {
       contentEditableRef.current.innerHTML = lastState.contentHtml;
       lastContentHtmlRef.current = lastState.contentHtml;
+
+      // Устанавливаем курсор в последний параграф после восстановления
+      setTimeout(() => {
+        if (!contentEditableRef.current) return;
+
+        const paragraphs = contentEditableRef.current.querySelectorAll('p[data-block-type="text"]');
+        if (paragraphs && paragraphs.length > 0) {
+          const lastParagraph = paragraphs[paragraphs.length - 1] as HTMLParagraphElement;
+
+          // Находим первый текстовый узел в параграфе (пропускаем кнопку)
+          let textNode: Node | null = null;
+          for (let i = 0; i < lastParagraph.childNodes.length; i++) {
+            const node = lastParagraph.childNodes[i];
+            if (node.nodeType === Node.TEXT_NODE) {
+              textNode = node;
+              break;
+            } else if (
+              node.nodeType === Node.ELEMENT_NODE &&
+              !(node as HTMLElement).classList.contains('edit-article-modal__paragraph-button')
+            ) {
+              const element = node as HTMLElement;
+              if (element.firstChild && element.firstChild.nodeType === Node.TEXT_NODE) {
+                textNode = element.firstChild;
+                break;
+              }
+            }
+          }
+
+          // Если текстового узла нет, создаем его
+          if (!textNode) {
+            textNode = document.createTextNode('');
+            const button = lastParagraph.querySelector('.edit-article-modal__paragraph-button');
+            if (button && button.nextSibling) {
+              lastParagraph.insertBefore(textNode, button.nextSibling);
+            } else if (button) {
+              lastParagraph.appendChild(textNode);
+            } else {
+              lastParagraph.appendChild(textNode);
+            }
+          }
+
+          // Устанавливаем курсор в конец текстового узла
+          const selection = window.getSelection();
+          if (selection && textNode) {
+            const range = document.createRange();
+            range.setStart(textNode, textNode.textContent?.length || 0);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            contentEditableRef.current.focus();
+          }
+        }
+      }, 0);
     }
 
     // Удаляем последнее состояние из redo stack
@@ -2341,6 +2710,64 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                   {editingData.nameArticle}
                 </h2>
 
+                {/* Тултип для кнопки "+" слева от параграфа */}
+                {paragraphToolbarIndex !== null && paragraphToolbarPositionRef.current && (
+                  <div
+                    className="edit-article-modal__paragraph-toolbar"
+                    style={{
+                      position: 'absolute',
+                      left: `${paragraphToolbarPositionRef.current.x}px`,
+                      top: `${paragraphToolbarPositionRef.current.y + 32}px`,
+                      transform: 'translateX(-50%)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="edit-article-modal__paragraph-toolbar-button"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setParagraphToolbarIndex(null);
+                      }}
+                      title={lang === 'ru' ? 'Добавить изображение' : 'Add image'}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-article-modal__paragraph-toolbar-button"
+                      onClick={addDivider}
+                      title={lang === 'ru' ? 'Добавить разделитель' : 'Add divider'}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+
                 {/* Единый contentEditable блок для редактирования всего контента */}
                 <div
                   ref={contentEditableRef}
@@ -2361,10 +2788,116 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                         selection.removeAllRanges();
                       }
                     }
+
+                    // Если клик по кнопке, не обрабатываем дальше
+                    if (target.closest('.edit-article-modal__paragraph-button')) {
+                      return;
+                    }
+
+                    // Если клик по параграфу, позволяем браузеру установить курсор естественным образом
+                    const paragraph = target.closest('p[data-block-type="text"]');
+                    if (paragraph) {
+                      // Не предотвращаем событие - браузер сам установит курсор
+                      // Но убеждаемся, что contentEditable имеет фокус
+                      setTimeout(() => {
+                        if (
+                          contentEditableRef.current &&
+                          document.activeElement !== contentEditableRef.current
+                        ) {
+                          contentEditableRef.current.focus();
+                        }
+                      }, 0);
+                    }
                   }}
                   onClick={(e) => {
-                    // Обработка клика на изображения и карусели для установки selectedImageIndex
                     const target = e.target as HTMLElement;
+
+                    // Если клик по кнопке, не обрабатываем дальше
+                    if (target.closest('.edit-article-modal__paragraph-button')) {
+                      return;
+                    }
+
+                    // Если клик по параграфу, явно устанавливаем курсор
+                    const paragraph = target.closest('p[data-block-type="text"]');
+                    if (paragraph && !target.closest('.edit-article-modal__paragraph-button')) {
+                      // Используем координаты клика для установки курсора
+                      const clickX = e.clientX;
+                      const clickY = e.clientY;
+
+                      setTimeout(() => {
+                        const selection = window.getSelection();
+                        if (selection && contentEditableRef.current) {
+                          // Создаем range из точки клика
+                          let range: Range | null = null;
+                          if (document.caretRangeFromPoint) {
+                            range = document.caretRangeFromPoint(clickX, clickY);
+                          } else if (document.caretPositionFromPoint) {
+                            const caretPos = document.caretPositionFromPoint(clickX, clickY);
+                            if (caretPos) {
+                              range = document.createRange();
+                              range.setStart(caretPos.offsetNode, caretPos.offset);
+                              range.collapse(true);
+                            }
+                          }
+
+                          if (range) {
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                            contentEditableRef.current.focus();
+                          } else {
+                            // Fallback: устанавливаем курсор в начало параграфа
+                            const paragraphElement = paragraph as HTMLElement;
+                            // Пропускаем кнопку и находим первый текстовый узел
+                            let textNode: Node | null = null;
+                            for (let i = 0; i < paragraphElement.childNodes.length; i++) {
+                              const node = paragraphElement.childNodes[i];
+                              if (node.nodeType === Node.TEXT_NODE) {
+                                textNode = node;
+                                break;
+                              } else if (
+                                node.nodeType === Node.ELEMENT_NODE &&
+                                !(node as HTMLElement).classList.contains(
+                                  'edit-article-modal__paragraph-button'
+                                )
+                              ) {
+                                const element = node as HTMLElement;
+                                if (
+                                  element.firstChild &&
+                                  element.firstChild.nodeType === Node.TEXT_NODE
+                                ) {
+                                  textNode = element.firstChild;
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (!textNode) {
+                              textNode = document.createTextNode('');
+                              // Вставляем после кнопки, если она есть
+                              const button = paragraphElement.querySelector(
+                                '.edit-article-modal__paragraph-button'
+                              );
+                              if (button && button.nextSibling) {
+                                paragraphElement.insertBefore(textNode, button.nextSibling);
+                              } else if (button) {
+                                paragraphElement.appendChild(textNode);
+                              } else {
+                                paragraphElement.appendChild(textNode);
+                              }
+                            }
+
+                            const newRange = document.createRange();
+                            newRange.setStart(textNode, 0);
+                            newRange.collapse(true);
+                            selection.removeAllRanges();
+                            selection.addRange(newRange);
+                            contentEditableRef.current.focus();
+                          }
+                        }
+                      }, 0);
+                    }
+
+                    // Обработка клика на изображения и карусели для установки selectedImageIndex
                     const imageWrapper = target.closest('.edit-article-modal__inline-image');
                     const carouselWrapper = target.closest('.edit-article-modal__inline-carousel');
 
@@ -2753,6 +3286,11 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       // #endregion
 
                       e.preventDefault();
+
+                      // Сохраняем текущее состояние в историю перед созданием нового параграфа
+                      if (saveToHistoryRef.current) {
+                        saveToHistoryRef.current();
+                      }
 
                       // Используем стандартное поведение браузера для разбивки блока
                       // document.execCommand('insertParagraph') создает новый блок того же типа

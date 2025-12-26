@@ -563,6 +563,8 @@ export function EditAlbumModal({
         upcEan: upc || prevForm.upcEan,
         description: album.description || prevForm.description,
         mood: mood.length > 0 ? mood : prevForm.mood || [],
+        regularPrice: (release as any).regularPrice || prevForm.regularPrice || '9.99',
+        currency: (release as any).currency || prevForm.currency || 'USD',
         albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
         albumCoverPhotographerURL:
           (release as any).photographerURL || prevForm.albumCoverPhotographerURL,

@@ -105,11 +105,70 @@
   }
 
   // Страница статьи в стиле фронтенда
+  &__content-editable {
+    outline: none;
+
+    &:focus-visible {
+      outline: none;
+    }
+
+    // Стили для параграфов с кнопками
+    p[data-block-type='text'] {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      min-height: 24px;
+
+      // Показываем кнопку при фокусе или наведении на параграф
+      &:hover,
+      &:focus-within {
+        .edit-article-modal__paragraph-button {
+          display: inline-flex;
+        }
+      }
+    }
+
+    // Кнопка слева от параграфа
+    &__paragraph-button {
+      display: none; // По умолчанию скрыта
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      margin-right: var(--ms-01);
+      padding: 0;
+      color: var(--warm-concrete);
+      font-size: 18px;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      transition:
+        color 0.2s,
+        background 0.2s;
+      vertical-align: middle;
+      flex-shrink: 0;
+      pointer-events: auto; // Кнопка должна быть кликабельной
+
+      &:hover {
+        color: var(--white);
+        background: rgba(var(--white-rgb) / 10%);
+      }
+
+      &:focus-visible {
+        outline: none;
+      }
+    }
+  }
+
   &__article {
+    position: relative;
     padding: var(--ms-2) 0;
     min-height: auto;
 
     .wrapper {
+      position: relative;
       max-width: 720px;
       padding-inline: var(--ms-1);
     }
@@ -145,8 +204,7 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--graphite-green);
-      box-shadow: 0 0 0 4px rgba(var(--graphite-green-rgb) / 20%);
+      outline: none;
     }
   }
 
@@ -374,14 +432,50 @@
       background: rgba(var(--white-rgb) / 10%);
       transform: scale(1.1);
     }
+  }
 
-    &:active {
-      transform: scale(0.95);
+  // Тултип для кнопки "+" слева от параграфа
+  &__paragraph-toolbar {
+    position: absolute;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: var(--ms-01);
+    padding: var(--ms-01);
+    background: rgba(var(--white-rgb) / 10%);
+    border: 1px solid var(--iron-slate);
+    border-radius: var(--ms-01);
+    box-shadow: 0 4px 12px rgba(var(--black-rgb) / 30%);
+  }
+
+  &__paragraph-toolbar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: var(--white);
+    background: transparent;
+    border: none;
+    border-radius: var(--ms-01);
+    cursor: pointer;
+    transition:
+      background 0.2s,
+      transform 0.2s;
+
+    &:hover {
+      background: rgba(var(--white-rgb) / 15%);
+      transform: scale(1.1);
     }
 
     svg {
       width: 20px;
       height: 20px;
+    }
+
+    &:active {
+      transform: scale(0.95);
     }
   }
 

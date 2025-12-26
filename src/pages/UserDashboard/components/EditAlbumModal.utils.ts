@@ -447,6 +447,14 @@ export const transformFormDataToAlbumFormat = (
     UPC: formData.upcEan,
   };
 
+  // Сохраняем цену и валюту
+  if (formData.regularPrice && formData.regularPrice.trim()) {
+    release.regularPrice = formData.regularPrice.trim();
+  }
+  if (formData.currency && formData.currency.trim()) {
+    release.currency = formData.currency.trim();
+  }
+
   // Сохраняем photographer (необязательное поле) и designer (обязательное поле)
   if (formData.albumCoverPhotographer) release.photographer = formData.albumCoverPhotographer;
   if (formData.albumCoverDesigner) release.designer = formData.albumCoverDesigner;

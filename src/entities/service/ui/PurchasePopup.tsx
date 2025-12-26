@@ -5,9 +5,46 @@ import { Hamburger } from '@shared/ui/hamburger';
 import type { IAlbums } from '@models';
 import AlbumCover from '@entities/album/ui/AlbumCover';
 import { createPayment } from '@shared/api/payment';
+import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './PurchasePopup.style.scss';
 
 type Step = 'cart' | 'checkout' | 'payment';
+
+// Утилита для получения цены и валюты из альбома
+const getAlbumPrice = (album: IAlbums): { price: string; currency: string; formatted: string } => {
+  const release = album.release && typeof album.release === 'object' ? album.release : {};
+  const regularPrice = (release as any).regularPrice || '0.99';
+  const currency = (release as any).currency || 'USD';
+
+  // Форматируем цену с символом валюты
+  const priceNum = parseFloat(regularPrice) || 0;
+  const formattedPrice = priceNum.toFixed(2);
+
+  // Определяем символ валюты и форматируем цену
+  let formatted = '';
+  switch (currency.toUpperCase()) {
+    case 'RUB':
+      // Для рубля символ ставится после цены
+      formatted = `${formattedPrice} ₽`;
+      break;
+    case 'EUR':
+      formatted = `€${formattedPrice}`;
+      break;
+    case 'USD':
+      formatted = `$${formattedPrice}`;
+      break;
+    default:
+      formatted = `${currency.toUpperCase()}${formattedPrice}`;
+  }
+
+  return {
+    price: regularPrice,
+    currency: currency,
+    formatted: formatted,
+  };
+};
 
 // Утилиты для форматирования
 const formatCardNumber = (value: string): string => {
@@ -33,41 +70,57 @@ interface ValidationErrors {
   [key: string]: string;
 }
 
-const validateEmail = (email: string): string => {
-  if (!email) return 'Email is required';
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) return 'Please enter a valid email address';
-  return '';
-};
+const createValidators = (t: any) => ({
+  validateEmail: (email: string): string => {
+    if (!email) return t?.checkout?.validation?.emailRequired || 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email))
+      return t?.checkout?.validation?.emailInvalid || 'Please enter a valid email address';
+    return '';
+  },
 
-const validateCardNumber = (cardNumber: string): string => {
-  const cleaned = cardNumber.replace(/\s/g, '');
-  if (!cleaned) return 'Card number is required';
-  if (cleaned.length < 13 || cleaned.length > 19) return 'Card number must be 13-19 digits';
-  return '';
-};
+  validateCardNumber: (cardNumber: string): string => {
+    const cleaned = cardNumber.replace(/\s/g, '');
+    if (!cleaned) return t?.checkout?.validation?.cardNumberRequired || 'Card number is required';
+    if (cleaned.length < 13 || cleaned.length > 19)
+      return t?.checkout?.validation?.cardNumberInvalid || 'Card number must be 13-19 digits';
+    return '';
+  },
 
-const validateCardExpiry = (expiry: string): string => {
-  if (!expiry) return 'Expiry date is required';
-  const [month, year] = expiry.split('/');
-  if (!month || !year || month.length !== 2 || year.length !== 2) {
-    return 'Please enter a valid expiry date (MM/YY)';
-  }
-  const monthNum = parseInt(month, 10);
-  if (monthNum < 1 || monthNum > 12) return 'Month must be between 01 and 12';
-  return '';
-};
+  validateCardExpiry: (expiry: string): string => {
+    if (!expiry) return t?.checkout?.validation?.expiryRequired || 'Expiry date is required';
+    const [month, year] = expiry.split('/');
+    if (!month || !year || month.length !== 2 || year.length !== 2) {
+      return t?.checkout?.validation?.expiryInvalid || 'Please enter a valid expiry date (MM/YY)';
+    }
+    const monthNum = parseInt(month, 10);
+    if (monthNum < 1 || monthNum > 12)
+      return t?.checkout?.validation?.expiryMonthInvalid || 'Month must be between 01 and 12';
+    return '';
+  },
 
-const validateCSC = (csc: string): string => {
-  if (!csc) return 'CSC is required';
-  if (csc.length < 3 || csc.length > 4) return 'CSC must be 3-4 digits';
-  return '';
-};
+  validateCSC: (csc: string): string => {
+    if (!csc) return t?.checkout?.validation?.cscRequired || 'CSC is required';
+    if (csc.length < 3 || csc.length > 4)
+      return t?.checkout?.validation?.cscInvalid || 'CSC must be 3-4 digits';
+    return '';
+  },
 
-const validateRequired = (value: string, fieldName: string): string => {
-  if (!value.trim()) return `${fieldName} is required`;
-  return '';
-};
+  validateRequired: (value: string, fieldName: string): string => {
+    if (!value.trim()) {
+      if (fieldName === 'First name')
+        return t?.checkout?.validation?.firstNameRequired || 'First name is required';
+      if (fieldName === 'Last name')
+        return t?.checkout?.validation?.lastNameRequired || 'Last name is required';
+      if (fieldName === 'ZIP code')
+        return t?.checkout?.validation?.zipCodeRequired || 'ZIP code is required';
+      if (fieldName === 'Mobile')
+        return t?.checkout?.validation?.mobileRequired || 'Mobile is required';
+      return `${fieldName} is required`;
+    }
+    return '';
+  },
+});
 
 interface PurchasePopupProps {
   isOpen: boolean;
@@ -78,11 +131,11 @@ interface PurchasePopupProps {
   onRegister: () => void;
 }
 
-function ProgressIndicator({ currentStep }: { currentStep: Step }) {
+function ProgressIndicator({ currentStep, t }: { currentStep: Step; t: any }) {
   const steps: { key: Step; label: string }[] = [
-    { key: 'cart', label: 'Cart' },
-    { key: 'checkout', label: 'Checkout' },
-    { key: 'payment', label: 'Payment' },
+    { key: 'cart', label: t?.checkout?.steps?.cart || 'Cart' },
+    { key: 'checkout', label: t?.checkout?.steps?.checkout || 'Checkout' },
+    { key: 'payment', label: t?.checkout?.steps?.payment || 'Payment' },
   ];
 
   const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
@@ -125,16 +178,20 @@ function CartStep({
   onRemove,
   onContinueShopping,
   onCheckout,
+  t,
 }: {
   album: IAlbums;
   onRemove: () => void;
   onContinueShopping: () => void;
   onCheckout: () => void;
+  t: any;
 }) {
+  const { formatted: formattedPrice } = getAlbumPrice(album);
+
   return (
     <>
-      <ProgressIndicator currentStep="cart" />
-      <h2 className="purchase-popup__title">Your cart</h2>
+      <ProgressIndicator currentStep="cart" t={t} />
+      <h2 className="purchase-popup__title">{t?.checkout?.cart?.title || 'Your cart'}</h2>
 
       <div className="purchase-popup__divider" />
 
@@ -155,46 +212,48 @@ function CartStep({
 
         <div className="purchase-popup__item-details">
           <div className="purchase-popup__item-title">{album.album}</div>
-          <div className="purchase-popup__item-type">Album download</div>
+          <div className="purchase-popup__item-type">
+            {t?.checkout?.cart?.albumDownload || 'Album download'}
+          </div>
           <div className="purchase-popup__item-actions">
             <span className="purchase-popup__item-quantity">1</span>
             <button
               type="button"
               className="purchase-popup__item-remove"
               onClick={onRemove}
-              aria-label="Remove item"
+              aria-label={t?.checkout?.cart?.remove || 'Remove item'}
             >
-              Remove
+              {t?.checkout?.cart?.remove || 'Remove'}
             </button>
           </div>
         </div>
 
-        <div className="purchase-popup__item-price">C$0.99</div>
+        <div className="purchase-popup__item-price">{formattedPrice}</div>
       </div>
 
       <div className="purchase-popup__divider" />
 
       <div className="purchase-popup__summary">
         <div className="purchase-popup__subtotal">
-          Subtotal <span>C$0.99</span>
+          {t?.checkout?.cart?.subtotal || 'Subtotal'} <span>{formattedPrice}</span>
         </div>
 
         <button
           type="button"
           className="purchase-popup__button purchase-popup__button--checkout"
           onClick={onCheckout}
-          aria-label="Checkout"
+          aria-label={t?.checkout?.cart?.checkout || 'Checkout'}
         >
-          CHECKOUT
+          {t?.checkout?.cart?.checkout || 'CHECKOUT'}
         </button>
 
         <button
           type="button"
           className="purchase-popup__button purchase-popup__button--continue"
           onClick={onContinueShopping}
-          aria-label="Continue shopping"
+          aria-label={t?.checkout?.cart?.continueShopping || 'Continue shopping'}
         >
-          Continue shopping
+          {t?.checkout?.cart?.continueShopping || 'Continue shopping'}
         </button>
       </div>
     </>
@@ -217,12 +276,14 @@ function CheckoutStep({
   onContinueToPayment,
   formData,
   onFormDataChange,
+  t,
 }: {
   album: IAlbums;
   onBackToCart: () => void;
   onContinueToPayment: () => void;
   formData: CheckoutFormData;
   onFormDataChange: (data: CheckoutFormData) => void;
+  t: any;
 }) {
   const [email, setEmail] = useState(formData.email);
   const [firstName, setFirstName] = useState(formData.firstName);
@@ -234,24 +295,28 @@ function CheckoutStep({
   const [discountCode, setDiscountCode] = useState('');
   const [errors, setErrors] = useState<ValidationErrors>({});
 
+  const validators = createValidators(t);
+
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    const emailError = validateEmail(email);
+    const emailError = validators.validateEmail(email);
     if (emailError) newErrors.email = emailError;
 
-    const firstNameError = validateRequired(firstName, 'First name');
+    const firstNameError = validators.validateRequired(firstName, 'First name');
     if (firstNameError) newErrors.firstName = firstNameError;
 
-    const lastNameError = validateRequired(lastName, 'Last name');
+    const lastNameError = validators.validateRequired(lastName, 'Last name');
     if (lastNameError) newErrors.lastName = lastNameError;
 
     if (!agreeToOffer) {
-      newErrors.agreeToOffer = 'You must agree to the offer';
+      newErrors.agreeToOffer =
+        t?.checkout?.validation?.agreeToOfferRequired || 'You must agree to the offer';
     }
 
     if (!agreeToPrivacy) {
-      newErrors.agreeToPrivacy = 'You must agree to the privacy policy';
+      newErrors.agreeToPrivacy =
+        t?.checkout?.validation?.agreeToPrivacyRequired || 'You must agree to the privacy policy';
     }
 
     setErrors(newErrors);
@@ -275,16 +340,20 @@ function CheckoutStep({
 
   return (
     <div className="purchase-popup__checkout">
-      <ProgressIndicator currentStep="checkout" />
-      <h2 className="purchase-popup__title">{album.artist} - Checkout</h2>
+      <ProgressIndicator currentStep="checkout" t={t} />
+      <h2 className="purchase-popup__title">
+        {album.artist} - {t?.checkout?.checkout?.title || 'Checkout'}
+      </h2>
 
       <div className="purchase-popup__checkout-content">
         <div className="purchase-popup__checkout-form">
-          <h3 className="purchase-popup__checkout-form-title">Customer Information</h3>
+          <h3 className="purchase-popup__checkout-form-title">
+            {t?.checkout?.checkout?.customerInformation || 'Customer Information'}
+          </h3>
 
           <div className="purchase-popup__form-field">
             <label htmlFor="email" className="purchase-popup__form-label">
-              Email address
+              {t?.checkout?.checkout?.emailAddress || 'Email address'}
             </label>
             <input
               type="email"
@@ -311,9 +380,10 @@ function CheckoutStep({
                 onChange={(e) => setJoinMailingList(e.target.checked)}
               />
               <span className="purchase-popup__toggle-text">
-                Join the mailing list
+                {t?.checkout?.checkout?.joinMailingList || 'Join the mailing list'}
                 <span className="purchase-popup__toggle-subtitle">
-                  You can unsubscribe at any time
+                  {t?.checkout?.checkout?.joinMailingListSubtitle ||
+                    'You can unsubscribe at any time'}
                 </span>
               </span>
             </label>
@@ -321,7 +391,7 @@ function CheckoutStep({
 
           <div className="purchase-popup__form-field">
             <label htmlFor="firstName" className="purchase-popup__form-label">
-              First name
+              {t?.checkout?.checkout?.firstName || 'First name'}
             </label>
             <input
               type="text"
@@ -343,7 +413,7 @@ function CheckoutStep({
 
           <div className="purchase-popup__form-field">
             <label htmlFor="lastName" className="purchase-popup__form-label">
-              Last name
+              {t?.checkout?.checkout?.lastName || 'Last name'}
             </label>
             <input
               type="text"
@@ -365,7 +435,7 @@ function CheckoutStep({
 
           <div className="purchase-popup__form-field">
             <label htmlFor="notes" className="purchase-popup__form-label">
-              Notes
+              {t?.checkout?.checkout?.notes || 'Notes'}
             </label>
             <textarea
               id="notes"
@@ -391,9 +461,9 @@ function CheckoutStep({
                 required
               />
               <span className="purchase-popup__toggle-text">
-                Согласен с{' '}
+                {t?.checkout?.checkout?.agreeToOffer || 'Согласен с'}{' '}
                 <Link to="/offer" target="_blank" className="purchase-popup__link">
-                  Публичной офертой
+                  {t?.checkout?.checkout?.publicOffer || 'Публичной офертой'}
                 </Link>
                 {errors.agreeToOffer && (
                   <span className="purchase-popup__form-error">{errors.agreeToOffer}</span>
@@ -417,9 +487,9 @@ function CheckoutStep({
                 required
               />
               <span className="purchase-popup__toggle-text">
-                Даю согласие на{' '}
+                {t?.checkout?.checkout?.agreeToPrivacy || 'Даю согласие на'}{' '}
                 <Link to="/privacy" target="_blank" className="purchase-popup__link">
-                  обработку персональных данных
+                  {t?.checkout?.checkout?.privacyPolicy || 'обработку персональных данных'}
                 </Link>
                 {errors.agreeToPrivacy && (
                   <span className="purchase-popup__form-error">{errors.agreeToPrivacy}</span>
@@ -433,30 +503,32 @@ function CheckoutStep({
               type="button"
               className="purchase-popup__link-button"
               onClick={onBackToCart}
-              aria-label="Back to cart"
+              aria-label={t?.checkout?.checkout?.backToCart || 'Back to cart'}
             >
-              &lt; Back to cart
+              {t?.checkout?.checkout?.backToCart || '< Back to cart'}
             </button>
             <button
               type="button"
               className="purchase-popup__button purchase-popup__button--payment"
               onClick={handleContinue}
-              aria-label="Continue to payment method"
+              aria-label={t?.checkout?.checkout?.continueToPayment || 'Continue to payment method'}
             >
-              Continue to payment method
+              {t?.checkout?.checkout?.continueToPayment || 'Continue to payment method'}
             </button>
           </div>
         </div>
 
         <div className="purchase-popup__checkout-summary">
-          <h3 className="purchase-popup__checkout-summary-title">Order Summary</h3>
+          <h3 className="purchase-popup__checkout-summary-title">
+            {t?.checkout?.checkout?.orderSummary || 'Order Summary'}
+          </h3>
 
           <table className="purchase-popup__order-table">
             <thead>
               <tr>
-                <th>DESC</th>
-                <th>QTY</th>
-                <th>PRICE</th>
+                <th>{t?.checkout?.checkout?.desc || 'DESC'}</th>
+                <th>{t?.checkout?.checkout?.qty || 'QTY'}</th>
+                <th>{t?.checkout?.checkout?.price || 'PRICE'}</th>
               </tr>
             </thead>
             <tbody>
@@ -481,12 +553,14 @@ function CheckoutStep({
                     </div>
                     <div className="purchase-popup__order-item-info">
                       <div className="purchase-popup__order-item-title">{album.album}</div>
-                      <div className="purchase-popup__order-item-type">Single download</div>
+                      <div className="purchase-popup__order-item-type">
+                        {t?.checkout?.checkout?.singleDownload || 'Single download'}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td>1</td>
-                <td>C$0.99</td>
+                <td>{getAlbumPrice(album).formatted}</td>
               </tr>
             </tbody>
           </table>
@@ -496,22 +570,24 @@ function CheckoutStep({
               <input
                 type="text"
                 className="purchase-popup__discount-input"
-                placeholder="Discount code or gift card"
+                placeholder={t?.checkout?.checkout?.discountCode || 'Discount code or gift card'}
                 value={discountCode}
                 onChange={(e) => setDiscountCode(e.target.value)}
               />
               <button type="button" className="purchase-popup__discount-button">
-                Apply
+                {t?.checkout?.checkout?.apply || 'Apply'}
               </button>
             </div>
           </div>
 
           <div className="purchase-popup__checkout-totals">
             <div className="purchase-popup__checkout-subtotal">
-              Subtotal <span>C$0.99</span>
+              {t?.checkout?.checkout?.subtotal || 'Subtotal'}{' '}
+              <span>{getAlbumPrice(album).formatted}</span>
             </div>
             <div className="purchase-popup__checkout-total">
-              Total <span>C$0.99</span>
+              {t?.checkout?.checkout?.total || 'Total'}{' '}
+              <span>{getAlbumPrice(album).formatted}</span>
             </div>
           </div>
 
@@ -520,9 +596,12 @@ function CheckoutStep({
               type="button"
               className="purchase-popup__link-button"
               onClick={onBackToCart}
-              aria-label="Back to site"
+              aria-label={t?.checkout?.checkout?.backToSite || 'Back to site'}
             >
-              &lt; Back to {window.location.hostname.replace('www.', '')}
+              {t?.checkout?.checkout?.backToSite || '< Back to'}{' '}
+              {typeof window !== 'undefined'
+                ? window.location.hostname.replace('www.', '')
+                : 'site'}
             </button>
           </div>
         </div>
@@ -538,6 +617,7 @@ function PaymentStep({
   formData,
   onEditCustomerInfo,
   discountCode: initialDiscountCode,
+  t,
 }: {
   album: IAlbums;
   onBackToCart: () => void;
@@ -545,6 +625,7 @@ function PaymentStep({
   formData: CheckoutFormData;
   onEditCustomerInfo: () => void;
   discountCode: string;
+  t: any;
 }) {
   const [discountCode, setDiscountCode] = useState(initialDiscountCode);
   const [isCardFormOpen, setIsCardFormOpen] = useState(false);
@@ -561,8 +642,10 @@ function PaymentStep({
   const [cardErrors, setCardErrors] = useState<ValidationErrors>({});
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const subtotal = 0.99;
+  const { price, currency: albumCurrency, formatted: formattedPrice } = getAlbumPrice(album);
+  const subtotal = parseFloat(price) || 0.99;
   const total = subtotal;
+  const validators = createValidators(t);
 
   const handlePayPal = () => {
     // Создаем PayPal checkout URL с параметрами заказа
@@ -581,7 +664,7 @@ function PaymentStep({
     // В продакшене это должно быть настроено через PayPal API
     const paypalUrl = new URL('https://www.paypal.com/checkoutnow');
     paypalUrl.searchParams.set('amount', amount);
-    paypalUrl.searchParams.set('currency', 'CAD');
+    paypalUrl.searchParams.set('currency', albumCurrency);
     paypalUrl.searchParams.set('item_name', itemName);
     paypalUrl.searchParams.set('email', formData.email || '');
     if (returnUrl) {
@@ -637,39 +720,43 @@ function PaymentStep({
   const validateCardForm = (): boolean => {
     const newErrors: ValidationErrors = {};
 
-    const emailError = validateEmail(cardEmail);
+    const emailError = validators.validateEmail(cardEmail);
     if (emailError) newErrors.cardEmail = emailError;
 
-    const cardNumberError = validateCardNumber(cardNumber);
+    const cardNumberError = validators.validateCardNumber(cardNumber);
     if (cardNumberError) newErrors.cardNumber = cardNumberError;
 
-    const expiryError = validateCardExpiry(cardExpires);
+    const expiryError = validators.validateCardExpiry(cardExpires);
     if (expiryError) newErrors.cardExpires = expiryError;
 
-    const cscError = validateCSC(cardCSC);
+    const cscError = validators.validateCSC(cardCSC);
     if (cscError) newErrors.cardCSC = cscError;
 
-    const firstNameError = validateRequired(billingFirstName, 'First name');
+    const firstNameError = validators.validateRequired(billingFirstName, 'First name');
     if (firstNameError) newErrors.billingFirstName = firstNameError;
 
-    const lastNameError = validateRequired(billingLastName, 'Last name');
+    const lastNameError = validators.validateRequired(billingLastName, 'Last name');
     if (lastNameError) newErrors.billingLastName = lastNameError;
 
-    const zipError = validateRequired(zipCode, 'ZIP code');
+    const zipError = validators.validateRequired(zipCode, 'ZIP code');
     if (zipError) newErrors.zipCode = zipError;
 
-    const mobileError = validateRequired(mobile, 'Mobile');
+    const mobileError = validators.validateRequired(mobile, 'Mobile');
     if (mobileError) newErrors.mobile = mobileError;
 
-    if (!confirmAge) newErrors.confirmAge = 'You must confirm you are 18 years or older';
+    if (!confirmAge)
+      newErrors.confirmAge =
+        t?.checkout?.validation?.confirmAgeRequired || 'You must confirm you are 18 years or older';
 
     // Проверяем согласие с офертой и политикой конфиденциальности
     if (!formData.agreeToOffer) {
-      newErrors.agreeToOffer = 'You must agree to the offer';
+      newErrors.agreeToOffer =
+        t?.checkout?.validation?.agreeToOfferRequired || 'You must agree to the offer';
     }
 
     if (!formData.agreeToPrivacy) {
-      newErrors.agreeToPrivacy = 'You must agree to the privacy policy';
+      newErrors.agreeToPrivacy =
+        t?.checkout?.validation?.agreeToPrivacyRequired || 'You must agree to the privacy policy';
     }
 
     setCardErrors(newErrors);
@@ -685,12 +772,14 @@ function PaymentStep({
     setPaymentError(null);
 
     try {
-      // Определяем валюту в зависимости от страны
-      let currency = 'RUB'; // По умолчанию для России/СНГ
-      if (country === 'US') currency = 'USD';
-      else if (country === 'GB') currency = 'GBP';
-      else if (country === 'DE' || country === 'FR' || country === 'IT' || country === 'ES')
-        currency = 'EUR';
+      // Используем валюту из альбома, если она указана, иначе определяем по стране
+      let currency = albumCurrency || 'RUB'; // По умолчанию из альбома или для России/СНГ
+      if (!albumCurrency) {
+        if (country === 'US') currency = 'USD';
+        else if (country === 'GB') currency = 'GBP';
+        else if (country === 'DE' || country === 'FR' || country === 'IT' || country === 'ES')
+          currency = 'EUR';
+      }
 
       // Формируем описание товара
       const description = `${album.album} - ${album.artist} (download)`;
@@ -745,32 +834,42 @@ function PaymentStep({
 
   return (
     <div className="purchase-popup__payment">
-      <ProgressIndicator currentStep="payment" />
-      <h2 className="purchase-popup__title">{album.artist} - Checkout</h2>
+      <ProgressIndicator currentStep="payment" t={t} />
+      <h2 className="purchase-popup__title">
+        {album.artist} - {t?.checkout?.checkout?.title || 'Checkout'}
+      </h2>
 
       <div className="purchase-popup__payment-content">
         <div className="purchase-popup__payment-form">
-          <h3 className="purchase-popup__payment-title">Payment</h3>
+          <h3 className="purchase-popup__payment-title">
+            {t?.checkout?.payment?.title || 'Payment'}
+          </h3>
 
           <div className="purchase-popup__customer-info-card">
             <div className="purchase-popup__customer-info-header">
-              <h4 className="purchase-popup__customer-info-title">Customer Information</h4>
+              <h4 className="purchase-popup__customer-info-title">
+                {t?.checkout?.payment?.customerInformation || 'Customer Information'}
+              </h4>
               <button
                 type="button"
                 className="purchase-popup__link-button"
                 onClick={onEditCustomerInfo}
-                aria-label="Edit customer information"
+                aria-label={t?.checkout?.payment?.edit || 'Edit customer information'}
               >
-                Edit
+                {t?.checkout?.payment?.edit || 'Edit'}
               </button>
             </div>
             <div className="purchase-popup__customer-info-details">
               <div className="purchase-popup__customer-info-item">
-                <span className="purchase-popup__customer-info-label">Email:</span>{' '}
+                <span className="purchase-popup__customer-info-label">
+                  {t?.checkout?.payment?.email || 'Email:'}
+                </span>{' '}
                 <span className="purchase-popup__customer-info-value">{formData.email || '—'}</span>
               </div>
               <div className="purchase-popup__customer-info-item">
-                <span className="purchase-popup__customer-info-label">Name:</span>{' '}
+                <span className="purchase-popup__customer-info-label">
+                  {t?.checkout?.payment?.name || 'Name:'}
+                </span>{' '}
                 <span className="purchase-popup__customer-info-value">
                   {formData.firstName && formData.lastName
                     ? `${formData.firstName} ${formData.lastName}`
@@ -785,7 +884,7 @@ function PaymentStep({
               type="button"
               className="purchase-popup__payment-button purchase-popup__payment-button--paypal"
               onClick={handlePayPal}
-              aria-label="Pay with PayPal"
+              aria-label={t?.checkout?.payment?.paypal || 'Pay with PayPal'}
             >
               <svg
                 width="20"
@@ -800,14 +899,16 @@ function PaymentStep({
                   fill="currentColor"
                 />
               </svg>
-              PayPal
+              {t?.checkout?.payment?.paypal || 'PayPal'}
             </button>
 
             <button
               type="button"
               className="purchase-popup__payment-button purchase-popup__payment-button--card"
               onClick={() => handleCard()}
-              aria-label="Pay with debit or credit card"
+              aria-label={
+                t?.checkout?.payment?.debitOrCreditCard || 'Pay with debit or credit card'
+              }
               aria-expanded={isCardFormOpen}
             >
               <svg
@@ -825,14 +926,14 @@ function PaymentStep({
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                 <line x1="1" y1="10" x2="23" y2="10" />
               </svg>
-              Debit or Credit Card
+              {t?.checkout?.payment?.debitOrCreditCard || 'Debit or Credit Card'}
             </button>
 
             <button
               type="button"
               className="purchase-popup__payment-button purchase-popup__payment-button--card"
               onClick={() => handleCard('RU')}
-              aria-label="Bank Card (Russia, CIS)"
+              aria-label={t?.checkout?.payment?.bankCardRussia || 'Bank Card (Russia, CIS)'}
               aria-expanded={isCardFormOpen}
             >
               <svg
@@ -850,7 +951,7 @@ function PaymentStep({
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                 <line x1="1" y1="10" x2="23" y2="10" />
               </svg>
-              Bank Card (Russia, CIS)
+              {t?.checkout?.payment?.bankCardRussia || 'Bank Card (Russia, CIS)'}
             </button>
 
             {isCardFormOpen && (
@@ -880,7 +981,7 @@ function PaymentStep({
                 <div className="purchase-popup__card-form-content">
                   <div className="purchase-popup__form-field">
                     <label htmlFor="card-email" className="purchase-popup__form-label">
-                      Email
+                      {t?.checkout?.checkout?.emailAddress || 'Email'}
                     </label>
                     <input
                       type="email"
@@ -902,7 +1003,7 @@ function PaymentStep({
 
                   <div className="purchase-popup__form-field">
                     <label htmlFor="card-number" className="purchase-popup__form-label">
-                      Card number
+                      {t?.checkout?.payment?.cardNumber || 'Card number'}
                     </label>
                     <input
                       type="text"
@@ -928,7 +1029,7 @@ function PaymentStep({
                   <div className="purchase-popup__form-field purchase-popup__form-field--row">
                     <div className="purchase-popup__form-field purchase-popup__form-field--expires">
                       <label htmlFor="card-expires" className="purchase-popup__form-label">
-                        Expires
+                        {t?.checkout?.payment?.expires || 'Expires'}
                       </label>
                       <input
                         type="text"
@@ -952,7 +1053,7 @@ function PaymentStep({
                     </div>
                     <div className="purchase-popup__form-field purchase-popup__form-field--csc">
                       <label htmlFor="card-csc" className="purchase-popup__form-label">
-                        CSC
+                        {t?.checkout?.payment?.csc || 'CSC'}
                       </label>
                       <input
                         type="text"
@@ -977,12 +1078,14 @@ function PaymentStep({
                   </div>
 
                   <div className="purchase-popup__billing-address">
-                    <h4 className="purchase-popup__billing-address-title">Billing address</h4>
+                    <h4 className="purchase-popup__billing-address-title">
+                      {t?.checkout?.payment?.billingAddress || 'Billing address'}
+                    </h4>
 
                     <div className="purchase-popup__form-field purchase-popup__form-field--row">
                       <div className="purchase-popup__form-field purchase-popup__form-field--first-name">
                         <label htmlFor="billing-first-name" className="purchase-popup__form-label">
-                          First name
+                          {t?.checkout?.checkout?.firstName || 'First name'}
                         </label>
                         <input
                           type="text"
@@ -1005,7 +1108,7 @@ function PaymentStep({
                       </div>
                       <div className="purchase-popup__form-field purchase-popup__form-field--last-name">
                         <label htmlFor="billing-last-name" className="purchase-popup__form-label">
-                          Last name
+                          {t?.checkout?.checkout?.lastName || 'Last name'}
                         </label>
                         <input
                           type="text"
@@ -1030,7 +1133,7 @@ function PaymentStep({
 
                     <div className="purchase-popup__form-field">
                       <label htmlFor="zip-code" className="purchase-popup__form-label">
-                        ZIP code
+                        {t?.checkout?.payment?.zipCode || 'ZIP code'}
                       </label>
                       <input
                         type="text"
@@ -1052,7 +1155,7 @@ function PaymentStep({
 
                     <div className="purchase-popup__form-field">
                       <label htmlFor="country" className="purchase-popup__form-label">
-                        Country
+                        {t?.checkout?.payment?.country || 'Country'}
                       </label>
                       <div className="purchase-popup__country-select-wrapper">
                         <select
@@ -1090,7 +1193,7 @@ function PaymentStep({
 
                     <div className="purchase-popup__form-field">
                       <label htmlFor="mobile" className="purchase-popup__form-label">
-                        Mobile
+                        {t?.checkout?.payment?.mobile || 'Mobile'}
                       </label>
                       <input
                         type="tel"
@@ -1126,7 +1229,8 @@ function PaymentStep({
                         required
                       />
                       <span className="purchase-popup__toggle-text">
-                        By continuing, you confirm you're 18 years or older.
+                        {t?.checkout?.payment?.confirmAge ||
+                          "By continuing, you confirm you're 18 years or older."}
                       </span>
                     </label>
                     {cardErrors.confirmAge && (
@@ -1145,14 +1249,18 @@ function PaymentStep({
                     className="purchase-popup__payment-button purchase-popup__payment-button--pay"
                     onClick={handleCardPayment}
                     disabled={!confirmAge || isPaymentLoading}
-                    aria-label={`Pay $${total.toFixed(2)}`}
+                    aria-label={`${t?.checkout?.payment?.pay || 'Pay'} ${formattedPrice}`}
                   >
-                    {isPaymentLoading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+                    {isPaymentLoading
+                      ? t?.checkout?.payment?.processing || 'Processing...'
+                      : `${t?.checkout?.payment?.pay || 'Pay'} ${formattedPrice}`}
                   </button>
 
                   <div className="purchase-popup__payment-powered">
-                    <span>Powered by </span>
-                    <span className="purchase-popup__payment-powered-logo">YooKassa</span>
+                    <span>{t?.checkout?.payment?.poweredBy || 'Powered by'} </span>
+                    <span className="purchase-popup__payment-powered-logo">
+                      {t?.checkout?.payment?.yooKassa || 'YooKassa'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1160,8 +1268,10 @@ function PaymentStep({
 
             {!isCardFormOpen && (
               <div className="purchase-popup__payment-powered">
-                <span>Powered by </span>
-                <span className="purchase-popup__payment-powered-logo">YooKassa</span>
+                <span>{t?.checkout?.payment?.poweredBy || 'Powered by'} </span>
+                <span className="purchase-popup__payment-powered-logo">
+                  {t?.checkout?.payment?.yooKassa || 'YooKassa'}
+                </span>
               </div>
             )}
           </div>
@@ -1171,22 +1281,24 @@ function PaymentStep({
               type="button"
               className="purchase-popup__link-button"
               onClick={onBackToCart}
-              aria-label="Back to cart"
+              aria-label={t?.checkout?.payment?.backToCart || 'Back to cart'}
             >
-              &lt; Back to cart
+              {t?.checkout?.payment?.backToCart || '< Back to cart'}
             </button>
           </div>
         </div>
 
         <div className="purchase-popup__checkout-summary">
-          <h3 className="purchase-popup__checkout-summary-title">Order Summary</h3>
+          <h3 className="purchase-popup__checkout-summary-title">
+            {t?.checkout?.checkout?.orderSummary || 'Order Summary'}
+          </h3>
 
           <table className="purchase-popup__order-table">
             <thead>
               <tr>
-                <th>DESC</th>
-                <th>QTY</th>
-                <th>PRICE</th>
+                <th>{t?.checkout?.checkout?.desc || 'DESC'}</th>
+                <th>{t?.checkout?.checkout?.qty || 'QTY'}</th>
+                <th>{t?.checkout?.checkout?.price || 'PRICE'}</th>
               </tr>
             </thead>
             <tbody>
@@ -1211,12 +1323,14 @@ function PaymentStep({
                     </div>
                     <div className="purchase-popup__order-item-info">
                       <div className="purchase-popup__order-item-title">{album.album}</div>
-                      <div className="purchase-popup__order-item-type">Single download</div>
+                      <div className="purchase-popup__order-item-type">
+                        {t?.checkout?.checkout?.singleDownload || 'Single download'}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td>1</td>
-                <td>C${subtotal.toFixed(2)}</td>
+                <td>{formattedPrice}</td>
               </tr>
             </tbody>
           </table>
@@ -1226,22 +1340,22 @@ function PaymentStep({
               <input
                 type="text"
                 className="purchase-popup__discount-input"
-                placeholder="Discount code or gift card"
+                placeholder={t?.checkout?.checkout?.discountCode || 'Discount code or gift card'}
                 value={discountCode}
                 onChange={(e) => setDiscountCode(e.target.value)}
               />
               <button type="button" className="purchase-popup__discount-button">
-                Apply
+                {t?.checkout?.checkout?.apply || 'Apply'}
               </button>
             </div>
           </div>
 
           <div className="purchase-popup__checkout-totals">
             <div className="purchase-popup__checkout-subtotal">
-              Subtotal <span>C${subtotal.toFixed(2)}</span>
+              {t?.checkout?.checkout?.subtotal || 'Subtotal'} <span>{formattedPrice}</span>
             </div>
             <div className="purchase-popup__checkout-total">
-              Total <span>C${total.toFixed(2)}</span>
+              {t?.checkout?.checkout?.total || 'Total'} <span>{formattedPrice}</span>
             </div>
           </div>
 
@@ -1250,9 +1364,9 @@ function PaymentStep({
               type="button"
               className="purchase-popup__link-button"
               onClick={onBackToCart}
-              aria-label="Back to site"
+              aria-label={t?.checkout?.checkout?.backToSite || 'Back to site'}
             >
-              &lt; Back to{' '}
+              {t?.checkout?.checkout?.backToSite || '< Back to'}{' '}
               {typeof window !== 'undefined'
                 ? window.location.hostname.replace('www.', '')
                 : 'site'}
@@ -1272,6 +1386,10 @@ export function PurchasePopup({
   onContinueShopping,
   onRegister,
 }: PurchasePopupProps) {
+  const { lang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const t = ui || null;
+
   const [step, setStep] = useState<Step>('cart');
   const [checkoutFormData, setCheckoutFormData] = useState<CheckoutFormData>({
     email: '',
@@ -1318,6 +1436,7 @@ export function PurchasePopup({
               onRemove={onRemove}
               onContinueShopping={onContinueShopping}
               onCheckout={handleCheckout}
+              t={t}
             />
           ) : step === 'checkout' ? (
             <CheckoutStep
@@ -1326,6 +1445,7 @@ export function PurchasePopup({
               onContinueToPayment={handleContinueToPayment}
               formData={checkoutFormData}
               onFormDataChange={setCheckoutFormData}
+              t={t}
             />
           ) : (
             <PaymentStep
@@ -1335,6 +1455,7 @@ export function PurchasePopup({
               formData={checkoutFormData}
               onEditCustomerInfo={handleBackToCheckout}
               discountCode={discountCode}
+              t={t}
             />
           )}
         </div>

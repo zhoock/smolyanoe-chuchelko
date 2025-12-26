@@ -185,6 +185,87 @@
           "cancel": "Отмена"
         }
       }
+    },
+    "checkout": {
+      "steps": {
+        "cart": "Корзина",
+        "checkout": "Оформление заказа",
+        "payment": "Оплата"
+      },
+      "cart": {
+        "title": "Ваша корзина",
+        "albumDownload": "Скачивание альбома",
+        "remove": "Удалить",
+        "subtotal": "Промежуточный итог",
+        "checkout": "ОФОРМИТЬ ЗАКАЗ",
+        "continueShopping": "Продолжить покупки"
+      },
+      "checkout": {
+        "title": "Оформление заказа",
+        "customerInformation": "Информация о покупателе",
+        "emailAddress": "Адрес электронной почты",
+        "joinMailingList": "Подписаться на рассылку",
+        "joinMailingListSubtitle": "Вы можете отписаться в любое время",
+        "firstName": "Имя",
+        "lastName": "Фамилия",
+        "notes": "Примечания",
+        "agreeToOffer": "Согласен с",
+        "agreeToPrivacy": "Даю согласие на",
+        "publicOffer": "Публичной офертой",
+        "privacyPolicy": "обработку персональных данных",
+        "backToCart": "< Назад в корзину",
+        "continueToPayment": "Перейти к способу оплаты",
+        "orderSummary": "Сводка заказа",
+        "desc": "ОПИСАНИЕ",
+        "qty": "КОЛ-ВО",
+        "price": "ЦЕНА",
+        "singleDownload": "Одно скачивание",
+        "discountCode": "Промокод или подарочная карта",
+        "apply": "Применить",
+        "total": "Итого",
+        "backToSite": "< Назад на"
+      },
+      "payment": {
+        "title": "Оплата",
+        "customerInformation": "Информация о покупателе",
+        "edit": "Изменить",
+        "email": "Email:",
+        "name": "Имя:",
+        "paypal": "PayPal",
+        "debitOrCreditCard": "Дебетовая или кредитная карта",
+        "bankCardRussia": "Банковская карта (Россия, СНГ)",
+        "cardNumber": "Номер карты",
+        "expires": "Срок действия",
+        "csc": "CSC",
+        "billingAddress": "Платежный адрес",
+        "zipCode": "Почтовый индекс",
+        "country": "Страна",
+        "mobile": "Мобильный телефон",
+        "confirmAge": "Продолжая, вы подтверждаете, что вам исполнилось 18 лет.",
+        "pay": "Оплатить",
+        "processing": "Обработка...",
+        "poweredBy": "Работает на",
+        "yooKassa": "ЮKassa",
+        "backToCart": "< Назад в корзину"
+      },
+      "validation": {
+        "emailRequired": "Email обязателен",
+        "emailInvalid": "Пожалуйста, введите корректный адрес электронной почты",
+        "firstNameRequired": "Имя обязательно",
+        "lastNameRequired": "Фамилия обязательна",
+        "cardNumberRequired": "Номер карты обязателен",
+        "cardNumberInvalid": "Номер карты должен содержать 13-19 цифр",
+        "expiryRequired": "Срок действия обязателен",
+        "expiryInvalid": "Пожалуйста, введите корректный срок действия (ММ/ГГ)",
+        "expiryMonthInvalid": "Месяц должен быть от 01 до 12",
+        "cscRequired": "CSC обязателен",
+        "cscInvalid": "CSC должен содержать 3-4 цифры",
+        "zipCodeRequired": "Почтовый индекс обязателен",
+        "mobileRequired": "Мобильный телефон обязателен",
+        "confirmAgeRequired": "Вы должны подтвердить, что вам исполнилось 18 лет",
+        "agreeToOfferRequired": "Вы должны согласиться с офертой",
+        "agreeToPrivacyRequired": "Вы должны согласиться с политикой конфиденциальности"
+      }
     }
   }
 ]
