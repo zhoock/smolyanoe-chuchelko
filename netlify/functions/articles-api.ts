@@ -32,7 +32,6 @@ interface ArticleRow {
   date: Date;
   details: unknown[];
   lang: string;
-  is_public: boolean;
   is_draft: boolean;
   created_at: Date;
   updated_at: Date;
@@ -57,7 +56,6 @@ interface CreateArticleRequest {
   date: string;
   details: unknown[];
   lang: SupportedLang;
-  isPublic?: boolean;
 }
 
 interface UpdateArticleRequest {
@@ -66,7 +64,6 @@ interface UpdateArticleRequest {
   img?: string;
   date?: string;
   details?: unknown[];
-  isPublic?: boolean;
   isDraft?: boolean;
 }
 
@@ -184,8 +181,8 @@ export const handler: Handler = async (
       // Используем RETURNING чтобы получить UUID созданной статьи
       // По умолчанию создаем как черновик (is_draft = true)
       const result = await query<ArticleRow>(
-        `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_public, is_draft, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, NOW(), NOW())
+        `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, NOW(), NOW())
          RETURNING id, article_id, name_article, description, img, date, details, lang, is_draft`,
         [
           userId,
@@ -196,7 +193,6 @@ export const handler: Handler = async (
           data.date,
           JSON.stringify(data.details),
           data.lang,
-          false, // is_public всегда false, так как все статьи принадлежат пользователю
           true, // is_draft = true по умолчанию (черновик)
         ]
       );
@@ -210,13 +206,21 @@ export const handler: Handler = async (
     }
 
     if (event.httpMethod === 'PUT') {
+      console.log('[articles-api PUT] Request received', {
+        hasUserId: !!userId,
+        userId: userId?.substring(0, 10) + '...',
+        queryParams: event.queryStringParameters,
+      });
+
       if (!userId) {
+        console.log('[articles-api PUT] Unauthorized: no userId');
         return createErrorResponse(401, 'Unauthorized');
       }
 
       const { id } = event.queryStringParameters || {};
 
       if (!id) {
+        console.log('[articles-api PUT] Bad request: no id in query params');
         return createErrorResponse(400, 'Article ID is required (query parameter: id)');
       }
 
@@ -226,25 +230,47 @@ export const handler: Handler = async (
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const isUUID = UUID_RE.test(id);
 
+      console.log('[articles-api PUT] Checking article', {
+        id,
+        isUUID,
+        userId: userId?.substring(0, 10) + '...',
+      });
+
       // Проверяем, что статья принадлежит пользователю
       // Поддерживаем как UUID id, так и article_id для обратной совместимости
       let checkResult: Awaited<ReturnType<typeof query<ArticleRow>>>;
 
       if (isUUID) {
         // Используем UUID id для поиска
+        console.log('[articles-api PUT] Searching by UUID id', { id, userId });
+        // Проверяем, что статья существует И (принадлежит пользователю ИЛИ является публичной)
+        // Публичные статьи имеют user_id = NULL
         checkResult = await query<ArticleRow>(
-          `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
+          `SELECT id FROM articles WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)`,
           [id, userId]
         );
       } else {
         // Fallback: используем article_id для старых данных без UUID
+        console.log('[articles-api PUT] Searching by article_id', { id, userId });
+        // Проверяем, что статья существует И (принадлежит пользователю ИЛИ является публичной)
+        // Публичные статьи имеют user_id = NULL
         checkResult = await query<ArticleRow>(
-          `SELECT id FROM articles WHERE article_id = $1 AND user_id = $2`,
+          `SELECT id FROM articles WHERE article_id = $1 AND (user_id = $2 OR user_id IS NULL)`,
           [id, userId]
         );
       }
 
+      console.log('[articles-api PUT] Check result', {
+        rowsFound: checkResult.rows.length,
+        foundId: checkResult.rows.length > 0 ? checkResult.rows[0].id : null,
+      });
+
       if (checkResult.rows.length === 0) {
+        console.log('[articles-api PUT] Article not found or access denied', {
+          id,
+          isUUID,
+          userId: userId?.substring(0, 10) + '...',
+        });
         return createErrorResponse(404, 'Article not found or access denied');
       }
 
@@ -288,7 +314,6 @@ export const handler: Handler = async (
         updates.push(`is_draft = $${paramIndex++}`);
         values.push(data.isDraft);
       }
-      // is_public больше не используется, все статьи принадлежат пользователю
 
       if (updates.length === 0) {
         return createErrorResponse(400, 'No fields to update');
@@ -304,11 +329,12 @@ export const handler: Handler = async (
         userId,
       });
 
-      // Используем реальный UUID id и user_id для обновления
+      // Используем реальный UUID id для обновления
+      // Обновляем статью, если она принадлежит пользователю ИЛИ является публичной (user_id IS NULL)
       const updateResult = await query(
         `UPDATE articles 
          SET ${updates.join(', ')}
-         WHERE id = $${paramIndex++} AND user_id = $${paramIndex++}
+         WHERE id = $${paramIndex++} AND (user_id = $${paramIndex++} OR user_id IS NULL)
          RETURNING id, article_id, name_article, details`,
         values
       );

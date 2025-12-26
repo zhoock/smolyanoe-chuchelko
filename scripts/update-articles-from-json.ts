@@ -51,8 +51,8 @@ async function updateArticlesFromJson(
       // Используем INSERT ... ON CONFLICT для создания или полного обновления статьи
       await query(
         `INSERT INTO articles (
-            user_id, article_id, name_article, description, img, date, details, lang, is_public
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+            user_id, article_id, name_article, description, img, date, details, lang
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
         ON CONFLICT (user_id, article_id, lang)
         DO UPDATE SET
           name_article = EXCLUDED.name_article,
@@ -60,7 +60,6 @@ async function updateArticlesFromJson(
           img = EXCLUDED.img,
           date = EXCLUDED.date,
           details = EXCLUDED.details,
-          is_public = EXCLUDED.is_public,
           updated_at = CURRENT_TIMESTAMP
         RETURNING id`,
         [
@@ -72,7 +71,6 @@ async function updateArticlesFromJson(
           article.date,
           JSON.stringify(article.details || []),
           lang,
-          true, // публичная
         ],
         0
       );

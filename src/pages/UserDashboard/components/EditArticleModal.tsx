@@ -194,14 +194,76 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
     try {
       const token = getToken();
-      if (!token) return null;
+      if (!token) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:192',
+            message: 'fetchArticleForEditing: no token',
+            data: {},
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }).catch(() => {});
+        // #endregion
+        return null;
+      }
 
       // Получаем статью со статусом (включая черновики)
-      const response = await fetch(`/api/articles-api?lang=${lang}&includeDrafts=true`, {
+      const fetchUrl = `/api/articles-api?lang=${lang}&includeDrafts=true`;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:200',
+          message: 'fetchArticleForEditing: before fetch',
+          data: {
+            fetchUrl,
+            lang,
+            currentArticleArticleId: currentArticle?.articleId,
+            articleArticleId: article?.articleId,
+            searchArticleId: currentArticle?.articleId || article?.articleId,
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {});
+      // #endregion
+      const response = await fetch(fetchUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:220',
+          message: 'fetchArticleForEditing: response received',
+          data: {
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText,
+            searchArticleId: currentArticle?.articleId || article?.articleId,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B',
+        }),
+      }).catch(() => {});
+      // #endregion
 
       if (response.ok) {
         const data = await response.json();
@@ -209,10 +271,73 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         const articleForEdit = articlesList.find(
           (a: IArticles) => a.articleId === (currentArticle?.articleId || article.articleId)
         );
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:230',
+            message: 'fetchArticleForEditing: article found',
+            data: {
+              articlesListLength: articlesList.length,
+              foundArticle: articleForEdit
+                ? {
+                    id: articleForEdit.id,
+                    articleId: articleForEdit.articleId,
+                    isDraft: articleForEdit.isDraft,
+                  }
+                : null,
+              searchArticleId: currentArticle?.articleId || article?.articleId,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'A',
+          }),
+        }).catch(() => {});
+        // #endregion
         return articleForEdit || null;
+      } else {
+        // #region agent log
+        const errorText = await response.text().catch(() => '');
+        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'EditArticleModal.tsx:240',
+            message: 'fetchArticleForEditing: response not ok',
+            data: {
+              status: response.status,
+              statusText: response.statusText,
+              errorText,
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B',
+          }),
+        }).catch(() => {});
+        // #endregion
       }
     } catch (error) {
       console.error('Error fetching article for editing:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:250',
+          message: 'fetchArticleForEditing: exception',
+          data: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'E',
+        }),
+      }).catch(() => {});
+      // #endregion
     }
     return null;
   }, [currentArticle, article, lang]);
@@ -2460,11 +2585,19 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       body: JSON.stringify({
         location: 'EditArticleModal.tsx:465',
         message: 'handlePublish called',
-        data: { hasCurrentArticle: !!currentArticle, editingData, blocksCount: blocks.length },
+        data: {
+          hasCurrentArticle: !!currentArticle,
+          currentArticleId: currentArticle?.id,
+          currentArticleArticleId: currentArticle?.articleId,
+          articleId: article?.id,
+          articleArticleId: article?.articleId,
+          editingData,
+          blocksCount: blocks.length,
+        },
         timestamp: Date.now(),
         sessionId: 'debug-session',
         runId: 'run1',
-        hypothesisId: 'F',
+        hypothesisId: 'A',
       }),
     }).catch(() => {});
     // #endregion
@@ -2508,11 +2641,90 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       // Небольшая задержка, чтобы onBlur успел обработаться
       await new Promise((resolve) => setTimeout(resolve, 100));
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:2511',
+          message: 'Before autoSaveDraft',
+          data: {
+            currentArticleId: currentArticle?.id,
+            currentArticleArticleId: currentArticle?.articleId,
+            currentArticleFull: currentArticle
+              ? { id: currentArticle.id, articleId: currentArticle.articleId }
+              : null,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {});
+      // #endregion
+
       // Сначала сохраняем последние изменения в черновик
       await autoSaveDraft();
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:2513',
+          message: 'After autoSaveDraft',
+          data: {
+            currentArticleId: currentArticle?.id,
+            currentArticleArticleId: currentArticle?.articleId,
+            currentArticleFull: currentArticle
+              ? { id: currentArticle.id, articleId: currentArticle.articleId }
+              : null,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {});
+      // #endregion
+
       const details = simplifiedToDetails(blocks);
       const articleIdToUse = currentArticle?.id || currentArticle?.articleId;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:2515',
+          message: 'articleIdToUse determined',
+          data: {
+            articleIdToUse,
+            isUUID:
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                articleIdToUse || ''
+              ),
+            currentArticleId: currentArticle?.id,
+            currentArticleArticleId: currentArticle?.articleId,
+            currentArticleFull: currentArticle
+              ? {
+                  id: currentArticle.id,
+                  articleId: currentArticle.articleId,
+                  isDraft: currentArticle.isDraft,
+                }
+              : null,
+            articleFull: article ? { id: article.id, articleId: article.articleId } : null,
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+            tokenPreview: token ? token.substring(0, 20) + '...' : null,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A',
+        }),
+      }).catch(() => {});
+      // #endregion
 
       if (!articleIdToUse) {
         showAlert(texts.failedToGetId);
@@ -2549,7 +2761,36 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         }),
       }).catch(() => {});
       // #endregion
-      const response = await fetch(`/api/articles-api?id=${encodeURIComponent(articleIdToUse)}`, {
+      const requestUrl = `/api/articles-api?id=${encodeURIComponent(articleIdToUse)}`;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'EditArticleModal.tsx:2552',
+          message: 'About to send PUT request',
+          data: {
+            requestUrl,
+            articleIdToUse,
+            isUUID:
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                articleIdToUse || ''
+              ),
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+            tokenPreview: token ? token.substring(0, 30) + '...' : null,
+            authorizationHeader: `Bearer ${token}`,
+            requestBodyKeys: Object.keys(publishRequestBody),
+            requestBodyFull: publishRequestBody,
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B',
+        }),
+      }).catch(() => {});
+      // #endregion
+      const response = await fetch(requestUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -2575,6 +2816,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text().catch(() => '');
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
           method: 'POST',
@@ -2582,11 +2824,22 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
           body: JSON.stringify({
             location: 'EditArticleModal.tsx:538',
             message: 'Publish failed',
-            data: { status: response.status, errorData },
+            data: {
+              status: response.status,
+              statusText: response.statusText,
+              errorData,
+              errorText,
+              requestUrl,
+              articleIdToUse,
+              isUUID:
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                  articleIdToUse || ''
+                ),
+            },
             timestamp: Date.now(),
             sessionId: 'debug-session',
             runId: 'run1',
-            hypothesisId: 'F',
+            hypothesisId: 'C',
           }),
         }).catch(() => {});
         // #endregion

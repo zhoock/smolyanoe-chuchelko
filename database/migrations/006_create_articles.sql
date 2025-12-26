@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS articles (
   date DATE NOT NULL, -- дата публикации
   details JSONB NOT NULL, -- массив деталей статьи (ArticledetailsProps[])
   lang VARCHAR(10) NOT NULL, -- 'en' или 'ru'
-  is_public BOOLEAN DEFAULT false, -- публичная или приватная статья
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
@@ -24,7 +23,6 @@ CREATE TABLE IF NOT EXISTS articles (
 CREATE INDEX IF NOT EXISTS idx_articles_user_id ON articles(user_id);
 CREATE INDEX IF NOT EXISTS idx_articles_article_id ON articles(article_id);
 CREATE INDEX IF NOT EXISTS idx_articles_lang ON articles(lang);
-CREATE INDEX IF NOT EXISTS idx_articles_is_public ON articles(is_public);
 CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(date DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_user_article_lang ON articles(user_id, article_id, lang);
 
@@ -33,7 +31,6 @@ COMMENT ON TABLE articles IS 'Статьи пользователей';
 COMMENT ON COLUMN articles.user_id IS 'ID владельца статьи';
 COMMENT ON COLUMN articles.article_id IS 'Уникальный идентификатор статьи';
 COMMENT ON COLUMN articles.details IS 'Массив деталей статьи (JSONB)';
-COMMENT ON COLUMN articles.is_public IS 'Публичная ли статья';
 
 -- Триггер для обновления updated_at
 CREATE TRIGGER update_articles_updated_at

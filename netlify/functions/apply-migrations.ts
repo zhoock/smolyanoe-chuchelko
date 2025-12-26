@@ -133,7 +133,6 @@ CREATE TABLE IF NOT EXISTS articles (
   date DATE NOT NULL,
   details JSONB NOT NULL,
   lang VARCHAR(10) NOT NULL,
-  is_public BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, article_id, lang)
@@ -142,7 +141,6 @@ CREATE TABLE IF NOT EXISTS articles (
 CREATE INDEX IF NOT EXISTS idx_articles_user_id ON articles(user_id);
 CREATE INDEX IF NOT EXISTS idx_articles_article_id ON articles(article_id);
 CREATE INDEX IF NOT EXISTS idx_articles_lang ON articles(lang);
-CREATE INDEX IF NOT EXISTS idx_articles_is_public ON articles(is_public);
 CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(date DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_user_article_lang ON articles(user_id, article_id, lang);
 

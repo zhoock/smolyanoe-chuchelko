@@ -104,6 +104,33 @@
     }
   }
 
+  // Кнопка слева от параграфа
+  &__paragraph-button {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: var(--warm-concrete);
+    font-size: 18px;
+    line-height: 1;
+    background: rgba(var(--white-rgb) / 10%);
+    border: none;
+    border-radius: 50%;
+    transition:
+      color 0.2s,
+      background 0.2s;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--ms-01);
+    cursor: pointer;
+    vertical-align: middle;
+    flex-shrink: 0;
+    pointer-events: auto; // Кнопка должна быть кликабельной
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
   // Страница статьи в стиле фронтенда
   &__content-editable {
     outline: none;
@@ -125,39 +152,6 @@
         .edit-article-modal__paragraph-button {
           display: inline-flex;
         }
-      }
-    }
-
-    // Кнопка слева от параграфа
-    &__paragraph-button {
-      display: none; // По умолчанию скрыта
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      margin-right: var(--ms-01);
-      padding: 0;
-      color: var(--warm-concrete);
-      font-size: 18px;
-      line-height: 1;
-      background: transparent;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      transition:
-        color 0.2s,
-        background 0.2s;
-      vertical-align: middle;
-      flex-shrink: 0;
-      pointer-events: auto; // Кнопка должна быть кликабельной
-
-      &:hover {
-        color: var(--white);
-        background: rgba(var(--white-rgb) / 10%);
-      }
-
-      &:focus-visible {
-        outline: none;
       }
     }
   }

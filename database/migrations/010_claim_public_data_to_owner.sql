@@ -60,7 +60,6 @@ BEGIN
   -- Привязываем все публичные статьи к владельцу
   UPDATE articles
   SET user_id = owner_user_id,
-      is_public = false,
       updated_at = NOW()
   WHERE user_id IS NULL;
 

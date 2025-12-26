@@ -11,9 +11,34 @@
  *   DATABASE_URL=postgresql://username:password@host:port/database
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { Pool } from 'pg';
+
+// Загружаем переменные окружения из .env
+const envPath = join(__dirname, '..', '.env');
+if (existsSync(envPath)) {
+  const envFile = readFileSync(envPath, 'utf-8');
+  envFile.split('\n').forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine && !trimmedLine.startsWith('#')) {
+      const match = trimmedLine.match(/^([^#=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let value = match[2].trim();
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+}
 
 const MIGRATIONS_DIR = join(__dirname, '..', 'database', 'migrations');
 
