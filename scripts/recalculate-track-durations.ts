@@ -64,7 +64,8 @@ function getAudioFileUrl(src: string): string | null {
   // Формируем путь в Supabase Storage
   // Формат: users/zhoock/audio/{albumId}/{fileName}
   // normalizedPath может быть "23/01-Barnums-Fijian-Mermaid-1644.wav"
-  const storagePath = `users/zhoock/audio/${normalizedPath}`;
+  const userId = process.env.CURRENT_USER_ID || 'zhoock';
+  const storagePath = `users/${userId}/audio/${normalizedPath}`;
 
   // Создаём Supabase клиент
   const supabase = createSupabaseAdminClient();
@@ -167,10 +168,11 @@ async function getAudioDurationFromUrl(urlOrPath: string): Promise<number | null
 }
 
 async function recalculateTrackDurations() {
-  console.log('🔄 Начинаем пересчёт duration для всех треков...\n');
+  console.log('🔄 Начинаем пересчёт duration для треков с пустым duration...\n');
 
   try {
-    // Получаем все треки с информацией об альбомах
+    // Получаем только треки с пустым duration (null или 0)
+    // В PostgreSQL DECIMAL может быть NULL или число (не может быть пустой строки)
     const tracksResult = await query<TrackRow>(
       `SELECT 
         t.id,
@@ -182,7 +184,12 @@ async function recalculateTrackDurations() {
         t.order_index
       FROM tracks t
       INNER JOIN albums a ON t.album_id = a.id
-      WHERE t.src IS NOT NULL AND t.src != ''
+      WHERE t.src IS NOT NULL 
+        AND t.src != ''
+        AND (
+          t.duration IS NULL 
+          OR t.duration = 0
+        )
       ORDER BY a.album_id, a.lang, t.order_index ASC`
     );
 

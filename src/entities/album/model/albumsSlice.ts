@@ -103,6 +103,13 @@ export const fetchAlbums = createAsyncThunk<
                 });
               }
 
+              // Логируем треки без duration
+              if (normalizedTrack.duration == null) {
+                console.warn(
+                  `[albumsSlice] ⚠️ Track ${normalizedTrack.id} (${normalizedTrack.title}) in album ${album.albumId} has no duration`
+                );
+              }
+
               return normalizedTrack;
             })
           : [];

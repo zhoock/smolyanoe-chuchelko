@@ -83,6 +83,14 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
         const isActive = isCurrentAlbum && activeIndex === index;
         const isPlayingNow = isCurrentAlbum && isPlaying && currentTrackId === track.id;
 
+        // Логируем для отладки, если duration отсутствует
+        if (track.duration == null && index === 0) {
+          console.warn(
+            `[TrackList] ⚠️ Track ${track.id} (${track.title}) has no duration. Type: ${typeof track.duration}, Value:`,
+            track.duration
+          );
+        }
+
         return (
           <button
             key={track.id}

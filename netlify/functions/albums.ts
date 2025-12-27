@@ -183,6 +183,14 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
         }
       }
 
+      // Логируем для отладки, если duration отсутствует
+      if (duration == null && track.track_id) {
+        console.log(
+          `[albums.ts] ⚠️ Track ${track.track_id} (${track.title}) has no duration. Raw value:`,
+          track.duration
+        );
+      }
+
       // Парсим synced_lyrics, если это строка (PostgreSQL может вернуть JSONB как строку)
       let syncedLyrics: unknown = undefined;
       if (track.synced_lyrics) {
@@ -226,7 +234,8 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
       return {
         id: track.track_id,
         title: track.title,
-        duration,
+        // Убеждаемся, что duration всегда число (0, если отсутствует)
+        duration: duration ?? 0,
         src: track.src || undefined,
         content: track.content || undefined,
         authorship: track.authorship || undefined,
@@ -357,9 +366,12 @@ export const handler: Handler = async (
                     trackId: t.track_id,
                     title: t.title,
                     src: t.src,
+                    duration: t.duration,
+                    durationType: typeof t.duration,
                     orderIndex: t.order_index,
                     hasTitle: !!t.title,
                     hasSrc: !!t.src,
+                    hasDuration: t.duration != null,
                   })),
                 },
                 timestamp: Date.now(),
@@ -369,6 +381,24 @@ export const handler: Handler = async (
               }),
             }).catch(() => {});
             // #endregion
+
+            // Логируем duration для отладки
+            console.log(
+              `[albums.ts GET] Tracks loaded for album ${album.album_id} (${album.lang}):`,
+              {
+                tracksCount: tracksResult.rows.length,
+                tracksWithDuration: tracksResult.rows.filter((t) => t.duration != null).length,
+                tracksWithoutDuration: tracksResult.rows.filter((t) => t.duration == null).length,
+                sampleTrack: tracksResult.rows[0]
+                  ? {
+                      trackId: tracksResult.rows[0].track_id,
+                      title: tracksResult.rows[0].title,
+                      duration: tracksResult.rows[0].duration,
+                      durationType: typeof tracksResult.rows[0].duration,
+                    }
+                  : null,
+              }
+            );
 
             // 🔍 DEBUG: Логируем треки из БД
             if (album.album_id === '23-remastered') {
@@ -499,6 +529,21 @@ export const handler: Handler = async (
 
             const mapped = mapAlbumToApiFormat(album, tracksWithSyncedLyrics);
 
+            // Логируем duration после маппинга
+            console.log(`[albums.ts GET] Album ${album.album_id} mapped tracks:`, {
+              tracksCount: mapped.tracks.length,
+              tracksWithDuration: mapped.tracks.filter((t) => t.duration != null).length,
+              tracksWithoutDuration: mapped.tracks.filter((t) => t.duration == null).length,
+              sampleTrack: mapped.tracks[0]
+                ? {
+                    id: mapped.tracks[0].id,
+                    title: mapped.tracks[0].title,
+                    duration: mapped.tracks[0].duration,
+                    durationType: typeof mapped.tracks[0].duration,
+                  }
+                : null,
+            });
+
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
               method: 'POST',
@@ -514,8 +559,11 @@ export const handler: Handler = async (
                     id: t.id,
                     title: t.title,
                     src: t.src,
+                    duration: t.duration,
+                    durationType: typeof t.duration,
                     hasTitle: !!t.title,
                     hasSrc: !!t.src,
+                    hasDuration: t.duration != null,
                   })),
                 },
                 timestamp: Date.now(),
