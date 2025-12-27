@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/EditArticleModalV2.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -119,6 +119,11 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     imageKeys: string[];
     caption?: string;
   } | null>(null);
+
+  // Ref для отложенной установки фокуса после удаления блока
+  const pendingFocusRef = useRef<{ blockId: string; position: 'start' | 'end' | number } | null>(
+    null
+  );
 
   // Обработка Escape для скрытия VK-плюса
   useEffect(() => {
@@ -654,6 +659,95 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     return null;
   }, [selectedBlockId, focusBlockId, blocks]);
 
+  // Функция для вычисления целевого блока после удаления
+  const findTargetBlockAfterDelete = useCallback(
+    (deletedBlockIndex: number, newBlocks: Block[], deletedBlockType?: string): Block | null => {
+      // Правило 1: Если удаляем активный блок, сначала проверяем следующий
+      // В новом массиве индекс deletedBlockIndex указывает на блок, который был следующим
+      let emptyBlockCandidate: Block | null = null;
+      let filledBlockCandidate: Block | null = null;
+
+      // Ищем следующий текстовый блок
+      if (deletedBlockIndex < newBlocks.length) {
+        for (let i = deletedBlockIndex; i < newBlocks.length; i++) {
+          const block = newBlocks[i];
+          if (
+            block &&
+            (block.type === 'paragraph' ||
+              block.type === 'title' ||
+              block.type === 'subtitle' ||
+              block.type === 'quote')
+          ) {
+            // Правило 2: Приоритет новым пустым блокам (созданным Return)
+            if (block.text.trim() === '') {
+              emptyBlockCandidate = block;
+            } else if (!filledBlockCandidate) {
+              filledBlockCandidate = block;
+            }
+            // Если нашли пустой блок, сразу возвращаем его
+            if (emptyBlockCandidate) {
+              return emptyBlockCandidate;
+            }
+          }
+        }
+      }
+
+      // Если нашли заполненный следующий блок, возвращаем его
+      if (filledBlockCandidate) {
+        return filledBlockCandidate;
+      }
+
+      // Если не нашли следующий, ищем предыдущий текстовый блок
+      emptyBlockCandidate = null;
+      filledBlockCandidate = null;
+      for (let i = deletedBlockIndex - 1; i >= 0; i--) {
+        const block = newBlocks[i];
+        if (
+          block &&
+          (block.type === 'paragraph' ||
+            block.type === 'title' ||
+            block.type === 'subtitle' ||
+            block.type === 'quote')
+        ) {
+          // Правило 2: Приоритет новым пустым блокам (созданным Return)
+          if (block.text.trim() === '') {
+            emptyBlockCandidate = block;
+          } else if (!filledBlockCandidate) {
+            filledBlockCandidate = block;
+          }
+          // Если нашли пустой блок, сразу возвращаем его
+          if (emptyBlockCandidate) {
+            return emptyBlockCandidate;
+          }
+        }
+      }
+
+      // Возвращаем заполненный предыдущий блок, если нашли
+      if (filledBlockCandidate) {
+        return filledBlockCandidate;
+      }
+
+      // Если не нашли текстовый блок, возвращаем null (будет создан новый)
+      return null;
+    },
+    []
+  );
+
+  // Функция для установки фокуса в конец блока
+  const focusBlockEnd = useCallback((blockId: string) => {
+    setFocusBlockId(blockId);
+    // Используем requestAnimationFrame для установки фокуса после обновления DOM
+    requestAnimationFrame(() => {
+      const textarea = document.querySelector(
+        `[data-block-id="${blockId}"] textarea`
+      ) as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      }
+    });
+  }, []);
+
   const restoreCaretPosition = useCallback(
     (caretPosition: CaretPosition | null | undefined, newBlocks: Block[]) => {
       if (!caretPosition) return;
@@ -813,12 +907,19 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     [createBlock, saveSnapshot]
   );
 
+  type DeleteFocus = { blockId: string; position: 'start' | 'end' | number };
+
   const deleteBlock = useCallback(
-    (blockId: string) => {
-      // Сохраняем позицию каретки перед удалением
+    (blockId: string, forcedFocus?: DeleteFocus) => {
+      // Сохраняем позицию каретки перед удалением (для undo/redo)
       const caretPosition = saveCaretPosition();
       // Сохраняем снимок перед удалением
       saveSnapshot(caretPosition);
+
+      // Если мы заранее знаем куда ставить каретку — фиксируем это ДО setBlocks
+      if (forcedFocus) {
+        pendingFocusRef.current = forcedFocus;
+      }
 
       setBlocks((prev) => {
         const blockIndex = prev.findIndex((b) => b.id === blockId);
@@ -828,79 +929,29 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         const newParagraph: Block = { id: generateId(), type: 'paragraph', text: '' };
         const newBlocks = filtered.length > 0 ? filtered : [newParagraph];
 
-        // Восстанавливаем каретку после удаления
-        setTimeout(() => {
-          // Для image/carousel блоков: ставим каретку в конец предыдущего текстового блока
-          if (deletedBlock && (deletedBlock.type === 'image' || deletedBlock.type === 'carousel')) {
-            // Ищем предыдущий текстовый блок (в новом массиве индексы сдвинулись)
-            let targetBlock: Block | null = null;
-            // Ищем в старом массиве до удаленного блока
-            for (let i = blockIndex - 1; i >= 0; i--) {
-              const oldBlock = prev[i];
-              if (
-                oldBlock &&
-                (oldBlock.type === 'paragraph' ||
-                  oldBlock.type === 'title' ||
-                  oldBlock.type === 'subtitle' ||
-                  oldBlock.type === 'quote')
-              ) {
-                // Находим этот блок в новом массиве
-                const foundBlock = newBlocks.find((b) => b.id === oldBlock.id);
-                targetBlock = foundBlock || null;
-                break;
-              }
-            }
-            // Если не нашли предыдущий, ищем следующий
-            if (!targetBlock) {
-              for (let i = blockIndex + 1; i < prev.length; i++) {
-                const oldBlock = prev[i];
-                if (
-                  oldBlock &&
-                  (oldBlock.type === 'paragraph' ||
-                    oldBlock.type === 'title' ||
-                    oldBlock.type === 'subtitle' ||
-                    oldBlock.type === 'quote')
-                ) {
-                  // Находим этот блок в новом массиве
-                  targetBlock = newBlocks.find((b) => b.id === oldBlock.id) || null;
-                  break;
-                }
-              }
-            }
-            // Если нашли текстовый блок, ставим каретку в конец
-            if (targetBlock) {
-              setFocusBlockId(targetBlock.id);
-              const textarea = document.querySelector(
-                `[data-block-id="${targetBlock.id}"] textarea`
-              ) as HTMLTextAreaElement;
-              if (textarea) {
-                textarea.focus();
-                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-              }
-            } else {
-              // Если не нашли текстовый блок, создаем новый пустой paragraph
-              const newParagraph = { id: generateId(), type: 'paragraph' as const, text: '' };
-              setBlocks((current) => [...current, newParagraph]);
-              setTimeout(() => {
-                setFocusBlockId(newParagraph.id);
-                const textarea = document.querySelector(
-                  `[data-block-id="${newParagraph.id}"] textarea`
-                ) as HTMLTextAreaElement;
-                if (textarea) {
-                  textarea.focus();
-                }
-              }, 0);
-            }
+        // IMPORTANT: если forcedFocus уже задан — НЕ переопределяем его автологикой
+        if (!forcedFocus) {
+          // Вычисляем целевой блок ПОСЛЕ удаления (не используем origin caretPosition)
+          const deletedBlockType = deletedBlock?.type;
+          // В новом массиве индекс удаленного блока равен blockIndex (так как мы удалили его)
+          const targetBlock = findTargetBlockAfterDelete(blockIndex, newBlocks, deletedBlockType);
+
+          // Сохраняем информацию о целевом блоке для установки фокуса после обновления DOM
+          if (targetBlock) {
+            pendingFocusRef.current = { blockId: targetBlock.id, position: 'end' };
           } else {
-            // Для текстовых блоков: используем сохраненную позицию каретки
-            restoreCaretPosition(caretPosition, newBlocks);
+            // Если не нашли целевой блок, создаем новый пустой paragraph
+            const newEmptyParagraph: Block = { id: generateId(), type: 'paragraph', text: '' };
+            pendingFocusRef.current = { blockId: newEmptyParagraph.id, position: 'start' };
+            // Добавляем новый блок в массив
+            return [...newBlocks, newEmptyParagraph];
           }
-        }, 0);
+        }
 
         return newBlocks;
       });
     },
-    [saveSnapshot, saveCaretPosition, restoreCaretPosition]
+    [saveSnapshot, saveCaretPosition, findTargetBlockAfterDelete]
   );
 
   // Конвертация image в carousel
@@ -989,6 +1040,33 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [selectedBlockId, blocks, deleteBlock, undo, redo]);
+
+  // Установка фокуса после удаления блока (useLayoutEffect выполняется синхронно после обновления DOM)
+  useLayoutEffect(() => {
+    if (pendingFocusRef.current) {
+      const { blockId, position } = pendingFocusRef.current;
+      pendingFocusRef.current = null; // Очищаем ref
+
+      // Используем requestAnimationFrame для гарантии, что DOM обновлен
+      requestAnimationFrame(() => {
+        const textarea = document.querySelector(
+          `[data-block-id="${blockId}"] textarea`
+        ) as HTMLTextAreaElement;
+        if (textarea) {
+          setFocusBlockId(blockId);
+          textarea.focus();
+          if (position === 'start') {
+            textarea.setSelectionRange(0, 0);
+          } else if (position === 'end') {
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+          } else {
+            const pos = Math.min(position, textarea.value.length);
+            textarea.setSelectionRange(pos, pos);
+          }
+        }
+      });
+    }
+  }, [blocks]); // Зависимость от blocks, чтобы эффект срабатывал после обновления
 
   // Снятие выделения при клике вне блока
   useEffect(() => {
@@ -1169,13 +1247,23 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           return;
         }
 
-        deleteBlock(blockId);
+        // Хотим как ВК: удалили пустой блок -> каретка в конец предыдущего (если есть)
+        const prev = blockIndex > 0 ? blocks[blockIndex - 1] : null;
+        const next = blockIndex < blocks.length - 1 ? blocks[blockIndex + 1] : null;
 
-        // Фокус на предыдущий блок
-        if (blockIndex > 0) {
-          setTimeout(() => {
-            setFocusBlockId(blocks[blockIndex - 1].id);
-          }, 0);
+        // Выбираем цель: сначала prev, если нет — next, если нет — пусть deleteBlock сам создаст paragraph
+        const target = prev ?? next;
+
+        if (
+          target &&
+          (target.type === 'paragraph' ||
+            target.type === 'title' ||
+            target.type === 'subtitle' ||
+            target.type === 'quote')
+        ) {
+          deleteBlock(blockId, { blockId: target.id, position: 'end' });
+        } else {
+          deleteBlock(blockId); // fallback на авто-логику
         }
         return;
       }
@@ -1197,25 +1285,13 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         ) {
           const mergedText = prevBlock.text + currentBlock.text;
           const mergedType = prevBlock.type; // Сохраняем тип предыдущего блока
+          const prevTextLength = prevBlock.text.length; // Сохраняем длину текста до слияния
 
           // Обновляем предыдущий блок
           updateBlock(prevBlock.id, { text: mergedText } as Partial<Block>);
 
-          // Удаляем текущий блок
-          deleteBlock(blockId);
-
-          // Фокус на объединённый блок
-          setTimeout(() => {
-            setFocusBlockId(prevBlock.id);
-            // Устанавливаем курсор в место слияния
-            const textarea = document.querySelector(
-              `[data-block-id="${prevBlock.id}"] textarea`
-            ) as HTMLTextAreaElement;
-            if (textarea) {
-              textarea.focus();
-              textarea.setSelectionRange(prevBlock.text.length, prevBlock.text.length);
-            }
-          }, 0);
+          // Удаляем текущий блок с явным указанием фокуса в место слияния
+          deleteBlock(blockId, { blockId: prevBlock.id, position: prevTextLength });
         }
       }
     },
