@@ -1609,68 +1609,78 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         return;
       }
 
-      const textarea = document.activeElement as HTMLTextAreaElement;
+      // Находим textarea по blockId, а не через activeElement
+      // Это важно, так как при клике на кнопку тултипа activeElement может измениться
+      const textarea = document.querySelector(
+        `[data-block-id="${blockId}"] textarea`
+      ) as HTMLTextAreaElement;
       if (!textarea) return;
 
-      const selectionStart = textarea.selectionStart;
-      const selectionEnd = textarea.selectionEnd;
+      // Восстанавливаем фокус на textarea перед получением позиции курсора
+      // Используем requestAnimationFrame чтобы убедиться, что событие клика обработано
+      requestAnimationFrame(() => {
+        textarea.focus();
 
-      if (selectionStart === selectionEnd) {
-        // Нет выделения - вставляем шаблон
-        let template = '';
-        let cursorOffset = 0;
+        const selectionStart = textarea.selectionStart;
+        const selectionEnd = textarea.selectionEnd;
 
-        if (type === 'bold') {
-          template = '**текст**';
-          cursorOffset = 2;
-        } else if (type === 'italic') {
-          template = '_текст_';
-          cursorOffset = 1;
-        } else if (type === 'link') {
-          template = '[текст](url)';
-          cursorOffset = 1;
+        if (selectionStart === selectionEnd) {
+          // Нет выделения - вставляем шаблон
+          let template = '';
+          let cursorOffset = 0;
+
+          if (type === 'bold') {
+            template = '**текст**';
+            cursorOffset = 2;
+          } else if (type === 'italic') {
+            template = '_текст_';
+            cursorOffset = 1;
+          } else if (type === 'link') {
+            template = '[текст](url)';
+            cursorOffset = 1;
+          }
+
+          const newText =
+            block.text.substring(0, selectionStart) + template + block.text.substring(selectionEnd);
+
+          updateBlock(blockId, { text: newText } as Partial<Block>);
+
+          // Устанавливаем курсор внутрь шаблона
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(
+              selectionStart + cursorOffset,
+              selectionStart + cursorOffset + 6
+            );
+          }, 0);
+        } else {
+          // Есть выделение - оборачиваем в markdown
+          const selectedText = block.text.substring(selectionStart, selectionEnd);
+          let wrappedText = '';
+
+          if (type === 'bold') {
+            wrappedText = `**${selectedText}**`;
+          } else if (type === 'italic') {
+            wrappedText = `_${selectedText}_`;
+          } else if (type === 'link') {
+            wrappedText = `[${selectedText}](url)`;
+          }
+
+          const newText =
+            block.text.substring(0, selectionStart) +
+            wrappedText +
+            block.text.substring(selectionEnd);
+
+          updateBlock(blockId, { text: newText } as Partial<Block>);
+
+          // Устанавливаем курсор после обёрнутого текста
+          setTimeout(() => {
+            textarea.focus();
+            const newCursorPos = selectionStart + wrappedText.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+          }, 0);
         }
-
-        const newText =
-          block.text.substring(0, selectionStart) + template + block.text.substring(selectionEnd);
-
-        updateBlock(blockId, { text: newText } as Partial<Block>);
-
-        // Устанавливаем курсор внутрь шаблона
-        setTimeout(() => {
-          textarea.focus();
-          textarea.setSelectionRange(
-            selectionStart + cursorOffset,
-            selectionStart + cursorOffset + 6
-          );
-        }, 0);
-      } else {
-        // Есть выделение - оборачиваем в markdown
-        const selectedText = block.text.substring(selectionStart, selectionEnd);
-        let wrappedText = '';
-
-        if (type === 'bold') {
-          wrappedText = `**${selectedText}**`;
-        } else if (type === 'italic') {
-          wrappedText = `_${selectedText}_`;
-        } else if (type === 'link') {
-          wrappedText = `[${selectedText}](url)`;
-        }
-
-        const newText =
-          block.text.substring(0, selectionStart) +
-          wrappedText +
-          block.text.substring(selectionEnd);
-
-        updateBlock(blockId, { text: newText } as Partial<Block>);
-
-        // Устанавливаем курсор после обёрнутого текста
-        setTimeout(() => {
-          textarea.focus();
-          const newCursorPos = selectionStart + wrappedText.length;
-          textarea.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-      }
+      });
     },
     [blocks, updateBlock]
   );

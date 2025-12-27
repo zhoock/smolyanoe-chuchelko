@@ -615,7 +615,7 @@ dialog {
     }
 
     &__format-menu {
-      position: absolute;
+      position: fixed;
       z-index: 1000;
       display: flex;
       padding: var(--ms-02);
@@ -624,7 +624,7 @@ dialog {
       border-radius: var(--ms-01);
       box-shadow: 0 4px 12px rgb(var(--black-rgb) / 50%);
       gap: var(--ms-02);
-      margin-top: var(--ms-01);
+      pointer-events: auto;
     }
 
     &__format-menu-item {

@@ -116,6 +116,16 @@ export function BlockParagraph({
     }
   };
 
+  const handleMouseUp = () => {
+    // Обновляем меню после завершения выделения мышью
+    handleSelect();
+  };
+
+  const handleKeyUp = () => {
+    // Обновляем меню после изменения выделения клавиатурой
+    handleSelect();
+  };
+
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = e.clipboardData;
     const items = Array.from(clipboardData.items);
@@ -171,6 +181,8 @@ export function BlockParagraph({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onSelect={handleSelect}
+          onMouseUp={handleMouseUp}
+          onKeyUp={handleKeyUp}
           onPaste={handlePaste}
           onFocus={onFocus}
           onBlur={onBlur}
@@ -197,6 +209,8 @@ interface FormatMenuProps {
 
 function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement | null>(null);
+  const selectionRef = useRef<{ start: number; end: number } | null>(null);
 
   useEffect(() => {
     if (!textarea) return;
@@ -207,26 +221,144 @@ function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
       const selectionStart = textarea.selectionStart;
       const selectionEnd = textarea.selectionEnd;
 
-      // Создаем временный элемент для измерения позиции
+      // Сохраняем позицию выделения
+      selectionRef.current = { start: selectionStart, end: selectionEnd };
+
+      // Если нет выделения, не показываем меню
+      if (selectionStart === selectionEnd) {
+        onClose();
+        return;
+      }
+
+      // Создаем временный элемент-измеритель с теми же стилями, что и textarea
+      if (!measureRef.current) {
+        measureRef.current = document.createElement('div');
+        measureRef.current.style.position = 'absolute';
+        measureRef.current.style.visibility = 'hidden';
+        measureRef.current.style.whiteSpace = 'pre-wrap';
+        measureRef.current.style.wordWrap = 'break-word';
+        measureRef.current.style.overflow = 'hidden';
+        measureRef.current.style.pointerEvents = 'none';
+        measureRef.current.style.zIndex = '-1';
+        document.body.appendChild(measureRef.current);
+      }
+
+      const measure = measureRef.current;
+      const textareaRect = textarea.getBoundingClientRect();
+      const textareaStyles = getComputedStyle(textarea);
+
+      // Позиционируем измеритель в том же месте, что и textarea
+      measure.style.position = 'fixed';
+      measure.style.top = `${textareaRect.top}px`;
+      measure.style.left = `${textareaRect.left}px`;
+
+      // Копируем все стили из textarea в измеритель
+      measure.style.font = textareaStyles.font;
+      measure.style.fontSize = textareaStyles.fontSize;
+      measure.style.fontFamily = textareaStyles.fontFamily;
+      measure.style.fontWeight = textareaStyles.fontWeight;
+      measure.style.fontStyle = textareaStyles.fontStyle;
+      measure.style.letterSpacing = textareaStyles.letterSpacing;
+      measure.style.textTransform = textareaStyles.textTransform;
+      measure.style.lineHeight = textareaStyles.lineHeight;
+      measure.style.padding = textareaStyles.padding;
+      measure.style.border = textareaStyles.border;
+      measure.style.boxSizing = textareaStyles.boxSizing;
+      measure.style.width = `${textarea.offsetWidth}px`;
+      measure.style.maxWidth = `${textarea.offsetWidth}px`;
+
+      // Получаем текст до начала выделения и сам выделенный текст
       const textBefore = textarea.value.substring(0, selectionStart);
-      const textAfter = textarea.value.substring(selectionEnd);
+      const selectedText = textarea.value.substring(selectionStart, selectionEnd);
 
-      // Простое позиционирование над выделением
-      const rect = textarea.getBoundingClientRect();
-      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
-      const lines = textBefore.split('\n').length - 1;
-      const top = rect.top + lines * lineHeight - 40;
-      const left = rect.left + 10;
+      // Очищаем измеритель
+      measure.innerHTML = '';
 
-      menuRef.current.style.top = `${top}px`;
-      menuRef.current.style.left = `${left}px`;
+      // Создаем текстовый узел для текста до выделения
+      const beforeText = document.createTextNode(textBefore);
+      measure.appendChild(beforeText);
+
+      // Создаем span для выделенного текста
+      const selectedSpan = document.createElement('span');
+      selectedSpan.textContent = selectedText;
+      measure.appendChild(selectedSpan);
+
+      // Принудительно пересчитываем layout
+      void measure.offsetHeight; // Force reflow
+
+      // Получаем позицию выделения
+      const startRect = selectedSpan.getBoundingClientRect();
+
+      // Вычисляем позицию тултипа: по центру выделения по горизонтали, над выделением по вертикали
+      const menuWidth = menuRef.current.offsetWidth || 120;
+      const menuHeight = menuRef.current.offsetHeight || 40;
+      const offsetY = 8; // Отступ сверху от выделения
+
+      // Центрируем по горизонтали относительно выделения
+      const selectionCenterX = startRect.left + startRect.width / 2;
+      const left = selectionCenterX - menuWidth / 2;
+      // Позиционируем над выделением
+      const top = startRect.top - menuHeight - offsetY;
+
+      // Проверяем, не выходит ли меню за границы viewport
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const padding = 8;
+
+      let finalLeft = left;
+      let finalTop = top;
+
+      // Если меню выходит за левую границу
+      if (finalLeft < padding) {
+        finalLeft = padding;
+      }
+      // Если меню выходит за правую границу
+      if (finalLeft + menuWidth > viewportWidth - padding) {
+        finalLeft = viewportWidth - menuWidth - padding;
+      }
+
+      // Если меню выходит за верхнюю границу, показываем его под выделением
+      if (finalTop < padding) {
+        finalTop = startRect.bottom + offsetY;
+      }
+      // Если меню выходит за нижнюю границу, показываем его над выделением (даже если частично скрыто)
+      if (finalTop + menuHeight > viewportHeight - padding) {
+        finalTop = Math.max(padding, startRect.top - menuHeight - offsetY);
+      }
+
+      menuRef.current.style.top = `${finalTop}px`;
+      menuRef.current.style.left = `${finalLeft}px`;
     };
 
-    updatePosition();
-    const handleScroll = () => updatePosition();
+    // Используем requestAnimationFrame для корректного обновления позиции после изменения выделения
+    const updatePositionWithRAF = () => {
+      requestAnimationFrame(() => {
+        updatePosition();
+      });
+    };
+
+    updatePositionWithRAF();
+
+    // Обновляем позицию при скролле и изменении размера окна
+    const handleScroll = () => updatePositionWithRAF();
+    const handleResize = () => updatePositionWithRAF();
+    const handleSelectionChange = () => updatePositionWithRAF();
+
     window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
-  }, [textarea]);
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('selectionchange', handleSelectionChange);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      // Удаляем измеритель при размонтировании
+      if (measureRef.current && measureRef.current.parentNode) {
+        measureRef.current.parentNode.removeChild(measureRef.current);
+        measureRef.current = null;
+      }
+    };
+  }, [textarea, onClose]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -239,11 +371,35 @@ function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
   }, [onClose]);
 
   return (
-    <div ref={menuRef} className="edit-article-v2__format-menu">
+    <div
+      ref={menuRef}
+      className="edit-article-v2__format-menu"
+      onMouseDown={(e) => {
+        // Предотвращаем всплытие события клика на контейнер меню
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        // Предотвращаем всплытие события клика на контейнер меню
+        e.stopPropagation();
+      }}
+    >
       <button
         type="button"
         className="edit-article-v2__format-menu-item"
-        onClick={() => {
+        onMouseDown={(e) => {
+          // Предотвращаем потерю фокуса textarea при клике на кнопку
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          // Предотвращаем всплытие события
+          e.preventDefault();
+          e.stopPropagation();
+          // Восстанавливаем выделение перед форматированием
+          if (textarea && selectionRef.current) {
+            textarea.focus();
+            textarea.setSelectionRange(selectionRef.current.start, selectionRef.current.end);
+          }
           onFormat?.('bold');
           onClose();
         }}
@@ -254,7 +410,20 @@ function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
       <button
         type="button"
         className="edit-article-v2__format-menu-item"
-        onClick={() => {
+        onMouseDown={(e) => {
+          // Предотвращаем потерю фокуса textarea при клике на кнопку
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          // Предотвращаем всплытие события
+          e.preventDefault();
+          e.stopPropagation();
+          // Восстанавливаем выделение перед форматированием
+          if (textarea && selectionRef.current) {
+            textarea.focus();
+            textarea.setSelectionRange(selectionRef.current.start, selectionRef.current.end);
+          }
           onFormat?.('italic');
           onClose();
         }}
@@ -265,7 +434,20 @@ function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
       <button
         type="button"
         className="edit-article-v2__format-menu-item"
-        onClick={() => {
+        onMouseDown={(e) => {
+          // Предотвращаем потерю фокуса textarea при клике на кнопку
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          // Предотвращаем всплытие события
+          e.preventDefault();
+          e.stopPropagation();
+          // Восстанавливаем выделение перед форматированием
+          if (textarea && selectionRef.current) {
+            textarea.focus();
+            textarea.setSelectionRange(selectionRef.current.start, selectionRef.current.end);
+          }
           onFormat?.('link');
           onClose();
         }}
