@@ -9,6 +9,7 @@ interface BlockTitleProps {
   onEnter?: (atEnd: boolean) => void;
   onBackspace?: (isEmpty: boolean, atStart?: boolean) => void;
   placeholder?: string;
+  blockId?: string;
 }
 
 export function BlockTitle({
@@ -19,6 +20,7 @@ export function BlockTitle({
   onEnter,
   onBackspace,
   placeholder = 'Заголовок',
+  blockId,
 }: BlockTitleProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -61,6 +63,7 @@ export function BlockTitle({
       <textarea
         ref={textareaRef}
         className="edit-article-v2__block edit-article-v2__block--title"
+        data-block-id={blockId}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -72,4 +75,3 @@ export function BlockTitle({
     </h3>
   );
 }
-

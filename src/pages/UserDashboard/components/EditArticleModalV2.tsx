@@ -90,11 +90,17 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
   // История для Undo/Redo
+  type CaretPosition = {
+    blockId: string;
+    position: 'start' | 'end' | number; // 'start', 'end' или точная позиция в тексте
+  };
+
   type EditorSnapshot = {
     blocks: Block[];
     meta: ArticleMeta;
     focusBlockId: string | null;
     selectedBlockId: string | null;
+    caretPosition?: CaretPosition | null; // Позиция каретки перед операцией
   };
   const [undoStack, setUndoStack] = useState<EditorSnapshot[]>([]);
   const [redoStack, setRedoStack] = useState<EditorSnapshot[]>([]);
@@ -603,56 +609,187 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     }
   }, []);
 
-  // Функции для работы с историей Undo/Redo
-  const saveSnapshot = useCallback(() => {
-    const snapshot: EditorSnapshot = {
-      blocks: JSON.parse(JSON.stringify(blocks)), // Deep clone
-      meta: { ...meta },
-      focusBlockId,
-      selectedBlockId,
-    };
-    setUndoStack((prev) => [...prev, snapshot].slice(-50)); // Ограничиваем историю 50 шагами
-    setRedoStack([]); // Очищаем redo при новом действии
-  }, [blocks, meta, focusBlockId, selectedBlockId]);
+  // Функции для работы с кареткой
+  const saveCaretPosition = useCallback((): CaretPosition | null => {
+    const activeElement = document.activeElement;
+    if (
+      activeElement &&
+      (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')
+    ) {
+      const textarea = activeElement as HTMLTextAreaElement | HTMLInputElement;
+      const blockId = textarea.getAttribute('data-block-id');
+      if (blockId) {
+        const position = textarea.selectionStart ?? 0;
+        const textLength = textarea.value.length;
+        if (position === 0) {
+          return { blockId, position: 'start' };
+        } else if (position === textLength) {
+          return { blockId, position: 'end' };
+        } else {
+          return { blockId, position: position as number };
+        }
+      }
+    }
+    // Если фокус на блоке (image/carousel), сохраняем blockId
+    if (selectedBlockId) {
+      return { blockId: selectedBlockId, position: 'end' };
+    }
+    // Если есть focusBlockId, но нет активного textarea, сохраняем его
+    if (focusBlockId) {
+      const block = blocks.find((b) => b.id === focusBlockId);
+      if (block && (block.type === 'image' || block.type === 'carousel')) {
+        return { blockId: focusBlockId, position: 'end' };
+      }
+      // Для текстовых блоков без активного textarea - конец блока
+      if (
+        block &&
+        (block.type === 'paragraph' ||
+          block.type === 'title' ||
+          block.type === 'subtitle' ||
+          block.type === 'quote')
+      ) {
+        return { blockId: focusBlockId, position: 'end' };
+      }
+    }
+    return null;
+  }, [selectedBlockId, focusBlockId, blocks]);
 
-  const restoreSnapshot = useCallback((snapshot: EditorSnapshot) => {
-    setBlocks(JSON.parse(JSON.stringify(snapshot.blocks))); // Deep clone
-    setMeta({ ...snapshot.meta });
-    setFocusBlockId(snapshot.focusBlockId);
-    setSelectedBlockId(snapshot.selectedBlockId);
-  }, []);
+  const restoreCaretPosition = useCallback(
+    (caretPosition: CaretPosition | null | undefined, newBlocks: Block[]) => {
+      if (!caretPosition) return;
+
+      // Если блок всё ещё существует
+      const targetBlock = newBlocks.find((b) => b.id === caretPosition.blockId);
+      if (targetBlock) {
+        // Для текстовых блоков
+        if (
+          targetBlock.type === 'paragraph' ||
+          targetBlock.type === 'title' ||
+          targetBlock.type === 'subtitle' ||
+          targetBlock.type === 'quote'
+        ) {
+          setTimeout(() => {
+            setFocusBlockId(caretPosition.blockId);
+            const textarea = document.querySelector(
+              `[data-block-id="${caretPosition.blockId}"] textarea`
+            ) as HTMLTextAreaElement;
+            if (textarea) {
+              textarea.focus();
+              let position: number;
+              if (caretPosition.position === 'start') {
+                position = 0;
+              } else if (caretPosition.position === 'end') {
+                position = textarea.value.length;
+              } else {
+                position = Math.min(caretPosition.position as number, textarea.value.length);
+              }
+              textarea.setSelectionRange(position, position);
+            }
+          }, 0);
+          return;
+        }
+        // Для image/carousel блоков
+        if (targetBlock.type === 'image' || targetBlock.type === 'carousel') {
+          setTimeout(() => {
+            setSelectedBlockId(caretPosition.blockId);
+            setFocusBlockId(caretPosition.blockId);
+          }, 0);
+          return;
+        }
+      }
+
+      // Если блок удалился, ищем ближайший подходящий текстовый блок
+      // Ищем первый доступный текстовый блок в новом массиве
+      const targetTextBlock = newBlocks.find(
+        (block) =>
+          block &&
+          (block.type === 'paragraph' ||
+            block.type === 'title' ||
+            block.type === 'subtitle' ||
+            block.type === 'quote')
+      );
+      if (targetTextBlock) {
+        setTimeout(() => {
+          setFocusBlockId(targetTextBlock.id);
+          const textarea = document.querySelector(
+            `[data-block-id="${targetTextBlock.id}"] textarea`
+          ) as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+          }
+        }, 0);
+      }
+    },
+    []
+  );
+
+  // Функции для работы с историей Undo/Redo
+  const saveSnapshot = useCallback(
+    (caretPosition?: CaretPosition | null) => {
+      const snapshot: EditorSnapshot = {
+        blocks: JSON.parse(JSON.stringify(blocks)), // Deep clone
+        meta: { ...meta },
+        focusBlockId,
+        selectedBlockId,
+        caretPosition: caretPosition !== undefined ? caretPosition : saveCaretPosition(),
+      };
+      setUndoStack((prev) => [...prev, snapshot].slice(-50)); // Ограничиваем историю 50 шагами
+      setRedoStack([]); // Очищаем redo при новом действии
+    },
+    [blocks, meta, focusBlockId, selectedBlockId, saveCaretPosition]
+  );
+
+  const restoreSnapshot = useCallback(
+    (snapshot: EditorSnapshot) => {
+      const newBlocks = JSON.parse(JSON.stringify(snapshot.blocks)) as Block[]; // Deep clone
+      setBlocks(newBlocks);
+      setMeta({ ...snapshot.meta });
+      setFocusBlockId(snapshot.focusBlockId);
+      setSelectedBlockId(snapshot.selectedBlockId);
+      // Восстанавливаем позицию каретки
+      restoreCaretPosition(snapshot.caretPosition, newBlocks);
+    },
+    [restoreCaretPosition]
+  );
 
   const undo = useCallback(() => {
     if (undoStack.length === 0) return;
 
+    // Сохраняем текущую позицию каретки перед undo
+    const currentCaretPosition = saveCaretPosition();
     const currentSnapshot: EditorSnapshot = {
       blocks: JSON.parse(JSON.stringify(blocks)),
       meta: { ...meta },
       focusBlockId,
       selectedBlockId,
+      caretPosition: currentCaretPosition,
     };
     setRedoStack((prev) => [currentSnapshot, ...prev]);
 
     const previousSnapshot = undoStack[undoStack.length - 1];
     restoreSnapshot(previousSnapshot);
     setUndoStack((prev) => prev.slice(0, -1));
-  }, [undoStack, blocks, meta, focusBlockId, selectedBlockId, restoreSnapshot]);
+  }, [undoStack, blocks, meta, focusBlockId, selectedBlockId, restoreSnapshot, saveCaretPosition]);
 
   const redo = useCallback(() => {
     if (redoStack.length === 0) return;
 
+    // Сохраняем текущую позицию каретки перед redo
+    const currentCaretPosition = saveCaretPosition();
     const currentSnapshot: EditorSnapshot = {
       blocks: JSON.parse(JSON.stringify(blocks)),
       meta: { ...meta },
       focusBlockId,
       selectedBlockId,
+      caretPosition: currentCaretPosition,
     };
     setUndoStack((prev) => [...prev, currentSnapshot]);
 
     const nextSnapshot = redoStack[0];
     restoreSnapshot(nextSnapshot);
     setRedoStack((prev) => prev.slice(1));
-  }, [redoStack, blocks, meta, focusBlockId, selectedBlockId, restoreSnapshot]);
+  }, [redoStack, blocks, meta, focusBlockId, selectedBlockId, restoreSnapshot, saveCaretPosition]);
 
   // Управление блоками
   const insertBlock = useCallback(
@@ -678,16 +815,92 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   const deleteBlock = useCallback(
     (blockId: string) => {
+      // Сохраняем позицию каретки перед удалением
+      const caretPosition = saveCaretPosition();
       // Сохраняем снимок перед удалением
-      saveSnapshot();
+      saveSnapshot(caretPosition);
 
       setBlocks((prev) => {
+        const blockIndex = prev.findIndex((b) => b.id === blockId);
+        const deletedBlock = prev.find((b) => b.id === blockId);
         const filtered = prev.filter((b) => b.id !== blockId);
         // Если блоков не осталось, создаем пустой paragraph
-        return filtered.length > 0 ? filtered : [{ id: generateId(), type: 'paragraph', text: '' }];
+        const newParagraph: Block = { id: generateId(), type: 'paragraph', text: '' };
+        const newBlocks = filtered.length > 0 ? filtered : [newParagraph];
+
+        // Восстанавливаем каретку после удаления
+        setTimeout(() => {
+          // Для image/carousel блоков: ставим каретку в конец предыдущего текстового блока
+          if (deletedBlock && (deletedBlock.type === 'image' || deletedBlock.type === 'carousel')) {
+            // Ищем предыдущий текстовый блок (в новом массиве индексы сдвинулись)
+            let targetBlock: Block | null = null;
+            // Ищем в старом массиве до удаленного блока
+            for (let i = blockIndex - 1; i >= 0; i--) {
+              const oldBlock = prev[i];
+              if (
+                oldBlock &&
+                (oldBlock.type === 'paragraph' ||
+                  oldBlock.type === 'title' ||
+                  oldBlock.type === 'subtitle' ||
+                  oldBlock.type === 'quote')
+              ) {
+                // Находим этот блок в новом массиве
+                const foundBlock = newBlocks.find((b) => b.id === oldBlock.id);
+                targetBlock = foundBlock || null;
+                break;
+              }
+            }
+            // Если не нашли предыдущий, ищем следующий
+            if (!targetBlock) {
+              for (let i = blockIndex + 1; i < prev.length; i++) {
+                const oldBlock = prev[i];
+                if (
+                  oldBlock &&
+                  (oldBlock.type === 'paragraph' ||
+                    oldBlock.type === 'title' ||
+                    oldBlock.type === 'subtitle' ||
+                    oldBlock.type === 'quote')
+                ) {
+                  // Находим этот блок в новом массиве
+                  targetBlock = newBlocks.find((b) => b.id === oldBlock.id) || null;
+                  break;
+                }
+              }
+            }
+            // Если нашли текстовый блок, ставим каретку в конец
+            if (targetBlock) {
+              setFocusBlockId(targetBlock.id);
+              const textarea = document.querySelector(
+                `[data-block-id="${targetBlock.id}"] textarea`
+              ) as HTMLTextAreaElement;
+              if (textarea) {
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+              }
+            } else {
+              // Если не нашли текстовый блок, создаем новый пустой paragraph
+              const newParagraph = { id: generateId(), type: 'paragraph' as const, text: '' };
+              setBlocks((current) => [...current, newParagraph]);
+              setTimeout(() => {
+                setFocusBlockId(newParagraph.id);
+                const textarea = document.querySelector(
+                  `[data-block-id="${newParagraph.id}"] textarea`
+                ) as HTMLTextAreaElement;
+                if (textarea) {
+                  textarea.focus();
+                }
+              }, 0);
+            }
+          } else {
+            // Для текстовых блоков: используем сохраненную позицию каретки
+            restoreCaretPosition(caretPosition, newBlocks);
+          }
+        }, 0);
+
+        return newBlocks;
       });
     },
-    [saveSnapshot]
+    [saveSnapshot, saveCaretPosition, restoreCaretPosition]
   );
 
   // Конвертация image в carousel
@@ -765,15 +978,9 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           (selectedBlock.type === 'image' || selectedBlock.type === 'carousel')
         ) {
           event.preventDefault();
-          const blockIndex = blocks.findIndex((b) => b.id === selectedBlockId);
           deleteBlock(selectedBlockId);
           setSelectedBlockId(null);
-          // Фокус на предыдущий блок, если есть
-          if (blockIndex > 0) {
-            setTimeout(() => {
-              setFocusBlockId(blocks[blockIndex - 1].id);
-            }, 0);
-          }
+          // Каретка будет восстановлена в deleteBlock
         }
       }
     };

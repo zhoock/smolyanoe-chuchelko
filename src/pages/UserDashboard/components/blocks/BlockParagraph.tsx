@@ -12,6 +12,7 @@ interface BlockParagraphProps {
   onFormat?: (type: 'bold' | 'italic' | 'link') => void;
   onPaste?: (text: string, files: File[]) => void;
   placeholder?: string;
+  blockId?: string;
 }
 
 export function BlockParagraph({
@@ -25,6 +26,7 @@ export function BlockParagraph({
   onFormat,
   onPaste,
   placeholder = 'Начните вводить текст...',
+  blockId,
 }: BlockParagraphProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showFormatMenu, setShowFormatMenu] = useState(false);
@@ -164,6 +166,7 @@ export function BlockParagraph({
         <textarea
           ref={textareaRef}
           className="edit-article-v2__block edit-article-v2__block--paragraph"
+          data-block-id={blockId}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -273,4 +276,3 @@ function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
     </div>
   );
 }
-

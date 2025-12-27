@@ -9,6 +9,7 @@ interface BlockQuoteProps {
   onEnter?: (atEnd: boolean) => void;
   onBackspace?: (isEmpty: boolean, atStart?: boolean) => void;
   placeholder?: string;
+  blockId?: string;
 }
 
 export function BlockQuote({
@@ -19,6 +20,7 @@ export function BlockQuote({
   onEnter,
   onBackspace,
   placeholder = 'Цитата',
+  blockId,
 }: BlockQuoteProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -61,6 +63,7 @@ export function BlockQuote({
       <textarea
         ref={textareaRef}
         className="edit-article-v2__block edit-article-v2__block--quote"
+        data-block-id={blockId}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -72,4 +75,3 @@ export function BlockQuote({
     </p>
   );
 }
-

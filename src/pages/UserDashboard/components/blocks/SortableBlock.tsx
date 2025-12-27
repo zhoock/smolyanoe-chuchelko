@@ -78,6 +78,7 @@ export function SortableBlock({
       case 'paragraph':
         return (
           <BlockParagraph
+            blockId={block.id}
             value={block.text}
             onChange={(text) => onUpdate(block.id, { text } as Partial<Block>)}
             onFocus={() => onFocus(block.id)}
@@ -92,6 +93,7 @@ export function SortableBlock({
       case 'title':
         return (
           <BlockTitle
+            blockId={block.id}
             value={block.text}
             onChange={(text) => onUpdate(block.id, { text } as Partial<Block>)}
             onFocus={() => onFocus(block.id)}
@@ -103,6 +105,7 @@ export function SortableBlock({
       case 'subtitle':
         return (
           <BlockSubtitle
+            blockId={block.id}
             value={block.text}
             onChange={(text) => onUpdate(block.id, { text } as Partial<Block>)}
             onFocus={() => onFocus(block.id)}
@@ -114,6 +117,7 @@ export function SortableBlock({
       case 'quote':
         return (
           <BlockQuote
+            blockId={block.id}
             value={block.text}
             onChange={(text) => onUpdate(block.id, { text } as Partial<Block>)}
             onFocus={() => onFocus(block.id)}
