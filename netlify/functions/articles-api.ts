@@ -117,7 +117,10 @@ export const handler: Handler = async (
   try {
     // Для GET запросов авторизация не требуется - все статьи публичные
     // Для POST/PUT/DELETE требуется авторизация (админка)
-    const userId = event.httpMethod === 'GET' ? null : getUserIdFromEvent(event);
+    // Для GET с includeDrafts=true также требуется авторизация
+    const includeDrafts =
+      event.httpMethod === 'GET' && event.queryStringParameters?.includeDrafts === 'true';
+    const userId = event.httpMethod === 'GET' && !includeDrafts ? null : getUserIdFromEvent(event);
 
     if (event.httpMethod === 'GET') {
       const { lang } = event.queryStringParameters || {};
@@ -127,7 +130,16 @@ export const handler: Handler = async (
       }
 
       // Проверяем, нужно ли включать черновики (для редактирования в админке, требует авторизации)
-      const includeDrafts = event.queryStringParameters?.includeDrafts === 'true';
+      // #region agent log
+      if (includeDrafts) {
+        console.log('[articles-api] GET with includeDrafts:', {
+          includeDrafts,
+          hasUserId: !!userId,
+          userId,
+          hasAuthHeader: !!(event.headers?.authorization || event.headers?.Authorization),
+        });
+      }
+      // #endregion
       if (includeDrafts && !userId) {
         return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
       }

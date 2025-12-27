@@ -2,6 +2,27 @@
 @use '@entities/article/ui/style.scss' as *;
 @use '../../../scss/abstracts/mixins' as *;
 
+// Общие селекторы img (должны быть перед более специфичными)
+// Селекторы img из вложенных блоков (менее специфичные, чем dialog .edit-article-v2__content.article .uncollapse img)
+.edit-article-v2__image-container img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--ms-01);
+}
+
+.edit-article-v2__carousel-image-wrapper img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.edit-article-v2__carousel-edit-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 dialog {
   .edit-article-v2 {
     display: flex;
@@ -27,11 +48,11 @@ dialog {
     &__header {
       position: sticky;
       top: 0;
-      background: var(--deep-black);
-      border-bottom: 1px solid var(--iron-slate);
-      padding: var(--ms-1) var(--ms-1);
       z-index: 10;
       display: flex;
+      padding: var(--ms-1) var(--ms-1);
+      background: var(--deep-black);
+      border-bottom: 1px solid var(--iron-slate);
       justify-content: space-between;
       align-items: center;
       gap: var(--ms-0);
@@ -45,15 +66,15 @@ dialog {
     }
 
     &__title-input {
-      flex: 1;
-      border: none;
-      outline: none;
+      padding: var(--ms-01) 0;
       color: var(--white);
       font-size: var(--ms-1);
+      background: transparent;
+      border: none;
+      flex: 1;
+      outline: none;
       font-weight: 700;
       font-family: var(--base-font-family, arial, sans-serif);
-      padding: var(--ms-01) 0;
-      background: transparent;
       text-transform: none !important;
       letter-spacing: normal !important;
 
@@ -125,6 +146,10 @@ dialog {
       font-family: var(--base-font-family, arial, sans-serif);
       line-height: 1.6;
 
+      strong {
+        font-weight: bold;
+      }
+
       p {
         margin: 0 0 var(--ms-2);
         color: var(--text-color, #ffffff);
@@ -168,6 +193,37 @@ dialog {
       }
     }
 
+    &__drag-handle {
+      z-index: 10;
+      display: flex;
+      width: calc(var(--ms-0) * 1.5);
+      height: calc(var(--ms-0) * 1.5);
+      background: var(--graphite-green);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-02);
+      transition:
+        opacity 0.2s,
+        color 0.2s,
+        background-color 0.2s,
+        border-color 0.2s;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      opacity: 0;
+      flex-shrink: 0;
+      margin-top: 0;
+      align-self: center;
+
+      &:active {
+        cursor: grabbing;
+      }
+
+      &:hover {
+        background: var(--graphite-green);
+        border-color: var(--dark-greenish-yellow);
+      }
+    }
+
     &__block-wrapper {
       position: relative;
       display: flex;
@@ -202,40 +258,9 @@ dialog {
       }
     }
 
-    &__drag-handle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: calc(var(--ms-0) * 1.5);
-      height: calc(var(--ms-0) * 1.5);
-      border: 1px solid var(--iron-slate);
-      background: var(--graphite-green);
-      cursor: grab;
-      opacity: 0;
-      z-index: 10;
-      transition:
-        opacity 0.2s,
-        color 0.2s,
-        background-color 0.2s,
-        border-color 0.2s;
-      flex-shrink: 0;
-      margin-top: 0;
-      align-self: center;
-      border-radius: var(--ms-02);
-
-      &:active {
-        cursor: grabbing;
-      }
-
-      &:hover {
-        background: var(--graphite-green);
-        border-color: var(--dark-greenish-yellow);
-      }
-    }
-
     &__drag-handle-icon {
-      font-size: var(--ms-0);
       color: var(--white);
+      font-size: var(--ms-0);
       user-select: none;
       transition: color 0.2s;
     }
@@ -249,138 +274,37 @@ dialog {
       min-width: 0;
     }
 
-    &__context-menu-button {
-      position: absolute;
-      top: var(--ms-01);
-      right: var(--ms-01);
-      width: calc(var(--ms-0) * 1.5);
-      height: calc(var(--ms-0) * 1.5);
-      border: 1px solid var(--iron-slate);
-      background: var(--deep-black);
-      color: var(--warm-concrete);
-      font-size: var(--ms-0);
-      line-height: 1;
-      cursor: pointer;
-      opacity: 0.3;
-      z-index: 10;
-      transition:
-        opacity 0.2s,
-        color 0.2s,
-        background-color 0.2s,
-        border-color 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: var(--ms-02);
-
-      &:hover {
-        opacity: 1;
-        background: var(--graphite-green);
-        color: var(--white);
-        border-color: var(--graphite-green);
-      }
-    }
-
-    &__block-wrapper:hover &__context-menu-button,
-    &__block-wrapper.is-focused &__context-menu-button {
-      opacity: 0.7;
-    }
-
-    &__block-wrapper:hover &__context-menu-button:hover,
-    &__block-wrapper.is-focused &__context-menu-button:hover {
-      opacity: 1;
-    }
-
-    &__context-menu {
-      position: absolute;
-      top: calc(var(--ms-0) * 1.5);
-      right: var(--ms-01);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-01);
-      box-shadow: 0 4px 12px rgb(var(--black-rgb) / 50%);
-      z-index: 1000;
-      min-width: 200px;
-      padding: var(--ms-01) 0;
-    }
-
-    &__context-menu-section {
-      padding: 0;
-    }
-
-    &__context-menu-title {
-      padding: var(--ms-01) var(--ms-0);
-      font-size: var(--ms-01);
-      font-weight: 600;
-      color: var(--warm-concrete);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    &__context-menu-item {
-      width: 100%;
-      padding: var(--ms-01) var(--ms-0);
-      border: none;
-      background: transparent;
-      text-align: left;
-      font-size: var(--ms-0);
-      color: var(--white);
-      cursor: pointer;
-      transition: background-color 0.2s;
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      &:hover:not(:disabled) {
-        background: var(--graphite-green);
-      }
-
-      &--danger {
-        color: var(--pink-terracotta);
-
-        &:hover:not(:disabled) {
-          background: var(--graphite-green);
-        }
-      }
-    }
-
-    &__context-menu-divider {
-      height: 1px;
-      background: var(--iron-slate);
-      margin: var(--ms-02) 0;
-    }
-
     // VK-стиль плюса (показывается только после Enter в конце блока)
     &__vk-plus {
-      position: relative;
+      position: absolute;
+      top: 50%;
+      left: -40px;
+      z-index: 10;
       display: flex;
+      transform: translateY(-50%);
       align-items: center;
-      margin: var(--ms-01) 0;
-      margin-left: calc(var(--ms-0) * -2);
     }
 
     &__vk-plus-button {
+      display: flex;
       width: calc(var(--ms-0) * 1.5);
       height: calc(var(--ms-0) * 1.5);
-      border: 1px solid var(--iron-slate);
-      border-radius: 50%;
-      background: var(--graphite-green);
       color: var(--white);
       font-size: var(--ms-0);
-      font-weight: 300;
       line-height: 1;
+      background: var(--graphite-green);
+      border: 1px solid var(--iron-slate);
+      border-radius: 50%;
+      transition: all 0.2s;
+      font-weight: 300;
       cursor: pointer;
-      display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
 
       &:hover {
+        color: var(--deep-black);
         background: var(--dark-greenish-yellow);
         border-color: var(--dark-greenish-yellow);
-        color: var(--deep-black);
       }
     }
 
@@ -388,27 +312,27 @@ dialog {
       position: absolute;
       top: calc(var(--ms-0) * 1.5);
       left: 0;
+      z-index: 1000;
+      padding: var(--ms-01) 0;
       background: var(--deep-black);
       border: 1px solid var(--iron-slate);
       border-radius: var(--ms-01);
       box-shadow: 0 4px 12px rgb(var(--black-rgb) / 50%);
-      z-index: 1000;
       min-width: 200px;
-      padding: var(--ms-01) 0;
       margin-top: var(--ms-02);
     }
 
     &__vk-plus-menu-item {
+      display: flex;
       width: 100%;
       padding: var(--ms-01) var(--ms-0);
-      border: none;
-      background: transparent;
-      text-align: left;
-      font-size: var(--ms-0);
       color: var(--white);
-      cursor: pointer;
+      font-size: var(--ms-0);
+      text-align: left;
+      background: transparent;
+      border: none;
       transition: background-color 0.2s;
-      display: flex;
+      cursor: pointer;
       align-items: center;
       gap: var(--ms-01);
 
@@ -418,25 +342,25 @@ dialog {
     }
 
     &__vk-plus-menu-icon {
-      font-size: var(--ms-0);
       width: calc(var(--ms-0) * 1.2);
+      font-size: var(--ms-0);
       text-align: center;
     }
 
     &__block {
       width: 100%;
+      margin: 0;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      background: transparent;
       border: none;
       outline: none;
-      background: transparent;
-      padding: 0;
-      margin: 0;
       resize: none;
       overflow: hidden;
       font-family: inherit;
-      font-size: inherit;
       font-weight: inherit;
-      line-height: inherit;
-      color: inherit;
       min-height: 1.5em;
 
       &--paragraph {
@@ -471,9 +395,9 @@ dialog {
         padding: var(--ms-0) 0;
 
         hr {
+          margin: 0;
           border: none;
           border-top: 1px solid var(--iron-slate);
-          margin: 0;
         }
       }
 
@@ -494,12 +418,7 @@ dialog {
       margin-bottom: var(--ms-01);
       cursor: pointer;
 
-      img {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        border-radius: var(--ms-01);
-      }
+      // Стили img определены выше для соблюдения специфичности
     }
 
     &__image-upload {
@@ -524,18 +443,18 @@ dialog {
       position: absolute;
       top: var(--ms-01);
       right: var(--ms-01);
+      z-index: 10;
       padding: var(--ms-01) var(--ms-0);
+      color: var(--white);
+      font-size: var(--ms-01);
       background: var(--deep-black);
       border: 1px solid var(--iron-slate);
       border-radius: var(--ms-01);
-      color: var(--white);
-      font-size: var(--ms-01);
-      cursor: pointer;
-      z-index: 10;
       transition:
         opacity 0.2s,
         background-color 0.2s,
         border-color 0.2s;
+      cursor: pointer;
       opacity: 0.9;
 
       &:hover {
@@ -548,11 +467,11 @@ dialog {
     &__image-caption {
       width: 100%;
       padding: var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-0);
+      background: var(--deep-black);
       border: 1px solid var(--iron-slate);
       border-radius: var(--ms-01);
-      font-size: var(--ms-0);
-      color: var(--white);
-      background: var(--deep-black);
       margin-top: var(--ms-01);
 
       &::placeholder {
@@ -565,72 +484,111 @@ dialog {
       }
     }
 
-    &__carousel-container {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    &__carousel-images {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 8px;
-    }
-
-    &__carousel-image-item {
+    // VK-стиль карусели: показываем только первое изображение с навигацией
+    &__carousel-view {
       position: relative;
-      aspect-ratio: 1;
-      border-radius: 4px;
-      overflow: hidden;
-      cursor: grab;
-
-      &:active {
-        cursor: grabbing;
-      }
+      width: 100%;
     }
 
-    &__carousel-image-drag-handle {
+    &__carousel-image-wrapper {
+      position: relative;
       width: 100%;
-      height: 100%;
-      cursor: grab;
-
-      &:active {
-        cursor: grabbing;
-      }
+      border-radius: var(--ms-01);
+      overflow: hidden;
+      cursor: pointer;
 
       img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        pointer-events: none;
+        // Стили определены выше для соблюдения специфичности
       }
     }
 
-    &__carousel-remove {
+    // Контейнер для бейджа и кнопки редактирования в правом верхнем углу
+    &__carousel-top-right {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 24px;
-      height: 24px;
+      top: var(--ms-01);
+      right: var(--ms-01);
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--ms-01);
+    }
+
+    // Бейдж "1 из N"
+    &__carousel-badge {
+      padding: var(--ms-02) var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-01);
+      background: rgb(0 0 0 / 70%);
+      border-radius: var(--ms-02);
+      font-weight: 500;
+      backdrop-filter: blur(4px);
+    }
+
+    // Стрелки навигации
+    &__carousel-nav {
+      position: absolute;
+      top: 50%;
+      z-index: 3;
+      display: flex;
+      width: 40px;
+      height: 40px;
+      color: var(--white);
+      font-size: 24px;
+      line-height: 1;
+      background: rgb(0 0 0 / 60%);
       border: none;
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      font-size: 18px;
-      line-height: 1;
+      transition:
+        background 0.2s,
+        opacity 0.2s;
+      transform: translateY(-50%);
       cursor: pointer;
-      display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s;
+      backdrop-filter: blur(4px);
 
       &:hover {
-        background: rgba(0, 0, 0, 0.8);
+        background: rgb(0 0 0 / 80%);
+      }
+
+      &--prev {
+        left: var(--ms-01);
+      }
+
+      &--next {
+        right: var(--ms-01);
       }
     }
 
-    &__carousel-add,
-    &__carousel-delete {
+    // Кнопка "Редактировать карусель"
+    &__carousel-edit {
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--white);
+      font-size: var(--ms-01);
+      background: rgb(0 0 0 / 80%);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      transition:
+        background 0.2s,
+        border-color 0.2s;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      white-space: nowrap;
+
+      &:hover {
+        background: var(--graphite-green);
+        border-color: var(--graphite-green);
+      }
+    }
+
+    // Пустая карусель
+    &__carousel-empty {
+      padding: var(--ms-02);
+      text-align: center;
+    }
+
+    &__carousel-add-empty {
       @include button-variant(
         $color: var(--white),
         $background: var(--iron-slate),
@@ -641,46 +599,15 @@ dialog {
         $border: 1px solid var(--iron-slate),
         $border-radius: var(--ms-01)
       );
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
     }
 
-    &__carousel-delete {
-      border-color: var(--pink-terracotta);
-      color: var(--pink-terracotta);
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-
-      &:hover:not(:disabled) {
-        background: var(--pink-terracotta);
-        color: var(--white);
-        border-color: var(--pink-terracotta);
-      }
-    }
-
-    &__carousel-caption {
-      width: 100%;
+    // Подпись к карусели (отображение)
+    &__carousel-caption-display {
       padding: var(--ms-01);
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-01);
+      color: var(--warm-concrete);
       font-size: var(--ms-0);
-      color: var(--white);
-      background: var(--deep-black);
-
-      &::placeholder {
-        color: var(--warm-concrete);
-      }
-
-      &:focus {
-        outline: none;
-        border-color: var(--dark-greenish-yellow);
-      }
+      line-height: 1.5;
+      margin-top: var(--ms-01);
     }
 
     &__block-wrapper-text {
@@ -689,37 +616,33 @@ dialog {
 
     &__format-menu {
       position: absolute;
+      z-index: 1000;
+      display: flex;
+      padding: var(--ms-02);
       background: var(--deep-black);
       border: 1px solid var(--iron-slate);
       border-radius: var(--ms-01);
       box-shadow: 0 4px 12px rgb(var(--black-rgb) / 50%);
-      z-index: 1000;
-      display: flex;
       gap: var(--ms-02);
-      padding: var(--ms-02);
       margin-top: var(--ms-01);
     }
 
     &__format-menu-item {
+      display: flex;
       width: calc(var(--ms-0) * 1.5);
       height: calc(var(--ms-0) * 1.5);
-      border: none;
+      color: var(--white);
+      font-size: var(--ms-0);
       background: transparent;
+      border: none;
       border-radius: var(--ms-01);
+      transition: background-color 0.2s;
       cursor: pointer;
-      display: flex;
       align-items: center;
       justify-content: center;
-      font-size: var(--ms-0);
-      color: var(--white);
-      transition: background-color 0.2s;
 
       &:hover {
         background: var(--graphite-green);
-      }
-
-      strong {
-        font-weight: bold;
       }
 
       em {
@@ -728,22 +651,22 @@ dialog {
     }
 
     &__slash-menu {
+      z-index: 1000;
+      padding: var(--ms-01) 0;
       background: var(--deep-black);
       border: 1px solid var(--iron-slate);
       border-radius: var(--ms-01);
       box-shadow: 0 4px 12px rgb(var(--black-rgb) / 50%);
-      z-index: 1000;
       min-width: 250px;
       max-height: 300px;
       overflow-y: auto;
-      padding: var(--ms-01) 0;
     }
 
     &__slash-menu-title {
       padding: var(--ms-01) var(--ms-0);
+      color: var(--warm-concrete);
       font-size: var(--ms-01);
       font-weight: 600;
-      color: var(--warm-concrete);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border-bottom: 1px solid var(--iron-slate);
@@ -751,16 +674,16 @@ dialog {
     }
 
     &__slash-menu-item {
+      display: flex;
       width: 100%;
       padding: var(--ms-01) var(--ms-0);
-      border: none;
-      background: transparent;
-      text-align: left;
-      font-size: var(--ms-0);
       color: var(--white);
-      cursor: pointer;
+      font-size: var(--ms-0);
+      text-align: left;
+      background: transparent;
+      border: none;
       transition: background-color 0.2s;
-      display: flex;
+      cursor: pointer;
       align-items: center;
       gap: var(--ms-01);
 
@@ -775,9 +698,178 @@ dialog {
     }
 
     &__slash-menu-icon {
-      font-size: var(--ms-0);
       width: calc(var(--ms-0) * 1.2);
+      font-size: var(--ms-0);
       text-align: center;
+    }
+
+    // Модал редактирования карусели
+    &__carousel-edit-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      display: flex;
+      width: 90vw;
+      max-width: 800px;
+      max-height: 90vh;
+      flex-direction: column;
+      background: var(--deep-black);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+    }
+
+    &__carousel-edit-header {
+      display: flex;
+      padding: var(--ms-0);
+      border-bottom: 1px solid var(--iron-slate);
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--ms-0);
+    }
+
+    &__carousel-edit-title {
+      margin: 0;
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-weight: 600;
+    }
+
+    &__carousel-edit-count {
+      color: var(--warm-concrete);
+      font-size: var(--ms-01);
+      margin-left: auto;
+    }
+
+    &__carousel-edit-actions {
+      display: flex;
+      gap: var(--ms-01);
+    }
+
+    &__carousel-edit-cancel,
+    &__carousel-edit-save {
+      padding: var(--ms-01) var(--ms-0);
+      font-size: var(--ms-01);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    &__carousel-edit-cancel {
+      color: var(--warm-concrete);
+      background: transparent;
+
+      &:hover {
+        color: var(--white);
+        background: var(--iron-slate);
+      }
+    }
+
+    &__carousel-edit-save {
+      color: var(--white);
+      background: var(--graphite-green);
+      border-color: var(--graphite-green);
+
+      &:hover {
+        background: var(--dark-greenish-yellow);
+        border-color: var(--dark-greenish-yellow);
+      }
+    }
+
+    &__carousel-edit-content {
+      padding: var(--ms-0);
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    &__carousel-edit-thumbnails {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--ms-01);
+      margin-bottom: var(--ms-0);
+    }
+
+    &__carousel-edit-thumbnail {
+      position: relative;
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+      aspect-ratio: 1;
+      overflow: hidden;
+
+      img {
+        // Стили определены выше для соблюдения специфичности
+      }
+    }
+
+    &__carousel-edit-remove {
+      position: absolute;
+      top: var(--ms-02);
+      right: var(--ms-02);
+      display: flex;
+      width: 24px;
+      height: 24px;
+      color: var(--white);
+      font-size: 18px;
+      line-height: 1;
+      background: rgb(0 0 0 / 70%);
+      border: none;
+      border-radius: 50%;
+      transition: background 0.2s;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+
+      &:hover {
+        background: rgb(255 0 0 / 80%);
+      }
+    }
+
+    &__carousel-edit-add {
+      display: flex;
+      color: var(--warm-concrete);
+      font-size: 32px;
+      line-height: 1;
+      background: transparent;
+      border: 2px dashed var(--iron-slate);
+      border-radius: var(--ms-01);
+      transition: all 0.2s;
+      aspect-ratio: 1;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &:hover:not(:disabled) {
+        border-color: var(--graphite-green);
+        color: var(--graphite-green);
+        background: rgba(var(--graphite-green-rgb) / 10%);
+      }
+    }
+
+    &__carousel-edit-caption-input {
+      width: 100%;
+      padding: var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-0);
+      background: var(--deep-black);
+      border: 1px solid var(--iron-slate);
+      border-radius: var(--ms-01);
+
+      &::placeholder {
+        color: var(--warm-concrete);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--dark-greenish-yellow);
+      }
     }
   }
 }

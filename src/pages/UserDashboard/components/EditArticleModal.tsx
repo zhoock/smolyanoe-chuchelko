@@ -23,64 +23,65 @@ import {
 import '@entities/article/ui/style.scss';
 import './EditArticleModal.style.scss';
 
-// Утилиты для сохранения и восстановления позиции каретки
-function getCaretOffset(root: HTMLElement): number | null {
-  // #region agent log
+// Отладочное логирование (только в dev режиме с явным флагом)
+const DEV_LOG =
+  process.env.NODE_ENV === 'development' &&
+  typeof window !== 'undefined' &&
+  (window as any).__EDIT_ARTICLE_DEBUG__ === true;
+
+function agentLog(payload: {
+  location: string;
+  message: string;
+  data?: any;
+  timestamp?: number;
+  sessionId?: string;
+  runId?: string;
+  hypothesisId?: string;
+}) {
+  if (!DEV_LOG) return;
   fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      location: 'EditArticleModal.tsx:getCaretOffset',
-      message: 'getCaretOffset called',
-      data: {
-        hasSelection: !!window.getSelection(),
-        rangeCount: window.getSelection()?.rangeCount || 0,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
+      ...payload,
+      timestamp: payload.timestamp || Date.now(),
+      sessionId: payload.sessionId || 'debug-session',
+      runId: payload.runId || 'run1',
     }),
   }).catch(() => {});
-  // #endregion
+}
+
+// Утилиты для сохранения и восстановления позиции каретки
+function getCaretOffset(root: HTMLElement): number | null {
+  agentLog({
+    location: 'EditArticleModal.tsx:getCaretOffset',
+    message: 'getCaretOffset called',
+    data: {
+      hasSelection: !!window.getSelection(),
+      rangeCount: window.getSelection()?.rangeCount || 0,
+    },
+    hypothesisId: 'A',
+  });
 
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:getCaretOffset',
-        message: 'getCaretOffset: no selection',
-        data: {},
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:getCaretOffset',
+      message: 'getCaretOffset: no selection',
+      data: {},
+      hypothesisId: 'A',
+    });
     return null;
   }
 
   const range = sel.getRangeAt(0);
   if (!root.contains(range.startContainer)) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:getCaretOffset',
-        message: 'getCaretOffset: range not in root',
-        data: {},
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:getCaretOffset',
+      message: 'getCaretOffset: range not in root',
+      data: {},
+      hypothesisId: 'A',
+    });
     return null;
   }
 
@@ -89,66 +90,39 @@ function getCaretOffset(root: HTMLElement): number | null {
   pre.setEnd(range.startContainer, range.startOffset);
   const offset = pre.toString().length;
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'EditArticleModal.tsx:getCaretOffset',
-      message: 'getCaretOffset: offset calculated',
-      data: {
-        offset,
-        startContainerType: range.startContainer.nodeType,
-        startOffset: range.startOffset,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A',
-    }),
-  }).catch(() => {});
-  // #endregion
+  agentLog({
+    location: 'EditArticleModal.tsx:getCaretOffset',
+    message: 'getCaretOffset: offset calculated',
+    data: {
+      offset,
+      startContainerType: range.startContainer.nodeType,
+      startOffset: range.startOffset,
+    },
+    hypothesisId: 'A',
+  });
 
   return offset;
 }
 
 function setCaretOffset(root: HTMLElement, offset: number) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'EditArticleModal.tsx:setCaretOffset',
-      message: 'setCaretOffset called',
-      data: {
-        offset,
-        hasSelection: !!window.getSelection(),
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'B',
-    }),
-  }).catch(() => {});
-  // #endregion
+  agentLog({
+    location: 'EditArticleModal.tsx:setCaretOffset',
+    message: 'setCaretOffset called',
+    data: {
+      offset,
+      hasSelection: !!window.getSelection(),
+    },
+    hypothesisId: 'B',
+  });
 
   const sel = window.getSelection();
   if (!sel) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:setCaretOffset',
-        message: 'setCaretOffset: no selection',
-        data: {},
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'B',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:setCaretOffset',
+      message: 'setCaretOffset: no selection',
+      data: {},
+      hypothesisId: 'B',
+    });
     return;
   }
 
@@ -181,29 +155,20 @@ function setCaretOffset(root: HTMLElement, offset: number) {
       sel.removeAllRanges();
       sel.addRange(r);
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:setCaretOffset',
-          message: 'setCaretOffset: cursor set',
-          data: {
-            offset,
-            current,
-            targetOffset,
-            textNodeLength: len,
-            nodesVisited,
-            textNodeType: textNode.nodeType,
-            parentTag: (textNode as Text).parentElement?.tagName,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:setCaretOffset',
+        message: 'setCaretOffset: cursor set',
+        data: {
+          offset,
+          current,
+          targetOffset,
+          textNodeLength: len,
+          nodesVisited,
+          textNodeType: textNode.nodeType,
+          parentTag: (textNode as Text).parentElement?.tagName,
+        },
+        hypothesisId: 'B',
+      });
 
       return;
     }
@@ -211,25 +176,16 @@ function setCaretOffset(root: HTMLElement, offset: number) {
   }
 
   // fallback: в конец
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'EditArticleModal.tsx:setCaretOffset',
-      message: 'setCaretOffset: fallback to end',
-      data: {
-        offset,
-        current,
-        nodesVisited,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'B',
-    }),
-  }).catch(() => {});
-  // #endregion
+  agentLog({
+    location: 'EditArticleModal.tsx:setCaretOffset',
+    message: 'setCaretOffset: fallback to end',
+    data: {
+      offset,
+      current,
+      nodesVisited,
+    },
+    hypothesisId: 'B',
+  });
   root.focus();
 }
 
@@ -339,6 +295,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   const [contentHtml, setContentHtml] = useState<string>('');
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const carouselFileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
   const [editingCarouselIndex, setEditingCarouselIndex] = useState<number | null>(null);
@@ -407,75 +364,47 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     try {
       const token = getToken();
       if (!token) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:192',
-            message: 'fetchArticleForEditing: no token',
-            data: {},
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'B',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:192',
+          message: 'fetchArticleForEditing: no token',
+          hypothesisId: 'B',
+        });
         return null;
       }
 
       // Получаем статью со статусом (включая черновики)
       const fetchUrl = `/api/articles-api?lang=${lang}&includeDrafts=true`;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:200',
-          message: 'fetchArticleForEditing: before fetch',
-          data: {
-            fetchUrl,
-            lang,
-            currentArticleArticleId: currentArticle?.articleId,
-            articleArticleId: article?.articleId,
-            searchArticleId: currentArticle?.articleId || article?.articleId,
-            hasToken: !!token,
-            tokenLength: token?.length || 0,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:200',
+        message: 'fetchArticleForEditing: before fetch',
+        data: {
+          fetchUrl,
+          lang,
+          currentArticleArticleId: currentArticle?.articleId,
+          articleArticleId: article?.articleId,
+          searchArticleId: currentArticle?.articleId || article?.articleId,
+          hasToken: !!token,
+          tokenLength: token?.length || 0,
+        },
+        hypothesisId: 'A',
+      });
       const response = await fetch(fetchUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:220',
-          message: 'fetchArticleForEditing: response received',
-          data: {
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText,
-            searchArticleId: currentArticle?.articleId || article?.articleId,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:220',
+        message: 'fetchArticleForEditing: response received',
+        data: {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText,
+          searchArticleId: currentArticle?.articleId || article?.articleId,
+        },
+        hypothesisId: 'B',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -483,73 +412,43 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         const articleForEdit = articlesList.find(
           (a: IArticles) => a.articleId === (currentArticle?.articleId || article.articleId)
         );
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:230',
-            message: 'fetchArticleForEditing: article found',
-            data: {
-              articlesListLength: articlesList.length,
-              foundArticle: articleForEdit
-                ? {
-                    id: articleForEdit.id,
-                    articleId: articleForEdit.articleId,
-                    isDraft: articleForEdit.isDraft,
-                  }
-                : null,
-              searchArticleId: currentArticle?.articleId || article?.articleId,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'A',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:230',
+          message: 'fetchArticleForEditing: article found',
+          data: {
+            articlesListLength: articlesList.length,
+            foundArticle: articleForEdit
+              ? {
+                  id: articleForEdit.id,
+                  articleId: articleForEdit.articleId,
+                  isDraft: articleForEdit.isDraft,
+                }
+              : null,
+          },
+          hypothesisId: 'A',
+        });
         return articleForEdit || null;
       } else {
-        // #region agent log
-        const errorText = await response.text().catch(() => '');
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:240',
-            message: 'fetchArticleForEditing: response not ok',
-            data: {
-              status: response.status,
-              statusText: response.statusText,
-              errorText,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'B',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:240',
+          message: 'fetchArticleForEditing: response not ok',
+          data: {
+            status: response.status,
+            statusText: response.statusText,
+          },
+          hypothesisId: 'B',
+        });
       }
     } catch (error) {
       console.error('Error fetching article for editing:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:250',
-          message: 'fetchArticleForEditing: exception',
-          data: {
-            error: error instanceof Error ? error.message : String(error),
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'E',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:250',
+        message: 'fetchArticleForEditing: exception',
+        data: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+        hypothesisId: 'E',
+      });
     }
     return null;
   }, [currentArticle, article, lang]);
@@ -587,25 +486,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       setBlocks(simplified);
       // Преобразуем блоки в HTML для единого contentEditable
       const html = blocksToHtml(simplified);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:230',
-          message: 'Initializing contentHtml',
-          data: {
-            blocksCount: simplified.length,
-            htmlLength: html.length,
-            htmlPreview: html.substring(0, 200),
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'D',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:230',
+        message: 'Initializing contentHtml',
+        data: {
+          blocksCount: simplified.length,
+          htmlLength: html.length,
+          htmlPreview: html.substring(0, 200),
+        },
+        hypothesisId: 'D',
+      });
       setContentHtml(html);
 
       // Сохраняем исходный статус статьи
@@ -647,82 +537,28 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         (contentHtml !== lastContentHtmlRef.current &&
           contentHtml !== contentEditableRef.current.innerHTML)
       ) {
-        // #region agent log
-        const selectionBefore = window.getSelection();
-        const selectionInfoBefore = selectionBefore
-          ? {
-              rangeCount: selectionBefore.rangeCount,
-              isCollapsed:
-                selectionBefore.rangeCount > 0 ? selectionBefore.getRangeAt(0).collapsed : null,
-              startContainer:
-                selectionBefore.rangeCount > 0
-                  ? selectionBefore.getRangeAt(0).startContainer.nodeName
-                  : null,
-              startOffset:
-                selectionBefore.rangeCount > 0 ? selectionBefore.getRangeAt(0).startOffset : null,
-            }
-          : null;
-
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:298',
-            message: 'useEffect: Setting innerHTML - BEFORE',
-            data: {
-              isInitialMount: isInitialMountRef.current,
-              contentHtmlLength: contentHtml.length,
-              currentInnerHTMLLength: contentEditableRef.current.innerHTML.length,
-              areDifferent: contentHtml !== contentEditableRef.current.innerHTML,
-              selectionBefore: selectionInfoBefore,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'E',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:298',
+          message: 'useEffect: Setting innerHTML - BEFORE',
+          data: {
+            isInitialMount: isInitialMountRef.current,
+            contentHtmlLength: contentHtml.length,
+            currentInnerHTMLLength: contentEditableRef.current.innerHTML.length,
+            areDifferent: contentHtml !== contentEditableRef.current.innerHTML,
+          },
+          hypothesisId: 'E',
+        });
 
         contentEditableRef.current.innerHTML = contentHtml;
         lastContentHtmlRef.current = contentHtml;
         isInitialMountRef.current = false;
 
-        // #region agent log
-        const selectionAfter = window.getSelection();
-        const selectionInfoAfter = selectionAfter
-          ? {
-              rangeCount: selectionAfter.rangeCount,
-              isCollapsed:
-                selectionAfter.rangeCount > 0 ? selectionAfter.getRangeAt(0).collapsed : null,
-              startContainer:
-                selectionAfter.rangeCount > 0
-                  ? selectionAfter.getRangeAt(0).startContainer.nodeName
-                  : null,
-              startOffset:
-                selectionAfter.rangeCount > 0 ? selectionAfter.getRangeAt(0).startOffset : null,
-            }
-          : null;
-
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:318',
-            message: 'useEffect: Setting innerHTML - AFTER',
-            data: {
-              selectionAfter: selectionInfoAfter,
-              selectionLost: selectionInfoBefore && !selectionInfoAfter,
-              selectionChanged:
-                JSON.stringify(selectionInfoBefore) !== JSON.stringify(selectionInfoAfter),
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'E',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:318',
+          message: 'useEffect: Setting innerHTML - AFTER',
+          data: {},
+          hypothesisId: 'E',
+        });
       }
     }
   }, [contentHtml]);
@@ -741,24 +577,15 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     let timeoutId: NodeJS.Timeout | null = null;
 
     const handleSelectionChange = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:335',
-          message: 'handleSelectionChange called',
-          data: {
-            isOpen,
-            hasContentEditable: !!contentEditableRef.current,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:335',
+        message: 'handleSelectionChange called',
+        data: {
+          isOpen,
+          hasContentEditable: !!contentEditableRef.current,
+        },
+        hypothesisId: 'A',
+      });
 
       // Очищаем предыдущий таймаут, если он есть
       if (timeoutId) {
@@ -768,26 +595,17 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0 || !contentEditableRef.current || !isOpen) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:350',
-            message: 'Selection check failed',
-            data: {
-              hasSelection: !!selection,
-              rangeCount: selection?.rangeCount || 0,
-              hasContentEditable: !!contentEditableRef.current,
-              isOpen,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'B',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:350',
+          message: 'Selection check failed',
+          data: {
+            hasSelection: !!selection,
+            rangeCount: selection?.rangeCount || 0,
+            hasContentEditable: !!contentEditableRef.current,
+            isOpen,
+          },
+          hypothesisId: 'B',
+        });
         setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
         return;
       }
@@ -801,27 +619,18 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         selectedText.length === 0 ||
         range.collapsed
       ) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:370',
-            message: 'Selection validation failed',
-            data: {
-              isInsideContentEditable: contentEditableRef.current.contains(
-                range.commonAncestorContainer
-              ),
-              selectedTextLength: selectedText.length,
-              isCollapsed: range.collapsed,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:370',
+          message: 'Selection validation failed',
+          data: {
+            isInsideContentEditable: contentEditableRef.current.contains(
+              range.commonAncestorContainer
+            ),
+            selectedTextLength: selectedText.length,
+            isCollapsed: range.collapsed,
+          },
+          hypothesisId: 'C',
+        });
         setFormattingTooltip({ show: false, x: 0, y: 0, selectedText: '', visible: false });
         return;
       }
@@ -831,28 +640,19 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       const tooltipX = rect.left + rect.width / 2;
       const tooltipY = rect.top - 70; // Сдвигаем выше, чтобы не перекрывать текст
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:385',
-          message: 'Setting tooltip position',
-          data: {
-            tooltipX,
-            tooltipY,
-            selectedTextLength: selectedText.length,
-            rectLeft: rect.left,
-            rectTop: rect.top,
-            rectWidth: rect.width,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'D',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:385',
+        message: 'Setting tooltip position',
+        data: {
+          tooltipX,
+          tooltipY,
+          selectedTextLength: selectedText.length,
+          rectLeft: rect.left,
+          rectTop: rect.top,
+          rectWidth: rect.width,
+        },
+        hypothesisId: 'D',
+      });
 
       // Сначала скрываем тултип (сбрасываем visible)
       setFormattingTooltip({
@@ -865,23 +665,14 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
       // Затем показываем с задержкой и анимацией
       timeoutId = setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:410',
-            message: 'Setting tooltip visible',
-            data: {
-              willSetVisible: true,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'E',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:410',
+          message: 'Setting tooltip visible',
+          data: {
+            willSetVisible: true,
+          },
+          hypothesisId: 'E',
+        });
         setFormattingTooltip((prev) => ({
           ...prev,
           visible: true,
@@ -966,45 +757,27 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     if (!contentEditableRef.current) return;
 
     const addButtonsToParagraphs = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:addButtonsToParagraphs',
-          message: 'addButtonsToParagraphs called',
-          data: {
-            hasContentEditable: !!contentEditableRef.current,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:addButtonsToParagraphs',
+        message: 'addButtonsToParagraphs called',
+        data: {
+          hasContentEditable: !!contentEditableRef.current,
+        },
+        hypothesisId: 'C',
+      });
 
       const root = contentEditableRef.current!;
       // Сохраняем позицию каретки перед мутациями DOM
       const caret = getCaretOffset(root);
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:addButtonsToParagraphs',
-          message: 'addButtonsToParagraphs: caret saved',
-          data: {
-            caret,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:addButtonsToParagraphs',
+        message: 'addButtonsToParagraphs: caret saved',
+        data: {
+          caret,
+        },
+        hypothesisId: 'C',
+      });
 
       const paragraphs = root.querySelectorAll('p[data-block-type="text"]');
       let buttonsAdded = 0;
@@ -1067,25 +840,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         buttonsAdded++;
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:addButtonsToParagraphs',
-          message: 'addButtonsToParagraphs: buttons added',
-          data: {
-            paragraphsCount: paragraphs.length,
-            buttonsAdded,
-            caret,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:addButtonsToParagraphs',
+        message: 'addButtonsToParagraphs: buttons added',
+        data: {
+          paragraphsCount: paragraphs.length,
+          buttonsAdded,
+          caret,
+        },
+        hypothesisId: 'C',
+      });
 
       // Восстанавливаем позицию каретки после всех вставок
       // НО только если курсор не был установлен недавно вручную (например, после Enter)
@@ -1112,66 +876,39 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
         // Не восстанавливаем курсор, если он уже в последнем параграфе (новом блоке)
         if (!isInLastParagraph) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'EditArticleModal.tsx:addButtonsToParagraphs',
-              message: 'addButtonsToParagraphs: restoring caret',
-              data: {
-                caret,
-                recentCursorSet: recentCursorSetRef.current,
-                isInLastParagraph,
-              },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'C',
-            }),
-          }).catch(() => {});
-          // #endregion
-          setCaretOffset(root, caret);
-          root.focus();
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'EditArticleModal.tsx:addButtonsToParagraphs',
-              message: 'addButtonsToParagraphs: skipping restore (cursor in last paragraph)',
-              data: {
-                caret,
-                isInLastParagraph,
-              },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'C',
-            }),
-          }).catch(() => {});
-          // #endregion
-        }
-      } else if (recentCursorSetRef.current) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          agentLog({
             location: 'EditArticleModal.tsx:addButtonsToParagraphs',
-            message: 'addButtonsToParagraphs: skipping caret restore (recently set)',
+            message: 'addButtonsToParagraphs: restoring caret',
             data: {
               caret,
               recentCursorSet: recentCursorSetRef.current,
+              isInLastParagraph,
             },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
             hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
+          });
+          setCaretOffset(root, caret);
+          root.focus();
+        } else {
+          agentLog({
+            location: 'EditArticleModal.tsx:addButtonsToParagraphs',
+            message: 'addButtonsToParagraphs: skipping restore (cursor in last paragraph)',
+            data: {
+              caret,
+              isInLastParagraph,
+            },
+            hypothesisId: 'C',
+          });
+        }
+      } else if (recentCursorSetRef.current) {
+        agentLog({
+          location: 'EditArticleModal.tsx:addButtonsToParagraphs',
+          message: 'addButtonsToParagraphs: skipping caret restore (recently set)',
+          data: {
+            caret,
+            recentCursorSet: recentCursorSetRef.current,
+          },
+          hypothesisId: 'C',
+        });
       }
     };
 
@@ -1342,26 +1079,17 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         e.preventDefault();
         const block = blocks[selectedImageIndex];
         if (block && (block.type === 'image' || block.type === 'carousel')) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'EditArticleModal.tsx:628',
-              message: 'Deleting image block',
-              data: {
-                selectedImageIndex,
-                blockType: block.type,
-                blockId: block.id,
-                blocksCount: blocks.length,
-              },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'J',
-            }),
-          }).catch(() => {});
-          // #endregion
+          agentLog({
+            location: 'EditArticleModal.tsx:628',
+            message: 'Deleting image block',
+            data: {
+              selectedImageIndex,
+              blockType: block.type,
+              blockId: block.id,
+              blocksCount: blocks.length,
+            },
+            hypothesisId: 'J',
+          });
           if (deleteBlockRef.current) {
             deleteBlockRef.current(selectedImageIndex);
           }
@@ -1386,25 +1114,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   useEffect(() => {
     if (!contentEditableRef.current) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:651',
-        message: 'Applying --selected class - start',
-        data: {
-          selectedImageIndex,
-          blocksCount: blocks.length,
-          hasContentEditable: !!contentEditableRef.current,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'D',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:651',
+      message: 'Applying --selected class - start',
+      data: {
+        selectedImageIndex,
+        blocksCount: blocks.length,
+        hasContentEditable: !!contentEditableRef.current,
+      },
+      hypothesisId: 'D',
+    });
 
     // Убираем класс --selected со всех изображений
     const allImages = contentEditableRef.current.querySelectorAll(
@@ -1419,27 +1138,18 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     if (selectedImageIndex !== null) {
       const block = blocks[selectedImageIndex];
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:675',
-          message: 'Applying --selected class - block found',
-          data: {
-            selectedImageIndex,
-            hasBlock: !!block,
-            blockType: block?.type,
-            blockId: block?.id,
-            blocksCount: blocks.length,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'E',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:675',
+        message: 'Applying --selected class - block found',
+        data: {
+          selectedImageIndex,
+          hasBlock: !!block,
+          blockType: block?.type,
+          blockId: block?.id,
+          blocksCount: blocks.length,
+        },
+        hypothesisId: 'E',
+      });
 
       if (block && (block.type === 'image' || block.type === 'carousel')) {
         // Ищем изображение по data-block-id или по позиции
@@ -1470,74 +1180,47 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
           }
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:705',
-            message: 'Applying --selected class - targetElement found',
-            data: {
-              selectedImageIndex,
-              hasTargetElement: !!targetElement,
-              targetElementClassName: targetElement?.className,
-              willAddClass: !!targetElement,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'F',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:705',
+          message: 'Applying --selected class - targetElement found',
+          data: {
+            selectedImageIndex,
+            hasTargetElement: !!targetElement,
+            targetElementClassName: targetElement?.className,
+            willAddClass: !!targetElement,
+          },
+          hypothesisId: 'F',
+        });
 
         if (targetElement) {
           if (block.type === 'image') {
             targetElement.classList.add('edit-article-modal__inline-image--selected');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                location: 'EditArticleModal.tsx:738',
-                message: 'Class added to image element',
-                data: {
-                  selectedImageIndex,
-                  hasClass: targetElement.classList.contains(
-                    'edit-article-modal__inline-image--selected'
-                  ),
-                  elementClassName: targetElement.className,
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'I',
-              }),
-            }).catch(() => {});
-            // #endregion
+            agentLog({
+              location: 'EditArticleModal.tsx:738',
+              message: 'Class added to image element',
+              data: {
+                selectedImageIndex,
+                hasClass: targetElement.classList.contains(
+                  'edit-article-modal__inline-image--selected'
+                ),
+                elementClassName: targetElement.className,
+              },
+              hypothesisId: 'I',
+            });
           } else {
             targetElement.classList.add('edit-article-modal__inline-carousel--selected');
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                location: 'EditArticleModal.tsx:750',
-                message: 'Class added to carousel element',
-                data: {
-                  selectedImageIndex,
-                  hasClass: targetElement.classList.contains(
-                    'edit-article-modal__inline-carousel--selected'
-                  ),
-                  elementClassName: targetElement.className,
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'I',
-              }),
-            }).catch(() => {});
-            // #endregion
+            agentLog({
+              location: 'EditArticleModal.tsx:750',
+              message: 'Class added to carousel element',
+              data: {
+                selectedImageIndex,
+                hasClass: targetElement.classList.contains(
+                  'edit-article-modal__inline-carousel--selected'
+                ),
+                elementClassName: targetElement.className,
+              },
+              hypothesisId: 'I',
+            });
           }
         }
       }
@@ -1633,39 +1316,21 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
   // Обновление блока
   const updateBlock = (index: number, updates: Partial<SimplifiedBlock>) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:323',
-        message: 'updateBlock called',
-        data: { index, updates, blocksCount: blocks.length },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'D',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:323',
+      message: 'updateBlock called',
+      data: { index, updates, blocksCount: blocks.length },
+      hypothesisId: 'D',
+    });
     setBlocks((prev) => {
       const newBlocks = [...prev];
       newBlocks[index] = { ...newBlocks[index], ...updates };
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:327',
-          message: 'updateBlock state updated',
-          data: { index, updatedBlock: newBlocks[index], blocksCount: newBlocks.length },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'D',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:327',
+        message: 'updateBlock state updated',
+        data: { index, updatedBlock: newBlocks[index], blocksCount: newBlocks.length },
+        hypothesisId: 'D',
+      });
       return newBlocks;
     });
     // Автосохранение будет вызвано из onBlur, но на всякий случай планируем его здесь тоже
@@ -1685,25 +1350,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   // Добавление текстового блока из поля ввода
   const addTextBlockFromInput = () => {
     if (newTextContent.trim() && contentEditableRef.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:492',
-          message: 'addTextBlockFromInput called',
-          data: {
-            textLength: newTextContent.trim().length,
-            hasContentEditable: !!contentEditableRef.current,
-            currentInnerHTMLLength: contentEditableRef.current.innerHTML.length,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:492',
+        message: 'addTextBlockFromInput called',
+        data: {
+          textLength: newTextContent.trim().length,
+          hasContentEditable: !!contentEditableRef.current,
+          currentInnerHTMLLength: contentEditableRef.current.innerHTML.length,
+        },
+        hypothesisId: 'A',
+      });
       const textHtml = `<p data-block-type="text">${newTextContent.trim()}</p>`;
       // Устанавливаем курсор в конец contentEditable, если нет выделения
       if (contentEditableRef.current) {
@@ -1740,50 +1396,32 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         selection?.removeAllRanges();
         selection?.addRange(range);
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:540',
-            message: 'After inserting text via selection',
-            data: {
-              newInnerHTMLLength: contentEditableRef.current.innerHTML.length,
-              insertedHtml: textHtml,
-              hadSelection: !!selection && selection.rangeCount > 0,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'B',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:540',
+          message: 'After inserting text via selection',
+          data: {
+            newInnerHTMLLength: contentEditableRef.current.innerHTML.length,
+            insertedHtml: textHtml,
+            hadSelection: !!selection && selection.rangeCount > 0,
+          },
+          hypothesisId: 'B',
+        });
         // Обновляем HTML и блоки
         const html = contentEditableRef.current.innerHTML;
         // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
         lastContentHtmlRef.current = html;
         setContentHtml(html);
         const parsedBlocks = htmlToBlocks(html);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:520',
-            message: 'After parsing blocks from inserted text',
-            data: {
-              htmlLength: html.length,
-              parsedBlocksCount: parsedBlocks.length,
-              lastBlockContent: parsedBlocks[parsedBlocks.length - 1]?.content,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:520',
+          message: 'After parsing blocks from inserted text',
+          data: {
+            htmlLength: html.length,
+            parsedBlocksCount: parsedBlocks.length,
+            lastBlockContent: parsedBlocks[parsedBlocks.length - 1]?.content,
+          },
+          hypothesisId: 'C',
+        });
         setBlocks(parsedBlocks);
         scheduleAutoSave();
       }
@@ -1887,29 +1525,20 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       }
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:910',
-        message: 'applyFormatting: checking containers',
-        data: {
-          formatType,
-          targetTagName,
-          targetBlockType,
-          hasBlockContainer: !!blockContainer,
-          blockContainerTag: blockContainer?.tagName,
-          blockContainerType: blockContainer?.getAttribute('data-block-type'),
-          hasExistingElement: !!existingElement,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'F',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:910',
+      message: 'applyFormatting: checking containers',
+      data: {
+        formatType,
+        targetTagName,
+        targetBlockType,
+        hasBlockContainer: !!blockContainer,
+        blockContainerTag: blockContainer?.tagName,
+        blockContainerType: blockContainer?.getAttribute('data-block-type'),
+        hasExistingElement: !!existingElement,
+      },
+      hypothesisId: 'F',
+    });
 
     // Обработка жирного текста и курсива (inline форматирование)
     if (formatType === 'bold' || formatType === 'italic') {
@@ -2318,100 +1947,53 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
   // Автосохранение (сохраняет изменения без изменения статуса)
   const autoSaveDraft = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:377',
-        message: 'autoSaveDraft called',
-        data: {
-          hasCurrentArticle: !!currentArticle,
-          isPublishing,
-          isMounted: isMountedRef.current,
-          articleId: currentArticle?.id || currentArticle?.articleId,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'B',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:377',
+      message: 'autoSaveDraft called',
+      data: {
+        hasCurrentArticle: !!currentArticle,
+        isPublishing,
+        isMounted: isMountedRef.current,
+        articleId: currentArticle?.id || currentArticle?.articleId,
+      },
+      hypothesisId: 'B',
+    });
     if (!currentArticle || isPublishing) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:378',
-          message: 'autoSaveDraft blocked by condition',
-          data: { hasCurrentArticle: !!currentArticle, isPublishing },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:378',
+        message: 'autoSaveDraft blocked by condition',
+        data: { hasCurrentArticle: !!currentArticle, isPublishing },
+        hypothesisId: 'B',
+      });
       return;
     }
 
     const articleIdToUse = currentArticle?.id || currentArticle?.articleId;
     if (!articleIdToUse) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:381',
-          message: 'autoSaveDraft blocked: no articleId',
-          data: {},
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:381',
+        message: 'autoSaveDraft blocked: no articleId',
+        hypothesisId: 'B',
+      });
       return;
     }
 
     if (!isMountedRef.current) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:383',
-          message: 'autoSaveDraft blocked: not mounted',
-          data: {},
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:383',
+        message: 'autoSaveDraft blocked: not mounted',
+        hypothesisId: 'B',
+      });
       return;
     }
 
     setIsAutoSaving(true);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:385',
-        message: 'autoSaveDraft starting',
-        data: { articleIdToUse, blocksCount: blocks.length, editingData },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'B',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:385',
+      message: 'autoSaveDraft starting',
+      data: { articleIdToUse, blocksCount: blocks.length, editingData },
+      hypothesisId: 'B',
+    });
 
     try {
       const token = getToken();
@@ -2421,27 +2003,18 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       const html = contentEditableRef.current?.innerHTML ?? contentHtml;
       const parsedBlocks = htmlToBlocks(html);
       const details = simplifiedToDetails(parsedBlocks);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:400',
-          message: 'Before API call',
-          data: {
-            detailsCount: details.length,
-            blocksCount: blocks.length,
-            originalIsDraft,
-            shouldBeDraft: originalIsDraft ?? true,
-            editingData,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:400',
+        message: 'Before API call',
+        data: {
+          detailsCount: details.length,
+          blocksCount: blocks.length,
+          originalIsDraft,
+          shouldBeDraft: originalIsDraft ?? true,
+          editingData,
+        },
+        hypothesisId: 'C',
+      });
 
       // Определяем, нужно ли менять статус
       // Если статья была опубликована (isDraft = false), сохраняем её статус
@@ -2458,21 +2031,12 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         lang: lang,
         isDraft: shouldBeDraft,
       };
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:413',
-          message: 'Sending PUT request',
-          data: { articleIdToUse, requestBody: JSON.stringify(requestBody).substring(0, 200) },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:413',
+        message: 'Sending PUT request',
+        data: { articleIdToUse, requestBody: JSON.stringify(requestBody).substring(0, 200) },
+        hypothesisId: 'C',
+      });
       const response = await fetch(`/api/articles-api?id=${encodeURIComponent(articleIdToUse)}`, {
         method: 'PUT',
         headers: {
@@ -2481,154 +2045,73 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         },
         body: JSON.stringify(requestBody),
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:425',
-          message: 'API response received',
-          data: { status: response.status, ok: response.ok, statusText: response.statusText },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:425',
+        message: 'API response received',
+        data: { status: response.status, ok: response.ok, statusText: response.statusText },
+        hypothesisId: 'C',
+      });
 
       if (response.ok) {
         // Получаем ответ от API для проверки сохраненных данных
         const responseData = await response.json().catch(() => null);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:427',
-            message: 'API response data',
-            data: {
-              hasResponseData: !!responseData,
-              responseDataKeys: responseData ? Object.keys(responseData) : [],
-              responseDataPreview: responseData
-                ? JSON.stringify(responseData).substring(0, 500)
-                : null,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:427',
-            message: 'Auto-save successful',
-            data: {},
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:427',
+          message: 'API response data',
+          data: {
+            hasResponseData: !!responseData,
+            responseDataKeys: responseData ? Object.keys(responseData) : [],
+            responseDataPreview: responseData
+              ? JSON.stringify(responseData).substring(0, 500)
+              : null,
+          },
+          hypothesisId: 'C',
+        });
+        agentLog({
+          location: 'EditArticleModal.tsx:427',
+          message: 'Auto-save successful',
+          hypothesisId: 'C',
+        });
         setLastSaved(new Date());
         // Обновляем Redux store (только опубликованные статьи) с принудительным обновлением
         try {
           await dispatch(fetchArticles({ lang, force: true })).unwrap();
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'EditArticleModal.tsx:431',
-              message: 'Redux store updated',
-              data: {},
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'E',
-            }),
-          }).catch(() => {});
-          // #endregion
+          agentLog({
+            location: 'EditArticleModal.tsx:431',
+            message: 'Redux store updated',
+            hypothesisId: 'E',
+          });
         } catch (error) {
           console.warn('⚠️ Не удалось обновить статьи из Redux:', error);
-          // #region agent log
-          const errorDetails =
-            error instanceof Error
-              ? {
-                  name: error.name,
-                  message: error.message,
-                  stack: error.stack?.substring(0, 500),
-                }
-              : typeof error === 'object' && error !== null
-                ? {
-                    type: typeof error,
-                    keys: Object.keys(error),
-                    stringified: JSON.stringify(error).substring(0, 500),
-                  }
-                : { type: typeof error, value: String(error) };
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'EditArticleModal.tsx:432',
-              message: 'Redux update failed',
-              data: { errorDetails },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'E',
-            }),
-          }).catch(() => {});
-          // #endregion
+          agentLog({
+            location: 'EditArticleModal.tsx:432',
+            message: 'Redux update failed',
+            data: { error: String(error) },
+            hypothesisId: 'E',
+          });
         }
       } else {
-        // #region agent log
-        const errorText = await response.text().catch(() => '');
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:435',
-            message: 'API response not OK',
-            data: {
-              status: response.status,
-              statusText: response.statusText,
-              errorText: errorText.substring(0, 200),
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:435',
+          message: 'API response not OK',
+          data: {
+            status: response.status,
+            statusText: response.statusText,
+          },
+          hypothesisId: 'C',
+        });
       }
     } catch (error) {
       console.error('Auto-save error:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:436',
-          message: 'Auto-save exception',
-          data: {
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:436',
+        message: 'Auto-save exception',
+        data: {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        hypothesisId: 'C',
+      });
     } finally {
       if (isMountedRef.current) {
         setIsAutoSaving(false);
@@ -2641,21 +2124,12 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     // Не планируем автосохранение, если модалка закрыта
     if (!isOpen) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:445',
-        message: 'scheduleAutoSave called',
-        data: { hasTimeout: !!autoSaveTimeoutRef.current, isOpen },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:445',
+      message: 'scheduleAutoSave called',
+      data: { hasTimeout: !!autoSaveTimeoutRef.current, isOpen },
+      hypothesisId: 'A',
+    });
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
     }
@@ -2664,38 +2138,19 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       // Проверяем, что модалка все еще открыта перед сохранением
       if (!isOpen) return;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:451',
-          message: 'Auto-save timer fired, calling autoSaveDraft',
-          data: {},
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:451',
+        message: 'Auto-save timer fired, calling autoSaveDraft',
+        hypothesisId: 'A',
+      });
       autoSaveDraft();
     }, 2000); // Сохранять через 2 секунды после последнего изменения
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:453',
-        message: 'Auto-save timer scheduled',
-        data: { timeoutId: autoSaveTimeoutRef.current },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:453',
+      message: 'Auto-save timer scheduled',
+      data: { timeoutId: autoSaveTimeoutRef.current },
+      hypothesisId: 'A',
+    });
   }, [autoSaveDraft, isOpen]);
 
   // Сохранение состояния в историю для undo
@@ -2714,6 +2169,15 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
   // Undo - отмена последнего действия
   const handleUndo = useCallback(() => {
+    agentLog({
+      location: 'EditArticleModal.tsx:handleUndo',
+      message: 'handleUndo called',
+      data: {
+        undoStackLength: undoStack.length,
+      },
+      hypothesisId: 'E',
+    });
+
     if (undoStack.length === 0) return;
 
     isUndoRedoRef.current = true;
@@ -2730,91 +2194,208 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       contentEditableRef.current.innerHTML = lastState.contentHtml;
       lastContentHtmlRef.current = lastState.contentHtml;
 
-      // Устанавливаем курсор в последний параграф с содержимым после восстановления
+      // Устанавливаем флаг, что курсор будет установлен вручную
+      recentCursorSetRef.current = true;
       setTimeout(() => {
-        if (!contentEditableRef.current) return;
+        recentCursorSetRef.current = false;
+      }, 500);
 
-        const paragraphs = Array.from(
-          contentEditableRef.current.querySelectorAll('p[data-block-type="text"]')
-        ) as HTMLParagraphElement[];
+      // Устанавливаем курсор в последний параграф с содержимым после восстановления
+      // Используем requestAnimationFrame для ожидания обновления DOM
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!contentEditableRef.current) return;
 
-        if (paragraphs.length > 0) {
-          // Ищем последний параграф с содержимым (или просто последний, если все пустые)
-          let targetParagraph: HTMLParagraphElement | null = null;
+          agentLog({
+            location: 'EditArticleModal.tsx:handleUndo:requestAnimationFrame',
+            message: 'handleUndo: setting cursor',
+            data: {
+              hasContentEditable: !!contentEditableRef.current,
+            },
+            hypothesisId: 'E',
+          });
 
-          // Проходим с конца и ищем параграф с текстом
-          for (let i = paragraphs.length - 1; i >= 0; i--) {
-            const paragraph = paragraphs[i];
-            // Получаем текст без учета кнопки
-            const button = paragraph.querySelector('.edit-article-modal__paragraph-button');
-            const textContent = paragraph?.textContent || '';
-            const textWithoutButton = button
-              ? textContent.replace(button?.textContent || '', '').trim()
-              : textContent.trim();
+          const paragraphs = Array.from(
+            contentEditableRef.current.querySelectorAll('p[data-block-type="text"]')
+          ) as HTMLParagraphElement[];
 
-            if (textWithoutButton.length > 0 || i === 0) {
-              targetParagraph = paragraph;
-              break;
+          agentLog({
+            location: 'EditArticleModal.tsx:handleUndo:foundParagraphs',
+            message: 'handleUndo: found paragraphs',
+            data: {
+              paragraphsCount: paragraphs.length,
+            },
+            hypothesisId: 'E',
+          });
+
+          if (paragraphs.length > 0) {
+            // Ищем последний параграф с содержимым (или просто последний, если все пустые)
+            let targetParagraph: HTMLParagraphElement | null = null;
+
+            // Проходим с конца и ищем параграф с текстом
+            for (let i = paragraphs.length - 1; i >= 0; i--) {
+              const paragraph = paragraphs[i];
+              // Получаем текст без учета кнопки
+              const button = paragraph.querySelector('.edit-article-modal__paragraph-button');
+              const textContent = paragraph?.textContent || '';
+              const textWithoutButton = button
+                ? textContent.replace(button?.textContent || '', '').trim()
+                : textContent.trim();
+
+              if (textWithoutButton.length > 0 || i === 0) {
+                targetParagraph = paragraph;
+                break;
+              }
             }
-          }
 
-          // Если не нашли параграф с текстом, берем последний
-          if (!targetParagraph && paragraphs.length > 0) {
-            targetParagraph = paragraphs[paragraphs.length - 1];
-          }
+            // Если не нашли параграф с текстом, берем последний
+            if (!targetParagraph && paragraphs.length > 0) {
+              targetParagraph = paragraphs[paragraphs.length - 1];
+            }
 
-          if (targetParagraph) {
-            // Находим все текстовые узлы в параграфе (пропускаем кнопку)
-            let lastTextNode: Node | null = null;
-            let lastTextNodeLength = 0;
+            if (targetParagraph) {
+              agentLog({
+                location: 'EditArticleModal.tsx:handleUndo:foundTargetParagraph',
+                message: 'handleUndo: found target paragraph',
+                data: {
+                  targetParagraphText: targetParagraph.textContent?.substring(0, 50) || '',
+                  targetParagraphChildNodesCount: targetParagraph.childNodes.length,
+                },
+                hypothesisId: 'E',
+              });
 
-            for (let i = 0; i < targetParagraph.childNodes.length; i++) {
-              const node = targetParagraph.childNodes[i];
-              if (node.nodeType === Node.TEXT_NODE) {
-                lastTextNode = node;
-                lastTextNodeLength = node.textContent?.length || 0;
-              } else if (
-                node.nodeType === Node.ELEMENT_NODE &&
-                !(node as HTMLElement).classList.contains('edit-article-modal__paragraph-button')
-              ) {
-                const element = node as HTMLElement;
-                // Ищем текстовые узлы внутри элемента
-                const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
-                let textNode: Node | null = null;
-                while ((textNode = walker.nextNode())) {
+              // Находим последний текстовый узел в параграфе, идя с конца (пропускаем кнопку)
+              let lastTextNode: Node | null = null;
+              let lastTextNodeLength = 0;
+
+              agentLog({
+                location: 'EditArticleModal.tsx:handleUndo:searchingTextNode',
+                message: 'handleUndo: searching for last text node',
+                data: {
+                  targetParagraphChildNodesCount: targetParagraph.childNodes.length,
+                  targetParagraphText: targetParagraph.textContent?.substring(0, 100) || '',
+                },
+                hypothesisId: 'E',
+              });
+
+              // Используем TreeWalker для поиска всех текстовых узлов в параграфе
+              // Это гарантирует, что мы найдем последний текстовый узел с содержимым во всем параграфе
+              const walker = document.createTreeWalker(targetParagraph, NodeFilter.SHOW_TEXT, {
+                acceptNode(node: Node) {
+                  const parent = (node as Text).parentElement;
+                  if (!parent) return NodeFilter.FILTER_REJECT;
+
+                  // Пропускаем кнопки и нередактируемые элементы
+                  if (parent.closest('[contenteditable="false"]')) return NodeFilter.FILTER_REJECT;
+                  if (parent.classList.contains('edit-article-modal__paragraph-button'))
+                    return NodeFilter.FILTER_REJECT;
+
+                  // Принимаем только текстовые узлы с содержимым
+                  if (node.textContent?.trim()) {
+                    return NodeFilter.FILTER_ACCEPT;
+                  }
+                  return NodeFilter.FILTER_REJECT;
+                },
+              } as any);
+
+              let textNode: Node | null = null;
+              // Проходим по всем текстовым узлам и берем последний
+              while ((textNode = walker.nextNode())) {
+                if (textNode.textContent?.trim()) {
                   lastTextNode = textNode;
-                  lastTextNodeLength = textNode.textContent?.length || 0;
+                  lastTextNodeLength = textNode.textContent.length;
                 }
               }
-            }
 
-            // Если текстового узла нет, создаем его
-            if (!lastTextNode) {
-              lastTextNode = document.createTextNode('');
-              const button = targetParagraph.querySelector('.edit-article-modal__paragraph-button');
-              if (button && button.nextSibling) {
-                targetParagraph.insertBefore(lastTextNode, button.nextSibling);
-              } else if (button) {
-                targetParagraph.appendChild(lastTextNode);
-              } else {
-                targetParagraph.appendChild(lastTextNode);
+              // Если текстового узла нет, создаем его
+              if (!lastTextNode) {
+                lastTextNode = document.createTextNode('');
+                const button = targetParagraph.querySelector(
+                  '.edit-article-modal__paragraph-button'
+                );
+                if (button && button.nextSibling) {
+                  targetParagraph.insertBefore(lastTextNode, button.nextSibling);
+                } else if (button) {
+                  targetParagraph.appendChild(lastTextNode);
+                } else {
+                  targetParagraph.appendChild(lastTextNode);
+                }
+                lastTextNodeLength = 0;
               }
-              lastTextNodeLength = 0;
-            }
 
-            // Устанавливаем курсор в конец последнего текстового узла
-            const selection = window.getSelection();
-            if (selection && lastTextNode) {
-              const range = document.createRange();
-              range.setStart(lastTextNode, lastTextNodeLength);
-              range.collapse(true);
-              selection.removeAllRanges();
-              selection.addRange(range);
-              contentEditableRef.current.focus();
+              if (lastTextNode) {
+                agentLog({
+                  location: 'EditArticleModal.tsx:handleUndo:foundTextNode',
+                  message: 'handleUndo: found text node',
+                  data: {
+                    textLength: lastTextNodeLength,
+                    textContent: lastTextNode.textContent?.substring(0, 50) || '',
+                    fullTextContent: lastTextNode.textContent || '',
+                  },
+                  hypothesisId: 'E',
+                });
+              }
+
+              // Устанавливаем курсор в конец последнего текстового узла
+              const selection = window.getSelection();
+              if (selection && lastTextNode) {
+                const range = document.createRange();
+                // Используем длину текстового узла, чтобы установить курсор в конец
+                const textLength = lastTextNode.textContent?.length || 0;
+                const actualTextContent = lastTextNode.textContent || '';
+
+                agentLog({
+                  location: 'EditArticleModal.tsx:handleUndo:setCursor',
+                  message: 'handleUndo: setting cursor position',
+                  data: {
+                    hasLastTextNode: !!lastTextNode,
+                    textLength,
+                    actualTextLength: actualTextContent.length,
+                    textContent: actualTextContent.substring(0, 50) || '',
+                    fullTextContent: actualTextContent,
+                    nodeType: lastTextNode.nodeType,
+                    parentTag: (lastTextNode as Text).parentElement?.tagName,
+                    parentTextContent:
+                      (lastTextNode as Text).parentElement?.textContent?.substring(0, 50) || '',
+                  },
+                  hypothesisId: 'E',
+                });
+
+                // Устанавливаем курсор в конец текстового узла
+                range.setStart(lastTextNode, textLength);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                contentEditableRef.current.focus();
+
+                // Проверяем, что курсор действительно установлен в конец
+                const finalSelection = window.getSelection();
+                const finalRange =
+                  finalSelection && finalSelection.rangeCount > 0
+                    ? finalSelection.getRangeAt(0)
+                    : null;
+
+                agentLog({
+                  location: 'EditArticleModal.tsx:handleUndo:afterSetCursor',
+                  message: 'handleUndo: cursor set',
+                  data: {
+                    rangeStartContainerType: finalRange?.startContainer?.nodeType,
+                    rangeStartOffset: finalRange?.startOffset,
+                    rangeEndOffset: finalRange?.endOffset,
+                    rangeStartContainerText:
+                      finalRange?.startContainer?.textContent?.substring(0, 50) || '',
+                    hasFocus: document.activeElement === contentEditableRef.current,
+                    expectedOffset: textLength,
+                    actualOffset: finalRange?.startOffset,
+                    isAtEnd: finalRange?.startOffset === textLength,
+                  },
+                  hypothesisId: 'E',
+                });
+              }
             }
           }
-        }
-      }, 0);
+        });
+      });
     }
 
     // Удаляем последнее состояние из undo stack
@@ -2960,29 +2541,20 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
   // Публикация статьи (убираем из черновика)
   const handlePublish = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'EditArticleModal.tsx:465',
-        message: 'handlePublish called',
-        data: {
-          hasCurrentArticle: !!currentArticle,
-          currentArticleId: currentArticle?.id,
-          currentArticleArticleId: currentArticle?.articleId,
-          articleId: article?.id,
-          articleArticleId: article?.articleId,
-          editingData,
-          blocksCount: blocks.length,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A',
-      }),
-    }).catch(() => {});
-    // #endregion
+    agentLog({
+      location: 'EditArticleModal.tsx:465',
+      message: 'handlePublish called',
+      data: {
+        hasCurrentArticle: !!currentArticle,
+        currentArticleId: currentArticle?.id,
+        currentArticleArticleId: currentArticle?.articleId,
+        articleId: article?.id,
+        articleArticleId: article?.articleId,
+        editingData,
+        blocksCount: blocks.length,
+      },
+      hypothesisId: 'A',
+    });
     if (!currentArticle) {
       showAlert(texts.articleNotFound);
       return;
@@ -3019,90 +2591,49 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       // Обновляем blocks из актуального HTML
       setBlocks(parsedBlocks);
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:2511',
-          message: 'Before autoSaveDraft',
-          data: {
-            currentArticleId: currentArticle?.id,
-            currentArticleArticleId: currentArticle?.articleId,
-            currentArticleFull: currentArticle
-              ? { id: currentArticle.id, articleId: currentArticle.articleId }
-              : null,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:2511',
+        message: 'Before autoSaveDraft',
+        data: {
+          currentArticleId: currentArticle?.id,
+          currentArticleArticleId: currentArticle?.articleId,
+          currentArticleFull: currentArticle
+            ? { id: currentArticle.id, articleId: currentArticle.articleId }
+            : null,
+        },
+        hypothesisId: 'A',
+      });
 
       // Сначала сохраняем последние изменения в черновик
       await autoSaveDraft();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:2513',
-          message: 'After autoSaveDraft',
-          data: {
-            currentArticleId: currentArticle?.id,
-            currentArticleArticleId: currentArticle?.articleId,
-            currentArticleFull: currentArticle
-              ? { id: currentArticle.id, articleId: currentArticle.articleId }
-              : null,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:2513',
+        message: 'After autoSaveDraft',
+        data: {
+          currentArticleId: currentArticle?.id,
+          currentArticleArticleId: currentArticle?.articleId,
+          currentArticleFull: currentArticle
+            ? { id: currentArticle.id, articleId: currentArticle.articleId }
+            : null,
+        },
+        hypothesisId: 'A',
+      });
 
       const details = simplifiedToDetails(blocks);
       const articleIdToUse = currentArticle?.id || currentArticle?.articleId;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:2515',
-          message: 'articleIdToUse determined',
-          data: {
-            articleIdToUse,
-            isUUID:
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-                articleIdToUse || ''
-              ),
-            currentArticleId: currentArticle?.id,
-            currentArticleArticleId: currentArticle?.articleId,
-            currentArticleFull: currentArticle
-              ? {
-                  id: currentArticle.id,
-                  articleId: currentArticle.articleId,
-                  isDraft: currentArticle.isDraft,
-                }
-              : null,
-            articleFull: article ? { id: article.id, articleId: article.articleId } : null,
-            hasToken: !!token,
-            tokenLength: token?.length || 0,
-            tokenPreview: token ? token.substring(0, 20) + '...' : null,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:2515',
+        message: 'articleIdToUse determined',
+        data: {
+          articleIdToUse,
+          isUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            String(articleIdToUse)
+          ),
+        },
+        hypothesisId: 'A',
+      });
 
       if (!articleIdToUse) {
         showAlert(texts.failedToGetId);
@@ -3121,53 +2652,28 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         lang: lang,
         isDraft: false, // Публикуем статью
       };
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:519',
-          message: 'Sending publish request',
-          data: {
-            articleIdToUse,
-            requestBody: JSON.stringify(publishRequestBody).substring(0, 200),
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'F',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:519',
+        message: 'Sending publish request',
+        data: {
+          articleIdToUse,
+          requestBody: JSON.stringify(publishRequestBody).substring(0, 200),
+        },
+        hypothesisId: 'F',
+      });
       const requestUrl = `/api/articles-api?id=${encodeURIComponent(articleIdToUse)}`;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:2552',
-          message: 'About to send PUT request',
-          data: {
-            requestUrl,
-            articleIdToUse,
-            isUUID:
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-                articleIdToUse || ''
-              ),
-            hasToken: !!token,
-            tokenLength: token?.length || 0,
-            tokenPreview: token ? token.substring(0, 30) + '...' : null,
-            authorizationHeader: `Bearer ${token}`,
-            requestBodyKeys: Object.keys(publishRequestBody),
-            requestBodyFull: publishRequestBody,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:2552',
+        message: 'About to send PUT request',
+        data: {
+          requestUrl,
+          articleIdToUse,
+          isUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            String(articleIdToUse)
+          ),
+        },
+        hypothesisId: 'B',
+      });
       const response = await fetch(requestUrl, {
         method: 'PUT',
         headers: {
@@ -3176,51 +2682,32 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         },
         body: JSON.stringify(publishRequestBody),
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'EditArticleModal.tsx:537',
-          message: 'Publish response received',
-          data: { status: response.status, ok: response.ok, statusText: response.statusText },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'F',
-        }),
-      }).catch(() => {});
-      // #endregion
+      agentLog({
+        location: 'EditArticleModal.tsx:537',
+        message: 'Publish response received',
+        data: { status: response.status, ok: response.ok, statusText: response.statusText },
+        hypothesisId: 'F',
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorText = await response.text().catch(() => '');
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'EditArticleModal.tsx:538',
-            message: 'Publish failed',
-            data: {
-              status: response.status,
-              statusText: response.statusText,
-              errorData,
-              errorText,
-              requestUrl,
-              articleIdToUse,
-              isUUID:
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-                  articleIdToUse || ''
-                ),
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'C',
-          }),
-        }).catch(() => {});
-        // #endregion
+        agentLog({
+          location: 'EditArticleModal.tsx:538',
+          message: 'Publish failed',
+          data: {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            errorText,
+            requestUrl,
+            articleIdToUse,
+            isUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              String(articleIdToUse)
+            ),
+          },
+          hypothesisId: 'C',
+        });
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
@@ -3316,21 +2803,12 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                   suppressContentEditableWarning
                   onBlur={(e) => {
                     const value = e.currentTarget.textContent ?? '';
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        location: 'EditArticleModal.tsx:545',
-                        message: 'Title onBlur',
-                        data: { value, oldValue: editingData.nameArticle },
-                        timestamp: Date.now(),
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'D',
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    agentLog({
+                      location: 'EditArticleModal.tsx:545',
+                      message: 'Title onBlur',
+                      data: { value, oldValue: editingData.nameArticle },
+                      hypothesisId: 'D',
+                    });
                     setEditingData((prev) => ({
                       ...prev,
                       nameArticle: value,
@@ -3532,27 +3010,18 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     const imageWrapper = target.closest('.edit-article-modal__inline-image');
                     const carouselWrapper = target.closest('.edit-article-modal__inline-carousel');
 
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        location: 'EditArticleModal.tsx:2074',
-                        message: 'Image click handler - start',
-                        data: {
-                          targetTagName: target.tagName,
-                          targetClassName: target.className,
-                          hasImageWrapper: !!imageWrapper,
-                          hasCarouselWrapper: !!carouselWrapper,
-                          blocksCount: blocks.length,
-                        },
-                        timestamp: Date.now(),
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'A',
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    agentLog({
+                      location: 'EditArticleModal.tsx:2074',
+                      message: 'Image click handler - start',
+                      data: {
+                        targetTagName: target.tagName,
+                        targetClassName: target.className,
+                        hasImageWrapper: !!imageWrapper,
+                        hasCarouselWrapper: !!carouselWrapper,
+                        blocksCount: blocks.length,
+                      },
+                      hypothesisId: 'A',
+                    });
 
                     if (imageWrapper || carouselWrapper) {
                       e.preventDefault();
@@ -3570,51 +3039,49 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
                       const blockId = wrapper.getAttribute('data-block-id');
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:2095',
-                          message: 'Image click - found wrapper',
-                          data: {
-                            blockId,
-                            wrapperClassName: wrapper.className,
-                            blocksCount: blocks.length,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'B',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      // Обработка двойного клика для открытия редактирования карусели
+                      if (carouselWrapper && e.detail === 2) {
+                        // Двойной клик - открываем редактирование карусели
+                        const carouselBlockId = carouselWrapper.getAttribute('data-block-id');
+                        if (carouselBlockId) {
+                          const carouselBlockIndex = blocks.findIndex(
+                            (block) =>
+                              String(block.id) === carouselBlockId && block.type === 'carousel'
+                          );
+                          if (carouselBlockIndex >= 0) {
+                            openCarouselEdit(carouselBlockIndex);
+                            return;
+                          }
+                        }
+                      }
+
+                      agentLog({
+                        location: 'EditArticleModal.tsx:2095',
+                        message: 'Image click - found wrapper',
+                        data: {
+                          blockId,
+                          wrapperClassName: wrapper.className,
+                          blocksCount: blocks.length,
+                        },
+                        hypothesisId: 'B',
+                      });
 
                       // Ищем блок по data-block-id или по порядковому номеру в DOM
                       let blockIndex = -1;
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:2217',
-                          message: 'Image click - searching by blockId',
-                          data: {
-                            blockId,
-                            blocksWithIds: blocks.map((b, idx) => ({
-                              index: idx,
-                              id: b.id,
-                              type: b.type,
-                            })),
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'G',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:2217',
+                        message: 'Image click - searching by blockId',
+                        data: {
+                          blockId,
+                          blocksWithIds: blocks.map((b, idx) => ({
+                            index: idx,
+                            id: b.id,
+                            type: b.type,
+                          })),
+                        },
+                        hypothesisId: 'G',
+                      });
 
                       if (blockId && blockId !== '') {
                         // Ищем по data-block-id, но только среди блоков типа image или carousel
@@ -3624,26 +3091,17 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                             (block.type === 'image' || block.type === 'carousel')
                         );
 
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            location: 'EditArticleModal.tsx:2222',
-                            message: 'Image click - blockIndex after findIndex',
-                            data: {
-                              blockId,
-                              blockIndex,
-                              foundBlockType: blockIndex >= 0 ? blocks[blockIndex]?.type : null,
-                              foundBlockId: blockIndex >= 0 ? blocks[blockIndex]?.id : null,
-                            },
-                            timestamp: Date.now(),
-                            sessionId: 'debug-session',
-                            runId: 'run1',
-                            hypothesisId: 'H',
-                          }),
-                        }).catch(() => {});
-                        // #endregion
+                        agentLog({
+                          location: 'EditArticleModal.tsx:2222',
+                          message: 'Image click - blockIndex after findIndex',
+                          data: {
+                            blockId,
+                            blockIndex,
+                            foundBlockType: blockIndex >= 0 ? blocks[blockIndex]?.type : null,
+                            foundBlockId: blockIndex >= 0 ? blocks[blockIndex]?.id : null,
+                          },
+                          hypothesisId: 'H',
+                        });
                       }
 
                       // Если не нашли по id, ищем по позиции в DOM
@@ -3669,25 +3127,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                         }
                       }
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:2130',
-                          message: 'Image click - blockIndex found',
-                          data: {
-                            blockIndex,
-                            willSetSelectedImageIndex: blockIndex >= 0,
-                            currentSelectedImageIndex: selectedImageIndex,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'C',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:2130',
+                        message: 'Image click - blockIndex found',
+                        data: {
+                          blockIndex,
+                          willSetSelectedImageIndex: blockIndex >= 0,
+                          currentSelectedImageIndex: selectedImageIndex,
+                        },
+                        hypothesisId: 'C',
+                      });
 
                       if (blockIndex >= 0) {
                         setSelectedImageIndex(blockIndex);
@@ -3698,24 +3147,15 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     // Обработка Enter: по умолчанию создаем параграф, Shift+Enter - тот же тег
                     // Не блокируем стандартные комбинации клавиш для выделения текста
                     if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:onKeyDown:Enter',
-                          message: 'Enter key pressed',
-                          data: {
-                            hasContentEditable: !!contentEditableRef.current,
-                            shiftKey: e.shiftKey,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'D',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:onKeyDown:Enter',
+                        message: 'Enter key pressed',
+                        data: {
+                          hasContentEditable: !!contentEditableRef.current,
+                          shiftKey: e.shiftKey,
+                        },
+                        hypothesisId: 'D',
+                      });
 
                       // Проверяем, что курсор находится внутри contentEditable
                       if (!contentEditableRef.current) {
@@ -3895,45 +3335,27 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       }
 
                       // Enter (без Shift): создаем новый параграф
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:1946',
-                          message: 'Enter key pressed - start (no shift)',
-                          data: {
-                            hasContentEditable: !!contentEditableRef.current,
-                            innerHTMLLength: contentEditableRef.current?.innerHTML?.length || 0,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'A',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:1946',
+                        message: 'Enter key pressed - start (no shift)',
+                        data: {
+                          hasContentEditable: !!contentEditableRef.current,
+                          innerHTMLLength: contentEditableRef.current?.innerHTML?.length || 0,
+                        },
+                        hypothesisId: 'A',
+                      });
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:1964',
-                          message: 'Enter key - before preventDefault (no shift)',
-                          data: {
-                            rangeStartContainer: range.startContainer.nodeName,
-                            rangeStartOffset: range.startOffset,
-                            rangeCollapsed: range.collapsed,
-                            selectionRangeCount: selection.rangeCount,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'A',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:1964',
+                        message: 'Enter key - before preventDefault (no shift)',
+                        data: {
+                          rangeStartContainer: range.startContainer.nodeName,
+                          rangeStartOffset: range.startOffset,
+                          rangeCollapsed: range.collapsed,
+                          selectionRangeCount: selection.rangeCount,
+                        },
+                        hypothesisId: 'A',
+                      });
 
                       e.preventDefault();
 
@@ -3970,25 +3392,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
                       let newParagraph: HTMLParagraphElement | null = null;
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:1992',
-                          message: 'Before creating paragraph',
-                          data: {
-                            hasBlockContainer: !!blockContainer,
-                            blockContainerTag: blockContainer?.tagName,
-                            blockContainerType: blockContainer?.getAttribute('data-block-type'),
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'B',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:1992',
+                        message: 'Before creating paragraph',
+                        data: {
+                          hasBlockContainer: !!blockContainer,
+                          blockContainerTag: blockContainer?.tagName,
+                          blockContainerType: blockContainer?.getAttribute('data-block-type'),
+                        },
+                        hypothesisId: 'B',
+                      });
 
                       if (blockContainer) {
                         // Используем стандартное поведение для разбивки блока
@@ -4031,26 +3444,17 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                         contentEditableRef.current.appendChild(newParagraph);
                       }
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:2033',
-                          message: 'Paragraph created, before HTML update',
-                          data: {
-                            hasNewParagraph: !!newParagraph,
-                            newParagraphText: newParagraph?.textContent || '',
-                            newParagraphHasTextNode: !!newParagraph?.firstChild,
-                            newParagraphTextNodeType: newParagraph?.firstChild?.nodeType,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'A',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:2033',
+                        message: 'Paragraph created, before HTML update',
+                        data: {
+                          hasNewParagraph: !!newParagraph,
+                          newParagraphText: newParagraph?.textContent || '',
+                          newParagraphHasTextNode: !!newParagraph?.firstChild,
+                          newParagraphTextNodeType: newParagraph?.firstChild?.nodeType,
+                        },
+                        hypothesisId: 'A',
+                      });
 
                       // Обновляем HTML и блоки
                       const html = contentEditableRef.current.innerHTML;
@@ -4059,25 +3463,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       const parsedBlocks = htmlToBlocks(html);
                       setBlocks(parsedBlocks);
 
-                      // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'EditArticleModal.tsx:2040',
-                          message: 'After HTML/Blocks update, before cursor setup',
-                          data: {
-                            htmlLength: html.length,
-                            parsedBlocksCount: parsedBlocks.length,
-                            currentSelectionRangeCount: window.getSelection()?.rangeCount || 0,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'run1',
-                          hypothesisId: 'A',
-                        }),
-                      }).catch(() => {});
-                      // #endregion
+                      agentLog({
+                        location: 'EditArticleModal.tsx:2040',
+                        message: 'After HTML/Blocks update, before cursor setup',
+                        data: {
+                          htmlLength: html.length,
+                          parsedBlocksCount: parsedBlocks.length,
+                          currentSelectionRangeCount: window.getSelection()?.rangeCount || 0,
+                        },
+                        hypothesisId: 'A',
+                      });
 
                       // Устанавливаем курсор в новый параграф после обновления DOM
                       if (newParagraph && contentEditableRef.current) {
@@ -4111,27 +3506,18 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                           ] as HTMLParagraphElement;
                         }
 
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            location: 'EditArticleModal.tsx:2042',
-                            message: 'Finding target paragraph',
-                            data: {
-                              allParagraphsCount: allParagraphs.length,
-                              hasBlockContainer: !!blockContainer,
-                              foundTargetParagraph: !!targetParagraph,
-                              targetParagraphText:
-                                targetParagraph?.textContent?.substring(0, 20) || '',
-                            },
-                            timestamp: Date.now(),
-                            sessionId: 'debug-session',
-                            runId: 'run1',
-                            hypothesisId: 'B',
-                          }),
-                        }).catch(() => {});
-                        // #endregion
+                        agentLog({
+                          location: 'EditArticleModal.tsx:2042',
+                          message: 'Finding target paragraph',
+                          data: {
+                            allParagraphsCount: allParagraphs.length,
+                            hasBlockContainer: !!blockContainer,
+                            foundTargetParagraph: !!targetParagraph,
+                            targetParagraphText:
+                              targetParagraph?.textContent?.substring(0, 20) || '',
+                          },
+                          hypothesisId: 'B',
+                        });
 
                         if (targetParagraph) {
                           // Создаем текстовый узел, если его нет
@@ -4145,30 +3531,6 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                             textNode = document.createTextNode('');
                             targetParagraph.appendChild(textNode);
                           }
-
-                          // #region agent log
-                          fetch(
-                            'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                            {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                location: 'EditArticleModal.tsx:2073',
-                                message: 'Before setting cursor',
-                                data: {
-                                  hasTextNode: !!textNode,
-                                  textNodeLength: textNode?.textContent?.length || 0,
-                                  targetParagraphHasFocus:
-                                    document.activeElement === contentEditableRef.current,
-                                },
-                                timestamp: Date.now(),
-                                sessionId: 'debug-session',
-                                runId: 'run1',
-                                hypothesisId: 'C',
-                              }),
-                            }
-                          ).catch(() => {});
-                          // #endregion
 
                           // Устанавливаем курсор после обновления React (используем setTimeout для следующего тика)
                           // Это гарантирует, что React завершил обновление DOM перед установкой курсора
@@ -4208,35 +3570,6 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                             }
 
                             if (finalTargetParagraph) {
-                              // #region agent log
-                              fetch(
-                                'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                                {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    location: 'EditArticleModal.tsx:2323',
-                                    message: 'Found target paragraph in setTimeout',
-                                    data: {
-                                      paragraphText:
-                                        finalTargetParagraph.textContent?.substring(0, 20) || '',
-                                      paragraphHasChildren: finalTargetParagraph.hasChildNodes(),
-                                      paragraphFirstChildType:
-                                        finalTargetParagraph.firstChild?.nodeType,
-                                      paragraphIndex: Array.from(
-                                        contentEditableRef.current.children
-                                      ).indexOf(finalTargetParagraph),
-                                      allParagraphsCount: allParagraphsAfter.length,
-                                    },
-                                    timestamp: Date.now(),
-                                    sessionId: 'debug-session',
-                                    runId: 'run1',
-                                    hypothesisId: 'B',
-                                  }),
-                                }
-                              ).catch(() => {});
-                              // #endregion
-
                               let finalTextNode: Text | null = null;
                               if (
                                 finalTargetParagraph.firstChild &&
@@ -4279,31 +3612,6 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                                 recentCursorSetRef.current = false;
                               }, 500);
 
-                              // #region agent log
-                              fetch(
-                                'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                                {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    location: 'EditArticleModal.tsx:onKeyDown:Enter:afterCursorSet',
-                                    message: 'Cursor set after Enter',
-                                    data: {
-                                      hasFinalTargetParagraph: !!finalTargetParagraph,
-                                      hasFinalTextNode: !!finalTextNode,
-                                      finalTextNodeLength: finalTextNode?.textContent?.length || 0,
-                                      hasFocus:
-                                        document.activeElement === contentEditableRef.current,
-                                    },
-                                    timestamp: Date.now(),
-                                    sessionId: 'debug-session',
-                                    runId: 'run1',
-                                    hypothesisId: 'D',
-                                  }),
-                                }
-                              ).catch(() => {});
-                              // #endregion
-
                               // Устанавливаем курсор еще раз через requestAnimationFrame для надежности
                               requestAnimationFrame(() => {
                                 const rafSelection = window.getSelection();
@@ -4322,90 +3630,11 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                                     setTimeout(() => {
                                       recentCursorSetRef.current = false;
                                     }, 500);
-
-                                    // #region agent log
-                                    fetch(
-                                      'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                                      {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                          location:
-                                            'EditArticleModal.tsx:onKeyDown:Enter:requestAnimationFrame',
-                                          message: 'Cursor set in requestAnimationFrame',
-                                          data: {
-                                            hasFocus:
-                                              document.activeElement === contentEditableRef.current,
-                                            rangeCount: rafSelection.rangeCount,
-                                          },
-                                          timestamp: Date.now(),
-                                          sessionId: 'debug-session',
-                                          runId: 'run1',
-                                          hypothesisId: 'D',
-                                        }),
-                                      }
-                                    ).catch(() => {});
-                                    // #endregion
                                   }
                                 }
                               });
-
-                              // #region agent log
-                              fetch(
-                                'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                                {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    location: 'EditArticleModal.tsx:2286',
-                                    message: 'After setting cursor (delayed after React update)',
-                                    data: {
-                                      selectionRangeCount: window.getSelection()?.rangeCount || 0,
-                                      selectionIsCollapsed: window.getSelection()?.getRangeAt(0)
-                                        ?.collapsed,
-                                      selectionStartContainer: window.getSelection()?.getRangeAt(0)
-                                        ?.startContainer?.nodeName,
-                                      selectionStartOffset: window.getSelection()?.getRangeAt(0)
-                                        ?.startOffset,
-                                      hasFocus:
-                                        document.activeElement === contentEditableRef.current,
-                                      activeElementTag: document.activeElement?.tagName,
-                                      paragraphText: finalTargetParagraph.textContent || '',
-                                      paragraphHasContent:
-                                        (finalTargetParagraph.textContent?.length || 0) > 0,
-                                    },
-                                    timestamp: Date.now(),
-                                    sessionId: 'debug-session',
-                                    runId: 'run1',
-                                    hypothesisId: 'C',
-                                  }),
-                                }
-                              ).catch(() => {});
-                              // #endregion
                             }
                           }, 0);
-                        } else {
-                          // #region agent log
-                          fetch(
-                            'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                            {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                location: 'EditArticleModal.tsx:2094',
-                                message: 'Target paragraph not found',
-                                data: {
-                                  allParagraphsCount: allParagraphs.length,
-                                  hasNewParagraph: !!newParagraph,
-                                },
-                                timestamp: Date.now(),
-                                sessionId: 'debug-session',
-                                runId: 'run1',
-                                hypothesisId: 'B',
-                              }),
-                            }
-                          ).catch(() => {});
-                          // #endregion
                         }
                       }
 
@@ -4459,75 +3688,48 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     scheduleAutoSave();
                   }}
                   onFocus={() => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        location: 'EditArticleModal.tsx:1293',
-                        message: 'ContentEditable onFocus',
-                        data: {
-                          hasRef: !!contentEditableRef.current,
-                          contentHtmlLength: contentHtml.length,
-                          innerHTML: contentEditableRef.current?.innerHTML?.substring(0, 100),
-                          isContentEditable: contentEditableRef.current?.isContentEditable,
-                        },
-                        timestamp: Date.now(),
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'A',
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    agentLog({
+                      location: 'EditArticleModal.tsx:1293',
+                      message: 'ContentEditable onFocus',
+                      data: {
+                        hasRef: !!contentEditableRef.current,
+                        contentHtmlLength: contentHtml.length,
+                        innerHTML: contentEditableRef.current?.innerHTML?.substring(0, 100),
+                        isContentEditable: contentEditableRef.current?.isContentEditable,
+                      },
+                      hypothesisId: 'A',
+                    });
                   }}
                   onInput={(e) => {
                     // Сохраняем значение сразу, чтобы избежать проблем с null в setState
                     const html = e.currentTarget.innerHTML;
 
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        location: 'EditArticleModal.tsx:1350',
-                        message: 'ContentEditable onInput triggered',
-                        data: {
-                          newHtmlLength: html.length,
-                          newHtmlPreview: html.substring(0, 100),
-                          oldContentHtmlLength: contentHtml.length,
-                          isInitialMount: isInitialMountRef.current,
-                        },
-                        timestamp: Date.now(),
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'B',
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    agentLog({
+                      location: 'EditArticleModal.tsx:1350',
+                      message: 'ContentEditable onInput triggered',
+                      data: {
+                        newHtmlLength: html.length,
+                        newHtmlPreview: html.substring(0, 100),
+                        oldContentHtmlLength: contentHtml.length,
+                        isInitialMount: isInitialMountRef.current,
+                      },
+                      hypothesisId: 'B',
+                    });
 
                     // Обновляем lastContentHtmlRef, чтобы useEffect не перезаписывал
                     lastContentHtmlRef.current = html;
                     setContentHtml(html);
                     // Парсим HTML обратно в блоки
                     const parsedBlocks = htmlToBlocks(html);
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        location: 'EditArticleModal.tsx:1370',
-                        message: 'After htmlToBlocks',
-                        data: {
-                          parsedBlocksCount: parsedBlocks.length,
-                          htmlLength: html.length,
-                        },
-                        timestamp: Date.now(),
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'B',
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    agentLog({
+                      location: 'EditArticleModal.tsx:1370',
+                      message: 'After htmlToBlocks',
+                      data: {
+                        parsedBlocksCount: parsedBlocks.length,
+                        htmlLength: html.length,
+                      },
+                      hypothesisId: 'B',
+                    });
 
                     // Проверяем, изменилось ли количество блоков или структура (например, удалили изображение)
                     // Сравниваем количество блоков и их типы
@@ -4553,24 +3755,15 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     scheduleAutoSave();
                   }}
                   onBlur={() => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        location: 'EditArticleModal.tsx:1306',
-                        message: 'ContentEditable onBlur',
-                        data: {
-                          hasRef: !!contentEditableRef.current,
-                          finalHtmlLength: contentEditableRef.current?.innerHTML?.length,
-                        },
-                        timestamp: Date.now(),
-                        sessionId: 'debug-session',
-                        runId: 'run1',
-                        hypothesisId: 'C',
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    agentLog({
+                      location: 'EditArticleModal.tsx:1306',
+                      message: 'ContentEditable onBlur',
+                      data: {
+                        hasRef: !!contentEditableRef.current,
+                        finalHtmlLength: contentEditableRef.current?.innerHTML?.length,
+                      },
+                      hypothesisId: 'C',
+                    });
                     // При потере фокуса также обновляем блоки
                     if (contentEditableRef.current) {
                       const html = contentEditableRef.current.innerHTML;
@@ -4847,6 +4040,92 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
           </div>
         </div>
       </Popup>
+
+      {/* Панель редактирования карусели */}
+      {editingCarouselIndex !== null && blocks[editingCarouselIndex]?.type === 'carousel' && (
+        <Popup isActive={true} onClose={cancelCarouselEdit}>
+          <div className="edit-article-modal__carousel-edit">
+            <div className="edit-article-modal__carousel-edit-header">
+              <h3>{texts.editCarousel}</h3>
+              <button
+                type="button"
+                className="edit-article-modal__carousel-edit-close"
+                onClick={cancelCarouselEdit}
+                aria-label={texts.close}
+              >
+                ×
+              </button>
+            </div>
+            <div className="edit-article-modal__carousel-edit-content">
+              {Array.isArray(blocks[editingCarouselIndex].img) &&
+                blocks[editingCarouselIndex].img.length > 0 && (
+                  <ImageCarousel
+                    images={blocks[editingCarouselIndex].img}
+                    alt=""
+                    category="articles"
+                  />
+                )}
+              <div className="edit-article-modal__carousel-edit-actions">
+                <button
+                  type="button"
+                  className="edit-article-modal__button edit-article-modal__button--secondary"
+                  onClick={() => {
+                    carouselFileInputRef.current?.click();
+                  }}
+                >
+                  {lang === 'ru' ? 'Добавить изображение' : 'Add image'}
+                </button>
+                <input
+                  ref={carouselFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && editingCarouselIndex !== null) {
+                      handleImageUpload(file, editingCarouselIndex);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="edit-article-modal__button edit-article-modal__button--primary"
+                  onClick={() => {
+                    setCarouselBackup(null);
+                    setEditingCarouselIndex(null);
+                    scheduleAutoSave();
+                  }}
+                >
+                  {texts.save}
+                </button>
+              </div>
+              {Array.isArray(blocks[editingCarouselIndex].img) &&
+                blocks[editingCarouselIndex].img.length > 0 && (
+                  <div className="edit-article-modal__carousel-edit-images">
+                    {blocks[editingCarouselIndex].img.map((img, index) => (
+                      <div key={index} className="edit-article-modal__carousel-edit-image">
+                        <img src={getUserImageUrl(img, 'articles')} alt={`Image ${index + 1}`} />
+                        <button
+                          type="button"
+                          className="edit-article-modal__carousel-edit-image-remove"
+                          onClick={() => {
+                            if (editingCarouselIndex !== null) {
+                              removeImageFromCarousel(editingCarouselIndex, index);
+                            }
+                          }}
+                          aria-label={lang === 'ru' ? 'Удалить изображение' : 'Remove image'}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
+          </div>
+        </Popup>
+      )}
 
       {alertModal && (
         <AlertModal

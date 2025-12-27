@@ -17,6 +17,7 @@ interface SortableBlockProps {
   index: number;
   isFocused: boolean;
   isSelected?: boolean;
+  showVkPlus?: boolean;
   onUpdate: (blockId: string, updates: Partial<Block>) => void;
   onDelete: (blockId: string) => void;
   onFocus: (blockId: string) => void;
@@ -32,6 +33,9 @@ interface SortableBlockProps {
   onFormat?: (blockId: string, type: 'bold' | 'italic' | 'link') => void;
   onPaste?: (blockId: string, text: string, files: File[]) => void;
   onConvertToCarousel?: (blockId: string) => void;
+  onVkPlusSelect?: (type: string) => void;
+  onVkPlusClose?: () => void;
+  onEditCarousel?: (blockId: string) => void;
 }
 
 export function SortableBlock({
@@ -39,6 +43,7 @@ export function SortableBlock({
   index,
   isFocused,
   isSelected,
+  showVkPlus,
   onUpdate,
   onDelete,
   onFocus,
@@ -54,72 +59,19 @@ export function SortableBlock({
   onFormat,
   onPaste,
   onConvertToCarousel,
+  onVkPlusSelect,
+  onVkPlusClose,
+  onEditCarousel,
 }: SortableBlockProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: block.id });
-
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [showInserter, setShowInserter] = useState(false);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-  const blockWrapperRef = useRef<HTMLDivElement>(null);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-
-  // Закрытие контекстного меню при клике вне
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        contextMenuRef.current &&
-        !contextMenuRef.current.contains(event.target as Node) &&
-        blockWrapperRef.current &&
-        !blockWrapperRef.current.contains(event.target as Node)
-      ) {
-        setShowContextMenu(false);
-      }
-    };
-
-    if (showContextMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showContextMenu]);
-
-  // Закрытие по Esc
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showContextMenu) {
-        setShowContextMenu(false);
-      }
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [showContextMenu]);
-
-  const handleContextMenuClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowContextMenu(!showContextMenu);
-  };
-
-  const blockTypes: Array<{ type: string; label: string }> = [
-    { type: 'paragraph', label: 'Текст' },
-    { type: 'title', label: 'Заголовок' },
-    { type: 'subtitle', label: 'Подзаголовок' },
-    { type: 'quote', label: 'Цитата' },
-    { type: 'list', label: 'Список' },
-    { type: 'divider', label: 'Разделитель' },
-    { type: 'image', label: 'Изображение' },
-    { type: 'carousel', label: 'Карусель' },
-  ];
 
   const renderBlock = () => {
     switch (block.type) {
@@ -207,7 +159,9 @@ export function SortableBlock({
             }
             onFocus={() => onFocus(block.id)}
             onBlur={onBlur}
-            onDelete={() => onDelete(block.id)}
+            isSelected={isSelected}
+            onSelect={() => onSelect?.(block.id)}
+            onEdit={() => onEditCarousel?.(block.id)}
           />
         );
       default:
@@ -215,112 +169,137 @@ export function SortableBlock({
     }
   };
 
+  // Проверяем, пустой ли блок
+  const isBlockEmpty = (() => {
+    if (
+      block.type === 'paragraph' ||
+      block.type === 'title' ||
+      block.type === 'subtitle' ||
+      block.type === 'quote'
+    ) {
+      return block.text.trim() === '';
+    }
+    if (block.type === 'list') {
+      return block.items.every((item) => item.trim() === '');
+    }
+    if (block.type === 'divider') {
+      return false; // Divider всегда "не пустой"
+    }
+    if (block.type === 'image') {
+      return !block.imageKey || block.imageKey === '';
+    }
+    if (block.type === 'carousel') {
+      return !block.imageKeys || block.imageKeys.length === 0;
+    }
+    return false;
+  })();
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      data-block-id={block.id}
       className={`edit-article-v2__block-wrapper ${isFocused ? 'is-focused' : ''} ${
         isDragging ? 'is-dragging' : ''
-      } ${isSelected ? 'edit-article-v2__block-wrapper--selected' : ''}`}
-      onMouseEnter={() => setShowInserter(true)}
-      onMouseLeave={() => {
-        setShowInserter(false);
-        if (!showContextMenu) {
-          setShowContextMenu(false);
-        }
-      }}
+      } ${isSelected ? 'edit-article-v2__block-wrapper--selected' : ''} ${isBlockEmpty ? 'is-empty' : ''}`}
     >
-      {/* Drag handle */}
-      <div
-        className="edit-article-v2__drag-handle"
-        {...attributes}
-        {...listeners}
-        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-      >
-        <span className="edit-article-v2__drag-handle-icon">⠿</span>
-      </div>
-
-      {/* Block content */}
-      <div ref={blockWrapperRef} className="edit-article-v2__block-content">
-        {renderBlock()}
-      </div>
-
-      {/* Context menu button */}
-      <button
-        type="button"
-        className="edit-article-v2__context-menu-button"
-        onClick={handleContextMenuClick}
-        aria-label="Меню блока"
-      >
-        ⋯
-      </button>
-
-      {/* Context menu */}
-      {showContextMenu && (
-        <div ref={contextMenuRef} className="edit-article-v2__context-menu">
-          <div className="edit-article-v2__context-menu-section">
-            <div className="edit-article-v2__context-menu-title">Добавить блок ниже</div>
-            {blockTypes.map(({ type, label }) => (
-              <button
-                key={type}
-                type="button"
-                className="edit-article-v2__context-menu-item"
-                onClick={() => {
-                  onInsertAfter(block.id, type);
-                  setShowContextMenu(false);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="edit-article-v2__context-menu-divider" />
-          <button
-            type="button"
-            className="edit-article-v2__context-menu-item"
-            onClick={() => {
-              onDuplicate(block.id);
-              setShowContextMenu(false);
-            }}
-          >
-            Дублировать
-          </button>
-          <button
-            type="button"
-            className="edit-article-v2__context-menu-item"
-            onClick={() => {
-              onMoveUp(block.id);
-              setShowContextMenu(false);
-            }}
-            disabled={index === 0}
-          >
-            Переместить вверх
-          </button>
-          <button
-            type="button"
-            className="edit-article-v2__context-menu-item"
-            onClick={() => {
-              onMoveDown(block.id);
-              setShowContextMenu(false);
-            }}
-          >
-            Переместить вниз
-          </button>
-          <div className="edit-article-v2__context-menu-divider" />
-          <button
-            type="button"
-            className="edit-article-v2__context-menu-item edit-article-v2__context-menu-item--danger"
-            onClick={() => {
-              onDelete(block.id);
-              setShowContextMenu(false);
-            }}
-          >
-            Удалить
-          </button>
+      {/* Drag handle - показываем только если блок не пустой */}
+      {!isBlockEmpty && (
+        <div
+          className="edit-article-v2__drag-handle"
+          {...attributes}
+          {...listeners}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        >
+          <span className="edit-article-v2__drag-handle-icon">⠿</span>
         </div>
       )}
 
+      {/* Block content */}
+      <div className="edit-article-v2__block-content">{renderBlock()}</div>
+
+      {/* VK-стиль плюс: показывается для пустых блоков */}
+      {showVkPlus && isBlockEmpty && onVkPlusSelect && onVkPlusClose && (
+        <VkPlusInserter onSelect={onVkPlusSelect} onClose={onVkPlusClose} />
+      )}
     </div>
   );
 }
 
+// Компонент VK-стиля плюса
+function VkPlusInserter({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (type: string) => void;
+  onClose: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        onClose();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleEscape);
+      };
+    }
+  }, [isOpen, onClose]);
+
+  const blockTypes = [
+    { type: 'paragraph', label: 'Текст', icon: '📝' },
+    { type: 'title', label: 'Заголовок', icon: '📌' },
+    { type: 'subtitle', label: 'Подзаголовок', icon: '📍' },
+    { type: 'quote', label: 'Цитата', icon: '💬' },
+    { type: 'list', label: 'Список', icon: '📋' },
+    { type: 'divider', label: 'Разделитель', icon: '➖' },
+    { type: 'image', label: 'Изображение', icon: '🖼️' },
+    { type: 'carousel', label: 'Карусель', icon: '🎠' },
+  ];
+
+  return (
+    <div ref={menuRef} className="edit-article-v2__vk-plus">
+      <button
+        type="button"
+        className="edit-article-v2__vk-plus-button"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        +
+      </button>
+      {isOpen && (
+        <div className="edit-article-v2__vk-plus-menu">
+          {blockTypes.map(({ type, label, icon }) => (
+            <button
+              key={type}
+              type="button"
+              className="edit-article-v2__vk-plus-menu-item"
+              onClick={() => {
+                onSelect(type);
+                setIsOpen(false);
+              }}
+            >
+              <span className="edit-article-v2__vk-plus-menu-icon">{icon}</span>
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

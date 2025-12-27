@@ -30,6 +30,7 @@ import {
 } from './EditArticleModalV2.utils';
 import { SortableBlock } from './blocks/SortableBlock';
 import { SlashMenu } from './blocks/SlashMenu';
+import { CarouselEditModal } from './CarouselEditModal';
 import './EditArticleModalV2.style.scss';
 
 interface EditArticleModalV2Props {
@@ -106,6 +107,12 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const [slashMenuSelectedIndex, setSlashMenuSelectedIndex] = useState(0);
   // VK-стиль инсертера: показывается только после Enter в конце блока
   const [vkInserter, setVkInserter] = useState<{ afterBlockId: string } | null>(null);
+  // Модал редактирования карусели
+  const [carouselEditModal, setCarouselEditModal] = useState<{
+    blockId: string;
+    imageKeys: string[];
+    caption?: string;
+  } | null>(null);
 
   // Обработка Escape для скрытия VK-плюса
   useEffect(() => {
@@ -873,9 +880,17 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         // Показываем VK-плюс у нового блока
         setVkInserter({ afterBlockId: newBlock.id });
 
-        // Фокус на новый блок
+        // Фокус на новый блок и перемещаем каретку в начало
         setTimeout(() => {
           setFocusBlockId(newBlock.id);
+          // Находим textarea нового блока и устанавливаем курсор в начало
+          const newBlockElement = document.querySelector(
+            `[data-block-id="${newBlock.id}"] textarea`
+          ) as HTMLTextAreaElement;
+          if (newBlockElement) {
+            newBlockElement.focus();
+            newBlockElement.setSelectionRange(0, 0);
+          }
         }, 0);
       } else {
         // Разрезаем блок на два (только для текстовых блоков)
@@ -914,9 +929,17 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
               return newBlocks;
             });
 
-            // Фокус на новый блок
+            // Фокус на новый блок и перемещаем каретку в начало
             setTimeout(() => {
               setFocusBlockId(newBlock.id);
+              // Находим textarea нового блока и устанавливаем курсор в начало
+              const newBlockElement = document.querySelector(
+                `[data-block-id="${newBlock.id}"] textarea`
+              ) as HTMLTextAreaElement;
+              if (newBlockElement) {
+                newBlockElement.focus();
+                newBlockElement.setSelectionRange(0, 0);
+              }
             }, 0);
           }
         }
@@ -1515,6 +1538,16 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                         index={index}
                         isFocused={focusBlockId === block.id}
                         isSelected={selectedBlockId === block.id}
+                        showVkPlus={
+                          (vkInserter?.afterBlockId === block.id || focusBlockId === block.id) &&
+                          (((block.type === 'paragraph' ||
+                            block.type === 'title' ||
+                            block.type === 'subtitle' ||
+                            block.type === 'quote') &&
+                            block.text.trim() === '') ||
+                            (block.type === 'list' &&
+                              block.items.every((item) => item.trim() === '')))
+                        }
                         onUpdate={updateBlock}
                         onDelete={deleteBlock}
                         onFocus={setFocusBlockId}
@@ -1549,22 +1582,22 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                         onFormat={handleFormat}
                         onPaste={handlePaste}
                         onConvertToCarousel={convertImageToCarousel}
+                        onVkPlusSelect={(type) => {
+                          insertBlockAfter(block.id, type);
+                          setVkInserter(null);
+                        }}
+                        onVkPlusClose={() => setVkInserter(null)}
+                        onEditCarousel={(blockId) => {
+                          const carouselBlock = blocks.find((b) => b.id === blockId);
+                          if (carouselBlock && carouselBlock.type === 'carousel') {
+                            setCarouselEditModal({
+                              blockId: carouselBlock.id,
+                              imageKeys: carouselBlock.imageKeys,
+                              caption: carouselBlock.caption,
+                            });
+                          }
+                        }}
                       />
-                      {/* VK-стиль плюс: показывается только после Enter в конце блока, только для пустых текстовых блоков */}
-                      {vkInserter?.afterBlockId === block.id &&
-                        (block.type === 'paragraph' ||
-                          block.type === 'title' ||
-                          block.type === 'subtitle' ||
-                          block.type === 'quote') &&
-                        block.text.trim() === '' && (
-                          <VkPlusInserter
-                            onSelect={(type) => {
-                              insertBlockAfter(block.id, type);
-                              setVkInserter(null);
-                            }}
-                            onClose={() => setVkInserter(null)}
-                          />
-                        )}
                     </React.Fragment>
                   ))}
                 </div>
@@ -1583,6 +1616,22 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           </div>
         </div>
       </div>
+
+      {/* Модал редактирования карусели */}
+      {carouselEditModal && (
+        <CarouselEditModal
+          blockId={carouselEditModal.blockId}
+          initialImageKeys={carouselEditModal.imageKeys}
+          initialCaption={carouselEditModal.caption}
+          onSave={(imageKeys, caption) => {
+            // Сохраняем снимок перед изменением карусели
+            saveSnapshot();
+            updateBlock(carouselEditModal.blockId, { imageKeys, caption } as Partial<Block>, true);
+            setCarouselEditModal(null);
+          }}
+          onCancel={() => setCarouselEditModal(null)}
+        />
+      )}
     </Popup>
   );
 }

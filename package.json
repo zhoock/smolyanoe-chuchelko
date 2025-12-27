@@ -32,6 +32,7 @@
     "migrate-producing-format": "tsx database/scripts/migrate-producing-format.ts",
     "export-tracks": "tsx scripts/export-tracks-from-db.ts",
     "export-all-tracks": "tsx scripts/export-all-tracks-with-audio.ts",
+    "export-articles": "tsx scripts/export-articles-from-db.ts",
     "fix-smolyanoechuchelko": "tsx scripts/fix-smolyanoechuchelko-user-id.ts",
     "add-missing-tracks": "tsx scripts/add-missing-tracks-to-smolyanoechuchelko-en.ts",
     "sync-tracks-languages": "tsx scripts/sync-tracks-between-languages.ts",

@@ -52,7 +52,7 @@ import { AddLyricsModal } from './components/AddLyricsModal';
 import { EditLyricsModal } from './components/EditLyricsModal';
 import { PreviewLyricsModal } from './components/PreviewLyricsModal';
 import { EditAlbumModal, type AlbumFormData } from './components/EditAlbumModal';
-import { EditArticleModal } from './components/EditArticleModal';
+import { EditArticleModalV2 } from './components/EditArticleModalV2';
 import { SyncLyricsModal } from './components/SyncLyricsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import type { IAlbums, IArticles } from '@models';
@@ -1927,7 +1927,7 @@ function UserDashboard() {
 
       {/* Edit Article Modal */}
       {editArticleModal && editArticleModal.article && (
-        <EditArticleModal
+        <EditArticleModalV2
           isOpen={editArticleModal.isOpen}
           article={editArticleModal.article}
           onClose={() => setEditArticleModal(null)}
