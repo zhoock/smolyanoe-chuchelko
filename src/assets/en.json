@@ -68,6 +68,7 @@
         "location": "Location"
       },
       "uploadNewAlbum": "Upload New Album",
+      "uploadNewArticle": "Upload New Article",
       "editAlbum": "Edit Album",
       "writeAndPublishArticles": "Write and publish articles",
       "newPost": "New Post",

@@ -13,8 +13,11 @@
       {
         "type": "image",
         "img": "yaroslav_zhoock",
+        "alt": "Ярослав Жук."
+      },
+      {
         "strong": "Я не люблю людей.",
-        "alt": "Ярослав Жук.",
+        "type": "text",
         "content": "Особенно глупых людей. Я смеюсь над ними и унижаю их. Это меня забавляет. Поэтому я пишу музыку, которая похожа на то, как я предпочитаю общаться. Это не самый лучший способ достичь успеха, если ты играешь в рок-группе."
       },
       {
@@ -148,8 +151,10 @@
       {
         "type": "image",
         "img": "recording_vocals_album_session_23",
+        "alt": "запись вокала, сессия альбома 23."
+      },
+      {
         "subtitle": "Микрофон",
-        "alt": "запись вокала, сессия альбома 23.",
         "content": "GoodFly 251"
       },
       {
@@ -160,8 +165,11 @@
       {
         "type": "image",
         "img": "recording_guitar_cabinet_album_session_23",
+        "alt": "Запись гитарного кабинета, сессия альбома 23."
+      },
+      {
+        "type": "text",
         "subtitle": "Гитара",
-        "alt": "запись гитарного кабинета, сессия альбома 23.",
         "content": ["Fender Mustang"]
       },
       {
@@ -203,8 +211,11 @@
       {
         "type": "carousel",
         "images": ["drum_recording_album_session_23", "drum_recording_album_session_23_2"],
+        "alt": "Запись барабанов, сессия альбома 23."
+      },
+      {
+        "type": "text",
         "subtitle": "Оверхеды",
-        "alt": "запись барабанов, сессия альбома 23.",
         "content": ["Стереопара COLES 4038 + моно GoodFly 251"]
       },
       {
@@ -250,8 +261,11 @@
       {
         "type": "image",
         "img": "bass_guitar_recording_album_session_23",
+        "alt": "запись басового кабинета, сессия альбома 23."
+      },
+      {
+        "type": "text",
         "subtitle": "Усилители",
-        "alt": "запись басового кабинета, сессия альбома 23.",
         "content": ["Ampeg SVT Classic head + Ampeg SVT Classic 8×10 cab"]
       },
       {
@@ -267,7 +281,7 @@
       {
         "type": "image",
         "img": "mixing_process_album_session_23",
-        "alt": "процесс сведения, сессия альбома 23."
+        "alt": "Процесс сведения, сессия альбома 23."
       },
       {
         "type": "text",
@@ -291,7 +305,10 @@
       {
         "type": "image",
         "img": "album_cover_smolyanoe_chuchelko_23",
-        "alt": "обложка альбома Смоляное чучелко — 23.",
+        "alt": "обложка альбома Смоляное чучелко — 23."
+      },
+      {
+        "type": "text",
         "content": "Я решил, что в этот раз на обложке должна быть фотография. Я пробовал фотографировать сам, но остался недоволен результатом. Тогда я начал мониторить Instagram и мне понравились работы Hans Jacob Haarseth. Hans живёт в Норвегии. Он графический дизайнер и фотограф. Я сразу понял, что нашёл именно то, что мне нужно. Тут и отсылка к обложке первого альбома, и намёк на бессмысленную работу, увековеченную Сизифом."
       },
       {
@@ -318,7 +335,10 @@
       {
         "type": "image",
         "img": "album_cover_smolyanoe_chuchelko_EP",
-        "alt": "обложка альбома Смоляное чучелко — смоляное чучелко.",
+        "alt": "обложка альбома Смоляное чучелко — смоляное чучелко."
+      },
+      {
+        "type": "text",
         "content": "Обложка альбома создана французским художником Blexbolex (Бернар Грейнджер) — автором культовой книги L'Imagier des gens (2008), удостоенной в 2009 году звания «Лучший дизайн книги в мире» на Лейпцигской книжной ярмарке. Этот рисунок задумывался как «пропавшая страница» из оригинального издания, продолжая его визуальный язык и сохраняя характерную для Blexbolex гармонию ручного рисунка и трафаретной печати."
       },
       {
@@ -342,28 +362,40 @@
         "type": "image",
         "img": "effects_pedal_BOSS_DS-1",
         "title": "BOSS DS-1",
-        "alt": "педаль эффектов BOSS DS-1.",
+        "alt": "педаль эффектов BOSS DS-1."
+      },
+      {
+        "type": "text",
         "content": "Серебряный винт, первая версия с длинным тире. Серийный номер 9900. Япония, октябрь 1980 года. Основной дисторшн."
       },
       {
         "type": "image",
         "img": "effects_pedal_RAT",
         "title": "RAT",
-        "alt": "педаль эффектов RAT.",
+        "alt": "педаль эффектов RAT."
+      },
+      {
+        "type": "text",
         "content": "Small Box RAT '84 Whiteface. На LM308 чипе. The Sound of the Underground. Использовался на басу."
       },
       {
         "type": "image",
         "img": "effects_pedal_Electro_Harmonix_Polychorus",
         "title": "Electro-Harmonix Polychorus",
-        "alt": "педаль эффектов Electro_Harmonix Polychorus.",
+        "alt": "педаль эффектов Electro_Harmonix Polychorus."
+      },
+      {
+        "type": "text",
         "content": "Начало 80-х. Куплен в штатах, прошёл диагностику у Ховарда Девиса, инженера ЕHX. Не знаю точно, принимал ли Ховард участие в создании Polychorus, но именно он — автор Deluxe Memory Man. Обе эти педали вышли в 81 году."
       },
       {
         "type": "image",
         "img": "effects_pedal_Electro-Harmonix_Small_Clone",
         "title": "Electro-Harmonix Small Clone",
-        "alt": "педаль эффектов Electro-Harmonix Small Clone.",
+        "alt": "педаль эффектов Electro-Harmonix Small Clone."
+      },
+      {
+        "type": "text",
         "content": "Идентифицировать педаль можно по дата-коду на потенциометре (имеет пластиковый вал (как фича — педаль не фонит, если прикасаться рукой)), последние 4 цифры (8339) означают, что год 83, 39 неделя.\nУ винтажных педалей ясный и меньшего размера (3 мм) светодиод против красного и большого (5 мм) светодиода в переизданиях. Кроме того, в оригиналах нет тире (-), разделяющего слова FULL и CHORUS. EHX c 79 до начала 80-х использовали чипы: MN3007 либо RETICON SAD1024 (самый редкий и востребованный по причине пользования его \"сами знаете кем\"). Но дело, конечно же, только в том, что переиздание звучит как говно."
       }
     ]
@@ -376,19 +408,32 @@
     "img": "recording_album_EP_equipment",
     "details": [
       {
+        "type": "text",
+        "title": "ПУЛЬТ"
+      },
+      {
         "type": "image",
         "img": "mixing_console_Solid_State_Logic_SSL_6000_E",
-        "title": "ПУЛЬТ",
-        "alt": "консоль Solid State Logic SSL 6000 E (32 канала).",
+        "alt": "консоль Solid State Logic SSL 6000 E (32 канала)."
+      },
+      {
+        "type": "text",
         "content": ["Solid State Logic SSL 6000 E (32 channels)"]
+      },
+
+      {
+        "type": "text",
+        "title": "БАРАБАНЫ",
+        "content": ["Neumann TLM 170"]
       },
       {
         "type": "image",
         "img": "drum_recording_album_session_EP",
-        "title": "БАРАБАНЫ",
-        "subtitle": "Эмбиентный микрофон",
-        "alt": "запись барабанов, сессия альбома EP.",
-        "content": ["Neumann TLM 170"]
+        "alt": "Запись барабанов, сессия альбома EP."
+      },
+      {
+        "type": "text",
+        "subtitle": "Эмбиентный микрофон"
       },
       {
         "type": "text",
@@ -426,12 +471,14 @@
         "content": ["AKG C451"]
       },
       {
+        "type": "text",
+        "title": "БАC",
+        "content": ["Gibson Thunderbird", "Fender Jazz Bass"]
+      },
+      {
         "type": "image",
         "img": "bass_guitar_recording_album_session_EP",
-        "title": "БАC",
-        "subtitle": "Гитары",
-        "alt": "запись бас-гитары, сессия альбома EP.",
-        "content": ["Gibson Thunderbird", "Fender Jazz Bass"]
+        "alt": "запись бас-гитары, сессия альбома EP."
       },
       {
         "type": "text",
@@ -449,11 +496,16 @@
         "content": ["GoodFly C12", "AKG C24 или Shure SM7 (room)"]
       },
       {
+        "type": "text",
+        "title": "ГИТАРА"
+      },
+      {
         "type": "image",
         "img": "guitar_recording_album_session_EP",
-        "title": "ГИТАРА",
+        "alt": "запись гитары, сессия альбома EP."
+      },
+      {
         "subtitle": "Гитары",
-        "alt": "запись гитары, сессия альбома EP.",
         "content": ["Fender Mustang", "Fender Jaguar", "Акустическая гитара Takamine"]
       },
       {
@@ -500,11 +552,16 @@
         "content": ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"]
       },
       {
+        "type": "text",
+        "title": "ВОКАЛ"
+      },
+      {
         "type": "image",
         "img": "mixing_process_album_session_EP",
-        "title": "ВОКАЛ",
+        "alt": "процесс сведения, сессия альбома EP."
+      },
+      {
         "subtitle": "Микрофон",
-        "alt": "процесс сведения, сессия альбома EP.",
         "content": ["Joemeek jm47 Black"]
       },
       {

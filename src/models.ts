@@ -179,6 +179,7 @@ export interface IInterface {
       location: string;
     };
     uploadNewAlbum: string;
+    uploadNewArticle: string;
     editAlbum: string;
     writeAndPublishArticles: string;
     newPost: string;

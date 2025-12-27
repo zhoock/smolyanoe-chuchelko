@@ -31,6 +31,7 @@ import {
 import { SortableBlock } from './blocks/SortableBlock';
 import { SlashMenu } from './blocks/SlashMenu';
 import { CarouselEditModal } from './CarouselEditModal';
+import { ArticleEditSkeleton } from './ArticleEditSkeleton';
 import './EditArticleModalV2.style.scss';
 
 interface EditArticleModalV2Props {
@@ -88,6 +89,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const [meta, setMeta] = useState<ArticleMeta>({ title: '', description: '' });
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // История для Undo/Redo
   type CaretPosition = {
@@ -173,6 +175,20 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     if (!isOpen) return;
 
     const loadArticle = async () => {
+      // Если это новая статья (articleId начинается с "new-"), пропускаем загрузку
+      if (article.articleId.startsWith('new-')) {
+        setIsLoading(false);
+        setCurrentArticle(article);
+        setOriginalIsDraft(true);
+        setBlocks([{ id: generateId(), type: 'paragraph', text: '' }]);
+        setMeta({
+          title: '',
+          description: '',
+        });
+        return;
+      }
+
+      setIsLoading(true);
       try {
         // #region agent log
         fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
@@ -423,6 +439,8 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         }).catch(() => {});
         // #endregion
         console.error('Error loading article:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -451,7 +469,12 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Автосохранение
   const autoSave = useCallback(async () => {
-    if (!isMountedRef.current || !isOpen || !currentArticle?.id) return;
+    if (!isMountedRef.current || !isOpen || !currentArticle) return;
+
+    // Для новой статьи не делаем автосохранение (только при публикации)
+    if (currentArticle.articleId.startsWith('new-')) return;
+
+    if (!currentArticle.id) return;
 
     // Отменяем предыдущий запрос
     if (abortControllerRef.current) {
@@ -472,7 +495,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         articleId: currentArticle.articleId,
         nameArticle: meta.title,
         description: meta.description,
-        img: currentArticle.img || article.img,
+        img: currentArticle.img || article.img || '',
         date: currentArticle.date || article.date,
         details: details,
         lang: lang,
@@ -530,7 +553,12 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Планирование автосохранения
   useEffect(() => {
-    if (!isOpen || !currentArticle?.id) return;
+    if (!isOpen || !currentArticle) return;
+
+    // Для новой статьи не делаем автосохранение
+    if (currentArticle.articleId.startsWith('new-')) return;
+
+    if (!currentArticle.id) return;
 
     debouncedAutoSave();
 
@@ -541,7 +569,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Публикация
   const handlePublish = useCallback(async () => {
-    if (!currentArticle?.id) return;
+    if (!currentArticle) return;
 
     setIsPublishing(true);
     setSaveStatus('saving');
@@ -553,28 +581,42 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       // Принудительное сохранение перед публикацией
       const details = blocksToDetails(blocks);
 
+      // Для новой статьи генерируем articleId из timestamp, если его нет
+      let articleId = currentArticle.articleId.startsWith('new-')
+        ? currentArticle.articleId.replace('new-', '')
+        : currentArticle.articleId;
+
+      // Если articleId пустой или все еще начинается с "new-", генерируем новый
+      if (!articleId || articleId.startsWith('new-')) {
+        articleId = `article-${Date.now()}`;
+      }
+
       const requestBody = {
-        articleId: currentArticle.articleId,
-        nameArticle: meta.title,
-        description: meta.description,
-        img: currentArticle.img || article.img,
-        date: currentArticle.date || article.date,
+        articleId: articleId,
+        nameArticle: meta.title || 'Untitled',
+        description: meta.description || '',
+        img: currentArticle.img || article.img || '',
+        date: currentArticle.date || article.date || new Date().toISOString().split('T')[0],
         details: details,
         lang: lang,
         isDraft: false, // Публикуем
       };
 
-      const response = await fetch(
-        `/api/articles-api?id=${encodeURIComponent(currentArticle.id)}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
+      // Для новой статьи используем POST, для существующей - PUT
+      const isNewArticle = currentArticle.articleId.startsWith('new-') || !currentArticle.id;
+      const url = isNewArticle
+        ? '/api/articles-api'
+        : `/api/articles-api?id=${encodeURIComponent(currentArticle.id || '')}`;
+      const method = isNewArticle ? 'POST' : 'PUT';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       if (response.ok) {
         setSaveStatus('saved');
@@ -1779,151 +1821,160 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   return (
     <Popup isActive={isOpen} onClose={onClose}>
-      <div className="edit-article-v2">
-        <div className="edit-article-v2__container">
-          {/* Sticky Header */}
-          <div className="edit-article-v2__header">
-            <div className="edit-article-v2__header-content">
-              <input
-                type="text"
-                className="edit-article-v2__title-input"
-                value={meta.title}
-                onChange={(e) => setMeta((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder={texts.title}
-              />
-              <div className="edit-article-v2__status">{getStatusText()}</div>
+      {isLoading ? (
+        //   {true ? (
+        <ArticleEditSkeleton />
+      ) : (
+        <div className="edit-article-v2">
+          <div className="edit-article-v2__container">
+            {/* Sticky Header */}
+            <div className="edit-article-v2__header">
+              <div className="edit-article-v2__header-content">
+                <input
+                  type="text"
+                  className="edit-article-v2__title-input"
+                  value={meta.title}
+                  onChange={(e) => setMeta((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder={texts.title}
+                />
+                <div className="edit-article-v2__status">{getStatusText()}</div>
+              </div>
+              <div className="edit-article-v2__header-actions">
+                <button
+                  type="button"
+                  className="edit-article-v2__button edit-article-v2__button--cancel"
+                  onClick={onClose}
+                >
+                  {texts.cancel}
+                </button>
+                <button
+                  type="button"
+                  className="edit-article-v2__button edit-article-v2__button--publish"
+                  onClick={handlePublish}
+                  disabled={isPublishing || saveStatus === 'saving'}
+                >
+                  {isPublishing ? texts.publishing : texts.publish}
+                </button>
+              </div>
             </div>
-            <div className="edit-article-v2__header-actions">
-              <button
-                type="button"
-                className="edit-article-v2__button edit-article-v2__button--cancel"
-                onClick={onClose}
-              >
-                {texts.cancel}
-              </button>
-              <button
-                type="button"
-                className="edit-article-v2__button edit-article-v2__button--publish"
-                onClick={handlePublish}
-                disabled={isPublishing || saveStatus === 'saving'}
-              >
-                {isPublishing ? texts.publishing : texts.publish}
-              </button>
-            </div>
-          </div>
 
-          {/* Content */}
-          <div className="edit-article-v2__content article">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={blocks.map((b) => b.id)}
-                strategy={verticalListSortingStrategy}
+            {/* Content */}
+            <div className="edit-article-v2__content article">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="edit-article-v2__blocks">
-                  {blocks.map((block, index) => (
-                    <React.Fragment key={block.id}>
-                      <SortableBlock
-                        block={block}
-                        index={index}
-                        isFocused={focusBlockId === block.id}
-                        isSelected={selectedBlockId === block.id}
-                        showVkPlus={
-                          (vkInserter?.afterBlockId === block.id || focusBlockId === block.id) &&
-                          (((block.type === 'paragraph' ||
-                            block.type === 'title' ||
-                            block.type === 'subtitle' ||
-                            block.type === 'quote') &&
-                            block.text.trim() === '') ||
-                            (block.type === 'list' &&
-                              block.items.every((item) => item.trim() === '')))
-                        }
-                        onUpdate={updateBlock}
-                        onDelete={deleteBlock}
-                        onFocus={setFocusBlockId}
-                        onBlur={() => {
-                          setFocusBlockId(null);
-                          // Скрываем плюс при потере фокуса, если блок не пустой
-                          if (vkInserter?.afterBlockId === block.id) {
-                            const isBlockEmpty =
-                              (block.type === 'paragraph' ||
-                                block.type === 'title' ||
-                                block.type === 'subtitle' ||
-                                block.type === 'quote') &&
-                              block.text.trim() === '';
-                            const isListEmpty =
-                              block.type === 'list' &&
-                              block.items.every((item) => item.trim() === '');
-                            if (!isBlockEmpty && !isListEmpty) {
-                              setVkInserter(null);
+                <SortableContext
+                  items={blocks.map((b) => b.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="edit-article-v2__blocks">
+                    {blocks.map((block, index) => (
+                      <React.Fragment key={block.id}>
+                        <SortableBlock
+                          block={block}
+                          index={index}
+                          isFocused={focusBlockId === block.id}
+                          isSelected={selectedBlockId === block.id}
+                          showVkPlus={
+                            (vkInserter?.afterBlockId === block.id || focusBlockId === block.id) &&
+                            (((block.type === 'paragraph' ||
+                              block.type === 'title' ||
+                              block.type === 'subtitle' ||
+                              block.type === 'quote') &&
+                              block.text.trim() === '') ||
+                              (block.type === 'list' &&
+                                block.items.every((item) => item.trim() === '')))
+                          }
+                          onUpdate={updateBlock}
+                          onDelete={deleteBlock}
+                          onFocus={setFocusBlockId}
+                          onBlur={() => {
+                            setFocusBlockId(null);
+                            // Скрываем плюс при потере фокуса, если блок не пустой
+                            if (vkInserter?.afterBlockId === block.id) {
+                              const isBlockEmpty =
+                                (block.type === 'paragraph' ||
+                                  block.type === 'title' ||
+                                  block.type === 'subtitle' ||
+                                  block.type === 'quote') &&
+                                block.text.trim() === '';
+                              const isListEmpty =
+                                block.type === 'list' &&
+                                block.items.every((item) => item.trim() === '');
+                              if (!isBlockEmpty && !isListEmpty) {
+                                setVkInserter(null);
+                              }
                             }
+                          }}
+                          onSelect={setSelectedBlockId}
+                          onEnter={handleBlockEnter}
+                          onBackspace={(isEmpty: boolean, atStart?: boolean) =>
+                            handleBlockBackspace(block.id, isEmpty, atStart ?? false)
                           }
-                        }}
-                        onSelect={setSelectedBlockId}
-                        onEnter={handleBlockEnter}
-                        onBackspace={(isEmpty: boolean, atStart?: boolean) =>
-                          handleBlockBackspace(block.id, isEmpty, atStart ?? false)
-                        }
-                        onInsertAfter={insertBlockAfter}
-                        onDuplicate={duplicateBlock}
-                        onMoveUp={moveBlockUp}
-                        onMoveDown={moveBlockDown}
-                        onSlash={handleSlash}
-                        onFormat={handleFormat}
-                        onPaste={handlePaste}
-                        onConvertToCarousel={convertImageToCarousel}
-                        onVkPlusSelect={(type) => {
-                          insertBlockAfter(block.id, type);
-                          setVkInserter(null);
-                        }}
-                        onVkPlusClose={() => setVkInserter(null)}
-                        onEditCarousel={(blockId) => {
-                          const carouselBlock = blocks.find((b) => b.id === blockId);
-                          if (carouselBlock && carouselBlock.type === 'carousel') {
-                            setCarouselEditModal({
-                              blockId: carouselBlock.id,
-                              imageKeys: carouselBlock.imageKeys,
-                              caption: carouselBlock.caption,
-                            });
-                          }
-                        }}
-                      />
-                    </React.Fragment>
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+                          onInsertAfter={insertBlockAfter}
+                          onDuplicate={duplicateBlock}
+                          onMoveUp={moveBlockUp}
+                          onMoveDown={moveBlockDown}
+                          onSlash={handleSlash}
+                          onFormat={handleFormat}
+                          onPaste={handlePaste}
+                          onConvertToCarousel={convertImageToCarousel}
+                          onVkPlusSelect={(type) => {
+                            insertBlockAfter(block.id, type);
+                            setVkInserter(null);
+                          }}
+                          onVkPlusClose={() => setVkInserter(null)}
+                          onEditCarousel={(blockId) => {
+                            const carouselBlock = blocks.find((b) => b.id === blockId);
+                            if (carouselBlock && carouselBlock.type === 'carousel') {
+                              setCarouselEditModal({
+                                blockId: carouselBlock.id,
+                                imageKeys: carouselBlock.imageKeys,
+                                caption: carouselBlock.caption,
+                              });
+                            }
+                          }}
+                        />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
-            {/* Slash menu */}
-            {slashMenu && (
-              <SlashMenu
-                position={slashMenu.position}
-                onSelect={handleSlashSelect}
-                onClose={() => setSlashMenu(null)}
-                selectedIndex={slashMenuSelectedIndex}
-              />
-            )}
+              {/* Slash menu */}
+              {slashMenu && (
+                <SlashMenu
+                  position={slashMenu!.position}
+                  onSelect={handleSlashSelect}
+                  onClose={() => setSlashMenu(null)}
+                  selectedIndex={slashMenuSelectedIndex}
+                />
+              )}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Модал редактирования карусели */}
-      {carouselEditModal && (
-        <CarouselEditModal
-          blockId={carouselEditModal.blockId}
-          initialImageKeys={carouselEditModal.imageKeys}
-          initialCaption={carouselEditModal.caption}
-          onSave={(imageKeys, caption) => {
-            // Сохраняем снимок перед изменением карусели
-            saveSnapshot();
-            updateBlock(carouselEditModal.blockId, { imageKeys, caption } as Partial<Block>, true);
-            setCarouselEditModal(null);
-          }}
-          onCancel={() => setCarouselEditModal(null)}
-        />
+          {/* Модал редактирования карусели */}
+          {carouselEditModal && (
+            <CarouselEditModal
+              blockId={carouselEditModal!.blockId}
+              initialImageKeys={carouselEditModal!.imageKeys}
+              initialCaption={carouselEditModal!.caption}
+              onSave={(imageKeys, caption) => {
+                // Сохраняем снимок перед изменением карусели
+                saveSnapshot();
+                updateBlock(
+                  carouselEditModal!.blockId,
+                  { imageKeys, caption } as Partial<Block>,
+                  true
+                );
+                setCarouselEditModal(null);
+              }}
+              onCancel={() => setCarouselEditModal(null)}
+            />
+          )}
+        </div>
       )}
     </Popup>
   );

@@ -73,6 +73,95 @@ interface SortableTrackItemProps {
   onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
 }
 
+// Функция для извлечения первых двух строк текста из блоков статьи
+function getArticlePreviewText(article: IArticles): string {
+  if (!article.details || !Array.isArray(article.details)) {
+    return '';
+  }
+
+  const textParts: string[] = [];
+
+  for (const block of article.details) {
+    if (!block) continue;
+
+    const blockType = (block as any).type;
+
+    // Старый формат: type: 'text' с content
+    if (blockType === 'text') {
+      const content = (block as any).content;
+      const strong = (block as any).strong;
+
+      // Добавляем strong, если есть
+      if (strong && typeof strong === 'string' && strong.trim()) {
+        textParts.push(strong.trim());
+      }
+
+      // Добавляем content
+      if (typeof content === 'string' && content.trim()) {
+        textParts.push(content.trim());
+      } else if (Array.isArray(content)) {
+        const textStr = content.filter((item) => typeof item === 'string' && item.trim()).join(' ');
+        if (textStr) {
+          textParts.push(textStr);
+        }
+      }
+    }
+    // Новый формат: type: 'paragraph', 'quote'
+    else if (blockType === 'paragraph' || blockType === 'quote') {
+      const text = (block as any).text;
+      if (typeof text === 'string' && text.trim()) {
+        // Убираем markdown разметку для превью
+        const cleanText = text
+          .replace(/\*\*(.*?)\*\*/g, '$1') // Убираем **bold**
+          .replace(/_(.*?)_/g, '$1') // Убираем _italic_
+          .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Убираем [link](url)
+          .trim();
+        if (cleanText) {
+          textParts.push(cleanText);
+        }
+      }
+    }
+    // Списки
+    else if (blockType === 'list') {
+      const items = (block as any).items;
+      if (Array.isArray(items)) {
+        const listText = items.filter((item) => typeof item === 'string' && item.trim()).join(' ');
+        if (listText) {
+          textParts.push(listText);
+        }
+      }
+    }
+
+    // Если уже набрали достаточно текста (примерно 2 строки = 150-200 символов)
+    const combinedText = textParts.join(' ');
+    if (combinedText.length >= 150) {
+      break;
+    }
+  }
+
+  const fullText = textParts.join(' ');
+
+  if (!fullText) {
+    return '';
+  }
+
+  // Берем первые ~150 символов или до конца, если меньше
+  let preview = fullText.substring(0, 150);
+
+  // Обрезаем по последнему пробелу, чтобы не обрезать слово
+  const lastSpace = preview.lastIndexOf(' ');
+  if (lastSpace > 100 && fullText.length > 150) {
+    preview = preview.substring(0, lastSpace);
+  }
+
+  // Добавляем троеточие, если текст был обрезан
+  if (fullText.length > preview.length) {
+    preview += '...';
+  }
+
+  return preview;
+}
+
 function SortableTrackItem({ track, albumId, onDelete }: SortableTrackItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: track.id,
@@ -201,6 +290,271 @@ function UserDashboard() {
     message: string;
     variant?: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
+
+  // Состояние для загрузки обложки статьи
+  const [articleCoverUpload, setArticleCoverUpload] = useState<{
+    [articleId: string]: {
+      preview: string | null;
+      status: 'idle' | 'uploading' | 'uploaded' | 'error';
+      progress: number;
+      error: string | null;
+      dragActive: boolean;
+    };
+  }>({});
+  const articleCoverLocalPreviewRefs = useRef<{ [articleId: string]: string | null }>({});
+
+  // Функции для загрузки обложки статьи
+  const handleArticleCoverDrag = (articleId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          dragActive: true,
+        },
+      }));
+    }
+    if (e.type === 'dragleave') {
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          dragActive: false,
+        },
+      }));
+    }
+  };
+
+  const handleArticleCoverDrop = async (articleId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setArticleCoverUpload((prev) => ({
+      ...prev,
+      [articleId]: {
+        ...(prev[articleId] || {
+          preview: null,
+          status: 'idle',
+          progress: 0,
+          error: null,
+          dragActive: false,
+        }),
+        dragActive: false,
+      },
+    }));
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await handleArticleCoverFileUpload(articleId, file);
+    }
+  };
+
+  const handleArticleCoverFileInput = async (
+    articleId: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await handleArticleCoverFileUpload(articleId, file);
+    }
+    e.target.value = '';
+  };
+
+  const handleArticleCoverFileUpload = async (articleId: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          status: 'error',
+          error:
+            lang === 'ru' ? 'Пожалуйста, выберите файл изображения' : 'Please select an image file',
+        },
+      }));
+      return;
+    }
+
+    try {
+      // Сброс
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          preview: null,
+          status: 'uploading',
+          progress: 0,
+          error: null,
+          dragActive: false,
+        },
+      }));
+
+      // Локальное превью
+      if (articleCoverLocalPreviewRefs.current[articleId]) {
+        URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+      }
+      articleCoverLocalPreviewRefs.current[articleId] = URL.createObjectURL(file);
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          preview: articleCoverLocalPreviewRefs.current[articleId],
+        },
+      }));
+
+      // Загружаем файл
+      const { CURRENT_USER_CONFIG } = await import('@config/user');
+
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const baseFileName = file.name.replace(/\.[^/.]+$/, '');
+      const timestamp = Date.now();
+      const fileName = `article_cover_${timestamp}_${baseFileName}.${fileExtension}`;
+
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          progress: 30,
+        },
+      }));
+
+      const url = await uploadFile({
+        userId: CURRENT_USER_CONFIG.userId,
+        file,
+        category: 'articles',
+        fileName,
+      });
+
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          progress: 90,
+        },
+      }));
+
+      if (url) {
+        // Извлекаем imageKey из URL
+        const urlParts = url.split('/');
+        const fileNameFromUrl = urlParts[urlParts.length - 1]?.split('?')[0] || '';
+        const finalImageKey = fileNameFromUrl.replace(/\.(webp|jpg|jpeg|png)$/i, '');
+
+        // Обновляем статью через API
+        const token = getToken();
+        if (token) {
+          const article = articlesFromStore.find((a) => a.articleId === articleId);
+          if (article && article.id) {
+            const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                articleId: article.articleId,
+                nameArticle: article.nameArticle,
+                description: article.description,
+                img: finalImageKey,
+                date: article.date,
+                details: article.details,
+                lang: lang,
+                isDraft: article.isDraft ?? true,
+              }),
+            });
+
+            if (response.ok) {
+              // Обновляем список статей
+              dispatch(fetchArticles({ lang, force: true }));
+            }
+          }
+        }
+
+        // Освобождаем objectURL
+        if (articleCoverLocalPreviewRefs.current[articleId]) {
+          URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+          articleCoverLocalPreviewRefs.current[articleId] = null;
+        }
+
+        // Устанавливаем финальный URL
+        setArticleCoverUpload((prev) => ({
+          ...prev,
+          [articleId]: {
+            preview: url,
+            status: 'uploaded',
+            progress: 100,
+            error: null,
+            dragActive: false,
+          },
+        }));
+      } else {
+        setArticleCoverUpload((prev) => ({
+          ...prev,
+          [articleId]: {
+            ...(prev[articleId] || {
+              preview: null,
+              status: 'idle',
+              progress: 0,
+              error: null,
+              dragActive: false,
+            }),
+            status: 'error',
+            error: lang === 'ru' ? 'Ошибка загрузки обложки' : 'Failed to upload cover image',
+          },
+        }));
+      }
+    } catch (error) {
+      console.error('Error uploading article cover:', error);
+      setArticleCoverUpload((prev) => ({
+        ...prev,
+        [articleId]: {
+          ...(prev[articleId] || {
+            preview: null,
+            status: 'idle',
+            progress: 0,
+            error: null,
+            dragActive: false,
+          }),
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      }));
+    }
+  };
 
   // Проверка авторизации
   useEffect(() => {
@@ -472,6 +826,89 @@ function UserDashboard() {
         await performDeleteAlbum(albumId);
       },
     });
+  };
+
+  const handleDeleteArticle = async (article: IArticles) => {
+    // Показываем модальное окно подтверждения
+    setConfirmationModal({
+      isOpen: true,
+      title: lang === 'ru' ? 'Подтвердите действие' : 'Confirm action',
+      message:
+        lang === 'ru'
+          ? `Вы уверены, что хотите удалить статью "${article.nameArticle || article.articleId}"?`
+          : `Are you sure you want to delete the article "${article.nameArticle || article.articleId}"?`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmationModal(null);
+        await performDeleteArticle(article);
+      },
+    });
+  };
+
+  const performDeleteArticle = async (article: IArticles) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        setAlertModal({
+          isOpen: true,
+          title: lang === 'ru' ? 'Ошибка' : 'Error',
+          message:
+            lang === 'ru'
+              ? 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.'
+              : 'Error: you are not authorized. Please log in.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      // Нужен UUID id статьи для удаления
+      if (!article.id) {
+        setAlertModal({
+          isOpen: true,
+          title: lang === 'ru' ? 'Ошибка' : 'Error',
+          message:
+            lang === 'ru'
+              ? 'Ошибка: не удалось найти ID статьи для удаления.'
+              : 'Error: could not find article ID for deletion.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      // Удаляем статью через API
+      const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      // Обновляем Redux store
+      await dispatch(fetchArticles({ lang, force: true })).unwrap();
+
+      // Закрываем расширенный вид, если удаленная статья была открыта
+      if (expandedArticleId === article.articleId) {
+        setExpandedArticleId(null);
+      }
+
+      console.log('✅ Article deleted successfully:', article.articleId);
+    } catch (error) {
+      console.error('❌ Error deleting article:', error);
+      setAlertModal({
+        isOpen: true,
+        title: lang === 'ru' ? 'Ошибка' : 'Error',
+        message: `${
+          lang === 'ru' ? 'Ошибка при удалении статьи' : 'Error deleting article'
+        }: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
+    }
   };
 
   const performDeleteAlbum = async (albumId: string) => {
@@ -1589,76 +2026,71 @@ function UserDashboard() {
                           {articlesError}
                         </div>
                       ) : articlesFromStore && articlesFromStore.length > 0 ? (
-                        <div className="user-dashboard__albums-list">
-                          {articlesFromStore.map((article, index) => {
-                            const isExpanded = expandedArticleId === article.articleId;
-                            return (
-                              <React.Fragment key={article.articleId}>
-                                <div
-                                  className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
-                                  onClick={() =>
-                                    setExpandedArticleId(isExpanded ? null : article.articleId)
-                                  }
-                                  role="button"
-                                  tabIndex={0}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault();
-                                      setExpandedArticleId(isExpanded ? null : article.articleId);
-                                    }
-                                  }}
-                                  aria-label={isExpanded ? 'Collapse article' : 'Expand article'}
-                                >
-                                  <div className="user-dashboard__album-thumbnail">
-                                    {article.img ? (
-                                      <img
-                                        src={getUserImageUrl(article.img, 'articles')}
-                                        alt={article.nameArticle}
-                                        loading="lazy"
-                                        decoding="async"
-                                        onError={(e) => {
-                                          const img = e.target as HTMLImageElement;
-                                          const currentSrc = img.src;
-                                          if (!currentSrc.includes('&_retry=')) {
-                                            img.src = `${currentSrc}&_retry=${Date.now()}`;
-                                          }
-                                        }}
-                                      />
-                                    ) : (
-                                      <img
-                                        src="/images/album-placeholder.png"
-                                        alt={article.nameArticle}
-                                      />
-                                    )}
-                                  </div>
-                                  <div className="user-dashboard__album-info">
-                                    <div className="user-dashboard__album-title">
-                                      {article.nameArticle}
-                                    </div>
-                                    {article.date ? (
-                                      <div className="user-dashboard__album-date">
-                                        {formatDate(article.date)}
-                                      </div>
-                                    ) : null}
-                                  </div>
+                        <>
+                          <div className="user-dashboard__albums-list">
+                            {articlesFromStore.map((article, index) => {
+                              const isExpanded = expandedArticleId === article.articleId;
+                              return (
+                                <React.Fragment key={article.articleId}>
                                   <div
-                                    className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
+                                    className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
+                                    onClick={() =>
+                                      setExpandedArticleId(isExpanded ? null : article.articleId)
+                                    }
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setExpandedArticleId(isExpanded ? null : article.articleId);
+                                      }
+                                    }}
+                                    aria-label={isExpanded ? 'Collapse article' : 'Expand article'}
                                   >
-                                    {isExpanded ? '⌃' : '›'}
-                                  </div>
-                                </div>
-
-                                {isExpanded && (
-                                  <div className="user-dashboard__album-expanded">
-                                    {article.description && (
-                                      <div className="user-dashboard__article-description">
-                                        {article.description}
+                                    <div className="user-dashboard__album-thumbnail">
+                                      {article.img ? (
+                                        <img
+                                          src={getUserImageUrl(article.img, 'articles')}
+                                          alt={article.nameArticle}
+                                          loading="lazy"
+                                          decoding="async"
+                                          onError={(e) => {
+                                            const img = e.target as HTMLImageElement;
+                                            const currentSrc = img.src;
+                                            if (!currentSrc.includes('&_retry=')) {
+                                              img.src = `${currentSrc}&_retry=${Date.now()}`;
+                                            }
+                                          }}
+                                        />
+                                      ) : (
+                                        <img
+                                          src="/images/album-placeholder.png"
+                                          alt={article.nameArticle}
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="user-dashboard__album-info">
+                                      <div className="user-dashboard__album-title">
+                                        {article.nameArticle}
                                       </div>
-                                    )}
-                                    <div className="user-dashboard__article-actions">
+                                      {article.date ? (
+                                        <div className="user-dashboard__album-date">
+                                          {formatDate(article.date)}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    <div
+                                      className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
+                                    >
+                                      {isExpanded ? '⌃' : '›'}
+                                    </div>
+                                  </div>
+
+                                  {isExpanded && (
+                                    <div className="user-dashboard__album-expanded user-dashboard__album-expanded--article">
                                       <button
                                         type="button"
-                                        className="user-dashboard__edit-button"
+                                        className="user-dashboard__edit-button user-dashboard__edit-button--top"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setEditArticleModal({
@@ -1669,17 +2101,184 @@ function UserDashboard() {
                                       >
                                         {lang === 'ru' ? 'Редактировать' : 'Edit'}
                                       </button>
-                                    </div>
-                                  </div>
-                                )}
 
-                                {index < articlesFromStore.length - 1 && (
-                                  <div className="user-dashboard__album-divider"></div>
-                                )}
-                              </React.Fragment>
-                            );
-                          })}
-                        </div>
+                                      {/* Article Cover Upload */}
+                                      <div className="user-dashboard__article-cover-section">
+                                        <label className="user-dashboard__article-cover-label">
+                                          {lang === 'ru' ? 'Обложка статьи' : 'Article Cover'}
+                                        </label>
+
+                                        <input
+                                          type="file"
+                                          id={`article-cover-input-${article.articleId}`}
+                                          accept="image/*"
+                                          className="user-dashboard__article-cover-file-input"
+                                          onChange={(e) =>
+                                            handleArticleCoverFileInput(article.articleId, e)
+                                          }
+                                        />
+
+                                        {(() => {
+                                          const coverState = articleCoverUpload[article.articleId];
+                                          const hasCover = article.img || coverState?.preview;
+
+                                          if (hasCover) {
+                                            const previewUrl =
+                                              coverState?.preview ||
+                                              getUserImageUrl(article.img || '', 'articles');
+                                            return (
+                                              <div className="user-dashboard__article-cover-wrap">
+                                                <div className="user-dashboard__article-cover-preview">
+                                                  <img
+                                                    src={previewUrl}
+                                                    alt="Article cover preview"
+                                                    className="user-dashboard__article-cover-image"
+                                                  />
+                                                </div>
+
+                                                <div className="user-dashboard__article-cover-actions">
+                                                  <div className="user-dashboard__article-cover-buttons">
+                                                    <label
+                                                      htmlFor={`article-cover-input-${article.articleId}`}
+                                                      className="user-dashboard__article-cover-button"
+                                                    >
+                                                      {lang === 'ru' ? 'Заменить' : 'Replace'}
+                                                    </label>
+                                                  </div>
+
+                                                  {coverState?.status === 'uploading' && (
+                                                    <div className="user-dashboard__article-cover-status">
+                                                      <div className="user-dashboard__article-cover-progress">
+                                                        <div
+                                                          className="user-dashboard__article-cover-progress-bar"
+                                                          style={{
+                                                            width: `${coverState.progress}%`,
+                                                          }}
+                                                        />
+                                                      </div>
+                                                      <span className="user-dashboard__article-cover-status-text">
+                                                        {lang === 'ru'
+                                                          ? 'Загрузка...'
+                                                          : 'Uploading...'}
+                                                      </span>
+                                                    </div>
+                                                  )}
+
+                                                  {coverState?.status === 'uploaded' && (
+                                                    <div className="user-dashboard__article-cover-status">
+                                                      <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--success">
+                                                        {lang === 'ru' ? 'Загружено' : 'Uploaded'}
+                                                      </span>
+                                                    </div>
+                                                  )}
+
+                                                  {coverState?.status === 'error' &&
+                                                    coverState.error && (
+                                                      <div className="user-dashboard__article-cover-status">
+                                                        <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--error">
+                                                          {lang === 'ru' ? 'Ошибка' : 'Error'}:{' '}
+                                                          {coverState.error}
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+
+                                          return (
+                                            <div
+                                              className={`user-dashboard__article-cover-dropzone ${coverState?.dragActive ? 'user-dashboard__article-cover-dropzone--active' : ''}`}
+                                              onDragEnter={(e) =>
+                                                handleArticleCoverDrag(article.articleId, e)
+                                              }
+                                              onDragLeave={(e) =>
+                                                handleArticleCoverDrag(article.articleId, e)
+                                              }
+                                              onDragOver={(e) =>
+                                                handleArticleCoverDrag(article.articleId, e)
+                                              }
+                                              onDrop={(e) =>
+                                                handleArticleCoverDrop(article.articleId, e)
+                                              }
+                                            >
+                                              <div className="user-dashboard__article-cover-dropzone-text">
+                                                {lang === 'ru'
+                                                  ? 'Перетащите изображение сюда или'
+                                                  : 'Drag image here or'}
+                                              </div>
+                                              <label
+                                                htmlFor={`article-cover-input-${article.articleId}`}
+                                                className="user-dashboard__article-cover-file-label"
+                                              >
+                                                {lang === 'ru' ? 'Выберите файл' : 'Choose file'}
+                                              </label>
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+
+                                      {(() => {
+                                        const previewText = getArticlePreviewText(article);
+                                        return previewText ? (
+                                          <div className="user-dashboard__article-description">
+                                            {previewText}
+                                          </div>
+                                        ) : null;
+                                      })()}
+                                      <div className="user-dashboard__article-actions">
+                                        <button
+                                          type="button"
+                                          className="user-dashboard__delete-article-button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteArticle(article);
+                                          }}
+                                          title={
+                                            lang === 'ru' ? 'Удалить статью' : 'Delete article'
+                                          }
+                                          aria-label={
+                                            lang === 'ru' ? 'Удалить статью' : 'Delete article'
+                                          }
+                                        >
+                                          {lang === 'ru' ? 'Удалить статью' : 'Delete article'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {index < articlesFromStore.length - 1 && (
+                                    <div className="user-dashboard__album-divider"></div>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+
+                          <button
+                            type="button"
+                            className="user-dashboard__upload-button"
+                            onClick={() => {
+                              // Создаем новую пустую статью
+                              const newArticle: IArticles = {
+                                articleId: `new-${Date.now()}`,
+                                nameArticle: '',
+                                img: '',
+                                date: new Date().toISOString().split('T')[0],
+                                details: [],
+                                description: '',
+                                isDraft: true,
+                              };
+                              setEditArticleModal({
+                                isOpen: true,
+                                article: newArticle,
+                              });
+                            }}
+                          >
+                            <span>+</span>
+                            <span>{ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}</span>
+                          </button>
+                        </>
                       ) : (
                         <div className="user-dashboard__posts-prompt">
                           <div className="user-dashboard__posts-prompt-text">
@@ -1689,15 +2288,19 @@ function UserDashboard() {
                             type="button"
                             className="user-dashboard__new-post-button"
                             onClick={() => {
-                              // TODO: Implement create new article
-                              setAlertModal({
+                              // Создаем новую пустую статью
+                              const newArticle: IArticles = {
+                                articleId: `new-${Date.now()}`,
+                                nameArticle: '',
+                                img: '',
+                                date: new Date().toISOString().split('T')[0],
+                                details: [],
+                                description: '',
+                                isDraft: true,
+                              };
+                              setEditArticleModal({
                                 isOpen: true,
-                                title: lang === 'ru' ? 'Информация' : 'Info',
-                                message:
-                                  lang === 'ru'
-                                    ? 'Создание новой статьи будет реализовано позже'
-                                    : 'Creating new articles will be implemented later',
-                                variant: 'info',
+                                article: newArticle,
                               });
                             }}
                           >
@@ -1721,15 +2324,19 @@ function UserDashboard() {
                           type="button"
                           className="user-dashboard__new-post-button"
                           onClick={() => {
-                            // TODO: Implement create new article
-                            setAlertModal({
+                            // Создаем новую пустую статью
+                            const newArticle: IArticles = {
+                              articleId: `new-${Date.now()}`,
+                              nameArticle: '',
+                              img: '',
+                              date: new Date().toISOString().split('T')[0],
+                              details: [],
+                              description: '',
+                              isDraft: true,
+                            };
+                            setEditArticleModal({
                               isOpen: true,
-                              title: lang === 'ru' ? 'Информация' : 'Info',
-                              message:
-                                lang === 'ru'
-                                  ? 'Создание новой статьи будет реализовано позже'
-                                  : 'Creating new articles will be implemented later',
-                              variant: 'info',
+                              article: newArticle,
                             });
                           }}
                         >

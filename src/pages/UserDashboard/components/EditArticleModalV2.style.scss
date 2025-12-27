@@ -94,6 +94,165 @@ dialog {
       gap: var(--ms-0);
     }
 
+    &__cover-section {
+      padding: var(--ms-1);
+      border-bottom: 1px solid var(--iron-slate);
+    }
+
+    &__cover-label {
+      display: block;
+      color: var(--white);
+      font-size: var(--ms-0);
+      font-weight: 500;
+      margin-bottom: var(--ms-01);
+      text-transform: none !important;
+      letter-spacing: normal !important;
+    }
+
+    &__cover-file-input {
+      display: none;
+    }
+
+    &__cover-dropzone {
+      position: relative;
+      display: flex;
+      padding: var(--ms-2);
+      background: var(--deep-black);
+      border: 2px dashed var(--iron-slate);
+      border-radius: var(--ms-01);
+      transition: all 0.2s;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      min-height: 120px;
+
+      &:hover {
+        border-color: var(--graphite-green);
+        background: rgba(var(--graphite-green-rgb) / 5%);
+      }
+
+      &--active {
+        border-color: var(--dark-greenish-yellow);
+        background: var(--graphite-green);
+      }
+    }
+
+    &__cover-dropzone-text {
+      color: var(--light-grey);
+      font-size: var(--ms-0);
+      text-align: center;
+      margin-bottom: var(--ms-01);
+    }
+
+    &__cover-file-label {
+      cursor: pointer;
+      display: inline-block;
+
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--iron-slate),
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0,
+        $padding: var(--ms-01) var(--ms-0),
+        $border: 0,
+        $border-radius: var(--ms-01)
+      );
+    }
+
+    &__cover-wrap {
+      display: flex;
+      gap: var(--ms-1);
+      align-items: flex-start;
+    }
+
+    &__cover-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: 160px;
+      aspect-ratio: 1 / 1;
+      background: var(--iron-slate);
+      border-radius: var(--ms-01);
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 45%);
+      flex-shrink: 0;
+    }
+
+    &__cover-image {
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      margin-bottom: 0;
+    }
+
+    &__cover-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+      flex: 1;
+    }
+
+    &__cover-buttons {
+      display: flex;
+      gap: var(--ms-01);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    &__cover-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--iron-slate),
+        $hover-color: var(--white),
+        $hover-background: var(--graphite-green),
+        $margin: 0,
+        $padding: var(--ms-01) var(--ms-0),
+        $border: 0,
+        $border-radius: var(--ms-01)
+      );
+    }
+
+    &__cover-status {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+      margin-top: var(--ms-01);
+    }
+
+    &__cover-progress {
+      width: 100%;
+      height: 4px;
+      background: var(--iron-slate);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    &__cover-progress-bar {
+      height: 100%;
+      background: var(--dark-greenish-yellow);
+      transition: width 0.3s ease;
+    }
+
+    &__cover-status-text {
+      color: var(--warm-concrete);
+      font-size: var(--ms-01);
+      line-height: 1.4;
+
+      &--success {
+        color: var(--dark-greenish-yellow);
+      }
+
+      &--error {
+        color: rgb(220 38 38);
+      }
+    }
+
     &__button {
       &--cancel {
         @include button-variant(
@@ -183,8 +342,6 @@ dialog {
       }
 
       .uncollapse {
-        margin: var(--ms-3) 0;
-
         img {
           max-inline-size: 100%;
           block-size: auto;

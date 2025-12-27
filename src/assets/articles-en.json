@@ -13,8 +13,11 @@
       {
         "type": "image",
         "img": "yaroslav_zhoock",
+        "alt": "Yaroslav Zhuk."
+      },
+      {
+        "type": "text",
         "strong": "I don't like people.",
-        "alt": "Yaroslav Zhuk.",
         "content": "Especially stupid people. I laugh at them and humiliate them. It amuses me. That's why I write music that reflects the way I prefer to communicate. It's not the best way to achieve success if you're in a rock band."
       },
       {
@@ -148,8 +151,10 @@
       {
         "type": "image",
         "img": "recording_vocals_album_session_23",
+        "alt": "vocal recording, album session 23."
+      },
+      {
         "subtitle": "microphone",
-        "alt": "vocal recording, album session 23.",
         "content": "GoodFly 251"
       },
       {
@@ -160,8 +165,11 @@
       {
         "type": "image",
         "img": "recording_guitar_cabinet_album_session_23",
+        "alt": "Guitar Cabinet Recording, Album Session 23."
+      },
+      {
+        "type": "text",
         "subtitle": "guitar",
-        "alt": "Guitar Cabinet Recording, Album Session 23.",
         "content": ["Fender Mustang"]
       },
       {
@@ -376,19 +384,31 @@
     "img": "recording_album_EP_equipment",
     "details": [
       {
+        "type": "text",
+        "title": "Mixing console"
+      },
+      {
         "type": "image",
         "img": "mixing_console_Solid_State_Logic_SSL_6000_E",
-        "title": "Mixing console",
-        "alt": "Solid State Logic SSL 6000 E console (32 channels).",
+        "alt": "Solid State Logic SSL 6000 E console (32 channels)."
+      },
+      {
+        "type": "text",
         "content": ["Solid State Logic SSL 6000 E (32 channels)"]
+      },
+      {
+        "type": "text",
+        "title": "Drums",
+        "content": ["Neumann TLM 170"]
       },
       {
         "type": "image",
         "img": "drum_recording_album_session_EP",
-        "title": "Drums",
-        "subtitle": "Ambient mic",
-        "alt": "drum recording, EP album session.",
-        "content": ["Neumann TLM 170"]
+        "alt": "drum recording, EP album session."
+      },
+      {
+        "type": "text",
+        "subtitle": "Ambient mic"
       },
       {
         "type": "text",
@@ -449,11 +469,16 @@
         "content": ["GoodFly C12", "AKG C24 or Shure SM7 (room)"]
       },
       {
+        "type": "text",
+        "title": "Guitar"
+      },
+      {
         "type": "image",
         "img": "guitar_recording_album_session_EP",
-        "title": "Guitar",
+        "alt": "guitar recording, EP album session."
+      },
+      {
         "subtitle": "Guitars",
-        "alt": "guitar recording, EP album session.",
         "content": ["Fender Mustang", "Fender Jaguar", "Takamine acoustic guitar"]
       },
       {
@@ -500,11 +525,16 @@
         "content": ["Evidence Audio The Forte", "Evidence Audio The Lyric HG"]
       },
       {
+        "type": "text",
+        "title": "Vocals"
+      },
+      {
         "type": "image",
         "img": "mixing_process_album_session_EP",
-        "title": "Vocals",
+        "alt": "mixing process, EP album session."
+      },
+      {
         "subtitle": "Microphone",
-        "alt": "mixing process, EP album session.",
         "content": ["Joemeek jm47 Black"]
       },
       {

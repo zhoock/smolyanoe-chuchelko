@@ -56,6 +56,7 @@ interface CreateArticleRequest {
   date: string;
   details: unknown[];
   lang: SupportedLang;
+  isDraft?: boolean;
 }
 
 interface UpdateArticleRequest {
@@ -191,7 +192,9 @@ export const handler: Handler = async (
       }
 
       // Используем RETURNING чтобы получить UUID созданной статьи
-      // По умолчанию создаем как черновик (is_draft = true)
+      // По умолчанию создаем как черновик (is_draft = true), если не указано иное
+      const isDraft = data.isDraft !== undefined ? data.isDraft : true;
+
       const result = await query<ArticleRow>(
         `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, NOW(), NOW())
@@ -205,7 +208,7 @@ export const handler: Handler = async (
           data.date,
           JSON.stringify(data.details),
           data.lang,
-          true, // is_draft = true по умолчанию (черновик)
+          isDraft, // Используем переданное значение или true по умолчанию
         ]
       );
 
