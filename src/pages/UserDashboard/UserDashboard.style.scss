@@ -533,7 +533,8 @@ dialog {
 
     &__article-actions {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: center;
       gap: var(--ms-01);
       margin-top: var(--ms-0);
     }
@@ -549,11 +550,6 @@ dialog {
         $border: 0,
         $border-radius: var(--ms-01)
       );
-
-      &--top {
-        margin-bottom: var(--ms-0);
-        align-self: flex-start;
-      }
     }
 
     &__delete-article-button {

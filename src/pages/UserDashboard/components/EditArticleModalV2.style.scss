@@ -653,21 +653,17 @@ dialog {
       border-radius: var(--ms-01);
       overflow: hidden;
       cursor: pointer;
-
-      img {
-        // Стили определены выше для соблюдения специфичности
-      }
     }
 
-    // Контейнер для бейджа и кнопки редактирования в правом верхнем углу
+    // Контейнер для кнопки редактирования и бейджа в правом верхнем углу
     &__carousel-top-right {
       position: absolute;
       top: var(--ms-01);
       right: var(--ms-01);
       z-index: 3;
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
+      flex-direction: row;
+      align-items: center;
       gap: var(--ms-01);
     }
 

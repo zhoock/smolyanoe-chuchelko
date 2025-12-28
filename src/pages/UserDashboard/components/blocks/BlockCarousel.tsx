@@ -101,11 +101,8 @@ export function BlockCarousel({
         <div className="edit-article-v2__carousel-image-wrapper">
           <img src={currentImageUrl} alt={`Image ${currentIndex + 1} of ${totalImages}`} />
 
-          {/* Бейдж "1 из N" и кнопка "Редактировать карусель" в правом верхнем углу */}
+          {/* Кнопка "Редактировать карусель" и бейдж "1 из N" в правом верхнем углу */}
           <div className="edit-article-v2__carousel-top-right">
-            <div className="edit-article-v2__carousel-badge">
-              {currentIndex + 1} из {totalImages}
-            </div>
             {(showEditButton || isSelected) && onEdit && (
               <button
                 type="button"
@@ -115,6 +112,9 @@ export function BlockCarousel({
                 Редактировать карусель
               </button>
             )}
+            <div className="edit-article-v2__carousel-badge">
+              {currentIndex + 1} из {totalImages}
+            </div>
           </div>
 
           {/* Стрелки навигации */}

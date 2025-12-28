@@ -53,6 +53,7 @@ import { EditLyricsModal } from './components/EditLyricsModal';
 import { PreviewLyricsModal } from './components/PreviewLyricsModal';
 import { EditAlbumModal, type AlbumFormData } from './components/EditAlbumModal';
 import { EditArticleModalV2 } from './components/EditArticleModalV2';
+import { ArticlesListSkeleton } from './components/ArticlesListSkeleton';
 import { SyncLyricsModal } from './components/SyncLyricsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import type { IAlbums, IArticles } from '@models';
@@ -2017,9 +2018,7 @@ function UserDashboard() {
                     </h3>
                     <div className="user-dashboard__section">
                       {articlesStatus === 'loading' ? (
-                        <div className="user-dashboard__loading">
-                          {lang === 'ru' ? 'Загрузка...' : 'Loading...'}
-                        </div>
+                        <ArticlesListSkeleton count={4} />
                       ) : articlesError ? (
                         <div className="user-dashboard__error">
                           {lang === 'ru' ? 'Ошибка загрузки статей' : 'Error loading articles'}:{' '}
@@ -2088,20 +2087,6 @@ function UserDashboard() {
 
                                   {isExpanded && (
                                     <div className="user-dashboard__album-expanded user-dashboard__album-expanded--article">
-                                      <button
-                                        type="button"
-                                        className="user-dashboard__edit-button user-dashboard__edit-button--top"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditArticleModal({
-                                            isOpen: true,
-                                            article: article,
-                                          });
-                                        }}
-                                      >
-                                        {lang === 'ru' ? 'Редактировать' : 'Edit'}
-                                      </button>
-
                                       {/* Article Cover Upload */}
                                       <div className="user-dashboard__article-cover-section">
                                         <label className="user-dashboard__article-cover-label">
@@ -2227,6 +2212,19 @@ function UserDashboard() {
                                         ) : null;
                                       })()}
                                       <div className="user-dashboard__article-actions">
+                                        <button
+                                          type="button"
+                                          className="user-dashboard__edit-button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditArticleModal({
+                                              isOpen: true,
+                                              article: article,
+                                            });
+                                          }}
+                                        >
+                                          {lang === 'ru' ? 'Редактировать' : 'Edit'}
+                                        </button>
                                         <button
                                           type="button"
                                           className="user-dashboard__delete-article-button"

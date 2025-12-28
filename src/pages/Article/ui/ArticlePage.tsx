@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 
 import { getUserImageUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
-import { Loader } from '@shared/ui/loader';
+import { ArticleSkeleton } from './ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { ImageCarousel } from '@shared/ui/image-carousel';
 import { useLang } from '@app/providers/lang';
@@ -211,7 +211,7 @@ function ArticleContent({
 }: ArticleContentProps) {
   if (!article) {
     if (status === 'loading' || status === 'idle') {
-      return <Loader />;
+      return <ArticleSkeleton />;
     }
 
     if (status === 'failed') {
