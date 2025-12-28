@@ -72,6 +72,7 @@ interface SortableTrackItemProps {
   track: TrackData;
   albumId: string;
   onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
+  onTitleChange?: (albumId: string, trackId: string, newTitle: string) => Promise<void>;
 }
 
 // Функция для извлечения первых двух строк текста из блоков статьи
@@ -163,15 +164,53 @@ function getArticlePreviewText(article: IArticles): string {
   return preview;
 }
 
-function SortableTrackItem({ track, albumId, onDelete }: SortableTrackItemProps) {
+function SortableTrackItem({ track, albumId, onDelete, onTitleChange }: SortableTrackItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: track.id,
   });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(track.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Синхронизируем editedTitle с track.title при изменении track
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedTitle(track.title);
+    }
+  }, [track.title, isEditing]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleTitleClick = () => {
+    setIsEditing(true);
+    setEditedTitle(track.title);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleTitleBlur = async () => {
+    if (editedTitle.trim() !== track.title && editedTitle.trim() !== '' && onTitleChange) {
+      // Сохраняем изменения
+      await onTitleChange(albumId, track.id, editedTitle.trim());
+    } else if (editedTitle.trim() === '') {
+      // Если поле пустое, возвращаем исходное значение
+      setEditedTitle(track.title);
+    }
+    setIsEditing(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inputRef.current?.blur();
+    } else if (e.key === 'Escape') {
+      setEditedTitle(track.title);
+      setIsEditing(false);
+    }
   };
 
   return (
@@ -192,21 +231,43 @@ function SortableTrackItem({ track, albumId, onDelete }: SortableTrackItemProps)
         <span className="user-dashboard__track-drag-icon">⋮⋮</span>
       </div>
       <div className="user-dashboard__track-number">{track.id.padStart(2, '0')}</div>
-      <div className="user-dashboard__track-title">{track.title}</div>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          className="user-dashboard__track-title-input"
+          value={editedTitle}
+          onChange={(e) => setEditedTitle(e.target.value)}
+          onBlur={handleTitleBlur}
+          onKeyDown={handleTitleKeyDown}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <div
+          className="user-dashboard__track-title"
+          onClick={handleTitleClick}
+          title="Нажмите для редактирования"
+        >
+          {track.title}
+        </div>
+      )}
       <div className="user-dashboard__track-duration-container">
         <div className="user-dashboard__track-duration">{track.duration}</div>
-        <button
-          type="button"
-          className="user-dashboard__track-delete-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(albumId, track.id, track.title);
-          }}
-          title="Удалить трек"
-          aria-label="Удалить трек"
-        >
-          Удалить трек
-        </button>
+        {!isEditing && (
+          <button
+            type="button"
+            className="user-dashboard__track-delete-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(albumId, track.id, track.title);
+            }}
+            title="Удалить трек"
+            aria-label="Удалить трек"
+          >
+            Удалить трек
+          </button>
+        )}
       </div>
     </div>
   );
@@ -764,6 +825,66 @@ function UserDashboard() {
         await performDeleteTrack(albumId, trackId);
       },
     });
+  };
+
+  // Обновление названия трека
+  const handleTrackTitleChange = async (albumId: string, trackId: string, newTitle: string) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      // Вызываем API для обновления названия
+      const response = await fetch('/api/update-track-title', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          albumId,
+          trackId,
+          title: newTitle,
+          lang,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as any)?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      // Обновляем локальное состояние
+      setAlbumsData((prev) =>
+        prev.map((album) =>
+          album.albumId === albumId || album.id === albumId
+            ? {
+                ...album,
+                tracks: album.tracks.map((t) => (t.id === trackId ? { ...t, title: newTitle } : t)),
+              }
+            : album
+        )
+      );
+
+      console.log('✅ Track title updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating track title:', error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Ошибка',
+        message: `Ошибка при обновлении названия трека: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
+      // Откатываем изменения в локальном состоянии
+      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+    }
   };
 
   const performDeleteTrack = async (albumId: string, trackId: string) => {
@@ -1705,310 +1826,343 @@ function UserDashboard() {
                       {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                     </h3>
                     <div className="user-dashboard__section">
-                      <div className="user-dashboard__albums-list">
-                        {albumsData.map((album, index) => {
-                          const isExpanded = expandedAlbumId === album.id;
-                          return (
-                            <React.Fragment key={album.id}>
-                              <div
-                                className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
-                                onClick={() => toggleAlbum(album.id)}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    toggleAlbum(album.id);
-                                  }
-                                }}
-                                aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
-                              >
-                                <div className="user-dashboard__album-thumbnail">
-                                  {album.cover ? (
-                                    <img
-                                      key={`cover-${album.id}-${album.cover}-${album.coverUpdatedAt || ''}`}
-                                      src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
-                                      alt={album.title}
-                                      onError={(e) => {
-                                        const img = e.target as HTMLImageElement;
-                                        // При ошибке загрузки добавляем timestamp для принудительной перезагрузки
-                                        const currentSrc = img.src;
-                                        if (!currentSrc.includes('&_retry=')) {
-                                          img.src = `${currentSrc.split('&v=')[0]}&v=${album.cover}&_retry=${Date.now()}`;
-                                        }
-                                      }}
-                                    />
-                                  ) : (
-                                    <img src="/images/album-placeholder.png" alt={album.title} />
-                                  )}
-                                </div>
-                                <div className="user-dashboard__album-info">
-                                  <div className="user-dashboard__album-title">{album.title}</div>
-                                  {album.releaseDate ? (
-                                    <div className="user-dashboard__album-date">
-                                      {album.releaseDate}
-                                    </div>
-                                  ) : (
-                                    <div className="user-dashboard__album-year">{album.year}</div>
-                                  )}
-                                </div>
-                                <div
-                                  className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
-                                >
-                                  {isExpanded ? '⌃' : '›'}
-                                </div>
-                              </div>
-
-                              {isExpanded && (
-                                <div className="user-dashboard__album-expanded">
-                                  {/* Edit Album button */}
-                                  <button
-                                    type="button"
-                                    className="user-dashboard__edit-album-button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditAlbumModal({ isOpen: true, albumId: album.id });
-                                    }}
-                                  >
-                                    {ui?.dashboard?.editAlbum ?? 'Edit Album'}
-                                  </button>
-
-                                  {/* Track upload section */}
+                      {albumsData.length > 0 ? (
+                        <>
+                          <div className="user-dashboard__albums-list">
+                            {albumsData.map((album, index) => {
+                              const isExpanded = expandedAlbumId === album.id;
+                              return (
+                                <React.Fragment key={album.id}>
                                   <div
-                                    className="user-dashboard__track-upload"
-                                    onDrop={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      const files = e.dataTransfer.files;
-                                      if (files.length > 0) {
-                                        handleTrackUpload(album.id, files);
+                                    className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
+                                    onClick={() => toggleAlbum(album.id)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        toggleAlbum(album.id);
                                       }
                                     }}
-                                    onDragOver={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                    }}
-                                    onDragEnter={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                    }}
+                                    aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
                                   >
-                                    {isUploadingTracks[album.id] ? (
-                                      <div className="user-dashboard__track-upload-progress">
-                                        <div className="user-dashboard__track-upload-text">
-                                          Uploading tracks...{' '}
-                                          {Math.round(uploadProgress[album.id] || 0)}%
-                                        </div>
-                                        <div className="user-dashboard__track-upload-progress-bar">
-                                          <div
-                                            className="user-dashboard__track-upload-progress-fill"
-                                            style={{
-                                              width: `${uploadProgress[album.id] || 0}%`,
-                                              transition: 'width 0.3s ease',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <>
-                                        <div className="user-dashboard__track-upload-text">
-                                          {ui?.dashboard?.dropTracksHere ?? 'Drop tracks here or'}
-                                        </div>
-                                        <input
-                                          ref={(el) => {
-                                            fileInputRefs.current[album.id] = el;
-                                          }}
-                                          type="file"
-                                          multiple
-                                          accept="audio/*"
-                                          style={{ display: 'none' }}
-                                          onChange={(e) => {
-                                            const files = e.target.files;
-                                            if (files && files.length > 0) {
-                                              handleTrackUpload(album.id, files);
-                                            }
-                                            // Сбрасываем input, чтобы можно было загрузить те же файлы снова
-                                            if (e.target) {
-                                              e.target.value = '';
+                                    <div className="user-dashboard__album-thumbnail">
+                                      {album.cover ? (
+                                        <img
+                                          key={`cover-${album.id}-${album.cover}-${album.coverUpdatedAt || ''}`}
+                                          src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
+                                          alt={album.title}
+                                          onError={(e) => {
+                                            const img = e.target as HTMLImageElement;
+                                            // При ошибке загрузки добавляем timestamp для принудительной перезагрузки
+                                            const currentSrc = img.src;
+                                            if (!currentSrc.includes('&_retry=')) {
+                                              img.src = `${currentSrc.split('&v=')[0]}&v=${album.cover}&_retry=${Date.now()}`;
                                             }
                                           }}
                                         />
-                                        <button
-                                          type="button"
-                                          className="user-dashboard__choose-files-button"
-                                          disabled={isUploadingTracks[album.id]}
-                                          onClick={() => {
-                                            const input = fileInputRefs.current[album.id];
-                                            if (input) {
-                                              input.click();
-                                            }
-                                          }}
-                                        >
-                                          {ui?.dashboard?.chooseFiles ?? 'Choose files'}
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-
-                                  {/* Tracks list with drag-and-drop */}
-                                  <DndContext
-                                    sensors={sensors}
-                                    collisionDetection={closestCenter}
-                                    onDragEnd={(event) => handleDragEnd(event, album.id)}
-                                  >
-                                    <SortableContext
-                                      items={album.tracks.map((track) => track.id)}
-                                      strategy={verticalListSortingStrategy}
+                                      ) : (
+                                        <img
+                                          src="/images/album-placeholder.png"
+                                          alt={album.title}
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="user-dashboard__album-info">
+                                      <div className="user-dashboard__album-title">
+                                        {album.title}
+                                      </div>
+                                      {album.releaseDate ? (
+                                        <div className="user-dashboard__album-date">
+                                          {album.releaseDate}
+                                        </div>
+                                      ) : (
+                                        <div className="user-dashboard__album-year">
+                                          {album.year}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div
+                                      className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
                                     >
-                                      <div className="user-dashboard__tracks-list">
-                                        {album.tracks.map((track) => (
-                                          <SortableTrackItem
-                                            key={track.id}
-                                            track={track}
-                                            albumId={album.albumId}
-                                            onDelete={handleDeleteTrack}
-                                          />
-                                        ))}
-                                      </div>
-                                    </SortableContext>
-                                  </DndContext>
-
-                                  {/* Lyrics section */}
-                                  <div className="user-dashboard__lyrics-section">
-                                    <h4 className="user-dashboard__lyrics-title">
-                                      {ui?.dashboard?.lyrics ?? 'Lyrics'}
-                                    </h4>
-                                    <div className="user-dashboard__lyrics-table">
-                                      <div className="user-dashboard__lyrics-header">
-                                        <div className="user-dashboard__lyrics-header-cell">
-                                          {ui?.dashboard?.track ?? 'Track'}
-                                        </div>
-                                        <div className="user-dashboard__lyrics-header-cell">
-                                          {ui?.dashboard?.status ?? 'Status'}
-                                        </div>
-                                        <div className="user-dashboard__lyrics-header-cell">
-                                          {ui?.dashboard?.actions ?? 'Actions'}
-                                        </div>
-                                      </div>
-                                      {album.tracks.map((track) => (
-                                        <div key={track.id} className="user-dashboard__lyrics-row">
-                                          <div className="user-dashboard__lyrics-cell">
-                                            {track.title}
-                                          </div>
-                                          <div className="user-dashboard__lyrics-cell">
-                                            {getLyricsStatusText(track.lyricsStatus)}
-                                          </div>
-                                          <div className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions">
-                                            {(() => {
-                                              // Вычисляем hasSyncedLyrics для логирования
-                                              const hasSyncedLyrics =
-                                                Array.isArray(track.syncedLyrics) &&
-                                                track.syncedLyrics.length > 0 &&
-                                                track.syncedLyrics.some(
-                                                  (line) => line.startTime > 0
-                                                );
-
-                                              // #region agent log
-                                              if (track.lyricsStatus === 'synced') {
-                                                fetch(
-                                                  'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
-                                                  {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({
-                                                      location: 'UserDashboard.tsx:1463',
-                                                      message:
-                                                        'Checking hasSyncedLyrics in dashboard',
-                                                      data: {
-                                                        albumId: album.albumId,
-                                                        trackId: track.id,
-                                                        lyricsStatus: track.lyricsStatus,
-                                                        hasSyncedLyrics: !!track.syncedLyrics,
-                                                        syncedLyricsType: Array.isArray(
-                                                          track.syncedLyrics
-                                                        )
-                                                          ? 'array'
-                                                          : typeof track.syncedLyrics,
-                                                        syncedLyricsLength: Array.isArray(
-                                                          track.syncedLyrics
-                                                        )
-                                                          ? track.syncedLyrics.length
-                                                          : 0,
-                                                        hasStartTimeGreaterThanZero:
-                                                          hasSyncedLyrics,
-                                                        willShowPrev: hasSyncedLyrics,
-                                                      },
-                                                      timestamp: Date.now(),
-                                                      sessionId: 'debug-session',
-                                                      runId: 'run1',
-                                                      hypothesisId: 'F',
-                                                    }),
-                                                  }
-                                                ).catch(() => {});
-                                              }
-                                              // #endregion
-
-                                              return getLyricsActions(
-                                                track.lyricsStatus,
-                                                hasSyncedLyrics
-                                              );
-                                            })().map((action, idx) => (
-                                              <button
-                                                key={idx}
-                                                type="button"
-                                                className="user-dashboard__lyrics-action-button"
-                                                onClick={() =>
-                                                  handleLyricsAction(
-                                                    action.action,
-                                                    album.id,
-                                                    track.id,
-                                                    track.title
-                                                  )
-                                                }
-                                              >
-                                                {action.label}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
+                                      {isExpanded ? '⌃' : '›'}
                                     </div>
                                   </div>
 
-                                  {/* Delete album button - после блока Lyrics, внизу вправо */}
-                                  <div className="user-dashboard__delete-album-container">
-                                    <button
-                                      type="button"
-                                      className="user-dashboard__delete-album-button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteAlbum(album.id);
-                                      }}
-                                      title="Удалить альбом"
-                                      aria-label="Удалить альбом"
-                                    >
-                                      Удалить альбом
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
+                                  {isExpanded && (
+                                    <div className="user-dashboard__album-expanded">
+                                      {/* Edit Album button */}
+                                      <button
+                                        type="button"
+                                        className="user-dashboard__edit-album-button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditAlbumModal({ isOpen: true, albumId: album.id });
+                                        }}
+                                      >
+                                        {ui?.dashboard?.editAlbum ?? 'Edit Album'}
+                                      </button>
 
-                              {index < albumsData.length - 1 && (
-                                <div className="user-dashboard__album-divider"></div>
-                              )}
-                            </React.Fragment>
-                          );
-                        })}
-                      </div>
+                                      {/* Track upload section */}
+                                      <div
+                                        className="user-dashboard__track-upload"
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          const files = e.dataTransfer.files;
+                                          if (files.length > 0) {
+                                            handleTrackUpload(album.id, files);
+                                          }
+                                        }}
+                                        onDragOver={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                        onDragEnter={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                      >
+                                        {isUploadingTracks[album.id] ? (
+                                          <div className="user-dashboard__track-upload-progress">
+                                            <div className="user-dashboard__track-upload-text">
+                                              Uploading tracks...{' '}
+                                              {Math.round(uploadProgress[album.id] || 0)}%
+                                            </div>
+                                            <div className="user-dashboard__track-upload-progress-bar">
+                                              <div
+                                                className="user-dashboard__track-upload-progress-fill"
+                                                style={{
+                                                  width: `${uploadProgress[album.id] || 0}%`,
+                                                  transition: 'width 0.3s ease',
+                                                }}
+                                              />
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <div className="user-dashboard__track-upload-text">
+                                              {ui?.dashboard?.dropTracksHere ??
+                                                'Drop tracks here or'}
+                                            </div>
+                                            <input
+                                              ref={(el) => {
+                                                fileInputRefs.current[album.id] = el;
+                                              }}
+                                              type="file"
+                                              multiple
+                                              accept="audio/*"
+                                              style={{ display: 'none' }}
+                                              onChange={(e) => {
+                                                const files = e.target.files;
+                                                if (files && files.length > 0) {
+                                                  handleTrackUpload(album.id, files);
+                                                }
+                                                // Сбрасываем input, чтобы можно было загрузить те же файлы снова
+                                                if (e.target) {
+                                                  e.target.value = '';
+                                                }
+                                              }}
+                                            />
+                                            <button
+                                              type="button"
+                                              className="user-dashboard__choose-files-button"
+                                              disabled={isUploadingTracks[album.id]}
+                                              onClick={() => {
+                                                const input = fileInputRefs.current[album.id];
+                                                if (input) {
+                                                  input.click();
+                                                }
+                                              }}
+                                            >
+                                              {ui?.dashboard?.chooseFiles ?? 'Choose files'}
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
 
-                      <button
-                        type="button"
-                        className="user-dashboard__upload-button"
-                        onClick={() => setEditAlbumModal({ isOpen: true })}
-                      >
-                        <span>+</span>
-                        <span>{ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}</span>
-                      </button>
+                                      {/* Tracks list with drag-and-drop */}
+                                      <DndContext
+                                        sensors={sensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={(event) => handleDragEnd(event, album.id)}
+                                      >
+                                        <SortableContext
+                                          items={album.tracks.map((track) => track.id)}
+                                          strategy={verticalListSortingStrategy}
+                                        >
+                                          <div className="user-dashboard__tracks-list">
+                                            {album.tracks.map((track) => (
+                                              <SortableTrackItem
+                                                key={track.id}
+                                                track={track}
+                                                albumId={album.albumId}
+                                                onDelete={handleDeleteTrack}
+                                                onTitleChange={handleTrackTitleChange}
+                                              />
+                                            ))}
+                                          </div>
+                                        </SortableContext>
+                                      </DndContext>
+
+                                      {/* Lyrics section */}
+                                      <div className="user-dashboard__lyrics-section">
+                                        <h4 className="user-dashboard__lyrics-title">
+                                          {ui?.dashboard?.lyrics ?? 'Lyrics'}
+                                        </h4>
+                                        <div className="user-dashboard__lyrics-table">
+                                          <div className="user-dashboard__lyrics-header">
+                                            <div className="user-dashboard__lyrics-header-cell">
+                                              {ui?.dashboard?.track ?? 'Track'}
+                                            </div>
+                                            <div className="user-dashboard__lyrics-header-cell">
+                                              {ui?.dashboard?.status ?? 'Status'}
+                                            </div>
+                                            <div className="user-dashboard__lyrics-header-cell">
+                                              {ui?.dashboard?.actions ?? 'Actions'}
+                                            </div>
+                                          </div>
+                                          {album.tracks.map((track) => (
+                                            <div
+                                              key={track.id}
+                                              className="user-dashboard__lyrics-row"
+                                            >
+                                              <div className="user-dashboard__lyrics-cell">
+                                                {track.title}
+                                              </div>
+                                              <div className="user-dashboard__lyrics-cell">
+                                                {getLyricsStatusText(track.lyricsStatus)}
+                                              </div>
+                                              <div className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions">
+                                                {(() => {
+                                                  // Вычисляем hasSyncedLyrics для логирования
+                                                  const hasSyncedLyrics =
+                                                    Array.isArray(track.syncedLyrics) &&
+                                                    track.syncedLyrics.length > 0 &&
+                                                    track.syncedLyrics.some(
+                                                      (line) => line.startTime > 0
+                                                    );
+
+                                                  // #region agent log
+                                                  if (track.lyricsStatus === 'synced') {
+                                                    fetch(
+                                                      'http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125',
+                                                      {
+                                                        method: 'POST',
+                                                        headers: {
+                                                          'Content-Type': 'application/json',
+                                                        },
+                                                        body: JSON.stringify({
+                                                          location: 'UserDashboard.tsx:1463',
+                                                          message:
+                                                            'Checking hasSyncedLyrics in dashboard',
+                                                          data: {
+                                                            albumId: album.albumId,
+                                                            trackId: track.id,
+                                                            lyricsStatus: track.lyricsStatus,
+                                                            hasSyncedLyrics: !!track.syncedLyrics,
+                                                            syncedLyricsType: Array.isArray(
+                                                              track.syncedLyrics
+                                                            )
+                                                              ? 'array'
+                                                              : typeof track.syncedLyrics,
+                                                            syncedLyricsLength: Array.isArray(
+                                                              track.syncedLyrics
+                                                            )
+                                                              ? track.syncedLyrics.length
+                                                              : 0,
+                                                            hasStartTimeGreaterThanZero:
+                                                              hasSyncedLyrics,
+                                                            willShowPrev: hasSyncedLyrics,
+                                                          },
+                                                          timestamp: Date.now(),
+                                                          sessionId: 'debug-session',
+                                                          runId: 'run1',
+                                                          hypothesisId: 'F',
+                                                        }),
+                                                      }
+                                                    ).catch(() => {});
+                                                  }
+                                                  // #endregion
+
+                                                  return getLyricsActions(
+                                                    track.lyricsStatus,
+                                                    hasSyncedLyrics
+                                                  );
+                                                })().map((action, idx) => (
+                                                  <button
+                                                    key={idx}
+                                                    type="button"
+                                                    className="user-dashboard__lyrics-action-button"
+                                                    onClick={() =>
+                                                      handleLyricsAction(
+                                                        action.action,
+                                                        album.id,
+                                                        track.id,
+                                                        track.title
+                                                      )
+                                                    }
+                                                  >
+                                                    {action.label}
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Delete album button - после блока Lyrics, внизу вправо */}
+                                      <div className="user-dashboard__delete-album-container">
+                                        <button
+                                          type="button"
+                                          className="user-dashboard__delete-album-button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteAlbum(album.id);
+                                          }}
+                                          title="Удалить альбом"
+                                          aria-label="Удалить альбом"
+                                        >
+                                          Удалить альбом
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {index < albumsData.length - 1 && (
+                                    <div className="user-dashboard__album-divider"></div>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+
+                          <button
+                            type="button"
+                            className="user-dashboard__upload-button"
+                            onClick={() => setEditAlbumModal({ isOpen: true })}
+                          >
+                            <span>+</span>
+                            <span>{ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="user-dashboard__albums-prompt">
+                          <div className="user-dashboard__albums-prompt-text">
+                            {lang === 'ru'
+                              ? 'Загружайте и публикуйте альбомы'
+                              : 'Upload and publish albums'}
+                          </div>
+                          <button
+                            type="button"
+                            className="user-dashboard__new-album-button"
+                            onClick={() => setEditAlbumModal({ isOpen: true })}
+                          >
+                            {lang === 'ru' ? 'Новый Альбом' : 'New Album'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </>
                 ) : activeTab === 'posts' ? (

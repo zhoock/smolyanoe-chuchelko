@@ -1056,8 +1056,33 @@ dialog {
     }
 
     &__track-title {
-      flex: 1;
+      padding: var(--ms-01);
       font-size: var(--ms-0);
+      border-radius: var(--ms-02);
+      transition: background-color 0.2s ease;
+      flex: 1;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(var(--graphite-green-rgb) / 10%);
+      }
+    }
+
+    &__track-title-input {
+      padding: var(--ms-01);
+      color: var(--white);
+      font-size: var(--ms-0);
+      background: var(--iron-slate);
+      border: 1px solid var(--graphite-green);
+      border-radius: var(--ms-02);
+      flex: 1;
+      outline: none;
+      font-family: inherit;
+
+      &:focus {
+        border-color: var(--dark-greenish-yellow);
+        background: rgba(var(--graphite-green-rgb) / 15%);
+      }
     }
 
     &__track-duration-container {
@@ -1220,6 +1245,35 @@ dialog {
       span:last-child {
         color: var(--white);
       }
+    }
+
+    // Albums empty state (same as posts)
+    &__albums-prompt {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--ms-0) var(--ms-1);
+      border-radius: var(--ms-01);
+      gap: var(--ms-0);
+    }
+
+    &__albums-prompt-text {
+      color: var(--light-grey);
+      font-size: var(--ms-0);
+      flex: 1;
+    }
+
+    &__new-album-button {
+      @include button-variant(
+        $color: var(--white),
+        $background: var(--graphite-green),
+        $hover-color: var(--white),
+        $hover-background: var(--iron-slate),
+        $margin: 0,
+        $padding: var(--ms-01) var(--ms-1),
+        $border: 1px solid var(--iron-slate),
+        $border-radius: var(--ms-01)
+      );
     }
 
     // Posts section
