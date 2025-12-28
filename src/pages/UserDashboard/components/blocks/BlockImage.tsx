@@ -13,6 +13,7 @@ interface BlockImageProps {
   isSelected?: boolean;
   onSelect?: () => void;
   onConvertToCarousel?: () => void;
+  onEnter?: (atEnd: boolean) => void;
 }
 
 export function BlockImage({
@@ -24,6 +25,7 @@ export function BlockImage({
   isSelected,
   onSelect,
   onConvertToCarousel,
+  onEnter,
 }: BlockImageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -42,7 +44,7 @@ export function BlockImage({
       const timestamp = Date.now();
       const fileName = `article_${timestamp}_${baseFileName}.${fileExtension}`;
       const imageKey = `article_${timestamp}_${baseFileName}`;
-      
+
       const url = await uploadFile({
         userId: CURRENT_USER_CONFIG.userId,
         file,
@@ -69,6 +71,21 @@ export function BlockImage({
     onChange(imageKey || '', newCaption || undefined);
   };
 
+  const handleCaptionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onEnter?.(true); // Создаем новый блок при Enter в caption
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Обработка Enter только если фокус на самом блоке (не на input caption)
+    if (e.key === 'Enter' && !(e.target instanceof HTMLInputElement)) {
+      e.preventDefault();
+      onEnter?.(true); // Всегда считаем, что Enter нажато в конце
+    }
+  };
+
   const imageUrl = imageKey ? getUserImageUrl(imageKey, 'articles') : '';
 
   const handleImageClick = (e: React.MouseEvent) => {
@@ -81,6 +98,7 @@ export function BlockImage({
       className="edit-article-v2__block edit-article-v2__block--image"
       onFocus={onFocus}
       onBlur={onBlur}
+      onKeyDown={handleKeyDown}
       tabIndex={0}
     >
       {imageKey && imageUrl ? (
@@ -120,6 +138,7 @@ export function BlockImage({
           className="edit-article-v2__image-caption"
           value={captionValue}
           onChange={handleCaptionChange}
+          onKeyDown={handleCaptionKeyDown}
           placeholder="Подпись к изображению (необязательно)"
         />
       )}
@@ -133,4 +152,3 @@ export function BlockImage({
     </div>
   );
 }
-

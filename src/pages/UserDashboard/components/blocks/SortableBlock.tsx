@@ -151,6 +151,7 @@ export function SortableBlock({
             isSelected={isSelected}
             onSelect={() => onSelect?.(block.id)}
             onConvertToCarousel={() => onConvertToCarousel?.(block.id)}
+            onEnter={(atEnd) => onEnter(block.id, atEnd)}
           />
         );
       case 'carousel':
@@ -166,6 +167,7 @@ export function SortableBlock({
             isSelected={isSelected}
             onSelect={() => onSelect?.(block.id)}
             onEdit={() => onEditCarousel?.(block.id)}
+            onEnter={(atEnd) => onEnter(block.id, atEnd)}
           />
         );
       default:

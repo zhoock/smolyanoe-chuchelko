@@ -1443,6 +1443,95 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     [blocks, insertBlock]
   );
 
+  // Преобразование типа блока (для VK-плюса)
+  const convertBlockType = useCallback(
+    (blockId: string, newType: BlockType) => {
+      const block = blocks.find((b) => b.id === blockId);
+      if (!block) return;
+
+      // Сохраняем снимок перед преобразованием
+      saveSnapshot();
+
+      // Создаем новый блок нужного типа, но сохраняем ID текущего блока
+      let newBlock: Block;
+      switch (newType) {
+        case 'paragraph':
+          newBlock = { id: blockId, type: 'paragraph', text: '' };
+          break;
+        case 'title':
+          newBlock = { id: blockId, type: 'title', text: '' };
+          break;
+        case 'subtitle':
+          newBlock = { id: blockId, type: 'subtitle', text: '' };
+          break;
+        case 'quote':
+          newBlock = { id: blockId, type: 'quote', text: '' };
+          break;
+        case 'list':
+          newBlock = { id: blockId, type: 'list', items: [''] };
+          break;
+        case 'divider':
+          newBlock = { id: blockId, type: 'divider' };
+          break;
+        case 'image':
+          newBlock = { id: blockId, type: 'image', imageKey: '' };
+          break;
+        case 'carousel':
+          newBlock = { id: blockId, type: 'carousel', imageKeys: [] };
+          break;
+      }
+
+      // Для текстовых блоков сохраняем текст из текущего блока, если он есть
+      if (
+        (block.type === 'paragraph' ||
+          block.type === 'title' ||
+          block.type === 'subtitle' ||
+          block.type === 'quote') &&
+        (newBlock.type === 'paragraph' ||
+          newBlock.type === 'title' ||
+          newBlock.type === 'subtitle' ||
+          newBlock.type === 'quote')
+      ) {
+        (newBlock as any).text = block.text;
+      }
+
+      const blockIndex = blocks.findIndex((b) => b.id === blockId);
+      setBlocks((prev) => {
+        const newBlocks = [...prev];
+        newBlocks[blockIndex] = newBlock;
+        return newBlocks;
+      });
+
+      // Фокус остается на том же блоке
+      setTimeout(() => {
+        setFocusBlockId(blockId);
+        // Устанавливаем фокус на textarea, если это текстовый блок
+        if (
+          newBlock.type === 'paragraph' ||
+          newBlock.type === 'title' ||
+          newBlock.type === 'subtitle' ||
+          newBlock.type === 'quote'
+        ) {
+          const textarea = document.querySelector(
+            `[data-block-id="${blockId}"] textarea`
+          ) as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.focus();
+          }
+        } else if (newBlock.type === 'list') {
+          // Для списка устанавливаем фокус на первый input
+          const firstInput = document.querySelector(
+            `[data-block-id="${blockId}"] input[type="text"]`
+          ) as HTMLInputElement;
+          if (firstInput) {
+            firstInput.focus();
+          }
+        }
+      }, 0);
+    },
+    [blocks, saveSnapshot]
+  );
+
   // Обработчик slash-меню
   const handleSlash = useCallback(
     (blockId: string, position: { top: number; left: number }, cursorPos: number) => {
@@ -1973,7 +2062,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                           onPaste={handlePaste}
                           onConvertToCarousel={convertImageToCarousel}
                           onVkPlusSelect={(type) => {
-                            insertBlockAfter(block.id, type);
+                            convertBlockType(block.id, type as BlockType);
                             setVkInserter(null);
                           }}
                           onVkPlusClose={() => setVkInserter(null)}

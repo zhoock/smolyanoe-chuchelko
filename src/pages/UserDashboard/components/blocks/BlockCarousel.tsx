@@ -12,6 +12,7 @@ interface BlockCarouselProps {
   isSelected?: boolean;
   onSelect?: () => void;
   onEdit?: () => void;
+  onEnter?: (atEnd: boolean) => void;
 }
 
 export function BlockCarousel({
@@ -24,6 +25,7 @@ export function BlockCarousel({
   isSelected,
   onSelect,
   onEdit,
+  onEnter,
 }: BlockCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showEditButton, setShowEditButton] = useState(false);
@@ -57,12 +59,20 @@ export function BlockCarousel({
     }
   }, [imageKeys.length, currentIndex]);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onEnter?.(true); // Всегда считаем, что Enter нажато в конце
+    }
+  };
+
   if (imageKeys.length === 0) {
     return (
       <div
         className="edit-article-v2__block edit-article-v2__block--carousel"
         onFocus={onFocus}
         onBlur={onBlur}
+        onKeyDown={handleKeyDown}
         tabIndex={0}
       >
         <div className="edit-article-v2__carousel-empty">
@@ -86,6 +96,7 @@ export function BlockCarousel({
       className="edit-article-v2__block edit-article-v2__block--carousel"
       onFocus={onFocus}
       onBlur={onBlur}
+      onKeyDown={handleKeyDown}
       tabIndex={0}
       onClick={handleCarouselClick}
       onMouseEnter={() => {
