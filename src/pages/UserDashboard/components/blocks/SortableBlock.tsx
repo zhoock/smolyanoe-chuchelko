@@ -244,8 +244,16 @@ function VkPlusInserter({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        onClose();
+        // Проверяем, не находится ли клик внутри того же блока
+        // (например, на textarea блока, чтобы пользователь мог кликнуть на блок для фокуса)
+        const target = event.target as HTMLElement;
+        const blockWrapper = menuRef.current.closest('.edit-article-v2__block-wrapper');
+        const isClickInSameBlock = blockWrapper && blockWrapper.contains(target);
+
+        if (!isClickInSameBlock) {
+          setIsOpen(false);
+          onClose();
+        }
       }
     };
 
@@ -283,6 +291,11 @@ function VkPlusInserter({
         type="button"
         className="edit-article-v2__vk-plus-button"
         onClick={() => setIsOpen(!isOpen)}
+        onMouseDown={(e) => {
+          // Предотвращаем потерю фокуса textarea при клике на кнопку плюса
+          // Это позволяет избежать скрытия плюса при клике на него
+          e.preventDefault();
+        }}
       >
         +
       </button>

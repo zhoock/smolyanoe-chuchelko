@@ -1889,24 +1889,75 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                           }
                           onUpdate={updateBlock}
                           onDelete={deleteBlock}
-                          onFocus={setFocusBlockId}
-                          onBlur={() => {
-                            setFocusBlockId(null);
-                            // Скрываем плюс при потере фокуса, если блок не пустой
-                            if (vkInserter?.afterBlockId === block.id) {
-                              const isBlockEmpty =
-                                (block.type === 'paragraph' ||
-                                  block.type === 'title' ||
-                                  block.type === 'subtitle' ||
-                                  block.type === 'quote') &&
-                                block.text.trim() === '';
-                              const isListEmpty =
-                                block.type === 'list' &&
-                                block.items.every((item) => item.trim() === '');
-                              if (!isBlockEmpty && !isListEmpty) {
-                                setVkInserter(null);
-                              }
+                          onFocus={() => {
+                            setFocusBlockId(block.id);
+                            // Если блок пустой и vkInserter не установлен, устанавливаем его
+                            const isBlockEmpty =
+                              ((block.type === 'paragraph' ||
+                                block.type === 'title' ||
+                                block.type === 'subtitle' ||
+                                block.type === 'quote') &&
+                                block.text.trim() === '') ||
+                              (block.type === 'list' &&
+                                block.items.every((item) => item.trim() === ''));
+                            if (isBlockEmpty && vkInserter?.afterBlockId !== block.id) {
+                              setVkInserter({ afterBlockId: block.id });
                             }
+                          }}
+                          onBlur={() => {
+                            // Используем setTimeout, чтобы проверить, куда перешел фокус
+                            // Если фокус перешел на плюс или внутри того же блока, не скрываем плюс
+                            setTimeout(() => {
+                              const activeElement = document.activeElement;
+
+                              // Проверяем, находится ли фокус на плюсе
+                              const isClickingOnVkPlus =
+                                activeElement?.closest('.edit-article-v2__vk-plus') !== null;
+
+                              // Проверяем, находится ли фокус на textarea этого блока
+                              const blockTextarea = document.querySelector(
+                                `[data-block-id="${block.id}"] textarea`
+                              ) as HTMLTextAreaElement;
+                              const isFocusOnBlockTextarea = activeElement === blockTextarea;
+
+                              // Проверяем, находится ли активный элемент в том же блоке
+                              const blockElement = activeElement?.closest(
+                                `.edit-article-v2__block-wrapper[data-block-id="${block.id}"]`
+                              );
+                              const isFocusInSameBlock = blockElement !== null;
+
+                              // Проверяем, не перешел ли фокус на другой блок редактора
+                              const isFocusOnAnotherBlock =
+                                activeElement?.tagName === 'TEXTAREA' &&
+                                activeElement?.getAttribute('data-block-id') !== null &&
+                                activeElement?.getAttribute('data-block-id') !== block.id;
+
+                              // Если фокус не на плюсе, не на textarea этого блока, не в том же блоке
+                              // и не перешел на другой блок редактора, скрываем плюс
+                              if (
+                                !isClickingOnVkPlus &&
+                                !isFocusOnBlockTextarea &&
+                                !isFocusInSameBlock &&
+                                !isFocusOnAnotherBlock
+                              ) {
+                                setFocusBlockId(null);
+                                // Скрываем плюс при потере фокуса, если блок не пустой
+                                if (vkInserter?.afterBlockId === block.id) {
+                                  const isBlockEmpty =
+                                    (block.type === 'paragraph' ||
+                                      block.type === 'title' ||
+                                      block.type === 'subtitle' ||
+                                      block.type === 'quote') &&
+                                    block.text.trim() === '';
+                                  const isListEmpty =
+                                    block.type === 'list' &&
+                                    block.items.every((item) => item.trim() === '');
+                                  if (!isBlockEmpty && !isListEmpty) {
+                                    setVkInserter(null);
+                                  }
+                                }
+                              }
+                            }, 0);
                           }}
                           onSelect={setSelectedBlockId}
                           onEnter={handleBlockEnter}
