@@ -2,6 +2,7 @@
 import type { AlbumFormData, ProducingCredits } from './EditAlbumModal.types';
 import { DEFAULT_PRODUCING_CREDIT_TYPES } from './EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
+import type { IInterface } from '@models';
 
 /**
  * Форматирует дату из формата YYYY-MM-DD в формат "MON. DD, YYYY" (английский)
@@ -432,7 +433,8 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
 
 export const transformFormDataToAlbumFormat = (
   formData: AlbumFormData,
-  lang: SupportedLang
+  lang: SupportedLang,
+  ui?: IInterface
 ): {
   release: Record<string, string>;
   buttons: Record<string, string>;
@@ -550,7 +552,7 @@ export const transformFormDataToAlbumFormat = (
     if (genreText) {
       details.push({
         id: 1,
-        title: lang === 'ru' ? 'Жанр' : 'Genre',
+        title: ui?.dashboard?.genre ?? 'Genre',
         content: [genreText],
       });
     }
@@ -562,7 +564,7 @@ export const transformFormDataToAlbumFormat = (
   if (formData.bandMembers.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Исполнители' : 'Band members',
+      title: ui?.dashboard?.bandMembers ?? 'Band members',
       content: formData.bandMembers.map((m) => {
         // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
         const roleClean = m.role.trim().replace(/\.+$/, '');
@@ -593,7 +595,7 @@ export const transformFormDataToAlbumFormat = (
   if (formData.sessionMusicians.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
+      title: ui?.dashboard?.sessionMusicians ?? 'Session musicians',
       content: formData.sessionMusicians.map((m) => {
         // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
         const roleClean = m.role.trim().replace(/\.+$/, '');
@@ -616,7 +618,7 @@ export const transformFormDataToAlbumFormat = (
   if (formData.producer && formData.producer.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Продюсирование' : 'Producing',
+      title: ui?.dashboard?.producing ?? 'Producing',
       content: formData.producer.map((member) => {
         // Новый формат: используем BandMember с name и role
         // Сохраняем в формате ["Имя", "роль"]
@@ -640,7 +642,7 @@ export const transformFormDataToAlbumFormat = (
   if (formData.mastering && formData.mastering.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
+      title: ui?.dashboard?.masteredBy ?? 'Mastered By',
       content: formData.mastering.map((entry) => {
         // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
@@ -662,7 +664,7 @@ export const transformFormDataToAlbumFormat = (
   if (formData.recordedAt.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Запись' : 'Recorded At',
+      title: ui?.dashboard?.recordedAt ?? 'Recorded At',
       content: formData.recordedAt.map((entry) => {
         // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
@@ -684,7 +686,7 @@ export const transformFormDataToAlbumFormat = (
   if (formData.mixedAt.length > 0) {
     details.push({
       id: nextId++,
-      title: lang === 'ru' ? 'Сведение' : 'Mixed At',
+      title: ui?.dashboard?.mixedAt ?? 'Mixed At',
       content: formData.mixedAt.map((entry) => {
         // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};

@@ -55,6 +55,7 @@ import { EditAlbumModal, type AlbumFormData } from './components/EditAlbumModal'
 import { EditArticleModalV2 } from './components/EditArticleModalV2';
 import { ArticlesListSkeleton } from './components/ArticlesListSkeleton';
 import { SyncLyricsModal } from './components/SyncLyricsModal';
+import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import type { IAlbums, IArticles } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
@@ -287,6 +288,7 @@ function UserDashboard() {
   const user = getUser();
 
   const [activeTab, setActiveTab] = useState<'albums' | 'posts' | 'payment-settings'>('albums');
+  const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
@@ -448,8 +450,7 @@ function UserDashboard() {
             dragActive: false,
           }),
           status: 'error',
-          error:
-            lang === 'ru' ? 'Пожалуйста, выберите файл изображения' : 'Please select an image file',
+          error: ui?.dashboard?.pleaseSelectImageFile ?? 'Please select an image file',
         },
       }));
       return;
@@ -595,7 +596,7 @@ function UserDashboard() {
               dragActive: false,
             }),
             status: 'error',
-            error: lang === 'ru' ? 'Ошибка загрузки обложки' : 'Failed to upload cover image',
+            error: ui?.dashboard?.failedToUploadCover ?? 'Failed to upload cover image',
           },
         }));
       }
@@ -954,11 +955,11 @@ function UserDashboard() {
     // Показываем модальное окно подтверждения
     setConfirmationModal({
       isOpen: true,
-      title: lang === 'ru' ? 'Подтвердите действие' : 'Confirm action',
-      message:
-        lang === 'ru'
-          ? `Вы уверены, что хотите удалить статью "${article.nameArticle || article.articleId}"?`
-          : `Are you sure you want to delete the article "${article.nameArticle || article.articleId}"?`,
+      title: ui?.dashboard?.confirmAction ?? 'Confirm action',
+      message: (
+        ui?.dashboard?.confirmDeleteArticle ??
+        'Are you sure you want to delete the article "{name}"?'
+      ).replace('{name}', article.nameArticle || article.articleId),
       variant: 'danger',
       onConfirm: async () => {
         setConfirmationModal(null);
@@ -973,11 +974,9 @@ function UserDashboard() {
       if (!token) {
         setAlertModal({
           isOpen: true,
-          title: lang === 'ru' ? 'Ошибка' : 'Error',
+          title: ui?.dashboard?.error ?? 'Error',
           message:
-            lang === 'ru'
-              ? 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.'
-              : 'Error: you are not authorized. Please log in.',
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
           variant: 'error',
         });
         return;
@@ -987,11 +986,10 @@ function UserDashboard() {
       if (!article.id) {
         setAlertModal({
           isOpen: true,
-          title: lang === 'ru' ? 'Ошибка' : 'Error',
+          title: ui?.dashboard?.error ?? 'Error',
           message:
-            lang === 'ru'
-              ? 'Ошибка: не удалось найти ID статьи для удаления.'
-              : 'Error: could not find article ID for deletion.',
+            ui?.dashboard?.errorArticleIdNotFound ??
+            'Error: could not find article ID for deletion.',
           variant: 'error',
         });
         return;
@@ -1024,10 +1022,8 @@ function UserDashboard() {
       console.error('❌ Error deleting article:', error);
       setAlertModal({
         isOpen: true,
-        title: lang === 'ru' ? 'Ошибка' : 'Error',
-        message: `${
-          lang === 'ru' ? 'Ошибка при удалении статьи' : 'Error deleting article'
-        }: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: ui?.dashboard?.error ?? 'Error',
+        message: `${ui?.dashboard?.errorDeletingArticle ?? 'Error deleting article'}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
     }
@@ -1672,7 +1668,7 @@ function UserDashboard() {
                   className={`user-dashboard__tab ${activeTab === 'posts' ? 'user-dashboard__tab--active' : ''}`}
                   onClick={() => setActiveTab('posts')}
                 >
-                  {ui?.dashboard?.tabs?.posts ?? 'Posts'}
+                  {ui?.dashboard?.tabs?.posts ?? 'Articles'}
                 </button>
                 <button
                   type="button"
@@ -1691,7 +1687,7 @@ function UserDashboard() {
                     onClick={() => setLangOpen(!langOpen)}
                     aria-haspopup="listbox"
                     aria-expanded={langOpen}
-                    aria-label={`Выбрать язык. Текущий язык: ${lang === 'ru' ? 'Русский' : 'English'}`}
+                    aria-label={`Выбрать язык. Текущий язык: ${lang === 'ru' ? (ui?.dashboard?.russian ?? 'Русский') : (ui?.dashboard?.english ?? 'English')}`}
                   >
                     {lang.toUpperCase()}
                   </button>
@@ -1811,6 +1807,14 @@ function UserDashboard() {
                     <input id="email" type="email" defaultValue={user?.email || ''} disabled />
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  className="user-dashboard__profile-settings-button"
+                  onClick={() => setIsProfileSettingsModalOpen(true)}
+                >
+                  {ui?.dashboard?.profileSettings ?? 'Настройки профиля'}
+                </button>
               </div>
 
               {/* Vertical separator */}
@@ -2150,16 +2154,14 @@ function UserDashboard() {
                       ) : (
                         <div className="user-dashboard__albums-prompt">
                           <div className="user-dashboard__albums-prompt-text">
-                            {lang === 'ru'
-                              ? 'Загружайте и публикуйте альбомы'
-                              : 'Upload and publish albums'}
+                            {ui?.dashboard?.uploadAndPublishAlbums ?? 'Upload and publish albums'}
                           </div>
                           <button
                             type="button"
                             className="user-dashboard__new-album-button"
                             onClick={() => setEditAlbumModal({ isOpen: true })}
                           >
-                            {lang === 'ru' ? 'Новый Альбом' : 'New Album'}
+                            {ui?.dashboard?.newAlbum ?? 'New Album'}
                           </button>
                         </div>
                       )}
@@ -2168,14 +2170,14 @@ function UserDashboard() {
                 ) : activeTab === 'posts' ? (
                   <>
                     <h3 className="user-dashboard__section-title">
-                      {ui?.dashboard?.tabs?.posts ?? 'Posts'}
+                      {ui?.dashboard?.tabs?.posts ?? 'Articles'}
                     </h3>
                     <div className="user-dashboard__section">
                       {articlesStatus === 'loading' ? (
                         <ArticlesListSkeleton count={4} />
                       ) : articlesError ? (
                         <div className="user-dashboard__error">
-                          {lang === 'ru' ? 'Ошибка загрузки статей' : 'Error loading articles'}:{' '}
+                          {ui?.dashboard?.errorLoadingArticles ?? 'Error loading articles'}:{' '}
                           {articlesError}
                         </div>
                       ) : articlesFromStore && articlesFromStore.length > 0 ? (
@@ -2244,7 +2246,7 @@ function UserDashboard() {
                                       {/* Article Cover Upload */}
                                       <div className="user-dashboard__article-cover-section">
                                         <label className="user-dashboard__article-cover-label">
-                                          {lang === 'ru' ? 'Обложка статьи' : 'Article Cover'}
+                                          {ui?.dashboard?.articleCover ?? 'Article Cover'}
                                         </label>
 
                                         <input
@@ -2281,7 +2283,7 @@ function UserDashboard() {
                                                       htmlFor={`article-cover-input-${article.articleId}`}
                                                       className="user-dashboard__article-cover-button"
                                                     >
-                                                      {lang === 'ru' ? 'Заменить' : 'Replace'}
+                                                      {ui?.dashboard?.replace ?? 'Replace'}
                                                     </label>
                                                   </div>
 
@@ -2296,9 +2298,7 @@ function UserDashboard() {
                                                         />
                                                       </div>
                                                       <span className="user-dashboard__article-cover-status-text">
-                                                        {lang === 'ru'
-                                                          ? 'Загрузка...'
-                                                          : 'Uploading...'}
+                                                        {ui?.dashboard?.uploading ?? 'Uploading...'}
                                                       </span>
                                                     </div>
                                                   )}
@@ -2306,7 +2306,7 @@ function UserDashboard() {
                                                   {coverState?.status === 'uploaded' && (
                                                     <div className="user-dashboard__article-cover-status">
                                                       <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--success">
-                                                        {lang === 'ru' ? 'Загружено' : 'Uploaded'}
+                                                        {ui?.dashboard?.uploaded ?? 'Uploaded'}
                                                       </span>
                                                     </div>
                                                   )}
@@ -2315,7 +2315,7 @@ function UserDashboard() {
                                                     coverState.error && (
                                                       <div className="user-dashboard__article-cover-status">
                                                         <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--error">
-                                                          {lang === 'ru' ? 'Ошибка' : 'Error'}:{' '}
+                                                          {ui?.dashboard?.error ?? 'Error'}:{' '}
                                                           {coverState.error}
                                                         </span>
                                                       </div>
@@ -2342,15 +2342,14 @@ function UserDashboard() {
                                               }
                                             >
                                               <div className="user-dashboard__article-cover-dropzone-text">
-                                                {lang === 'ru'
-                                                  ? 'Перетащите изображение сюда или'
-                                                  : 'Drag image here or'}
+                                                {ui?.dashboard?.dragImageHereOr ??
+                                                  'Drag image here or'}
                                               </div>
                                               <label
                                                 htmlFor={`article-cover-input-${article.articleId}`}
                                                 className="user-dashboard__article-cover-file-label"
                                               >
-                                                {lang === 'ru' ? 'Выберите файл' : 'Choose file'}
+                                                {ui?.dashboard?.chooseFile ?? 'Choose file'}
                                               </label>
                                             </div>
                                           );
@@ -2377,7 +2376,7 @@ function UserDashboard() {
                                             });
                                           }}
                                         >
-                                          {lang === 'ru' ? 'Редактировать' : 'Edit'}
+                                          {ui?.dashboard?.editArticle ?? 'Edit Article'}
                                         </button>
                                         <button
                                           type="button"
@@ -2386,14 +2385,12 @@ function UserDashboard() {
                                             e.stopPropagation();
                                             handleDeleteArticle(article);
                                           }}
-                                          title={
-                                            lang === 'ru' ? 'Удалить статью' : 'Delete article'
-                                          }
+                                          title={ui?.dashboard?.deleteArticle ?? 'Delete article'}
                                           aria-label={
-                                            lang === 'ru' ? 'Удалить статью' : 'Delete article'
+                                            ui?.dashboard?.deleteArticle ?? 'Delete article'
                                           }
                                         >
-                                          {lang === 'ru' ? 'Удалить статью' : 'Delete article'}
+                                          {ui?.dashboard?.deleteArticle ?? 'Delete article'}
                                         </button>
                                       </div>
                                     </div>
@@ -2465,7 +2462,7 @@ function UserDashboard() {
                 ) : (
                   <>
                     <h3 className="user-dashboard__section-title">
-                      {ui?.dashboard?.tabs?.posts ?? 'Posts'}
+                      {ui?.dashboard?.tabs?.posts ?? 'Articles'}
                     </h3>
                     <div className="user-dashboard__section">
                       <div className="user-dashboard__posts-prompt">
@@ -2692,6 +2689,14 @@ function UserDashboard() {
           onClose={() => setEditArticleModal(null)}
         />
       )}
+
+      {/* Profile Settings Modal */}
+      <ProfileSettingsModal
+        isOpen={isProfileSettingsModalOpen}
+        onClose={() => setIsProfileSettingsModalOpen(false)}
+        userName={user?.name ?? undefined}
+        userEmail={user?.email}
+      />
     </>
   );
 }

@@ -2,6 +2,7 @@
 import React from 'react';
 import type { ArticleFormData } from '../EditArticleModal.types';
 import { getUserImageUrl } from '@shared/api/albums';
+import type { IInterface } from '@models';
 
 interface EditArticleModalStep1Props {
   formData: ArticleFormData;
@@ -12,6 +13,7 @@ interface EditArticleModalStep1Props {
   onDrag: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   lang: 'ru' | 'en';
+  ui?: IInterface;
 }
 
 export function EditArticleModalStep1({
@@ -23,6 +25,7 @@ export function EditArticleModalStep1({
   onDrag,
   onDrop,
   lang,
+  ui,
 }: EditArticleModalStep1Props) {
   return (
     <>
@@ -30,7 +33,7 @@ export function EditArticleModalStep1({
 
       <div className="edit-article-modal__field">
         <label htmlFor="article-id" className="edit-article-modal__label">
-          {lang === 'ru' ? 'ID статьи' : 'Article ID'}
+          {ui?.dashboard?.articleId ?? 'Article ID'}
         </label>
         <input
           id="article-id"
@@ -52,7 +55,7 @@ export function EditArticleModalStep1({
 
       <div className="edit-article-modal__field">
         <label htmlFor="article-title" className="edit-article-modal__label">
-          {lang === 'ru' ? 'Название статьи' : 'Article Title'}
+          {ui?.dashboard?.articleTitle ?? 'Article Title'}
         </label>
         <input
           id="article-title"
@@ -63,13 +66,13 @@ export function EditArticleModalStep1({
           required
           value={formData.nameArticle}
           onChange={(e) => onFormDataChange('nameArticle', e.target.value)}
-          placeholder={lang === 'ru' ? 'Введите название статьи' : 'Enter article title'}
+          placeholder={ui?.dashboard?.enterArticleTitle ?? 'Enter article title'}
         />
       </div>
 
       <div className="edit-article-modal__field">
         <label htmlFor="article-description" className="edit-article-modal__label">
-          {lang === 'ru' ? 'Описание' : 'Description'}
+          {ui?.dashboard?.description ?? 'Description'}
         </label>
         <textarea
           id="article-description"
@@ -88,7 +91,7 @@ export function EditArticleModalStep1({
 
       <div className="edit-article-modal__field">
         <label htmlFor="article-date" className="edit-article-modal__label">
-          {lang === 'ru' ? 'Дата публикации' : 'Publication Date'}
+          {ui?.dashboard?.publicationDate ?? 'Publication Date'}
         </label>
         <input
           id="article-date"
@@ -103,7 +106,7 @@ export function EditArticleModalStep1({
 
       <div className="edit-article-modal__field">
         <label className="edit-article-modal__label">
-          {lang === 'ru' ? 'Обложка статьи' : 'Article Cover'}
+          {ui?.dashboard?.articleCover ?? 'Article Cover'}
         </label>
 
         <input

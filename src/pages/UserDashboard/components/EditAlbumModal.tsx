@@ -1424,7 +1424,7 @@ export function EditAlbumModal({
       release,
       buttons,
       details: newDetails,
-    } = transformFormDataToAlbumFormat(finalFormData, lang);
+    } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined);
 
     // Формируем fullName из artist и album
     const artistName = formData.artist || originalAlbum?.artist || '';
@@ -1447,19 +1447,19 @@ export function EditAlbumModal({
     // Заменяем редактируемые блоки (Genre, Band members, Session musicians, Producing, Recorded At, Mixed At)
     const editableTitles = [
       // Genre
-      lang === 'ru' ? 'Жанр' : 'Genre',
+      ui?.dashboard?.genre ?? 'Genre',
       // Band members (только два варианта: Исполнители и Band members)
-      lang === 'ru' ? 'Исполнители' : 'Band members',
+      ui?.dashboard?.bandMembers ?? 'Band members',
       // Session musicians
-      lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
+      ui?.dashboard?.sessionMusicians ?? 'Session musicians',
       // Producing
-      lang === 'ru' ? 'Продюсирование' : 'Producing',
+      ui?.dashboard?.producing ?? 'Producing',
       // Mastering
-      lang === 'ru' ? 'Мастеринг' : 'Mastered By',
+      ui?.dashboard?.masteredBy ?? 'Mastered By',
       // Recorded At
-      lang === 'ru' ? 'Запись' : 'Recorded At',
+      ui?.dashboard?.recordedAt ?? 'Recorded At',
       // Mixed At
-      lang === 'ru' ? 'Сведение' : 'Mixed At',
+      ui?.dashboard?.mixedAt ?? 'Mixed At',
     ];
 
     // Удаляем старые редактируемые блоки

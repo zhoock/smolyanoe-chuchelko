@@ -6,6 +6,7 @@ import { ImageCarousel } from '@shared/ui/image-carousel';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectArticleById } from '@entities/article';
 import { getToken } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
@@ -271,6 +272,7 @@ const LANG_TEXTS = {
 export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalProps) {
   const { lang } = useLang();
   const dispatch = useAppDispatch();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const texts = LANG_TEXTS[lang];
 
   // Получаем актуальную статью из Redux store после сохранения
@@ -1587,7 +1589,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         if (linkParent.tagName === 'A') {
           // Если уже внутри ссылки, просто обновляем href
           const url = prompt(
-            lang === 'ru' ? 'Введите ссылку:' : 'Enter link:',
+            ui?.dashboard?.enterLink ?? 'Enter link:',
             linkParent.getAttribute('href') || 'https://'
           );
           if (!url) return;
@@ -2838,7 +2840,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                         fileInputRef.current?.click();
                         setParagraphToolbarIndex(null);
                       }}
-                      title={lang === 'ru' ? 'Добавить изображение' : 'Add image'}
+                      title={ui?.dashboard?.addImage ?? 'Add image'}
                     >
                       <svg
                         width="20"
@@ -2859,7 +2861,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__paragraph-toolbar-button"
                       onClick={addDivider}
-                      title={lang === 'ru' ? 'Добавить разделитель' : 'Add divider'}
+                      title={ui?.dashboard?.addDivider ?? 'Add divider'}
                     >
                       <svg
                         width="20"
@@ -3792,7 +3794,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('link')}
-                      title={lang === 'ru' ? 'Сделать ссылкой' : 'Make link'}
+                      title={ui?.dashboard?.makeLink ?? 'Make link'}
                     >
                       <svg
                         width="16"
@@ -3813,7 +3815,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('h1')}
-                      title={lang === 'ru' ? 'Заголовок первого уровня' : 'Heading 1'}
+                      title={ui?.dashboard?.heading1 ?? 'Heading 1'}
                     >
                       <strong>H</strong>
                     </button>
@@ -3821,7 +3823,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button edit-article-modal__formatting-button--active"
                       onClick={() => applyFormatting('h2')}
-                      title={lang === 'ru' ? 'Заголовок второго уровня' : 'Heading 2'}
+                      title={ui?.dashboard?.heading2 ?? 'Heading 2'}
                     >
                       H
                     </button>
@@ -3829,7 +3831,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('h3')}
-                      title={lang === 'ru' ? 'Заголовок третьего уровня' : 'Heading 3'}
+                      title={ui?.dashboard?.heading3 ?? 'Heading 3'}
                     >
                       <span style={{ fontSize: '12px' }}>H3</span>
                     </button>
@@ -3837,7 +3839,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('h4')}
-                      title={lang === 'ru' ? 'Заголовок четвёртого уровня' : 'Heading 4'}
+                      title={ui?.dashboard?.heading4 ?? 'Heading 4'}
                     >
                       <span style={{ fontSize: '12px' }}>H4</span>
                     </button>
@@ -3846,7 +3848,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('paragraph')}
-                      title={lang === 'ru' ? 'Параграф' : 'Paragraph'}
+                      title={ui?.dashboard?.paragraph ?? 'Paragraph'}
                     >
                       <span style={{ fontSize: '12px' }}>P</span>
                     </button>
@@ -3854,7 +3856,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('bold')}
-                      title={lang === 'ru' ? 'Жирный текст' : 'Bold'}
+                      title={ui?.dashboard?.bold ?? 'Bold'}
                     >
                       <strong>B</strong>
                     </button>
@@ -3862,7 +3864,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('italic')}
-                      title={lang === 'ru' ? 'Курсив' : 'Italic'}
+                      title={ui?.dashboard?.italic ?? 'Italic'}
                     >
                       <em>I</em>
                     </button>
@@ -3871,7 +3873,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('list')}
-                      title={lang === 'ru' ? 'Элемент списка' : 'List item'}
+                      title={ui?.dashboard?.listItem ?? 'List item'}
                     >
                       <svg
                         width="16"
@@ -3895,7 +3897,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                       type="button"
                       className="edit-article-modal__formatting-button"
                       onClick={() => applyFormatting('quote')}
-                      title={lang === 'ru' ? 'Цитата' : 'Quote'}
+                      title={ui?.dashboard?.quote ?? 'Quote'}
                     >
                       <svg
                         width="16"
@@ -3927,7 +3929,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     <textarea
                       ref={textInputRef}
                       className="edit-article-modal__text-input"
-                      placeholder={lang === 'ru' ? 'Начните вводить текст...' : 'Start typing...'}
+                      placeholder={ui?.dashboard?.startTyping ?? 'Start typing...'}
                       value={newTextContent}
                       onChange={(e) => setNewTextContent(e.target.value)}
                       onKeyDown={(e) => {
@@ -3964,7 +3966,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                           fileInputRef.current?.click();
                           setShowToolbar(false);
                         }}
-                        title={lang === 'ru' ? 'Добавить изображение' : 'Add image'}
+                        title={ui?.dashboard?.addImage ?? 'Add image'}
                       >
                         <svg
                           width="20"
@@ -3985,7 +3987,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                         type="button"
                         className="edit-article-modal__toolbar-button"
                         onClick={addDivider}
-                        title={lang === 'ru' ? 'Добавить разделитель' : 'Add divider'}
+                        title={ui?.dashboard?.addDivider ?? 'Add divider'}
                       >
                         <svg
                           width="20"
@@ -4073,7 +4075,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                     carouselFileInputRef.current?.click();
                   }}
                 >
-                  {lang === 'ru' ? 'Добавить изображение' : 'Add image'}
+                  {ui?.dashboard?.addImage ?? 'Add image'}
                 </button>
                 <input
                   ref={carouselFileInputRef}
@@ -4114,7 +4116,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                               removeImageFromCarousel(editingCarouselIndex, index);
                             }
                           }}
-                          aria-label={lang === 'ru' ? 'Удалить изображение' : 'Remove image'}
+                          aria-label={ui?.dashboard?.removeImage ?? 'Remove image'}
                         >
                           ×
                         </button>
