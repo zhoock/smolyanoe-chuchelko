@@ -193,6 +193,11 @@ function Layout() {
   const isKnownRoute = knownRoutes.some((pattern) =>
     matchPath({ path: pattern, end: true }, location.pathname)
   );
+  
+  const isPaymentRoute = ['/pay/success', '/pay/fail'].some((pattern) =>
+    matchPath({ path: pattern, end: true }, location.pathname)
+  );
+  
   const shouldHideChrome = !isKnownRoute;
 
   const standardRoutes = (
@@ -279,22 +284,6 @@ function Layout() {
           }
         />
         <Route
-          path="/pay/success"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <PaymentSuccess />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/pay/fail"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <PaymentSuccess />
-            </Suspense>
-          }
-        />
-        <Route
           path="/auth"
           element={
             <Suspense fallback={<PageLoader />}>
@@ -318,6 +307,28 @@ function Layout() {
 
   const notFoundRoutes = (
     <Routes>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+
+  const paymentRoutes = (
+    <Routes>
+      <Route
+        path="/pay/success"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <PaymentSuccess />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/pay/fail"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <PaymentSuccess />
+          </Suspense>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
@@ -349,7 +360,11 @@ function Layout() {
         <meta name="twitter:image" content={seo[lang].ogImage} />
       </Helmet>
 
-      {shouldHideChrome ? (
+      {isPaymentRoute ? (
+        <ErrorBoundary>
+          <main>{paymentRoutes}</main>
+        </ErrorBoundary>
+      ) : shouldHideChrome ? (
         <ErrorBoundary>
           <main>{notFoundRoutes}</main>
         </ErrorBoundary>

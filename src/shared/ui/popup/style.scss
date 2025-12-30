@@ -24,27 +24,31 @@
 }
 
 dialog {
-  color: var(--text-color, #dddddd);
-  background: rgb(var(--extra-background-color-rgb) / 80%);
+  color: var(--text-color, var(--graphite-green));
+  background: rgb(var(--white-rgb) / 80%);
   border: none;
   max-inline-size: 100%;
   max-block-size: 100%;
   inline-size: 100vw;
   block-size: 100dvb;
   overflow: scroll;
-  backdrop-filter: blur(20px);
-  animation: spin 11.125s linear infinite;
 
   @extend %hide-scrollbar;
 
-  .popup__gradient {
-    position: absolute;
-    z-index: -1;
-    filter: blur(calc(var(--card-height) / 6));
-    transform: scale(0.7);
-    inline-size: 100%;
-    block-size: 100%;
-    inset-block-start: calc(var(--card-height) / 6);
+  // Анимация и эффекты только для navigation popup (с классом popup)
+  &.popup {
+    backdrop-filter: blur(20px);
+    animation: spin 11.125s linear infinite;
+
+    .popup__gradient {
+      position: absolute;
+      z-index: -1;
+      filter: blur(calc(var(--card-height) / 6));
+      transform: scale(0.7);
+      inline-size: 100%;
+      block-size: 100%;
+      inset-block-start: calc(var(--card-height) / 6);
+    }
   }
 }
 
@@ -80,6 +84,6 @@ dialog input[type='range']:focus-visible {
 }
 
 .about-dialog::backdrop {
-  background: rgb(0 0 0 / 65%);
+  background: rgb(var(--black-rgb) / 20%);
   backdrop-filter: blur(8px);
 }

@@ -49,6 +49,7 @@ const PopupComponent = ({
   return (
     <dialog
       ref={dialogRef}
+      className="popup"
       style={{ background: bgColor }}
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
