@@ -61,6 +61,7 @@ interface YooKassaPaymentRequest {
     value: string;
     currency: string;
   };
+  capture: boolean;
   confirmation: {
     type: 'redirect';
     return_url: string;
@@ -387,6 +388,7 @@ export const handler: Handler = async (
         value: data.amount.toFixed(2),
         currency: yookassaCurrency, // Принудительно RUB для YooKassa
       },
+      capture: true, // Деньги списываются сразу после оплаты
       confirmation: {
         type: 'redirect',
         return_url: returnUrl,
