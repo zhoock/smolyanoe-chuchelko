@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/ProfileSettingsModal.style.scss
-@import '../../../scss/abstracts/mixins';
+@use '../../../scss/abstracts/mixins' as *;
 
 dialog {
   .profile-settings-modal {
