@@ -102,6 +102,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/change-password"
+  to = "/.netlify/functions/change-password"
+  status = 200
+  force = true
+
 # Upload file
 [[redirects]]
   from = "/api/upload-file*"
@@ -138,6 +144,24 @@
 [[redirects]]
   from = "/api/payment-settings*"
   to = "/.netlify/functions/payment-settings"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/get-order-status*"
+  to = "/.netlify/functions/get-order-status"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/get-payment-status*"
+  to = "/.netlify/functions/get-payment-status"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/yookassa-health*"
+  to = "/.netlify/functions/yookassa-health"
   status = 200
   force = true
 

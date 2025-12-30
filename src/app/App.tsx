@@ -38,6 +38,7 @@ const HelpArticlePage = lazy(() => import('@pages/HelpArticle'));
 const OfferPage = lazy(() => import('@pages/Offer'));
 const UserDashboard = lazy(() => import('@pages/UserDashboard/UserDashboard'));
 const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
+const PaymentSuccess = lazy(() => import('@pages/PaymentSuccess/PaymentSuccess'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -274,6 +275,22 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <UserDashboard />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/pay/success"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PaymentSuccess />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/pay/fail"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <PaymentSuccess />
             </Suspense>
           }
         />

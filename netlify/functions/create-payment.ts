@@ -10,6 +10,16 @@
  *    - YOOKASSA_SECRET_KEY - Секретный ключ
  *    - YOOKASSA_RETURN_URL - URL возврата после оплаты (опционально)
  *
+ * Локальная разработка:
+ * - Netlify Dev автоматически читает .env файл из корня проекта
+ * - Запуск: netlify dev (без дополнительных опций)
+ * - Убедитесь, что .env содержит YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY
+ *
+ * Диагностика:
+ * - POST /api/create-payment с {"diagnose": true} - проверка credentials без создания платежа
+ * - GET /api/yookassa-health - health check endpoint для диагностики
+ * - См. docs/YOOKASSA-DIAGNOSTICS.md для подробной инструкции
+ *
  * Пример использования:
  * POST /api/create-payment
  * Body: {
@@ -18,7 +28,8 @@
  *   description: string,
  *   albumId: string,
  *   customerEmail: string,
- *   returnUrl: string (опционально)
+ *   returnUrl: string (опционально),
+ *   diagnose: boolean (опционально, для диагностики)
  * }
  */
 
@@ -108,10 +119,110 @@ interface YooKassaPaymentResponse {
   };
 }
 
+/**
+ * Режим диагностики: проверяет наличие и валидность credentials без создания платежа
+ */
+async function handleDiagnosticMode(
+  event: HandlerEvent,
+  headers: Record<string, string>
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  try {
+    // Получаем credentials из env
+    const shopId = process.env.YOOKASSA_SHOP_ID?.trim();
+    const secretKey = process.env.YOOKASSA_SECRET_KEY?.trim();
+    const hasValidShopId = shopId && shopId.length > 0;
+    const hasValidSecretKey = secretKey && secretKey.length > 0;
+
+    const diagnosticInfo = {
+      env: {
+        hasShopId: hasValidShopId,
+        hasSecret: hasValidSecretKey,
+        shopIdLength: shopId?.length || 0,
+        secretKeyLength: secretKey?.length || 0,
+        secretKeyPrefix: secretKey?.substring(0, 6) + '***' || 'not set',
+        nodeEnv: process.env.NODE_ENV,
+        netlifyDev: process.env.NETLIFY_DEV,
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+      },
+      yookassa: {
+        apiUrl: process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments',
+        testMode: false, // Можно добавить проверку test mode
+      },
+    };
+
+    // Если credentials есть, делаем тестовый запрос к YooKassa
+    let yookassaTest: { success: boolean; error?: string; status?: number } = {
+      success: false,
+      error: 'Credentials not available',
+    };
+
+    if (hasValidShopId && hasValidSecretKey) {
+      try {
+        const apiUrl = process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments';
+        const authHeader = Buffer.from(`${shopId}:${secretKey}`).toString('base64');
+
+        // Делаем лёгкий запрос: список платежей с limit=1
+        const testUrl = `${apiUrl}?limit=1`;
+        const testResponse = await fetch(testUrl, {
+          method: 'GET',
+          headers: {
+            Authorization: `Basic ${authHeader}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        yookassaTest = {
+          success: testResponse.ok,
+          status: testResponse.status,
+          error: testResponse.ok ? undefined : `HTTP ${testResponse.status}`,
+        };
+      } catch (testError: any) {
+        yookassaTest = {
+          success: false,
+          error: testError?.message || 'Unknown error',
+        };
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        diagnostic: {
+          ...diagnosticInfo,
+          yookassaTest,
+        },
+      }),
+    };
+  } catch (error: any) {
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: error?.message || 'Diagnostic failed',
+      }),
+    };
+  }
+}
+
 export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
+  // Диагностика переменных окружения
+  console.log('🔍 ENV check:', {
+    hasShopId: !!process.env.YOOKASSA_SHOP_ID,
+    hasSecret: !!process.env.YOOKASSA_SECRET_KEY,
+    hasDb: !!process.env.DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    netlifyDev: process.env.NETLIFY_DEV,
+    shopIdLength: process.env.YOOKASSA_SHOP_ID?.length || 0,
+    secretKeyLength: process.env.YOOKASSA_SECRET_KEY?.length || 0,
+    secretKeyPrefix: process.env.YOOKASSA_SECRET_KEY?.substring(0, 10) || 'not set',
+  });
+
   // CORS headers для работы с фронтенда
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -145,11 +256,17 @@ export const handler: Handler = async (
     // Парсим тело запроса
     const data: CreatePaymentRequest = JSON.parse(event.body || '{}');
 
+    // Режим диагностики: если передан {"diagnose": true}, возвращаем статус без создания платежа
+    if ((data as any).diagnose === true) {
+      return await handleDiagnosticMode(event, headers);
+    }
+
     // Получаем shopId и secretKey
     // Если указан userId, используем индивидуальный аккаунт музыканта
     // Иначе используем аккаунт платформы по умолчанию
     let shopId: string | undefined;
     let secretKey: string | undefined;
+    let credentialsSource: 'user_settings' | 'env' = 'env';
 
     if (data.userId) {
       // Получаем настройки платежей из БД для конкретного пользователя
@@ -160,6 +277,7 @@ export const handler: Handler = async (
         if (userCredentials && userCredentials.shopId && userCredentials.secretKey) {
           shopId = userCredentials.shopId?.trim();
           secretKey = userCredentials.secretKey?.trim();
+          credentialsSource = 'user_settings';
           console.log(`✅ Using user ${data.userId} payment settings`);
         } else {
           console.log(`ℹ️ User ${data.userId} has no payment settings - using platform account`);
@@ -175,30 +293,49 @@ export const handler: Handler = async (
     if (!shopId || !secretKey) {
       shopId = process.env.YOOKASSA_SHOP_ID?.trim();
       secretKey = process.env.YOOKASSA_SECRET_KEY?.trim();
+      credentialsSource = 'env';
     }
 
-    if (!shopId || !secretKey) {
-      console.error('❌ YooKassa credentials not configured');
+    // ЖЁСТКАЯ ПРОВЕРКА: проверяем что credentials не пустые и не состоят только из пробелов
+    const hasValidShopId = shopId && shopId.length > 0;
+    const hasValidSecretKey = secretKey && secretKey.length > 0;
+
+    if (!hasValidShopId || !hasValidSecretKey) {
+      console.error('❌ YooKassa credentials validation failed:', {
+        hasShopId: hasValidShopId,
+        hasSecret: hasValidSecretKey,
+        shopIdLength: shopId?.length || 0,
+        secretKeyLength: secretKey?.length || 0,
+        credentialsSource,
+        nodeEnv: process.env.NODE_ENV,
+        netlifyDev: process.env.NETLIFY_DEV,
+        // Безопасное логирование: только префикс секрета
+        secretKeyPrefix: secretKey?.substring(0, 6) || 'not set',
+      });
+
       return {
         statusCode: 500,
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'Payment service not configured. Please contact support.',
+          error: 'Payment service not configured',
+          message:
+            'YooKassa credentials are missing or invalid. Check Netlify environment variables.',
         } as CreatePaymentResponse),
       };
     }
 
-    // Логируем credentials для диагностики (без полного secretKey)
-    const credentialsSource = data.userId ? 'user_or_fallback' : 'env';
-    const credsLog = {
-      source: credentialsSource,
-      shopId,
-      secretKeyPrefix: secretKey?.slice(0, 6),
-      secretKeyLen: secretKey?.length,
-      hasUserId: !!data.userId,
-    };
-    console.log('🔐 YooKassa creds used:', credsLog);
+    // Безопасное логирование credentials (без полного секрета)
+    // После проверки выше мы знаем, что shopId и secretKey не undefined
+    console.log('🔐 YooKassa credentials loaded:', {
+      shopId: shopId!,
+      shopIdLength: shopId!.length,
+      secretKeyLength: secretKey!.length,
+      secretKeyPrefix: secretKey!.substring(0, 6) + '***',
+      credentialsSource,
+      nodeEnv: process.env.NODE_ENV,
+      netlifyDev: process.env.NETLIFY_DEV,
+    });
 
     // Валидация данных
     if (!data.amount || !data.description || !data.albumId || !data.customerEmail) {
@@ -312,34 +449,53 @@ export const handler: Handler = async (
       }
     } else {
       // Создаем новый заказ
-      const orderResult = await query<{ id: string }>(
-        `INSERT INTO orders (
-          user_id, album_id, amount, currency, customer_email, 
-          customer_first_name, customer_last_name, customer_phone,
-          status, payment_provider
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        RETURNING id`,
-        [
-          data.userId || null,
-          data.albumId,
-          data.amount,
-          'RUB', // YooKassa работает только с рублями
-          data.customerEmail,
-          data.billingData?.firstName || null,
-          data.billingData?.lastName || null,
-          data.billingData?.phone || null,
-          'pending_payment',
-          'yookassa',
-        ]
-      );
+      console.log('📝 Creating new order in database...', {
+        albumId: data.albumId,
+        amount: data.amount,
+        customerEmail: data.customerEmail,
+        hasDbUrl: !!process.env.DATABASE_URL,
+      });
 
-      if (orderResult.rows.length === 0) {
-        throw new Error('Failed to create order');
+      try {
+        const orderResult = await query<{ id: string }>(
+          `INSERT INTO orders (
+            user_id, album_id, amount, currency, customer_email, 
+            customer_first_name, customer_last_name, customer_phone,
+            status, payment_provider
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          RETURNING id`,
+          [
+            data.userId || null,
+            data.albumId,
+            data.amount,
+            'RUB', // YooKassa работает только с рублями
+            data.customerEmail,
+            data.billingData?.firstName || null,
+            data.billingData?.lastName || null,
+            data.billingData?.phone || null,
+            'pending_payment',
+            'yookassa',
+          ]
+        );
+
+        if (orderResult.rows.length === 0) {
+          throw new Error('Failed to create order');
+        }
+
+        orderId = orderResult.rows[0].id;
+        orderAmount = data.amount;
+        orderStatus = 'pending_payment';
+        console.log('✅ Order created:', { orderId, orderAmount, orderStatus });
+      } catch (dbError: any) {
+        console.error('❌ Database error when creating order:', {
+          message: dbError?.message,
+          code: dbError?.code,
+          detail: dbError?.detail,
+          hint: dbError?.hint,
+          hasDbUrl: !!process.env.DATABASE_URL,
+        });
+        throw dbError;
       }
-
-      orderId = orderResult.rows[0].id;
-      orderAmount = data.amount;
-      orderStatus = 'pending_payment';
     }
 
     // Нормализуем телефон для YooKassa: только цифры, без символов
@@ -369,14 +525,38 @@ export const handler: Handler = async (
     }
 
     // Формируем return URL с orderId
-    const baseReturnUrl =
-      data.returnUrl ||
-      process.env.YOOKASSA_RETURN_URL ||
-      (typeof event.headers.referer !== 'undefined'
-        ? `${new URL(event.headers.referer).origin}/pay/success`
-        : 'https://smolyanoechuchelko.ru/pay/success');
+    const fallbackReturnUrl = 'https://smolyanoechuchelko.ru/pay/success';
+    const requestedReturnUrl = data.returnUrl?.trim() || process.env.YOOKASSA_RETURN_URL?.trim();
+    let refererOrigin: string | null = null;
 
-    const returnUrl = `${baseReturnUrl}?orderId=${orderId}`;
+    if (event.headers.referer) {
+      try {
+        refererOrigin = new URL(event.headers.referer).origin;
+      } catch (error) {
+        console.warn('⚠️ Invalid referer URL, using fallback return URL:', {
+          referer: event.headers.referer,
+          error,
+        });
+      }
+    }
+
+    const baseReturnUrl =
+      requestedReturnUrl || (refererOrigin ? `${refererOrigin}/pay/success` : fallbackReturnUrl);
+
+    let returnUrl: string;
+    try {
+      const returnUrlObject = new URL(baseReturnUrl, refererOrigin || undefined);
+      returnUrlObject.searchParams.set('orderId', orderId);
+      returnUrl = returnUrlObject.toString();
+    } catch (error) {
+      console.warn('⚠️ Invalid return URL, using fallback:', {
+        baseReturnUrl,
+        error,
+      });
+      const fallbackUrl = new URL(fallbackReturnUrl);
+      fallbackUrl.searchParams.set('orderId', orderId);
+      returnUrl = fallbackUrl.toString();
+    }
 
     // Формируем запрос к ЮKassa
     // ВАЖНО: YooKassa (российский платежный сервис) работает только с рублями (RUB)
@@ -459,8 +639,93 @@ export const handler: Handler = async (
     // Создаем Basic Auth заголовок (credentials уже trimmed выше)
     const authHeader = Buffer.from(`${shopId}:${secretKey}`).toString('base64');
 
-    // Ключ идемпотентности на основе orderId для предотвращения дублей
-    const idempotenceKey = `${orderId}-${Date.now()}`;
+    // Проверяем существующие pending платежи для этого заказа
+    // ВАЖНО: Избегаем создания дублей pending платежей
+    if (orderId) {
+      try {
+        const existingPaymentResult = await query<{
+          provider_payment_id: string;
+          status: string;
+        }>(
+          `SELECT provider_payment_id, status 
+           FROM payments 
+           WHERE order_id = $1 
+             AND provider = 'yookassa'
+             AND status IN ('pending', 'waiting_for_capture')
+           ORDER BY created_at DESC 
+           LIMIT 1`,
+          [orderId]
+        );
+
+        if (existingPaymentResult.rows.length > 0) {
+          const existingPayment = existingPaymentResult.rows[0];
+          console.log(`ℹ️ Found existing pending payment for order ${orderId}:`, {
+            paymentId: existingPayment.provider_payment_id,
+            status: existingPayment.status,
+          });
+
+          // Получаем актуальные данные платежа из YooKassa
+          try {
+            const apiUrl = process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments';
+            const paymentUrl = `${apiUrl}/${existingPayment.provider_payment_id}`;
+            const existingPaymentResponse = await fetch(paymentUrl, {
+              method: 'GET',
+              headers: {
+                Authorization: `Basic ${authHeader}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (existingPaymentResponse.ok) {
+              const existingPaymentData: YooKassaPaymentResponse =
+                await existingPaymentResponse.json();
+
+              // Если платеж все еще pending, возвращаем его confirmation_url
+              if (
+                existingPaymentData.status === 'pending' ||
+                existingPaymentData.status === 'waiting_for_capture'
+              ) {
+                console.log(`✅ Returning existing pending payment:`, {
+                  paymentId: existingPaymentData.id,
+                  status: existingPaymentData.status,
+                  hasConfirmationUrl: !!existingPaymentData.confirmation?.confirmation_url,
+                });
+
+                return {
+                  statusCode: 200,
+                  headers,
+                  body: JSON.stringify({
+                    success: true,
+                    paymentId: existingPaymentData.id,
+                    orderId,
+                    confirmationUrl: existingPaymentData.confirmation?.confirmation_url || '',
+                    message: 'Using existing pending payment',
+                  } as CreatePaymentResponse),
+                };
+              }
+
+              // Если платеж завершен, продолжаем создание нового
+              console.log(
+                `ℹ️ Existing payment is ${existingPaymentData.status}, creating new payment`
+              );
+            } else {
+              console.warn(
+                `⚠️ Could not fetch existing payment status, creating new payment:`,
+                existingPaymentResponse.status
+              );
+            }
+          } catch (fetchError) {
+            console.warn('⚠️ Error fetching existing payment, creating new payment:', fetchError);
+          }
+        }
+      } catch (dbError) {
+        console.warn('⚠️ Error checking existing payments, continuing with new payment:', dbError);
+      }
+    }
+
+    // Ключ идемпотентности стабильный по orderId для предотвращения дублей
+    // YooKassa вернет тот же платеж при повторном запросе с тем же ключом
+    const idempotenceKey = `order-${orderId}`;
 
     // Логируем детали запроса перед отправкой (после формирования yookassaRequest)
     console.log('📤 Sending request to YooKassa:', {
@@ -477,7 +742,32 @@ export const handler: Handler = async (
         : 'not provided',
       amount: yookassaRequest.amount.value,
       currency: yookassaRequest.amount.currency,
+      capture: yookassaRequest.capture,
+      hasConfirmation: !!yookassaRequest.confirmation,
+      returnUrl: yookassaRequest.confirmation?.return_url,
     });
+
+    // Логируем тело запроса для диагностики (без секретных данных)
+    console.log(
+      '📤 YooKassa request body:',
+      JSON.stringify(
+        {
+          ...yookassaRequest,
+          receipt: yookassaRequest.receipt
+            ? {
+                customer: {
+                  email: yookassaRequest.receipt.customer.email,
+                  phone: yookassaRequest.receipt.customer.phone ? '***' : undefined,
+                  full_name: yookassaRequest.receipt.customer.full_name || undefined,
+                },
+                items: yookassaRequest.receipt.items,
+              }
+            : undefined,
+        },
+        null,
+        2
+      )
+    );
 
     // Отправляем запрос к ЮKassa
     let yookassaResponse;
@@ -501,7 +791,7 @@ export const handler: Handler = async (
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Basic ${authHeader}`,
-            'Idempotence-Key': `${idempotenceKey}-attempt-${attempt}`,
+            'Idempotence-Key': idempotenceKey, // Стабильный ключ для предотвращения дублей
             Connection: 'keep-alive',
           },
           body: JSON.stringify(yookassaRequest),
@@ -568,6 +858,9 @@ export const handler: Handler = async (
         status: yookassaResponse.status,
         statusText: yookassaResponse.statusText,
         errorText,
+        shopId: shopId?.substring(0, 10) + '...', // Первые 10 символов для диагностики
+        secretKeyLength: secretKey?.length,
+        authHeaderLength: authHeader.length,
       });
 
       // Пытаемся распарсить JSON ошибки от YooKassa
@@ -577,7 +870,7 @@ export const handler: Handler = async (
 
       try {
         parsedError = JSON.parse(errorText);
-        console.error('❌ YooKassa error details:', parsedError);
+        console.error('❌ YooKassa error details:', JSON.stringify(parsedError, null, 2));
 
         // YooKassa возвращает ошибки в формате:
         // { "type": "error", "id": "...", "code": "...", "description": "...", "parameter": "..." }
@@ -593,13 +886,31 @@ export const handler: Handler = async (
         if (parsedError.code) {
           errorDetails.code = parsedError.code;
         }
+
+        // Специальная обработка для 401 ошибки (invalid_credentials)
+        if (yookassaResponse.status === 401) {
+          console.error('🔐 Authentication failed! Check credentials:', {
+            shopIdPrefix: shopId?.substring(0, 6),
+            secretKeyPrefix: secretKey?.substring(0, 6) + '***',
+            secretKeyLength: secretKey?.length,
+            credentialsSource: credentialsSource,
+            errorCode: parsedError.code,
+            errorDescription: parsedError.description,
+            nodeEnv: process.env.NODE_ENV,
+            netlifyDev: process.env.NETLIFY_DEV,
+          });
+          errorMessage = `Payment service credentials are invalid or missing. Check Netlify env vars.`;
+        }
       } catch (parseError) {
         // Если не удалось распарсить, используем текст как есть
         console.warn('⚠️ Could not parse YooKassa error JSON:', parseError);
       }
 
+      // Преобразуем 401 в 500 для клиента, чтобы не раскрывать детали авторизации
+      const clientStatusCode = yookassaResponse.status === 401 ? 500 : yookassaResponse.status;
+
       return {
-        statusCode: yookassaResponse.status,
+        statusCode: clientStatusCode,
         headers,
         body: JSON.stringify({
           success: false,
