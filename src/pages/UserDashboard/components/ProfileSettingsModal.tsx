@@ -1,0 +1,849 @@
+// src/pages/UserDashboard/components/ProfileSettingsModal.tsx
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Popup } from '@shared/ui/popup';
+import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { getUser, getToken } from '@shared/lib/auth';
+import './ProfileSettingsModal.style.scss';
+
+interface ProfileSettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  userName?: string;
+  userEmail?: string;
+}
+
+type TabType = 'profile' | 'security' | 'interface';
+
+export function ProfileSettingsModal({
+  isOpen,
+  onClose,
+  userName = 'Site Owner',
+  userEmail = 'zhook@zhoock.ru',
+}: ProfileSettingsModalProps) {
+  const { lang: currentLang, setLang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [name, setName] = useState(userName);
+  const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(currentLang || 'ru');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [headerImages, setHeaderImages] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+
+  // Поля для смены пароля
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Состояние для показа/скрытия паролей
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Состояние для смены пароля
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  // Исходные значения для отслеживания изменений
+  const [initialName, setInitialName] = useState(userName);
+  const [initialLang, setInitialLang] = useState<'ru' | 'en'>(currentLang || 'ru');
+  const [initialHeaderImages, setInitialHeaderImages] = useState<File[]>([]);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const languages = [
+    { value: 'ru', label: 'Русский' },
+    { value: 'en', label: 'English' },
+  ];
+
+  const selectedLanguage = languages.find((l) => l.value === selectedLang) || languages[0];
+
+  // Закрытие dropdown при клике вне
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        selectRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        !selectRef.current.contains(e.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  // Валидация формы смены пароля
+  const getPasswordValidationError = (): string | null => {
+    if (activeTab !== 'security') return null;
+
+    // Если поля пустые, ошибки валидации нет (но форма невалидна для сохранения)
+    if (!currentPassword && !newPassword && !confirmPassword) return null;
+
+    if (!currentPassword) {
+      return 'Введите текущий пароль';
+    }
+
+    if (!newPassword) {
+      return 'Введите новый пароль';
+    }
+
+    if (newPassword.length < 8) {
+      return 'Новый пароль должен содержать минимум 8 символов';
+    }
+
+    if (newPassword === currentPassword) {
+      return 'Новый пароль должен отличаться от текущего';
+    }
+
+    if (newPassword !== confirmPassword) {
+      return 'Пароли не совпадают';
+    }
+
+    return null;
+  };
+
+  const passwordValidationError = getPasswordValidationError();
+  const isPasswordFormValid =
+    passwordValidationError === null && currentPassword && newPassword && confirmPassword;
+
+  // Проверка наличия изменений
+  const hasProfileChanges =
+    name !== initialName ||
+    selectedLang !== initialLang ||
+    headerImages.length !== initialHeaderImages.length;
+  const hasPasswordChanges =
+    activeTab === 'security' && (currentPassword || newPassword || confirmPassword);
+  const hasChanges = hasProfileChanges || hasPasswordChanges;
+
+  const handleCancel = () => {
+    // Возвращаем исходные значения
+    setName(initialName);
+    setSelectedLang(initialLang);
+    setHeaderImages([...initialHeaderImages]);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    onClose();
+  };
+
+  const handleSave = async () => {
+    if (activeTab === 'security') {
+      // Валидация формы пароля
+      if (!isPasswordFormValid) {
+        setPasswordError(passwordValidationError || 'Заполните все поля');
+        return;
+      }
+
+      // Смена пароля через API
+      setIsChangingPassword(true);
+      setPasswordError(null);
+      setPasswordSuccess(false);
+
+      try {
+        const token = getToken();
+        if (!token) {
+          setPasswordError('Не удалось получить токен авторизации');
+          setIsChangingPassword(false);
+          return;
+        }
+
+        console.log('🔄 Sending password change request...');
+        const response = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword,
+          }),
+        });
+
+        console.log('📥 Response status:', response.status);
+        const result = await response.json();
+        console.log('📥 Response data:', result);
+
+        if (!response.ok) {
+          console.error('❌ Password change failed:', result.error);
+          setPasswordError(result.error || 'Ошибка при смене пароля');
+          setIsChangingPassword(false);
+          return;
+        }
+
+        console.log('✅ Password changed successfully!');
+
+        // Успех - перезагружаем пароль из БД и обновляем состояние
+        setPasswordSuccess(true);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordError(null);
+
+        // Перезагружаем пароль из БД, чтобы получить актуальное значение
+        const reloadPassword = async () => {
+          try {
+            const token = getToken();
+            if (!token) return;
+
+            const reloadResponse = await fetch('/api/user-profile', {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            if (reloadResponse.ok) {
+              const reloadResult = await reloadResponse.json();
+              console.log('🔄 Reloaded password from DB:', reloadResult);
+              if (reloadResult.success && reloadResult.data?.password) {
+                setCurrentPassword(reloadResult.data.password);
+                console.log('✅ Updated currentPassword state:', reloadResult.data.password);
+              } else {
+                // Если пароль не загрузился из БД, используем новый пароль
+                setCurrentPassword(newPassword);
+                console.log('⚠️ Password not found in DB response, using new password');
+              }
+            }
+          } catch (error) {
+            console.error('Ошибка перезагрузки пароля:', error);
+            // В случае ошибки используем новый пароль
+            setCurrentPassword(newPassword);
+          }
+        };
+
+        await reloadPassword();
+
+        // Закрываем модалку через небольшую задержку, чтобы пользователь увидел сообщение об успехе
+        setTimeout(() => {
+          onClose();
+          setPasswordSuccess(false);
+        }, 1500);
+      } catch (error) {
+        console.error('Ошибка при смене пароля:', error);
+        setPasswordError(error instanceof Error ? error.message : 'Неизвестная ошибка');
+      } finally {
+        setIsChangingPassword(false);
+      }
+    } else {
+      // Сохранение изменений профиля (язык, имя и т.д.)
+      if (selectedLang !== currentLang) {
+        setLang(selectedLang);
+      }
+      // TODO: Здесь можно добавить сохранение данных профиля на сервер
+      setInitialName(name);
+      setInitialLang(selectedLang);
+      setInitialHeaderImages([...headerImages]);
+      onClose();
+    }
+  };
+
+  const handleHeaderClose = () => {
+    if (hasChanges) {
+      // Если есть изменения, отменяем их и закрываем
+      handleCancel();
+    } else {
+      onClose();
+    }
+  };
+
+  // Загрузка текущего пароля при открытии вкладки "Безопасность"
+  useEffect(() => {
+    if (isOpen && activeTab === 'security') {
+      const loadPassword = async () => {
+        try {
+          const token = getToken();
+          if (!token) {
+            console.log('⚠️ Токен не найден для загрузки пароля');
+            return;
+          }
+
+          const response = await fetch('/api/user-profile', {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.password) {
+              setCurrentPassword(result.data.password);
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка загрузки пароля:', error);
+        }
+      };
+
+      loadPassword();
+    }
+  }, [isOpen, activeTab]);
+
+  // Сброс состояния пароля при переключении вкладок
+  useEffect(() => {
+    if (activeTab !== 'security') {
+      setPasswordError(null);
+      setPasswordSuccess(false);
+    }
+  }, [activeTab]);
+
+  // Сброс значений при открытии модального окна
+  useEffect(() => {
+    if (isOpen) {
+      // Сохраняем исходные значения при открытии
+      const initialUserName = userName || '';
+      const initialUserLang = currentLang || 'ru';
+      setInitialName(initialUserName);
+      setInitialLang(initialUserLang);
+      setInitialHeaderImages([]);
+      setName(initialUserName);
+      setSelectedLang(initialUserLang);
+      setHeaderImages([]);
+      // Сбрасываем поля пароля при открытии (кроме currentPassword - он загружается отдельно)
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError(null);
+      setPasswordSuccess(false);
+    }
+  }, [isOpen, userName, currentLang]);
+
+  // Закрытие при нажатии Escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isDropdownOpen) {
+          setIsDropdownOpen(false);
+        } else {
+          handleHeaderClose();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, isDropdownOpen, hasChanges, onClose]);
+
+  const handleSelectLanguage = (lang: 'ru' | 'en') => {
+    setSelectedLang(lang);
+    setIsDropdownOpen(false);
+    // Не изменяем язык интерфейса сразу, только при сохранении
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleFiles = (files: File[]) => {
+    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+    const maxImages = 10;
+    const currentCount = headerImages.length;
+    const remainingSlots = maxImages - currentCount;
+
+    if (remainingSlots <= 0) {
+      alert(`Можно загрузить до ${maxImages} изображений`);
+      return;
+    }
+
+    const filesToAdd = imageFiles.slice(0, remainingSlots);
+    setHeaderImages((prev) => [...prev, ...filesToAdd]);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setHeaderImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  return (
+    <Popup isActive={isOpen} onClose={handleHeaderClose}>
+      <div className="profile-settings-modal">
+        <div className="profile-settings-modal__card">
+          <div className="profile-settings-modal__header">
+            <h2 className="profile-settings-modal__title">
+              {ui?.dashboard?.profileSettings ?? 'Настройки профиля'}
+            </h2>
+            <button
+              type="button"
+              className="profile-settings-modal__close"
+              onClick={handleHeaderClose}
+              aria-label="Закрыть"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="profile-settings-modal__tabs">
+            <button
+              type="button"
+              className={`profile-settings-modal__tab ${
+                activeTab === 'profile' ? 'profile-settings-modal__tab--active' : ''
+              }`}
+              onClick={() => setActiveTab('profile')}
+            >
+              Профиль
+            </button>
+            <button
+              type="button"
+              className={`profile-settings-modal__tab ${
+                activeTab === 'security' ? 'profile-settings-modal__tab--active' : ''
+              }`}
+              onClick={() => setActiveTab('security')}
+            >
+              Безопасность
+            </button>
+            <button
+              type="button"
+              className={`profile-settings-modal__tab ${
+                activeTab === 'interface' ? 'profile-settings-modal__tab--active' : ''
+              }`}
+              onClick={() => setActiveTab('interface')}
+            >
+              Интерфейс
+            </button>
+          </div>
+
+          <div className="profile-settings-modal__content">
+            {activeTab === 'profile' && (
+              <div className="profile-settings-modal__profile-tab">
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="profile-name" className="profile-settings-modal__label">
+                    Band Name
+                  </label>
+                  <input
+                    id="profile-name"
+                    type="text"
+                    className="profile-settings-modal__input"
+                    placeholder="Enter the name of your band"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="profile-email" className="profile-settings-modal__label">
+                    Email
+                  </label>
+                  <input
+                    id="profile-email"
+                    type="email"
+                    className="profile-settings-modal__input"
+                    value={userEmail}
+                    disabled
+                  />
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  <label className="profile-settings-modal__label">Язык</label>
+                  <div className="profile-settings-modal__select-wrapper">
+                    <div
+                      ref={selectRef}
+                      className="profile-settings-modal__select"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setIsDropdownOpen(!isDropdownOpen);
+                        }
+                      }}
+                    >
+                      <span className="profile-settings-modal__select-value">
+                        {selectedLanguage.label}
+                      </span>
+                      <svg
+                        className={`profile-settings-modal__select-arrow ${
+                          isDropdownOpen ? 'profile-settings-modal__select-arrow--open' : ''
+                        }`}
+                        width="12"
+                        height="8"
+                        viewBox="0 0 12 8"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 1L6 6L11 1"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+
+                    {isDropdownOpen && (
+                      <div ref={dropdownRef} className="profile-settings-modal__dropdown">
+                        {languages.map((lang) => (
+                          <button
+                            key={lang.value}
+                            type="button"
+                            className={`profile-settings-modal__option ${
+                              selectedLang === lang.value
+                                ? 'profile-settings-modal__option--selected'
+                                : ''
+                            }`}
+                            onClick={() => handleSelectLanguage(lang.value as 'ru' | 'en')}
+                          >
+                            {lang.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  <label className="profile-settings-modal__label">
+                    Изображения для шапки сайта
+                  </label>
+                  <div
+                    className={`profile-settings-modal__dropzone ${
+                      dragActive ? 'profile-settings-modal__dropzone--active' : ''
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <div className="profile-settings-modal__dropzone-text">
+                      Можно загрузить до 10 изображений для шапки сайта
+                    </div>
+                    {headerImages.length > 0 && (
+                      <div className="profile-settings-modal__images-list">
+                        {headerImages.map((file, index) => (
+                          <div key={index} className="profile-settings-modal__image-item">
+                            <span className="profile-settings-modal__image-name">{file.name}</span>
+                            <button
+                              type="button"
+                              className="profile-settings-modal__image-remove"
+                              onClick={() => handleRemoveImage(index)}
+                              aria-label="Удалить изображение"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label
+                      htmlFor="header-images-input"
+                      className="profile-settings-modal__file-label"
+                    >
+                      Выбрать файлы
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      id="header-images-input"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="profile-settings-modal__file-input"
+                      onChange={handleFileInput}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
+              <div className="profile-settings-modal__security-tab">
+                <h3 className="profile-settings-modal__section-title">Смена пароля</h3>
+
+                {passwordSuccess && (
+                  <div className="profile-settings-modal__success-message">Пароль обновлён</div>
+                )}
+
+                {passwordError && (
+                  <div className="profile-settings-modal__error-message">{passwordError}</div>
+                )}
+
+                {passwordValidationError && !passwordError && (
+                  <div className="profile-settings-modal__validation-error">
+                    {passwordValidationError}
+                  </div>
+                )}
+
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="current-password" className="profile-settings-modal__label">
+                    Текущий пароль
+                  </label>
+                  <div className="profile-settings-modal__input-wrapper">
+                    <input
+                      id="current-password"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      className="profile-settings-modal__input"
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      disabled={isChangingPassword}
+                    />
+                    <button
+                      type="button"
+                      className="profile-settings-modal__password-toggle"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      aria-label={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      tabIndex={-1}
+                    >
+                      {showCurrentPassword ? (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M8 8l8 8M16 8l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="new-password" className="profile-settings-modal__label">
+                    Новый пароль
+                  </label>
+                  <div className="profile-settings-modal__input-wrapper">
+                    <input
+                      id="new-password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      className="profile-settings-modal__input"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      disabled={isChangingPassword}
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      className="profile-settings-modal__password-toggle"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M8 8l8 8M16 8l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="confirm-password" className="profile-settings-modal__label">
+                    Подтвердите новый пароль
+                  </label>
+                  <div className="profile-settings-modal__input-wrapper">
+                    <input
+                      id="confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      className="profile-settings-modal__input"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      disabled={isChangingPassword}
+                    />
+                    <button
+                      type="button"
+                      className="profile-settings-modal__password-toggle"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M8 8l8 8M16 8l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'interface' && (
+              <div className="profile-settings-modal__interface-tab">
+                <p>Раздел «Интерфейс» в разработке</p>
+              </div>
+            )}
+          </div>
+
+          {hasChanges && (
+            <div className="profile-settings-modal__footer">
+              <button
+                type="button"
+                className="profile-settings-modal__button profile-settings-modal__button--cancel"
+                onClick={handleCancel}
+                disabled={isChangingPassword}
+              >
+                {ui?.dashboard?.cancel ?? 'Отмена'}
+              </button>
+              <button
+                type="button"
+                className="profile-settings-modal__button profile-settings-modal__button--save"
+                onClick={handleSave}
+                disabled={isChangingPassword || (activeTab === 'security' && !isPasswordFormValid)}
+              >
+                {isChangingPassword ? 'Сохранение...' : (ui?.dashboard?.save ?? 'Сохранить')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Popup>
+  );
+}
