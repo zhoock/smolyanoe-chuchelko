@@ -65,6 +65,70 @@ $ms-4: 123.363px; // 6.854rem;
   }
 }
 
+// Dashboard button - единый темный стиль для всех кнопок в админке
+@mixin dashboard-button(
+  $margin: 0,
+  $padding: var(--ms-01) var(--ms-0),
+  $border-radius: var(--ms-01)
+) {
+  @include button-variant(
+    $color: var(--dashboard-button-cancel-text),
+    $background: var(--dashboard-button-cancel-bg),
+    $hover-color: var(--dashboard-button-cancel-text),
+    $hover-background: var(--dashboard-button-cancel-hover),
+    $margin: $margin,
+    $padding: $padding,
+    $border: 0,
+    $border-radius: $border-radius
+  );
+}
+
+// Dashboard delete button - стиль для кнопок удаления
+@mixin dashboard-delete-button(
+  $margin: 0,
+  $padding: var(--ms-01) var(--ms-0),
+  $border-radius: var(--ms-01)
+) {
+  display: flex;
+  margin: $margin;
+  padding: $padding;
+  color: var(--dashboard-text-secondary);
+  font-size: var(--ms-0);
+  line-height: 1;
+  background: rgb(139 69 19 / 30%); // Темно-коричневый фон
+  border: 1px solid rgb(220 38 38 / 50%); // Красная граница
+  border-radius: $border-radius;
+  transition: all 0.2s;
+  align-items: center;
+  justify-content: center;
+  font-weight: 400;
+  cursor: pointer;
+  opacity: 0.7;
+  text-transform: none;
+  letter-spacing: normal;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      color: var(--dashboard-text-primary);
+      background: rgb(220 38 38 / 30%);
+      border-color: rgb(220 38 38 / 70%);
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    background: rgb(220 38 38 / 30%);
+    border-color: rgb(220 38 38 / 70%);
+  }
+
+  &.disabled,
+  &[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
 $old-phones: 'width < 375px';
 $phones: 'width >= 375px';
 $tablets: 'width >= 768px';
@@ -276,4 +340,29 @@ $desktops: 'width >= 1024px';
   --skeleton-base-rgb: var(--charcoal-rgb, 39 39 39);
   --skeleton-play-button-rgb: var(--mango-sorbet-rgb, 250 229 155);
   --skeleton-progress-rgb: var(--charcoal-rgb, 39 39 39);
+
+  // Dashboard (Админка) - светлая тема
+  --dashboard-card-bg: var(--white);
+  --dashboard-card-border: var(--icy-mist);
+  --dashboard-text-primary: var(--graphite-green);
+  --dashboard-text-secondary: var(--quiet-gray);
+  --dashboard-input-bg: var(--white);
+  --dashboard-input-border: var(--icy-mist);
+  --dashboard-button-bg: var(--icy-mist);
+  --dashboard-button-bg-hover: var(--mango-sorbet);
+  --dashboard-button-text: var(--graphite-green);
+  --dashboard-button-cancel-bg: var(--icy-mist);
+  --dashboard-button-cancel-text: var(--graphite-green);
+  --dashboard-button-cancel-hover: var(--mango-sorbet);
+  --dashboard-button-save-bg: var(--mango-sorbet);
+  --dashboard-button-save-text: var(--graphite-green);
+  --dashboard-button-save-hover: var(--honeydew-melon);
+  --dashboard-button-primary-bg: var(--mango-sorbet);
+  --dashboard-button-primary-bg-hover: var(--honeydew-melon);
+  --dashboard-button-primary-text: var(--graphite-green);
+  --dashboard-divider: var(--icy-mist);
+  --dashboard-hover-bg: var(--icy-mist);
+  --dashboard-active-bg: var(--mango-sorbet);
+  --dashboard-shadow: rgb(var(--black-rgb) / 10%);
+  --dashboard-backdrop: rgb(var(--black-rgb) / 20%);
 }
