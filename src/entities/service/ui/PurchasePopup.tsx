@@ -803,7 +803,8 @@ function PaymentStep({
         description,
         albumId: album.albumId,
         customerEmail: cardEmail,
-        returnUrl,
+        returnUrl:
+          typeof window !== 'undefined' ? `${window.location.origin}/pay/success` : returnUrl,
         billingData: {
           firstName: billingFirstName,
           lastName: billingLastName,
