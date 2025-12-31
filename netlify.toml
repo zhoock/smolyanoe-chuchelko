@@ -185,8 +185,9 @@
   status = 200
   force = true
 
+# Download track
 [[redirects]]
-  from = "/download*"
+  from = "/api/download*"
   to = "/.netlify/functions/download-track"
   status = 200
   force = true
