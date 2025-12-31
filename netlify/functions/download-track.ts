@@ -227,22 +227,26 @@ export const handler: Handler = async (
                 ? `${sanitizeFileName(track.title)}.${extension}`
                 : sanitizeFileName(fileName);
 
-              // Экранируем кавычки и другие недопустимые символы для HTTP заголовка
+              // Экранируем имя файла для HTTP заголовка
+              // Убираем все недопустимые символы для HTTP заголовков
               const escapeHeaderValue = (value: string): string => {
-                // Убираем кавычки и другие недопустимые символы из заголовка
-                return value.replace(/["\\\r\n]/g, '');
+                // Убираем все недопустимые символы: кавычки, обратные слеши, переносы строк, табы
+                return value.replace(/["\\\r\n\t\x00-\x1F\x7F]/g, '');
               };
 
               const safeFileName = escapeHeaderValue(downloadFileName);
               const encodedFileName = encodeURIComponent(downloadFileName);
 
+              // Формируем заголовок Content-Disposition
+              // Используем только RFC 5987 encoding для избежания проблем с кавычками
+              const contentDisposition = `attachment; filename*=UTF-8''${encodedFileName}`;
+
               // Возвращаем файл с заголовком для скачивания
-              // Используем RFC 5987 encoding для поддержки не-ASCII символов
               return {
                 statusCode: 200,
                 headers: {
                   'Content-Type': contentType,
-                  'Content-Disposition': `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`,
+                  'Content-Disposition': contentDisposition,
                   'Content-Length': fileBuffer.byteLength.toString(),
                   'Cache-Control': 'no-cache',
                 },
