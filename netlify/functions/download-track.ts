@@ -190,7 +190,6 @@ export const handler: Handler = async (
             const headResponse = await fetch(urlData.publicUrl, { method: 'HEAD' });
             if (headResponse.ok) {
               console.log(`✅ [download-track] Found file at: ${storagePath}`);
-              audioUrl = urlData.publicUrl;
 
               // Обновляем счетчик скачиваний (не блокируем ответ)
               query(
@@ -204,13 +203,31 @@ export const handler: Handler = async (
                 console.error('❌ Failed to update download count:', error);
               });
 
-              // Редирект на Supabase Storage URL
+              // Скачиваем файл из Supabase Storage для проксирования
+              const fileResponse = await fetch(urlData.publicUrl);
+              if (!fileResponse.ok) {
+                throw new Error(`Failed to download file: ${fileResponse.status}`);
+              }
+
+              const fileBuffer = await fileResponse.arrayBuffer();
+              const contentType = fileResponse.headers.get('content-type') || 'audio/wav';
+
+              // Формируем имя файла для скачивания
+              const downloadFileName = track.title
+                ? `${track.title.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s-]/g, '_')}.${fileName.split('.').pop() || 'wav'}`
+                : fileName;
+
+              // Возвращаем файл с заголовком для скачивания
               return {
-                statusCode: 302,
+                statusCode: 200,
                 headers: {
-                  Location: audioUrl,
+                  'Content-Type': contentType,
+                  'Content-Disposition': `attachment; filename="${downloadFileName}"`,
+                  'Content-Length': fileBuffer.byteLength.toString(),
                   'Cache-Control': 'no-cache',
                 },
+                body: Buffer.from(fileBuffer).toString('base64'),
+                isBase64Encoded: true,
               };
             } else {
               console.log(
