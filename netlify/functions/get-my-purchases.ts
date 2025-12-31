@@ -74,7 +74,14 @@ export const handler: Handler = async (
         console.warn(
           '⚠️ [get-my-purchases] Table "purchases" does not exist. Please run migration 021_create_purchases.sql'
         );
-        return createSuccessResponse([], 200, CORS_HEADERS);
+        return {
+          statusCode: 200,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({
+            success: true,
+            purchases: [],
+          }),
+        };
       }
     } catch (tableCheckError) {
       console.error('❌ [get-my-purchases] Error checking table existence:', tableCheckError);
@@ -100,7 +107,14 @@ export const handler: Handler = async (
     console.log('📋 [get-my-purchases] Found purchases:', purchasesResult.rows.length);
 
     if (purchasesResult.rows.length === 0) {
-      return createSuccessResponse([], 200, CORS_HEADERS);
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          success: true,
+          purchases: [],
+        }),
+      };
     }
 
     // Для каждой покупки получаем информацию об альбоме и треках
@@ -163,7 +177,14 @@ export const handler: Handler = async (
     );
 
     console.log('✅ [get-my-purchases] Successfully fetched purchases:', purchases.length);
-    return createSuccessResponse(purchases, 200, CORS_HEADERS);
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        success: true,
+        purchases,
+      }),
+    };
   } catch (error) {
     console.error('❌ [get-my-purchases] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
