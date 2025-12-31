@@ -125,7 +125,7 @@ export const handler: Handler = async (
     // Убираем ведущий слеш и префикс /audio/ если есть
     let normalizedPath = audioUrl.trim();
     if (normalizedPath.startsWith('/audio/')) {
-      normalizedPath = normalizedPath.slice(7); // Убираем "/audio/"
+      normalizedPath = normalizedPath.slice(7); // Убираем "/audio/" -> "23-Remastered/01-Barnums-Fijian-Mermaid-1644.wav"
     } else if (normalizedPath.startsWith('/')) {
       normalizedPath = normalizedPath.slice(1); // Убираем ведущий "/"
     }
@@ -133,37 +133,52 @@ export const handler: Handler = async (
     // Используем 'zhoock' как userId для единообразия
     const storageUserId = 'zhoock';
 
-    // Извлекаем имя файла из пути
-    // Путь может быть: "23/01-track.wav" или "23-Remastered/01-track.wav"
+    // Пробуем несколько вариантов путей
+    // 1. Используем оригинальный путь из БД (normalizedPath уже содержит правильную папку, например "23-Remastered/01-track.wav")
+    // 2. Пробуем варианты с album_id из покупки
+    const possiblePaths: string[] = [];
+
+    // Вариант 1: Оригинальный путь из БД (приоритет, так как он содержит правильное имя папки)
+    if (normalizedPath) {
+      possiblePaths.push(`users/${storageUserId}/audio/${normalizedPath}`);
+    }
+
+    // Вариант 2: Извлекаем имя файла и пробуем разные варианты album_id
     const fileName = normalizedPath.includes('/')
       ? normalizedPath.split('/').pop() || normalizedPath
       : normalizedPath;
 
-    // Пробуем несколько вариантов путей, так как album_id может отличаться от реальной папки
-    // Варианты: с разными регистрами, с дефисами/подчеркиваниями, оригинальный путь из БД
+    // Варианты album_id с разными регистрами и форматами
     const albumIdVariants = [
       purchase.album_id, // "23-remastered"
       purchase.album_id.replace(/-remastered/i, '-Remastered'), // "23-Remastered"
+      purchase.album_id.replace(/-remastered/i, ' Remastered'), // "23 Remastered" (с пробелом)
       purchase.album_id.replace(/-remastered/i, 'Remastered'), // "23Remastered"
       purchase.album_id.replace(/-/g, '_'), // "23_remastered"
+      '23-Remastered', // Прямой вариант с заглавной R
+      '23 Remastered', // С пробелом
     ];
 
-    const possiblePaths = [
-      // Основные варианты с album_id
-      ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`),
-      // Оригинальный путь из БД (если он содержит полный путь)
-      `users/${storageUserId}/audio/${normalizedPath}`,
-      // Если normalizedPath уже содержит users/zhoock/audio, используем его как есть
-      normalizedPath.startsWith('users/') ? normalizedPath : null,
-    ].filter((path): path is string => path !== null);
+    // Добавляем варианты с album_id
+    possiblePaths.push(
+      ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`)
+    );
 
-    console.log('🔍 [download-track] Trying paths:', possiblePaths);
+    // Если normalizedPath уже содержит users/zhoock/audio, используем его как есть
+    if (normalizedPath.startsWith('users/')) {
+      possiblePaths.push(normalizedPath);
+    }
+
+    // Убираем дубликаты
+    const uniquePaths = [...new Set(possiblePaths)];
+
+    console.log('🔍 [download-track] Trying paths:', uniquePaths);
 
     // Пробуем получить публичный URL из Supabase Storage
     const supabase = createSupabaseClient();
     if (supabase) {
       // Пробуем каждый возможный путь
-      for (const storagePath of possiblePaths) {
+      for (const storagePath of uniquePaths) {
         console.log(`🔍 [download-track] Trying path: ${storagePath}`);
         const { data: urlData } = supabase.storage
           .from(STORAGE_BUCKET_NAME)
