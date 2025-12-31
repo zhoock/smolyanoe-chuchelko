@@ -74,8 +74,16 @@ export const handler: Handler = async (
     const track = trackResult.rows[0];
     let audioUrl = track.src;
 
+    console.log('🔍 [download-track] Track info:', {
+      trackId,
+      albumId: purchase.album_id,
+      src: track.src,
+      title: track.title,
+    });
+
     // Если src - это уже полный URL, используем его
-    if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+    if (audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'))) {
+      console.log('✅ [download-track] Using direct URL:', audioUrl);
       // Обновляем счетчик скачиваний (не блокируем ответ)
       query(
         `UPDATE purchases 
@@ -98,68 +106,118 @@ export const handler: Handler = async (
       };
     }
 
+    if (!audioUrl) {
+      console.error('❌ [download-track] Track src is empty');
+      return {
+        statusCode: 404,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Track file path not found in database' }),
+      };
+    }
+
     // Если src - относительный путь, конвертируем в Supabase Storage URL
     // Формат пути может быть:
     // - "/audio/23/01-Barnums-Fijian-Mermaid-1644.wav"
+    // - "/audio/23-Remastered/01-Barnums-Fijian-Mermaid-1644.wav"
     // - "23/01-Barnums-Fijian-Mermaid-1644.wav"
     // - Полный URL из Supabase Storage (уже обработан выше)
-    let normalizedPath = audioUrl.startsWith('/audio/') ? audioUrl.slice(7) : audioUrl;
+
+    // Убираем ведущий слеш и префикс /audio/ если есть
+    let normalizedPath = audioUrl.trim();
+    if (normalizedPath.startsWith('/audio/')) {
+      normalizedPath = normalizedPath.slice(7); // Убираем "/audio/"
+    } else if (normalizedPath.startsWith('/')) {
+      normalizedPath = normalizedPath.slice(1); // Убираем ведущий "/"
+    }
 
     // Используем 'zhoock' как userId для единообразия
     const storageUserId = 'zhoock';
 
-    // Если путь содержит подпапки (например "23/01-track.wav"), берем имя файла
-    // Иначе используем путь как есть
+    // Извлекаем имя файла из пути
+    // Путь может быть: "23/01-track.wav" или "23-Remastered/01-track.wav"
     const fileName = normalizedPath.includes('/')
       ? normalizedPath.split('/').pop() || normalizedPath
       : normalizedPath;
 
-    const storagePath = `users/${storageUserId}/audio/${purchase.album_id}/${fileName}`;
+    // Пробуем несколько вариантов путей, так как album_id может отличаться от реальной папки
+    const possiblePaths = [
+      `users/${storageUserId}/audio/${purchase.album_id}/${fileName}`, // Основной путь
+      `users/${storageUserId}/audio/${purchase.album_id.replace(/-/g, '-')}/${fileName}`, // С дефисами
+      `users/${storageUserId}/audio/${normalizedPath}`, // Оригинальный путь из БД
+    ];
+
+    console.log('🔍 [download-track] Trying paths:', possiblePaths);
 
     // Пробуем получить публичный URL из Supabase Storage
     const supabase = createSupabaseClient();
     if (supabase) {
-      const { data: urlData } = supabase.storage
-        .from(STORAGE_BUCKET_NAME)
-        .getPublicUrl(storagePath);
-      if (urlData?.publicUrl) {
-        audioUrl = urlData.publicUrl;
+      // Пробуем каждый возможный путь
+      for (const storagePath of possiblePaths) {
+        console.log(`🔍 [download-track] Trying path: ${storagePath}`);
+        const { data: urlData } = supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .getPublicUrl(storagePath);
 
-        // Обновляем счетчик скачиваний (не блокируем ответ)
-        query(
-          `UPDATE purchases 
-           SET download_count = download_count + 1, 
-               last_downloaded_at = CURRENT_TIMESTAMP,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $1`,
-          [purchase.id]
-        ).catch((error) => {
-          console.error('❌ Failed to update download count:', error);
-        });
+        if (urlData?.publicUrl) {
+          // Проверяем, что файл действительно существует (делаем HEAD запрос)
+          try {
+            const headResponse = await fetch(urlData.publicUrl, { method: 'HEAD' });
+            if (headResponse.ok) {
+              console.log(`✅ [download-track] Found file at: ${storagePath}`);
+              audioUrl = urlData.publicUrl;
 
-        // Редирект на Supabase Storage URL
-        return {
-          statusCode: 302,
-          headers: {
-            Location: audioUrl,
-            'Cache-Control': 'no-cache',
-          },
-        };
+              // Обновляем счетчик скачиваний (не блокируем ответ)
+              query(
+                `UPDATE purchases 
+                 SET download_count = download_count + 1, 
+                     last_downloaded_at = CURRENT_TIMESTAMP,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $1`,
+                [purchase.id]
+              ).catch((error) => {
+                console.error('❌ Failed to update download count:', error);
+              });
+
+              // Редирект на Supabase Storage URL
+              return {
+                statusCode: 302,
+                headers: {
+                  Location: audioUrl,
+                  'Cache-Control': 'no-cache',
+                },
+              };
+            } else {
+              console.log(
+                `⚠️ [download-track] File not found at: ${storagePath} (${headResponse.status})`
+              );
+            }
+          } catch (fetchError) {
+            console.log(`⚠️ [download-track] Error checking file at: ${storagePath}`, fetchError);
+          }
+        }
       }
     }
 
     // Если не удалось получить URL, возвращаем ошибку
-    console.error('❌ Failed to get track URL:', {
+    console.error('❌ [download-track] Failed to get track URL:', {
       trackId,
       albumId: purchase.album_id,
       src: track.src,
-      storagePath,
+      triedPaths: possiblePaths,
     });
 
     return {
-      statusCode: 500,
+      statusCode: 404,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Failed to get track URL' }),
+      body: JSON.stringify({
+        error: 'Track file not found in storage',
+        details: {
+          trackId,
+          albumId: purchase.album_id,
+          src: track.src,
+          triedPaths: possiblePaths,
+        },
+      }),
     };
   } catch (error) {
     console.error('❌ Error in download-track:', error);
