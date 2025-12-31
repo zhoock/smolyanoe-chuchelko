@@ -563,8 +563,15 @@ export function EditAlbumModal({
         upcEan: upc || prevForm.upcEan,
         description: album.description || prevForm.description,
         mood: mood.length > 0 ? mood : prevForm.mood || [],
+        allowDownloadSale:
+          ((release as any).allowDownloadSale as 'no' | 'yes' | 'preorder') ||
+          prevForm.allowDownloadSale ||
+          'no',
         regularPrice: (release as any).regularPrice || prevForm.regularPrice || '9.99',
         currency: (release as any).currency || prevForm.currency || 'USD',
+        preorderReleaseDate: (release as any).preorderReleaseDate
+          ? formatDateFromISO((release as any).preorderReleaseDate)
+          : prevForm.preorderReleaseDate || '',
         albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
         albumCoverPhotographerURL:
           (release as any).photographerURL || prevForm.albumCoverPhotographerURL,

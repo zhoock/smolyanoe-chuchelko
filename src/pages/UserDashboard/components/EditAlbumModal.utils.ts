@@ -449,6 +449,17 @@ export const transformFormDataToAlbumFormat = (
     UPC: formData.upcEan,
   };
 
+  // Сохраняем allowDownloadSale (всегда, даже если 'no')
+  release.allowDownloadSale = formData.allowDownloadSale || 'no';
+
+  // Сохраняем preorderReleaseDate, если включен preorder
+  if (formData.allowDownloadSale === 'preorder' && formData.preorderReleaseDate) {
+    const preorderDateISO = formatDateToISO(formData.preorderReleaseDate);
+    if (preorderDateISO) {
+      release.preorderReleaseDate = preorderDateISO;
+    }
+  }
+
   // Сохраняем цену и валюту
   if (formData.regularPrice && formData.regularPrice.trim()) {
     release.regularPrice = formData.regularPrice.trim();
