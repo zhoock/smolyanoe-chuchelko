@@ -49,7 +49,7 @@ export async function sendPurchaseEmail(
           <td style="padding: 12px 0; color: #333;">${index + 1}.</td>
           <td style="padding: 12px 0; color: #333;">${escapeHtml(track.title)}</td>
           <td style="padding: 12px 0; text-align: right;">
-            <a href="${siteUrl}/download?token=${options.purchaseToken}&track=${track.trackId}" 
+            <a href="${siteUrl}/api/download?token=${options.purchaseToken}&track=${track.trackId}" 
                style="color: #4CAF50; text-decoration: none; font-weight: 500;">
               Скачать
             </a>
@@ -127,7 +127,7 @@ ${customerGreeting}
 ${options.artistName} — ${options.albumName}
 
 Треки:
-${options.tracks.map((t, i) => `${i + 1}. ${t.title}\n   Скачать: ${siteUrl}/download?token=${options.purchaseToken}&track=${t.trackId}`).join('\n')}
+${options.tracks.map((t, i) => `${i + 1}. ${t.title}\n   Скачать: ${siteUrl}/api/download?token=${options.purchaseToken}&track=${t.trackId}`).join('\n')}
 
 Все ваши покупки доступны по ссылке: ${myPurchasesUrl}
 

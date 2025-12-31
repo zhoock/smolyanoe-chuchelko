@@ -250,13 +250,107 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
             );
 
             if (purchaseResult.rows.length > 0) {
+              const purchase = purchaseResult.rows[0];
               console.log('✅ Purchase created/updated:', {
-                purchaseId: purchaseResult.rows[0].id,
-                purchaseToken: purchaseResult.rows[0].purchase_token,
+                purchaseId: purchase.id,
+                purchaseToken: purchase.purchase_token,
                 orderId,
                 albumId,
                 customerEmail,
               });
+
+              // Отправляем email (не блокируем основной поток)
+              // Это резервный механизм на случай, если webhook не сработал
+              import('./lib/email')
+                .then(({ sendPurchaseEmail }) => {
+                  // Получаем информацию об альбоме и треках
+                  return query<{
+                    artist: string;
+                    album: string;
+                    lang: string;
+                    customer_first_name: string | null;
+                    customer_last_name: string | null;
+                  }>(
+                    `SELECT a.artist, a.album, a.lang, o.customer_first_name, o.customer_last_name
+                     FROM albums a
+                     INNER JOIN orders o ON a.album_id = o.album_id
+                     WHERE a.album_id = $1 AND a.lang = o.lang
+                     LIMIT 1`,
+                    [albumId]
+                  ).then((albumResult) => {
+                    if (albumResult.rows.length > 0) {
+                      const album = albumResult.rows[0];
+
+                      // Получаем треки альбома
+                      return query<{
+                        track_id: string;
+                        title: string;
+                      }>(
+                        `SELECT t.track_id, t.title 
+                         FROM tracks t
+                         INNER JOIN albums a ON t.album_id = a.id
+                         WHERE a.album_id = $1 AND a.lang = $2
+                         ORDER BY t.order_index ASC`,
+                        [albumId, album.lang]
+                      ).then((tracksResult) => {
+                        const tracks = tracksResult.rows.map((row) => ({
+                          trackId: row.track_id,
+                          title: row.title,
+                        }));
+
+                        const customerName =
+                          album.customer_first_name && album.customer_last_name
+                            ? `${album.customer_first_name} ${album.customer_last_name}`
+                            : album.customer_first_name || undefined;
+
+                        console.log('📧 [get-payment-status] Attempting to send purchase email:', {
+                          to: customerEmail,
+                          customerName,
+                          albumName: album.album,
+                          artistName: album.artist,
+                          orderId,
+                          tracksCount: tracks.length,
+                          hasResendKey: !!process.env.RESEND_API_KEY,
+                        });
+
+                        return sendPurchaseEmail({
+                          to: customerEmail,
+                          customerName,
+                          albumName: album.album,
+                          artistName: album.artist,
+                          orderId,
+                          purchaseToken: purchase.purchase_token,
+                          tracks,
+                          siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+                        });
+                      });
+                    }
+                    return Promise.resolve({ success: false, error: 'Album not found' });
+                  });
+                })
+                .then((result) => {
+                  if (result?.success) {
+                    console.log('✅ [get-payment-status] Purchase email sent successfully:', {
+                      to: customerEmail,
+                      orderId,
+                    });
+                  } else {
+                    console.error('❌ [get-payment-status] Failed to send purchase email:', {
+                      to: customerEmail,
+                      orderId,
+                      error: result?.error,
+                    });
+                  }
+                })
+                .catch((emailError) => {
+                  console.error('❌ [get-payment-status] Error sending purchase email:', {
+                    to: customerEmail,
+                    orderId,
+                    error: emailError instanceof Error ? emailError.message : String(emailError),
+                    stack: emailError instanceof Error ? emailError.stack : undefined,
+                  });
+                  // Не выбрасываем ошибку, чтобы не блокировать основной поток
+                });
             }
           } else {
             console.warn('⚠️ Cannot create purchase: missing albumId or customerEmail', {
