@@ -140,11 +140,22 @@ export const handler: Handler = async (
       : normalizedPath;
 
     // Пробуем несколько вариантов путей, так как album_id может отличаться от реальной папки
-    const possiblePaths = [
-      `users/${storageUserId}/audio/${purchase.album_id}/${fileName}`, // Основной путь
-      `users/${storageUserId}/audio/${purchase.album_id.replace(/-/g, '-')}/${fileName}`, // С дефисами
-      `users/${storageUserId}/audio/${normalizedPath}`, // Оригинальный путь из БД
+    // Варианты: с разными регистрами, с дефисами/подчеркиваниями, оригинальный путь из БД
+    const albumIdVariants = [
+      purchase.album_id, // "23-remastered"
+      purchase.album_id.replace(/-remastered/i, '-Remastered'), // "23-Remastered"
+      purchase.album_id.replace(/-remastered/i, 'Remastered'), // "23Remastered"
+      purchase.album_id.replace(/-/g, '_'), // "23_remastered"
     ];
+
+    const possiblePaths = [
+      // Основные варианты с album_id
+      ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`),
+      // Оригинальный путь из БД (если он содержит полный путь)
+      `users/${storageUserId}/audio/${normalizedPath}`,
+      // Если normalizedPath уже содержит users/zhoock/audio, используем его как есть
+      normalizedPath.startsWith('users/') ? normalizedPath : null,
+    ].filter((path): path is string => path !== null);
 
     console.log('🔍 [download-track] Trying paths:', possiblePaths);
 
