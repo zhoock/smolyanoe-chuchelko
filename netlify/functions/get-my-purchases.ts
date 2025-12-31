@@ -58,6 +58,29 @@ export const handler: Handler = async (
       return createErrorResponse(400, 'Invalid email format');
     }
 
+    console.log('📋 [get-my-purchases] Fetching purchases for email:', email);
+
+    // Проверяем существование таблицы purchases
+    try {
+      const tableCheckResult = await query<{ exists: boolean }>(
+        `SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'purchases'
+        ) as exists`
+      );
+
+      if (!tableCheckResult.rows[0]?.exists) {
+        console.warn(
+          '⚠️ [get-my-purchases] Table "purchases" does not exist. Please run migration 021_create_purchases.sql'
+        );
+        return createSuccessResponse([], 200, CORS_HEADERS);
+      }
+    } catch (tableCheckError) {
+      console.error('❌ [get-my-purchases] Error checking table existence:', tableCheckError);
+      // Продолжаем выполнение, возможно таблица существует
+    }
+
     // Получаем все покупки покупателя
     const purchasesResult = await query<{
       id: string;
@@ -73,6 +96,8 @@ export const handler: Handler = async (
        ORDER BY purchased_at DESC`,
       [email]
     );
+
+    console.log('📋 [get-my-purchases] Found purchases:', purchasesResult.rows.length);
 
     if (purchasesResult.rows.length === 0) {
       return createSuccessResponse([], 200, CORS_HEADERS);
@@ -137,15 +162,31 @@ export const handler: Handler = async (
       })
     );
 
+    console.log('✅ [get-my-purchases] Successfully fetched purchases:', purchases.length);
     return createSuccessResponse(purchases, 200, CORS_HEADERS);
   } catch (error) {
-    console.error('❌ Error in get-my-purchases:', error);
+    console.error('❌ [get-my-purchases] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-    console.error('❌ Error details:', {
+
+    // Проверяем, является ли ошибка связанной с отсутствием таблицы
+    const errorString = errorMessage.toLowerCase();
+    if (errorString.includes('relation') && errorString.includes('does not exist')) {
+      console.error(
+        '❌ [get-my-purchases] Table does not exist. Please run migrations 020 and 021.'
+      );
+      return createErrorResponse(
+        500,
+        'Database table not found. Please contact support or check if migrations are applied.'
+      );
+    }
+
+    console.error('❌ [get-my-purchases] Error details:', {
       message: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
       email: event.queryStringParameters?.email,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
     });
+
     return createErrorResponse(500, errorMessage);
   }
 };
