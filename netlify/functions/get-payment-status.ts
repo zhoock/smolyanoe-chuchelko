@@ -25,6 +25,39 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
+import dns from 'node:dns';
+
+// Форсируем IPv4 для избежания проблем с fetch в некоторых сетях
+dns.setDefaultResultOrder('ipv4first');
+
+/**
+ * Валидирует UUID формат
+ */
+function isValidUUID(value: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
+/**
+ * Валидирует query параметр (UUID должен быть валидным, без угловых скобок и пробелов)
+ */
+function validateUUIDParameter(value: string | null | undefined, paramName: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  // Проверяем на угловые скобки и пробелы
+  if (value.includes('<') || value.includes('>') || value.includes(' ') || value.trim() !== value) {
+    return `${paramName} contains invalid characters (angle brackets or spaces are not allowed)`;
+  }
+
+  // Проверяем формат UUID
+  if (!isValidUUID(value)) {
+    return `${paramName} must be a valid UUID`;
+  }
+
+  return null;
+}
 
 interface YooKassaPaymentStatus {
   id: string;
@@ -156,9 +189,9 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
     // Обновляем заказ
     await query(
       `UPDATE orders 
-       SET status = $1, 
+       SET status = $1::text, 
            payment_id = $2,
-           paid_at = CASE WHEN $1 = 'paid' THEN COALESCE(paid_at, CURRENT_TIMESTAMP) ELSE paid_at END,
+           paid_at = CASE WHEN $1::text = 'paid' THEN COALESCE(paid_at, CURRENT_TIMESTAMP) ELSE paid_at END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
       [orderStatus, paymentStatus.id, orderId]
@@ -182,6 +215,62 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
         paymentStatus.amount.currency,
       ]
     );
+
+    // Если платеж успешен, создаем или обновляем запись в purchases
+    if (orderStatus === 'paid' && (paymentStatus.status === 'succeeded' || paymentStatus.paid)) {
+      try {
+        // Получаем информацию о заказе для создания покупки
+        const orderResult = await query<{
+          album_id: string;
+          customer_email: string;
+        }>(
+          `SELECT album_id, customer_email 
+           FROM orders 
+           WHERE id = $1`,
+          [orderId]
+        );
+
+        if (orderResult.rows.length > 0) {
+          const order = orderResult.rows[0];
+          const albumId = order.album_id || paymentStatus.metadata?.albumId;
+          const customerEmail = order.customer_email || paymentStatus.metadata?.customerEmail;
+
+          if (albumId && customerEmail) {
+            // Создаем запись о покупке (или получаем существующую)
+            const purchaseResult = await query<{
+              id: string;
+              purchase_token: string;
+            }>(
+              `INSERT INTO purchases (order_id, customer_email, album_id)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (customer_email, album_id) 
+               DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
+               RETURNING id, purchase_token`,
+              [orderId, customerEmail, albumId]
+            );
+
+            if (purchaseResult.rows.length > 0) {
+              console.log('✅ Purchase created/updated:', {
+                purchaseId: purchaseResult.rows[0].id,
+                purchaseToken: purchaseResult.rows[0].purchase_token,
+                orderId,
+                albumId,
+                customerEmail,
+              });
+            }
+          } else {
+            console.warn('⚠️ Cannot create purchase: missing albumId or customerEmail', {
+              albumId,
+              customerEmail,
+              orderId,
+            });
+          }
+        }
+      } catch (purchaseError) {
+        // Не блокируем основной поток, если не удалось создать покупку
+        console.error('❌ Error creating purchase:', purchaseError);
+      }
+    }
 
     console.log(
       `✅ Updated order ${orderId} and payment ${paymentStatus.id} to status: ${orderStatus}`
@@ -240,7 +329,48 @@ export const handler: Handler = async (
       };
     }
 
-    // Если передан orderId, получаем paymentId из БД
+    // Запрещаем одновременную передачу paymentId и orderId
+    if (paymentId && orderId) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Provide either paymentId or orderId, not both',
+        } as PaymentStatusResponse),
+      };
+    }
+
+    // Валидация параметров (до обращения к БД)
+    if (paymentId) {
+      const validationError = validateUUIDParameter(paymentId, 'paymentId');
+      if (validationError) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: validationError,
+          } as PaymentStatusResponse),
+        };
+      }
+    }
+
+    if (orderId) {
+      const validationError = validateUUIDParameter(orderId, 'orderId');
+      if (validationError) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: validationError,
+          } as PaymentStatusResponse),
+        };
+      }
+    }
+
+    // Если передан orderId, получаем paymentId из БД (только после валидации)
     let actualPaymentId = paymentId;
     if (!actualPaymentId && orderId) {
       const orderResult = await query<{ payment_id: string | null }>(
@@ -284,13 +414,110 @@ export const handler: Handler = async (
 
     console.log(`🔍 Checking payment status via YooKassa API: ${actualPaymentId}`);
 
-    const yookassaResponse = await fetch(paymentUrl, {
-      method: 'GET',
-      headers: {
-        Authorization: `Basic ${authHeader}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Проверяем DNS резолюцию перед fetch (опционально, не фатально)
+    const urlObj = new URL(paymentUrl);
+    const dnsStartTime = Date.now();
+
+    try {
+      const addresses = await dns.promises.lookup(urlObj.hostname, { family: 4 }); // Форсируем IPv4
+      const dnsDuration = Date.now() - dnsStartTime;
+
+      console.log('✅ DNS resolved:', {
+        hostname: urlObj.hostname,
+        address: addresses.address,
+        family: addresses.family,
+        duration: dnsDuration,
+      });
+    } catch (dnsError: any) {
+      const dnsDuration = Date.now() - dnsStartTime;
+
+      console.warn('⚠️ DNS lookup failed:', {
+        hostname: urlObj.hostname,
+        error: dnsError?.message,
+        code: dnsError?.code,
+        duration: dnsDuration,
+      });
+      // Продолжаем выполнение, возможно DNS резолвится при fetch
+    }
+
+    // Отправляем запрос к YooKassa с таймаутом
+    let yookassaResponse;
+    const fetchStartTime = Date.now();
+
+    try {
+      // Используем AbortController с таймаутом
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Fetch timeout reached, aborting...');
+        controller.abort();
+      }, 60000); // 60 секунд таймаут
+
+      yookassaResponse = await fetch(paymentUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${authHeader}`,
+          'Content-Type': 'application/json',
+          Connection: 'keep-alive',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const fetchDuration = Date.now() - fetchStartTime;
+
+      console.log('✅ YooKassa response received:', {
+        status: yookassaResponse.status,
+        statusText: yookassaResponse.statusText,
+        duration: fetchDuration,
+      });
+    } catch (fetchError: any) {
+      const fetchDuration = Date.now() - fetchStartTime;
+      const isTimeoutError =
+        fetchError?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+        fetchError?.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+        fetchError?.message?.includes('timeout') ||
+        fetchError?.message?.includes('aborted');
+
+      console.error('❌ Fetch error to YooKassa:', {
+        message: fetchError?.message,
+        code: fetchError?.code,
+        cause: fetchError?.cause,
+        causeCode: fetchError?.cause?.code,
+        causeMessage: fetchError?.cause?.message,
+        stack: fetchError?.stack,
+        duration: fetchDuration,
+        isTimeoutError,
+        paymentUrlHost: urlObj.hostname,
+      });
+
+      // В dev режиме возвращаем детали ошибки
+      const isDev = process.env.NETLIFY_DEV === 'true' || process.env.NODE_ENV !== 'production';
+
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: isDev
+            ? `Fetch failed: ${fetchError?.message || 'Unknown error'}`
+            : 'Failed to fetch payment status from payment service',
+          ...(isDev && {
+            details: {
+              code: fetchError?.code,
+              cause: fetchError?.cause
+                ? {
+                    code: fetchError.cause.code,
+                    message: fetchError.cause.message,
+                  }
+                : undefined,
+              isTimeoutError,
+              durationMs: fetchDuration,
+              paymentUrlHost: urlObj.hostname,
+            },
+          }),
+        } as PaymentStatusResponse),
+      };
+    }
 
     if (!yookassaResponse.ok) {
       const errorText = await yookassaResponse.text();
@@ -346,13 +573,35 @@ export const handler: Handler = async (
       } as PaymentStatusResponse),
     };
   } catch (error: any) {
-    console.error('❌ Error getting payment status:', error);
+    console.error('❌ Error getting payment status:', {
+      message: error?.message,
+      code: error?.code,
+      cause: error?.cause,
+      causeCode: error?.cause?.code,
+      causeMessage: error?.cause?.message,
+      stack: error?.stack,
+    });
+
+    // В dev режиме возвращаем детали ошибки для диагностики
+    const isDev = process.env.NETLIFY_DEV === 'true' || process.env.NODE_ENV !== 'production';
+
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: error?.message || 'Unknown error occurred',
+        error: isDev ? error?.message || 'Unknown error occurred' : 'Failed to get payment status',
+        ...(isDev && {
+          details: {
+            code: error?.code,
+            cause: error?.cause
+              ? {
+                  code: error.cause.code,
+                  message: error.cause.message,
+                }
+              : undefined,
+          },
+        }),
       } as PaymentStatusResponse),
     };
   }
