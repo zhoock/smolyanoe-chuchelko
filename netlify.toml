@@ -165,6 +165,32 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/yookassa-shop-id*"
+  to = "/.netlify/functions/yookassa-shop-id"
+  status = 200
+  force = true
+
+# Purchases
+[[redirects]]
+  from = "/api/get-my-purchases*"
+  to = "/.netlify/functions/get-my-purchases"
+  status = 200
+  force = true
+
+# Test email (для тестирования отправки email)
+[[redirects]]
+  from = "/api/test-email*"
+  to = "/.netlify/functions/test-email"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/download*"
+  to = "/.netlify/functions/download-track"
+  status = 200
+  force = true
+
 # Tracks upload
 [[redirects]]
   from = "/api/tracks/upload-url*"

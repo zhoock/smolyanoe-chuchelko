@@ -24,6 +24,12 @@
 
 - `ENCRYPTION_KEY` - Ключ для шифрования чувствительных данных (32 байта в hex формате)
 
+### Email (Resend)
+
+- `RESEND_API_KEY` - API ключ для отправки email через Resend
+  - Получить можно в [Resend Dashboard](https://resend.com/api-keys)
+  - Используется для отправки писем о покупках покупателям
+
 ### Supabase Storage (опционально)
 
 - `SUPABASE_URL` или `VITE_SUPABASE_URL` - URL вашего Supabase проекта
