@@ -212,17 +212,37 @@ export const handler: Handler = async (
               const fileBuffer = await fileResponse.arrayBuffer();
               const contentType = fileResponse.headers.get('content-type') || 'audio/wav';
 
-              // Формируем имя файла для скачивания
+              // Формируем имя файла для скачивания (убираем недопустимые символы)
+              const sanitizeFileName = (name: string): string => {
+                // Убираем недопустимые символы для имени файла
+                return name
+                  .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_') // Убираем недопустимые символы
+                  .replace(/\s+/g, '_') // Заменяем пробелы на подчеркивания
+                  .replace(/_{2,}/g, '_') // Убираем множественные подчеркивания
+                  .trim();
+              };
+
+              const extension = fileName.split('.').pop() || 'wav';
               const downloadFileName = track.title
-                ? `${track.title.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\s-]/g, '_')}.${fileName.split('.').pop() || 'wav'}`
-                : fileName;
+                ? `${sanitizeFileName(track.title)}.${extension}`
+                : sanitizeFileName(fileName);
+
+              // Экранируем кавычки и другие недопустимые символы для HTTP заголовка
+              const escapeHeaderValue = (value: string): string => {
+                // Убираем кавычки и другие недопустимые символы из заголовка
+                return value.replace(/["\\\r\n]/g, '');
+              };
+
+              const safeFileName = escapeHeaderValue(downloadFileName);
+              const encodedFileName = encodeURIComponent(downloadFileName);
 
               // Возвращаем файл с заголовком для скачивания
+              // Используем RFC 5987 encoding для поддержки не-ASCII символов
               return {
                 statusCode: 200,
                 headers: {
                   'Content-Type': contentType,
-                  'Content-Disposition': `attachment; filename="${downloadFileName}"`,
+                  'Content-Disposition': `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`,
                   'Content-Length': fileBuffer.byteLength.toString(),
                   'Cache-Control': 'no-cache',
                 },
