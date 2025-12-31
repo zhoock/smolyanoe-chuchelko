@@ -50,6 +50,19 @@ dialog {
       inset-block-start: calc(var(--card-height) / 6);
     }
   }
+
+  // Отключаем анимацию для UserDashboard, PurchasePopup, ProfileSettingsModal и EditAlbumModal
+  &.popup:has(.user-dashboard),
+  &.popup:has(.purchase-popup),
+  &.popup:has(.profile-settings-modal),
+  &.popup:has(.edit-album-modal) {
+    animation: none;
+    backdrop-filter: none;
+
+    .popup__gradient {
+      display: none;
+    }
+  }
 }
 
 .page:has(dialog[open]) {
