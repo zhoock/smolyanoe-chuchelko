@@ -13,6 +13,7 @@ export interface Purchase {
   albumId: string;
   artist: string;
   album: string;
+  cover: string | null;
   purchaseToken: string;
   purchasedAt: string;
   downloadCount: number;
@@ -50,4 +51,11 @@ export async function getMyPurchases(email: string): Promise<Purchase[]> {
  */
 export function getTrackDownloadUrl(purchaseToken: string, trackId: string): string {
   return `/api/download?token=${encodeURIComponent(purchaseToken)}&track=${encodeURIComponent(trackId)}`;
+}
+
+/**
+ * Получить URL для скачивания всего альбома (ZIP)
+ */
+export function getAlbumDownloadUrl(purchaseToken: string): string {
+  return `/api/download-album?token=${encodeURIComponent(purchaseToken)}`;
 }

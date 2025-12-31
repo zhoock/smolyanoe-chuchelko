@@ -192,6 +192,13 @@
   status = 200
   force = true
 
+# Download album (ZIP)
+[[redirects]]
+  from = "/api/download-album*"
+  to = "/.netlify/functions/download-album"
+  status = 200
+  force = true
+
 # Tracks upload
 [[redirects]]
   from = "/api/tracks/upload-url*"

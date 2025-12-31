@@ -4,10 +4,12 @@ import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import type { IAlbums } from '@models';
 import AlbumCover from '@entities/album/ui/AlbumCover';
-import { createPayment } from '@shared/api/payment';
+import { createPayment, getYooKassaShopId } from '@shared/api/payment';
+import { getPaymentToken } from '@shared/lib/yookassa/checkout';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { getUser } from '@shared/lib/auth';
 import './PurchasePopup.style.scss';
 
 type Step = 'cart' | 'checkout' | 'payment';
@@ -371,23 +373,26 @@ function CheckoutStep({
             {errors.email && <span className="purchase-popup__form-error">{errors.email}</span>}
           </div>
 
-          <div className="purchase-popup__form-field purchase-popup__form-field--toggle">
-            <label className="purchase-popup__toggle-label">
-              <input
-                type="checkbox"
-                className="purchase-popup__toggle-input"
-                checked={joinMailingList}
-                onChange={(e) => setJoinMailingList(e.target.checked)}
-              />
-              <span className="purchase-popup__toggle-text">
-                {t?.checkout?.checkout?.joinMailingList || 'Join the mailing list'}
-                <span className="purchase-popup__toggle-subtitle">
-                  {t?.checkout?.checkout?.joinMailingListSubtitle ||
-                    'You can unsubscribe at any time'}
+          {/* Временно скрыто: Подписаться на рассылку */}
+          {/* {(
+            <div className="purchase-popup__form-field purchase-popup__form-field--toggle">
+              <label className="purchase-popup__toggle-label">
+                <input
+                  type="checkbox"
+                  className="purchase-popup__toggle-input"
+                  checked={joinMailingList}
+                  onChange={(e) => setJoinMailingList(e.target.checked)}
+                />
+                <span className="purchase-popup__toggle-text">
+                  {t?.checkout?.checkout?.joinMailingList || 'Join the mailing list'}
+                  <span className="purchase-popup__toggle-subtitle">
+                    {t?.checkout?.checkout?.joinMailingListSubtitle ||
+                      'You can unsubscribe at any time'}
+                  </span>
                 </span>
-              </span>
-            </label>
-          </div>
+              </label>
+            </div>
+          )} */}
 
           <div className="purchase-popup__form-field">
             <label htmlFor="firstName" className="purchase-popup__form-label">
@@ -433,18 +438,21 @@ function CheckoutStep({
             )}
           </div>
 
-          <div className="purchase-popup__form-field">
-            <label htmlFor="notes" className="purchase-popup__form-label">
-              {t?.checkout?.checkout?.notes || 'Notes'}
-            </label>
-            <textarea
-              id="notes"
-              className="purchase-popup__form-textarea"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
+          {/* Временно скрыто: Примечания */}
+          {/* {(
+            <div className="purchase-popup__form-field">
+              <label htmlFor="notes" className="purchase-popup__form-label">
+                {t?.checkout?.checkout?.notes || 'Notes'}
+              </label>
+              <textarea
+                id="notes"
+                className="purchase-popup__form-textarea"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )} */}
 
           <div className="purchase-popup__form-field purchase-popup__form-field--toggle">
             <label className="purchase-popup__toggle-label">
@@ -797,6 +805,41 @@ function PaymentStep({
         return;
       }
 
+      // Пытаемся использовать Checkout.js для получения токена
+      let paymentToken: string | undefined;
+      try {
+        // Получаем shopId для Checkout.js
+        const shopIdResult = await getYooKassaShopId();
+        if (shopIdResult.shopId) {
+          // Разбиваем срок действия карты на месяц и год
+          const [expMonth, expYear] = cardExpires.split('/');
+
+          // Получаем токен через Checkout.js
+          const tokenResult = await getPaymentToken(shopIdResult.shopId, {
+            number: cardNumber.replace(/\s/g, ''), // Убираем пробелы
+            cvc: cardCSC,
+            expMonth: expMonth || '',
+            expYear: expYear ? `20${expYear}` : '', // Добавляем 20 для полного года
+          });
+
+          if (tokenResult.token) {
+            paymentToken = tokenResult.token;
+            console.log('✅ Payment token obtained via Checkout.js');
+          } else {
+            console.warn(
+              '⚠️ Failed to get payment token via Checkout.js, falling back to redirect:',
+              tokenResult.error
+            );
+          }
+        } else {
+          console.warn('⚠️ Shop ID not available, falling back to redirect:', shopIdResult.error);
+        }
+      } catch (checkoutError) {
+        console.warn('⚠️ Checkout.js error, falling back to redirect:', checkoutError);
+        // Продолжаем без токена - используем старую логику (redirect)
+      }
+
+      // Создаем платеж с токеном (если получен) или без (fallback на redirect)
       const paymentResult = await createPayment({
         amount: total,
         currency,
@@ -805,6 +848,7 @@ function PaymentStep({
         customerEmail: cardEmail,
         returnUrl:
           typeof window !== 'undefined' ? `${window.location.origin}/pay/success` : returnUrl,
+        paymentToken, // Передаем токен, если получен
         billingData: {
           firstName: billingFirstName,
           lastName: billingLastName,
@@ -814,15 +858,28 @@ function PaymentStep({
         },
       });
 
-      if (!paymentResult.success || !paymentResult.confirmationUrl) {
+      if (!paymentResult.success) {
         setPaymentError(paymentResult.error || 'Failed to create payment. Please try again.');
         setIsPaymentLoading(false);
         return;
       }
 
-      // Перенаправляем на страницу оплаты ЮKassa
-      if (typeof window !== 'undefined' && paymentResult.confirmationUrl) {
-        window.location.href = paymentResult.confirmationUrl;
+      // Обработка результата согласно документации YooKassa:
+      // Если статус pending (требуется 3D Secure), перенаправляем на confirmation_url
+      // Если статус succeeded, перенаправляем на страницу успеха
+      if (paymentResult.confirmationUrl) {
+        // Платёж требует подтверждения (3D Secure) - перенаправляем на страницу YooKassa
+        if (typeof window !== 'undefined') {
+          window.location.href = paymentResult.confirmationUrl;
+        }
+      } else if (paymentResult.orderId) {
+        // Платёж уже обработан (succeeded) - перенаправляем на страницу успеха
+        if (typeof window !== 'undefined') {
+          window.location.href = `${window.location.origin}/pay/success?orderId=${paymentResult.orderId}`;
+        }
+      } else {
+        setPaymentError('Failed to get payment confirmation. Please try again.');
+        setIsPaymentLoading(false);
       }
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -881,27 +938,30 @@ function PaymentStep({
           </div>
 
           <div className="purchase-popup__payment-methods">
-            <button
-              type="button"
-              className="purchase-popup__payment-button purchase-popup__payment-button--paypal"
-              onClick={handlePayPal}
-              aria-label={t?.checkout?.payment?.paypal || 'Pay with PayPal'}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-                style={{ marginRight: '8px' }}
+            {/* PayPal скрыт, так как не используется */}
+            {/* {(
+              <button
+                type="button"
+                className="purchase-popup__payment-button purchase-popup__payment-button--paypal"
+                onClick={handlePayPal}
+                aria-label={t?.checkout?.payment?.paypal || 'Pay with PayPal'}
               >
-                <path
-                  d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a.915.915 0 0 0-.028-.225c-.207-1.226-1.126-2.182-2.698-2.733l-.556-.169a.817.817 0 0 1-.554-.768V3.19a.816.816 0 0 0-.811-.82H5.998a.642.642 0 0 0-.634.74l2.107 13.396h3.277l1.12-7.106c.082-.518.526-.9 1.05-.9h2.19c4.298 0 7.664-1.747 8.647-6.797.03-.149.054-.294.077-.437z"
-                  fill="currentColor"
-                />
-              </svg>
-              {t?.checkout?.payment?.paypal || 'PayPal'}
-            </button>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                  style={{ marginRight: '8px' }}
+                >
+                  <path
+                    d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a.915.915 0 0 0-.028-.225c-.207-1.226-1.126-2.182-2.698-2.733l-.556-.169a.817.817 0 0 1-.554-.768V3.19a.816.816 0 0 0-.811-.82H5.998a.642.642 0 0 0-.634.74l2.107 13.396h3.277l1.12-7.106c.082-.518.526-.9 1.05-.9h2.19c4.298 0 7.664-1.747 8.647-6.797.03-.149.054-.294.077-.437z"
+                    fill="currentColor"
+                  />
+                </svg>
+                {t?.checkout?.payment?.paypal || 'PayPal'}
+              </button>
+            )} */}
 
             <button
               type="button"
@@ -928,31 +988,6 @@ function PaymentStep({
                 <line x1="1" y1="10" x2="23" y2="10" />
               </svg>
               {t?.checkout?.payment?.debitOrCreditCard || 'Debit or Credit Card'}
-            </button>
-
-            <button
-              type="button"
-              className="purchase-popup__payment-button purchase-popup__payment-button--card"
-              onClick={() => handleCard('RU')}
-              aria-label={t?.checkout?.payment?.bankCardRussia || 'Bank Card (Russia, CIS)'}
-              aria-expanded={isCardFormOpen}
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                style={{ marginRight: '8px' }}
-              >
-                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-                <line x1="1" y1="10" x2="23" y2="10" />
-              </svg>
-              {t?.checkout?.payment?.bankCardRussia || 'Bank Card (Russia, CIS)'}
             </button>
 
             {isCardFormOpen && (
@@ -1392,15 +1427,39 @@ export function PurchasePopup({
   const t = ui || null;
 
   const [step, setStep] = useState<Step>('cart');
-  const [checkoutFormData, setCheckoutFormData] = useState<CheckoutFormData>({
-    email: '',
-    firstName: '',
-    lastName: '',
-    notes: '',
-    joinMailingList: false,
-    agreeToOffer: false,
-    agreeToPrivacy: false,
-  });
+
+  // Автозаполнение данных из профиля, если пользователь авторизован
+  const getInitialFormData = (): CheckoutFormData => {
+    const user = getUser();
+    if (user?.email) {
+      // Разделяем имя на имя и фамилию, если есть
+      const nameParts = user.name?.split(' ') || [];
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      return {
+        email: user.email,
+        firstName,
+        lastName,
+        notes: '',
+        joinMailingList: false,
+        agreeToOffer: false,
+        agreeToPrivacy: false,
+      };
+    }
+
+    return {
+      email: '',
+      firstName: '',
+      lastName: '',
+      notes: '',
+      joinMailingList: false,
+      agreeToOffer: false,
+      agreeToPrivacy: false,
+    };
+  };
+
+  const [checkoutFormData, setCheckoutFormData] = useState<CheckoutFormData>(getInitialFormData);
   const [discountCode, setDiscountCode] = useState('');
 
   const handleCheckout = () => {
@@ -1419,10 +1478,23 @@ export function PurchasePopup({
     setStep('checkout');
   };
 
-  // Сбрасываем шаг при закрытии попапа
+  // Сбрасываем шаг и обновляем данные формы при открытии/закрытии попапа
   React.useEffect(() => {
     if (!isOpen) {
       setStep('cart');
+      // При закрытии сбрасываем форму
+      setCheckoutFormData({
+        email: '',
+        firstName: '',
+        lastName: '',
+        notes: '',
+        joinMailingList: false,
+        agreeToOffer: false,
+        agreeToPrivacy: false,
+      });
+    } else {
+      // При открытии обновляем данные из профиля, если пользователь авторизован
+      setCheckoutFormData(getInitialFormData());
     }
   }, [isOpen]);
 

@@ -18,6 +18,7 @@ interface Purchase {
   albumId: string;
   artist: string;
   album: string;
+  cover: string | null;
   purchaseToken: string;
   purchasedAt: string;
   downloadCount: number;
@@ -125,7 +126,8 @@ export const handler: Handler = async (
           artist: string;
           album: string;
           lang: string;
-        }>(`SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`, [
+          cover: string | null;
+        }>(`SELECT artist, album, lang, cover FROM albums WHERE album_id = $1 LIMIT 1`, [
           purchaseRow.album_id,
         ]);
 
@@ -137,6 +139,7 @@ export const handler: Handler = async (
             albumId: purchaseRow.album_id,
             artist: 'Unknown',
             album: purchaseRow.album_id,
+            cover: null,
             purchaseToken: purchaseRow.purchase_token,
             purchasedAt: purchaseRow.purchased_at.toISOString(),
             downloadCount: purchaseRow.download_count,
@@ -165,6 +168,7 @@ export const handler: Handler = async (
           albumId: purchaseRow.album_id,
           artist: album.artist,
           album: album.album,
+          cover: album.cover || null,
           purchaseToken: purchaseRow.purchase_token,
           purchasedAt: purchaseRow.purchased_at.toISOString(),
           downloadCount: purchaseRow.download_count,

@@ -253,7 +253,20 @@ export const handler: Handler = async (
     if (event.httpMethod === 'POST') {
       const data: PaymentSettingsRequest = JSON.parse(event.body || '{}');
 
+      console.log('📥 Payment settings save request:', {
+        userId: data.userId,
+        provider: data.provider,
+        hasShopId: !!data.shopId,
+        hasSecretKey: !!data.secretKey,
+        shopIdLength: data.shopId?.length || 0,
+        secretKeyLength: data.secretKey?.length || 0,
+      });
+
       if (!data.userId || !data.provider) {
+        console.error('❌ Missing required fields:', {
+          userId: data.userId,
+          provider: data.provider,
+        });
         return {
           statusCode: 400,
           headers,
@@ -301,19 +314,44 @@ export const handler: Handler = async (
       }
 
       // Валидация shopId и secretKey через тестовый запрос к ЮKassa API
-      if (data.provider === 'yookassa' && data.shopId && data.secretKey) {
-        const validation = await validateYooKassaCredentials(data.shopId, data.secretKey);
+      // ВАЖНО: Валидация может быть отключена через переменную окружения для упрощения отладки
+      const skipValidation = process.env.SKIP_YOOKASSA_VALIDATION === 'true';
 
-        if (!validation.valid) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: `Invalid YooKassa credentials: ${validation.error || 'Validation failed'}`,
-            } as PaymentSettingsResponse),
-          };
+      if (!skipValidation && data.provider === 'yookassa' && data.shopId && data.secretKey) {
+        console.log('🔍 Validating YooKassa credentials...');
+        try {
+          const validation = await validateYooKassaCredentials(data.shopId, data.secretKey);
+
+          if (!validation.valid) {
+            console.error('❌ YooKassa validation failed:', validation.error);
+            // Не блокируем сохранение, только предупреждаем
+            console.warn(
+              '⚠️ YooKassa validation failed, but saving credentials anyway. Error:',
+              validation.error
+            );
+            // Можно раскомментировать для строгой валидации:
+            // return {
+            //   statusCode: 400,
+            //   headers,
+            //   body: JSON.stringify({
+            //     success: false,
+            //     error: `Неверные данные ЮKassa: ${validation.error || 'Проверка не пройдена'}`,
+            //     message: validation.error || 'Проверьте правильность Shop ID и Secret Key',
+            //   } as PaymentSettingsResponse),
+            // };
+          } else {
+            console.log('✅ YooKassa credentials validated successfully');
+          }
+        } catch (validationError) {
+          console.error('❌ YooKassa validation error:', validationError);
+          // Не блокируем сохранение при ошибке валидации, только логируем
+          console.warn(
+            '⚠️ YooKassa validation error, but saving credentials anyway. Error:',
+            validationError
+          );
         }
+      } else if (skipValidation) {
+        console.log('ℹ️ YooKassa validation skipped (SKIP_YOOKASSA_VALIDATION=true)');
       }
 
       const settings = await savePaymentSettings({

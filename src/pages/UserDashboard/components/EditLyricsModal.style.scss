@@ -18,10 +18,10 @@ dialog {
       max-height: 90vh;
       overflow-y: auto;
       padding: var(--ms-2);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px rgb(var(--black-rgb) / 50%);
+      box-shadow: 0 8px 32px var(--dashboard-shadow);
       gap: var(--ms-1);
     }
 
@@ -35,7 +35,7 @@ dialog {
     &__title {
       margin: 0;
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 700;
       line-height: 1.2;
@@ -44,22 +44,13 @@ dialog {
     }
 
     &__preview-button {
-      @include button-variant(
-        $color: var(--white),
-        $background: transparent,
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button;
     }
 
     &__divider {
       width: calc(100% + var(--ms-2) * 2);
       height: 1px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       margin-left: calc(var(--ms-2) * -1);
       margin-right: calc(var(--ms-2) * -1);
     }
@@ -69,11 +60,11 @@ dialog {
       width: 100%;
       min-height: 300px;
       padding: var(--ms-0);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-family: inherit;
-      background: transparent;
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       resize: vertical;
       box-sizing: border-box;
@@ -91,7 +82,7 @@ dialog {
     }
 
     &__label {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
     }
@@ -100,16 +91,16 @@ dialog {
       display: block;
       width: 100%;
       padding: var(--ms-01) var(--ms-0);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-family: inherit;
-      background: transparent;
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       box-sizing: border-box;
 
       &::placeholder {
-        color: var(--iron-slate);
+        color: var(--dashboard-text-secondary);
       }
 
       &:focus {
@@ -126,30 +117,9 @@ dialog {
     }
 
     &__button {
-      &--cancel {
-        @include button-variant(
-          $color: var(--white),
-          $background: transparent,
-          $hover-color: var(--white),
-          $hover-background: var(--graphite-green),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--iron-slate),
-          $border-radius: var(--ms-01)
-        );
-      }
-
+      &--cancel,
       &--primary {
-        @include button-variant(
-          $color: var(--white),
-          $background: var(--graphite-green),
-          $hover-color: var(--white),
-          $hover-background: var(--iron-slate),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--iron-slate),
-          $border-radius: var(--ms-01)
-        );
+        @include dashboard-button;
       }
     }
   }
@@ -157,6 +127,6 @@ dialog {
 
 // Overlay для модалки поверх модалки
 dialog dialog::backdrop {
-  background: rgb(var(--black-rgb) / 70%);
+  background: var(--dashboard-backdrop);
   backdrop-filter: blur(4px);
 }

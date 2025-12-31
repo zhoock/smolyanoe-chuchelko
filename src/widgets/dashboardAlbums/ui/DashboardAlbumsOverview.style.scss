@@ -23,22 +23,13 @@
 
   &__create-button {
     display: inline-flex;
-    padding: 8px 16px;
-    color: var(--text-color, #ffffff);
-    font-size: 0.875rem;
-    line-height: 1.5;
-    background: var(--accent-color, #998238);
-    border: 1px solid var(--accent-color, #998238);
-    border-radius: 6px;
-    transition:
-      background-color 0.15s ease,
-      border-color 0.15s ease;
     align-items: center;
     gap: 6px;
     font-weight: 500;
     font-family: var(--base-font-family, arial, sans-serif);
     text-decoration: none;
-    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.5;
 
     // Стили для button (когда используется как button вместо Link)
     &:is(button) {
@@ -47,25 +38,10 @@
       font-family: inherit;
     }
 
-    &:hover {
-      background: var(--accent-color-hover, #b8a654);
-      border-color: var(--accent-color-hover, #b8a654);
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover {
-        background: var(--accent-color, #998238);
-        border-color: var(--accent-color, #998238);
-      }
-
-      &:active {
-        background: var(--accent-color-hover, #b8a654);
-        border-color: var(--accent-color-hover, #b8a654);
-      }
-    }
+    @include dashboard-button($padding: 8px 16px, $border-radius: 6px);
 
     &:focus-visible {
-      outline: 2px solid var(--accent-color, #998238);
+      outline: 2px solid var(--dashboard-button-cancel-bg);
       outline-offset: 2px;
     }
   }

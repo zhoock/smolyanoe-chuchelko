@@ -16,10 +16,10 @@ dialog {
       width: 100%;
       max-width: 600px;
       padding: var(--ms-2);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px rgb(var(--black-rgb) / 50%);
+      box-shadow: 0 8px 32px var(--dashboard-shadow);
       gap: var(--ms-1);
       max-height: 90vh;
       overflow-y: auto;
@@ -28,7 +28,7 @@ dialog {
     &__title {
       margin: 0;
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 700;
       line-height: 1.2;
@@ -45,7 +45,7 @@ dialog {
     }
 
     &__content-lang-label {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       font-weight: 500;
     }
@@ -57,23 +57,23 @@ dialog {
 
     &__content-lang-button {
       padding: var(--ms-01) var(--ms-0);
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       font-weight: 500;
       background: transparent;
-      border: 1px solid var(--iron-slate);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       cursor: pointer;
       transition: all 0.2s;
 
       &:hover {
         border-color: var(--dark-greenish-yellow);
-        color: var(--white);
+        color: var(--dashboard-text-primary);
       }
 
       &--active {
-        color: var(--deep-black);
-        background: var(--dark-greenish-yellow);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-button-primary-bg);
         border-color: var(--dark-greenish-yellow);
         font-weight: 600;
       }
@@ -92,7 +92,7 @@ dialog {
     }
 
     &__label {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
       text-transform: none !important;
@@ -101,16 +101,16 @@ dialog {
 
     &__input {
       padding: var(--ms-01) var(--ms-01);
-      color: var(--white) !important;
+      color: var(--dashboard-text-primary) !important;
       font-size: var(--ms-0) !important;
-      background: var(--deep-black) !important;
-      border: 1px solid var(--iron-slate) !important;
+      background: var(--dashboard-card-bg) !important;
+      border: 1px solid var(--dashboard-card-border) !important;
       border-radius: var(--ms-01) !important;
       transition: all 0.2s;
       box-sizing: border-box !important;
 
       &::placeholder {
-        color: var(--warm-concrete);
+        color: var(--dashboard-text-secondary);
       }
 
       &:focus {
@@ -133,17 +133,17 @@ dialog {
       width: 100%;
       min-height: 120px;
       padding: var(--ms-01);
-      color: var(--white) !important;
+      color: var(--dashboard-text-primary) !important;
       font-size: var(--ms-0) !important;
       font-family: inherit;
-      background: var(--deep-black) !important;
-      border: 1px solid var(--iron-slate) !important;
+      background: var(--dashboard-card-bg) !important;
+      border: 1px solid var(--dashboard-card-border) !important;
       border-radius: var(--ms-01) !important;
       resize: vertical;
       box-sizing: border-box !important;
 
       &::placeholder {
-        color: var(--warm-concrete);
+        color: var(--dashboard-text-secondary);
       }
 
       &:focus {
@@ -161,20 +161,20 @@ dialog {
       gap: var(--ms-0);
       padding: var(--ms-2);
       min-height: 200px;
-      background: var(--deep-black);
-      border: 2px dashed var(--iron-slate);
+      background: var(--moon-ash);
+      border: 2px dashed var(--dashboard-card-border);
       border-radius: var(--ms-01);
       cursor: pointer;
       transition: all 0.2s;
 
       &--active {
         border-color: var(--dark-greenish-yellow);
-        background: var(--graphite-green);
+        background: var(--dashboard-hover-bg);
       }
     }
 
     &__dropzone-text {
-      color: var(--light-grey);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       text-align: center;
     }
@@ -187,20 +187,11 @@ dialog {
       cursor: pointer;
       display: inline-block;
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button;
     }
 
     &__file-name {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       margin-top: var(--ms-01);
     }
@@ -217,11 +208,11 @@ dialog {
       justify-content: center;
       inline-size: 160px;
       aspect-ratio: 1 / 1;
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-hover-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       overflow: hidden;
-      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 45%);
+      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 10%);
       flex-shrink: 0;
     }
 
@@ -250,21 +241,17 @@ dialog {
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      border: 1px solid var(--dashboard-card-border);
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+      @include dashboard-button(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
         $border-radius: var(--ms-01)
       );
     }
 
     &__art-meta {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       line-height: 1.4;
     }
@@ -279,7 +266,7 @@ dialog {
     &__art-progress {
       width: 100%;
       height: 4px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       border-radius: 2px;
       overflow: hidden;
     }
@@ -291,7 +278,7 @@ dialog {
     }
 
     &__art-status-text {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       line-height: 1.4;
 
@@ -305,7 +292,7 @@ dialog {
     }
 
     &__help-text {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       margin-bottom: var(--ms-01);
     }
@@ -324,7 +311,7 @@ dialog {
     }
 
     &__checkbox-label {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       cursor: pointer;
       text-transform: none !important;
@@ -351,7 +338,7 @@ dialog {
     }
 
     &__radio-label {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       cursor: pointer;
       text-transform: none !important;
@@ -359,7 +346,7 @@ dialog {
     }
 
     &__preorder-help {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       margin-top: var(--ms-01);
       padding-left: calc(var(--ms-0) + var(--ms-01));
@@ -373,10 +360,10 @@ dialog {
 
     &__select {
       padding: var(--ms-01) var(--ms-01);
-      color: var(--white) !important;
+      color: var(--dashboard-text-primary) !important;
       font-size: var(--ms-0) !important;
-      background: var(--deep-black) !important;
-      border: 1px solid var(--iron-slate) !important;
+      background: var(--dashboard-card-bg) !important;
+      border: 1px solid var(--dashboard-card-border) !important;
       border-radius: var(--ms-01) !important;
       cursor: pointer;
       transition: all 0.2s;
@@ -394,8 +381,8 @@ dialog {
       }
 
       option {
-        color: var(--white);
-        background: var(--deep-black);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-card-bg);
       }
     }
 
@@ -403,7 +390,7 @@ dialog {
       width: calc(100% + var(--ms-2) * 2);
       height: 1px;
       margin: 0 calc(var(--ms-2) * -1) var(--ms-1) calc(var(--ms-2) * -1);
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
 
       @include breakpoint(phones) {
         width: calc(100% + var(--ms-1) * 2);
@@ -418,47 +405,14 @@ dialog {
       gap: var(--ms-0);
       margin-top: var(--ms-0);
       padding-top: var(--ms-1);
-      border-top: 1px solid var(--iron-slate);
+      border-top: 1px solid var(--dashboard-divider);
     }
 
     &__button {
-      &--cancel {
-        @include button-variant(
-          $color: var(--white),
-          $background: transparent,
-          $hover-color: var(--white),
-          $hover-background: var(--graphite-green),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--iron-slate),
-          $border-radius: var(--ms-01)
-        );
-      }
-
-      &--secondary {
-        @include button-variant(
-          $color: var(--white),
-          $background: transparent,
-          $hover-color: var(--white),
-          $hover-background: var(--graphite-green),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--iron-slate),
-          $border-radius: var(--ms-01)
-        );
-      }
-
+      &--cancel,
+      &--secondary,
       &--primary {
-        @include button-variant(
-          $color: var(--deep-coal),
-          $background: var(--honeydew-melon),
-          $hover-color: var(--deep-coal),
-          $hover-background: var(--mango-sorbet),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--honeydew-melon),
-          $border-radius: var(--ms-01)
-        );
+        @include dashboard-button;
       }
     }
 
@@ -474,10 +428,10 @@ dialog {
       align-items: center;
       min-height: calc(var(--ms-0) * 2);
       padding: var(--ms-01);
-      color: var(--white) !important;
+      color: var(--dashboard-text-primary) !important;
       font-size: var(--ms-0) !important;
-      background: var(--deep-black) !important;
-      border: 1px solid var(--iron-slate) !important;
+      background: var(--dashboard-card-bg) !important;
+      border: 1px solid var(--dashboard-card-border) !important;
       border-radius: var(--ms-01) !important;
       cursor: pointer;
       box-sizing: border-box !important;
@@ -496,12 +450,12 @@ dialog {
     }
 
     &__multiselect-placeholder {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
     }
 
     &__multiselect-arrow {
       margin-left: auto;
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       flex-shrink: 0;
     }
@@ -514,12 +468,12 @@ dialog {
       z-index: 10;
       margin-top: var(--ms-01);
       padding: var(--ms-01);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       max-height: 300px;
       overflow-y: auto;
-      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 50%);
+      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 10%);
 
       @include breakpoint(phones) {
         max-height: 250px;
@@ -532,7 +486,7 @@ dialog {
       align-items: center;
       gap: var(--ms-01);
       padding: var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       cursor: pointer;
       border-radius: var(--ms-02);
       transition: background-color 0.2s;
@@ -543,7 +497,7 @@ dialog {
       }
 
       &:hover {
-        background: var(--graphite-green);
+        background: var(--dashboard-hover-bg);
       }
 
       input[type='checkbox'] {
@@ -581,10 +535,10 @@ dialog {
       align-items: center;
       gap: var(--ms-02);
       padding: var(--ms-02) var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-01);
-      background: var(--graphite-green);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-hover-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-02);
     }
 
@@ -595,7 +549,7 @@ dialog {
       width: calc(var(--ms-0) * 0.8);
       height: calc(var(--ms-0) * 0.8);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       line-height: 1;
       background: transparent;
@@ -608,7 +562,7 @@ dialog {
 
       &:hover {
         color: var(--pink-terracotta);
-        background: var(--iron-slate);
+        background: var(--moon-ash);
       }
     }
 
@@ -635,15 +589,11 @@ dialog {
 
     &__add-tag-button {
       white-space: nowrap;
+      border: 1px solid var(--dashboard-card-border);
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+      @include dashboard-button(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
         $border-radius: var(--ms-01)
       );
 
@@ -688,8 +638,8 @@ dialog {
       align-items: center;
       justify-content: space-between;
       padding: var(--ms-01);
-      background: var(--graphite-green);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-hover-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       gap: var(--ms-0);
     }
@@ -703,18 +653,18 @@ dialog {
     }
 
     &__list-item-name {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
     }
 
     &__list-item-role {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
     }
 
     &__list-item-url {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       word-break: break-all;
     }
@@ -733,7 +683,7 @@ dialog {
       width: calc(var(--ms-0) * 1.2);
       height: calc(var(--ms-0) * 1.2);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-01);
       line-height: 1;
       background: transparent;
@@ -747,7 +697,7 @@ dialog {
 
       &:hover {
         color: var(--dark-greenish-yellow);
-        background: var(--iron-slate);
+        background: var(--moon-ash);
       }
     }
 
@@ -758,7 +708,7 @@ dialog {
       width: calc(var(--ms-0) * 1.2);
       height: calc(var(--ms-0) * 1.2);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       line-height: 1;
       background: transparent;
@@ -772,7 +722,7 @@ dialog {
 
       &:hover {
         color: var(--pink-terracotta);
-        background: var(--iron-slate);
+        background: var(--moon-ash);
       }
     }
 
@@ -785,14 +735,11 @@ dialog {
     }
 
     &__add-button {
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+      border: 1px solid var(--dashboard-card-border);
+
+      @include dashboard-button(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
         $border-radius: var(--ms-01)
       );
 
@@ -804,13 +751,13 @@ dialog {
 
     &__cancel-button {
       @include button-variant(
-        $color: var(--white),
+        $color: var(--dashboard-text-primary),
         $background: transparent,
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+        $hover-color: var(--dashboard-text-primary),
+        $hover-background: var(--dashboard-hover-bg),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
+        $border: 1px solid var(--dashboard-card-border),
         $border-radius: var(--ms-01)
       );
     }
@@ -819,7 +766,7 @@ dialog {
     &__producing-type-section {
       margin-bottom: var(--ms-1);
       padding-bottom: var(--ms-1);
-      border-bottom: 1px solid var(--iron-slate);
+      border-bottom: 1px solid var(--dashboard-divider);
 
       &:last-of-type {
         border-bottom: none;
@@ -836,7 +783,7 @@ dialog {
     }
 
     &__producing-type-label {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
       text-transform: none !important;
@@ -850,7 +797,7 @@ dialog {
       width: calc(var(--ms-0) * 1.2);
       height: calc(var(--ms-0) * 1.2);
       padding: 0;
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       line-height: 1;
       background: transparent;
@@ -864,7 +811,7 @@ dialog {
 
       &:hover {
         color: var(--pink-terracotta);
-        background: var(--iron-slate);
+        background: var(--moon-ash);
       }
     }
 
@@ -895,7 +842,7 @@ dialog {
     &__producing-new-type {
       margin-top: var(--ms-1);
       padding-top: var(--ms-1);
-      border-top: 1px solid var(--iron-slate);
+      border-top: 1px solid var(--dashboard-divider);
     }
 
     // Links section (Step 4)
@@ -918,7 +865,7 @@ dialog {
     }
 
     &__links-label {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
       text-transform: uppercase;
@@ -939,8 +886,8 @@ dialog {
       justify-content: space-between;
       gap: var(--ms-0);
       padding: var(--ms-01) var(--ms-0);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
 
       @include breakpoint(phones) {
@@ -959,14 +906,14 @@ dialog {
 
     &__link-icon {
       display: inline-block;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       line-height: 1;
       flex-shrink: 0;
     }
 
     &__link-name {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
       overflow: hidden;
@@ -990,44 +937,44 @@ dialog {
     &__link-select {
       width: 100%;
       padding: var(--ms-01) var(--ms-0);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-family: inherit;
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       cursor: pointer;
       transition: border-color 0.2s;
 
       &:focus {
         outline: none;
-        border-color: var(--graphite-green);
+        border-color: var(--dark-greenish-yellow);
       }
 
       option {
-        color: var(--white);
-        background: var(--deep-black);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-card-bg);
       }
     }
 
     &__link-input {
       width: 100%;
       padding: var(--ms-01) var(--ms-0);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-family: inherit;
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       transition: border-color 0.2s;
 
       &:focus {
         outline: none;
-        border-color: var(--graphite-green);
+        border-color: var(--dark-greenish-yellow);
       }
 
       &::placeholder {
-        color: var(--warm-concrete);
+        color: var(--dashboard-text-secondary);
       }
     }
 
@@ -1044,13 +991,13 @@ dialog {
 
     &__link-save {
       @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+        $color: var(--dashboard-text-primary),
+        $background: var(--dashboard-hover-bg),
+        $hover-color: var(--dashboard-text-primary),
+        $hover-background: var(--dashboard-button-primary-bg),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
+        $border: 1px solid var(--dashboard-card-border),
         $border-radius: var(--ms-01)
       );
 
@@ -1067,13 +1014,13 @@ dialog {
 
     &__link-cancel {
       @include button-variant(
-        $color: var(--white),
+        $color: var(--dashboard-text-primary),
         $background: transparent,
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+        $hover-color: var(--dashboard-text-primary),
+        $hover-background: var(--dashboard-hover-bg),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
+        $border: 1px solid var(--dashboard-card-border),
         $border-radius: var(--ms-01)
       );
 
@@ -1099,22 +1046,22 @@ dialog {
     }
 
     &__review-title {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 500;
       margin-bottom: var(--ms-01);
     }
 
     &__review-description {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       margin-bottom: var(--ms-0);
     }
 
     &__review-section {
       padding: var(--ms-0);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
 
       @include breakpoint(phones) {
@@ -1123,7 +1070,7 @@ dialog {
     }
 
     &__review-section-title {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
       margin-bottom: var(--ms-0);
@@ -1142,7 +1089,7 @@ dialog {
       flex-direction: column;
       gap: var(--ms-02);
       padding-bottom: var(--ms-01);
-      border-bottom: 1px solid var(--iron-slate);
+      border-bottom: 1px solid var(--dashboard-divider);
 
       &:last-child {
         border-bottom: none;
@@ -1155,7 +1102,7 @@ dialog {
     }
 
     &__review-label {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       font-weight: 500;
       text-transform: uppercase;
@@ -1163,13 +1110,13 @@ dialog {
     }
 
     &__review-value {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       word-break: break-word;
     }
 
     &__review-empty {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-style: italic;
     }
 
@@ -1183,10 +1130,10 @@ dialog {
     &__review-tag {
       display: inline-block;
       padding: var(--ms-02) var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-01);
-      background: var(--iron-slate);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-hover-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
     }
 
@@ -1199,14 +1146,14 @@ dialog {
 
     &__review-list-item {
       padding: var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
 
       strong {
-        color: var(--honeydew-melon);
+        color: var(--dark-greenish-yellow);
         font-weight: 500;
       }
     }
@@ -1215,6 +1162,6 @@ dialog {
 
 // Overlay для модалки поверх модалки
 dialog dialog::backdrop {
-  background: rgb(var(--black-rgb) / 70%);
+  background: var(--dashboard-backdrop);
   backdrop-filter: blur(4px);
 }

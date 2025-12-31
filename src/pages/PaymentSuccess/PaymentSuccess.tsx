@@ -68,8 +68,8 @@ function PaymentSuccess() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pollingCount, setPollingCount] = useState(0);
-  const maxPollingAttempts = 20; // ~10 минут (20 * 30 секунд)
-  const pollingInterval = 30000; // 30 секунд
+  const maxPollingAttempts = 20; // ~1.5 минуты (20 * 5 секунд)
+  const pollingInterval = 5000; // 5 секунд для более быстрого обновления
 
   /**
    * Проверяет статус платежа через YooKassa API
@@ -102,6 +102,11 @@ function PaymentSuccess() {
     try {
       // Используем get-payment-status, который проверяет через YooKassa API
       const response = await fetch(`/api/get-payment-status?${apiParam}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (!data.success) {
@@ -142,8 +147,23 @@ function PaymentSuccess() {
       }
     } catch (err) {
       console.error('Error fetching payment status:', err);
-      setError('Failed to fetch payment status. Please try again.');
-      setLoading(false);
+
+      // Продолжаем попытки, если не исчерпаны все попытки
+      if (pollingCount < maxPollingAttempts) {
+        // Не показываем ошибку, продолжаем polling
+        setTimeout(() => {
+          setPollingCount((prev) => prev + 1);
+          fetchPaymentStatus();
+        }, pollingInterval);
+      } else {
+        // Все попытки исчерпаны - показываем ошибку
+        const errorMessage =
+          err instanceof Error
+            ? `Ошибка соединения: ${err.message}. Проверьте подключение к интернету.`
+            : 'Не удалось получить статус платежа. Попробуйте обновить страницу.';
+        setError(errorMessage);
+        setLoading(false);
+      }
     }
   };
 
@@ -230,7 +250,6 @@ function PaymentSuccess() {
 
               return (
                 <div className={`payment-success__status ${statusInfo.className}`}>
-                  <div className="payment-success__icon">{statusInfo.icon}</div>
                   <h1 className="payment-success__title">{statusInfo.title}</h1>
                   <p className="payment-success__message">{statusInfo.message}</p>
 
@@ -310,13 +329,24 @@ function PaymentSuccess() {
                   )}
 
                   {isSucceeded && (
-                    <button
-                      type="button"
-                      className="payment-success__button"
-                      onClick={() => navigate('/')}
-                    >
-                      Вернуться на главную
-                    </button>
+                    <div className="payment-success__success-actions">
+                      {payment.metadata?.customerEmail && (
+                        <button
+                          type="button"
+                          className="payment-success__button payment-success__button--primary"
+                          onClick={() => navigate('/dashboard-new?tab=my-purchases')}
+                        >
+                          Мои покупки
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="payment-success__button"
+                        onClick={() => navigate('/')}
+                      >
+                        На главную
+                      </button>
+                    </div>
                   )}
                 </div>
               );

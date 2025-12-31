@@ -82,6 +82,13 @@ export async function savePaymentSettings(
   data: SavePaymentSettingsRequest
 ): Promise<PaymentSettingsResponse> {
   try {
+    console.log('📤 Saving payment settings:', {
+      userId: data.userId,
+      provider: data.provider,
+      hasShopId: !!data.shopId,
+      hasSecretKey: !!data.secretKey,
+    });
+
     const response = await fetch('/api/payment-settings', {
       method: 'POST',
       headers: {
@@ -96,12 +103,25 @@ export async function savePaymentSettings(
         const errorData = await response.json().catch(() => ({
           error: `HTTP ${response.status}: ${response.statusText}`,
         }));
+        console.error('❌ Payment settings save error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error,
+          message: errorData.message,
+          fullResponse: errorData,
+        });
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}`,
-          message: errorData.message,
+          message: errorData.message || errorData.error,
         };
       } else {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('❌ Payment settings save error (non-JSON):', {
+          status: response.status,
+          statusText: response.statusText,
+          text: errorText,
+        });
         return {
           success: false,
           error:

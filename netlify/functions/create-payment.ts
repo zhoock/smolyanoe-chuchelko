@@ -49,6 +49,7 @@ interface CreatePaymentRequest {
   returnUrl?: string;
   userId?: string; // ID музыканта-продавца (опционально, если нет - используется аккаунт платформы)
   orderId?: string; // ID существующего заказа (для повторной оплаты)
+  paymentToken?: string; // Токен от Checkout.js для оплаты на сайте
   billingData?: {
     firstName: string;
     lastName: string;
@@ -73,11 +74,14 @@ interface YooKassaPaymentRequest {
     currency: string;
   };
   capture: boolean;
-  confirmation: {
+  confirmation?: {
     type: 'redirect';
     return_url: string;
+    enforce?: boolean; // Опционально, по умолчанию false
   };
+  payment_token?: string; // Токен от Checkout.js (в корне запроса, не в payment_method!)
   description: string;
+  test?: boolean; // true для тестового режима
   metadata?: {
     albumId: string;
     customerEmail: string;
@@ -563,17 +567,47 @@ export const handler: Handler = async (
     // Игнорируем валюту от клиента и принудительно используем RUB
     const yookassaCurrency = 'RUB';
 
+    // Определяем тестовый режим
+    // ВАЖНО: параметр test работает ТОЛЬКО с тестовыми shop_id и secret_key
+    // Если используете production креды, test нужно отключить
+    const isTestMode = process.env.YOOKASSA_TEST_MODE === 'true';
+
+    console.log('🔧 YooKassa mode:', {
+      isTestMode,
+      YOOKASSA_TEST_MODE: process.env.YOOKASSA_TEST_MODE,
+      NODE_ENV: process.env.NODE_ENV,
+      NETLIFY_DEV: process.env.NETLIFY_DEV,
+      shopIdPrefix: (process.env.YOOKASSA_SHOP_ID || '').substring(0, 6) + '...',
+    });
+
+    // Формируем запрос: если есть paymentToken (Checkout.js), используем payment_token в корне,
+    // иначе используем только confirmation для redirect (умная оплата)
     const yookassaRequest: YooKassaPaymentRequest = {
       amount: {
         value: data.amount.toFixed(2),
         currency: yookassaCurrency, // Принудительно RUB для YooKassa
       },
       capture: true, // Деньги списываются сразу после оплаты
-      confirmation: {
-        type: 'redirect',
-        return_url: returnUrl,
-      },
+      ...(data.paymentToken
+        ? {
+            // Для Checkout.js: payment_token в корне запроса
+            payment_token: data.paymentToken,
+            // confirmation нужен для 3D Secure (если потребуется)
+            confirmation: {
+              type: 'redirect',
+              return_url: returnUrl,
+              enforce: false, // Не принуждаем к 3D Secure
+            },
+          }
+        : {
+            // Для умной оплаты: используем только confirmation
+            confirmation: {
+              type: 'redirect',
+              return_url: returnUrl,
+            },
+          }),
       description: data.description,
+      // test: isTestMode, // ВРЕМЕННО ОТКЛЮЧЕНО для диагностики
       metadata: {
         orderId: orderId,
         albumId: data.albumId,
@@ -743,6 +777,8 @@ export const handler: Handler = async (
       amount: yookassaRequest.amount.value,
       currency: yookassaRequest.amount.currency,
       capture: yookassaRequest.capture,
+      test: yookassaRequest.test, // ВАЖНО: проверяем, передаётся ли test
+      hasPaymentToken: !!yookassaRequest.payment_token, // payment_token в корне запроса для Checkout.js
       hasConfirmation: !!yookassaRequest.confirmation,
       returnUrl: yookassaRequest.confirmation?.return_url,
     });

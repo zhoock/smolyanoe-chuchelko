@@ -1,7 +1,7 @@
 // src/pages/UserDashboard/UserDashboard.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -57,6 +57,7 @@ import { ArticlesListSkeleton } from './components/ArticlesListSkeleton';
 import { SyncLyricsModal } from './components/SyncLyricsModal';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
+import { MyPurchasesContent } from './components/MyPurchasesContent';
 import type { IAlbums, IArticles } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
@@ -279,6 +280,7 @@ function UserDashboard() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
@@ -287,7 +289,22 @@ function UserDashboard() {
   const articlesFromStore = useAppSelector((state) => selectArticlesData(state, lang));
   const user = getUser();
 
-  const [activeTab, setActiveTab] = useState<'albums' | 'posts' | 'payment-settings'>('albums');
+  // Получаем вкладку из URL параметра или используем значение по умолчанию
+  const tabParam = searchParams.get('tab');
+  const validTabs: Array<'albums' | 'posts' | 'payment-settings' | 'my-purchases'> = [
+    'albums',
+    'posts',
+    'payment-settings',
+    'my-purchases',
+  ];
+  const initialTab =
+    tabParam && validTabs.includes(tabParam as any)
+      ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases')
+      : 'albums';
+
+  const [activeTab, setActiveTab] = useState<
+    'albums' | 'posts' | 'payment-settings' | 'my-purchases'
+  >(initialTab);
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -1677,6 +1694,13 @@ function UserDashboard() {
                 >
                   {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
                 </button>
+                <button
+                  type="button"
+                  className={`user-dashboard__tab ${activeTab === 'my-purchases' ? 'user-dashboard__tab--active' : ''}`}
+                  onClick={() => setActiveTab('my-purchases')}
+                >
+                  Мои покупки
+                </button>
               </div>
               <div className="user-dashboard__header-controls">
                 {/* Language switcher */}
@@ -1823,7 +1847,9 @@ function UserDashboard() {
               {/* Right column - Content */}
               <div className="user-dashboard__content">
                 {activeTab === 'payment-settings' ? (
-                  <PaymentSettings userId="current-user" />
+                  <PaymentSettings userId={user?.id || 'zhoock'} />
+                ) : activeTab === 'my-purchases' ? (
+                  <MyPurchasesContent userEmail={user?.email} />
                 ) : activeTab === 'albums' ? (
                   <>
                     <h3 className="user-dashboard__section-title">

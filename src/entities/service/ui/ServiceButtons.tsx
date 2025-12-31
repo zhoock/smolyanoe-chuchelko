@@ -32,16 +32,6 @@ function ServiceButtonsContent({
       : 'no';
   const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
 
-  // Отладочное логирование (можно удалить после проверки)
-  if (section === 'Купить') {
-    console.log('[ServiceButtons] Download button visibility check:', {
-      albumId: album.albumId,
-      allowDownloadSale,
-      isDownloadAllowed,
-      release: album.release,
-    });
-  }
-
   const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setIsPurchasePopupOpen(true);

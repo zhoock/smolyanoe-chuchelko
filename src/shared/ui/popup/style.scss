@@ -35,8 +35,8 @@ dialog {
 
   @extend %hide-scrollbar;
 
-  // Анимация и эффекты только для navigation popup (с классом popup)
-  &.popup {
+  // Анимация и эффекты только для попапа с плеером
+  &.popup:has(.player) {
     backdrop-filter: blur(20px);
     animation: spin 11.125s linear infinite;
 
@@ -48,19 +48,6 @@ dialog {
       inline-size: 100%;
       block-size: 100%;
       inset-block-start: calc(var(--card-height) / 6);
-    }
-  }
-
-  // Отключаем анимацию для UserDashboard, PurchasePopup, ProfileSettingsModal и EditAlbumModal
-  &.popup:has(.user-dashboard),
-  &.popup:has(.purchase-popup),
-  &.popup:has(.profile-settings-modal),
-  &.popup:has(.edit-album-modal) {
-    animation: none;
-    backdrop-filter: none;
-
-    .popup__gradient {
-      display: none;
     }
   }
 }

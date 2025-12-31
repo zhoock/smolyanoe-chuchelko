@@ -3,6 +3,9 @@
 @use '../../scss/abstracts/mixins' as *;
 
 dialog {
+  color: var(--dashboard-text-primary);
+  background: var(--dashboard-card-bg);
+
   .user-dashboard {
     display: flex;
     align-items: center;
@@ -11,7 +14,7 @@ dialog {
     padding: var(--ms-2);
     background: transparent;
 
-    // Main card - темная карточка
+    // Main card - светлая карточка
     &__card {
       display: flex;
       flex-direction: column;
@@ -20,10 +23,10 @@ dialog {
       min-height: 600px;
       max-height: 90vh;
       overflow: hidden;
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px rgb(var(--black-rgb) / 50%);
+      box-shadow: 0 8px 32px var(--dashboard-shadow);
     }
 
     // Header with tabs
@@ -32,8 +35,8 @@ dialog {
       justify-content: space-between;
       align-items: center;
       padding: var(--ms-1) var(--ms-1);
-      border-bottom: 1px solid var(--iron-slate);
-      background: var(--deep-black);
+      border-bottom: 1px solid var(--dashboard-card-border);
+      background: var(--dashboard-card-bg);
     }
 
     &__tabs {
@@ -43,7 +46,7 @@ dialog {
 
     &__tab {
       padding: var(--ms-01) var(--ms-0);
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       background: transparent;
       border: none;
       cursor: pointer;
@@ -53,13 +56,13 @@ dialog {
       letter-spacing: normal;
 
       &:hover {
-        color: var(--white);
-        background: var(--graphite-green);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-hover-bg);
       }
 
       &--active {
-        color: var(--white);
-        background: var(--graphite-green);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-button-cancel-bg);
       }
     }
 
@@ -102,12 +105,13 @@ dialog {
       right: 0;
       z-index: 100;
       padding: 0;
-      background: var(--deep-black, #1a1a1a);
-      border: 1px solid var(--iron-slate, #2a2a2a);
+      background: var(--white, #ffffff);
+      border: 1px solid var(--icy-mist, #e6e6e6);
       border-radius: var(--ms-01);
       list-style: none;
       margin-top: var(--ms-0);
       min-width: 60px;
+      box-shadow: 0 4px 12px rgb(var(--black-rgb) / 10%);
 
       &.is-hidden {
         display: none;
@@ -121,7 +125,7 @@ dialog {
     &__lang-option {
       width: 100%;
       padding: var(--ms-01) var(--ms-0);
-      color: var(--warm-concrete, #dddddd);
+      color: var(--graphite-green, #373633);
       text-align: center;
       background: transparent;
       border: none;
@@ -131,13 +135,13 @@ dialog {
       cursor: pointer;
 
       &.active {
-        color: var(--dark-greenish-yellow, #998238);
-        background: var(--graphite-green, #2a3a2a);
+        color: var(--graphite-green, #373633);
+        background: var(--mango-sorbet, #fae59b);
       }
 
       &:hover {
-        color: var(--white, #ffffff);
-        background: var(--graphite-green, #2a3a2a);
+        color: var(--graphite-green, #373633);
+        background: var(--icy-mist, #e6e6e6);
       }
     }
 
@@ -153,7 +157,7 @@ dialog {
       letter-spacing: normal;
 
       &:hover {
-        color: var(--deep-coal);
+        color: var(--dashboard-text-primary);
         background: var(--dark-greenish-yellow);
       }
     }
@@ -173,6 +177,7 @@ dialog {
       padding: var(--ms-1) var(--ms-1);
       gap: var(--ms-1);
       overflow-y: auto;
+      background: var(--dashboard-card-bg, var(--moon-ash));
     }
 
     &__navigation {
@@ -188,7 +193,7 @@ dialog {
       align-items: center;
       gap: var(--ms-01);
       padding: var(--ms-01) var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       text-align: left;
       text-transform: none;
       font-weight: 400;
@@ -200,12 +205,12 @@ dialog {
       transition: all 0.2s;
 
       &:hover {
-        background: var(--graphite-green);
+        background: var(--dashboard-hover-bg);
       }
 
       &--active {
-        color: var(--deep-black);
-        background: var(--honeydew-melon);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-button-cancel-bg);
       }
     }
 
@@ -220,7 +225,7 @@ dialog {
 
     &__profile-title {
       margin: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-weight: 700;
       line-height: 1.2;
     }
@@ -237,8 +242,8 @@ dialog {
       width: calc(var(--ms-2) * 2.7);
       height: calc(var(--ms-2) * 2.7);
       overflow: hidden;
-      background: var(--deep-black);
-      border: 2px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 2px solid var(--dashboard-card-border);
       border-radius: 50%;
       cursor: pointer;
 
@@ -260,9 +265,9 @@ dialog {
       width: calc(var(--ms-1) * 1.5);
       height: calc(var(--ms-1) * 1.5);
       padding: 0;
-      color: var(--white);
-      background: rgb(var(--black-rgb) / 70%);
-      border: 1px solid var(--iron-slate);
+      color: var(--dashboard-text-primary);
+      background: rgb(var(--white-rgb) / 90%);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: 50%;
       cursor: pointer;
       opacity: 0;
@@ -280,8 +285,8 @@ dialog {
       }
 
       &:hover {
-        background: var(--graphite-green);
-        border-color: var(--graphite-green);
+        background: var(--dashboard-button-primary-bg);
+        border-color: var(--mango-sorbet);
       }
 
       &:disabled {
@@ -309,7 +314,7 @@ dialog {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgb(0 0 0 / 60%);
+      background: rgb(var(--white-rgb) / 80%);
       border-radius: 50%;
       backdrop-filter: blur(2px);
     }
@@ -317,8 +322,8 @@ dialog {
     &__avatar-spinner {
       width: 32px;
       height: 32px;
-      border: 3px solid rgb(255 255 255 / 20%);
-      border-top-color: var(--accent-color, #4ade80);
+      border: 3px solid rgb(var(--graphite-green-rgb) / 20%);
+      border-top-color: var(--dark-greenish-yellow);
       border-radius: 50%;
       animation: avatar-spin 0.8s linear infinite;
     }
@@ -339,21 +344,28 @@ dialog {
       gap: var(--ms-0);
     }
 
+    &__profile-settings-button {
+      margin-top: var(--ms-0);
+      width: 100%;
+
+      @include dashboard-button;
+    }
+
     &__field {
       display: flex;
       flex-direction: column;
       gap: var(--ms-01);
 
       label {
-        color: var(--white);
+        color: var(--dashboard-text-primary);
       }
 
       input {
         padding: var(--ms-01) var(--ms-01);
-        color: var(--light-grey) !important;
+        color: var(--dashboard-text-primary) !important;
         font-size: var(--ms-0) !important;
-        background: var(--deep-black) !important;
-        border: 1px solid var(--iron-slate) !important;
+        background: var(--dashboard-input-bg) !important;
+        border: 1px solid var(--dashboard-input-border) !important;
         border-radius: 6px !important;
         transition: all 0.2s;
         box-sizing: border-box !important;
@@ -373,7 +385,7 @@ dialog {
     // Vertical separator
     &__separator {
       width: 1px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       min-height: 100%;
     }
 
@@ -381,10 +393,11 @@ dialog {
     &__content {
       padding: var(--ms-1) var(--ms-2);
       overflow-y: auto;
+      background: var(--dashboard-card-bg);
     }
 
     &__section {
-      border: 1px solid var(--iron-slate);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       overflow: hidden;
     }
@@ -392,7 +405,7 @@ dialog {
     &__section-title {
       margin: 0 0 var(--ms-1) 0 !important;
       padding: 0 !important;
-      color: var(--white) !important;
+      color: var(--dashboard-text-primary) !important;
       font-size: var(--ms-1) !important;
       font-weight: 700 !important;
       line-height: 1.2 !important;
@@ -409,7 +422,7 @@ dialog {
       transition: background-color 0.2s;
 
       &:hover {
-        background: var(--iron-slate);
+        background: var(--dashboard-hover-bg);
       }
 
       &:focus {
@@ -440,11 +453,11 @@ dialog {
     }
 
     &__album-title {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
     }
 
     &__album-year {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
     }
 
     &__album-arrow {
@@ -454,7 +467,7 @@ dialog {
       width: var(--ms-1);
       height: var(--ms-1);
       padding: 0;
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-1);
       font-weight: 300;
       margin-left: auto;
@@ -476,46 +489,21 @@ dialog {
     }
 
     &__delete-album-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--warm-concrete);
-      font-size: var(--ms-0);
-      font-weight: 400;
-      line-height: 1;
-      background: transparent;
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-01);
-      cursor: pointer;
-      transition: all 0.2s;
-      opacity: 0.7;
-
-      &:hover {
-        color: var(--white);
-        background: rgb(220 38 38 / 20%);
-        border-color: rgb(220 38 38 / 50%);
-        opacity: 1;
-      }
-
-      &:active {
-        background: rgb(220 38 38 / 30%);
-        border-color: rgb(220 38 38 / 70%);
-      }
+      @include dashboard-delete-button;
     }
 
     &__album-item--expanded {
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
     }
 
     &__album-date {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
     }
 
     &__album-expanded {
       padding: var(--ms-0);
-      background: var(--deep-black);
-      border-top: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border-top: 1px solid var(--dashboard-divider);
 
       &--article {
         display: flex;
@@ -524,7 +512,7 @@ dialog {
     }
 
     &__article-description {
-      color: var(--light-grey);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       line-height: 1.6;
       margin-bottom: var(--ms-0);
@@ -540,45 +528,15 @@ dialog {
     }
 
     &__edit-button {
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+      @include dashboard-button(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 0,
         $border-radius: var(--ms-01)
       );
     }
 
     &__delete-article-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--warm-concrete);
-      font-size: var(--ms-0);
-      font-weight: 400;
-      line-height: 1;
-      background: transparent;
-      border: 1px solid var(--iron-slate);
-      border-radius: var(--ms-01);
-      cursor: pointer;
-      transition: all 0.2s;
-      opacity: 0.7;
-
-      &:hover {
-        color: var(--white);
-        background: rgb(220 38 38 / 20%);
-        border-color: rgb(220 38 38 / 50%);
-        opacity: 1;
-      }
-
-      &:active {
-        background: rgb(220 38 38 / 30%);
-        border-color: rgb(220 38 38 / 70%);
-      }
+      @include dashboard-delete-button;
     }
 
     &__article-cover-section {
@@ -587,7 +545,7 @@ dialog {
 
     &__article-cover-label {
       display: block;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 500;
       margin-bottom: var(--ms-01);
@@ -603,8 +561,8 @@ dialog {
       position: relative;
       display: flex;
       padding: var(--ms-2);
-      background: var(--deep-black);
-      border: 2px dashed var(--iron-slate);
+      background: var(--dashboard-card-bg, var(--moon-ash));
+      border: 2px dashed var(--dashboard-input-border);
       border-radius: var(--ms-01);
       transition: all 0.2s;
       flex-direction: column;
@@ -614,18 +572,18 @@ dialog {
       min-height: 120px;
 
       &:hover {
-        border-color: var(--graphite-green);
-        background: rgba(var(--graphite-green-rgb) / 5%);
+        border-color: var(--dark-greenish-yellow);
+        background: var(--dashboard-hover-bg);
       }
 
       &--active {
         border-color: var(--dark-greenish-yellow);
-        background: var(--graphite-green);
+        background: var(--dashboard-button-primary-bg);
       }
     }
 
     &__article-cover-dropzone-text {
-      color: var(--light-grey);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       text-align: center;
       margin-bottom: var(--ms-01);
@@ -659,10 +617,10 @@ dialog {
       justify-content: center;
       inline-size: 160px;
       aspect-ratio: 1 / 1;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       border-radius: var(--ms-01);
       overflow: hidden;
-      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 45%);
+      box-shadow: 0 4px 16px rgb(var(--black-rgb) / 10%);
       flex-shrink: 0;
     }
 
@@ -693,10 +651,10 @@ dialog {
       justify-content: center;
 
       @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+        $color: var(--dashboard-text-primary),
+        $background: var(--dashboard-button-bg),
+        $hover-color: var(--dashboard-text-primary),
+        $hover-background: var(--dashboard-button-primary-bg),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
         $border: 0,
@@ -714,7 +672,7 @@ dialog {
     &__article-cover-progress {
       width: 100%;
       height: 4px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       border-radius: 2px;
       overflow: hidden;
     }
@@ -726,7 +684,7 @@ dialog {
     }
 
     &__article-cover-status-text {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       line-height: 1.4;
 
@@ -749,8 +707,8 @@ dialog {
     &__article {
       display: flex;
       padding: var(--ms-1);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       flex-direction: column;
       gap: var(--ms-0);
@@ -781,9 +739,9 @@ dialog {
       display: flex;
       width: 100%;
       height: 100%;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
-      background: var(--graphite-green);
+      background: var(--dashboard-button-primary-bg);
       align-items: center;
       justify-content: center;
       font-weight: 600;
@@ -797,13 +755,13 @@ dialog {
     }
 
     &__article-author {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 600;
     }
 
     &__article-date {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
     }
 
@@ -815,7 +773,7 @@ dialog {
 
     &__article-edit-link {
       padding: 0;
-      color: var(--graphite-green);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       background: none;
       border: none;
@@ -843,23 +801,23 @@ dialog {
     }
 
     &__article-save-button {
-      color: var(--white);
-      background: var(--graphite-green);
-      border-color: var(--graphite-green);
+      color: var(--dashboard-text-primary);
+      background: var(--dashboard-button-primary-bg);
+      border-color: var(--mango-sorbet);
 
       &:hover {
-        background: var(--iron-slate);
-        border-color: var(--iron-slate);
+        background: var(--honeydew-melon);
+        border-color: var(--honeydew-melon);
       }
     }
 
     &__article-cancel-button {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       background: transparent;
-      border-color: var(--iron-slate);
+      border-color: var(--icy-mist);
 
       &:hover {
-        background: var(--iron-slate);
+        background: var(--dashboard-hover-bg);
       }
     }
 
@@ -869,7 +827,7 @@ dialog {
 
     &__article-title {
       margin: 0 0 var(--ms-0) 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       line-height: 1.3;
       font-weight: 700;
@@ -878,10 +836,10 @@ dialog {
     &__article-title-input {
       width: 100%;
       padding: var(--ms-01) var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
-      background: var(--iron-slate);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       font-weight: 700;
       font-family: inherit;
@@ -889,17 +847,17 @@ dialog {
 
       &:focus {
         outline: none;
-        border-color: var(--graphite-green);
+        border-color: var(--dark-greenish-yellow);
       }
     }
 
     &__article-description-input {
       width: 100%;
       padding: var(--ms-01) var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
-      background: var(--iron-slate);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       font-family: inherit;
       resize: vertical;
@@ -907,7 +865,7 @@ dialog {
 
       &:focus {
         outline: none;
-        border-color: var(--graphite-green);
+        border-color: var(--dark-greenish-yellow);
       }
     }
 
@@ -925,22 +883,13 @@ dialog {
     &__article-divider {
       height: 1px;
       margin: var(--ms-0) 0;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
     }
 
     &__edit-album-button {
       margin-bottom: var(--ms-0);
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--deep-black),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
-        $margin: 0 0 var(--ms-0) 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button($margin: 0 0 var(--ms-0) 0);
     }
 
     &__track-upload {
@@ -950,10 +899,10 @@ dialog {
       justify-content: center;
       gap: var(--ms-0);
       padding: var(--ms-1);
-      color: var(--light-grey);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
-      background: var(--deep-black);
-      border: 2px dashed var(--iron-slate);
+      background: var(--dashboard-card-bg, var(--moon-ash));
+      border: 2px dashed var(--dashboard-input-border);
       border-radius: var(--ms-01);
       margin-bottom: var(--ms-0);
     }
@@ -972,7 +921,7 @@ dialog {
       height: 8px;
       border-radius: 4px;
       max-width: 400px;
-      background-color: rgb(255 255 255 / 10%);
+      background-color: rgb(var(--graphite-green-rgb) / 10%);
       overflow: hidden;
     }
 
@@ -990,16 +939,7 @@ dialog {
     &__choose-files-button {
       white-space: nowrap;
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button;
     }
 
     &__tracks-list {
@@ -1014,7 +954,7 @@ dialog {
       align-items: center;
       gap: var(--ms-01);
       padding: var(--ms-01) 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       cursor: default;
       transition: opacity 0.2s ease;
 
@@ -1029,14 +969,14 @@ dialog {
       justify-content: center;
       cursor: grab;
       padding: var(--ms-01);
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       user-select: none;
       touch-action: none;
       min-width: 24px;
       transition: color 0.2s ease;
 
       &:hover {
-        color: var(--white);
+        color: var(--dashboard-text-primary);
       }
 
       &:active {
@@ -1051,7 +991,7 @@ dialog {
     }
 
     &__track-number {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       min-width: calc(var(--ms-0) * 2);
     }
 
@@ -1064,16 +1004,16 @@ dialog {
       cursor: pointer;
 
       &:hover {
-        background: rgba(var(--graphite-green-rgb) / 10%);
+        background: var(--dashboard-hover-bg);
       }
     }
 
     &__track-title-input {
       padding: var(--ms-01);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
-      background: var(--iron-slate);
-      border: 1px solid var(--graphite-green);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dark-greenish-yellow);
       border-radius: var(--ms-02);
       flex: 1;
       outline: none;
@@ -1081,7 +1021,7 @@ dialog {
 
       &:focus {
         border-color: var(--dark-greenish-yellow);
-        background: rgba(var(--graphite-green-rgb) / 15%);
+        background: var(--dashboard-card-bg, var(--moon-ash));
       }
     }
 
@@ -1093,14 +1033,14 @@ dialog {
     }
 
     &__track-duration {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-variant-numeric: tabular-nums;
     }
 
     &__track-delete-button {
       position: absolute;
-      right: 0;
-      bottom: -10px;
+      right: 55px;
+      bottom: -6px;
       z-index: 10;
       margin-bottom: var(--ms-01);
       white-space: nowrap;
@@ -1112,15 +1052,7 @@ dialog {
         visibility 0.2s ease,
         all 200ms ease;
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-delete-button;
     }
 
     &__track-item:hover .user-dashboard__track-delete-button {
@@ -1131,19 +1063,19 @@ dialog {
 
     &__album-divider {
       height: 1px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
     }
 
     &__lyrics-section {
       margin-top: var(--ms-1);
       padding-top: var(--ms-0);
-      border-top: 1px solid var(--iron-slate);
+      border-top: 1px solid var(--dashboard-divider);
     }
 
     &__lyrics-title {
       margin: 0 0 var(--ms-0) 0 !important;
       padding: 0 !important;
-      color: var(--white) !important;
+      color: var(--graphite-green) !important;
       font-size: var(--ms-1) !important;
       font-weight: 700 !important;
       line-height: 1.2 !important;
@@ -1162,11 +1094,11 @@ dialog {
       grid-template-columns: 2fr 2fr 2fr;
       gap: var(--ms-0);
       padding: var(--ms-0);
-      border-bottom: 1px solid var(--iron-slate);
+      border-bottom: 1px solid var(--dashboard-divider);
     }
 
     &__lyrics-header-cell {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
       font-weight: 500;
       text-transform: uppercase;
@@ -1181,13 +1113,13 @@ dialog {
       grid-template-columns: 2fr 2fr 2fr;
       gap: var(--ms-0);
       padding: var(--ms-0);
-      border-bottom: 1px solid var(--iron-slate);
+      border-bottom: 1px solid var(--dashboard-divider);
     }
 
     &__lyrics-cell {
       display: flex;
       align-items: center;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
 
       &--actions {
@@ -1203,13 +1135,13 @@ dialog {
       white-space: nowrap;
 
       @include button-variant(
-        $color: var(--white),
-        $background: transparent,
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
+        $color: var(--dashboard-button-cancel-text),
+        $background: var(--dashboard-button-cancel-bg),
+        $hover-color: var(--dashboard-button-cancel-text),
+        $hover-background: var(--dashboard-button-cancel-hover),
         $margin: 0,
         $padding: var(--ms-02) var(--ms-01),
-        $border: 1px solid var(--iron-slate),
+        $border: 0,
         $border-radius: var(--ms-02)
       );
     }
@@ -1224,26 +1156,21 @@ dialog {
       text-transform: none;
       letter-spacing: normal;
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--graphite-green),
-        $hover-color: var(--white),
-        $hover-background: var(--iron-slate),
+      @include dashboard-button(
         $margin: var(--ms-0) 0 0 0,
         $padding: var(--ms-0) var(--ms-1),
-        $border: 1px solid var(--iron-slate),
         $border-radius: 0 0 var(--ms-01) var(--ms-01)
       );
 
       span:first-child {
-        color: var(--white);
+        color: var(--dashboard-text-primary);
         font-size: var(--ms-1);
         font-weight: 400;
         line-height: 1;
       }
 
       span:last-child {
-        color: var(--white);
+        color: var(--dashboard-text-primary);
       }
     }
 
@@ -1258,22 +1185,13 @@ dialog {
     }
 
     &__albums-prompt-text {
-      color: var(--light-grey);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       flex: 1;
     }
 
     &__new-album-button {
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--graphite-green),
-        $hover-color: var(--white),
-        $hover-background: var(--iron-slate),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-1),
-        $border: 1px solid var(--iron-slate),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button($margin: 0, $padding: var(--ms-01) var(--ms-1));
     }
 
     // Posts section
@@ -1287,28 +1205,295 @@ dialog {
     }
 
     &__posts-prompt-text {
-      color: var(--light-grey);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       flex: 1;
     }
 
     &__new-post-button {
       @include button-variant(
-        $color: var(--white),
-        $background: var(--graphite-green),
-        $hover-color: var(--white),
-        $hover-background: var(--iron-slate),
+        $color: var(--graphite-green),
+        $background: var(--mango-sorbet),
+        $hover-color: var(--graphite-green),
+        $hover-background: var(--honeydew-melon),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-1),
-        $border: 1px solid var(--iron-slate),
+        $border: 1px solid var(--dashboard-card-border),
         $border-radius: var(--ms-01)
       );
+    }
+
+    // My Purchases styles
+    &__my-purchases {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__my-purchases-form {
+      display: flex;
+      padding: var(--ms-1);
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__my-purchases-description {
+      margin: 0;
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+      line-height: 1.5;
+    }
+
+    &__my-purchases-form-inner {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-label {
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      font-weight: 500;
+    }
+
+    &__my-purchases-input {
+      padding: var(--ms-01) var(--ms-01);
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: 6px;
+      transition: all 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: var(--dark-greenish-yellow);
+      }
+    }
+
+    &__my-purchases-submit {
+      margin-top: var(--ms-01);
+
+      @include dashboard-button;
+    }
+
+    &__my-purchases-error {
+      padding: var(--ms-01);
+      color: #f44336;
+      font-size: var(--ms-0);
+      background: rgb(244 67 54 / 10%);
+      border: 1px solid rgb(244 67 54 / 30%);
+      border-radius: 6px;
+    }
+
+    &__my-purchases-email-info {
+      display: flex;
+      padding: var(--ms-01) var(--ms-1);
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--ms-01);
+
+      p {
+        margin: 0;
+        color: var(--dashboard-text-primary);
+
+        strong {
+          color: var(--dark-greenish-yellow);
+        }
+      }
+    }
+
+    &__my-purchases-change-email {
+      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+    }
+
+    &__my-purchases-loading {
+      padding: var(--ms-2);
+      color: var(--dashboard-text-secondary);
+      text-align: center;
+    }
+
+    &__my-purchases-empty {
+      padding: var(--ms-2);
+      text-align: center;
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+
+      p {
+        margin: var(--ms-01) 0;
+        color: var(--dashboard-text-secondary);
+      }
+    }
+
+    &__my-purchases-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__my-purchases-purchase {
+      padding: var(--ms-1);
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      transition: all 0.2s;
+
+      &:hover {
+        border-color: var(--dark-greenish-yellow);
+      }
+    }
+
+    &__my-purchases-purchase-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--ms-01);
+      margin-bottom: var(--ms-1);
+    }
+
+    &__my-purchases-purchase-cover {
+      width: 80px;
+      height: 80px;
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: 6px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    &__my-purchases-purchase-cover-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &__my-purchases-purchase-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+      flex: 1;
+    }
+
+    &__my-purchases-album-download {
+      position: relative;
+      display: inline-flex;
+      white-space: nowrap;
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--ms-02);
+
+      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    &__my-purchases-purchase-title {
+      margin: 0;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-1);
+      font-weight: 600;
+    }
+
+    &__my-purchases-purchase-date,
+    &__my-purchases-purchase-downloads {
+      margin: 0;
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+    }
+
+    &__my-purchases-tracks {
+      margin-top: var(--ms-1);
+    }
+
+    &__my-purchases-tracks-title {
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      font-weight: 600;
+      margin-bottom: var(--ms-01);
+    }
+
+    &__my-purchases-tracks-list {
+      display: flex;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-track {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+      padding: var(--ms-01);
+    }
+
+    &__my-purchases-track-number {
+      font-weight: 600;
+      color: var(--dashboard-text-secondary);
+      min-width: 30px;
+      text-align: right;
+    }
+
+    &__my-purchases-track-title {
+      flex: 1;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+    }
+
+    &__my-purchases-track-download {
+      position: relative;
+      display: inline-flex;
+      white-space: nowrap;
+      align-items: center;
+      gap: var(--ms-02);
+
+      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    &__download-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--dashboard-card-border);
+      border-top-color: var(--dashboard-text-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
   }
 }
 
 // Стили для backdrop (фон за попапом)
 dialog::backdrop {
-  background: rgb(var(--black-rgb) / 50%);
+  background: var(--dashboard-backdrop);
   backdrop-filter: blur(8px);
 }

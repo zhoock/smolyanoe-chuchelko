@@ -18,10 +18,10 @@ dialog {
       max-height: 90vh;
       overflow-y: auto;
       padding: var(--ms-2);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px rgb(var(--black-rgb) / 50%);
+      box-shadow: 0 8px 32px var(--dashboard-shadow);
       gap: var(--ms-1);
     }
 
@@ -35,7 +35,7 @@ dialog {
     &__title {
       margin: 0;
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 700;
       line-height: 1.2;
@@ -50,7 +50,7 @@ dialog {
       width: calc(var(--ms-1) * 1.5);
       height: calc(var(--ms-1) * 1.5);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 300;
       line-height: 1;
@@ -63,8 +63,8 @@ dialog {
       letter-spacing: normal !important;
 
       &:hover {
-        color: var(--white);
-        background: var(--graphite-green);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-hover-bg);
       }
 
       &:focus {
@@ -75,7 +75,7 @@ dialog {
     &__divider {
       width: calc(100% + var(--ms-2) * 2);
       height: 1px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       margin-left: calc(var(--ms-2) * -1);
       margin-right: calc(var(--ms-2) * -1);
     }
@@ -94,9 +94,9 @@ dialog {
       width: calc(var(--ms-1) * 2);
       height: calc(var(--ms-1) * 2);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       background: transparent;
-      border: 1px solid var(--iron-slate);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: 50%;
       cursor: pointer;
       transition: all 0.2s;
@@ -112,19 +112,19 @@ dialog {
       }
 
       &:hover {
-        background: var(--graphite-green);
-        border-color: var(--graphite-green);
+        background: var(--dashboard-hover-bg);
+        border-color: var(--dark-greenish-yellow);
       }
     }
 
     &__time {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
     }
 
     &__progress-bar {
       position: relative;
       height: 4px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       border-radius: 2px;
       flex: 1;
       overflow: hidden;
@@ -137,13 +137,13 @@ dialog {
 
     &__progress-fill {
       height: 100%;
-      background: var(--white);
+      background: var(--dark-greenish-yellow);
       border-radius: 2px;
       transition: width 0.1s linear;
     }
 
     &__duration {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 400;
       font-variant-numeric: tabular-nums;
@@ -169,7 +169,7 @@ dialog {
 
     &__lyric-line {
       padding: var(--ms-01) var(--ms-0);
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 400;
       line-height: 1.5;
@@ -181,8 +181,8 @@ dialog {
       opacity: 0.7;
 
       &--active {
-        background-color: rgb(255 255 255 / 10%);
-        color: var(--white);
+        background-color: var(--dashboard-hover-bg);
+        color: var(--dashboard-text-primary);
         font-weight: 600;
         opacity: 1;
         transform: scale(1.02);
@@ -193,6 +193,6 @@ dialog {
 
 // Overlay для модалки поверх модалки
 dialog dialog dialog::backdrop {
-  background: rgb(var(--black-rgb) / 70%);
+  background: var(--dashboard-backdrop);
   backdrop-filter: blur(4px);
 }

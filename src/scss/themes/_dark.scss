@@ -63,4 +63,29 @@ html.theme-dark {
   --skeleton-base-rgb: var(--white-rgb, 255 255 255);
   --skeleton-play-button-rgb: var(--dark-greenish-yellow-rgb, 153 130 56);
   --skeleton-progress-rgb: var(--white-rgb, 255 255 255);
+
+  // Dashboard (Админка) - темная тема
+  --dashboard-card-bg: var(--deep-black);
+  --dashboard-card-border: var(--iron-slate);
+  --dashboard-text-primary: var(--white);
+  --dashboard-text-secondary: var(--warm-concrete);
+  --dashboard-input-bg: var(--deep-black);
+  --dashboard-input-border: var(--iron-slate);
+  --dashboard-button-bg: var(--iron-slate);
+  --dashboard-button-bg-hover: var(--quiet-gray);
+  --dashboard-button-text: var(--white);
+  --dashboard-button-cancel-bg: var(--iron-slate);
+  --dashboard-button-cancel-text: var(--white);
+  --dashboard-button-cancel-hover: var(--quiet-gray);
+  --dashboard-button-save-bg: var(--white);
+  --dashboard-button-save-text: var(--deep-coal);
+  --dashboard-button-save-hover: var(--moon-ash);
+  --dashboard-button-primary-bg: var(--white);
+  --dashboard-button-primary-bg-hover: var(--moon-ash);
+  --dashboard-button-primary-text: var(--deep-coal);
+  --dashboard-divider: var(--iron-slate);
+  --dashboard-hover-bg: var(--iron-slate);
+  --dashboard-active-bg: var(--warm-concrete);
+  --dashboard-shadow: rgb(var(--black-rgb) / 50%);
+  --dashboard-backdrop: rgb(var(--black-rgb) / 70%);
 }

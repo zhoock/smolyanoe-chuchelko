@@ -136,7 +136,13 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
         setSecretKey(''); // Очищаем секретный ключ из формы (безопасность)
         await loadSettings();
       } else {
-        setError(result.error || 'Failed to save payment settings');
+        const errorMessage = result.message || result.error || 'Failed to save payment settings';
+        console.error('❌ Payment settings save failed:', {
+          error: result.error,
+          message: result.message,
+          fullResult: result,
+        });
+        setError(errorMessage);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save payment settings');

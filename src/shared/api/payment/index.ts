@@ -10,6 +10,7 @@ export interface CreatePaymentRequest {
   customerEmail: string;
   returnUrl?: string;
   userId?: string; // ID музыканта-продавца (опционально, если нет - используется аккаунт платформы)
+  paymentToken?: string; // Токен от Checkout.js для оплаты на сайте
   billingData?: {
     firstName: string;
     lastName: string;
@@ -23,6 +24,7 @@ export interface CreatePaymentResponse {
   success: boolean;
   paymentId?: string;
   confirmationUrl?: string;
+  orderId?: string;
   error?: string;
   message?: string;
 }
@@ -30,6 +32,40 @@ export interface CreatePaymentResponse {
 // Экспорт типов и утилит
 export type { PaymentProvider, UserPaymentSettings, PaymentSettingsResponse } from './types';
 export { getPaymentSettings, savePaymentSettings, disconnectPaymentProvider } from './settings';
+
+/**
+ * Получает Shop ID платформы YooKassa для Checkout.js
+ * @returns Promise с Shop ID или ошибкой
+ */
+export async function getYooKassaShopId(): Promise<{ shopId?: string; error?: string }> {
+  try {
+    const response = await fetch('/api/yookassa-shop-id', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      }));
+      return { error: errorData.error || `HTTP ${response.status}` };
+    }
+
+    const data = await response.json();
+    if (data.success && data.shopId) {
+      return { shopId: data.shopId };
+    }
+
+    return { error: data.error || 'Shop ID not found' };
+  } catch (error) {
+    console.error('Error getting YooKassa Shop ID:', error);
+    return {
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
 
 /**
  * Создает платеж через ЮKassa API.

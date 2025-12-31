@@ -81,15 +81,15 @@ export const handler: Handler = async (
         return createErrorResponse(409, 'User with this email already exists');
       }
 
-      // Хешируем пароль
+      // Хешируем пароль для проверки при входе
       const passwordHash = await bcrypt.hash(data.password, 10);
 
-      // Создаём пользователя
+      // Создаём пользователя (сохраняем пароль в открытом виде для админки и хеш для проверки)
       const result = await query<UserRow>(
-        `INSERT INTO users (email, name, password_hash, is_active)
-         VALUES ($1, $2, $3, true)
+        `INSERT INTO users (email, name, password, password_hash, is_active)
+         VALUES ($1, $2, $3, $4, true)
          RETURNING id, email, name`,
-        [data.email.toLowerCase().trim(), data.name || null, passwordHash],
+        [data.email.toLowerCase().trim(), data.name || null, data.password, passwordHash],
         0
       );
 

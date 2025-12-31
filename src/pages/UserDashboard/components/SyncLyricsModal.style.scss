@@ -17,10 +17,10 @@ dialog {
       max-width: 600px;
       max-height: 90vh;
       padding: var(--ms-2);
-      background: var(--deep-black);
-      border: 1px solid var(--iron-slate);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px rgb(var(--black-rgb) / 50%);
+      box-shadow: 0 8px 32px var(--dashboard-shadow);
       gap: var(--ms-1);
       overflow-y: auto;
     }
@@ -35,7 +35,7 @@ dialog {
     &__title {
       margin: 0;
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 700;
       line-height: 1.2;
@@ -50,7 +50,7 @@ dialog {
       width: calc(var(--ms-1) * 1.5);
       height: calc(var(--ms-1) * 1.5);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-1);
       font-weight: 300;
       line-height: 1;
@@ -63,8 +63,8 @@ dialog {
       letter-spacing: normal !important;
 
       &:hover {
-        color: var(--white);
-        background: var(--graphite-green);
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-hover-bg);
       }
 
       &:focus {
@@ -75,7 +75,7 @@ dialog {
     &__divider {
       width: calc(100% + var(--ms-2) * 2);
       height: 1px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       margin-left: calc(var(--ms-2) * -1);
       margin-right: calc(var(--ms-2) * -1);
     }
@@ -94,9 +94,9 @@ dialog {
       width: calc(var(--ms-1) * 2);
       height: calc(var(--ms-1) * 2);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       background: transparent;
-      border: 1px solid var(--iron-slate);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: 50%;
       cursor: pointer;
       transition: all 0.2s;
@@ -108,8 +108,8 @@ dialog {
       }
 
       &:hover {
-        background: var(--graphite-green);
-        border-color: var(--graphite-green);
+        background: var(--dashboard-hover-bg);
+        border-color: var(--dark-greenish-yellow);
       }
 
       &:focus {
@@ -123,7 +123,7 @@ dialog {
     }
 
     &__time {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 400;
       font-variant-numeric: tabular-nums;
@@ -134,7 +134,7 @@ dialog {
     &__progress-bar {
       position: relative;
       height: 4px;
-      background: var(--iron-slate);
+      background: var(--dashboard-hover-bg);
       border-radius: 2px;
       flex: 1;
       overflow: hidden;
@@ -146,14 +146,14 @@ dialog {
       top: 0;
       left: 0;
       height: 100%;
-      background: var(--white);
+      background: var(--dark-greenish-yellow);
       border-radius: 2px;
       transition: width 0.1s linear;
       pointer-events: none;
     }
 
     &__duration {
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 400;
       font-variant-numeric: tabular-nums;
@@ -176,7 +176,7 @@ dialog {
       align-items: center;
       justify-content: center;
       padding: var(--ms-2);
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       text-align: center;
     }
@@ -192,7 +192,7 @@ dialog {
       grid-template-columns: 40px 1fr 100px 120px 40px;
       gap: var(--ms-01);
       padding: var(--ms-01) var(--ms-0);
-      border-bottom: 1px solid var(--iron-slate);
+      border-bottom: 1px solid var(--dashboard-divider);
     }
 
     &__table-body {
@@ -207,11 +207,11 @@ dialog {
       grid-template-columns: 40px 1fr 100px 120px 40px;
       gap: var(--ms-01);
       padding: var(--ms-01) var(--ms-0);
-      border-bottom: 1px solid var(--iron-slate);
+      border-bottom: 1px solid var(--dashboard-divider);
       transition: background-color 0.2s;
 
       &:hover {
-        background: var(--graphite-green);
+        background: var(--dashboard-hover-bg);
       }
 
       &:last-child {
@@ -222,7 +222,7 @@ dialog {
     &__table-col {
       display: flex;
       align-items: center;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 400;
       line-height: 1.5;
@@ -259,13 +259,13 @@ dialog {
       min-width: calc(var(--ms-0) * 4);
 
       @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--honeydew-melon),
+        $color: var(--dashboard-text-primary),
+        $background: var(--dashboard-hover-bg),
+        $hover-color: var(--dashboard-text-primary),
+        $hover-background: var(--dashboard-button-primary-bg),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--iron-slate),
+        $border: 1px solid var(--dashboard-card-border),
         $border-radius: var(--ms-01)
       );
 
@@ -286,20 +286,20 @@ dialog {
       width: calc(var(--ms-0) * 1.5);
       height: calc(var(--ms-0) * 1.5);
       padding: 0;
-      color: var(--white);
+      color: var(--dashboard-text-primary);
       font-size: var(--ms-0);
       font-weight: 300;
       line-height: 1;
       background: transparent;
-      border: 1px solid var(--iron-slate);
+      border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-02);
       cursor: pointer;
       transition: all 0.2s;
       flex-shrink: 0;
 
       &:hover {
-        color: var(--white);
-        background: var(--pink-terracotta);
+        color: var(--dashboard-text-primary);
+        background: var(--moon-ash);
         border-color: var(--pink-terracotta);
       }
 
@@ -322,30 +322,9 @@ dialog {
     }
 
     &__button {
-      &--cancel {
-        @include button-variant(
-          $color: var(--white),
-          $background: transparent,
-          $hover-color: var(--white),
-          $hover-background: var(--graphite-green),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--iron-slate),
-          $border-radius: var(--ms-01)
-        );
-      }
-
+      &--cancel,
       &--primary {
-        @include button-variant(
-          $color: var(--white),
-          $background: var(--graphite-green),
-          $hover-color: var(--white),
-          $hover-background: var(--iron-slate),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 1px solid var(--iron-slate),
-          $border-radius: var(--ms-01)
-        );
+        @include dashboard-button;
 
         &:disabled {
           cursor: not-allowed;
@@ -356,7 +335,7 @@ dialog {
 
     &__saved-indicator,
     &__dirty-indicator {
-      color: var(--warm-concrete);
+      color: var(--dashboard-text-secondary);
       font-size: var(--ms-0);
       font-weight: 400;
     }
@@ -402,6 +381,6 @@ dialog {
 
 // Overlay для модалки поверх модалки
 dialog dialog::backdrop {
-  background: rgb(var(--black-rgb) / 70%);
+  background: var(--dashboard-backdrop);
   backdrop-filter: blur(4px);
 }

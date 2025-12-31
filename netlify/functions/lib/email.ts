@@ -39,7 +39,7 @@ export async function sendPurchaseEmail(
 
     const siteUrl =
       options.siteUrl || process.env.NETLIFY_SITE_URL || 'https://smolyanoechuchelko.ru';
-    const myPurchasesUrl = `${siteUrl}/my-purchases?email=${encodeURIComponent(options.to)}`;
+    const myPurchasesUrl = `${siteUrl}/dashboard-new?tab=my-purchases`;
 
     // Формируем список треков с ссылками на скачивание
     const tracksList = options.tracks

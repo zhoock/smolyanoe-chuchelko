@@ -11,6 +11,7 @@ import { query } from './lib/db';
 interface UserProfileRow {
   id: string;
   the_band: any; // JSONB
+  password: string | null;
 }
 
 interface GetUserProfileResponse {
@@ -60,13 +61,38 @@ export const handler: Handler = async (
         };
       }
 
-      const result = await query<UserProfileRow>(
-        `SELECT the_band FROM users WHERE id = $1 AND is_active = true`,
-        [userId],
-        0
-      );
+      // Пытаемся получить данные, включая password (если поле существует)
+      // Если поле password не существует, используем COALESCE для возврата NULL
+      let result;
+      let password = '';
 
-      if (result.rows.length === 0) {
+      try {
+        result = await query<UserProfileRow>(
+          `SELECT the_band, password FROM users WHERE id = $1 AND is_active = true`,
+          [userId],
+          0
+        );
+
+        if (result.rows.length > 0) {
+          password = result.rows[0].password || '';
+        }
+      } catch (error: any) {
+        // Если ошибка связана с отсутствием колонки password, пробуем без неё
+        const errorMessage = error?.message || String(error);
+        if (errorMessage.includes('column') && errorMessage.includes('password')) {
+          console.log('⚠️ Поле password еще не существует в БД, используем только the_band');
+          result = await query<{ the_band: any }>(
+            `SELECT the_band FROM users WHERE id = $1 AND is_active = true`,
+            [userId],
+            0
+          );
+          password = ''; // Поле еще не существует
+        } else {
+          throw error; // Перебрасываем другую ошибку
+        }
+      }
+
+      if (!result || result.rows.length === 0) {
         return {
           statusCode: 404,
           headers,
@@ -85,7 +111,7 @@ export const handler: Handler = async (
         headers,
         body: JSON.stringify({
           success: true,
-          data: { theBand },
+          data: { theBand, password },
         } as GetUserProfileResponse),
       };
     }

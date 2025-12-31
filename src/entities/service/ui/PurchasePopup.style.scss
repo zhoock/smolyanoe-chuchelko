@@ -1,5 +1,5 @@
 // src/entities/service/ui/PurchasePopup.scss
-// Попап покупки в стиле ChatGPT
+// Попап покупки в стиле дашборда
 @use '../../../scss/abstracts/mixins' as *;
 
 .purchase-popup {
@@ -11,10 +11,11 @@
 
   &__container {
     padding: var(--ms-2);
-    color: var(--white, #ffffff);
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 12px;
+    color: var(--dashboard-text-primary);
+    background: var(--dashboard-card-bg);
+    border: 1px solid var(--dashboard-card-border);
+    border-radius: var(--ms-0);
+    box-shadow: 0 8px 32px var(--dashboard-shadow);
     inline-size: 100%;
     max-inline-size: 600px;
     max-block-size: 90vh;
@@ -28,7 +29,7 @@
 
   &__title {
     margin: 0;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -44,7 +45,7 @@
     gap: var(--ms-01);
     margin-block-end: var(--ms-2);
     padding-block-end: var(--ms-2);
-    border-block-end: 1px solid var(--iron-slate, #3d3c3a);
+    border-block-end: 1px solid var(--dashboard-divider);
 
     @include breakpoint(tablet) {
       gap: var(--ms-1);
@@ -61,9 +62,9 @@
 
   &__progress-step-circle {
     display: flex;
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.875rem;
-    background: var(--iron-slate, #3d3c3a);
+    background: var(--dashboard-button-cancel-bg);
     border-radius: 50%;
     transition:
       background-color 0.3s ease,
@@ -76,13 +77,13 @@
     font-family: var(--base-font-family, arial, sans-serif);
 
     &--active {
-      color: var(--white, #ffffff);
-      background: var(--accent-color, #998238);
+      color: var(--dashboard-button-primary-text);
+      background: var(--dashboard-button-primary-bg);
     }
   }
 
   &__progress-step-label {
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.75rem;
     transition: color 0.3s ease;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -90,7 +91,7 @@
     letter-spacing: 0.05em;
 
     &--active {
-      color: var(--white, #ffffff);
+      color: var(--dashboard-text-primary);
     }
 
     @include breakpoint(tablet) {
@@ -101,12 +102,12 @@
   &__progress-line {
     flex: 1;
     block-size: 2px;
-    background: var(--iron-slate, #3d3c3a);
+    background: var(--dashboard-divider);
     max-inline-size: 60px;
     transition: background-color 0.3s ease;
 
     &--active {
-      background: var(--accent-color, #998238);
+      background: var(--dashboard-button-primary-bg);
     }
 
     @include breakpoint(tablet) {
@@ -116,7 +117,7 @@
 
   &__divider {
     block-size: 1px;
-    background: var(--iron-slate, #3d3c3a);
+    background: var(--dashboard-divider);
     margin-block: var(--ms-1);
   }
 
@@ -130,7 +131,7 @@
 
   &__item-thumbnail {
     position: relative;
-    background: var(--iron-slate, #3d3c3a);
+    background: var(--dashboard-hover-bg);
     border-radius: 8px;
     inline-size: 80px;
     block-size: 80px;
@@ -179,14 +180,14 @@
   }
 
   &__item-title {
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__item-type {
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.875rem;
     font-family: var(--base-font-family, arial, sans-serif);
   }
@@ -199,14 +200,14 @@
   }
 
   &__item-quantity {
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.875rem;
     font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__item-remove {
     padding: 0;
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.875rem;
     background: none;
     border: none;
@@ -216,22 +217,22 @@
     cursor: pointer;
 
     &:hover {
-      color: var(--white, #ffffff);
+      color: var(--dashboard-text-primary);
     }
 
     @media (hover: none) and (pointer: coarse) {
       &:hover {
-        color: var(--warm-concrete, #9b9b9a);
+        color: var(--dashboard-text-secondary);
       }
 
       &:active {
-        color: var(--white, #ffffff);
+        color: var(--dashboard-text-primary);
       }
     }
   }
 
   &__item-price {
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
     text-align: end;
     font-weight: 600;
@@ -246,7 +247,7 @@
 
   &__subtotal {
     display: flex;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 1rem;
     justify-content: space-between;
     align-items: center;
@@ -264,7 +265,7 @@
     font-size: 0.9375rem;
     text-align: center;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--ms-01);
     transition:
       background-color 0.2s ease,
       border-color 0.2s ease,
@@ -275,63 +276,53 @@
     cursor: pointer;
 
     &--checkout {
-      color: var(--white, #ffffff);
-      background: transparent;
-      border: 1px solid var(--white, #ffffff);
+      border: 1px solid var(--dashboard-card-border);
+
+      @include dashboard-button($padding: var(--ms-01) var(--ms-1));
 
       &:hover {
-        background: rgba(255 255 255 / 10%);
-      }
-
-      @media (hover: none) and (pointer: coarse) {
-        &:hover {
-          background: transparent;
-        }
-
-        &:active {
-          background: rgba(255 255 255 / 10%);
-        }
+        background: var(--dashboard-hover-bg);
       }
     }
 
     &--continue {
-      color: var(--warm-concrete, #9b9b9a);
+      color: var(--dashboard-text-secondary);
       background: transparent;
       border: none;
       text-decoration: underline;
       padding-block: var(--ms-01);
 
       &:hover {
-        color: var(--white, #ffffff);
+        color: var(--dashboard-text-primary);
       }
 
       @media (hover: none) and (pointer: coarse) {
         &:hover {
-          color: var(--warm-concrete, #9b9b9a);
+          color: var(--dashboard-text-secondary);
         }
 
         &:active {
-          color: var(--white, #ffffff);
+          color: var(--dashboard-text-primary);
         }
       }
     }
 
     &--payment {
-      color: var(--white, #ffffff);
-      background: var(--accent-color, #998238);
+      color: var(--dashboard-button-primary-text);
+      background: var(--dashboard-button-primary-bg);
       border: none;
 
       &:hover {
-        background: var(--accent-color-hover, #b8a654);
+        background: var(--dashboard-button-primary-bg-hover);
       }
 
       @media (hover: none) and (pointer: coarse) {
         &:hover {
-          background: var(--accent-color, #998238);
+          background: var(--dashboard-button-primary-bg);
         }
 
         &:active {
-          background: var(--accent-color-hover, #b8a654);
+          background: var(--dashboard-button-primary-bg-hover);
         }
       }
     }
@@ -339,7 +330,7 @@
 
   &__link-button {
     padding: 0;
-    color: #2563eb;
+    color: var(--dark-greenish-yellow);
     font-size: 0.875rem;
     background: none;
     border: none;
@@ -349,16 +340,16 @@
     cursor: pointer;
 
     &:hover {
-      color: #1d4ed8;
+      color: var(--dashboard-text-primary);
     }
 
     @media (hover: none) and (pointer: coarse) {
       &:hover {
-        color: #2563eb;
+        color: var(--dark-greenish-yellow);
       }
 
       &:active {
-        color: #1d4ed8;
+        color: var(--dashboard-text-primary);
       }
     }
   }
@@ -393,7 +384,7 @@
 
   &__checkout-form-title {
     margin: 0;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 1.125rem;
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -412,7 +403,7 @@
   }
 
   &__form-label {
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.875rem;
     font-weight: 500;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -420,17 +411,17 @@
 
   &__form-input {
     padding: 12px;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.9375rem;
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
+    background: var(--dashboard-input-bg);
+    border: 1px solid var(--dashboard-input-border);
+    border-radius: var(--ms-01);
     transition: border-color 0.2s ease;
     font-family: var(--base-font-family, arial, sans-serif);
 
     &:focus {
       outline: none;
-      border-color: var(--accent-color, #998238);
+      border-color: var(--dark-greenish-yellow);
     }
 
     &--error {
@@ -442,17 +433,17 @@
     }
 
     &::placeholder {
-      color: var(--warm-concrete, #9b9b9a);
+      color: var(--dashboard-text-secondary);
     }
   }
 
   &__form-textarea {
     padding: 12px;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.9375rem;
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
+    background: var(--dashboard-input-bg);
+    border: 1px solid var(--dashboard-input-border);
+    border-radius: var(--ms-01);
     transition: border-color 0.2s ease;
     font-family: var(--base-font-family, arial, sans-serif);
     resize: vertical;
@@ -460,7 +451,7 @@
 
     &:focus {
       outline: none;
-      border-color: var(--accent-color, #998238);
+      border-color: var(--dark-greenish-yellow);
     }
 
     &--error {
@@ -472,7 +463,7 @@
     }
 
     &::placeholder {
-      color: var(--warm-concrete, #9b9b9a);
+      color: var(--dashboard-text-secondary);
     }
   }
 
@@ -493,7 +484,7 @@
 
   &__toggle-input {
     position: relative;
-    background: var(--iron-slate, #3d3c3a);
+    background: var(--dashboard-button-cancel-bg);
     border-radius: 12px;
     transition: background-color 0.2s ease;
     inline-size: 44px;
@@ -505,7 +496,7 @@
       position: absolute;
       top: 2px;
       left: 2px;
-      background: var(--white, #ffffff);
+      background: var(--dashboard-button-primary-bg);
       border-radius: 50%;
       transition: transform 0.2s ease;
       content: '';
@@ -514,7 +505,7 @@
     }
 
     &:checked {
-      background: var(--accent-color, #998238);
+      background: var(--dark-greenish-yellow);
 
       &::before {
         transform: translateX(20px);
@@ -528,7 +519,7 @@
 
   &__toggle-text {
     display: flex;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.875rem;
     flex-direction: column;
     gap: 2px;
@@ -536,7 +527,7 @@
   }
 
   &__toggle-subtitle {
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.75rem;
   }
 
@@ -555,7 +546,7 @@
 
   &__checkout-summary-title {
     margin: 0;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 1.125rem;
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -570,11 +561,11 @@
     margin-block-end: var(--ms-1);
 
     thead {
-      border-block-end: 1px solid var(--iron-slate, #3d3c3a);
+      border-block-end: 1px solid var(--dashboard-divider);
     }
 
     th {
-      color: var(--warm-concrete, #9b9b9a);
+      color: var(--dashboard-text-secondary);
       font-size: 0.75rem;
       text-align: start;
       padding-block: var(--ms-01);
@@ -591,7 +582,7 @@
     td {
       padding-block: var(--ms-1);
       padding-inline-end: var(--ms-1);
-      color: var(--white, #ffffff);
+      color: var(--dashboard-text-primary);
       vertical-align: top;
 
       &:last-child {
@@ -608,7 +599,7 @@
   }
 
   &__order-item-thumbnail {
-    background: var(--iron-slate, #3d3c3a);
+    background: var(--dashboard-hover-bg);
     border-radius: 6px;
     inline-size: 48px;
     block-size: 48px;
@@ -643,14 +634,14 @@
   }
 
   &__order-item-title {
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.875rem;
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__order-item-type {
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.75rem;
     font-family: var(--base-font-family, arial, sans-serif);
   }
@@ -666,52 +657,32 @@
 
   &__discount-input {
     padding: 12px;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.875rem;
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
+    background: var(--dashboard-input-bg);
+    border: 1px solid var(--dashboard-input-border);
+    border-radius: var(--ms-01);
     transition: border-color 0.2s ease;
     flex: 1;
     font-family: var(--base-font-family, arial, sans-serif);
 
     &:focus {
       outline: none;
-      border-color: var(--accent-color, #998238);
+      border-color: var(--dark-greenish-yellow);
     }
 
     &::placeholder {
-      color: var(--warm-concrete, #9b9b9a);
+      color: var(--dashboard-text-secondary);
     }
   }
 
   &__discount-button {
-    padding: 12px var(--ms-1);
-    color: var(--white, #ffffff);
-    font-size: 0.875rem;
-    background: transparent;
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease;
-    font-family: var(--base-font-family, arial, sans-serif);
-    cursor: pointer;
+    border: 1px solid var(--dashboard-card-border);
+
+    @include dashboard-button($padding: 12px var(--ms-1));
 
     &:hover {
-      background: rgba(255 255 255 / 5%);
-      border-color: var(--accent-color, #998238);
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover {
-        background: transparent;
-        border-color: var(--iron-slate, #3d3c3a);
-      }
-
-      &:active {
-        background: rgba(255 255 255 / 5%);
-      }
+      background: var(--dashboard-hover-bg);
     }
   }
 
@@ -720,13 +691,13 @@
     flex-direction: column;
     gap: var(--ms-01);
     padding-block-start: var(--ms-1);
-    border-block-start: 1px solid var(--iron-slate, #3d3c3a);
+    border-block-start: 1px solid var(--dashboard-divider);
   }
 
   &__checkout-subtotal,
   &__checkout-total {
     display: flex;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.9375rem;
     justify-content: space-between;
     align-items: center;
@@ -781,7 +752,7 @@
 
   &__payment-title {
     margin: 0;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 1.125rem;
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -789,9 +760,9 @@
 
   &__customer-info-card {
     padding: var(--ms-1);
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
+    background: var(--dashboard-card-bg);
+    border: 1px solid var(--dashboard-card-border);
+    border-radius: var(--ms-01);
   }
 
   &__customer-info-header {
@@ -803,7 +774,7 @@
 
   &__customer-info-title {
     margin: 0;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 1rem;
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -816,18 +787,18 @@
   }
 
   &__customer-info-item {
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.875rem;
     font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__customer-info-label {
     font-weight: 500;
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
   }
 
   &__customer-info-value {
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
   }
 
   &__payment-methods {
@@ -874,28 +845,17 @@
     }
 
     &--card {
-      color: var(--white, #ffffff);
-      background: var(--iron-slate, #3d3c3a);
+      @include dashboard-button($padding: var(--ms-1) var(--ms-2));
 
       &:hover {
-        background: #4a4947;
-      }
-
-      @media (hover: none) and (pointer: coarse) {
-        &:hover {
-          background: var(--iron-slate, #3d3c3a);
-        }
-
-        &:active {
-          background: #4a4947;
-        }
+        background: var(--dashboard-button-cancel-hover);
       }
     }
   }
 
   &__payment-powered {
     display: flex;
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     font-size: 0.75rem;
     align-items: center;
     justify-content: center;
@@ -905,7 +865,7 @@
 
     &-logo {
       font-weight: 600;
-      color: #003087;
+      color: var(--dark-greenish-yellow);
       letter-spacing: -0.02em;
     }
   }
@@ -918,10 +878,10 @@
   &__card-form {
     position: relative;
     padding: var(--ms-2);
-    color: var(--white, #ffffff);
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
+    color: var(--dashboard-text-primary);
+    background: var(--dashboard-card-bg);
+    border: 1px solid var(--dashboard-card-border);
+    border-radius: var(--ms-01);
     margin-block-start: var(--ms-1);
     box-sizing: border-box;
     animation: slide-down 0.2s ease-out;
@@ -945,7 +905,7 @@
     right: var(--ms-1);
     display: flex;
     padding: 0;
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     background: none;
     border: none;
     border-radius: 4px;
@@ -959,18 +919,18 @@
     cursor: pointer;
 
     &:hover {
-      color: var(--white, #ffffff);
-      background: rgba(255 255 255 / 5%);
+      color: var(--dashboard-text-primary);
+      background: var(--dashboard-hover-bg);
     }
 
     @media (hover: none) and (pointer: coarse) {
       &:hover {
-        color: var(--warm-concrete, #9b9b9a);
+        color: var(--dashboard-text-secondary);
         background: none;
       }
 
       &:active {
-        background: rgba(255 255 255 / 5%);
+        background: var(--dashboard-hover-bg);
       }
     }
 
@@ -987,27 +947,27 @@
     min-inline-size: 0;
 
     .purchase-popup__form-label {
-      color: var(--white, #ffffff);
+      color: var(--dashboard-text-primary);
     }
 
     .purchase-popup__form-input {
-      color: var(--white, #ffffff);
-      background: var(--extra-background-color, #1e1e1e);
-      border-color: var(--iron-slate, #3d3c3a);
+      color: var(--dashboard-text-primary);
+      background: var(--dashboard-input-bg);
+      border-color: var(--dashboard-input-border);
       inline-size: 100%;
       box-sizing: border-box;
 
       &:focus {
-        border-color: var(--accent-color, #998238);
+        border-color: var(--dark-greenish-yellow);
       }
 
       &::placeholder {
-        color: var(--warm-concrete, #9b9b9a);
+        color: var(--dashboard-text-secondary);
       }
     }
 
     .purchase-popup__link {
-      color: var(--white, #ffffff);
+      color: var(--dark-greenish-yellow);
       text-decoration: underline;
       transition: opacity 0.2s ease;
 
@@ -1016,19 +976,19 @@
       }
 
       &:visited {
-        color: var(--white, #ffffff);
+        color: var(--dark-greenish-yellow);
       }
     }
 
     .purchase-popup__toggle-text {
-      color: var(--white, #ffffff);
+      color: var(--dashboard-text-primary);
     }
 
     .purchase-popup__toggle-input {
-      background: var(--iron-slate, #3d3c3a);
+      background: var(--dashboard-button-cancel-bg);
 
       &:checked {
-        background: var(--accent-color, #998238);
+        background: var(--dark-greenish-yellow);
       }
     }
   }
@@ -1046,12 +1006,12 @@
   &__billing-address {
     margin-block-start: var(--ms-1);
     padding-block-start: var(--ms-1);
-    border-block-start: 1px solid var(--iron-slate, #3d3c3a);
+    border-block-start: 1px solid var(--dashboard-divider);
   }
 
   &__billing-address-title {
     margin: 0 0 var(--ms-1);
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 1rem;
     font-weight: 600;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -1065,11 +1025,11 @@
 
   &__country-select {
     padding: 12px 32px 12px 12px;
-    color: var(--white, #ffffff);
+    color: var(--dashboard-text-primary);
     font-size: 0.9375rem;
-    background: var(--extra-background-color, #1e1e1e);
-    border: 1px solid var(--iron-slate, #3d3c3a);
-    border-radius: 8px;
+    background: var(--dashboard-input-bg);
+    border: 1px solid var(--dashboard-input-border);
+    border-radius: var(--ms-01);
     transition: border-color 0.2s ease;
     inline-size: 100%;
     font-family: var(--base-font-family, arial, sans-serif);
@@ -1078,12 +1038,12 @@
 
     &:focus {
       outline: none;
-      border-color: var(--accent-color, #998238);
+      border-color: var(--dark-greenish-yellow);
     }
 
     option {
-      color: var(--white, #ffffff);
-      background: var(--extra-background-color, #1e1e1e);
+      color: var(--dashboard-text-primary);
+      background: var(--dashboard-input-bg);
     }
   }
 
@@ -1091,14 +1051,14 @@
     position: absolute;
     right: 12px;
     pointer-events: none;
-    color: var(--warm-concrete, #9b9b9a);
+    color: var(--dashboard-text-secondary);
     inline-size: 16px;
     block-size: 16px;
   }
 
   &__payment-button--pay {
-    color: var(--white, #ffffff);
-    background: var(--accent-color, #998238);
+    color: var(--dashboard-button-primary-text);
+    background: var(--dashboard-button-primary-bg);
     margin-block-start: var(--ms-1);
 
     &:disabled {
@@ -1107,16 +1067,16 @@
     }
 
     &:hover:not(:disabled) {
-      background: var(--accent-color-hover, #b8a654);
+      background: var(--dashboard-button-primary-bg-hover);
     }
 
     @media (hover: none) and (pointer: coarse) {
       &:hover:not(:disabled) {
-        background: var(--accent-color, #998238);
+        background: var(--dashboard-button-primary-bg);
       }
 
       &:active:not(:disabled) {
-        background: var(--accent-color-hover, #b8a654);
+        background: var(--dashboard-button-primary-bg-hover);
       }
     }
   }
