@@ -260,6 +260,39 @@ export async function deleteStorageFile(
 }
 
 /**
+ * Удалить hero изображение и все его варианты из Storage
+ * @param imageUrl - URL изображения (может быть полный URL, image-set() строка или простой путь)
+ * @returns true если успешно, false в случае ошибки
+ */
+export async function deleteHeroImage(imageUrl: string): Promise<boolean> {
+  try {
+    const { getAuthHeader } = await import('@shared/lib/auth');
+    const authHeader = getAuthHeader();
+
+    const response = await fetch('/api/delete-hero-image', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader,
+      },
+      body: JSON.stringify({ imageUrl }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error deleting hero image:', errorData.error || response.statusText);
+      return false;
+    }
+
+    const result = await response.json();
+    return result.success === true;
+  } catch (error) {
+    console.error('Error in deleteHeroImage:', error);
+    return false;
+  }
+}
+
+/**
  * Получить список файлов в категории пользователя
  * @param userId - ID пользователя
  * @param category - категория файлов

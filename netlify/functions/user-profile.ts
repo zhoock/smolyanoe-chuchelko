@@ -11,6 +11,7 @@ import { query } from './lib/db';
 interface UserProfileRow {
   id: string;
   the_band: any; // JSONB
+  header_images?: any; // JSONB
   password: string | null;
 }
 
@@ -18,12 +19,14 @@ interface GetUserProfileResponse {
   success: boolean;
   data?: {
     theBand: string[];
+    headerImages?: string[];
   };
   error?: string;
 }
 
 interface SaveUserProfileRequest {
   theBand: string[];
+  headerImages?: string[];
 }
 
 interface SaveUserProfileResponse {
@@ -68,7 +71,7 @@ export const handler: Handler = async (
 
       try {
         result = await query<UserProfileRow>(
-          `SELECT the_band, password FROM users WHERE id = $1 AND is_active = true`,
+          `SELECT the_band, header_images, password FROM users WHERE id = $1 AND is_active = true`,
           [userId],
           0
         );
@@ -77,16 +80,25 @@ export const handler: Handler = async (
           password = result.rows[0].password || '';
         }
       } catch (error: any) {
-        // Если ошибка связана с отсутствием колонки password, пробуем без неё
+        // Если ошибка связана с отсутствием колонки, пробуем без неё
         const errorMessage = error?.message || String(error);
-        if (errorMessage.includes('column') && errorMessage.includes('password')) {
-          console.log('⚠️ Поле password еще не существует в БД, используем только the_band');
-          result = await query<{ the_band: any }>(
-            `SELECT the_band FROM users WHERE id = $1 AND is_active = true`,
-            [userId],
-            0
-          );
-          password = ''; // Поле еще не существует
+        if (errorMessage.includes('column')) {
+          console.log('⚠️ Некоторые поля еще не существуют в БД, используем только доступные');
+          try {
+            result = await query<{ the_band: any; header_images?: any }>(
+              `SELECT the_band, header_images FROM users WHERE id = $1 AND is_active = true`,
+              [userId],
+              0
+            );
+            password = '';
+          } catch (innerError) {
+            result = await query<{ the_band: any }>(
+              `SELECT the_band FROM users WHERE id = $1 AND is_active = true`,
+              [userId],
+              0
+            );
+            password = '';
+          }
         } else {
           throw error; // Перебрасываем другую ошибку
         }
@@ -105,13 +117,18 @@ export const handler: Handler = async (
 
       const user = result.rows[0];
       const theBand = user.the_band ? (Array.isArray(user.the_band) ? user.the_band : []) : [];
+      const headerImages = user.header_images
+        ? Array.isArray(user.header_images)
+          ? user.header_images
+          : []
+        : [];
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          data: { theBand, password },
+          data: { theBand, password, headerImages },
         } as GetUserProfileResponse),
       };
     }
@@ -141,17 +158,31 @@ export const handler: Handler = async (
         };
       }
 
-      await query(
-        `UPDATE users 
-         SET the_band = $1::jsonb, updated_at = NOW()
-         WHERE id = $2 AND is_active = true`,
-        [JSON.stringify(data.theBand), userId],
-        0
-      );
+      // Обновляем the_band и header_images (если указаны)
+      if (data.headerImages !== undefined) {
+        await query(
+          `UPDATE users 
+           SET the_band = $1::jsonb, 
+               header_images = $2::jsonb, 
+               updated_at = NOW()
+           WHERE id = $3 AND is_active = true`,
+          [JSON.stringify(data.theBand), JSON.stringify(data.headerImages || []), userId],
+          0
+        );
+      } else {
+        await query(
+          `UPDATE users 
+           SET the_band = $1::jsonb, updated_at = NOW()
+           WHERE id = $2 AND is_active = true`,
+          [JSON.stringify(data.theBand), userId],
+          0
+        );
+      }
 
       console.log('✅ User profile updated:', {
         userId,
         theBandLength: data.theBand.length,
+        headerImagesLength: data.headerImages?.length || 0,
       });
 
       return {

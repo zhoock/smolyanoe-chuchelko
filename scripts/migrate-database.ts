@@ -167,7 +167,22 @@ async function runMigration(pool: Pool, migration: Migration): Promise<void> {
     // Выполняем команды
     for (const command of commands) {
       if (command.trim()) {
-        await pool.query(command);
+        try {
+          await pool.query(command);
+        } catch (error: any) {
+          // Игнорируем ошибки "already exists" для CREATE TABLE IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, CREATE TRIGGER
+          const errorMessage = error?.message || String(error);
+          if (
+            errorMessage.includes('already exists') ||
+            errorMessage.includes('duplicate key') ||
+            errorMessage.includes('relation already exists') ||
+            (error.code === '42710' && errorMessage.includes('trigger')) // PostgreSQL error code for duplicate object
+          ) {
+            console.log(`  ⚠️  Пропускаем (уже существует): ${command.substring(0, 80)}...`);
+            continue;
+          }
+          throw error;
+        }
       }
     }
 

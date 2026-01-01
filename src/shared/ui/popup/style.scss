@@ -24,16 +24,24 @@
 }
 
 dialog {
-  color: var(--text-color, var(--graphite-green));
-  background: rgb(var(--white-rgb) / 80%);
-  border: none;
   max-inline-size: 100%;
   max-block-size: 100%;
   inline-size: 100vw;
   block-size: 100dvb;
+  padding: var(--ms-2);
   overflow: scroll;
+  color: var(--text-color, var(--graphite-green));
+  background: rgb(var(--extra-background-color-rgb, var(--deep-black-rgb)) / 80%);
+  border: none;
 
   @extend %hide-scrollbar;
+
+  // Центрирование только для попапов с классом .popup, но не для дашборда
+  &.popup[open]:not(:has(.user-dashboard)) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   // Анимация и эффекты только для попапа с плеером
   &.popup:has(.player) {

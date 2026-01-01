@@ -42,11 +42,6 @@
     "links": {
       "home": "home"
     },
-    "theBand": [
-      "«Смоляное чучелко» is a Russian musical group from Moscow playing grunge and alternative rock. The band draws heavily on the aesthetics and sound of 1990s Seattle grunge, combining dense guitars with introspective lyrics about inner struggle and melancholy.",
-      "Vocalist and songwriter Yaroslav Zhuk shapes the project’s philosophy, weaving raw energy with atmospheric soundscapes and cinematic arrangements.",
-      "The band has released several albums, including 23 and Smolyanoe Chuchelko, available on streaming platforms. The name “Tar Baby” hints at a problem that becomes more tangled the more you try to solve it."
-    ],
     "stems": {
       "pageTitle": "Mixer",
       "text": "Mixer: turn on/off parts, rewind and listen to the song in layers.",
@@ -146,6 +141,67 @@
       "uploadAndPublishAlbums": "Upload and publish albums",
       "uploading": "Uploading...",
       "dragImageHereOr": "Drag image here or",
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "profileSettingsModal": {
+        "tabs": {
+          "profile": "Profile",
+          "security": "Security",
+          "interface": "Interface"
+        },
+        "fields": {
+          "bandName": "Band Name",
+          "email": "Email",
+          "language": "Language",
+          "aboutBand": "About the Band",
+          "headerImages": "Header Images",
+          "currentPassword": "Current Password",
+          "newPassword": "New Password",
+          "confirmPassword": "Confirm New Password",
+          "zoom": "Zoom"
+        },
+        "placeholders": {
+          "bandName": "Enter the name of your band",
+          "aboutBand": "Enter band description. Each line will be a separate paragraph."
+        },
+        "hints": {
+          "aboutBand": "Each line will be a separate paragraph in the band description",
+          "headerImages": "You can upload up to 10 images for the site header",
+          "coverImage": "Recommended resolution: 2560 × 1522\nMinimum: 1920 × 1140\nFormat: JPG, PNG, WEBP, GIF, AVIF, HEIC/HEIF"
+        },
+        "buttons": {
+          "selectFiles": "Select Files",
+          "changePassword": "Change Password",
+          "uploadCover": "Upload Cover",
+          "preview": "Preview",
+          "setCover": "Set Cover"
+        },
+        "messages": {
+          "passwordUpdated": "Password updated",
+          "interfaceInDevelopment": "Interface section is under development",
+          "coverEditTitle": "Editing Cover",
+          "coverEditInstruction": "The selected area will be visible in your profile",
+          "coverPreviewInstruction": "Cover preview",
+          "coverUploaded": "Cover uploaded successfully",
+          "coverUploadError": "Error uploading cover",
+          "mobileAreaVisible": "This area is visible on mobile devices",
+          "desktopAreaVisible": "This area is visible on computers"
+        },
+        "validation": {
+          "enterCurrentPassword": "Enter current password",
+          "enterNewPassword": "Enter new password",
+          "passwordMinLength": "New password must be at least 8 characters",
+          "passwordDifferent": "New password must be different from current password",
+          "passwordsNotMatch": "Passwords do not match",
+          "fillAllFields": "Fill in all fields",
+          "maxImages": "You can upload up to {count} images",
+          "invalidFileType": "Unsupported file format. Use JPG, PNG, WEBP, GIF, AVIF or HEIC/HEIF",
+          "fileTooLarge": "File is too large. Maximum size: {size} MB",
+          "imageTooSmall": "Image is too small. Minimum size: {width} × {height} px",
+          "uploadError": "Error uploading file",
+          "networkError": "Network error. Please check your internet connection."
+        }
+      },
       "editAlbumModal": {
         "stepTitles": {
           "step1": "Step 1 of 5: Basic Info",

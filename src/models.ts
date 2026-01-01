@@ -154,7 +154,6 @@ export interface IInterface {
   links?: {
     [key: string]: string;
   };
-  theBand: Array<string | { text: string[]; link: string }>;
   stems?: {
     text: string;
     pageTitle: string;
@@ -257,6 +256,67 @@ export interface IInterface {
     uploadAndPublishAlbums: string;
     uploading: string;
     dragImageHereOr: string;
+    loading?: string;
+    saving?: string;
+    profileSettingsModal?: {
+      tabs: {
+        profile: string;
+        security: string;
+        interface: string;
+      };
+      fields: {
+        bandName: string;
+        email: string;
+        language: string;
+        aboutBand: string;
+        headerImages: string;
+        currentPassword: string;
+        newPassword: string;
+        confirmPassword: string;
+        zoom?: string;
+      };
+      placeholders: {
+        bandName: string;
+        aboutBand: string;
+      };
+      hints: {
+        aboutBand: string;
+        headerImages: string;
+        coverImage: string;
+      };
+      buttons: {
+        selectFiles: string;
+        changePassword: string;
+        uploadCover: string;
+        preview: string;
+        setCover: string;
+      };
+      messages: {
+        passwordUpdated: string;
+        interfaceInDevelopment: string;
+        coverEditTitle: string;
+        coverEditInstruction: string;
+        coverPreviewInstruction?: string;
+        coverUploaded: string;
+        coverUploadError: string;
+        mobileAreaVisible: string;
+        desktopAreaVisible: string;
+      };
+      validation: {
+        enterCurrentPassword: string;
+        enterNewPassword: string;
+        passwordMinLength: string;
+        passwordDifferent: string;
+        passwordsNotMatch: string;
+        fillAllFields: string;
+        maxImages: string;
+        invalidFileType: string;
+        fileTooLarge: string;
+        imageTooSmall: string;
+        uploadError: string;
+        networkError?: string;
+      };
+    };
     editAlbumModal?: {
       stepTitles: {
         step1: string;

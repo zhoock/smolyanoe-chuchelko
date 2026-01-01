@@ -172,7 +172,6 @@ describe('ArticlePage integration tests', () => {
                 links: {
                   home: 'Home',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -233,7 +232,6 @@ describe('ArticlePage integration tests', () => {
                 links: {
                   home: 'Home',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),

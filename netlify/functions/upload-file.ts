@@ -25,6 +25,7 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
+import { generateHeroImageVariants, extractBaseName } from './lib/image-processor';
 
 const STORAGE_BUCKET_NAME = 'user-media';
 
@@ -133,6 +134,93 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       });
     }
 
+    // Для категории hero генерируем варианты изображений
+    if (category === 'hero') {
+      // Извлекаем базовое имя файла (без расширения)
+      const baseName = extractBaseName(fileName);
+
+      console.log('🖼️ Generating hero image variants for:', baseName);
+      const variants = await generateHeroImageVariants(fileBuffer, baseName);
+
+      // Удаляем старые варианты этого изображения (если есть)
+      const heroFolder = `users/${targetUserId}/hero`;
+      const { data: existingFiles } = await supabase.storage
+        .from(STORAGE_BUCKET_NAME)
+        .list(heroFolder, {
+          limit: 100,
+        });
+
+      if (existingFiles && existingFiles.length > 0) {
+        // Находим все файлы с таким же базовым именем
+        const oldFiles = existingFiles
+          .filter((f) => {
+            const fileBaseName = extractBaseName(f.name);
+            return fileBaseName === baseName;
+          })
+          .map((f) => `${heroFolder}/${f.name}`);
+
+        if (oldFiles.length > 0) {
+          console.log(`🗑️ Removing ${oldFiles.length} old hero image variants`);
+          await supabase.storage.from(STORAGE_BUCKET_NAME).remove(oldFiles);
+        }
+      }
+
+      // Загружаем все варианты
+      const uploadedFiles: string[] = [];
+      const uploadErrors: string[] = [];
+
+      for (const [variantFileName, buffer] of Object.entries(variants)) {
+        const variantPath = getStoragePath(targetUserId, category, variantFileName);
+        const variantContentType = variantFileName.endsWith('.avif')
+          ? 'image/avif'
+          : variantFileName.endsWith('.webp')
+            ? 'image/webp'
+            : 'image/jpeg';
+
+        const { data: variantData, error: variantError } = await supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .upload(variantPath, buffer, {
+            contentType: variantContentType,
+            upsert: true,
+            cacheControl: '3600', // Кеш на 1 час
+          });
+
+        if (variantError) {
+          console.error(`Error uploading variant ${variantFileName}:`, variantError.message);
+          uploadErrors.push(`${variantFileName}: ${variantError.message}`);
+        } else {
+          uploadedFiles.push(variantFileName);
+        }
+      }
+
+      if (uploadErrors.length > 0) {
+        console.error('Some hero image variants failed to upload:', uploadErrors);
+        if (uploadedFiles.length === 0) {
+          return createErrorResponse(
+            500,
+            `Failed to upload any hero image variants: ${uploadErrors.join(', ')}`
+          );
+        }
+      }
+
+      console.log(`✅ Uploaded ${uploadedFiles.length} hero image variants`);
+
+      // Используем -1920.jpg как основной URL (Full HD версия)
+      const mainFileName = `${baseName}-1920.jpg`;
+      const mainPath = getStoragePath(targetUserId, category, mainFileName);
+      const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(mainPath);
+
+      return createSuccessResponse(
+        {
+          url: urlData.publicUrl,
+          storagePath: mainPath,
+          baseName, // Возвращаем базовое имя для генерации image-set на клиенте
+        },
+        200
+      );
+    }
+
+    // Для остальных категорий загружаем файл как есть
     // Формируем путь в Storage
     const storagePath = getStoragePath(targetUserId, category, fileName);
 

@@ -21,6 +21,12 @@
     }
   }
 
+  &__buttonWrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-block-start: var(--ms-1);
+  }
+
   &__look-more {
     display: inline-flex;
     align-items: center;

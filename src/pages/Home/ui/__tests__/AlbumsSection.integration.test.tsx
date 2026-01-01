@@ -145,7 +145,6 @@ describe('AlbumsSection integration tests', () => {
                 titles: {
                   albums: 'Albums',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -195,7 +194,6 @@ describe('AlbumsSection integration tests', () => {
                 titles: {
                   albums: 'My Albums',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -280,7 +278,6 @@ describe('AlbumsSection integration tests', () => {
                 titles: {
                   albums: 'Albums',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),

@@ -190,6 +190,49 @@ dialog {
       }
     }
 
+    &__textarea {
+      display: block;
+      width: 100%;
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      line-height: 1.5;
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: var(--ms-01);
+      font-family: inherit;
+      box-sizing: border-box;
+      resize: vertical;
+      min-height: 150px;
+
+      &::placeholder {
+        color: var(--dashboard-text-secondary);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--dark-greenish-yellow);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    &__field-hint {
+      color: var(--dashboard-text-secondary);
+      font-size: calc(var(--ms-0) * 0.875);
+      margin-top: calc(var(--ms-01) * -0.5);
+    }
+
+    &__loading {
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+      text-align: center;
+    }
+
     // Для инпутов внутри wrapper (поля пароля) добавляем padding справа
     &__input-wrapper &__input {
       padding-right: calc(var(--ms-0) + 24px + var(--ms-01));

@@ -184,7 +184,6 @@ describe('Album integration tests', () => {
                 links: {
                   home: 'Home',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -292,7 +291,6 @@ describe('Album integration tests', () => {
                 links: {
                   home: 'Главная',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),

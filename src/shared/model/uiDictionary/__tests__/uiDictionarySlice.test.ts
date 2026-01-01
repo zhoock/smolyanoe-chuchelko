@@ -83,7 +83,6 @@ describe('uiDictionarySlice', () => {
         buttons: {
           playButton: 'Play',
         },
-        theBand: [],
       },
     ];
 
@@ -182,7 +181,6 @@ describe('uiDictionarySlice', () => {
           buttons: {
             playButton: 'Play',
           },
-          theBand: [],
         },
       ];
 
@@ -198,7 +196,6 @@ describe('uiDictionarySlice', () => {
           buttons: {
             playButton: 'Воспроизвести',
           },
-          theBand: [],
         },
       ];
 
@@ -389,7 +386,6 @@ describe('uiDictionarySlice', () => {
               buttons: {
                 playButton: 'Play',
               },
-              theBand: [],
             },
           ],
           lastUpdated: 1234567890,
@@ -482,7 +478,6 @@ describe('uiDictionarySlice', () => {
         buttons: {
           playButton: `Play ${i}`,
         },
-        theBand: [],
       }));
 
       const largeState = {
@@ -522,7 +517,6 @@ describe('uiDictionarySlice', () => {
                 buttons: {
                   playButton: 'Single Play',
                 },
-                theBand: [],
               },
             ],
           },
@@ -553,7 +547,6 @@ describe('uiDictionarySlice', () => {
                 buttons: {
                   playButton: 'First Play',
                 },
-                theBand: [],
               },
               {
                 titles: {
@@ -566,7 +559,6 @@ describe('uiDictionarySlice', () => {
                 buttons: {
                   playButton: 'Second Play',
                 },
-                theBand: [],
               },
             ],
           },

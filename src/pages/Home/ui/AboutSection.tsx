@@ -6,7 +6,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectAlbumsData } from '@entities/album';
-import { loadTheBandFromDatabase } from '@entities/user/lib';
+import { loadTheBandFromDatabase, loadTheBandFromProfileJson } from '@entities/user/lib';
 import aboutStyles from './AboutSection.module.scss';
 
 type AboutSectionProps = {
@@ -23,6 +23,8 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
   // Состояние для theBand из БД
   const [theBandFromDb, setTheBandFromDb] = useState<string[] | null>(null);
   const [isLoadingTheBand, setIsLoadingTheBand] = useState(true);
+  // Состояние для theBand из profile.json (fallback)
+  const [theBandFromProfileJson, setTheBandFromProfileJson] = useState<string[] | null>(null);
 
   const title = ui?.titles?.theBand ?? '';
   const artistName = albums[0]?.artist ?? '';
@@ -55,10 +57,34 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     };
   }, [lang]);
 
-  // Используем theBand из БД, если есть и не пустой, иначе из JSON (fallback)
-  const theBandFromJson = (ui?.theBand || []).filter(Boolean) as string[];
+  // Загружаем theBand из profile.json (fallback)
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const profileData = await loadTheBandFromProfileJson(lang);
+        if (!cancelled) {
+          setTheBandFromProfileJson(profileData);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('⚠️ Ошибка загрузки theBand из profile.json:', error);
+          setTheBandFromProfileJson(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
+
+  // Используем theBand из БД, если есть и не пустой, иначе из profile.json (fallback)
   const theBand = (
-    theBandFromDb !== null && theBandFromDb.length > 0 ? theBandFromDb : theBandFromJson
+    theBandFromDb !== null && theBandFromDb.length > 0
+      ? theBandFromDb
+      : theBandFromProfileJson || []
   ).filter(Boolean);
   const previewParagraph = theBand[0];
   const showLabel = ui?.buttons?.show ?? '';
@@ -80,14 +106,16 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
           </Text>
         )}
 
-        <button
-          className={aboutStyles.aboutLookMore}
-          onClick={onOpen}
-          type="button"
-          aria-haspopup="dialog"
-        >
-          {showLabel}
-        </button>
+        <div className={aboutStyles.aboutButtonWrapper}>
+          <button
+            className={aboutStyles.aboutLookMore}
+            onClick={onOpen}
+            type="button"
+            aria-haspopup="dialog"
+          >
+            {showLabel}
+          </button>
+        </div>
 
         <Popup isActive={isAboutModalOpen} onClose={onClose} aria-labelledby="about-popup-title">
           <div className={aboutStyles.aboutPopup}>

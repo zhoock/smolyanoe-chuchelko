@@ -19,7 +19,6 @@ describe('Footer integration tests', () => {
                 titles: {
                   support: 'Support',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -55,7 +54,6 @@ describe('Footer integration tests', () => {
                 titles: {
                   support: 'Support',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -94,7 +92,6 @@ describe('Footer integration tests', () => {
                 titles: {
                   support: 'Support',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -127,7 +124,6 @@ describe('Footer integration tests', () => {
                 titles: {
                   support: 'Support',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),

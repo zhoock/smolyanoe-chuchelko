@@ -517,6 +517,17 @@ COMMENT ON COLUMN articles.is_draft IS 'Черновик статьи (true) и�
 UPDATE articles SET is_draft = false WHERE is_draft IS NULL;
 `;
 
+const MIGRATION_022 = `
+-- Миграция: Добавление поля header_images в таблицу users
+-- Дата: 2025
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS header_images JSONB DEFAULT '[]'::jsonb;
+
+-- Комментарий для поля
+COMMENT ON COLUMN users.header_images IS 'Массив URL изображений для шапки сайта (hero section)';
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -532,6 +543,7 @@ const MIGRATIONS: Record<string, string> = {
   '014_force_all_covers.sql': MIGRATION_014,
   '015_fix_synced_lyrics_null_duplicates.sql': MIGRATION_015,
   '017_add_is_draft_to_articles.sql': MIGRATION_017,
+  '022_add_header_images_to_users.sql': MIGRATION_022,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {

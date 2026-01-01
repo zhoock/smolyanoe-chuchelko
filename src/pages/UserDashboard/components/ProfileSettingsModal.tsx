@@ -5,6 +5,14 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { getUser, getToken } from '@shared/lib/auth';
+import {
+  loadTheBandFromDatabase,
+  loadTheBandFromProfileJson,
+  saveTheBandToDatabase,
+  loadHeaderImagesFromDatabase,
+  saveHeaderImagesToDatabase,
+} from '@entities/user/lib';
+import { HeaderImagesUpload } from './HeaderImagesUpload';
 import './ProfileSettingsModal.style.scss';
 
 interface ProfileSettingsModalProps {
@@ -28,8 +36,12 @@ export function ProfileSettingsModal({
   const [name, setName] = useState(userName);
   const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(currentLang || 'ru');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [headerImages, setHeaderImages] = useState<File[]>([]);
-  const [dragActive, setDragActive] = useState(false);
+  const [headerImages, setHeaderImages] = useState<string[]>([]);
+  const [initialHeaderImages, setInitialHeaderImages] = useState<string[]>([]);
+  const [isLoadingHeaderImages, setIsLoadingHeaderImages] = useState(false);
+  const [aboutText, setAboutText] = useState<string>('');
+  const [isLoadingAboutText, setIsLoadingAboutText] = useState(false);
+  const [isSavingAboutText, setIsSavingAboutText] = useState(false);
 
   // Поля для смены пароля
   const [currentPassword, setCurrentPassword] = useState('');
@@ -49,11 +61,10 @@ export function ProfileSettingsModal({
   // Исходные значения для отслеживания изменений
   const [initialName, setInitialName] = useState(userName);
   const [initialLang, setInitialLang] = useState<'ru' | 'en'>(currentLang || 'ru');
-  const [initialHeaderImages, setInitialHeaderImages] = useState<File[]>([]);
+  const [initialAboutText, setInitialAboutText] = useState<string>('');
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const languages = [
     { value: 'ru', label: 'Русский' },
@@ -89,23 +100,36 @@ export function ProfileSettingsModal({
     if (!currentPassword && !newPassword && !confirmPassword) return null;
 
     if (!currentPassword) {
-      return 'Введите текущий пароль';
+      return (
+        ui?.dashboard?.profileSettingsModal?.validation?.enterCurrentPassword ??
+        'Введите текущий пароль'
+      );
     }
 
     if (!newPassword) {
-      return 'Введите новый пароль';
+      return (
+        ui?.dashboard?.profileSettingsModal?.validation?.enterNewPassword ?? 'Введите новый пароль'
+      );
     }
 
     if (newPassword.length < 8) {
-      return 'Новый пароль должен содержать минимум 8 символов';
+      return (
+        ui?.dashboard?.profileSettingsModal?.validation?.passwordMinLength ??
+        'Новый пароль должен содержать минимум 8 символов'
+      );
     }
 
     if (newPassword === currentPassword) {
-      return 'Новый пароль должен отличаться от текущего';
+      return (
+        ui?.dashboard?.profileSettingsModal?.validation?.passwordDifferent ??
+        'Новый пароль должен отличаться от текущего'
+      );
     }
 
     if (newPassword !== confirmPassword) {
-      return 'Пароли не совпадают';
+      return (
+        ui?.dashboard?.profileSettingsModal?.validation?.passwordsNotMatch ?? 'Пароли не совпадают'
+      );
     }
 
     return null;
@@ -119,7 +143,9 @@ export function ProfileSettingsModal({
   const hasProfileChanges =
     name !== initialName ||
     selectedLang !== initialLang ||
-    headerImages.length !== initialHeaderImages.length;
+    headerImages.length !== initialHeaderImages.length ||
+    headerImages.some((url, index) => url !== initialHeaderImages[index]) ||
+    aboutText !== initialAboutText;
   const hasPasswordChanges =
     activeTab === 'security' && (currentPassword || newPassword || confirmPassword);
   const hasChanges = hasProfileChanges || hasPasswordChanges;
@@ -129,6 +155,7 @@ export function ProfileSettingsModal({
     setName(initialName);
     setSelectedLang(initialLang);
     setHeaderImages([...initialHeaderImages]);
+    setAboutText(initialAboutText);
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -141,7 +168,11 @@ export function ProfileSettingsModal({
     if (activeTab === 'security') {
       // Валидация формы пароля
       if (!isPasswordFormValid) {
-        setPasswordError(passwordValidationError || 'Заполните все поля');
+        setPasswordError(
+          passwordValidationError ||
+            ui?.dashboard?.profileSettingsModal?.validation?.fillAllFields ||
+            'Заполните все поля'
+        );
         return;
       }
 
@@ -240,10 +271,61 @@ export function ProfileSettingsModal({
       if (selectedLang !== currentLang) {
         setLang(selectedLang);
       }
-      // TODO: Здесь можно добавить сохранение данных профиля на сервер
+
+      // Сохранение текста "О Группе"
+      if (aboutText !== initialAboutText) {
+        setIsSavingAboutText(true);
+        try {
+          // Разбиваем текст на параграфы по переносам строк
+          const paragraphs = aboutText
+            .split('\n')
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+
+          const result = await saveTheBandToDatabase(paragraphs);
+          if (!result.success) {
+            console.error('Ошибка сохранения текста "О Группе":', result.error);
+            alert(`Ошибка сохранения: ${result.error || 'Неизвестная ошибка'}`);
+            setIsSavingAboutText(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Ошибка сохранения текста "О Группе":', error);
+          alert(
+            `Ошибка сохранения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+          );
+          setIsSavingAboutText(false);
+          return;
+        } finally {
+          setIsSavingAboutText(false);
+        }
+      }
+
+      // Сохранение header images
+      if (
+        headerImages.length !== initialHeaderImages.length ||
+        headerImages.some((url, index) => url !== initialHeaderImages[index])
+      ) {
+        try {
+          const result = await saveHeaderImagesToDatabase(headerImages);
+          if (!result.success) {
+            console.error('Ошибка сохранения header images:', result.error);
+            alert(`Ошибка сохранения изображений: ${result.error || 'Неизвестная ошибка'}`);
+            return;
+          }
+        } catch (error) {
+          console.error('Ошибка сохранения header images:', error);
+          alert(
+            `Ошибка сохранения изображений: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+          );
+          return;
+        }
+      }
+
       setInitialName(name);
       setInitialLang(selectedLang);
       setInitialHeaderImages([...headerImages]);
+      setInitialAboutText(aboutText);
       onClose();
     }
   };
@@ -298,6 +380,68 @@ export function ProfileSettingsModal({
     }
   }, [activeTab]);
 
+  // Загрузка текста "О Группе" и header images при открытии модального окна или переключении на вкладку "Профиль"
+  useEffect(() => {
+    if (isOpen && activeTab === 'profile') {
+      const loadAboutText = async () => {
+        setIsLoadingAboutText(true);
+        try {
+          // Сначала пытаемся загрузить из БД
+          let theBand = await loadTheBandFromDatabase(currentLang || 'ru');
+          let source = 'БД';
+
+          // Если в БД нет данных, загружаем из profile.json как fallback
+          if (!theBand || theBand.length === 0) {
+            console.log('📝 Данных в БД нет, загружаем из profile.json...');
+            theBand = await loadTheBandFromProfileJson(currentLang || 'ru');
+            source = 'profile.json';
+          }
+
+          const text = theBand && theBand.length > 0 ? theBand.join('\n') : '';
+          setAboutText(text);
+          setInitialAboutText(text);
+
+          if (theBand && theBand.length > 0) {
+            console.log('✅ Текст "О Группе" загружен:', {
+              source,
+              paragraphs: theBand.length,
+              lang: currentLang || 'ru',
+            });
+          } else {
+            console.log('ℹ️ Текст "О Группе" пуст, можно ввести новый');
+          }
+        } catch (error) {
+          console.error('Ошибка загрузки текста "О Группе":', error);
+          setAboutText('');
+          setInitialAboutText('');
+        } finally {
+          setIsLoadingAboutText(false);
+        }
+      };
+
+      const loadHeaderImages = async () => {
+        setIsLoadingHeaderImages(true);
+        try {
+          const images = await loadHeaderImagesFromDatabase();
+          setHeaderImages(images);
+          setInitialHeaderImages(images);
+          if (images.length > 0) {
+            console.log('✅ Header images загружены:', images.length);
+          }
+        } catch (error) {
+          console.error('Ошибка загрузки header images:', error);
+          setHeaderImages([]);
+          setInitialHeaderImages([]);
+        } finally {
+          setIsLoadingHeaderImages(false);
+        }
+      };
+
+      loadAboutText();
+      loadHeaderImages();
+    }
+  }, [isOpen, activeTab, currentLang]);
+
   // Сброс значений при открытии модального окна
   useEffect(() => {
     if (isOpen) {
@@ -306,15 +450,14 @@ export function ProfileSettingsModal({
       const initialUserLang = currentLang || 'ru';
       setInitialName(initialUserName);
       setInitialLang(initialUserLang);
-      setInitialHeaderImages([]);
       setName(initialUserName);
       setSelectedLang(initialUserLang);
-      setHeaderImages([]);
       // Сбрасываем поля пароля при открытии (кроме currentPassword - он загружается отдельно)
       setNewPassword('');
       setConfirmPassword('');
       setPasswordError(null);
       setPasswordSuccess(false);
+      // Текст "О Группе" будет загружен отдельно при открытии вкладки "Профиль"
     }
   }, [isOpen, userName, currentLang]);
 
@@ -342,51 +485,6 @@ export function ProfileSettingsModal({
     // Не изменяем язык интерфейса сразу, только при сохранении
   };
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(Array.from(e.dataTransfer.files));
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFiles(Array.from(e.target.files));
-    }
-  };
-
-  const handleFiles = (files: File[]) => {
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    const maxImages = 10;
-    const currentCount = headerImages.length;
-    const remainingSlots = maxImages - currentCount;
-
-    if (remainingSlots <= 0) {
-      alert(`Можно загрузить до ${maxImages} изображений`);
-      return;
-    }
-
-    const filesToAdd = imageFiles.slice(0, remainingSlots);
-    setHeaderImages((prev) => [...prev, ...filesToAdd]);
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setHeaderImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
   return (
     <Popup isActive={isOpen} onClose={handleHeaderClose}>
       <div className="profile-settings-modal">
@@ -399,7 +497,7 @@ export function ProfileSettingsModal({
               type="button"
               className="profile-settings-modal__close"
               onClick={handleHeaderClose}
-              aria-label="Закрыть"
+              aria-label={ui?.dashboard?.close ?? 'Закрыть'}
             >
               ×
             </button>
@@ -413,7 +511,7 @@ export function ProfileSettingsModal({
               }`}
               onClick={() => setActiveTab('profile')}
             >
-              Профиль
+              {ui?.dashboard?.profileSettingsModal?.tabs?.profile ?? 'Профиль'}
             </button>
             <button
               type="button"
@@ -422,7 +520,7 @@ export function ProfileSettingsModal({
               }`}
               onClick={() => setActiveTab('security')}
             >
-              Безопасность
+              {ui?.dashboard?.profileSettingsModal?.tabs?.security ?? 'Безопасность'}
             </button>
             <button
               type="button"
@@ -431,7 +529,7 @@ export function ProfileSettingsModal({
               }`}
               onClick={() => setActiveTab('interface')}
             >
-              Интерфейс
+              {ui?.dashboard?.profileSettingsModal?.tabs?.interface ?? 'Интерфейс'}
             </button>
           </div>
 
@@ -440,13 +538,16 @@ export function ProfileSettingsModal({
               <div className="profile-settings-modal__profile-tab">
                 <div className="profile-settings-modal__field">
                   <label htmlFor="profile-name" className="profile-settings-modal__label">
-                    Band Name
+                    {ui?.dashboard?.profileSettingsModal?.fields?.bandName ?? 'Band Name'}
                   </label>
                   <input
                     id="profile-name"
                     type="text"
                     className="profile-settings-modal__input"
-                    placeholder="Enter the name of your band"
+                    placeholder={
+                      ui?.dashboard?.profileSettingsModal?.placeholders?.bandName ??
+                      'Enter the name of your band'
+                    }
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
@@ -454,7 +555,7 @@ export function ProfileSettingsModal({
 
                 <div className="profile-settings-modal__field">
                   <label htmlFor="profile-email" className="profile-settings-modal__label">
-                    Email
+                    {ui?.dashboard?.profileSettingsModal?.fields?.email ?? 'Email'}
                   </label>
                   <input
                     id="profile-email"
@@ -466,7 +567,9 @@ export function ProfileSettingsModal({
                 </div>
 
                 <div className="profile-settings-modal__field">
-                  <label className="profile-settings-modal__label">Язык</label>
+                  <label className="profile-settings-modal__label">
+                    {ui?.dashboard?.profileSettingsModal?.fields?.language ?? 'Язык'}
+                  </label>
                   <div className="profile-settings-modal__select-wrapper">
                     <div
                       ref={selectRef}
@@ -526,64 +629,58 @@ export function ProfileSettingsModal({
                 </div>
 
                 <div className="profile-settings-modal__field">
-                  <label className="profile-settings-modal__label">
-                    Изображения для шапки сайта
+                  <label htmlFor="profile-about" className="profile-settings-modal__label">
+                    {ui?.dashboard?.profileSettingsModal?.fields?.aboutBand ?? 'О Группе'}
                   </label>
-                  <div
-                    className={`profile-settings-modal__dropzone ${
-                      dragActive ? 'profile-settings-modal__dropzone--active' : ''
-                    }`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                  >
-                    <div className="profile-settings-modal__dropzone-text">
-                      Можно загрузить до 10 изображений для шапки сайта
+                  {isLoadingAboutText ? (
+                    <div className="profile-settings-modal__loading">
+                      {ui?.dashboard?.loading ?? ui?.dashboard?.uploading ?? 'Загрузка...'}
                     </div>
-                    {headerImages.length > 0 && (
-                      <div className="profile-settings-modal__images-list">
-                        {headerImages.map((file, index) => (
-                          <div key={index} className="profile-settings-modal__image-item">
-                            <span className="profile-settings-modal__image-name">{file.name}</span>
-                            <button
-                              type="button"
-                              className="profile-settings-modal__image-remove"
-                              onClick={() => handleRemoveImage(index)}
-                              aria-label="Удалить изображение"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <label
-                      htmlFor="header-images-input"
-                      className="profile-settings-modal__file-label"
-                    >
-                      Выбрать файлы
-                    </label>
-                    <input
-                      ref={fileInputRef}
-                      id="header-images-input"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      className="profile-settings-modal__file-input"
-                      onChange={handleFileInput}
+                  ) : (
+                    <textarea
+                      id="profile-about"
+                      className="profile-settings-modal__textarea"
+                      placeholder={
+                        ui?.dashboard?.profileSettingsModal?.placeholders?.aboutBand ??
+                        'Введите описание группы. Каждая строка будет отдельным параграфом.'
+                      }
+                      value={aboutText}
+                      onChange={(e) => setAboutText(e.target.value)}
+                      rows={8}
                     />
+                  )}
+                  <div className="profile-settings-modal__field-hint">
+                    {ui?.dashboard?.profileSettingsModal?.hints?.aboutBand ??
+                      'Каждая строка будет отдельным параграфом в описании группы'}
                   </div>
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  {isLoadingHeaderImages ? (
+                    <div>Загрузка изображений...</div>
+                  ) : (
+                    <HeaderImagesUpload
+                      currentImages={headerImages}
+                      onImagesUpdated={(urls) => {
+                        setHeaderImages(urls);
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             )}
 
             {activeTab === 'security' && (
               <div className="profile-settings-modal__security-tab">
-                <h3 className="profile-settings-modal__section-title">Смена пароля</h3>
+                <h3 className="profile-settings-modal__section-title">
+                  {ui?.dashboard?.profileSettingsModal?.buttons?.changePassword ?? 'Смена пароля'}
+                </h3>
 
                 {passwordSuccess && (
-                  <div className="profile-settings-modal__success-message">Пароль обновлён</div>
+                  <div className="profile-settings-modal__success-message">
+                    {ui?.dashboard?.profileSettingsModal?.messages?.passwordUpdated ??
+                      'Пароль обновлён'}
+                  </div>
                 )}
 
                 {passwordError && (
@@ -598,7 +695,8 @@ export function ProfileSettingsModal({
 
                 <div className="profile-settings-modal__field">
                   <label htmlFor="current-password" className="profile-settings-modal__label">
-                    Текущий пароль
+                    {ui?.dashboard?.profileSettingsModal?.fields?.currentPassword ??
+                      'Текущий пароль'}
                   </label>
                   <div className="profile-settings-modal__input-wrapper">
                     <input
@@ -670,7 +768,7 @@ export function ProfileSettingsModal({
 
                 <div className="profile-settings-modal__field">
                   <label htmlFor="new-password" className="profile-settings-modal__label">
-                    Новый пароль
+                    {ui?.dashboard?.profileSettingsModal?.fields?.newPassword ?? 'Новый пароль'}
                   </label>
                   <div className="profile-settings-modal__input-wrapper">
                     <input
@@ -743,7 +841,8 @@ export function ProfileSettingsModal({
 
                 <div className="profile-settings-modal__field">
                   <label htmlFor="confirm-password" className="profile-settings-modal__label">
-                    Подтвердите новый пароль
+                    {ui?.dashboard?.profileSettingsModal?.fields?.confirmPassword ??
+                      'Подтвердите новый пароль'}
                   </label>
                   <div className="profile-settings-modal__input-wrapper">
                     <input
@@ -817,7 +916,10 @@ export function ProfileSettingsModal({
 
             {activeTab === 'interface' && (
               <div className="profile-settings-modal__interface-tab">
-                <p>Раздел «Интерфейс» в разработке</p>
+                <p>
+                  {ui?.dashboard?.profileSettingsModal?.messages?.interfaceInDevelopment ??
+                    'Раздел «Интерфейс» в разработке'}
+                </p>
               </div>
             )}
           </div>
@@ -836,9 +938,15 @@ export function ProfileSettingsModal({
                 type="button"
                 className="profile-settings-modal__button profile-settings-modal__button--save"
                 onClick={handleSave}
-                disabled={isChangingPassword || (activeTab === 'security' && !isPasswordFormValid)}
+                disabled={
+                  isChangingPassword ||
+                  isSavingAboutText ||
+                  (activeTab === 'security' && !isPasswordFormValid)
+                }
               >
-                {isChangingPassword ? 'Сохранение...' : (ui?.dashboard?.save ?? 'Сохранить')}
+                {isChangingPassword || isSavingAboutText
+                  ? (ui?.dashboard?.saving ?? ui?.dashboard?.uploading ?? 'Сохранение...')
+                  : (ui?.dashboard?.save ?? 'Сохранить')}
               </button>
             </div>
           )}

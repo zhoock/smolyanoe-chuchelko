@@ -1,60 +1,109 @@
 // src/widgets/hero/ui/Hero.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-
+import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import './style.scss';
 
-const photos = [
-  `image-set(
-    url('/images/hero/2.avif') type('image/avif'),
-    url('/images/hero/2.webp') type('image/webp'),
-    url('/images/hero/2.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/3.avif') type('image/avif'),
-    url('/images/hero/3.webp') type('image/webp'),
-    url('/images/hero/3.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/4.avif') type('image/avif'),
-    url('/images/hero/4.webp') type('image/webp'),
-    url('/images/hero/4.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/5.avif') type('image/avif'),
-    url('/images/hero/5.webp') type('image/webp'),
-    url('/images/hero/5.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/6.avif') type('image/avif'),
-    url('/images/hero/6.webp') type('image/webp'),
-    url('/images/hero/6.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/7.avif') type('image/avif'),
-    url('/images/hero/7.webp') type('image/webp'),
-    url('/images/hero/7.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/8.avif') type('image/avif'),
-    url('/images/hero/8.webp') type('image/webp'),
-    url('/images/hero/8.jpg') type('image/jpg')
-  )`,
-  `image-set(
-    url('/images/hero/9.avif') type('image/avif'),
-    url('/images/hero/9.webp') type('image/webp'),
-    url('/images/hero/9.jpg') type('image/jpg')
-  )`,
-];
+/**
+ * Генерирует image-set() строку из базового URL изображения
+ * @param baseUrl - базовый URL изображения (например, https://.../hero-123-1920.jpg)
+ * @returns image-set() строка с вариантами для разных форматов (без размеров)
+ */
+function generateImageSetFromUrl(baseUrl: string): string {
+  // Если URL уже содержит image-set, нормализуем его (убираем переносы строк)
+  if (baseUrl.includes('image-set')) {
+    // Убираем переносы строк и лишние пробелы для корректного использования в inline style
+    return baseUrl.replace(/\n\s*/g, ' ').trim();
+  }
+
+  // Если это локальный путь (начинается с /images/), возвращаем простой URL
+  if (baseUrl.startsWith('/images/')) {
+    return `url('${baseUrl}')`;
+  }
+
+  // Извлекаем базовое имя файла из URL
+  // Примеры:
+  // - https://.../hero-123-1920.jpg -> hero-123
+  // - https://.../hero-123-abc-1920.jpg -> hero-123-abc
+  const urlMatch = baseUrl.match(/([^/]+)-(\d+)\.(jpg|webp|avif)$/);
+  if (!urlMatch) {
+    // Если не удалось распарсить, возвращаем простой URL
+    return `url('${baseUrl}')`;
+  }
+
+  const baseName = urlMatch[1]; // hero-123
+  const basePath = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1); // https://.../users/.../hero/
+
+  // Для background-image используем только один размер (1920px для desktop) и несколько форматов
+  // Браузер выберет оптимальный формат, но не будет загружать несколько размеров
+  const size = 1920; // Используем Full HD размер для desktop
+  const formats = ['avif', 'webp', 'jpg']; // Форматы в порядке приоритета
+
+  // Генерируем варианты для image-set (только форматы, один размер)
+  const variants: string[] = [];
+  for (const format of formats) {
+    const variantUrl = `${basePath}${baseName}-${size}.${format}`;
+    const mimeType =
+      format === 'avif' ? 'image/avif' : format === 'webp' ? 'image/webp' : 'image/jpeg';
+    variants.push(`url('${variantUrl}') type('${mimeType}')`);
+  }
+
+  // Убираем переносы строк для корректного использования в inline style
+  return `image-set(${variants.join(', ')})`;
+}
 
 export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
+  const [headerImages, setHeaderImages] = useState<string[]>([]);
   const location = useLocation();
+  const lastPathRef = useRef<string>('');
+  const imagesLoadedRef = useRef<boolean>(false);
+  const imageSelectedForPathRef = useRef<string>('');
 
+  // Загружаем изображения из БД
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * photos.length);
-    setBackgroundImage(photos[randomIndex]);
-  }, [location.pathname]);
+    const loadImages = async () => {
+      try {
+        const images = await loadHeaderImagesFromDatabase();
+        setHeaderImages(images);
+        imagesLoadedRef.current = true;
+      } catch (error) {
+        console.warn('⚠️ Ошибка загрузки header images из БД:', error);
+        setHeaderImages([]);
+        imagesLoadedRef.current = true;
+      }
+    };
+    loadImages();
+  }, []);
+
+  // Выбираем случайное изображение при загрузке данных или изменении пути
+  useEffect(() => {
+    // Выбираем изображение только если данные загружены
+    if (!imagesLoadedRef.current) {
+      return;
+    }
+
+    // Выбираем случайное изображение при изменении пути
+    // При перезагрузке страницы компонент монтируется заново, поэтому будет новое случайное изображение
+    const pathChanged = lastPathRef.current !== location.pathname;
+
+    if (!pathChanged && imageSelectedForPathRef.current === location.pathname) {
+      // Изображение уже выбрано для этого пути, не меняем
+      return;
+    }
+
+    lastPathRef.current = location.pathname;
+    imageSelectedForPathRef.current = location.pathname;
+
+    if (headerImages.length > 0) {
+      // Используем изображения из БД - случайный выбор
+      const randomIndex = Math.floor(Math.random() * headerImages.length);
+      const imageUrl = headerImages[randomIndex];
+      const imageSet = generateImageSetFromUrl(imageUrl);
+      setBackgroundImage(imageSet);
+    }
+    // Если в БД нет данных, backgroundImage останется пустым (не будет фона)
+  }, [location.pathname, headerImages]);
 
   return (
     <section className="hero" style={{ backgroundImage }}>

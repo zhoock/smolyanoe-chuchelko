@@ -133,7 +133,6 @@ describe('ArticlesSection integration tests', () => {
                 titles: {
                   articles: 'Articles',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -183,7 +182,6 @@ describe('ArticlesSection integration tests', () => {
                 titles: {
                   articles: 'News',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),
@@ -268,7 +266,6 @@ describe('ArticlesSection integration tests', () => {
                 titles: {
                   articles: 'Articles',
                 },
-                theBand: [],
               },
             ],
             lastUpdated: Date.now(),

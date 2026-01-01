@@ -44,7 +44,6 @@ describe('HomePage integration tests', () => {
     buttons: {
       show: 'Show more',
     },
-    theBand: ['Paragraph 1', 'Paragraph 2'],
   };
 
   test('должен отобразить все секции', () => {
@@ -247,7 +246,6 @@ describe('HomePage integration tests', () => {
       buttons: {
         show: 'Показать больше',
       },
-      theBand: ['Параграф 1', 'Параграф 2'],
     };
 
     renderWithProviders(<HomePage />, {
