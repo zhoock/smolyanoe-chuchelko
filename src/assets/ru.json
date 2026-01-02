@@ -113,6 +113,8 @@
       "english": "English",
       "dragToReorder": "Перетащите для изменения порядка",
       "clickToEdit": "Нажмите для редактирования",
+      "editTrack": "Редактировать трек",
+      "trackTitle": "Название трека",
       "deleteTrack": "Удалить трек",
       "deleteAlbum": "Удалить альбом",
       "errorLoading": "Ошибка загрузки:",

@@ -227,6 +227,8 @@ export interface IInterface {
     english: string;
     dragToReorder?: string;
     clickToEdit?: string;
+    editTrack?: string;
+    trackTitle?: string;
     deleteTrack?: string;
     deleteAlbum?: string;
     errorLoading?: string;

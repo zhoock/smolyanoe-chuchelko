@@ -113,6 +113,8 @@
       "english": "English",
       "dragToReorder": "Drag to reorder",
       "clickToEdit": "Click to edit",
+      "editTrack": "Edit track",
+      "trackTitle": "Track Title",
       "deleteTrack": "Delete track",
       "deleteAlbum": "Delete album",
       "errorLoading": "Error loading:",

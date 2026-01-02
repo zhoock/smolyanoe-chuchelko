@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/UserDashboard.tsx
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
@@ -72,8 +72,11 @@ interface SortableTrackItemProps {
   track: TrackData;
   albumId: string;
   onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
+  onEdit?: (albumId: string, trackId: string, trackTitle: string) => void;
   onTitleChange?: (albumId: string, trackId: string, newTitle: string) => Promise<void>;
   ui?: IInterface;
+  swipedTrackId: string | null;
+  onSwipeChange: (trackId: string | null) => void;
 }
 
 // Функция для извлечения первых двух строк текста из блоков статьи
@@ -169,16 +172,36 @@ function SortableTrackItem({
   track,
   albumId,
   onDelete,
+  onEdit,
   onTitleChange,
   ui,
+  swipedTrackId,
+  onSwipeChange,
 }: SortableTrackItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: track.id,
   });
 
+  // Editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(track.title);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Swipe state
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const startXRef = useRef<number>(0);
+  const startYRef = useRef<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const EDIT_BUTTON_WIDTH = 80;
+  const DELETE_BUTTON_WIDTH = 80;
+  const BUTTON_GAP = 8; // Gap между кнопками
+  const DURATION_WIDTH = 50; // Примерная ширина длительности трека (например, "3:19")
+  const SWIPE_MENU_WIDTH = EDIT_BUTTON_WIDTH + DELETE_BUTTON_WIDTH + BUTTON_GAP + DURATION_WIDTH;
+
+  const isSwiped = swipedTrackId === track.id;
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
   // Синхронизируем editedTitle с track.title при изменении track
   useEffect(() => {
@@ -187,17 +210,138 @@ function SortableTrackItem({
     }
   }, [track.title, isEditing]);
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  // Закрываем swipe при изменении swipedTrackId (если открыта другая строка)
+  useEffect(() => {
+    if (!isSwiped && swipeX !== 0) {
+      setSwipeX(0);
+    }
+  }, [isSwiped, swipeX]);
 
-  const handleTitleClick = () => {
-    setIsEditing(true);
-    setEditedTitle(track.title);
-    setTimeout(() => inputRef.current?.focus(), 0);
-  };
+  // Обработчики swipe (только на мобильных)
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      // Игнорируем, если не мобильное устройство или если клик по drag handle
+      if (!isMobile || (e.target as HTMLElement).closest('.user-dashboard__track-drag-handle')) {
+        return;
+      }
+
+      // Игнорируем, если клик по input или кнопке
+      if (
+        (e.target as HTMLElement).tagName === 'INPUT' ||
+        (e.target as HTMLElement).tagName === 'BUTTON' ||
+        (e.target as HTMLElement).closest('button')
+      ) {
+        return;
+      }
+
+      // Если уже открыта другая строка, закрываем её
+      if (swipedTrackId && swipedTrackId !== track.id) {
+        onSwipeChange(null);
+      }
+
+      startXRef.current = e.clientX;
+      startYRef.current = e.clientY;
+      setIsSwiping(true);
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      e.preventDefault();
+    },
+    [isMobile, swipedTrackId, track.id, onSwipeChange]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isSwiping || !isMobile) return;
+
+      const dx = e.clientX - startXRef.current;
+      const dy = e.clientY - startYRef.current;
+
+      // Если вертикальное движение больше горизонтального, это скролл, не swipe
+      if (Math.abs(dy) > Math.abs(dx)) {
+        return;
+      }
+
+      // Если движение вправо, не обрабатываем
+      if (dx > 0) {
+        return;
+      }
+
+      // Ограничиваем движение влево
+      const maxSwipe = -SWIPE_MENU_WIDTH;
+      const newSwipeX = Math.max(maxSwipe, Math.min(0, dx));
+      setSwipeX(newSwipeX);
+      e.preventDefault();
+    },
+    [isSwiping, isMobile]
+  );
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isSwiping || !isMobile) return;
+
+      const dx = e.clientX - startXRef.current;
+      const threshold = 40;
+
+      if (dx < -threshold) {
+        // Открываем
+        setSwipeX(-SWIPE_MENU_WIDTH);
+        onSwipeChange(track.id);
+      } else {
+        // Закрываем
+        setSwipeX(0);
+        onSwipeChange(null);
+      }
+
+      setIsSwiping(false);
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    },
+    [isSwiping, isMobile, onSwipeChange, track.id]
+  );
+
+  // Закрытие при клике вне
+  useEffect(() => {
+    if (!isSwiped) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setSwipeX(0);
+        onSwipeChange(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isSwiped, onSwipeChange]);
+
+  const handleEdit = useCallback(
+    (e: React.MouseEvent | React.PointerEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setEditedTitle(track.title);
+      setIsEditing(true);
+      // Закрываем swipe после установки редактирования
+      setSwipeX(0);
+      onSwipeChange(null);
+    },
+    [track.title, onSwipeChange]
+  );
+
+  // Фокус на input при открытии редактирования
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      // Используем setTimeout для гарантии, что DOM обновлен
+      const timer = setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isEditing]);
 
   const handleTitleBlur = async () => {
     if (editedTitle.trim() !== track.title && editedTitle.trim() !== '' && onTitleChange) {
@@ -220,62 +364,173 @@ function SortableTrackItem({
     }
   };
 
+  const handleDelete = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSwipeX(0);
+      onSwipeChange(null);
+      onDelete(albumId, track.id, track.title);
+    },
+    [albumId, track.id, track.title, onDelete, onSwipeChange]
+  );
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const contentStyle: React.CSSProperties = {
+    transform: `translateX(${swipeX}px)`,
+    transition: isSwiping ? 'none' : 'transform 0.2s ease',
+  };
+
+  // Объединяем refs для setNodeRef и containerRef
+  const combinedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      setNodeRef(node);
+      // Используем type assertion для обновления ref
+      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    },
+    [setNodeRef]
+  );
+
   return (
     <div
-      ref={setNodeRef}
+      ref={combinedRef}
       style={style}
-      className={clsx('user-dashboard__track-item', {
-        'user-dashboard__track-item--dragging': isDragging,
+      className={clsx('user-dashboard__track-item-wrapper', {
+        'user-dashboard__track-item-wrapper--dragging': isDragging,
       })}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="user-dashboard__track-drag-handle"
-        title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
-        aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
-      >
-        <span className="user-dashboard__track-drag-icon">⋮⋮</span>
-      </div>
-      <div className="user-dashboard__track-number">{track.id.padStart(2, '0')}</div>
-      {isEditing ? (
-        <input
-          ref={inputRef}
-          type="text"
-          className="user-dashboard__track-title-input"
-          value={editedTitle}
-          onChange={(e) => setEditedTitle(e.target.value)}
-          onBlur={handleTitleBlur}
-          onKeyDown={handleTitleKeyDown}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        />
-      ) : (
+      <div ref={contentRef} style={contentStyle} className="user-dashboard__track-item-content">
         <div
-          className="user-dashboard__track-title"
-          onClick={handleTitleClick}
-          title={ui?.dashboard?.clickToEdit ?? 'Click to edit'}
+          className={clsx('user-dashboard__track-item', {
+            'user-dashboard__track-item--dragging': isDragging,
+          })}
         >
-          {track.title}
+          <div
+            {...attributes}
+            {...listeners}
+            className="user-dashboard__track-drag-handle"
+            title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+            aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+          >
+            <span className="user-dashboard__track-drag-icon">⋮⋮</span>
+          </div>
+          <div className="user-dashboard__track-number">{track.id.padStart(2, '0')}</div>
+          {isEditing ? (
+            <input
+              key={`edit-${track.id}-${isEditing}`}
+              ref={inputRef}
+              type="text"
+              className="user-dashboard__track-title-input"
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              onBlur={handleTitleBlur}
+              onKeyDown={handleTitleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div className="user-dashboard__track-title">{track.title}</div>
+          )}
+          <div className="user-dashboard__track-duration-container">
+            <div className="user-dashboard__track-duration">{track.duration}</div>
+            {!isMobile && (
+              <button
+                type="button"
+                className="user-dashboard__track-delete-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(albumId, track.id, track.title);
+                }}
+                title={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+                aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+              >
+                {ui?.dashboard?.deleteTrack ?? 'Delete track'}
+              </button>
+            )}
+          </div>
         </div>
-      )}
-      <div className="user-dashboard__track-duration-container">
-        <div className="user-dashboard__track-duration">{track.duration}</div>
-        {!isEditing && (
+      </div>
+      {isMobile && (
+        <>
           <button
             type="button"
-            className="user-dashboard__track-delete-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(albumId, track.id, track.title);
-            }}
-            title={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+            className={clsx('user-dashboard__track-edit-button-swipe', {
+              'user-dashboard__track-edit-button-swipe--visible': isSwiped,
+            })}
+            onPointerDown={handleEdit}
+            onClick={handleEdit}
+            aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14.5 1.5L18.5 5.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={clsx('user-dashboard__track-delete-button-swipe', {
+              'user-dashboard__track-delete-button-swipe--visible': isSwiped,
+            })}
+            onClick={handleDelete}
             aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
           >
-            {ui?.dashboard?.deleteTrack ?? 'Delete track'}
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8.5 9.5V14.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M11.5 9.5V14.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -326,6 +581,13 @@ function UserDashboard() {
   const { avatarSrc, isUploadingAvatar, avatarInputRef, handleAvatarClick, handleAvatarChange } =
     useAvatar();
   const [addLyricsModal, setAddLyricsModal] = useState<{
+    isOpen: boolean;
+    albumId: string;
+    trackId: string;
+    trackTitle: string;
+  } | null>(null);
+  const [swipedTrackId, setSwipedTrackId] = useState<string | null>(null);
+  const [editTrackModal, setEditTrackModal] = useState<{
     isOpen: boolean;
     albumId: string;
     trackId: string;
@@ -1903,6 +2165,8 @@ function UserDashboard() {
                                                 onDelete={handleDeleteTrack}
                                                 onTitleChange={handleTrackTitleChange}
                                                 ui={ui ?? undefined}
+                                                swipedTrackId={swipedTrackId}
+                                                onSwipeChange={setSwipedTrackId}
                                               />
                                             ))}
                                           </div>
@@ -1931,13 +2195,22 @@ function UserDashboard() {
                                               key={track.id}
                                               className="user-dashboard__lyrics-row"
                                             >
-                                              <div className="user-dashboard__lyrics-cell">
+                                              <div
+                                                className="user-dashboard__lyrics-cell"
+                                                data-label={ui?.dashboard?.track ?? 'Track'}
+                                              >
                                                 {track.title}
                                               </div>
-                                              <div className="user-dashboard__lyrics-cell">
+                                              <div
+                                                className="user-dashboard__lyrics-cell"
+                                                data-label={ui?.dashboard?.status ?? 'Status'}
+                                              >
                                                 {getLyricsStatusText(track.lyricsStatus)}
                                               </div>
-                                              <div className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions">
+                                              <div
+                                                className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions"
+                                                data-label={ui?.dashboard?.actions ?? 'Actions'}
+                                              >
                                                 {(() => {
                                                   // Вычисляем hasSyncedLyrics для логирования
                                                   const hasSyncedLyrics =
@@ -2540,6 +2813,72 @@ function UserDashboard() {
             }
           }}
         />
+      )}
+
+      {/* Edit Track Modal */}
+      {editTrackModal && (
+        <Popup isActive={editTrackModal.isOpen} onClose={() => setEditTrackModal(null)}>
+          <div className="edit-track-modal">
+            <div className="edit-track-modal__card">
+              <div className="edit-track-modal__header">
+                <button
+                  type="button"
+                  className="edit-track-modal__close"
+                  onClick={() => setEditTrackModal(null)}
+                  aria-label={ui?.dashboard?.close ?? 'Close'}
+                >
+                  ×
+                </button>
+                <h2 className="edit-track-modal__title">
+                  {ui?.dashboard?.editTrack ?? 'Edit Track'}
+                </h2>
+              </div>
+              <div className="edit-track-modal__content">
+                <div className="edit-track-modal__field">
+                  <label className="edit-track-modal__label">
+                    {ui?.dashboard?.trackTitle ?? 'Track Title'}
+                  </label>
+                  <input
+                    type="text"
+                    className="edit-track-modal__input"
+                    defaultValue={editTrackModal.trackTitle}
+                    id="edit-track-title-input"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="edit-track-modal__footer">
+                <button
+                  type="button"
+                  className="edit-track-modal__cancel"
+                  onClick={() => setEditTrackModal(null)}
+                >
+                  {ui?.dashboard?.cancel ?? 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  className="edit-track-modal__save"
+                  onClick={async () => {
+                    const input = document.getElementById(
+                      'edit-track-title-input'
+                    ) as HTMLInputElement;
+                    const newTitle = input?.value.trim();
+                    if (newTitle && newTitle !== editTrackModal.trackTitle) {
+                      await handleTrackTitleChange(
+                        editTrackModal.albumId,
+                        editTrackModal.trackId,
+                        newTitle
+                      );
+                    }
+                    setEditTrackModal(null);
+                  }}
+                >
+                  {ui?.dashboard?.save ?? 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Popup>
       )}
 
       {/* Edit Album Modal */}
