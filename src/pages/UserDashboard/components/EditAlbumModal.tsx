@@ -2164,6 +2164,14 @@ export function EditAlbumModal({
           <div className="edit-album-modal__card">
             <div className="edit-album-modal__header">
               <h2 className="edit-album-modal__title">{getStepTitle()}</h2>
+              <button
+                type="button"
+                className="edit-album-modal__close"
+                onClick={handleClose}
+                aria-label={ui?.dashboard?.close ?? 'Close'}
+              >
+                ×
+              </button>
             </div>
 
             <div className="edit-album-modal__form">

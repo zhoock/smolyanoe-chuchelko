@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { Popup } from '../popup';
-import { Hamburger } from '../hamburger';
 import './style.scss';
 
 export interface ConfirmationModalProps {
@@ -39,10 +38,19 @@ export function ConfirmationModal({
 
   return (
     <Popup isActive={isOpen} onClose={onCancel} bgColor="rgba(var(--deep-black-rgb) / 95%)">
-      <Hamburger isActive onToggle={onCancel} />
       <div className="confirmation-modal">
         <div className="confirmation-modal__container">
-          {title && <h2 className="confirmation-modal__title">{title}</h2>}
+          <div className="confirmation-modal__header">
+            {title && <h2 className="confirmation-modal__title">{title}</h2>}
+            <button
+              type="button"
+              className="confirmation-modal__close"
+              onClick={onCancel}
+              aria-label="Закрыть"
+            >
+              ×
+            </button>
+          </div>
           <p className="confirmation-modal__message">{message}</p>
           <p className="confirmation-modal__warning">Это действие нельзя отменить.</p>
           <div className="confirmation-modal__actions">

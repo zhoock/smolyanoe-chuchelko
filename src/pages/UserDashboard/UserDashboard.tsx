@@ -436,24 +436,87 @@ function SortableTrackItem({
               onMouseDown={(e) => e.stopPropagation()}
             />
           ) : (
-            <div className="user-dashboard__track-title">{track.title}</div>
+            <div className="user-dashboard__track-title">
+              {track.title}
+              {!isMobile && (
+                <div className="user-dashboard__track-actions">
+                  <button
+                    type="button"
+                    className="user-dashboard__track-edit-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(e);
+                    }}
+                    aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M14.5 1.5L18.5 5.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="user-dashboard__track-delete-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(albumId, track.id, track.title);
+                    }}
+                    aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M8.5 9.5V14.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M11.5 9.5V14.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <div className="user-dashboard__track-duration-container">
             <div className="user-dashboard__track-duration">{track.duration}</div>
-            {!isMobile && (
-              <button
-                type="button"
-                className="user-dashboard__track-delete-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(albumId, track.id, track.title);
-                }}
-                title={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-                aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-              >
-                {ui?.dashboard?.deleteTrack ?? 'Delete track'}
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -2320,8 +2383,7 @@ function UserDashboard() {
                             className="user-dashboard__upload-button"
                             onClick={() => setEditAlbumModal({ isOpen: true })}
                           >
-                            <span>+</span>
-                            <span>{ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}</span>
+                            {ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}
                           </button>
                         </>
                       ) : (
@@ -2597,8 +2659,7 @@ function UserDashboard() {
                               });
                             }}
                           >
-                            <span>+</span>
-                            <span>{ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}</span>
+                            {ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}
                           </button>
                         </>
                       ) : (

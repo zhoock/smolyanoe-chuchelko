@@ -1,5 +1,5 @@
-// Новая верстка dashboard в стиле ChatGPT popup
-// Фон за попапом, белая карточка внутри
+/* Dashboard */
+
 @use '../../scss/abstracts/mixins' as *;
 
 dialog {
@@ -420,10 +420,8 @@ dialog {
       padding: var(--ms-0);
       cursor: pointer;
       transition: background-color 0.2s;
-
-      &:hover {
-        background: var(--dashboard-hover-bg);
-      }
+      border-top-left-radius: var(--ms-01);
+      border-top-right-radius: var(--ms-01);
 
       &:focus {
         outline: none;
@@ -1011,10 +1009,106 @@ dialog {
     }
 
     &__track-title {
+      position: relative;
+      display: flex;
+      align-items: center;
       padding: var(--ms-01);
       font-size: var(--dashboard-font-size);
       border-radius: var(--ms-02);
       flex: 1;
+
+      @include breakpoint(tablet) {
+        &:hover {
+          .user-dashboard__track-actions {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+          }
+        }
+      }
+    }
+
+    &__track-actions {
+      position: absolute;
+      right: var(--ms-01);
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+      padding: var(--ms-01);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: var(--ms-01);
+      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+
+      @include breakpoint(tablet) {
+        display: flex;
+      }
+    }
+
+    &__track-edit-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: var(--dashboard-hover-bg);
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentcolor;
+      }
+    }
+
+    &__track-delete-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      color: rgb(220 38 38);
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: rgb(220 38 38 / 10%);
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentcolor;
+      }
     }
 
     &__track-title-input {
@@ -1044,34 +1138,6 @@ dialog {
     &__track-duration {
       color: var(--dashboard-text-secondary);
       font-variant-numeric: tabular-nums;
-    }
-
-    &__track-delete-button {
-      position: absolute;
-      right: 55px;
-      bottom: -6px;
-      z-index: 10;
-      margin-bottom: var(--ms-01);
-      white-space: nowrap;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s ease,
-        all 200ms ease;
-
-      @include dashboard-delete-button;
-
-      @include breakpoint(phones) {
-        display: none;
-      }
-    }
-
-    &__track-item:hover .user-dashboard__track-delete-button {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
     }
 
     &__track-edit-button-swipe {
@@ -1288,11 +1354,8 @@ dialog {
     }
 
     &__upload-button {
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
       width: 100%;
-      text-align: left;
+      text-align: center;
       justify-content: flex-start;
       text-transform: none;
       letter-spacing: normal;
@@ -1300,19 +1363,8 @@ dialog {
       @include dashboard-button(
         $margin: var(--ms-0) 0 0 0,
         $padding: var(--ms-0) var(--ms-1),
-        $border-radius: 0 0 var(--ms-01) var(--ms-01)
+        $border-radius: var(--ms-01)
       );
-
-      span:first-child {
-        color: var(--dashboard-text-primary);
-        font-size: var(--ms-1);
-        font-weight: 400;
-        line-height: 1;
-      }
-
-      span:last-child {
-        color: var(--dashboard-text-primary);
-      }
     }
 
     // Albums empty state (same as posts)

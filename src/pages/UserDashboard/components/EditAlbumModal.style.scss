@@ -13,8 +13,6 @@ dialog {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: var(--ms-2);
-    background: transparent;
 
     &__card {
       padding: var(--ms-2);
@@ -22,6 +20,13 @@ dialog {
       overflow-y: auto;
 
       @include dashboard-modal-card;
+    }
+
+    &__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--ms-1);
     }
 
     &__title {
@@ -33,6 +38,32 @@ dialog {
       line-height: 1.2;
       text-transform: none !important;
       letter-spacing: normal !important;
+    }
+
+    &__close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--ms-1) * 1.5);
+      height: calc(var(--ms-1) * 1.5);
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-1);
+      font-weight: 300;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: var(--dashboard-hover-bg);
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
     }
 
     &__content-lang-switcher {
@@ -92,10 +123,7 @@ dialog {
 
     &__label {
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-weight: 500;
-      text-transform: none !important;
-      letter-spacing: normal !important;
+      font-size: var(--dashboard-font-size);
     }
 
     &__input {
@@ -252,7 +280,6 @@ dialog {
     &__help-text {
       color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
-      margin-bottom: var(--ms-01);
     }
 
     &__checkbox-wrapper {
@@ -297,10 +324,8 @@ dialog {
 
     &__radio-label {
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       cursor: pointer;
-      text-transform: none !important;
-      letter-spacing: normal !important;
     }
 
     &__preorder-help {
@@ -596,7 +621,6 @@ dialog {
       align-items: center;
       justify-content: space-between;
       padding: var(--ms-01);
-      background: var(--dashboard-hover-bg);
       border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
       gap: var(--ms-0);
@@ -612,8 +636,7 @@ dialog {
 
     &__list-item-name {
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-weight: 500;
+      font-size: var(--dashboard-font-size);
     }
 
     &__list-item-role {
