@@ -168,6 +168,7 @@ export interface IInterface {
       albums: string;
       posts: string;
       paymentSettings: string;
+      myPurchases?: string;
     };
     profile: string;
     profileSettings: string;
@@ -220,9 +221,19 @@ export interface IInterface {
     failedToUploadCover: string;
     confirmAction: string;
     error: string;
+    success?: string;
     errorDeletingArticle: string;
     russian: string;
     english: string;
+    dragToReorder?: string;
+    clickToEdit?: string;
+    deleteTrack?: string;
+    deleteAlbum?: string;
+    errorLoading?: string;
+    failedToLoadAlbums?: string;
+    selectLanguage?: string;
+    changeAvatar?: string;
+    errorSavingText?: string;
     enterLink: string;
     addImage: string;
     addDivider: string;
@@ -258,11 +269,33 @@ export interface IInterface {
     dragImageHereOr: string;
     loading?: string;
     saving?: string;
+    myPurchases?: {
+      title: string;
+      purchasesFor: string;
+      changeEmail: string;
+      enterEmailDescription: string;
+      emailAddress: string;
+      viewPurchases: string;
+      loadingPurchases: string;
+      purchasesNotFound: string;
+      checkEmail: string;
+      purchased: string;
+      downloads: string;
+      downloadAlbum: string;
+      downloading: string;
+      downloaded: string;
+      download: string;
+      tracks: string;
+      downloadTrack: string;
+      downloadFullAlbum: string;
+      errorDownloadingTrack: string;
+      errorDownloadingAlbum: string;
+    };
     profileSettingsModal?: {
       tabs: {
+        general: string;
         profile: string;
         security: string;
-        interface: string;
       };
       fields: {
         bandName: string;

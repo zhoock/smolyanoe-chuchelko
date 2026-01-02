@@ -2,7 +2,6 @@
   &__label {
     display: block;
     margin-bottom: var(--ms-2);
-    font-weight: 600;
     color: var(--dashboard-text-primary);
   }
 
@@ -80,7 +79,7 @@
 
   &__dropzone-hint {
     color: var(--dashboard-text-secondary);
-    font-size: 14px;
+    font-size: var(--dashboard-font-size);
     margin-bottom: var(--ms-01);
   }
 

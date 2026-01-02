@@ -49,7 +49,14 @@ export const handler: Handler = async (
       const data: SaveTrackTextRequest = JSON.parse(event.body || '{}');
 
       // Валидация данных
-      if (!data.albumId || !data.trackId || !data.lang || !data.content) {
+      // content может быть пустой строкой (пользователь может удалить весь текст)
+      if (
+        !data.albumId ||
+        !data.trackId ||
+        !data.lang ||
+        data.content === undefined ||
+        data.content === null
+      ) {
         return {
           statusCode: 400,
           headers,

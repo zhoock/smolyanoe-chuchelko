@@ -2,6 +2,12 @@
 @use '../../../scss/abstracts/mixins' as *;
 
 dialog {
+  // Общие стили для всех кнопок в попапе
+  button {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
   .edit-lyrics-modal {
     display: flex;
     align-items: center;
@@ -13,46 +19,82 @@ dialog {
     &__card {
       display: flex;
       flex-direction: column;
-      width: 100%;
-      max-width: 600px;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: var(--ms-2);
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px var(--dashboard-shadow);
-      gap: var(--ms-1);
+      overflow: hidden;
+      padding: 0;
+      gap: 0;
+
+      @include dashboard-modal-card;
     }
 
     &__header {
       display: flex;
-      justify-content: space-between;
+      flex-shrink: 0;
       align-items: center;
       gap: var(--ms-0);
+      padding: var(--ms-1) var(--ms-2);
+      border-bottom: 1px solid var(--dashboard-divider);
+    }
+
+    &__close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--ms-1) * 1.5);
+      height: calc(var(--ms-1) * 1.5);
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-1);
+      font-weight: 300;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+
+      &:hover {
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-hover-bg);
+      }
+
+      &:focus {
+        outline: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--dark-greenish-yellow);
+        outline-offset: 2px;
+      }
+    }
+
+    &__content {
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      gap: var(--ms-1);
+      min-height: 0;
+      overflow-y: auto;
+      padding: var(--ms-2);
     }
 
     &__title {
       margin: 0;
       padding: 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
+      font-size: var(--dashboard-heading-font-size);
       font-weight: 700;
       line-height: 1.2;
       text-transform: none !important;
       letter-spacing: normal !important;
     }
 
-    &__preview-button {
-      @include dashboard-button;
-    }
-
     &__divider {
-      width: calc(100% + var(--ms-2) * 2);
+      width: 100%;
       height: 1px;
-      background: var(--dashboard-hover-bg);
-      margin-left: calc(var(--ms-2) * -1);
-      margin-right: calc(var(--ms-2) * -1);
+      background: var(--dashboard-divider);
+      flex-shrink: 0;
     }
 
     &__textarea {
@@ -76,44 +118,19 @@ dialog {
     }
 
     &__field {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-01);
+      @include dashboard-form-field;
     }
 
     &__label {
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-weight: 500;
+      @include dashboard-form-label;
     }
 
     &__input {
-      display: block;
-      width: 100%;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-family: inherit;
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      box-sizing: border-box;
-
-      &::placeholder {
-        color: var(--dashboard-text-secondary);
-      }
-
-      &:focus {
-        outline: none;
-        border-color: var(--dark-greenish-yellow);
-      }
+      @include dashboard-form-input;
     }
 
-    &__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: var(--ms-0);
-      margin-top: var(--ms-0);
+    &__footer {
+      @include dashboard-modal-footer;
     }
 
     &__button {

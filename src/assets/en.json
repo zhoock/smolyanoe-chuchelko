@@ -52,7 +52,8 @@
       "tabs": {
         "albums": "Albums",
         "posts": "Posts",
-        "paymentSettings": "Payment Settings"
+        "paymentSettings": "Payment Settings",
+        "myPurchases": "My Purchases"
       },
       "profile": "Profile",
       "profileSettings": "Profile Settings",
@@ -105,9 +106,19 @@
       "failedToUploadCover": "Failed to upload cover image",
       "confirmAction": "Confirm action",
       "error": "Error",
+      "success": "Success",
       "errorDeletingArticle": "Error deleting article",
+      "errorSavingText": "Error saving text",
       "russian": "Russian",
       "english": "English",
+      "dragToReorder": "Drag to reorder",
+      "clickToEdit": "Click to edit",
+      "deleteTrack": "Delete track",
+      "deleteAlbum": "Delete album",
+      "errorLoading": "Error loading:",
+      "failedToLoadAlbums": "Failed to load albums",
+      "selectLanguage": "Select language. Current language:",
+      "changeAvatar": "Change avatar",
       "enterLink": "Enter link:",
       "addImage": "Add image",
       "addDivider": "Add divider",
@@ -143,11 +154,33 @@
       "dragImageHereOr": "Drag image here or",
       "loading": "Loading...",
       "saving": "Saving...",
+      "myPurchases": {
+        "title": "My Purchases",
+        "purchasesFor": "Purchases for:",
+        "changeEmail": "Change Email",
+        "enterEmailDescription": "Enter the email you used when purchasing to view all your purchases and download tracks.",
+        "emailAddress": "Email address",
+        "viewPurchases": "View purchases",
+        "loadingPurchases": "Loading purchases...",
+        "purchasesNotFound": "Purchases not found.",
+        "checkEmail": "Make sure you entered the correct email address.",
+        "purchased": "Purchased:",
+        "downloads": "Downloads:",
+        "downloadAlbum": "Download Album",
+        "downloading": "Downloading...",
+        "downloaded": "Downloaded",
+        "download": "Download",
+        "tracks": "Tracks:",
+        "downloadTrack": "Download track",
+        "downloadFullAlbum": "Download full album",
+        "errorDownloadingTrack": "Error downloading track. Please try again.",
+        "errorDownloadingAlbum": "Error downloading album. Please try again."
+      },
       "profileSettingsModal": {
         "tabs": {
+          "general": "General",
           "profile": "Profile",
-          "security": "Security",
-          "interface": "Interface"
+          "security": "Security"
         },
         "fields": {
           "bandName": "Band Name",

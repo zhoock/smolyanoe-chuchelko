@@ -66,15 +66,15 @@ html.theme-dark {
 
   // Dashboard (Админка) - темная тема
   --dashboard-card-bg: var(--deep-black);
-  --dashboard-card-border: var(--iron-slate);
+  --dashboard-card-border: var(--graphite-green);
   --dashboard-text-primary: var(--white);
   --dashboard-text-secondary: var(--warm-concrete);
   --dashboard-input-bg: var(--deep-black);
-  --dashboard-input-border: var(--iron-slate);
-  --dashboard-button-bg: var(--iron-slate);
+  --dashboard-input-border: var(--graphite-green);
+  --dashboard-button-bg: var(--graphite-green);
   --dashboard-button-bg-hover: var(--quiet-gray);
   --dashboard-button-text: var(--white);
-  --dashboard-button-cancel-bg: var(--iron-slate);
+  --dashboard-button-cancel-bg: var(--graphite-green);
   --dashboard-button-cancel-text: var(--white);
   --dashboard-button-cancel-hover: var(--quiet-gray);
   --dashboard-button-save-bg: var(--white);
@@ -83,8 +83,8 @@ html.theme-dark {
   --dashboard-button-primary-bg: var(--white);
   --dashboard-button-primary-bg-hover: var(--moon-ash);
   --dashboard-button-primary-text: var(--deep-coal);
-  --dashboard-divider: var(--iron-slate);
-  --dashboard-hover-bg: var(--iron-slate);
+  --dashboard-divider: var(--graphite-green);
+  --dashboard-hover-bg: var(--graphite-green);
   --dashboard-active-bg: var(--warm-concrete);
   --dashboard-shadow: rgb(var(--black-rgb) / 50%);
   --dashboard-backdrop: rgb(var(--black-rgb) / 70%);

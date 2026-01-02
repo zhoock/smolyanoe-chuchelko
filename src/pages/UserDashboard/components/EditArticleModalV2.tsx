@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/EditArticleModalV2.tsx
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -59,6 +59,7 @@ const LANG_TEXTS = {
     articlePublished: 'Статья успешно опубликована',
     savingError: 'Ошибка при сохранении',
     addBlock: 'Добавить блок',
+    close: 'Закрыть',
   },
   en: {
     editArticle: 'Edit Article',
@@ -76,6 +77,7 @@ const LANG_TEXTS = {
     articlePublished: 'Article published successfully',
     savingError: 'Error saving article',
     addBlock: 'Add Block',
+    close: 'Close',
   },
 };
 
@@ -90,6 +92,10 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const [focusBlockId, setFocusBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Исходные значения для отслеживания изменений
+  const [initialBlocks, setInitialBlocks] = useState<Block[]>([]);
+  const [initialMeta, setInitialMeta] = useState<ArticleMeta>({ title: '', description: '' });
 
   // История для Undo/Redo
   type CaretPosition = {
@@ -180,11 +186,15 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setIsLoading(false);
         setCurrentArticle(article);
         setOriginalIsDraft(true);
-        setBlocks([{ id: generateId(), type: 'paragraph', text: '' }]);
-        setMeta({
+        const initialBlocksValue: Block[] = [{ id: generateId(), type: 'paragraph', text: '' }];
+        const initialMetaValue = {
           title: '',
           description: '',
-        });
+        };
+        setBlocks(initialBlocksValue);
+        setMeta(initialMetaValue);
+        setInitialBlocks(JSON.parse(JSON.stringify(initialBlocksValue))); // Deep copy
+        setInitialMeta({ ...initialMetaValue });
         return;
       }
 
@@ -383,6 +393,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
             // #endregion
 
             setBlocks(loadedBlocks);
+            setInitialBlocks(JSON.parse(JSON.stringify(loadedBlocks))); // Deep copy
 
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
@@ -400,10 +411,13 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
             }).catch(() => {});
             // #endregion
 
-            setMeta({
+            const loadedMeta = {
               title: articleForEdit.nameArticle || '',
               description: articleForEdit.description || '',
-            });
+            };
+            setMeta(loadedMeta);
+            setInitialMeta({ ...loadedMeta });
+            setInitialMeta({ ...loadedMeta });
           }
         } else {
           // #region agent log
@@ -567,6 +581,77 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     };
   }, [blocks, meta, isOpen, currentArticle?.id, debouncedAutoSave]);
 
+  // Функция для сравнения двух блоков
+  const blocksAreEqual = useCallback((block1: Block, block2: Block): boolean => {
+    if (block1.id !== block2.id || block1.type !== block2.type) {
+      return false;
+    }
+
+    // Сравниваем в зависимости от типа блока
+    switch (block1.type) {
+      case 'paragraph':
+      case 'title':
+      case 'subtitle':
+      case 'quote':
+        return block1.text === (block2 as typeof block1).text;
+
+      case 'list':
+        return JSON.stringify(block1.items) === JSON.stringify((block2 as typeof block1).items);
+
+      case 'divider':
+        return true; // divider не имеет дополнительных свойств
+
+      case 'image':
+        return (
+          block1.imageKey === (block2 as typeof block1).imageKey &&
+          block1.caption === (block2 as typeof block1).caption
+        );
+
+      case 'carousel':
+        return (
+          JSON.stringify(block1.imageKeys) ===
+            JSON.stringify((block2 as typeof block1).imageKeys) &&
+          block1.caption === (block2 as typeof block1).caption
+        );
+
+      default:
+        return false;
+    }
+  }, []);
+
+  // Проверка наличия изменений
+  const hasChanges = useMemo(() => {
+    // Сравниваем блоки
+    const blocksChanged =
+      blocks.length !== initialBlocks.length ||
+      blocks.some((block, index) => {
+        const initialBlock = initialBlocks[index];
+        if (!initialBlock) return true;
+        return !blocksAreEqual(block, initialBlock);
+      });
+
+    // Сравниваем мета
+    const metaChanged =
+      meta.title !== initialMeta.title || meta.description !== initialMeta.description;
+
+    return blocksChanged || metaChanged;
+  }, [blocks, initialBlocks, meta, initialMeta, blocksAreEqual]);
+
+  // Отмена изменений
+  const handleCancel = useCallback(() => {
+    setBlocks(JSON.parse(JSON.stringify(initialBlocks))); // Deep copy
+    setMeta({ ...initialMeta });
+  }, [initialBlocks, initialMeta]);
+
+  // Обработка закрытия модального окна
+  const handleClose = useCallback(() => {
+    if (hasChanges) {
+      // Если есть изменения, отменяем их и закрываем
+      handleCancel();
+    }
+    onClose();
+  }, [hasChanges, handleCancel, onClose]);
+
   // Публикация
   const handlePublish = useCallback(async () => {
     if (!currentArticle) return;
@@ -620,6 +705,9 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
       if (response.ok) {
         setSaveStatus('saved');
+        // Обновляем начальные значения после успешного сохранения
+        setInitialBlocks(JSON.parse(JSON.stringify(blocks))); // Deep copy
+        setInitialMeta({ ...meta });
         // Обновляем Redux store
         await dispatch(fetchArticles({ lang, force: true })).unwrap();
         onClose();
@@ -1909,7 +1997,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   };
 
   return (
-    <Popup isActive={isOpen} onClose={onClose}>
+    <Popup isActive={isOpen} onClose={handleClose}>
       {isLoading ? (
         //   {true ? (
         <ArticleEditSkeleton />
@@ -1928,23 +2016,14 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                 />
                 <div className="edit-article-v2__status">{getStatusText()}</div>
               </div>
-              <div className="edit-article-v2__header-actions">
-                <button
-                  type="button"
-                  className="edit-article-v2__button edit-article-v2__button--cancel"
-                  onClick={onClose}
-                >
-                  {texts.cancel}
-                </button>
-                <button
-                  type="button"
-                  className="edit-article-v2__button edit-article-v2__button--publish"
-                  onClick={handlePublish}
-                  disabled={isPublishing || saveStatus === 'saving'}
-                >
-                  {isPublishing ? texts.publishing : texts.publish}
-                </button>
-              </div>
+              <button
+                type="button"
+                className="edit-article-v2__close"
+                onClick={handleClose}
+                aria-label={texts.close}
+              >
+                ×
+              </button>
             </div>
 
             {/* Content */}
@@ -2093,6 +2172,27 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                 />
               )}
             </div>
+
+            {/* Footer с кнопками - показывается только при наличии изменений */}
+            {hasChanges && (
+              <div className="edit-article-v2__footer">
+                <button
+                  type="button"
+                  className="edit-article-v2__button edit-article-v2__button--cancel"
+                  onClick={handleCancel}
+                >
+                  {texts.cancel}
+                </button>
+                <button
+                  type="button"
+                  className="edit-article-v2__button edit-article-v2__button--publish"
+                  onClick={handlePublish}
+                  disabled={isPublishing || saveStatus === 'saving'}
+                >
+                  {isPublishing ? texts.publishing : texts.publish}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Модал редактирования карусели */}

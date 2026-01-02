@@ -2,6 +2,12 @@
 @use '../../../scss/abstracts/mixins' as *;
 
 dialog {
+  // Общие стили для всех кнопок в попапе
+  button {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
   .sync-lyrics-modal {
     display: flex;
     align-items: center;
@@ -11,18 +17,11 @@ dialog {
     background: transparent;
 
     &__card {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      max-width: 600px;
-      max-height: 90vh;
       padding: var(--ms-2);
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px var(--dashboard-shadow);
       gap: var(--ms-1);
       overflow-y: auto;
+
+      @include dashboard-modal-card;
     }
 
     &__header {
@@ -36,7 +35,7 @@ dialog {
       margin: 0;
       padding: 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
+      font-size: var(--dashboard-heading-font-size);
       font-weight: 700;
       line-height: 1.2;
       text-transform: none !important;

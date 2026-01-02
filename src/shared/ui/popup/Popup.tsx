@@ -46,6 +46,9 @@ const PopupComponent = ({
     };
   }, [onClose]);
 
+  // popup__gradient рендерится только для плеера (когда передан bgColor)
+  const shouldRenderGradient = !!bgColor;
+
   return (
     <dialog
       ref={dialogRef}
@@ -54,7 +57,9 @@ const PopupComponent = ({
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
     >
-      <div className="popup__gradient" style={{ background: bgColor }} aria-hidden="true"></div>
+      {shouldRenderGradient && (
+        <div className="popup__gradient" style={{ background: bgColor }} aria-hidden="true"></div>
+      )}
       {children}
     </dialog>
   );

@@ -1,5 +1,8 @@
 // src/pages/UserDashboard/components/MyPurchasesContent.tsx
 import React, { useEffect, useState } from 'react';
+import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import {
   getMyPurchases,
   getTrackDownloadUrl,
@@ -14,6 +17,8 @@ interface MyPurchasesContentProps {
 }
 
 export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
+  const { lang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [email, setEmail] = useState(userEmail || '');
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +46,11 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       setSubmitted(true);
     } catch (err) {
       console.error('Error fetching purchases:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load purchases');
+      setError(
+        err instanceof Error
+          ? err.message
+          : (ui?.dashboard?.myPurchases?.purchasesNotFound ?? 'Failed to load purchases')
+      );
       setPurchases([]);
     } finally {
       setLoading(false);
@@ -51,13 +60,13 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError('Please enter your email address');
+      setError(ui?.dashboard?.myPurchases?.emailAddress ?? 'Please enter your email address');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      setError('Please enter a valid email address');
+      setError(ui?.dashboard?.myPurchases?.checkEmail ?? 'Please enter a valid email address');
       return;
     }
 
@@ -128,7 +137,10 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       }, 2000);
     } catch (err) {
       console.error('Error downloading track:', err);
-      alert('Ошибка при скачивании трека. Попробуйте еще раз.');
+      alert(
+        ui?.dashboard?.myPurchases?.errorDownloadingTrack ??
+          'Error downloading track. Please try again.'
+      );
     } finally {
       setDownloadingTracks((prev) => {
         const next = new Set(prev);
@@ -200,7 +212,10 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       }, 2000);
     } catch (err) {
       console.error('Error downloading album:', err);
-      alert('Ошибка при скачивании альбома. Попробуйте еще раз.');
+      alert(
+        ui?.dashboard?.myPurchases?.errorDownloadingAlbum ??
+          'Error downloading album. Please try again.'
+      );
     } finally {
       setDownloadingAlbums((prev) => {
         const next = new Set(prev);
@@ -212,7 +227,7 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
+    return date.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -221,19 +236,21 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
 
   return (
     <div className="user-dashboard__my-purchases">
-      <h3 className="user-dashboard__section-title">Мои покупки</h3>
+      <h3 className="user-dashboard__section-title">
+        {ui?.dashboard?.myPurchases?.title ?? 'My Purchases'}
+      </h3>
 
       {!submitted ? (
         <div className="user-dashboard__my-purchases-form">
           <p className="user-dashboard__my-purchases-description">
-            Введите email, который вы использовали при покупке, чтобы просмотреть все ваши покупки и
-            скачать треки.
+            {ui?.dashboard?.myPurchases?.enterEmailDescription ??
+              'Enter the email you used when purchasing to view all your purchases and download tracks.'}
           </p>
 
           <form className="user-dashboard__my-purchases-form-inner" onSubmit={handleSubmit}>
             <div className="user-dashboard__my-purchases-form-group">
               <label htmlFor="purchase-email" className="user-dashboard__my-purchases-label">
-                Email адрес
+                {ui?.dashboard?.myPurchases?.emailAddress ?? 'Email address'}
               </label>
               <input
                 type="email"
@@ -256,7 +273,9 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
               className="user-dashboard__my-purchases-submit"
               disabled={loading}
             >
-              {loading ? 'Загрузка...' : 'Просмотреть покупки'}
+              {loading
+                ? (ui?.dashboard?.loading ?? 'Loading...')
+                : (ui?.dashboard?.myPurchases?.viewPurchases ?? 'View purchases')}
             </button>
           </form>
         </div>
@@ -264,7 +283,8 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
         <>
           <div className="user-dashboard__my-purchases-email-info">
             <p>
-              Покупки для: <strong>{email}</strong>
+              {ui?.dashboard?.myPurchases?.purchasesFor ?? 'Purchases for:'}{' '}
+              <strong>{email}</strong>
             </p>
             <button
               className="user-dashboard__my-purchases-change-email"
@@ -274,20 +294,25 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                 setPurchases([]);
               }}
             >
-              Изменить email
+              {ui?.dashboard?.myPurchases?.changeEmail ?? 'Change Email'}
             </button>
           </div>
 
           {loading && (
-            <div className="user-dashboard__my-purchases-loading">Загрузка покупок...</div>
+            <div className="user-dashboard__my-purchases-loading">
+              {ui?.dashboard?.myPurchases?.loadingPurchases ?? 'Loading purchases...'}
+            </div>
           )}
 
           {error && <div className="user-dashboard__my-purchases-error">{error}</div>}
 
           {!loading && !error && purchases.length === 0 && (
             <div className="user-dashboard__my-purchases-empty">
-              <p>Покупки не найдены.</p>
-              <p>Убедитесь, что вы ввели правильный email адрес.</p>
+              <p>{ui?.dashboard?.myPurchases?.purchasesNotFound ?? 'Purchases not found.'}</p>
+              <p>
+                {ui?.dashboard?.myPurchases?.checkEmail ??
+                  'Make sure you entered the correct email address.'}
+              </p>
             </div>
           )}
 
@@ -310,35 +335,39 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                         {purchase.artist} — {purchase.album}
                       </h4>
                       <p className="user-dashboard__my-purchases-purchase-date">
-                        Куплено: {formatDate(purchase.purchasedAt)}
+                        {ui?.dashboard?.myPurchases?.purchased ?? 'Purchased:'}{' '}
+                        {formatDate(purchase.purchasedAt)}
                       </p>
                       {purchase.downloadCount > 0 && (
                         <p className="user-dashboard__my-purchases-purchase-downloads">
-                          Скачиваний: {purchase.downloadCount}
+                          {ui?.dashboard?.myPurchases?.downloads ?? 'Downloads:'}{' '}
+                          {purchase.downloadCount}
                         </p>
                       )}
                     </div>
                     <button
                       className="user-dashboard__my-purchases-album-download"
                       onClick={() => handleDownloadAlbum(purchase.purchaseToken)}
-                      title="Скачать весь альбом"
+                      title={ui?.dashboard?.myPurchases?.downloadFullAlbum ?? 'Download full album'}
                       disabled={downloadingAlbums.has(purchase.purchaseToken)}
                     >
                       {downloadingAlbums.has(purchase.purchaseToken) ? (
                         <>
                           <span className="user-dashboard__download-spinner"></span>
-                          Скачивание...
+                          {ui?.dashboard?.myPurchases?.downloading ?? 'Downloading...'}
                         </>
                       ) : downloadedItems.has(`album-${purchase.purchaseToken}`) ? (
-                        'Скачано'
+                        (ui?.dashboard?.myPurchases?.downloaded ?? 'Downloaded')
                       ) : (
-                        'Скачать альбом'
+                        (ui?.dashboard?.myPurchases?.downloadAlbum ?? 'Download Album')
                       )}
                     </button>
                   </div>
 
                   <div className="user-dashboard__my-purchases-tracks">
-                    <h5 className="user-dashboard__my-purchases-tracks-title">Треки:</h5>
+                    <h5 className="user-dashboard__my-purchases-tracks-title">
+                      {ui?.dashboard?.myPurchases?.tracks ?? 'Tracks:'}
+                    </h5>
                     <ul className="user-dashboard__my-purchases-tracks-list">
                       {purchase.tracks.map((track, index) => (
                         <li key={track.trackId} className="user-dashboard__my-purchases-track">
@@ -353,7 +382,7 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                             onClick={() =>
                               handleDownloadTrack(purchase.purchaseToken, track.trackId)
                             }
-                            title="Скачать трек"
+                            title={ui?.dashboard?.myPurchases?.downloadTrack ?? 'Download track'}
                             disabled={downloadingTracks.has(
                               `${purchase.purchaseToken}-${track.trackId}`
                             )}
@@ -361,14 +390,14 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                             {downloadingTracks.has(`${purchase.purchaseToken}-${track.trackId}`) ? (
                               <>
                                 <span className="user-dashboard__download-spinner"></span>
-                                Скачивание...
+                                {ui?.dashboard?.myPurchases?.downloading ?? 'Downloading...'}
                               </>
                             ) : downloadedItems.has(
                                 `${purchase.purchaseToken}-${track.trackId}`
                               ) ? (
-                              'Скачано'
+                              (ui?.dashboard?.myPurchases?.downloaded ?? 'Downloaded')
                             ) : (
-                              'Скачать'
+                              (ui?.dashboard?.myPurchases?.download ?? 'Download')
                             )}
                           </button>
                         </li>

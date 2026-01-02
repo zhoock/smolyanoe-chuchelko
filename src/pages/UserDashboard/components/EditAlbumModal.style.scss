@@ -2,6 +2,12 @@
 @use '../../../scss/abstracts/mixins' as *;
 
 dialog {
+  // Общие стили для всех кнопок в попапе
+  button {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
   .edit-album-modal {
     display: flex;
     align-items: center;
@@ -11,25 +17,18 @@ dialog {
     background: transparent;
 
     &__card {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      max-width: 600px;
       padding: var(--ms-2);
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px var(--dashboard-shadow);
       gap: var(--ms-1);
-      max-height: 90vh;
       overflow-y: auto;
+
+      @include dashboard-modal-card;
     }
 
     &__title {
       margin: 0;
       padding: 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
+      font-size: var(--dashboard-heading-font-size);
       font-weight: 700;
       line-height: 1.2;
       text-transform: none !important;
@@ -100,28 +99,7 @@ dialog {
     }
 
     &__input {
-      padding: var(--ms-01) var(--ms-01);
-      color: var(--dashboard-text-primary) !important;
-      font-size: var(--ms-0) !important;
-      background: var(--dashboard-card-bg) !important;
-      border: 1px solid var(--dashboard-card-border) !important;
-      border-radius: var(--ms-01) !important;
-      transition: all 0.2s;
-      box-sizing: border-box !important;
-
-      &::placeholder {
-        color: var(--dashboard-text-secondary);
-      }
-
-      &:focus {
-        outline: none !important;
-        border-color: var(--dark-greenish-yellow) !important;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+      @include dashboard-form-input;
 
       &--price {
         flex: 1;
@@ -129,27 +107,7 @@ dialog {
     }
 
     &__textarea {
-      display: block;
-      width: 100%;
-      min-height: 120px;
-      padding: var(--ms-01);
-      color: var(--dashboard-text-primary) !important;
-      font-size: var(--ms-0) !important;
-      font-family: inherit;
-      background: var(--dashboard-card-bg) !important;
-      border: 1px solid var(--dashboard-card-border) !important;
-      border-radius: var(--ms-01) !important;
-      resize: vertical;
-      box-sizing: border-box !important;
-
-      &::placeholder {
-        color: var(--dashboard-text-secondary);
-      }
-
-      &:focus {
-        outline: none !important;
-        border-color: var(--dark-greenish-yellow) !important;
-      }
+      @include dashboard-form-textarea($min-height: 120px);
     }
 
     &__dropzone {

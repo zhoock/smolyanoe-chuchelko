@@ -35,7 +35,6 @@ $ms-4: 123.363px; // 6.854rem;
   cursor: pointer;
   appearance: none;
   user-select: none;
-  text-transform: capitalize;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
@@ -71,6 +70,9 @@ $ms-4: 123.363px; // 6.854rem;
   $padding: var(--ms-01) var(--ms-0),
   $border-radius: var(--ms-01)
 ) {
+  font-size: var(--dashboard-font-size);
+  line-height: 16px;
+
   @include button-variant(
     $color: var(--dashboard-button-cancel-text),
     $background: var(--dashboard-button-cancel-bg),
@@ -93,15 +95,14 @@ $ms-4: 123.363px; // 6.854rem;
   margin: $margin;
   padding: $padding;
   color: var(--dashboard-text-secondary);
-  font-size: var(--ms-0);
-  line-height: 1;
+  font-size: 12px;
+  line-height: 16px;
   background: rgb(139 69 19 / 30%); // Темно-коричневый фон
   border: 1px solid rgb(220 38 38 / 50%); // Красная граница
   border-radius: $border-radius;
   transition: all 0.2s;
   align-items: center;
   justify-content: center;
-  font-weight: 400;
   cursor: pointer;
   opacity: 0.7;
   text-transform: none;
@@ -127,6 +128,184 @@ $ms-4: 123.363px; // 6.854rem;
     opacity: 0.5;
     pointer-events: none;
   }
+}
+
+// Dashboard modal card - единый стиль для всех попапов
+@mixin dashboard-modal-card(
+  $mobile-max-height: 90vh,
+  $desktop-width: 680px,
+  $desktop-height: 600px
+) {
+  // Базовые стили
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 60vh;
+  max-height: $mobile-max-height;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: var(--ms-0);
+  box-shadow: 0 8px 32px var(--dashboard-shadow);
+
+  // Десктоп стили
+  @include breakpoint(tablet) {
+    width: $desktop-width;
+    max-width: $desktop-width;
+    height: $desktop-height;
+    min-height: $desktop-height;
+    max-height: $desktop-height;
+  }
+}
+
+// Dashboard font size - базовый размер шрифта для дашборда
+@mixin dashboard-font-size {
+  font-size: var(--dashboard-font-size);
+}
+
+// Dashboard heading font size - размер шрифта для заголовков
+@mixin dashboard-heading-font-size {
+  font-size: var(--dashboard-heading-font-size);
+}
+
+// Dashboard form field - контейнер для поля формы (стиль ChatGPT)
+@mixin dashboard-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+// Dashboard form label - метка поля формы (стиль ChatGPT)
+@mixin dashboard-form-label {
+  color: var(--dashboard-text-primary);
+  font-size: var(--dashboard-font-size);
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-bottom: 4px;
+}
+
+// Dashboard form input - текстовое поле (стиль ChatGPT)
+@mixin dashboard-form-input($padding: 12px 16px) {
+  display: block;
+  width: 100%;
+  padding: $padding;
+  color: var(--dashboard-text-primary);
+  font-size: var(--dashboard-font-size);
+  font-family: inherit;
+  line-height: 1.5;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: var(--dashboard-text-secondary);
+    opacity: 0.7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--dark-greenish-yellow);
+    box-shadow: 0 0 0 3px rgba(var(--dark-greenish-yellow-rgb, 250 229 155) / 10%);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--dashboard-hover-bg);
+  }
+}
+
+// Dashboard form textarea - многострочное поле (стиль ChatGPT)
+@mixin dashboard-form-textarea($padding: 12px 16px, $min-height: 120px) {
+  display: block;
+  width: 100%;
+  min-height: $min-height;
+  padding: $padding;
+  color: var(--dashboard-text-primary);
+  font-size: var(--dashboard-font-size);
+  line-height: 1.5;
+  font-family: inherit;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 8px;
+  box-sizing: border-box;
+  resize: vertical;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: var(--dashboard-text-secondary);
+    opacity: 0.7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--dark-greenish-yellow);
+    box-shadow: 0 0 0 3px rgba(var(--dark-greenish-yellow-rgb, 250 229 155) / 10%);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--dashboard-hover-bg);
+  }
+}
+
+// Dashboard form select - выпадающий список (стиль ChatGPT)
+@mixin dashboard-form-select($padding: 12px 16px) {
+  display: block;
+  width: 100%;
+  padding: $padding;
+  color: var(--dashboard-text-primary);
+  font-size: var(--dashboard-font-size);
+  font-family: inherit;
+  line-height: 1.5;
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
+  border-radius: 8px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  appearance: none;
+
+  &:focus {
+    outline: none;
+    border-color: var(--dark-greenish-yellow);
+    box-shadow: 0 0 0 3px rgba(var(--dark-greenish-yellow-rgb, 250 229 155) / 10%);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--dashboard-hover-bg);
+  }
+}
+
+@mixin dashboard-modal-footer(
+  $padding: var(--ms-01),
+  $border-color: var(--dashboard-divider),
+  $margin-top: auto
+) {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ms-0);
+  padding: $padding;
+  margin-top: $margin-top;
+  border-top: 1px solid $border-color;
+  background: var(--dashboard-card-bg);
 }
 
 $old-phones: 'width < 375px';

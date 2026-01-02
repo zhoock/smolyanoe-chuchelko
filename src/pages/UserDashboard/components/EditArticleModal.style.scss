@@ -10,6 +10,12 @@
   padding: 0;
   background: transparent;
 
+  // Общие стили для всех кнопок
+  button {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
   &__card {
     display: flex;
     flex-direction: column;
@@ -79,7 +85,7 @@
     margin: 0;
     padding: 0;
     color: var(--dashboard-text-primary);
-    font-size: var(--ms-1);
+    font-size: var(--dashboard-heading-font-size);
     font-weight: 700;
     line-height: 1.2;
   }

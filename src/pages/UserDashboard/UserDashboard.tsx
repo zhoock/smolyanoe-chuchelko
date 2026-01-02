@@ -7,7 +7,6 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import type { SupportedLang } from '@shared/model/lang';
 import clsx from 'clsx';
 import {
   DndContext,
@@ -58,7 +57,7 @@ import { SyncLyricsModal } from './components/SyncLyricsModal';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/MyPurchasesContent';
-import type { IAlbums, IArticles } from '@models';
+import type { IAlbums, IArticles, IInterface } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
   transformAlbumsToAlbumData,
@@ -67,7 +66,6 @@ import {
 } from '@entities/album/lib/transformAlbumData';
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import './UserDashboard.style.scss';
-const LANG_OPTIONS: SupportedLang[] = ['en', 'ru'];
 
 // Компонент для сортируемого трека
 interface SortableTrackItemProps {
@@ -75,6 +73,7 @@ interface SortableTrackItemProps {
   albumId: string;
   onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
   onTitleChange?: (albumId: string, trackId: string, newTitle: string) => Promise<void>;
+  ui?: IInterface;
 }
 
 // Функция для извлечения первых двух строк текста из блоков статьи
@@ -166,7 +165,13 @@ function getArticlePreviewText(article: IArticles): string {
   return preview;
 }
 
-function SortableTrackItem({ track, albumId, onDelete, onTitleChange }: SortableTrackItemProps) {
+function SortableTrackItem({
+  track,
+  albumId,
+  onDelete,
+  onTitleChange,
+  ui,
+}: SortableTrackItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: track.id,
   });
@@ -227,8 +232,8 @@ function SortableTrackItem({ track, albumId, onDelete, onTitleChange }: Sortable
         {...attributes}
         {...listeners}
         className="user-dashboard__track-drag-handle"
-        title="Перетащите для изменения порядка"
-        aria-label="Перетащите для изменения порядка"
+        title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+        aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
       >
         <span className="user-dashboard__track-drag-icon">⋮⋮</span>
       </div>
@@ -249,7 +254,7 @@ function SortableTrackItem({ track, albumId, onDelete, onTitleChange }: Sortable
         <div
           className="user-dashboard__track-title"
           onClick={handleTitleClick}
-          title="Нажмите для редактирования"
+          title={ui?.dashboard?.clickToEdit ?? 'Click to edit'}
         >
           {track.title}
         </div>
@@ -264,10 +269,10 @@ function SortableTrackItem({ track, albumId, onDelete, onTitleChange }: Sortable
               e.stopPropagation();
               onDelete(albumId, track.id, track.title);
             }}
-            title="Удалить трек"
-            aria-label="Удалить трек"
+            title={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+            aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
           >
-            Удалить трек
+            {ui?.dashboard?.deleteTrack ?? 'Delete track'}
           </button>
         )}
       </div>
@@ -291,23 +296,22 @@ function UserDashboard() {
 
   // Получаем вкладку из URL параметра или используем значение по умолчанию
   const tabParam = searchParams.get('tab');
-  const validTabs: Array<'albums' | 'posts' | 'payment-settings' | 'my-purchases'> = [
+  const validTabs: Array<'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile'> = [
     'albums',
     'posts',
     'payment-settings',
     'my-purchases',
+    'profile',
   ];
   const initialTab =
     tabParam && validTabs.includes(tabParam as any)
-      ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases')
+      ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile')
       : 'albums';
 
   const [activeTab, setActiveTab] = useState<
-    'albums' | 'posts' | 'payment-settings' | 'my-purchases'
+    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile'
   >(initialTab);
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
@@ -702,7 +706,7 @@ function UserDashboard() {
           setIsLoadingTracks(false);
         }
       } catch (error) {
-        console.error('Ошибка загрузки данных альбомов:', error);
+        console.error('Error loading albums data:', error);
         if (!abortController.signal.aborted) {
           setIsLoadingTracks(false);
         }
@@ -713,25 +717,6 @@ function UserDashboard() {
       abortController.abort();
     };
   }, [albumsFromStore, lang]);
-
-  // Закрываем меню языка при клике вне
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setLangOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Смена языка
-  const changeLang = (newLang: SupportedLang) => {
-    if (newLang !== lang) {
-      setLang(newLang);
-    }
-    setLangOpen(false);
-  };
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
@@ -777,8 +762,9 @@ function UserDashboard() {
       if (!token) {
         setAlertModal({
           isOpen: true,
-          title: 'Ошибка',
-          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
           variant: 'error',
         });
         // Откатываем изменения
@@ -819,7 +805,7 @@ function UserDashboard() {
       console.error('❌ Error reordering tracks:', error);
       setAlertModal({
         isOpen: true,
-        title: 'Ошибка',
+        title: ui?.dashboard?.error ?? 'Error',
         message: `Ошибка при изменении порядка треков: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
@@ -835,7 +821,7 @@ function UserDashboard() {
     // Показываем модальное окно подтверждения
     setConfirmationModal({
       isOpen: true,
-      title: 'Подтвердите действие',
+      title: ui?.dashboard?.confirmAction ?? 'Confirm action',
       message: `Вы уверены, что хотите удалить трек "${trackTitle}"?`,
       variant: 'danger',
       onConfirm: async () => {
@@ -852,8 +838,9 @@ function UserDashboard() {
       if (!token) {
         setAlertModal({
           isOpen: true,
-          title: 'Ошибка',
-          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
           variant: 'error',
         });
         return;
@@ -896,7 +883,7 @@ function UserDashboard() {
       console.error('❌ Error updating track title:', error);
       setAlertModal({
         isOpen: true,
-        title: 'Ошибка',
+        title: ui?.dashboard?.error ?? 'Error',
         message: `Ошибка при обновлении названия трека: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
@@ -911,8 +898,9 @@ function UserDashboard() {
       if (!token) {
         setAlertModal({
           isOpen: true,
-          title: 'Ошибка',
-          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
           variant: 'error',
         });
         return;
@@ -943,7 +931,7 @@ function UserDashboard() {
       console.error('❌ Error deleting track:', error);
       setAlertModal({
         isOpen: true,
-        title: 'Ошибка',
+        title: ui?.dashboard?.error ?? 'Error',
         message: `Ошибка при удалении трека: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
@@ -958,7 +946,7 @@ function UserDashboard() {
     // Показываем модальное окно подтверждения
     setConfirmationModal({
       isOpen: true,
-      title: 'Подтвердите действие',
+      title: ui?.dashboard?.confirmAction ?? 'Confirm action',
       message: `Вы уверены, что хотите удалить альбом "${albumTitle}"?`,
       variant: 'danger',
       onConfirm: async () => {
@@ -1052,8 +1040,9 @@ function UserDashboard() {
       if (!token) {
         setAlertModal({
           isOpen: true,
-          title: 'Ошибка',
-          message: 'Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.',
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
           variant: 'error',
         });
         return;
@@ -1093,7 +1082,7 @@ function UserDashboard() {
       console.error('❌ Error deleting album:', error);
       setAlertModal({
         isOpen: true,
-        title: 'Ошибка',
+        title: ui?.dashboard?.error ?? 'Error',
         message: `Ошибка при удалении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
@@ -1207,7 +1196,7 @@ function UserDashboard() {
 
         setAlertModal({
           isOpen: true,
-          title: 'Успешно',
+          title: ui?.dashboard?.success ?? 'Success',
           message: `Successfully uploaded ${uploadedCount} track(s)`,
           variant: 'success',
         });
@@ -1218,7 +1207,7 @@ function UserDashboard() {
       console.error('❌ Error uploading tracks:', error);
       setAlertModal({
         isOpen: true,
-        title: 'Ошибка',
+        title: ui?.dashboard?.error ?? 'Error',
         message: `Error uploading tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
@@ -1482,8 +1471,8 @@ function UserDashboard() {
       } else {
         setAlertModal({
           isOpen: true,
-          title: 'Ошибка',
-          message: result.message || 'Ошибка при сохранении текста',
+          title: ui?.dashboard?.error ?? 'Error',
+          message: result.message || (ui?.dashboard?.errorSavingText ?? 'Error saving text'),
           variant: 'error',
         });
       }
@@ -1563,8 +1552,8 @@ function UserDashboard() {
       } else {
         setAlertModal({
           isOpen: true,
-          title: 'Ошибка',
-          message: result.message || 'Ошибка при сохранении текста',
+          title: ui?.dashboard?.error ?? 'Error',
+          message: result.message || (ui?.dashboard?.errorSavingText ?? 'Error saving text'),
           variant: 'error',
         });
       }
@@ -1652,7 +1641,8 @@ function UserDashboard() {
         <div className="user-dashboard">
           <div className="user-dashboard__card">
             <div className="user-dashboard__error">
-              Ошибка загрузки: {albumsError || 'Не удалось загрузить альбомы'}
+              {ui?.dashboard?.errorLoading ?? 'Error loading:'}{' '}
+              {albumsError || (ui?.dashboard?.failedToLoadAlbums ?? 'Failed to load albums')}
             </div>
           </div>
         </div>
@@ -1670,181 +1660,64 @@ function UserDashboard() {
         <div className="user-dashboard">
           {/* Main card container */}
           <div className="user-dashboard__card">
-            {/* Header with tabs */}
+            {/* Header with controls */}
             <div className="user-dashboard__header">
-              <div className="user-dashboard__tabs">
+              <h2 className="user-dashboard__title">{ui?.dashboard?.title ?? 'Dashboard'}</h2>
+              <Hamburger isActive={true} onToggle={() => navigate('/')} />
+            </div>
+
+            {/* Main body with sidebar and content */}
+            <div className="user-dashboard__body">
+              {/* Sidebar navigation */}
+              <nav className="user-dashboard__sidebar">
                 <button
                   type="button"
-                  className={`user-dashboard__tab ${activeTab === 'albums' ? 'user-dashboard__tab--active' : ''}`}
+                  className={`user-dashboard__nav-item ${
+                    activeTab === 'profile' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
+                  onClick={() => setActiveTab('profile')}
+                >
+                  {ui?.dashboard?.profile ?? 'Profile'}
+                </button>
+                <button
+                  type="button"
+                  className={`user-dashboard__nav-item ${
+                    activeTab === 'albums' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
                   onClick={() => setActiveTab('albums')}
                 >
                   {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                 </button>
                 <button
                   type="button"
-                  className={`user-dashboard__tab ${activeTab === 'posts' ? 'user-dashboard__tab--active' : ''}`}
+                  className={`user-dashboard__nav-item ${
+                    activeTab === 'posts' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
                   onClick={() => setActiveTab('posts')}
                 >
                   {ui?.dashboard?.tabs?.posts ?? 'Articles'}
                 </button>
                 <button
                   type="button"
-                  className={`user-dashboard__tab ${activeTab === 'payment-settings' ? 'user-dashboard__tab--active' : ''}`}
+                  className={`user-dashboard__nav-item ${
+                    activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
                   onClick={() => setActiveTab('payment-settings')}
                 >
                   {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
                 </button>
                 <button
                   type="button"
-                  className={`user-dashboard__tab ${activeTab === 'my-purchases' ? 'user-dashboard__tab--active' : ''}`}
+                  className={`user-dashboard__nav-item ${
+                    activeTab === 'my-purchases' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
                   onClick={() => setActiveTab('my-purchases')}
                 >
-                  Мои покупки
+                  {ui?.dashboard?.tabs?.myPurchases ?? 'My Purchases'}
                 </button>
-              </div>
-              <div className="user-dashboard__header-controls">
-                {/* Language switcher */}
-                <div className="user-dashboard__lang-menu" ref={langRef}>
-                  <button
-                    type="button"
-                    className="user-dashboard__lang-current"
-                    onClick={() => setLangOpen(!langOpen)}
-                    aria-haspopup="listbox"
-                    aria-expanded={langOpen}
-                    aria-label={`Выбрать язык. Текущий язык: ${lang === 'ru' ? (ui?.dashboard?.russian ?? 'Русский') : (ui?.dashboard?.english ?? 'English')}`}
-                  >
-                    {lang.toUpperCase()}
-                  </button>
-                  <ul
-                    className={clsx('user-dashboard__lang-list', { 'is-hidden': !langOpen })}
-                    role="listbox"
-                  >
-                    {LANG_OPTIONS.map((l) => (
-                      <li key={l}>
-                        <button
-                          className={clsx('user-dashboard__lang-option', { active: lang === l })}
-                          onClick={() => changeLang(l)}
-                          role="option"
-                          aria-selected={lang === l}
-                        >
-                          {l.toUpperCase()}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <button
-                  type="button"
-                  className="user-dashboard__logout-button"
-                  onClick={() => {
-                    logout();
-                    navigate('/auth');
-                  }}
-                >
-                  {ui?.dashboard?.logout ?? 'Logout'}
-                </button>
-              </div>
-            </div>
+              </nav>
 
-            {/* Main layout */}
-            <div className="user-dashboard__layout">
-              {/* Left column - Profile */}
-              <div className="user-dashboard__profile">
-                <h3 className="user-dashboard__profile-title">
-                  {ui?.dashboard?.profile ?? 'Profile'}
-                </h3>
-
-                <div className="user-dashboard__avatar">
-                  <div
-                    className="user-dashboard__avatar-img"
-                    role="button"
-                    tabIndex={0}
-                    aria-label="Изменить аватар"
-                    onClick={handleAvatarClick}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleAvatarClick();
-                      }
-                    }}
-                  >
-                    <img
-                      src={avatarSrc}
-                      alt={ui?.dashboard?.profile ?? 'Profile'}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        const applied = img.dataset.fallbackApplied;
-
-                        // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
-                        if (!applied) {
-                          img.dataset.fallbackApplied = 'default';
-                          img.src = '/images/avatar.png';
-                          return;
-                        }
-
-                        // 2) если и дефолтный не загрузился — скрываем
-                        img.style.display = 'none';
-                      }}
-                    />
-                    {isUploadingAvatar && (
-                      <div
-                        className="user-dashboard__avatar-loader"
-                        aria-live="polite"
-                        aria-busy="true"
-                      >
-                        <div className="user-dashboard__avatar-spinner"></div>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="user-dashboard__avatar-edit"
-                    onClick={handleAvatarClick}
-                    disabled={isUploadingAvatar}
-                    aria-label="Изменить аватар"
-                  >
-                    ✎
-                  </button>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{
-                      position: 'absolute',
-                      width: '1px',
-                      height: '1px',
-                      opacity: 0,
-                      pointerEvents: 'none',
-                    }}
-                    onChange={handleAvatarChange}
-                  />
-                </div>
-
-                <div className="user-dashboard__profile-fields">
-                  <div className="user-dashboard__field">
-                    <label htmlFor="name">{ui?.dashboard?.profileFields?.name ?? 'Name'}</label>
-                    <input id="name" type="text" defaultValue={user?.name || ''} disabled />
-                  </div>
-
-                  <div className="user-dashboard__field">
-                    <label htmlFor="email">{ui?.dashboard?.profileFields?.email ?? 'Email'}</label>
-                    <input id="email" type="email" defaultValue={user?.email || ''} disabled />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="user-dashboard__profile-settings-button"
-                  onClick={() => setIsProfileSettingsModalOpen(true)}
-                >
-                  {ui?.dashboard?.profileSettings ?? 'Настройки профиля'}
-                </button>
-              </div>
-
-              {/* Vertical separator */}
-              <div className="user-dashboard__separator"></div>
-
-              {/* Right column - Content */}
+              {/* Content area */}
               <div className="user-dashboard__content">
                 {activeTab === 'payment-settings' ? (
                   <PaymentSettings userId={user?.id || 'zhoock'} />
@@ -2029,6 +1902,7 @@ function UserDashboard() {
                                                 albumId={album.albumId}
                                                 onDelete={handleDeleteTrack}
                                                 onTitleChange={handleTrackTitleChange}
+                                                ui={ui ?? undefined}
                                               />
                                             ))}
                                           </div>
@@ -2151,10 +2025,10 @@ function UserDashboard() {
                                             e.stopPropagation();
                                             handleDeleteAlbum(album.id);
                                           }}
-                                          title="Удалить альбом"
-                                          aria-label="Удалить альбом"
+                                          title={ui?.dashboard?.deleteAlbum ?? 'Delete album'}
+                                          aria-label={ui?.dashboard?.deleteAlbum ?? 'Delete album'}
                                         >
-                                          Удалить альбом
+                                          {ui?.dashboard?.deleteAlbum ?? 'Delete album'}
                                         </button>
                                       </div>
                                     </div>
@@ -2485,47 +2359,127 @@ function UserDashboard() {
                       )}
                     </div>
                   </>
-                ) : (
-                  <>
+                ) : activeTab === 'profile' ? (
+                  <div className="user-dashboard__profile-tab">
                     <h3 className="user-dashboard__section-title">
-                      {ui?.dashboard?.tabs?.posts ?? 'Articles'}
+                      {ui?.dashboard?.profile ?? 'Profile'}
                     </h3>
                     <div className="user-dashboard__section">
-                      <div className="user-dashboard__posts-prompt">
-                        <div className="user-dashboard__posts-prompt-text">
-                          {ui?.dashboard?.writeAndPublishArticles ?? 'Write and publish articles'}
+                      <div className="user-dashboard__profile-content">
+                        <div className="user-dashboard__avatar">
+                          <div
+                            className="user-dashboard__avatar-img"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
+                            onClick={handleAvatarClick}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleAvatarClick();
+                              }
+                            }}
+                          >
+                            <img
+                              src={avatarSrc}
+                              alt={ui?.dashboard?.profile ?? 'Profile'}
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                const applied = img.dataset.fallbackApplied;
+
+                                // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
+                                if (!applied) {
+                                  img.dataset.fallbackApplied = 'default';
+                                  img.src = '/images/avatar.png';
+                                  return;
+                                }
+
+                                // 2) если и дефолтный не загрузился — скрываем
+                                img.style.display = 'none';
+                              }}
+                            />
+                            {isUploadingAvatar && (
+                              <div
+                                className="user-dashboard__avatar-loader"
+                                aria-live="polite"
+                                aria-busy="true"
+                              >
+                                <div className="user-dashboard__avatar-spinner"></div>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="user-dashboard__avatar-edit"
+                              onClick={handleAvatarClick}
+                              disabled={isUploadingAvatar}
+                              aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
+                            >
+                              ✎
+                            </button>
+                          </div>
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            style={{
+                              position: 'absolute',
+                              width: '1px',
+                              height: '1px',
+                              opacity: 0,
+                              pointerEvents: 'none',
+                            }}
+                            onChange={handleAvatarChange}
+                          />
                         </div>
-                        <button
-                          type="button"
-                          className="user-dashboard__new-post-button"
-                          onClick={() => {
-                            // Создаем новую пустую статью
-                            const newArticle: IArticles = {
-                              articleId: `new-${Date.now()}`,
-                              nameArticle: '',
-                              img: '',
-                              date: new Date().toISOString().split('T')[0],
-                              details: [],
-                              description: '',
-                              isDraft: true,
-                            };
-                            setEditArticleModal({
-                              isOpen: true,
-                              article: newArticle,
-                            });
-                          }}
-                        >
-                          {ui?.dashboard?.newPost ?? 'New Post'}
-                        </button>
+
+                        <div className="user-dashboard__profile-fields">
+                          <div className="user-dashboard__field">
+                            <label htmlFor="name">
+                              {ui?.dashboard?.profileFields?.name ?? 'Name'}
+                            </label>
+                            <input id="name" type="text" defaultValue={user?.name || ''} disabled />
+                          </div>
+
+                          <div className="user-dashboard__field">
+                            <label htmlFor="email">
+                              {ui?.dashboard?.profileFields?.email ?? 'Email'}
+                            </label>
+                            <input
+                              id="email"
+                              type="email"
+                              defaultValue={user?.email || ''}
+                              disabled
+                            />
+                          </div>
+                        </div>
+
+                        <div className="user-dashboard__profile-actions">
+                          <button
+                            type="button"
+                            className="user-dashboard__profile-settings-button"
+                            onClick={() => setIsProfileSettingsModalOpen(true)}
+                          >
+                            {ui?.dashboard?.profileSettings ?? 'Настройки профиля'}
+                          </button>
+                          <button
+                            type="button"
+                            className="user-dashboard__logout-button"
+                            onClick={() => {
+                              logout();
+                              navigate('/auth');
+                            }}
+                          >
+                            {ui?.dashboard?.logout ?? 'Logout'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </>
-                )}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
-        <Hamburger isActive={true} onToggle={() => navigate('/')} />
       </Popup>
 
       {/* Add Lyrics Modal */}
@@ -2552,8 +2506,6 @@ function UserDashboard() {
           }
           onClose={() => setEditLyricsModal(null)}
           onSave={handleSaveLyrics}
-          onPreview={editLyricsModal.hasSyncedLyrics ? handlePreviewLyrics : undefined}
-          onSync={handleSyncLyricsFromEdit}
         />
       )}
 

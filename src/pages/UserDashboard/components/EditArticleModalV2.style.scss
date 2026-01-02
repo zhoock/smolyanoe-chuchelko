@@ -24,6 +24,12 @@
 }
 
 dialog {
+  // Общие стили для всех кнопок в попапе
+  button {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
   .edit-article-v2 {
     display: flex;
     align-items: center;
@@ -33,16 +39,7 @@ dialog {
     background: transparent;
 
     &__container {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      max-width: 1000px;
-      max-height: 90vh;
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-0);
-      box-shadow: 0 8px 32px var(--dashboard-shadow);
-      overflow: hidden;
+      @include dashboard-modal-card($desktop-width: 1000px);
     }
 
     &__header {
@@ -53,7 +50,6 @@ dialog {
       padding: var(--ms-1) var(--ms-1);
       background: var(--dashboard-card-bg);
       border-bottom: 1px solid var(--dashboard-divider);
-      justify-content: space-between;
       align-items: center;
       gap: var(--ms-0);
     }
@@ -65,10 +61,45 @@ dialog {
       gap: var(--ms-0);
     }
 
+    &__close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: calc(var(--ms-1) * 1.5);
+      height: calc(var(--ms-1) * 1.5);
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-1);
+      font-weight: 300;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+      flex-shrink: 0;
+
+      &:hover {
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-hover-bg);
+      }
+
+      &:focus {
+        outline: none;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--dark-greenish-yellow);
+        outline-offset: 2px;
+      }
+    }
+
     &__title-input {
       padding: var(--ms-01) 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
+      font-size: var(--dashboard-heading-font-size);
       background: transparent;
       border: none;
       flex: 1;
@@ -89,9 +120,8 @@ dialog {
       white-space: nowrap;
     }
 
-    &__header-actions {
-      display: flex;
-      gap: var(--ms-0);
+    &__footer {
+      @include dashboard-modal-footer($padding: var(--ms-1) var(--ms-2), $margin-top: 0);
     }
 
     &__cover-section {
@@ -248,9 +278,10 @@ dialog {
     }
 
     &__content {
-      flex: 1;
+      flex: 1 1 0;
       overflow-y: auto;
       padding: var(--ms-2);
+      min-height: 0;
     }
 
     &__blocks {
@@ -312,6 +343,9 @@ dialog {
     }
 
     &__drag-handle {
+      position: absolute;
+      top: var(--ms-01);
+      left: calc(var(--ms-0) * -2);
       z-index: 10;
       display: flex;
       width: calc(var(--ms-0) * 1.5);
@@ -329,8 +363,6 @@ dialog {
       cursor: grab;
       opacity: 0;
       flex-shrink: 0;
-      margin-top: 0;
-      align-self: center;
 
       &:active {
         cursor: grabbing;
@@ -346,7 +378,6 @@ dialog {
       position: relative;
       display: flex;
       align-items: flex-start;
-      gap: var(--ms-01);
       padding: var(--ms-01);
       border-radius: var(--ms-01);
       transition: background-color 0.2s;

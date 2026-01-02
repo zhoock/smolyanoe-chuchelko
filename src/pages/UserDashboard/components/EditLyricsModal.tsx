@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/EditLyricsModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -12,8 +12,6 @@ interface EditLyricsModalProps {
   initialAuthorship?: string;
   onClose: () => void;
   onSave: (lyrics: string, authorship?: string) => Promise<void> | void;
-  onPreview?: () => void;
-  onSync?: (currentLyrics: string, currentAuthorship?: string) => void;
 }
 
 export function EditLyricsModal({
@@ -22,13 +20,15 @@ export function EditLyricsModal({
   initialAuthorship,
   onClose,
   onSave,
-  onPreview,
-  onSync,
 }: EditLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [lyricsText, setLyricsText] = useState(initialLyrics);
   const [authorship, setAuthorship] = useState(initialAuthorship || '');
+
+  // Исходные значения для отслеживания изменений
+  const [initialLyricsValue, setInitialLyricsValue] = useState(initialLyrics);
+  const [initialAuthorshipValue, setInitialAuthorshipValue] = useState(initialAuthorship || '');
 
   // Обновляем состояние при изменении initialLyrics или initialAuthorship
   useEffect(() => {
@@ -43,16 +43,32 @@ export function EditLyricsModal({
     if (isOpen) {
       setLyricsText(initialLyrics);
       setAuthorship(initialAuthorship || '');
+      setInitialLyricsValue(initialLyrics);
+      setInitialAuthorshipValue(initialAuthorship || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLyrics, initialAuthorship, isOpen]);
 
-  // Проверяем, изменился ли текст относительно исходного
-  const hasTextChanged = lyricsText.trim() !== initialLyrics.trim();
+  // Проверка наличия изменений
+  const hasChanges = useMemo(() => {
+    return (
+      lyricsText.trim() !== initialLyricsValue.trim() ||
+      authorship.trim() !== initialAuthorshipValue.trim()
+    );
+  }, [lyricsText, initialLyricsValue, authorship, initialAuthorshipValue]);
+
+  // Отмена изменений
+  const handleCancel = useCallback(() => {
+    setLyricsText(initialLyricsValue);
+    setAuthorship(initialAuthorshipValue);
+  }, [initialLyricsValue, initialAuthorshipValue]);
 
   const handleSave = async () => {
     try {
       await onSave(lyricsText, authorship.trim() || undefined);
+      // Обновляем начальные значения после успешного сохранения
+      setInitialLyricsValue(lyricsText);
+      setInitialAuthorshipValue(authorship.trim() || '');
       // Закрываем модальное окно только после успешного сохранения
       onClose();
     } catch (error) {
@@ -61,113 +77,109 @@ export function EditLyricsModal({
     }
   };
 
-  const handleClose = () => {
-    setLyricsText(initialLyrics);
-    setAuthorship(initialAuthorship || '');
+  // Обработка закрытия модального окна
+  const handleClose = useCallback(() => {
+    if (hasChanges) {
+      // Если есть изменения, отменяем их и закрываем
+      handleCancel();
+    }
     onClose();
-  };
+  }, [hasChanges, handleCancel, onClose]);
 
   return (
     <Popup isActive={isOpen} onClose={handleClose}>
       <div className="edit-lyrics-modal">
         <div className="edit-lyrics-modal__card">
           <div className="edit-lyrics-modal__header">
+            <button
+              type="button"
+              className="edit-lyrics-modal__close"
+              onClick={handleClose}
+              aria-label={ui?.dashboard?.close ?? 'Закрыть'}
+            >
+              ×
+            </button>
             <h2 className="edit-lyrics-modal__title">
               {ui?.dashboard?.editLyrics ?? 'Edit Lyrics'}
             </h2>
-            {/* Показываем Preview, если есть синхронизированный текст, иначе Sync (если доступен) */}
-            {onPreview ? (
+          </div>
+          <div className="edit-lyrics-modal__content">
+            <div className="edit-lyrics-modal__divider"></div>
+            <textarea
+              className="edit-lyrics-modal__textarea"
+              value={lyricsText}
+              onChange={(e) => setLyricsText(e.target.value)}
+            />
+            <div className="edit-lyrics-modal__divider"></div>
+            <div className="edit-lyrics-modal__field">
+              <label className="edit-lyrics-modal__label">
+                {ui?.dashboard?.authorship ?? 'Authorship:'}
+              </label>
+              <input
+                type="text"
+                className="edit-lyrics-modal__input"
+                name="authorship"
+                id="authorship"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-gramm="false"
+                data-lpignore="true"
+                data-form-type="other"
+                inputMode="text"
+                aria-autocomplete="none"
+                placeholder={
+                  ui?.dashboard?.authorshipPlaceholder ??
+                  'For example: Yaroslav Zhuk — words and music'
+                }
+                value={authorship}
+                onChange={(e) => setAuthorship(e.target.value)}
+                onFocus={(e) => {
+                  // Предотвращаем всплытие события, чтобы избежать конфликтов с расширениями браузера
+                  e.stopPropagation();
+                }}
+                onBlur={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyUp={(e) => {
+                  e.stopPropagation();
+                }}
+                onKeyPress={(e) => {
+                  e.stopPropagation();
+                }}
+                onInput={(e) => {
+                  e.stopPropagation();
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Footer с кнопками - показывается только при наличии изменений */}
+          {hasChanges && (
+            <div className="edit-lyrics-modal__footer">
               <button
                 type="button"
-                className="edit-lyrics-modal__preview-button"
-                onClick={onPreview}
+                className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
+                onClick={handleCancel}
               >
-                {ui?.dashboard?.preview ?? 'Preview'}
+                {ui?.dashboard?.cancel ?? 'Cancel'}
               </button>
-            ) : (
-              onSync && (
-                <button
-                  type="button"
-                  className="edit-lyrics-modal__preview-button"
-                  onClick={() => onSync(lyricsText, authorship.trim() || undefined)}
-                >
-                  {ui?.dashboard?.sync ?? 'Sync'}
-                </button>
-              )
-            )}
-          </div>
-          <div className="edit-lyrics-modal__divider"></div>
-          <textarea
-            className="edit-lyrics-modal__textarea"
-            value={lyricsText}
-            onChange={(e) => setLyricsText(e.target.value)}
-          />
-          <div className="edit-lyrics-modal__divider"></div>
-          <div className="edit-lyrics-modal__field">
-            <label className="edit-lyrics-modal__label">
-              {ui?.dashboard?.authorship ?? 'Authorship:'}
-            </label>
-            <input
-              type="text"
-              className="edit-lyrics-modal__input"
-              name="authorship"
-              id="authorship"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              data-gramm="false"
-              data-lpignore="true"
-              data-form-type="other"
-              inputMode="text"
-              aria-autocomplete="none"
-              placeholder={
-                ui?.dashboard?.authorshipPlaceholder ??
-                'For example: Yaroslav Zhuk — words and music'
-              }
-              value={authorship}
-              onChange={(e) => setAuthorship(e.target.value)}
-              onFocus={(e) => {
-                // Предотвращаем всплытие события, чтобы избежать конфликтов с расширениями браузера
-                e.stopPropagation();
-              }}
-              onBlur={(e) => {
-                e.stopPropagation();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-              }}
-              onKeyUp={(e) => {
-                e.stopPropagation();
-              }}
-              onKeyPress={(e) => {
-                e.stopPropagation();
-              }}
-              onInput={(e) => {
-                e.stopPropagation();
-              }}
-            />
-          </div>
-          <div className="edit-lyrics-modal__divider"></div>
-          <div className="edit-lyrics-modal__actions">
-            <button
-              type="button"
-              className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
-              onClick={handleClose}
-            >
-              {ui?.dashboard?.cancel ?? 'Cancel'}
-            </button>
-            <button
-              type="button"
-              className="edit-lyrics-modal__button edit-lyrics-modal__button--primary"
-              onClick={handleSave}
-            >
-              {ui?.dashboard?.save ?? 'Save'}
-            </button>
-          </div>
+              <button
+                type="button"
+                className="edit-lyrics-modal__button edit-lyrics-modal__button--primary"
+                onClick={handleSave}
+              >
+                {ui?.dashboard?.save ?? 'Save'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </Popup>

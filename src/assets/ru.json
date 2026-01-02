@@ -51,8 +51,9 @@
       "title": "Кабинет пользователя",
       "tabs": {
         "albums": "Альбомы",
-        "posts": "Посты",
-        "paymentSettings": "Настройки оплаты"
+        "posts": "Статьи",
+        "paymentSettings": "Настройки оплаты",
+        "myPurchases": "Мои покупки"
       },
       "profile": "Профиль",
       "profileSettings": "Настройки профиля",
@@ -105,9 +106,19 @@
       "failedToUploadCover": "Ошибка загрузки обложки",
       "confirmAction": "Подтвердите действие",
       "error": "Ошибка",
+      "success": "Успешно",
       "errorDeletingArticle": "Ошибка при удалении статьи",
+      "errorSavingText": "Ошибка при сохранении текста",
       "russian": "Русский",
       "english": "English",
+      "dragToReorder": "Перетащите для изменения порядка",
+      "clickToEdit": "Нажмите для редактирования",
+      "deleteTrack": "Удалить трек",
+      "deleteAlbum": "Удалить альбом",
+      "errorLoading": "Ошибка загрузки:",
+      "failedToLoadAlbums": "Не удалось загрузить альбомы",
+      "selectLanguage": "Выбрать язык. Текущий язык:",
+      "changeAvatar": "Изменить аватар",
       "enterLink": "Введите ссылку:",
       "addImage": "Добавить изображение",
       "addDivider": "Добавить разделитель",
@@ -143,11 +154,33 @@
       "dragImageHereOr": "Перетащите изображение сюда или",
       "loading": "Загрузка...",
       "saving": "Сохранение...",
+      "myPurchases": {
+        "title": "Мои покупки",
+        "purchasesFor": "Покупки для:",
+        "changeEmail": "Изменить Email",
+        "enterEmailDescription": "Введите email, который вы использовали при покупке, чтобы просмотреть все ваши покупки и скачать треки.",
+        "emailAddress": "Email адрес",
+        "viewPurchases": "Просмотреть покупки",
+        "loadingPurchases": "Загрузка покупок...",
+        "purchasesNotFound": "Покупки не найдены.",
+        "checkEmail": "Убедитесь, что вы ввели правильный email адрес.",
+        "purchased": "Куплено:",
+        "downloads": "Скачиваний:",
+        "downloadAlbum": "Скачать альбом",
+        "downloading": "Скачивание...",
+        "downloaded": "Скачано",
+        "download": "Скачать",
+        "tracks": "Треки:",
+        "downloadTrack": "Скачать трек",
+        "downloadFullAlbum": "Скачать весь альбом",
+        "errorDownloadingTrack": "Ошибка при скачивании трека. Попробуйте еще раз.",
+        "errorDownloadingAlbum": "Ошибка при скачивании альбома. Попробуйте еще раз."
+      },
       "profileSettingsModal": {
         "tabs": {
+          "general": "Общие",
           "profile": "Профиль",
-          "security": "Безопасность",
-          "interface": "Интерфейс"
+          "security": "Безопасность"
         },
         "fields": {
           "bandName": "Название группы",

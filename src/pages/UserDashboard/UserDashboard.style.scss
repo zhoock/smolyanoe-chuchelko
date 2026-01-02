@@ -6,171 +6,130 @@ dialog {
   color: var(--dashboard-text-primary);
   background: var(--dashboard-card-bg);
 
+  // Общие стили для всех кнопок в дашборде и попапах
+  button {
+    display: inline-block;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
   .user-dashboard {
     display: flex;
+    font-size: var(--dashboard-font-size);
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: var(--ms-2);
-    background: transparent;
+    line-height: 1.2;
 
     // Main card - светлая карточка
     &__card {
       display: flex;
       flex-direction: column;
       width: 100%;
-      max-width: 1200px;
-      min-height: 600px;
-      max-height: 90vh;
+      max-width: 100%;
+      min-height: auto;
+      max-height: 100vh;
       overflow: hidden;
       background: var(--dashboard-card-bg);
       border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-0);
+      border-radius: 0;
       box-shadow: 0 8px 32px var(--dashboard-shadow);
+
+      @include breakpoint(tablet) {
+        max-width: 1200px;
+        min-height: 600px;
+        max-height: 90vh;
+        border-radius: var(--ms-0);
+      }
     }
 
-    // Header with tabs
+    // Header
     &__header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: var(--ms-1) var(--ms-1);
+      padding: var(--ms-01) var(--ms-1);
       border-bottom: 1px solid var(--dashboard-card-border);
       background: var(--dashboard-card-bg);
-    }
 
-    &__tabs {
-      display: flex;
-      gap: var(--ms-01);
-    }
-
-    &__tab {
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--dashboard-text-secondary);
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      border-radius: var(--ms-02);
-      transition: all 0.2s;
-      text-transform: none;
-      letter-spacing: normal;
-
-      &:hover {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-hover-bg);
+      @include breakpoint(tablet) {
+        padding: var(--ms-1) var(--ms-2);
       }
 
-      &--active {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-button-cancel-bg);
+      .hamburger {
+        position: static;
+        margin-left: auto;
+        inset-block-start: auto;
+        inset-inline-end: auto;
       }
     }
 
-    &__header-controls {
-      display: flex;
-      align-items: center;
-      gap: var(--ms-0);
-    }
-
-    &__lang-menu {
-      position: relative;
-    }
-
-    &__lang-current {
-      display: flex;
-      width: 40.25px;
-      height: 40.25px;
+    &__title {
       margin: 0;
-      padding: 0;
-      color: var(--dark-greenish-yellow, #998238);
-      font-size: 14px;
-      background: transparent;
-      border: 1px solid var(--dark-greenish-yellow, #998238);
-      border-radius: 50%;
-      transition: all 0.2s;
-      font-weight: bold;
-      cursor: pointer;
-      align-items: center;
-      justify-content: center;
-
-      &:hover {
-        color: var(--deep-coal, #1a1a1a);
-        background: var(--dark-greenish-yellow, #998238);
-      }
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-heading-font-size);
+      font-weight: 600;
     }
 
-    &__lang-list {
-      position: absolute;
-      top: 100%;
-      right: 0;
-      z-index: 100;
-      padding: 0;
-      background: var(--white, #ffffff);
-      border: 1px solid var(--icy-mist, #e6e6e6);
-      border-radius: var(--ms-01);
-      list-style: none;
+    &__profile-actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
       margin-top: var(--ms-0);
-      min-width: 60px;
-      box-shadow: 0 4px 12px rgb(var(--black-rgb) / 10%);
-
-      &.is-hidden {
-        display: none;
-      }
-
-      li {
-        padding: var(--ms-01) var(--ms-0);
-      }
-    }
-
-    &__lang-option {
       width: 100%;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--graphite-green, #373633);
-      text-align: center;
-      background: transparent;
-      border: none;
-      border-radius: var(--ms-02);
-      transition: all 0.2s;
-      appearance: none;
-      cursor: pointer;
 
-      &.active {
-        color: var(--graphite-green, #373633);
-        background: var(--mango-sorbet, #fae59b);
-      }
-
-      &:hover {
-        color: var(--graphite-green, #373633);
-        background: var(--icy-mist, #e6e6e6);
+      @include breakpoint(tablet) {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
       }
     }
 
     &__logout-button {
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--dark-greenish-yellow);
-      background: transparent;
-      border: 1px solid var(--dark-greenish-yellow);
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: none;
-      letter-spacing: normal;
+      @include dashboard-delete-button;
 
-      &:hover {
-        color: var(--dashboard-text-primary);
-        background: var(--dark-greenish-yellow);
+      @include breakpoint(tablet) {
+        margin-left: auto;
       }
     }
 
-    // Layout
-    &__layout {
-      display: grid;
-      grid-template-columns: 320px 1px 1fr;
+    // Body with sidebar and content
+    &__body {
+      display: flex;
+      flex-direction: column;
       flex: 1;
       min-height: 0;
+      overflow: hidden;
+
+      @include breakpoint(tablet) {
+        flex-direction: row;
+      }
     }
 
-    // Profile section (left)
+    // Sidebar navigation
+    &__sidebar {
+      display: flex;
+      flex-flow: row wrap;
+      gap: var(--ms-02);
+      width: 100%;
+      min-width: 100%;
+      padding: var(--ms-01) var(--ms-01);
+      border-right: none;
+      border-bottom: 1px solid var(--dashboard-card-border);
+      background: var(--dashboard-card-bg);
+
+      @include breakpoint(tablet) {
+        flex-flow: column nowrap;
+        width: 200px;
+        min-width: 200px;
+        padding: var(--ms-1) var(--ms-01);
+        border-right: 1px solid var(--dashboard-card-border);
+        border-bottom: none;
+        overflow: auto hidden;
+      }
+    }
+
+    // Profile section (left) - kept for backward compatibility
     &__profile {
       display: flex;
       flex-direction: column;
@@ -191,26 +150,43 @@ dialog {
     &__nav-item {
       display: flex;
       align-items: center;
-      gap: var(--ms-01);
-      padding: var(--ms-01) var(--ms-01);
-      color: var(--dashboard-text-primary);
-      text-align: left;
-      text-transform: none;
-      font-weight: 400;
-      letter-spacing: normal;
+      width: auto;
+      min-width: auto;
+      padding: var(--ms-01) var(--ms-0);
+      color: var(--dashboard-text-secondary);
+      font-size: var(--dashboard-font-size);
+      text-align: center;
       background: transparent;
       border: none;
       border-radius: var(--ms-02);
       cursor: pointer;
       transition: all 0.2s;
+      text-transform: none;
+      letter-spacing: normal;
+      margin-right: var(--ms-01);
+      margin-bottom: var(--ms-01);
 
       &:hover {
+        color: var(--dashboard-text-primary);
         background: var(--dashboard-hover-bg);
       }
 
       &--active {
         color: var(--dashboard-text-primary);
         background: var(--dashboard-button-cancel-bg);
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: inset 0 0 0 2px var(--dashboard-button-cancel-bg);
+      }
+
+      @include breakpoint(tablet) {
+        width: 100%;
+        padding: var(--ms-01) var(--ms-1);
+        text-align: left;
+        margin-right: 0;
+        margin-bottom: 0;
       }
     }
 
@@ -226,6 +202,7 @@ dialog {
     &__profile-title {
       margin: 0;
       color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-heading-font-size);
       font-weight: 700;
       line-height: 1.2;
     }
@@ -235,6 +212,7 @@ dialog {
       display: inline-flex;
       justify-content: center;
       align-items: center;
+      overflow: visible;
     }
 
     &__avatar-img {
@@ -256,9 +234,9 @@ dialog {
 
     &__avatar-edit {
       position: absolute;
-      right: 60px; // не трогай
-      bottom: -6px;
-      z-index: 2;
+      right: -4px;
+      bottom: -4px;
+      z-index: 3;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -287,6 +265,7 @@ dialog {
       &:hover {
         background: var(--dashboard-button-primary-bg);
         border-color: var(--mango-sorbet);
+        opacity: 1;
       }
 
       &:disabled {
@@ -299,7 +278,7 @@ dialog {
       opacity: 1;
     }
 
-    &__avatar-img:hover + .user-dashboard__avatar-edit {
+    &__avatar-img:hover &__avatar-edit {
       opacity: 1;
     }
 
@@ -345,10 +324,17 @@ dialog {
     }
 
     &__profile-settings-button {
-      margin-top: var(--ms-0);
+      margin-top: 0;
       width: 100%;
 
       @include dashboard-button;
+
+      @include breakpoint(tablet) {
+        width: auto;
+        margin-top: 0;
+        padding: var(--ms-01) var(--ms-0);
+        font-size: var(--dashboard-font-size);
+      }
     }
 
     &__field {
@@ -363,7 +349,7 @@ dialog {
       input {
         padding: var(--ms-01) var(--ms-01);
         color: var(--dashboard-text-primary) !important;
-        font-size: var(--ms-0) !important;
+        font-size: var(--dashboard-font-size) !important;
         background: var(--dashboard-input-bg) !important;
         border: 1px solid var(--dashboard-input-border) !important;
         border-radius: 6px !important;
@@ -391,22 +377,36 @@ dialog {
 
     // Content section (right)
     &__content {
-      padding: var(--ms-1) var(--ms-2);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: var(--ms-1);
+      width: 100%;
+      padding: var(--ms-1);
       overflow-y: auto;
       background: var(--dashboard-card-bg);
+
+      @include breakpoint(tablet) {
+        padding: var(--ms-2);
+      }
     }
 
-    &__section {
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      overflow: hidden;
+    &__profile-tab {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__profile-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
     }
 
     &__section-title {
-      margin: 0 0 var(--ms-1) 0 !important;
       padding: 0 !important;
       color: var(--dashboard-text-primary) !important;
-      font-size: var(--ms-1) !important;
+      font-size: var(--dashboard-heading-font-size) !important;
       font-weight: 700 !important;
       line-height: 1.2 !important;
       text-transform: none !important;
@@ -503,7 +503,8 @@ dialog {
     &__album-expanded {
       padding: var(--ms-0);
       background: var(--dashboard-card-bg);
-      border-top: 1px solid var(--dashboard-divider);
+      border: 1px solid var(--dashboard-divider);
+      border-bottom: none;
 
       &--article {
         display: flex;
@@ -828,7 +829,7 @@ dialog {
     &__article-title {
       margin: 0 0 var(--ms-0) 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
+      font-size: var(--dashboard-heading-font-size);
       line-height: 1.3;
       font-weight: 700;
     }
@@ -837,7 +838,7 @@ dialog {
       width: 100%;
       padding: var(--ms-01) var(--ms-01);
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
+      font-size: var(--dashboard-font-size);
       background: var(--dashboard-card-bg);
       border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
@@ -855,7 +856,7 @@ dialog {
       width: 100%;
       padding: var(--ms-01) var(--ms-01);
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       background: var(--dashboard-card-bg);
       border: 1px solid var(--dashboard-card-border);
       border-radius: var(--ms-01);
@@ -952,8 +953,6 @@ dialog {
     &__track-item {
       display: flex;
       align-items: center;
-      gap: var(--ms-01);
-      padding: var(--ms-01) 0;
       color: var(--dashboard-text-primary);
       cursor: default;
       transition: opacity 0.2s ease;
@@ -985,7 +984,7 @@ dialog {
     }
 
     &__track-drag-icon {
-      font-size: 14px;
+      font-size: var(--dashboard-font-size);
       line-height: 1;
       letter-spacing: -2px;
     }
@@ -997,7 +996,7 @@ dialog {
 
     &__track-title {
       padding: var(--ms-01);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       border-radius: var(--ms-02);
       transition: background-color 0.2s ease;
       flex: 1;
@@ -1011,7 +1010,7 @@ dialog {
     &__track-title-input {
       padding: var(--ms-01);
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       background: var(--dashboard-card-bg);
       border: 1px solid var(--dark-greenish-yellow);
       border-radius: var(--ms-02);
@@ -1073,14 +1072,12 @@ dialog {
     }
 
     &__lyrics-title {
-      margin: 0 0 var(--ms-0) 0 !important;
-      padding: 0 !important;
-      color: var(--graphite-green) !important;
-      font-size: var(--ms-1) !important;
-      font-weight: 700 !important;
-      line-height: 1.2 !important;
-      text-transform: none !important;
-      letter-spacing: normal !important;
+      margin: 0 0 var(--ms-0) 0;
+      padding: 0;
+      color: var(--white);
+      font-size: var(--dashboard-heading-font-size);
+      font-weight: 700;
+      letter-spacing: normal;
     }
 
     &__lyrics-table {
@@ -1120,7 +1117,7 @@ dialog {
       display: flex;
       align-items: center;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
 
       &--actions {
         display: flex;
@@ -1268,7 +1265,7 @@ dialog {
     &__my-purchases-input {
       padding: var(--ms-01) var(--ms-01);
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       background: var(--dashboard-card-bg);
       border: 1px solid var(--dashboard-input-border);
       border-radius: 6px;
@@ -1351,10 +1348,6 @@ dialog {
       border: 1px solid var(--dashboard-input-border);
       border-radius: var(--ms-01);
       transition: all 0.2s;
-
-      &:hover {
-        border-color: var(--dark-greenish-yellow);
-      }
     }
 
     &__my-purchases-purchase-header {
@@ -1385,7 +1378,6 @@ dialog {
     &__my-purchases-purchase-info {
       display: flex;
       flex-direction: column;
-      gap: var(--ms-01);
       flex: 1;
     }
 
@@ -1408,15 +1400,15 @@ dialog {
     &__my-purchases-purchase-title {
       margin: 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
-      font-weight: 600;
+      font-family: inherit;
+      letter-spacing: normal;
     }
 
     &__my-purchases-purchase-date,
     &__my-purchases-purchase-downloads {
       margin: 0;
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
+      font-size: var(--ms-01);
     }
 
     &__my-purchases-tracks {
@@ -1443,14 +1435,12 @@ dialog {
       display: flex;
       align-items: center;
       gap: var(--ms-01);
-      padding: var(--ms-01);
     }
 
     &__my-purchases-track-number {
       font-weight: 600;
       color: var(--dashboard-text-secondary);
       min-width: 30px;
-      text-align: right;
     }
 
     &__my-purchases-track-title {
