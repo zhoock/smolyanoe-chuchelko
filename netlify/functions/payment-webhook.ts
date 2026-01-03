@@ -242,72 +242,57 @@ export const handler: Handler = async (
                     title: row.title,
                   }));
 
-                  // Отправляем email (не блокируем основной поток)
-                  import('./lib/email')
-                    .then(({ sendPurchaseEmail }) => {
-                      const customerName =
-                        order.customer_first_name && order.customer_last_name
-                          ? `${order.customer_first_name} ${order.customer_last_name}`
-                          : order.customer_first_name || undefined;
+                  // Отправляем email и дожидаемся результата
+                  try {
+                    const { sendPurchaseEmail } = await import('./lib/email');
 
-                      console.log('📧 Attempting to send purchase email:', {
-                        to: customerEmail,
-                        customerName,
-                        albumName: album.album,
-                        artistName: album.artist,
-                        orderId,
-                        tracksCount: tracks.length,
-                        hasResendKey: !!process.env.RESEND_API_KEY,
-                      });
+                    const customerName =
+                      order.customer_first_name && order.customer_last_name
+                        ? `${order.customer_first_name} ${order.customer_last_name}`
+                        : order.customer_first_name || undefined;
 
-                      sendPurchaseEmail({
-                        to: customerEmail,
-                        customerName,
-                        albumName: album.album,
-                        artistName: album.artist,
-                        orderId,
-                        purchaseToken: purchase.purchase_token,
-                        tracks,
-                        siteUrl: process.env.NETLIFY_SITE_URL || undefined,
-                      })
-                        .then((result) => {
-                          if (result.success) {
-                            console.log('✅ Purchase email sent successfully:', {
-                              to: customerEmail,
-                              orderId,
-                            });
-                          } else {
-                            console.error('❌ Failed to send purchase email:', {
-                              to: customerEmail,
-                              orderId,
-                              error: result.error,
-                            });
-                          }
-                        })
-                        .catch((emailError) => {
-                          console.error('❌ Error sending purchase email:', {
-                            to: customerEmail,
-                            orderId,
-                            error:
-                              emailError instanceof Error ? emailError.message : String(emailError),
-                            stack: emailError instanceof Error ? emailError.stack : undefined,
-                          });
-                          // Не выбрасываем ошибку, чтобы не блокировать webhook
-                        });
-                    })
-                    .catch((importError) => {
-                      console.error('❌ Failed to import email module:', {
-                        error:
-                          importError instanceof Error ? importError.message : String(importError),
-                        stack: importError instanceof Error ? importError.stack : undefined,
-                      });
+                    console.log('📧 Attempting to send purchase email:', {
+                      to: customerEmail,
+                      customerName,
+                      albumName: album.album,
+                      artistName: album.artist,
+                      orderId,
+                      tracksCount: tracks.length,
+                      hasResendKey: !!process.env.RESEND_API_KEY,
                     });
 
-                  console.log('📧 Purchase email queued for sending:', {
-                    to: customerEmail,
-                    albumName: album.album,
-                    tracksCount: tracks.length,
-                  });
+                    const emailResult = await sendPurchaseEmail({
+                      to: customerEmail,
+                      customerName,
+                      albumName: album.album,
+                      artistName: album.artist,
+                      orderId,
+                      purchaseToken: purchase.purchase_token,
+                      tracks,
+                      siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+                    });
+
+                    if (emailResult.success) {
+                      console.log('✅ Purchase email sent successfully:', {
+                        to: customerEmail,
+                        orderId,
+                      });
+                    } else {
+                      console.error('❌ Failed to send purchase email:', {
+                        to: customerEmail,
+                        orderId,
+                        error: emailResult.error,
+                      });
+                    }
+                  } catch (emailError) {
+                    console.error('❌ Error sending purchase email:', {
+                      to: customerEmail,
+                      orderId,
+                      error: emailError instanceof Error ? emailError.message : String(emailError),
+                      stack: emailError instanceof Error ? emailError.stack : undefined,
+                    });
+                    // Не выбрасываем ошибку, чтобы не блокировать webhook
+                  }
                 } else {
                   console.warn('⚠️ Album not found for purchase email:', { albumId });
                 }
