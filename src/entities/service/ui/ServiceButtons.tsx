@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { String, IAlbums } from '@models';
 import { GetButton } from './GetButton';
-import { PurchasePopup } from './PurchasePopup';
+import { useCart } from '../model/CartContext';
 import './style.scss';
 
 type ServiceButtonsProps = {
@@ -21,7 +20,7 @@ function ServiceButtonsContent({
   section: string;
   labels: { purchase: string; stream: string };
 }) {
-  const [isPurchasePopupOpen, setIsPurchasePopupOpen] = useState(false);
+  const { addToCart } = useCart();
   const buttons = album?.buttons as String;
 
   // Проверяем, разрешено ли скачивание/продажа
@@ -34,25 +33,7 @@ function ServiceButtonsContent({
 
   const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    setIsPurchasePopupOpen(true);
-  };
-
-  const handleClosePopup = () => {
-    setIsPurchasePopupOpen(false);
-  };
-
-  const handleRemove = () => {
-    // TODO: Реализовать удаление из корзины
-    setIsPurchasePopupOpen(false);
-  };
-
-  const handleContinueShopping = () => {
-    setIsPurchasePopupOpen(false);
-  };
-
-  const handleRegister = () => {
-    // TODO: Реализовать переход на регистрацию/оформление заказа
-    console.log('Register for checkout');
+    addToCart(album);
   };
 
   return (
@@ -103,15 +84,6 @@ function ServiceButtonsContent({
             />
             <GetButton buttonClass="icon-amazon" buttonUrl={buttons?.amazon} buttonText="Amazon" />
           </ul>
-
-          <PurchasePopup
-            isOpen={isPurchasePopupOpen}
-            album={album}
-            onClose={handleClosePopup}
-            onRemove={handleRemove}
-            onContinueShopping={handleContinueShopping}
-            onRegister={handleRegister}
-          />
         </>
       )}
 
