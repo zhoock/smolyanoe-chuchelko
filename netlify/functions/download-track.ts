@@ -203,55 +203,13 @@ export const handler: Handler = async (
                 console.error('❌ Failed to update download count:', error);
               });
 
-              // Скачиваем файл из Supabase Storage для проксирования
-              const fileResponse = await fetch(urlData.publicUrl);
-              if (!fileResponse.ok) {
-                throw new Error(`Failed to download file: ${fileResponse.status}`);
-              }
-
-              const fileBuffer = await fileResponse.arrayBuffer();
-              const contentType = fileResponse.headers.get('content-type') || 'audio/wav';
-
-              // Формируем имя файла для скачивания (убираем недопустимые символы)
-              const sanitizeFileName = (name: string): string => {
-                // Убираем недопустимые символы для имени файла
-                return name
-                  .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_') // Убираем недопустимые символы
-                  .replace(/\s+/g, '_') // Заменяем пробелы на подчеркивания
-                  .replace(/_{2,}/g, '_') // Убираем множественные подчеркивания
-                  .trim();
-              };
-
-              const extension = fileName.split('.').pop() || 'wav';
-              const downloadFileName = track.title
-                ? `${sanitizeFileName(track.title)}.${extension}`
-                : sanitizeFileName(fileName);
-
-              // Экранируем имя файла для HTTP заголовка
-              // Убираем все недопустимые символы для HTTP заголовков
-              const escapeHeaderValue = (value: string): string => {
-                // Убираем все недопустимые символы: кавычки, обратные слеши, переносы строк, табы
-                return value.replace(/["\\\r\n\t\x00-\x1F\x7F]/g, '');
-              };
-
-              const safeFileName = escapeHeaderValue(downloadFileName);
-              const encodedFileName = encodeURIComponent(downloadFileName);
-
-              // Формируем заголовок Content-Disposition
-              // Используем только RFC 5987 encoding для избежания проблем с кавычками
-              const contentDisposition = `attachment; filename*=UTF-8''${encodedFileName}`;
-
-              // Возвращаем файл с заголовком для скачивания
+              // Редирект на прямой URL из Supabase Storage (избегаем ошибки 413 для больших файлов)
               return {
-                statusCode: 200,
+                statusCode: 302,
                 headers: {
-                  'Content-Type': contentType,
-                  'Content-Disposition': contentDisposition,
-                  'Content-Length': fileBuffer.byteLength.toString(),
+                  Location: urlData.publicUrl,
                   'Cache-Control': 'no-cache',
                 },
-                body: Buffer.from(fileBuffer).toString('base64'),
-                isBase64Encoded: true,
               };
             } else {
               console.log(
