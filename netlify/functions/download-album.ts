@@ -393,10 +393,11 @@ export const handler: Handler = async (
       console.log(`📤 [download-album] Uploading ZIP to storage: ${tempStoragePath}`);
 
       // Загружаем ZIP в Storage
+      // Используем 'application/octet-stream' вместо 'application/zip', так как Supabase не поддерживает 'application/zip'
       const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from(STORAGE_BUCKET_NAME)
         .upload(tempStoragePath, zipBuffer, {
-          contentType: 'application/zip',
+          contentType: 'application/octet-stream',
           upsert: true, // Перезаписываем, если файл уже существует
           cacheControl: '3600', // Кэш на 1 час
         });
