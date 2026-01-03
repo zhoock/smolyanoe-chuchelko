@@ -242,5 +242,36 @@ dialog {
 
       @include dashboard-button($padding: var(--ms-01) var(--ms-0));
     }
+
+    // Download spinner (используется в My Purchases и других местах)
+    &__download-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: var(--ms-02);
+      flex-shrink: 0;
+      animation: download-spinner-spin 0.8s linear infinite;
+
+      circle {
+        stroke: currentcolor;
+        stroke-width: 2;
+      }
+
+      path {
+        stroke: currentcolor;
+        stroke-width: 2;
+        stroke-linecap: round;
+      }
+    }
+
+    @keyframes download-spinner-spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
   }
 }
