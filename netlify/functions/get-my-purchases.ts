@@ -122,16 +122,15 @@ export const handler: Handler = async (
     const purchases: Purchase[] = await Promise.all(
       purchasesResult.rows.map(async (purchaseRow) => {
         // Получаем информацию об альбоме (берем первую найденную языковую версию)
-        // ВАЖНО: cover хранится как JSONB, извлекаем img из него
+        // ВАЖНО: cover хранится как TEXT (после миграции 015), просто возвращаем его
         const albumResult = await query<{
           artist: string;
           album: string;
           lang: string;
           cover: string | null;
-        }>(
-          `SELECT artist, album, lang, cover->>'img' as cover FROM albums WHERE album_id = $1 LIMIT 1`,
-          [purchaseRow.album_id]
-        );
+        }>(`SELECT artist, album, lang, cover FROM albums WHERE album_id = $1 LIMIT 1`, [
+          purchaseRow.album_id,
+        ]);
 
         if (albumResult.rows.length === 0) {
           // Если альбом не найден, возвращаем минимальную информацию
