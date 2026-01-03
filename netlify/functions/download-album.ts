@@ -6,6 +6,7 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import { createClient } from '@supabase/supabase-js';
 import archiver from 'archiver';
 
 export const handler: Handler = async (
@@ -138,10 +139,10 @@ export const handler: Handler = async (
         order_index: number;
       }>(
         `SELECT t.track_id, t.title, t.src, t.order_index
-         FROM tracks t
-         INNER JOIN albums a ON t.album_id = a.id
-         WHERE a.album_id = $1 AND a.lang = $2
-         ORDER BY t.order_index ASC`,
+       FROM tracks t
+       INNER JOIN albums a ON t.album_id = a.id
+       WHERE a.album_id = $1 AND a.lang = $2
+       ORDER BY t.order_index ASC`,
         [purchase.album_id, album.lang]
       );
     } catch (dbError) {
@@ -312,17 +313,9 @@ export const handler: Handler = async (
     // Объединяем все chunks в один Buffer
     const zipBuffer = Buffer.concat(chunks);
 
-    // Обновляем счетчик скачиваний
-    query(
-      `UPDATE purchases 
-       SET download_count = download_count + 1, 
-           last_downloaded_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [purchase.id]
-    ).catch((error) => {
-      console.error('❌ Failed to update download count:', error);
-    });
+    console.log(
+      `✅ [download-album] ZIP archive created: ${filesAdded} files, ${zipBuffer.length} bytes`
+    );
 
     // Формируем имя файла для скачивания
     const sanitizeFileName = (name: string): string => {
@@ -337,21 +330,123 @@ export const handler: Handler = async (
     const downloadFileName = `${albumFileName}.zip`;
     const encodedFileName = encodeURIComponent(downloadFileName);
 
-    console.log(
-      `✅ [download-album] ZIP archive created: ${filesAdded} files, ${zipBuffer.length} bytes`
-    );
+    // Обновляем счетчик скачиваний (не блокируем ответ)
+    query(
+      `UPDATE purchases 
+       SET download_count = download_count + 1, 
+           last_downloaded_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [purchase.id]
+    ).catch((error) => {
+      console.error('❌ Failed to update download count:', error);
+    });
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
-        'Content-Length': zipBuffer.length.toString(),
-        'Cache-Control': 'no-cache',
+    // Для локальной разработки возвращаем файл напрямую (нет лимита размера)
+    // Для production используем upload в Storage + redirect
+    const isLocalDev = !!process.env.NETLIFY_DEV;
+
+    if (isLocalDev) {
+      // Локальная разработка: возвращаем файл напрямую
+      console.log(
+        `📤 [download-album] Returning ZIP directly (local dev): ${zipBuffer.length} bytes`
+      );
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
+          'Content-Length': zipBuffer.length.toString(),
+          'Cache-Control': 'no-cache',
+        },
+        body: zipBuffer.toString('base64'),
+        isBase64Encoded: true,
+      };
+    }
+
+    // Production: загружаем в Storage и возвращаем redirect
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    const serviceRoleKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('❌ [download-album] Supabase credentials not found');
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Storage service not configured' }),
+      };
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
       },
-      body: zipBuffer.toString('base64'),
-      isBase64Encoded: true,
-    };
+    });
+
+    // Временный путь для ZIP-файла (используем purchase_token для уникальности)
+    const tempStoragePath = `users/${storageUserId}/downloads/${purchaseToken}/${downloadFileName}`;
+
+    try {
+      console.log(`📤 [download-album] Uploading ZIP to storage: ${tempStoragePath}`);
+
+      // Загружаем ZIP в Storage
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET_NAME)
+        .upload(tempStoragePath, zipBuffer, {
+          contentType: 'application/zip',
+          upsert: true, // Перезаписываем, если файл уже существует
+          cacheControl: '3600', // Кэш на 1 час
+        });
+
+      if (uploadError) {
+        console.error('❌ [download-album] Failed to upload ZIP to storage:', uploadError);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Failed to upload ZIP file' }),
+        };
+      }
+
+      console.log(`✅ [download-album] ZIP uploaded successfully`);
+
+      // Получаем публичный URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from(STORAGE_BUCKET_NAME)
+        .getPublicUrl(tempStoragePath);
+
+      if (!urlData?.publicUrl) {
+        console.error('❌ [download-album] Failed to get public URL');
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Failed to get download URL' }),
+        };
+      }
+
+      console.log(`✅ [download-album] Public URL generated: ${urlData.publicUrl}`);
+
+      // Редирект на прямой URL (избегаем ошибки 413 для больших файлов)
+      return {
+        statusCode: 302,
+        headers: {
+          Location: urlData.publicUrl,
+          'Cache-Control': 'no-cache',
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
+        },
+      };
+    } catch (error) {
+      console.error('❌ [download-album] Error uploading ZIP:', error);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Internal server error',
+        }),
+      };
+    }
   } catch (error) {
     console.error('❌ Error in download-album:', error);
     return {
