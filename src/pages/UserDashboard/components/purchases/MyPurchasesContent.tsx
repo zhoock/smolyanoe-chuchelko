@@ -373,7 +373,29 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                     >
                       {downloadingAlbums.has(purchase.purchaseToken) ? (
                         <>
-                          <span className="user-dashboard__download-spinner"></span>
+                          <svg
+                            className="user-dashboard__download-spinner"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 14 14"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <circle
+                              cx="7"
+                              cy="7"
+                              r="6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeOpacity="0.3"
+                            />
+                            <path
+                              d="M 7 1 A 6 6 0 0 1 13 7"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
                           {ui?.dashboard?.myPurchases?.downloading ?? 'Downloading...'}
                         </>
                       ) : downloadedItems.has(`album-${purchase.purchaseToken}`) ? (
@@ -409,7 +431,29 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                           >
                             {downloadingTracks.has(`${purchase.purchaseToken}-${track.trackId}`) ? (
                               <>
-                                <span className="user-dashboard__download-spinner"></span>
+                                <svg
+                                  className="user-dashboard__download-spinner"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 14 14"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <circle
+                                    cx="7"
+                                    cy="7"
+                                    r="6"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeOpacity="0.3"
+                                  />
+                                  <path
+                                    d="M 7 1 A 6 6 0 0 1 13 7"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
                                 {ui?.dashboard?.myPurchases?.downloading ?? 'Downloading...'}
                               </>
                             ) : downloadedItems.has(

@@ -1,0 +1,470 @@
+// Tracks styles for UserDashboard
+// Tracks, lyrics, upload
+
+@use '../../../scss/abstracts/mixins' as *;
+
+dialog {
+  .user-dashboard {
+    &__track-upload {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--ms-0);
+      padding: var(--ms-1);
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+      background: var(--dashboard-card-bg, var(--moon-ash));
+      border: 2px dashed var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      margin-bottom: var(--ms-0);
+    }
+
+    &__track-upload-progress {
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    &__track-upload-progress-bar {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      max-width: 400px;
+      background-color: rgb(var(--graphite-green-rgb) / 10%);
+      overflow: hidden;
+    }
+
+    &__track-upload-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4caf50, #8bc34a);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    &__track-upload-text {
+      text-align: center;
+    }
+
+    &__choose-files-button {
+      white-space: nowrap;
+
+      @include dashboard-button;
+    }
+
+    &__tracks-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+      margin-bottom: var(--ms-0);
+    }
+
+    &__track-item-wrapper {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+
+      &--dragging {
+        opacity: 0.5;
+      }
+    }
+
+    &__track-item-content {
+      position: relative;
+      width: 100%;
+      background: var(--dashboard-card-bg);
+    }
+
+    &__track-item {
+      display: flex;
+      height: 56px;
+      align-items: center;
+      color: var(--dashboard-text-primary);
+      cursor: default;
+      background: var(--dashboard-card-bg);
+      transition: opacity 0.2s ease;
+
+      &--dragging {
+        opacity: 0.5;
+      }
+    }
+
+    &__track-drag-handle {
+      display: flex;
+      align-items: center;
+      cursor: grab;
+      color: var(--dashboard-text-secondary);
+      user-select: none;
+      touch-action: none;
+      min-width: 24px;
+      background: transparent;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: var(--dashboard-text-primary);
+      }
+
+      &:active {
+        cursor: grabbing;
+      }
+    }
+
+    &__track-drag-icon {
+      font-size: var(--dashboard-font-size);
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+
+    &__track-number {
+      color: var(--dashboard-text-secondary);
+    }
+
+    &__track-title {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: var(--ms-01);
+      font-size: var(--dashboard-font-size);
+      border-radius: var(--ms-02);
+      flex: 1;
+
+      @include breakpoint(tablet) {
+        &:hover {
+          .user-dashboard__track-actions {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+          }
+        }
+      }
+    }
+
+    &__track-actions {
+      position: absolute;
+      right: var(--ms-01);
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+      padding: var(--ms-01);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: var(--ms-01);
+      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+
+      @include breakpoint(tablet) {
+        display: flex;
+      }
+    }
+
+    &__track-edit-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: var(--dashboard-hover-bg);
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentcolor;
+      }
+    }
+
+    &__track-delete-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      color: rgb(220 38 38);
+      background: transparent;
+      border: none;
+      border-radius: var(--ms-02);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: rgb(220 38 38 / 10%);
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentcolor;
+      }
+    }
+
+    &__track-title-input {
+      padding: var(--ms-01);
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dark-greenish-yellow);
+      border-radius: var(--ms-02);
+      flex: 1;
+      outline: none;
+      font-family: inherit;
+
+      &:focus {
+        border-color: var(--dark-greenish-yellow);
+        background: var(--dashboard-card-bg, var(--moon-ash));
+      }
+    }
+
+    &__track-duration-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+    }
+
+    &__track-duration {
+      color: var(--dashboard-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    &__track-edit-button-swipe {
+      position: absolute;
+      top: var(--ms-01);
+      right: calc(80px + 8px + var(--ms-01));
+      bottom: var(--ms-01);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      padding: 0;
+      color: var(--white);
+      font-size: var(--dashboard-font-size);
+      background: rgb(59 130 246);
+      border: none;
+      border-radius: var(--ms-01);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease,
+        background-color 0.2s;
+
+      @include breakpoint(tablet) {
+        display: none;
+      }
+
+      &--visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      &:hover,
+      &:active {
+        background: rgb(37 99 235);
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    &__track-delete-button-swipe {
+      position: absolute;
+      top: var(--ms-01);
+      right: var(--ms-01);
+      bottom: var(--ms-01);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      padding: 0;
+      color: var(--white);
+      font-size: var(--dashboard-font-size);
+      background: rgb(220 38 38);
+      border: none;
+      border-radius: var(--ms-01);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease,
+        background-color 0.2s;
+
+      @include breakpoint(tablet) {
+        display: none;
+      }
+
+      &--visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      &:hover,
+      &:active {
+        background: rgb(185 28 28);
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    &__album-divider {
+      height: 1px;
+      background: var(--dashboard-hover-bg);
+    }
+
+    &__lyrics-section {
+      margin-top: var(--ms-1);
+      padding-top: var(--ms-0);
+      border-top: 1px solid var(--dashboard-divider);
+    }
+
+    &__lyrics-title {
+      margin: 0 0 var(--ms-0) 0;
+      padding: 0;
+      color: var(--white);
+      font-size: var(--dashboard-heading-font-size);
+      font-weight: 700;
+      letter-spacing: normal;
+    }
+
+    &__lyrics-table {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    &__lyrics-header {
+      display: none;
+
+      @include breakpoint(tablet) {
+        display: grid;
+        grid-template-columns: 2fr 2fr 2fr;
+        gap: var(--ms-0);
+        padding: var(--ms-0);
+        border-bottom: 1px solid var(--dashboard-divider);
+      }
+    }
+
+    &__lyrics-header-cell {
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+      font-weight: 500;
+      text-transform: uppercase;
+
+      &:last-child {
+        text-align: right;
+      }
+    }
+
+    &__lyrics-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-0);
+      padding: var(--ms-01);
+      border-bottom: 1px solid var(--dashboard-divider);
+
+      @include breakpoint(tablet) {
+        display: grid;
+        grid-template-columns: 2fr 2fr 2fr;
+        gap: var(--ms-0);
+        padding: var(--ms-0);
+      }
+    }
+
+    &__lyrics-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--ms-02);
+      width: 100%;
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
+
+      &::before {
+        content: attr(data-label);
+        color: var(--dashboard-text-secondary);
+        font-size: var(--ms-01);
+        font-weight: 500;
+        text-transform: uppercase;
+        margin-bottom: var(--ms-02);
+      }
+
+      @include breakpoint(tablet) {
+        flex-direction: row;
+        align-items: center;
+        gap: 0;
+        width: auto;
+
+        &::before {
+          display: none;
+        }
+      }
+
+      &--actions {
+        display: flex;
+        gap: var(--ms-01);
+        flex-wrap: wrap;
+        justify-content: flex-start;
+
+        @include breakpoint(tablet) {
+          justify-content: flex-end;
+        }
+      }
+    }
+
+    &__lyrics-action-button {
+      font-size: var(--ms-01);
+      white-space: nowrap;
+
+      @include button-variant(
+        $color: var(--dashboard-button-cancel-text),
+        $background: var(--dashboard-button-cancel-bg),
+        $hover-color: var(--dashboard-button-cancel-text),
+        $hover-background: var(--dashboard-button-cancel-hover),
+        $margin: 0,
+        $padding: var(--ms-02) var(--ms-01),
+        $border: 0,
+        $border-radius: var(--ms-02)
+      );
+    }
+  }
+}

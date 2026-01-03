@@ -1,0 +1,246 @@
+// Purchases styles for UserDashboard
+// My Purchases section
+
+@use '../../../scss/abstracts/mixins' as *;
+
+dialog {
+  .user-dashboard {
+    &__my-purchases {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__my-purchases-form {
+      display: flex;
+      padding: var(--ms-1);
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__my-purchases-description {
+      margin: 0;
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+      line-height: 1.5;
+    }
+
+    &__my-purchases-form-inner {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-label {
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      font-weight: 500;
+    }
+
+    &__my-purchases-input {
+      padding: var(--ms-01) var(--ms-01);
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: 6px;
+      transition: all 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: var(--dark-greenish-yellow);
+      }
+    }
+
+    &__my-purchases-submit {
+      margin-top: var(--ms-01);
+
+      @include dashboard-button;
+    }
+
+    &__my-purchases-error {
+      padding: var(--ms-01);
+      color: #f44336;
+      font-size: var(--ms-0);
+      background: rgb(244 67 54 / 10%);
+      border: 1px solid rgb(244 67 54 / 30%);
+      border-radius: 6px;
+    }
+
+    &__my-purchases-email-info {
+      display: flex;
+      padding: var(--ms-01) var(--ms-1);
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--ms-01);
+
+      p {
+        margin: 0;
+        color: var(--dashboard-text-primary);
+
+        strong {
+          color: var(--dark-greenish-yellow);
+        }
+      }
+    }
+
+    &__my-purchases-change-email {
+      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+    }
+
+    &__my-purchases-loading {
+      padding: var(--ms-2);
+      color: var(--dashboard-text-secondary);
+      text-align: center;
+    }
+
+    &__my-purchases-empty {
+      padding: var(--ms-2);
+      text-align: center;
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+
+      p {
+        margin: var(--ms-01) 0;
+        color: var(--dashboard-text-secondary);
+      }
+    }
+
+    &__my-purchases-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ms-1);
+    }
+
+    &__my-purchases-purchase {
+      padding: var(--ms-1);
+      background: var(--dashboard-input-bg);
+      border: 1px solid var(--dashboard-input-border);
+      border-radius: var(--ms-01);
+      transition: all 0.2s;
+    }
+
+    &__my-purchases-purchase-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--ms-01);
+      margin-bottom: var(--ms-1);
+    }
+
+    &__my-purchases-purchase-cover {
+      width: 80px;
+      height: 80px;
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: 6px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    &__my-purchases-purchase-cover-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &__my-purchases-purchase-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    &__my-purchases-album-download {
+      position: relative;
+      display: inline-flex;
+      white-space: nowrap;
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--ms-02);
+
+      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    &__my-purchases-purchase-title {
+      margin: 0;
+      color: var(--dashboard-text-primary);
+      font-family: inherit;
+      letter-spacing: normal;
+    }
+
+    &__my-purchases-purchase-date,
+    &__my-purchases-purchase-downloads {
+      margin: 0;
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+    }
+
+    &__my-purchases-tracks {
+      margin-top: var(--ms-1);
+    }
+
+    &__my-purchases-tracks-title {
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      font-weight: 600;
+      margin-bottom: var(--ms-01);
+    }
+
+    &__my-purchases-tracks-list {
+      display: flex;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      flex-direction: column;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-track {
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+    }
+
+    &__my-purchases-track-number {
+      font-weight: 600;
+      color: var(--dashboard-text-secondary);
+      min-width: 30px;
+    }
+
+    &__my-purchases-track-title {
+      flex: 1;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+    }
+
+    &__my-purchases-track-download {
+      position: relative;
+      display: inline-flex;
+      white-space: nowrap;
+      align-items: center;
+      gap: var(--ms-02);
+
+      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+    }
+  }
+}

@@ -1,0 +1,126 @@
+// Modals styles for UserDashboard
+// Edit Track Modal
+
+@use '../../../scss/abstracts/mixins' as *;
+
+dialog {
+  .user-dashboard {
+    // Edit Track Modal
+    .edit-track-modal {
+      &__card {
+        @include dashboard-modal-card;
+      }
+
+      &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--ms-1) var(--ms-2);
+        border-bottom: 1px solid var(--dashboard-divider);
+      }
+
+      &__close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: calc(var(--ms-1) * 1.5);
+        height: calc(var(--ms-1) * 1.5);
+        padding: 0;
+        color: var(--dashboard-text-primary);
+        font-size: var(--dashboard-heading-font-size);
+        font-weight: 300;
+        line-height: 1;
+        background: transparent;
+        border: none;
+        border-radius: var(--ms-02);
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          color: var(--dashboard-text-primary);
+          background: var(--dashboard-hover-bg);
+        }
+
+        &:focus {
+          outline: none;
+        }
+
+        &:focus-visible {
+          outline: 2px solid var(--dark-greenish-yellow);
+          outline-offset: 2px;
+        }
+      }
+
+      &__title {
+        margin: 0;
+        padding: 0;
+        color: var(--dashboard-text-primary);
+        font-size: var(--dashboard-heading-font-size);
+        font-weight: 700;
+      }
+
+      &__content {
+        flex: 1;
+        padding: var(--ms-2);
+        overflow-y: auto;
+      }
+
+      &__field {
+        @include dashboard-form-field;
+      }
+
+      &__label {
+        @include dashboard-form-label;
+      }
+
+      &__input {
+        @include dashboard-form-input;
+      }
+
+      &__footer {
+        @include dashboard-modal-footer;
+      }
+
+      &__cancel {
+        @include dashboard-button;
+      }
+
+      &__save {
+        font-size: var(--dashboard-font-size);
+        line-height: 16px;
+
+        @include button-variant(
+          $color: var(--dashboard-button-primary-text),
+          $background: var(--dashboard-button-primary-bg),
+          $hover-color: var(--dashboard-button-primary-text),
+          $hover-background: var(--dashboard-button-primary-hover),
+          $margin: 0,
+          $padding: var(--ms-01) var(--ms-0),
+          $border: 0,
+          $border-radius: var(--ms-01)
+        );
+
+        &:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+      }
+
+      &__download-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--dashboard-card-border);
+        border-top-color: var(--dashboard-text-primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
+  }
+}
