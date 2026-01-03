@@ -324,9 +324,29 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                     {purchase.cover && (
                       <div className="user-dashboard__my-purchases-purchase-cover">
                         <img
-                          src={getUserImageUrl(purchase.cover, 'albums', '.jpg', true)}
+                          src={(() => {
+                            const imageUrl = getUserImageUrl(
+                              purchase.cover,
+                              'albums',
+                              '.jpg',
+                              true
+                            );
+                            console.log('🖼️ [MyPurchases] Image URL:', {
+                              purchaseCover: purchase.cover,
+                              generatedUrl: imageUrl,
+                              albumId: purchase.albumId,
+                            });
+                            return imageUrl;
+                          })()}
                           alt={`${purchase.artist} — ${purchase.album}`}
                           className="user-dashboard__my-purchases-purchase-cover-image"
+                          onError={(e) => {
+                            console.error('❌ [MyPurchases] Failed to load image:', {
+                              src: e.currentTarget.src,
+                              purchaseCover: purchase.cover,
+                              albumId: purchase.albumId,
+                            });
+                          }}
                         />
                       </div>
                     )}
