@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/components/EditArticleModalV2.style.scss
 @use '@entities/article/ui/style.scss' as *;
-@use '../../../scss/abstracts/mixins' as *;
+@use '../../../../../scss/abstracts/mixins' as *;
 
 // Общие селекторы img (должны быть перед более специфичными)
 // Селекторы img из вложенных блоков (менее специфичные, чем dialog .edit-article-v2__content.article .uncollapse img)

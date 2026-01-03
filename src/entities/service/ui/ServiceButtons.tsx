@@ -20,7 +20,7 @@ function ServiceButtonsContent({
   section: string;
   labels: { purchase: string; stream: string };
 }) {
-  const { addToCart } = useCart();
+  const { addToCart, cartAlbums } = useCart();
   const buttons = album?.buttons as String;
 
   // Проверяем, разрешено ли скачивание/продажа
@@ -31,9 +31,14 @@ function ServiceButtonsContent({
       : 'no';
   const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
 
+  // Проверяем, есть ли альбом уже в корзине
+  const isInCart = album.albumId ? cartAlbums.some((a) => a.albumId === album.albumId) : false;
+
   const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    addToCart(album);
+    if (!isInCart) {
+      addToCart(album);
+    }
   };
 
   return (
@@ -49,8 +54,12 @@ function ServiceButtonsContent({
               <li className="service-buttons__list-item">
                 <a
                   href="#"
-                  className="service-buttons__link service-buttons__link--download"
-                  aria-label="Скачать альбом"
+                  className={`service-buttons__link service-buttons__link--download${
+                    isInCart ? ' service-buttons__link--in-cart' : ''
+                  }`}
+                  aria-label={isInCart ? 'Альбом уже в корзине' : 'Скачать альбом'}
+                  aria-disabled={isInCart}
+                  tabIndex={isInCart ? -1 : 0}
                   onClick={handleDownloadClick}
                 >
                   <svg

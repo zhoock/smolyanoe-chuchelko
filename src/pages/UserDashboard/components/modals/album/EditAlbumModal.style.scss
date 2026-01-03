@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/EditAlbumModal.style.scss
-@use '../../../scss/abstracts/mixins' as *;
+@use '../../../../../scss/abstracts/mixins' as *;
 
 dialog {
   // Общие стили для всех кнопок в попапе
@@ -26,7 +26,6 @@ dialog {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: var(--ms-1);
     }
 
     &__title {
@@ -147,7 +146,6 @@ dialog {
       gap: var(--ms-0);
       padding: var(--ms-2);
       min-height: 200px;
-      background: var(--moon-ash);
       border: 2px dashed var(--dashboard-card-border);
       border-radius: var(--ms-01);
       cursor: pointer;
@@ -343,8 +341,8 @@ dialog {
 
     &__select {
       padding: var(--ms-01) var(--ms-01);
-      color: var(--dashboard-text-primary) !important;
-      font-size: var(--ms-0) !important;
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
       background: var(--dashboard-card-bg) !important;
       border: 1px solid var(--dashboard-card-border) !important;
       border-radius: var(--ms-01) !important;
@@ -372,13 +370,12 @@ dialog {
     &__divider {
       width: calc(100% + var(--ms-2) * 2);
       height: 1px;
-      margin: 0 calc(var(--ms-2) * -1) var(--ms-1) calc(var(--ms-2) * -1);
       background: var(--dashboard-hover-bg);
 
       @include breakpoint(phones) {
-        width: calc(100% + var(--ms-1) * 2);
-        margin-left: calc(var(--ms-1) * -1);
-        margin-right: calc(var(--ms-1) * -1);
+        width: calc(100% + var(--ms-2) * 2);
+        margin-left: calc(var(--ms-2) * -1);
+        margin-right: calc(var(--ms-2) * -1);
       }
     }
 
@@ -393,9 +390,28 @@ dialog {
 
     &__button {
       &--cancel,
-      &--secondary,
+      &--secondary {
+        @include dashboard-button;
+      }
+
       &--primary {
         @include dashboard-button;
+
+        & {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          border: 1px solid var(--dashboard-card-border);
+        }
+
+        &:hover {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          opacity: 0.9;
+        }
+
+        &:active {
+          opacity: 0.8;
+        }
       }
     }
 
@@ -510,7 +526,6 @@ dialog {
       display: flex;
       flex-wrap: wrap;
       gap: var(--ms-01);
-      margin-bottom: var(--ms-01);
     }
 
     &__tag {

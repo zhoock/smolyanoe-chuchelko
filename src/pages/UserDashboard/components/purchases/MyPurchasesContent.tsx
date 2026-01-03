@@ -10,7 +10,7 @@ import {
   type Purchase,
 } from '@shared/api/purchases';
 import { getUserImageUrl } from '@shared/api/albums';
-import '../UserDashboard.style.scss';
+import '../../UserDashboard.style.scss';
 
 interface MyPurchasesContentProps {
   userEmail?: string;

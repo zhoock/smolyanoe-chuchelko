@@ -1,5 +1,5 @@
-// src/pages/UserDashboard/components/EditLyricsModal.style.scss
-@use '../../../scss/abstracts/mixins' as *;
+// src/pages/UserDashboard/components/AddLyricsModal.style.scss
+@use '../../../../../scss/abstracts/mixins' as *;
 
 dialog {
   // Общие стили для всех кнопок в попапе
@@ -8,7 +8,7 @@ dialog {
     line-height: 16px;
   }
 
-  .edit-lyrics-modal {
+  .add-lyrics-modal {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -17,66 +17,24 @@ dialog {
     background: transparent;
 
     &__card {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      padding: 0;
-      gap: 0;
+      overflow-y: auto;
+      padding: var(--ms-2);
+      gap: var(--ms-1);
 
       @include dashboard-modal-card;
     }
 
     &__header {
       display: flex;
-      flex-shrink: 0;
-      align-items: center;
+      justify-content: space-between;
+      align-items: flex-start;
       gap: var(--ms-0);
-      padding: var(--ms-1) var(--ms-2);
-      border-bottom: 1px solid var(--dashboard-divider);
     }
 
-    &__close {
+    &__header-content {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      width: calc(var(--ms-1) * 1.5);
-      height: calc(var(--ms-1) * 1.5);
-      padding: 0;
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
-      font-weight: 300;
-      line-height: 1;
-      background: transparent;
-      border: none;
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: none !important;
-      letter-spacing: normal !important;
-
-      &:hover {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-hover-bg);
-      }
-
-      &:focus {
-        outline: none;
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--dark-greenish-yellow);
-        outline-offset: 2px;
-      }
-    }
-
-    &__content {
-      display: flex;
-      flex: 1 1 0;
       flex-direction: column;
-      gap: var(--ms-1);
-      min-height: 0;
-      overflow-y: auto;
-      padding: var(--ms-2);
+      gap: var(--ms-01);
     }
 
     &__title {
@@ -90,11 +48,27 @@ dialog {
       letter-spacing: normal !important;
     }
 
+    &__subtitle {
+      margin: 0;
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      font-weight: 400;
+      line-height: 1.2;
+      text-transform: none !important;
+      letter-spacing: normal !important;
+    }
+
+    &__preview-button {
+      @include dashboard-button;
+    }
+
     &__divider {
-      width: 100%;
+      width: calc(100% + var(--ms-2) * 2);
       height: 1px;
-      background: var(--dashboard-divider);
-      flex-shrink: 0;
+      background: var(--dashboard-hover-bg);
+      margin-left: calc(var(--ms-2) * -1);
+      margin-right: calc(var(--ms-2) * -1);
     }
 
     &__textarea {
@@ -110,6 +84,10 @@ dialog {
       border-radius: var(--ms-01);
       resize: vertical;
       box-sizing: border-box;
+
+      &::placeholder {
+        color: var(--dashboard-text-secondary);
+      }
 
       &:focus {
         outline: none;
@@ -129,14 +107,36 @@ dialog {
       @include dashboard-form-input;
     }
 
-    &__footer {
-      @include dashboard-modal-footer;
+    &__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--ms-0);
+      margin-top: var(--ms-0);
     }
 
     &__button {
-      &--cancel,
+      &--cancel {
+        @include dashboard-button;
+      }
+
       &--primary {
         @include dashboard-button;
+
+        & {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          border: 1px solid var(--dashboard-card-border);
+        }
+
+        &:hover {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          opacity: 0.9;
+        }
+
+        &:active {
+          opacity: 0.8;
+        }
       }
     }
   }

@@ -39,18 +39,7 @@ function agentLog(payload: {
   runId?: string;
   hypothesisId?: string;
 }) {
-  if (!DEV_LOG) return;
-  fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...payload,
-      timestamp: payload.timestamp || Date.now(),
-      sessionId: payload.sessionId || 'debug-session',
-      runId: payload.runId || 'run1',
-    }),
-  }).catch(() => {});
-}
+  if (!DEV_LOG) return;}
 
 // Утилиты для сохранения и восстановления позиции каретки
 function getCaretOffset(root: HTMLElement): number | null {

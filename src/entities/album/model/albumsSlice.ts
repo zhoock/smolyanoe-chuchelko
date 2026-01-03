@@ -161,76 +161,10 @@ export const fetchAlbums = createAsyncThunk<
           headers,
         });
 
-        clearTimeout(timeoutId);
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'albumsSlice.ts:151',
-            message: 'Albums API response',
-            data: {
-              status: response.status,
-              ok: response.ok,
-              statusText: response.statusText,
-              hasToken: !!token,
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'I',
-          }),
-        }).catch(() => {});
-        // #endregion
-
-        if (response.ok) {
-          const result = await response.json();
-
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'albumsSlice.ts:159',
-              message: 'Albums API result',
-              data: {
-                hasSuccess: result.success,
-                hasData: !!result.data,
-                dataIsArray: Array.isArray(result.data),
-                dataLength: Array.isArray(result.data) ? result.data.length : 0,
-                firstAlbum:
-                  Array.isArray(result.data) && result.data[0]
-                    ? { albumId: result.data[0].albumId, artist: result.data[0].artist }
-                    : null,
-              },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'I',
-            }),
-          }).catch(() => {});
-          // #endregion
-
-          if (result.success && result.data && Array.isArray(result.data)) {
+        clearTimeout(timeoutId);if (response.ok) {
+          const result = await response.json();if (result.success && result.data && Array.isArray(result.data)) {
             // Если данных нет, возвращаем пустой массив
-            if (result.data.length === 0) {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  location: 'albumsSlice.ts:164',
-                  message: 'Albums API returned empty array',
-                  data: {},
-                  timestamp: Date.now(),
-                  sessionId: 'debug-session',
-                  runId: 'run1',
-                  hypothesisId: 'I',
-                }),
-              }).catch(() => {});
-              // #endregion
-              return [];
+            if (result.data.length === 0) {return [];
             }
 
             // 🔍 DEBUG: Проверяем наличие duration в данных из API

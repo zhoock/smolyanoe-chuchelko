@@ -39,29 +39,7 @@ export function generateId(): string {
 /**
  * Преобразует старую структуру details в новую структуру блоков
  */
-export function normalizeDetailsToBlocks(details: ArticledetailsProps[]): Block[] {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'EditArticleModalV2.utils.ts:42',
-      message: 'normalizeDetailsToBlocks entry',
-      data: {
-        detailsLength: details?.length || 0,
-        isArray: Array.isArray(details),
-        detailsType: typeof details,
-        firstDetail: details?.[0] || null,
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'E',
-    }),
-  }).catch(() => {});
-  // #endregion
-
-  const blocks: Block[] = [];
+export function normalizeDetailsToBlocks(details: ArticledetailsProps[]): Block[] {const blocks: Block[] = [];
 
   if (!details || !Array.isArray(details) || details.length === 0) {
     // Если details пустой, создаем пустой paragraph
@@ -177,28 +155,7 @@ export function normalizeDetailsToBlocks(details: ArticledetailsProps[]): Block[
       type: 'paragraph',
       text: '',
     });
-  }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'EditArticleModalV2.utils.ts:147',
-      message: 'normalizeDetailsToBlocks exit',
-      data: {
-        blocksCount: blocks.length,
-        blocksTypes: blocks.map((b) => b.type),
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'E',
-    }),
-  }).catch(() => {});
-  // #endregion
-
-  return blocks;
+  }return blocks;
 }
 
 /**

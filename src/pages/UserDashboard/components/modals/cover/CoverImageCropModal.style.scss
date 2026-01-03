@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/CoverImageCropModal.style.scss
-@use '../../../scss/abstracts/mixins' as *;
+@use '../../../../../scss/abstracts/mixins' as *;
 
 .cover-image-crop-modal {
   @include dashboard-modal-card;
@@ -256,11 +256,18 @@
     }
 
     &--save {
-      color: var(--dashboard-button-save-text);
-      background: var(--dashboard-button-save-bg);
+      color: var(--dashboard-card-bg);
+      background: var(--white);
+      border: 1px solid var(--dashboard-card-border);
 
       &:hover:not(:disabled) {
-        background: var(--dashboard-button-save-hover);
+        color: var(--dashboard-card-bg);
+        background: var(--white);
+        opacity: 0.9;
+      }
+
+      &:active:not(:disabled) {
+        opacity: 0.8;
       }
     }
   }

@@ -12,7 +12,7 @@ import {
   loadHeaderImagesFromDatabase,
   saveHeaderImagesToDatabase,
 } from '@entities/user/lib';
-import { HeaderImagesUpload } from './HeaderImagesUpload';
+import { HeaderImagesUpload } from '../../upload/HeaderImagesUpload';
 import './ProfileSettingsModal.style.scss';
 
 interface ProfileSettingsModalProps {
@@ -155,17 +155,17 @@ export function ProfileSettingsModal({
   const handleCancel = () => {
     // Возвращаем исходные значения в зависимости от активной вкладки
     if (activeTab === 'general') {
-      setSelectedLang(initialLang);
+    setSelectedLang(initialLang);
     } else if (activeTab === 'profile') {
       setName(initialName);
       setAboutText(initialAboutText);
-      setHeaderImages([...initialHeaderImages]);
+    setHeaderImages([...initialHeaderImages]);
     } else if (activeTab === 'security') {
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setPasswordError(null);
-      setPasswordSuccess(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordSuccess(false);
     }
     onClose();
   };
@@ -306,7 +306,7 @@ export function ProfileSettingsModal({
           return;
         } finally {
           setIsSavingAboutText(false);
-        }
+      }
       }
 
       // Сохранение header images
@@ -541,73 +541,73 @@ export function ProfileSettingsModal({
           </nav>
 
           <div className="profile-settings-modal__body">
-            <div className="profile-settings-modal__content">
+          <div className="profile-settings-modal__content">
               {activeTab === 'general' && (
                 <div className="profile-settings-modal__general-tab">
                   <h3 className="profile-settings-modal__section-title">
                     {ui?.dashboard?.profileSettingsModal?.tabs?.general ?? 'General'}
                   </h3>
-                  <div className="profile-settings-modal__field">
+                <div className="profile-settings-modal__field">
                     <label className="profile-settings-modal__label">
                       {ui?.dashboard?.profileSettingsModal?.fields?.language ?? 'Язык'}
-                    </label>
-                    <div className="profile-settings-modal__select-wrapper">
-                      <div
-                        ref={selectRef}
-                        className="profile-settings-modal__select"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setIsDropdownOpen(!isDropdownOpen);
-                          }
-                        }}
+                  </label>
+                  <div className="profile-settings-modal__select-wrapper">
+                    <div
+                      ref={selectRef}
+                      className="profile-settings-modal__select"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setIsDropdownOpen(!isDropdownOpen);
+                        }
+                      }}
+                    >
+                      <span className="profile-settings-modal__select-value">
+                        {selectedLanguage.label}
+                      </span>
+                      <svg
+                        className={`profile-settings-modal__select-arrow ${
+                          isDropdownOpen ? 'profile-settings-modal__select-arrow--open' : ''
+                        }`}
+                        width="12"
+                        height="8"
+                        viewBox="0 0 12 8"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
                       >
-                        <span className="profile-settings-modal__select-value">
-                          {selectedLanguage.label}
-                        </span>
-                        <svg
-                          className={`profile-settings-modal__select-arrow ${
-                            isDropdownOpen ? 'profile-settings-modal__select-arrow--open' : ''
-                          }`}
-                          width="12"
-                          height="8"
-                          viewBox="0 0 12 8"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M1 1L6 6L11 1"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
-
-                      {isDropdownOpen && (
-                        <div ref={dropdownRef} className="profile-settings-modal__dropdown">
-                          {languages.map((lang) => (
-                            <button
-                              key={lang.value}
-                              type="button"
-                              className={`profile-settings-modal__option ${
-                                selectedLang === lang.value
-                                  ? 'profile-settings-modal__option--selected'
-                                  : ''
-                              }`}
-                              onClick={() => handleSelectLanguage(lang.value as 'ru' | 'en')}
-                            >
-                              {lang.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                        <path
+                          d="M1 1L6 6L11 1"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                     </div>
+
+                    {isDropdownOpen && (
+                      <div ref={dropdownRef} className="profile-settings-modal__dropdown">
+                        {languages.map((lang) => (
+                          <button
+                            key={lang.value}
+                            type="button"
+                            className={`profile-settings-modal__option ${
+                              selectedLang === lang.value
+                                ? 'profile-settings-modal__option--selected'
+                                : ''
+                            }`}
+                            onClick={() => handleSelectLanguage(lang.value as 'ru' | 'en')}
+                          >
+                            {lang.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                </div>
                 </div>
               )}
 
@@ -616,10 +616,10 @@ export function ProfileSettingsModal({
                   <h3 className="profile-settings-modal__section-title">
                     {ui?.dashboard?.profileSettingsModal?.tabs?.profile ?? 'Profile'}
                   </h3>
-                  <div className="profile-settings-modal__field">
+                <div className="profile-settings-modal__field">
                     <label htmlFor="profile-name" className="profile-settings-modal__label">
                       {ui?.dashboard?.profileSettingsModal?.fields?.bandName ?? 'Band Name'}
-                    </label>
+                  </label>
                     <input
                       id="profile-name"
                       type="text"
@@ -631,7 +631,7 @@ export function ProfileSettingsModal({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
-                  </div>
+                    </div>
 
                   <div className="profile-settings-modal__field">
                     <label htmlFor="profile-email" className="profile-settings-modal__label">
@@ -653,7 +653,7 @@ export function ProfileSettingsModal({
                     {isLoadingAboutText ? (
                       <div className="profile-settings-modal__loading">
                         {ui?.dashboard?.loading ?? ui?.dashboard?.uploading ?? 'Загрузка...'}
-                      </div>
+                </div>
                     ) : (
                       <textarea
                         id="profile-about"
@@ -685,253 +685,253 @@ export function ProfileSettingsModal({
                       />
                     )}
                   </div>
-                </div>
-              )}
+              </div>
+            )}
 
-              {activeTab === 'security' && (
-                <div className="profile-settings-modal__security-tab">
+            {activeTab === 'security' && (
+              <div className="profile-settings-modal__security-tab">
                   <h3 className="profile-settings-modal__section-title">
                     {ui?.dashboard?.profileSettingsModal?.buttons?.changePassword ?? 'Смена пароля'}
                   </h3>
 
-                  {passwordSuccess && (
+                {passwordSuccess && (
                     <div className="profile-settings-modal__success-message">
                       {ui?.dashboard?.profileSettingsModal?.messages?.passwordUpdated ??
                         'Пароль обновлён'}
                     </div>
-                  )}
+                )}
 
-                  {passwordError && (
-                    <div className="profile-settings-modal__error-message">{passwordError}</div>
-                  )}
+                {passwordError && (
+                  <div className="profile-settings-modal__error-message">{passwordError}</div>
+                )}
 
-                  {passwordValidationError && !passwordError && (
-                    <div className="profile-settings-modal__validation-error">
-                      {passwordValidationError}
-                    </div>
-                  )}
+                {passwordValidationError && !passwordError && (
+                  <div className="profile-settings-modal__validation-error">
+                    {passwordValidationError}
+                  </div>
+                )}
 
-                  <div className="profile-settings-modal__field">
-                    <label htmlFor="current-password" className="profile-settings-modal__label">
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="current-password" className="profile-settings-modal__label">
                       {ui?.dashboard?.profileSettingsModal?.fields?.currentPassword ??
                         'Текущий пароль'}
-                    </label>
-                    <div className="profile-settings-modal__input-wrapper">
-                      <input
-                        id="current-password"
-                        type={showCurrentPassword ? 'text' : 'password'}
-                        className="profile-settings-modal__input"
-                        value={currentPassword}
-                        onChange={(e) => {
-                          setCurrentPassword(e.target.value);
-                          setPasswordError(null);
-                        }}
-                        disabled={isChangingPassword}
-                      />
-                      <button
-                        type="button"
-                        className="profile-settings-modal__password-toggle"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        aria-label={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                        tabIndex={-1}
-                      >
-                        {showCurrentPassword ? (
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
-                              fill="currentColor"
-                            />
-                            <path
-                              d="M8 8l8 8M16 8l-8 8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="3"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="profile-settings-modal__field">
-                    <label htmlFor="new-password" className="profile-settings-modal__label">
-                      {ui?.dashboard?.profileSettingsModal?.fields?.newPassword ?? 'Новый пароль'}
-                    </label>
-                    <div className="profile-settings-modal__input-wrapper">
-                      <input
-                        id="new-password"
-                        type={showNewPassword ? 'text' : 'password'}
-                        className="profile-settings-modal__input"
-                        value={newPassword}
-                        onChange={(e) => {
-                          setNewPassword(e.target.value);
-                          setPasswordError(null);
-                        }}
-                        disabled={isChangingPassword}
-                        minLength={8}
-                      />
-                      <button
-                        type="button"
-                        className="profile-settings-modal__password-toggle"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        aria-label={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                        tabIndex={-1}
-                      >
-                        {showNewPassword ? (
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
-                              fill="currentColor"
-                            />
-                            <path
-                              d="M8 8l8 8M16 8l-8 8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="3"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="profile-settings-modal__field">
-                    <label htmlFor="confirm-password" className="profile-settings-modal__label">
-                      {ui?.dashboard?.profileSettingsModal?.fields?.confirmPassword ??
-                        'Подтвердите новый пароль'}
-                    </label>
-                    <div className="profile-settings-modal__input-wrapper">
-                      <input
-                        id="confirm-password"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        className="profile-settings-modal__input"
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
-                          setPasswordError(null);
-                        }}
-                        disabled={isChangingPassword}
-                      />
-                      <button
-                        type="button"
-                        className="profile-settings-modal__password-toggle"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? (
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
-                              fill="currentColor"
-                            />
-                            <path
-                              d="M8 8l8 8M16 8l-8 8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="3"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
+                  </label>
+                  <div className="profile-settings-modal__input-wrapper">
+                    <input
+                      id="current-password"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      className="profile-settings-modal__input"
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      disabled={isChangingPassword}
+                    />
+                    <button
+                      type="button"
+                      className="profile-settings-modal__password-toggle"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      aria-label={showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      tabIndex={-1}
+                    >
+                      {showCurrentPassword ? (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M8 8l8 8M16 8l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="new-password" className="profile-settings-modal__label">
+                      {ui?.dashboard?.profileSettingsModal?.fields?.newPassword ?? 'Новый пароль'}
+                  </label>
+                  <div className="profile-settings-modal__input-wrapper">
+                    <input
+                      id="new-password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      className="profile-settings-modal__input"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      disabled={isChangingPassword}
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      className="profile-settings-modal__password-toggle"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M8 8l8 8M16 8l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="profile-settings-modal__field">
+                  <label htmlFor="confirm-password" className="profile-settings-modal__label">
+                      {ui?.dashboard?.profileSettingsModal?.fields?.confirmPassword ??
+                        'Подтвердите новый пароль'}
+                  </label>
+                  <div className="profile-settings-modal__input-wrapper">
+                    <input
+                      id="confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      className="profile-settings-modal__input"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setPasswordError(null);
+                      }}
+                      disabled={isChangingPassword}
+                    />
+                    <button
+                      type="button"
+                      className="profile-settings-modal__password-toggle"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M10.94 6.08A6.93 6.93 0 0 1 12 6c3.18 0 6.17 2.29 7.91 6a15.23 15.23 0 0 1-.9 1.64 1 1 0 0 1-1.7-1.05A13.07 13.07 0 0 0 12 8a4.93 4.93 0 0 0-2.94 1.08L10.94 6.08ZM12 18a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92A6.93 6.93 0 0 1 12 18c-3.18 0-6.17-2.29-7.91-6a15.23 15.23 0 0 1 .9-1.64 1 1 0 0 1 1.7 1.05A13.07 13.07 0 0 0 12 16a4.93 4.93 0 0 0 2.94-1.08L13.06 17.92Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M8 8l8 8M16 8l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+              </div>
           </div>
 
           {hasChanges && (

@@ -1,0 +1,138 @@
+// src/entities/service/ui/FloatingCart.style.scss
+@use '../../../scss/abstracts/mixins' as *;
+
+.floating-cart {
+  position: fixed;
+  right: var(--ms-2);
+  bottom: var(--ms-2);
+  z-index: 1100;
+  display: flex;
+  padding: 0;
+  color: var(--text-color, #ffffff);
+  background: var(--accent-color, #998238);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  align-items: center;
+  justify-content: center;
+  inline-size: 56px;
+  block-size: 56px;
+  cursor: pointer;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      box-shadow: 0 6px 20px rgb(0 0 0 / 40%);
+      transform: scale(1.05);
+      background-color: var(--accent-color-hover, #b8a654);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    block-size: 100%;
+    color: inherit;
+  }
+
+  &__thumbnail {
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    pointer-events: none;
+
+    img {
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__thumbnails-stack {
+    position: relative;
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: none;
+  }
+
+  &__thumbnail-stack-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: calc(var(--stack-index, 0) + 1);
+    border-radius: 50%;
+    box-shadow:
+      0 2px 8px rgb(0 0 0 / 20%),
+      0 1px 3px rgb(0 0 0 / 15%);
+    transition: transform 0.2s ease;
+    transform: translateX(calc(var(--stack-index, 0) * 10px));
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: hidden;
+
+    img {
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    &--more {
+      display: flex;
+      background: var(--accent-color, #998238);
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  &__thumbnail-stack-item-overlay {
+    color: var(--text-color, #ffffff);
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: var(--base-font-family, arial, sans-serif);
+    line-height: 1;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 50%);
+  }
+
+  @include breakpoint(tablet) {
+    &__thumbnail-stack-item {
+      transform: translateX(calc(var(--stack-index, 0) * 12px));
+    }
+  }
+
+  &__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 20px;
+    block-size: 20px;
+    padding: 0 4px;
+    color: var(--text-color, #ffffff);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: var(--base-font-family, arial, sans-serif);
+    background: var(--accent-color, #998238);
+    border-radius: 10px;
+  }
+
+  @include breakpoint(tablet) {
+    right: var(--ms-3);
+    bottom: var(--ms-3);
+    inline-size: 64px;
+    block-size: 64px;
+  }
+}

@@ -1,10 +1,10 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep3.tsx
 import React from 'react';
-import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
 import '../shared/EditableCardField.style.scss';
 
-import { parseRecordingText, buildRecordingText } from '../EditAlbumModal.utils';
+import { parseRecordingText, buildRecordingText } from '../modals/album/EditAlbumModal.utils';
 
 interface EditAlbumModalStep3Props {
   formData: AlbumFormData;

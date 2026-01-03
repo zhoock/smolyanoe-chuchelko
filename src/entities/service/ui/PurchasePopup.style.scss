@@ -1,4 +1,4 @@
-// src/entities/service/ui/PurchasePopup.scss
+// src/entities/service/ui/PurchasePopup.style.scss
 // Попап покупки в стиле дашборда
 @use '../../../scss/abstracts/mixins' as *;
 
@@ -7,11 +7,15 @@
   align-items: center;
   justify-content: center;
   min-block-size: 100vh;
-  padding: var(--ms-2);
 
   &__container {
-    padding: var(--ms-2);
+    position: relative;
+    padding: var(--ms-0);
     color: var(--dashboard-text-primary);
+    font-size: var(--dashboard-font-size, 14px);
+    line-height: 1.4;
+    font-family: var(--base-font-family, arial, sans-serif);
+    font-weight: 400;
     background: var(--dashboard-card-bg);
     border: 1px solid var(--dashboard-card-border);
     border-radius: var(--ms-0);
@@ -22,97 +26,60 @@
     overflow-y: auto;
 
     @include breakpoint(tablet) {
-      padding: var(--ms-3);
+      padding: var(--ms-0);
       max-inline-size: 1000px;
+    }
+  }
+
+  &__close {
+    position: absolute;
+    top: var(--ms-1);
+    right: var(--ms-1);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 32px;
+    block-size: 32px;
+    padding: 0;
+    color: var(--dashboard-text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      background-color 0.2s ease;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        color: var(--dashboard-text-primary);
+        background: var(--dashboard-hover-bg);
+      }
+    }
+
+    &:active {
+      background: var(--dashboard-active-bg);
+    }
+
+    svg {
+      inline-size: 20px;
+      block-size: 20px;
+    }
+
+    @include breakpoint(tablet) {
+      top: var(--ms-2);
+      right: var(--ms-2);
     }
   }
 
   &__title {
     margin: 0;
     color: var(--dashboard-text-primary);
-    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
+    font-size: var(--dashboard-heading-font-size, 18px);
+    font-weight: 400;
     letter-spacing: -0.02em;
     margin-block-start: var(--ms-2);
-  }
-
-  // Прогресс-индикатор
-  &__progress {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--ms-01);
-    margin-block-end: var(--ms-2);
-    padding-block-end: var(--ms-2);
-    border-block-end: 1px solid var(--dashboard-divider);
-
-    @include breakpoint(tablet) {
-      gap: var(--ms-1);
-    }
-  }
-
-  &__progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--ms-01);
-    min-inline-size: 60px;
-  }
-
-  &__progress-step-circle {
-    display: flex;
-    color: var(--dashboard-text-secondary);
-    font-size: 0.875rem;
-    background: var(--dashboard-button-cancel-bg);
-    border-radius: 50%;
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-    inline-size: 32px;
-    block-size: 32px;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
-
-    &--active {
-      color: var(--dashboard-button-primary-text);
-      background: var(--dashboard-button-primary-bg);
-    }
-  }
-
-  &__progress-step-label {
-    color: var(--dashboard-text-secondary);
-    font-size: 0.75rem;
-    transition: color 0.3s ease;
-    font-family: var(--base-font-family, arial, sans-serif);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-
-    &--active {
-      color: var(--dashboard-text-primary);
-    }
-
-    @include breakpoint(tablet) {
-      font-size: 0.875rem;
-    }
-  }
-
-  &__progress-line {
-    flex: 1;
-    block-size: 2px;
-    background: var(--dashboard-divider);
-    max-inline-size: 60px;
-    transition: background-color 0.3s ease;
-
-    &--active {
-      background: var(--dashboard-button-primary-bg);
-    }
-
-    @include breakpoint(tablet) {
-      max-inline-size: 100px;
-    }
   }
 
   &__divider {
@@ -181,15 +148,13 @@
 
   &__item-title {
     color: var(--dashboard-text-primary);
-    font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
+    font-size: var(--dashboard-font-size, 14px);
+    font-weight: 400;
   }
 
   &__item-type {
     color: var(--dashboard-text-secondary);
-    font-size: 0.875rem;
-    font-family: var(--base-font-family, arial, sans-serif);
+    font-size: var(--dashboard-font-size, 14px);
   }
 
   &__item-actions {
@@ -201,18 +166,16 @@
 
   &__item-quantity {
     color: var(--dashboard-text-secondary);
-    font-size: 0.875rem;
-    font-family: var(--base-font-family, arial, sans-serif);
+    font-size: var(--dashboard-font-size, 14px);
   }
 
   &__item-remove {
     padding: 0;
     color: var(--dashboard-text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--dashboard-font-size, 14px);
     background: none;
     border: none;
     transition: color 0.2s ease;
-    font-family: var(--base-font-family, arial, sans-serif);
     text-decoration: underline;
     cursor: pointer;
 
@@ -233,10 +196,9 @@
 
   &__item-price {
     color: var(--dashboard-text-primary);
-    font-size: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
+    font-size: var(--dashboard-font-size, 14px);
     text-align: end;
-    font-weight: 600;
-    font-family: var(--base-font-family, arial, sans-serif);
+    font-weight: 400;
   }
 
   &__summary {
@@ -248,15 +210,14 @@
   &__subtotal {
     display: flex;
     color: var(--dashboard-text-primary);
-    font-size: 1rem;
+    font-size: var(--dashboard-font-size, 14px);
     justify-content: space-between;
     align-items: center;
-    font-family: var(--base-font-family, arial, sans-serif);
-    font-weight: 500;
+    font-weight: 400;
     padding-block-end: var(--ms-01);
 
     span {
-      font-weight: 600;
+      font-weight: 400;
     }
   }
 
@@ -287,6 +248,7 @@
 
     &--continue {
       color: var(--dashboard-text-secondary);
+      font-size: var(--dashboard-font-size, 14px);
       background: transparent;
       border: none;
       text-decoration: underline;
@@ -429,15 +391,13 @@
 
   &__form-label {
     color: var(--dashboard-text-primary);
-    font-size: 0.875rem;
-    font-weight: 500;
-    font-family: var(--base-font-family, arial, sans-serif);
+    font-size: var(--dashboard-font-size, 14px);
   }
 
   &__form-input {
     padding: 12px;
     color: var(--dashboard-text-primary);
-    font-size: 0.9375rem;
+    font-size: var(--dashboard-font-size, 14px);
     background: var(--dashboard-input-bg);
     border: 1px solid var(--dashboard-input-border);
     border-radius: var(--ms-01);
@@ -538,17 +498,16 @@
     }
 
     &--error {
-      background: #ef4444;
+      background: var(--error-color, #ef4444);
     }
   }
 
   &__toggle-text {
     display: flex;
     color: var(--dashboard-text-primary);
-    font-size: 0.875rem;
+    font-size: var(--dashboard-font-size, 14px);
     flex-direction: column;
     gap: 2px;
-    font-family: var(--base-font-family, arial, sans-serif);
   }
 
   &__toggle-subtitle {
@@ -591,11 +550,11 @@
 
     th {
       color: var(--dashboard-text-secondary);
-      font-size: 0.75rem;
+      font-size: var(--dashboard-font-size, 14px);
       text-align: start;
       padding-block: var(--ms-01);
       padding-inline-end: var(--ms-1);
-      font-weight: 600;
+      font-weight: 400;
       text-transform: uppercase;
       letter-spacing: 0.05em;
 
@@ -737,11 +696,6 @@
     font-size: 1rem;
     font-weight: 600;
     padding-block-start: var(--ms-01);
-  }
-
-  &__checkout-back-link {
-    margin-block-start: var(--ms-2);
-    text-align: center;
   }
 
   // Шаг оплаты
@@ -973,10 +927,16 @@
 
     .purchase-popup__form-label {
       color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size, 14px);
+      font-weight: 400;
+      line-height: 1.4;
     }
 
     .purchase-popup__form-input {
       color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size, 14px);
+      font-weight: 400;
+      line-height: 1.4;
       background: var(--dashboard-input-bg);
       border-color: var(--dashboard-input-border);
       inline-size: 100%;
@@ -988,6 +948,9 @@
 
       &::placeholder {
         color: var(--dashboard-text-secondary);
+        font-size: var(--dashboard-font-size, 14px);
+        font-weight: 400;
+        line-height: 1.4;
       }
     }
 
@@ -1050,14 +1013,14 @@
 
   &__country-select {
     padding: 12px 32px 12px 12px;
+    inline-size: 100%;
     color: var(--dashboard-text-primary);
-    font-size: 0.9375rem;
+    font-size: var(--dashboard-font-size, 14px);
+    font-family: var(--base-font-family, arial, sans-serif);
     background: var(--dashboard-input-bg);
     border: 1px solid var(--dashboard-input-border);
     border-radius: var(--ms-01);
     transition: border-color 0.2s ease;
-    inline-size: 100%;
-    font-family: var(--base-font-family, arial, sans-serif);
     cursor: pointer;
     appearance: none;
 

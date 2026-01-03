@@ -44,3 +44,4 @@ COMMENT ON COLUMN purchases.expires_at IS 'Срок действия досту�
 COMMENT ON COLUMN purchases.download_count IS 'Количество скачиваний';
 COMMENT ON COLUMN purchases.last_downloaded_at IS 'Дата последнего скачивания';
 
+

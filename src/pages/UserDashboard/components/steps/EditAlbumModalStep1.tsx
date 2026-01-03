@@ -1,7 +1,7 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep1.tsx
 import React from 'react';
-import type { AlbumFormData } from '../EditAlbumModal.types';
-import { formatDateInput } from '../EditAlbumModal.utils';
+import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
+import { formatDateInput } from '../modals/album/EditAlbumModal.utils';
 
 interface EditAlbumModalStep1Props {
   formData: AlbumFormData;

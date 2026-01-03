@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/components/ArticleBlockEditor.tsx
 import React, { useState } from 'react';
-import type { ArticleBlockData } from './EditArticleModal.types';
+import type { ArticleBlockData } from '../modals/article/EditArticleModal.types';
 import { getUserImageUrl } from '@shared/api/albums';
 import './ArticleBlockEditor.style.scss';
 

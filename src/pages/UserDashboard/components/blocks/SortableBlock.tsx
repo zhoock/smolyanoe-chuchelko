@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Block } from '../EditArticleModalV2.utils';
+import type { Block } from '../modals/article/EditArticleModalV2.utils';
 import { BlockParagraph } from './BlockParagraph';
 import { BlockTitle } from './BlockTitle';
 import { BlockSubtitle } from './BlockSubtitle';

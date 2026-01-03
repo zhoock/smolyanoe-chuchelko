@@ -1,5 +1,5 @@
 import { useLang } from '@app/providers/lang';
-import { formatDateToDisplay } from '@pages/UserDashboard/components/EditAlbumModal.utils';
+import { formatDateToDisplay } from '@pages/UserDashboard/components/modals/album/EditAlbumModal.utils';
 import type { IAlbums, detailsProps } from '@models';
 
 /**

@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/components/steps/EditArticleModalStep1.tsx
 import React from 'react';
-import type { ArticleFormData } from '../EditArticleModal.types';
+import type { ArticleFormData } from '../modals/article/EditArticleModal.types';
 import { getUserImageUrl } from '@shared/api/albums';
 import type { IInterface } from '@models';
 

@@ -26,6 +26,7 @@ import { Navigation } from '@features/navigation';
 import { Hamburger } from '@shared/ui/hamburger';
 import { PlayerShell } from '@features/player';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
+import { FloatingCart } from '@entities/service/ui/FloatingCart';
 
 // Lazy loading для страниц - загружаются только при необходимости
 const Album = lazy(() => import('@pages/Album/Album'));
@@ -389,6 +390,7 @@ function Layout() {
           </main>
           <Footer />
           <PlayerShell />
+          <FloatingCart />
         </ErrorBoundary>
       )}
     </>

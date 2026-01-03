@@ -1,8 +1,8 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep2.tsx
 import React from 'react';
-import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
-import { GENRE_OPTIONS_EN, GENRE_OPTIONS_RU, MAX_TAGS } from '../EditAlbumModal.constants';
+import { GENRE_OPTIONS_EN, GENRE_OPTIONS_RU, MAX_TAGS } from '../modals/album/EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 
 interface EditAlbumModalStep2Props {

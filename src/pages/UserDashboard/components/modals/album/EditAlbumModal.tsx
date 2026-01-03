@@ -38,11 +38,11 @@ import {
   parseRecordingText,
   buildRecordingText,
 } from './EditAlbumModal.utils';
-import { EditAlbumModalStep1 } from './steps/EditAlbumModalStep1';
-import { EditAlbumModalStep2 } from './steps/EditAlbumModalStep2';
-import { EditAlbumModalStep3 } from './steps/EditAlbumModalStep3';
-import { EditAlbumModalStep4 } from './steps/EditAlbumModalStep4';
-import { EditAlbumModalStep5 } from './steps/EditAlbumModalStep5';
+import { EditAlbumModalStep1 } from '../../steps/EditAlbumModalStep1';
+import { EditAlbumModalStep2 } from '../../steps/EditAlbumModalStep2';
+import { EditAlbumModalStep3 } from '../../steps/EditAlbumModalStep3';
+import { EditAlbumModalStep4 } from '../../steps/EditAlbumModalStep4';
+import { EditAlbumModalStep5 } from '../../steps/EditAlbumModalStep5';
 import './EditAlbumModal.style.scss';
 
 // Re-export types for backward compatibility

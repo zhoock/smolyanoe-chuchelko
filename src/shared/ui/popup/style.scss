@@ -70,13 +70,13 @@ dialog {
       width: 100%;
       max-width: 100%;
 
-      @include breakpoint(tablet) {
-        width: 680px;
-        max-width: 680px;
-        height: 600px;
-        min-height: 600px;
-        max-height: 600px;
-      }
+      // @include breakpoint(tablet) {
+      //   width: 680px;
+      //   max-width: 680px;
+      //   height: 600px;
+      //   min-height: 600px;
+      //   max-height: 600px;
+      // }
     }
   }
 

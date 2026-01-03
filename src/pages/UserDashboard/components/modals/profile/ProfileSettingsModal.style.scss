@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/ProfileSettingsModal.style.scss
-@use '../../../scss/abstracts/mixins' as *;
+@use '../../../../../scss/abstracts/mixins' as *;
 
 dialog {
   // Общие стили для всех кнопок в попапе
@@ -425,11 +425,30 @@ dialog {
     }
 
     &__button {
-      &--cancel,
+      &--cancel {
+        @include dashboard-button;
+      }
+
       &--save {
         @include dashboard-button;
 
-        &--save:disabled {
+        & {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          border: 1px solid var(--dashboard-card-border);
+        }
+
+        &:hover {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          opacity: 0.9;
+        }
+
+        &:active {
+          opacity: 0.8;
+        }
+
+        &:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }

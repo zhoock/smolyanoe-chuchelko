@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
-import { Hamburger } from '@shared/ui/hamburger';
 import type { IAlbums } from '@models';
 import AlbumCover from '@entities/album/ui/AlbumCover';
 import { createPayment } from '@shared/api/payment';
@@ -79,117 +78,105 @@ const createValidators = (t: any) => ({
 
 interface PurchasePopupProps {
   isOpen: boolean;
-  album: IAlbums;
+  albums: IAlbums[];
   onClose: () => void;
-  onRemove: () => void;
+  onRemove: (albumId: string) => void;
   onContinueShopping: () => void;
   onRegister: () => void;
 }
 
-function ProgressIndicator({ currentStep, t }: { currentStep: Step; t: any }) {
-  const steps: { key: Step; label: string }[] = [
-    { key: 'cart', label: t?.checkout?.steps?.cart || 'Cart' },
-    { key: 'checkout', label: t?.checkout?.steps?.checkout || 'Checkout' },
-  ];
-
-  const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
-
-  return (
-    <div className="purchase-popup__progress">
-      {steps.map((step, index) => (
-        <React.Fragment key={step.key}>
-          <div className="purchase-popup__progress-step">
-            <div
-              className={`purchase-popup__progress-step-circle ${
-                index <= currentStepIndex ? 'purchase-popup__progress-step-circle--active' : ''
-              }`}
-            >
-              {index + 1}
-            </div>
-            <span
-              className={`purchase-popup__progress-step-label ${
-                index <= currentStepIndex ? 'purchase-popup__progress-step-label--active' : ''
-              }`}
-            >
-              {step.label}
-            </span>
-          </div>
-          {index < steps.length - 1 && (
-            <div
-              className={`purchase-popup__progress-line ${
-                index < currentStepIndex ? 'purchase-popup__progress-line--active' : ''
-              }`}
-            />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
 function CartStep({
-  album,
+  albums,
   onRemove,
   onContinueShopping,
   onCheckout,
   t,
 }: {
-  album: IAlbums;
-  onRemove: () => void;
+  albums: IAlbums[];
+  onRemove: (albumId: string) => void;
   onContinueShopping: () => void;
   onCheckout: () => void;
   t: any;
 }) {
-  const { formatted: formattedPrice } = getAlbumPrice(album);
+  // Вычисляем общую стоимость
+  const totalPrice = albums.reduce((sum, album) => {
+    const { price } = getAlbumPrice(album);
+    return sum + (parseFloat(price) || 0);
+  }, 0);
+
+  // Получаем валюту из первого альбома
+  const firstAlbumCurrency = albums[0] ? getAlbumPrice(albums[0]).currency : 'USD';
+  
+  // Форматируем общую цену
+  const formattedTotalPrice = totalPrice.toFixed(2);
+  let formattedTotal = '';
+  switch (firstAlbumCurrency.toUpperCase()) {
+    case 'RUB':
+      formattedTotal = `${formattedTotalPrice} ₽`;
+      break;
+    case 'EUR':
+      formattedTotal = `€${formattedTotalPrice}`;
+      break;
+    case 'USD':
+      formattedTotal = `$${formattedTotalPrice}`;
+      break;
+    default:
+      formattedTotal = `${formattedTotalPrice} ${firstAlbumCurrency}`;
+  }
 
   return (
     <>
-      <ProgressIndicator currentStep="cart" t={t} />
       <h2 className="purchase-popup__title">{t?.checkout?.cart?.title || 'Your cart'}</h2>
 
       <div className="purchase-popup__divider" />
 
-      <div className="purchase-popup__item">
-        <div className="purchase-popup__item-thumbnail">
-          {album?.cover ? (
-            <AlbumCover
-              img={album.cover}
-              fullName={album.fullName}
-              size={64}
-              densities={[1, 2]}
-              sizes="80px"
-            />
-          ) : (
-            <div className="purchase-popup__item-thumbnail-placeholder" aria-hidden="true" />
-          )}
-        </div>
+      {albums.map((album) => {
+        const { formatted: formattedPrice } = getAlbumPrice(album);
+        return (
+          <React.Fragment key={album.albumId || album.album}>
+            <div className="purchase-popup__item">
+              <div className="purchase-popup__item-thumbnail">
+                {album?.cover ? (
+                  <AlbumCover
+                    img={album.cover}
+                    fullName={album.fullName}
+                    size={64}
+                    densities={[1, 2]}
+                    sizes="80px"
+                  />
+                ) : (
+                  <div className="purchase-popup__item-thumbnail-placeholder" aria-hidden="true" />
+                )}
+              </div>
 
-        <div className="purchase-popup__item-details">
-          <div className="purchase-popup__item-title">{album.album}</div>
-          <div className="purchase-popup__item-type">
-            {t?.checkout?.cart?.albumDownload || 'Album download'}
-          </div>
-          <div className="purchase-popup__item-actions">
-            <span className="purchase-popup__item-quantity">1</span>
-            <button
-              type="button"
-              className="purchase-popup__item-remove"
-              onClick={onRemove}
-              aria-label={t?.checkout?.cart?.remove || 'Remove item'}
-            >
-              {t?.checkout?.cart?.remove || 'Remove'}
-            </button>
-          </div>
-        </div>
+              <div className="purchase-popup__item-details">
+                <div className="purchase-popup__item-title">{album.album}</div>
+                <div className="purchase-popup__item-type">
+                  {t?.checkout?.cart?.albumDownload || 'Album download'}
+                </div>
+                <div className="purchase-popup__item-actions">
+                  <span className="purchase-popup__item-quantity">1</span>
+                  <button
+                    type="button"
+                    className="purchase-popup__item-remove"
+                    onClick={() => album.albumId && onRemove(album.albumId)}
+                    aria-label={t?.checkout?.cart?.remove || 'Remove item'}
+                  >
+                    {t?.checkout?.cart?.remove || 'Remove'}
+                  </button>
+                </div>
+              </div>
 
-        <div className="purchase-popup__item-price">{formattedPrice}</div>
-      </div>
-
-      <div className="purchase-popup__divider" />
+              <div className="purchase-popup__item-price">{formattedPrice}</div>
+            </div>
+            <div className="purchase-popup__divider" />
+          </React.Fragment>
+        );
+      })}
 
       <div className="purchase-popup__summary">
         <div className="purchase-popup__subtotal">
-          {t?.checkout?.cart?.subtotal || 'Subtotal'} <span>{formattedPrice}</span>
+          {t?.checkout?.cart?.subtotal || 'Subtotal'} <span>{formattedTotal}</span>
         </div>
 
         <button
@@ -360,7 +347,6 @@ function CheckoutStep({
 
   return (
     <div className="purchase-popup__checkout">
-      <ProgressIndicator currentStep="checkout" t={t} />
       <h2 className="purchase-popup__title">
         {album.artist} - {t?.checkout?.checkout?.title || 'Checkout'}
       </h2>
@@ -641,19 +627,6 @@ function CheckoutStep({
             </div>
           </div>
 
-          <div className="purchase-popup__checkout-back-link">
-            <button
-              type="button"
-              className="purchase-popup__link-button"
-              onClick={onBackToCart}
-              aria-label={t?.checkout?.checkout?.backToSite || 'Back to site'}
-            >
-              {t?.checkout?.checkout?.backToSite || '< Back to'}{' '}
-              {typeof window !== 'undefined'
-                ? window.location.hostname.replace('www.', '')
-                : 'site'}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -662,7 +635,7 @@ function CheckoutStep({
 
 export function PurchasePopup({
   isOpen,
-  album,
+  albums,
   onClose,
   onRemove,
   onContinueShopping,
@@ -735,14 +708,43 @@ export function PurchasePopup({
     }
   }, [isOpen]);
 
+  // Используем первый альбом для CheckoutStep (можно улучшить для поддержки нескольких альбомов)
+  const firstAlbum = albums[0];
+
+  // Если корзина пуста, не показываем попап
+  if (albums.length === 0) {
+    return null;
+  }
+
   return (
     <Popup isActive={isOpen} onClose={onClose} bgColor="rgba(var(--deep-black-rgb) / 95%)">
-      <Hamburger isActive onToggle={onClose} />
       <div className="purchase-popup">
         <div className="purchase-popup__container">
+          <button
+            type="button"
+            className="purchase-popup__close"
+            onClick={onClose}
+            aria-label="Закрыть"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span className="visually-hidden">Закрыть</span>
+          </button>
           {step === 'cart' ? (
             <CartStep
-              album={album}
+              albums={albums}
               onRemove={onRemove}
               onContinueShopping={onContinueShopping}
               onCheckout={handleCheckout}
@@ -750,7 +752,7 @@ export function PurchasePopup({
             />
           ) : (
             <CheckoutStep
-              album={album}
+              album={firstAlbum}
               onBackToCart={handleBackToCart}
               formData={checkoutFormData}
               onFormDataChange={setCheckoutFormData}

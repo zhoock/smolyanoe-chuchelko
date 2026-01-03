@@ -47,6 +47,19 @@
         background-color: var(--accent-color-hover, #b8a654);
         color: var(--text-color, #ffffff);
       }
+
+      &.service-buttons__link--in-cart {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+        color: var(--text-color, #ffffff);
+        background: var(--accent-color, #998238);
+      }
+
+      &:hover:not(.service-buttons__link--in-cart) {
+        background-color: var(--accent-color-hover, #b8a654);
+        color: var(--text-color, #ffffff);
+      }
     }
   }
 }

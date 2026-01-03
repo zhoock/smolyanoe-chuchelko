@@ -65,37 +65,7 @@ export const fetchArticles = createAsyncThunk<
               console.log('[fetchArticles] First article from API:', payload.data[0]);
               console.log('[fetchArticles] First article has id?', !!payload.data[0]?.id);
             }
-          }
-
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'articlesSlice.ts:78',
-              message: 'fetchArticles API response',
-              data: {
-                payloadType: Array.isArray(payload) ? 'array' : typeof payload,
-                payloadKeys: Array.isArray(payload) ? ['array'] : Object.keys(payload || {}),
-                articlesCount: Array.isArray(payload)
-                  ? payload.length
-                  : payload?.data?.length || payload?.articles?.length || 0,
-                firstArticleId: Array.isArray(payload)
-                  ? payload[0]?.articleId
-                  : payload?.data?.[0]?.articleId || payload?.articles?.[0]?.articleId,
-                firstArticleName: Array.isArray(payload)
-                  ? payload[0]?.nameArticle
-                  : payload?.data?.[0]?.nameArticle || payload?.articles?.[0]?.nameArticle,
-              },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'E',
-            }),
-          }).catch(() => {});
-          // #endregion
-
-          // ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
+          }// ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
           const list = Array.isArray(payload) ? payload : (payload.data ?? payload.articles ?? []);
 
           if (!Array.isArray(list)) {
@@ -134,23 +104,7 @@ export const fetchArticles = createAsyncThunk<
       } catch (apiError) {
         // Если API недоступен или вернул ошибку - возвращаем ошибку
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        console.error('[fetchArticles] API request failed:', errorMessage);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'articlesSlice.ts:135',
-            message: 'API request failed',
-            data: { errorMessage },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'E',
-          }),
-        }).catch(() => {});
-        // #endregion
-        throw apiError;
+        console.error('[fetchArticles] API request failed:', errorMessage);throw apiError;
       }
     } catch (error) {
       // Если API недоступен – отдаём ошибку

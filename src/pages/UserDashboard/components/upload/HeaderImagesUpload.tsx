@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
-import { CoverImageCropModal } from './CoverImageCropModal';
+import { CoverImageCropModal } from '../modals/cover/CoverImageCropModal';
 import { uploadFile, deleteHeroImage } from '@shared/api/storage';
 import { getUser } from '@shared/lib/auth';
 import './HeaderImagesUpload.style.scss';

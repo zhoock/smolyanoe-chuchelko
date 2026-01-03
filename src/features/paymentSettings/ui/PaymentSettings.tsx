@@ -202,10 +202,6 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
 
   return (
     <div className="payment-settings">
-      <div className="payment-settings__header">
-        <h2 className="payment-settings__title">ЮKassa</h2>
-      </div>
-
       {error && (
         <div className="payment-settings__error" role="alert">
           <strong>Ошибка:</strong> {error}
@@ -217,15 +213,6 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
           {success}
         </div>
       )}
-
-      <div className="payment-settings__description">
-        <p>Разрешите Людям Оплачивать Покупки На Вашем Сайте Через ЮKassa</p>
-        <p>
-          Для получения платежей вам потребуется бизнес-счёт ЮKassa. Если у вас есть личный счёт, вы
-          можете бесплатно обновить его. Вы можете использовать один и тот же счёт ЮKassa Business
-          для нескольких аккаунтов для совершения продаж.
-        </p>
-      </div>
 
       <div className="payment-settings__providers-list">
         {PAYMENT_PROVIDERS.map(renderProviderCard)}

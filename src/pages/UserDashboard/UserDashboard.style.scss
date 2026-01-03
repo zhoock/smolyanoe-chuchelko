@@ -385,10 +385,6 @@ dialog {
       padding: var(--ms-1);
       overflow-y: auto;
       background: var(--dashboard-card-bg);
-
-      @include breakpoint(tablet) {
-        padding: var(--ms-2);
-      }
     }
 
     &__profile-tab {

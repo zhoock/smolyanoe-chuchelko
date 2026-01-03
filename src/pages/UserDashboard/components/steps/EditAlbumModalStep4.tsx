@@ -1,8 +1,8 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep4.tsx
 import React from 'react';
-import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
-import { MAX_BAND_MEMBERS } from '../EditAlbumModal.constants';
+import { MAX_BAND_MEMBERS } from '../modals/album/EditAlbumModal.constants';
 import { EditableCardField } from '../shared/EditableCardField';
 import '../shared/EditableCardField.style.scss';
 

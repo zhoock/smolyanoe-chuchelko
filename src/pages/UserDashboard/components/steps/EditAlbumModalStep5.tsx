@@ -1,8 +1,8 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep5.tsx
 import React from 'react';
-import type { AlbumFormData } from '../EditAlbumModal.types';
+import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
-import { PURCHASE_SERVICES, STREAMING_SERVICES } from '../EditAlbumModal.constants';
+import { PURCHASE_SERVICES, STREAMING_SERVICES } from '../modals/album/EditAlbumModal.constants';
 
 interface EditAlbumModalStep5Props {
   formData: AlbumFormData;

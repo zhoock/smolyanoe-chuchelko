@@ -157,24 +157,7 @@ export async function commitCover(
 ): Promise<CommitCoverResponse> {
   try {
     const token = getToken();
-    if (!token) return { success: false, error: 'User is not authenticated. Please log in.' };
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'cover.ts:162',
-        message: 'commitCover: sending request',
-        data: { draftKey, albumId, ...meta },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'B',
-      }),
-    }).catch(() => {});
-    // #endregion
-    const response = await fetch('/api/albums/cover/commit', {
+    if (!token) return { success: false, error: 'User is not authenticated. Please log in.' };const response = await fetch('/api/albums/cover/commit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,30 +166,7 @@ export async function commitCover(
       body: JSON.stringify({ draftKey, albumId, ...meta }),
     });
 
-    const json: unknown = await response.json().catch(() => null);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'cover.ts:176',
-        message: 'commitCover: response received',
-        data: {
-          ok: response.ok,
-          status: response.status,
-          hasJson: json !== null,
-          jsonKeys: isObject(json) ? Object.keys(json) : [],
-          success: isObject(json) && 'success' in json ? json.success : undefined,
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'C',
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    if (!response.ok) {
+    const json: unknown = await response.json().catch(() => null);if (!response.ok) {
       if (isApiError(json)) return json;
       return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
     }
@@ -228,37 +188,7 @@ export async function commitCover(
       }
     }
 
-    if (!isCommitCoverResponse(json)) {
-      // #region agent log
-      const debugData = isObject(json)
-        ? {
-            success: json.success,
-            hasData: 'data' in json,
-            dataKeys: isObject(json.data) ? Object.keys(json.data) : [],
-            baseNameType:
-              isObject(json.data) && 'baseName' in json.data
-                ? typeof json.data.baseName
-                : 'missing',
-            baseNameValue:
-              isObject(json.data) && 'baseName' in json.data ? json.data.baseName : undefined,
-            extractedBaseName,
-          }
-        : { isObject: false };
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'cover.ts:183',
-          message: 'commitCover: invalid response shape',
-          data: { json, debugData },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
-      console.error('❌ commitCover: Invalid response shape', {
+    if (!isCommitCoverResponse(json)) {console.error('❌ commitCover: Invalid response shape', {
         response: json,
         expected: 'CommitCoverResponse with baseName: string',
         actual:
@@ -297,31 +227,7 @@ export async function commitCover(
       }
 
       return { success: false, error: 'Invalid response shape from commit-cover' };
-    }
-
-    // #region agent log
-    if (json.success && json.data) {
-      fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'cover.ts:195',
-          message: 'commitCover: returning success response',
-          data: {
-            success: json.success,
-            hasData: !!json.data,
-            baseName: json.data.baseName,
-            url: json.data.url,
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
-    return json;
+    }return json;
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
