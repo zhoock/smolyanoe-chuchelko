@@ -155,18 +155,42 @@ export const handler: Handler = async (
           }
         }
       } else {
-        // Если паттерн не совпал, пробуем базовое имя без суффиксов
-        const baseNameMatch = decodedPath.match(
-          /^(.+?)(?:-64|-128|-448|-896|-1344)(\.(jpg|webp))$/
-        );
+        // Если паттерн не совпал, пробуем добавить суффиксы размера к базовому имени
+        // Пример: smolyanoe-chuchelko-Cover.jpg -> smolyanoe-chuchelko-Cover-448.webp
+        const baseNameMatch = decodedPath.match(/^(.+?\/)(.+?)(\.(jpg|jpeg|png|webp))$/i);
         if (baseNameMatch) {
-          const basePath = `${baseNameMatch[1]}${baseNameMatch[2]}`;
-          const baseSegments = basePath.split('/');
-          const encodedBaseSegments = baseSegments.map((segment) => encodeURIComponent(segment));
-          const encodedBasePath = encodedBaseSegments.join('/');
-          const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodedBasePath}`;
-          console.log('[proxy-image] Trying fallback path:', basePath);
-          response = await fetch(fallbackUrl);
+          const [, folder, baseName, , ext] = baseNameMatch;
+          const extension = ext?.toLowerCase() || 'jpg';
+
+          // Список вариантов для fallback (от меньшего к большему)
+          const fallbackVariants = [
+            '-448.webp',
+            '-448.jpg',
+            '-128.webp',
+            '-128.jpg',
+            '-64.webp',
+            '-64.jpg',
+            `.${extension}`, // Базовое имя без суффикса (уже пробовали)
+          ];
+
+          // Пробуем каждый вариант
+          for (const variant of fallbackVariants) {
+            const fallbackPath = `${folder}${baseName}${variant}`;
+            const fallbackSegments = fallbackPath.split('/');
+            const encodedFallbackSegments = fallbackSegments.map((segment) =>
+              encodeURIComponent(segment)
+            );
+            const encodedFallbackPath = encodedFallbackSegments.join('/');
+            const fallbackUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodedFallbackPath}`;
+            console.log('[proxy-image] Trying fallback path (no suffix):', fallbackPath);
+
+            const fallbackResponse = await fetch(fallbackUrl);
+            if (fallbackResponse.ok) {
+              response = fallbackResponse;
+              console.log('[proxy-image] Found fallback (no suffix):', fallbackPath);
+              break;
+            }
+          }
         }
       }
     }
