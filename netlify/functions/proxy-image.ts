@@ -162,14 +162,14 @@ export const handler: Handler = async (
           const [, folder, baseName, , ext] = baseNameMatch;
           const extension = ext?.toLowerCase() || 'jpg';
 
-          // Список вариантов для fallback (от меньшего к большему)
+          // Список вариантов для fallback (от меньшего к большему - для миниатюр начинаем с 64)
           const fallbackVariants = [
-            '-448.webp',
-            '-448.jpg',
-            '-128.webp',
-            '-128.jpg',
             '-64.webp',
             '-64.jpg',
+            '-128.webp',
+            '-128.jpg',
+            '-448.webp',
+            '-448.jpg',
             `.${extension}`, // Базовое имя без суффикса (уже пробовали)
           ];
 
