@@ -106,7 +106,7 @@ function CartStep({
 
   // Получаем валюту из первого альбома
   const firstAlbumCurrency = albums[0] ? getAlbumPrice(albums[0]).currency : 'USD';
-  
+
   // Форматируем общую цену
   const formattedTotalPrice = totalPrice.toFixed(2);
   let formattedTotal = '';
@@ -626,7 +626,6 @@ function CheckoutStep({
               <span>{getAlbumPrice(album).formatted}</span>
             </div>
           </div>
-
         </div>
       </div>
     </div>

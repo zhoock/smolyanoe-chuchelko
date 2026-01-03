@@ -107,24 +107,69 @@ export function BlockParagraph({
     }
   };
 
-  const handleSelect = () => {
+  // Эти функции больше не используются - используем нативные события через useEffect
+  // Оставлены для обратной совместимости, если они где-то вызываются
+
+  // Обработчики для отслеживания выделения текста (включая существующий текст)
+  useEffect(() => {
     const textarea = textareaRef.current;
-    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-      setShowFormatMenu(true);
-    } else {
-      setShowFormatMenu(false);
-    }
-  };
+    if (!textarea) return;
 
-  const handleMouseUp = () => {
-    // Обновляем меню после завершения выделения мышью
-    handleSelect();
-  };
+    const checkSelection = () => {
+      // Используем requestAnimationFrame для гарантии, что выделение обновлено
+      requestAnimationFrame(() => {
+        if (textarea.selectionStart !== textarea.selectionEnd) {
+          setShowFormatMenu(true);
+        } else {
+          setShowFormatMenu(false);
+        }
+      });
+    };
 
-  const handleKeyUp = () => {
-    // Обновляем меню после изменения выделения клавиатурой
-    handleSelect();
-  };
+    // Обработчик для mouseup (выделение мышью) - нативное событие
+    const handleNativeMouseUp = () => {
+      // Двойной requestAnimationFrame для надежности
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          checkSelection();
+        });
+      });
+    };
+
+    // Обработчик для select (нативное событие textarea)
+    const handleNativeSelect = () => {
+      checkSelection();
+    };
+
+    // Обработчик для keyup (выделение клавиатурой)
+    const handleNativeKeyUp = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          checkSelection();
+        });
+      });
+    };
+
+    // Обработчик для selectionchange (глобальное событие)
+    const handleSelectionChange = () => {
+      if (document.activeElement === textarea) {
+        checkSelection();
+      }
+    };
+
+    // Нативные события на textarea для более надежной работы с существующим текстом
+    textarea.addEventListener('mouseup', handleNativeMouseUp, true); // useCapture = true
+    textarea.addEventListener('select', handleNativeSelect, true);
+    textarea.addEventListener('keyup', handleNativeKeyUp, true);
+    document.addEventListener('selectionchange', handleSelectionChange);
+
+    return () => {
+      textarea.removeEventListener('mouseup', handleNativeMouseUp, true);
+      textarea.removeEventListener('select', handleNativeSelect, true);
+      textarea.removeEventListener('keyup', handleNativeKeyUp, true);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []); // Убираем value из зависимостей, чтобы обработчики не пересоздавались
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = e.clipboardData;
@@ -180,12 +225,18 @@ export function BlockParagraph({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          onSelect={handleSelect}
-          onMouseUp={handleMouseUp}
-          onKeyUp={handleKeyUp}
           onPaste={handlePaste}
           onFocus={onFocus}
-          onBlur={onBlur}
+          onBlur={(e) => {
+            // Скрываем меню при потере фокуса с небольшой задержкой
+            // на случай, если пользователь кликает на кнопки меню
+            setTimeout(() => {
+              if (document.activeElement !== textareaRef.current) {
+                setShowFormatMenu(false);
+              }
+            }, 100);
+            onBlur?.();
+          }}
           placeholder={placeholder}
           rows={1}
         />
@@ -201,13 +252,13 @@ export function BlockParagraph({
   );
 }
 
-interface FormatMenuProps {
+export interface FormatMenuProps {
   textarea: HTMLTextAreaElement | null;
   onFormat?: (type: 'bold' | 'italic' | 'link') => void;
   onClose: () => void;
 }
 
-function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
+export function FormatMenu({ textarea, onFormat, onClose }: FormatMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef<{ start: number; end: number } | null>(null);

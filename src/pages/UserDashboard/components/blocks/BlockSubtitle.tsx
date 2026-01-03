@@ -1,5 +1,6 @@
 // src/pages/UserDashboard/components/blocks/BlockSubtitle.tsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { FormatMenu } from './BlockParagraph';
 
 interface BlockSubtitleProps {
   value: string;
@@ -8,6 +9,7 @@ interface BlockSubtitleProps {
   onBlur?: () => void;
   onEnter?: (atEnd: boolean) => void;
   onBackspace?: (isEmpty: boolean, atStart?: boolean) => void;
+  onFormat?: (type: 'bold' | 'italic' | 'link') => void;
   placeholder?: string;
   blockId?: string;
 }
@@ -19,10 +21,12 @@ export function BlockSubtitle({
   onBlur,
   onEnter,
   onBackspace,
+  onFormat,
   placeholder = 'Подзаголовок',
   blockId,
 }: BlockSubtitleProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -31,6 +35,60 @@ export function BlockSubtitle({
       textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }, [value]);
+
+  // Обработчики для отслеживания выделения текста (включая существующий текст)
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const checkSelection = () => {
+      requestAnimationFrame(() => {
+        if (textarea.selectionStart !== textarea.selectionEnd) {
+          setShowFormatMenu(true);
+        } else {
+          setShowFormatMenu(false);
+        }
+      });
+    };
+
+    const handleNativeMouseUp = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          checkSelection();
+        });
+      });
+    };
+
+    const handleNativeSelect = () => {
+      checkSelection();
+    };
+
+    const handleNativeKeyUp = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          checkSelection();
+        });
+      });
+    };
+
+    const handleSelectionChange = () => {
+      if (document.activeElement === textarea) {
+        checkSelection();
+      }
+    };
+
+    textarea.addEventListener('mouseup', handleNativeMouseUp, true);
+    textarea.addEventListener('select', handleNativeSelect, true);
+    textarea.addEventListener('keyup', handleNativeKeyUp, true);
+    document.addEventListener('selectionchange', handleSelectionChange);
+
+    return () => {
+      textarea.removeEventListener('mouseup', handleNativeMouseUp, true);
+      textarea.removeEventListener('select', handleNativeSelect, true);
+      textarea.removeEventListener('keyup', handleNativeKeyUp, true);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
@@ -68,10 +126,24 @@ export function BlockSubtitle({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onFocus={onFocus}
-        onBlur={onBlur}
+        onBlur={(e) => {
+          setTimeout(() => {
+            if (document.activeElement !== textareaRef.current) {
+              setShowFormatMenu(false);
+            }
+          }, 100);
+          onBlur?.();
+        }}
         placeholder={placeholder}
         rows={1}
       />
+      {showFormatMenu && (
+        <FormatMenu
+          textarea={textareaRef.current}
+          onFormat={onFormat}
+          onClose={() => setShowFormatMenu(false)}
+        />
+      )}
     </h4>
   );
 }

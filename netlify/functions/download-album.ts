@@ -36,6 +36,7 @@ export const handler: Handler = async (
     console.log('📦 [download-album] Purchase token:', purchaseToken ? 'present' : 'missing');
 
     if (!purchaseToken) {
+      console.error('❌ [download-album] Missing token parameter');
       return {
         statusCode: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -44,15 +45,36 @@ export const handler: Handler = async (
     }
 
     // Проверяем, что покупка существует
-    const purchaseResult = await query<{
-      id: string;
-      album_id: string;
-      customer_email: string;
-    }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1`, [
-      purchaseToken,
-    ]);
+    console.log(
+      '📦 [download-album] Querying purchase with token:',
+      purchaseToken.substring(0, 8) + '...'
+    );
+    let purchaseResult;
+    try {
+      purchaseResult = await query<{
+        id: string;
+        album_id: string;
+        customer_email: string;
+      }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1`, [
+        purchaseToken,
+      ]);
+    } catch (dbError) {
+      console.error('❌ [download-album] Database error when querying purchase:', dbError);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Database error',
+          details: dbError instanceof Error ? dbError.message : String(dbError),
+        }),
+      };
+    }
 
     if (purchaseResult.rows.length === 0) {
+      console.error(
+        '❌ [download-album] Purchase not found for token:',
+        purchaseToken.substring(0, 8) + '...'
+      );
       return {
         statusCode: 404,
         headers: { 'Content-Type': 'application/json' },
@@ -61,15 +83,31 @@ export const handler: Handler = async (
     }
 
     const purchase = purchaseResult.rows[0];
+    console.log('📦 [download-album] Purchase found:', { albumId: purchase.album_id });
 
     // Получаем информацию об альбоме
-    const albumResult = await query<{
-      artist: string;
-      album: string;
-      lang: string;
-    }>(`SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`, [purchase.album_id]);
+    console.log('📦 [download-album] Querying album:', purchase.album_id);
+    let albumResult;
+    try {
+      albumResult = await query<{
+        artist: string;
+        album: string;
+        lang: string;
+      }>(`SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`, [purchase.album_id]);
+    } catch (dbError) {
+      console.error('❌ [download-album] Database error when querying album:', dbError);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Database error when fetching album',
+          details: dbError instanceof Error ? dbError.message : String(dbError),
+        }),
+      };
+    }
 
     if (albumResult.rows.length === 0) {
+      console.error('❌ [download-album] Album not found:', purchase.album_id);
       return {
         statusCode: 404,
         headers: { 'Content-Type': 'application/json' },
@@ -78,21 +116,45 @@ export const handler: Handler = async (
     }
 
     const album = albumResult.rows[0];
+    console.log('📦 [download-album] Album found:', {
+      artist: album.artist,
+      album: album.album,
+      lang: album.lang,
+    });
 
     // Получаем все треки альбома
-    const tracksResult = await query<{
-      track_id: string;
-      title: string;
-      src: string | null;
-      order_index: number;
-    }>(
-      `SELECT t.track_id, t.title, t.src, t.order_index
-       FROM tracks t
-       INNER JOIN albums a ON t.album_id = a.id
-       WHERE a.album_id = $1 AND a.lang = $2
-       ORDER BY t.order_index ASC`,
-      [purchase.album_id, album.lang]
+    console.log(
+      '📦 [download-album] Querying tracks for album:',
+      purchase.album_id,
+      'lang:',
+      album.lang
     );
+    let tracksResult;
+    try {
+      tracksResult = await query<{
+        track_id: string;
+        title: string;
+        src: string | null;
+        order_index: number;
+      }>(
+        `SELECT t.track_id, t.title, t.src, t.order_index
+         FROM tracks t
+         INNER JOIN albums a ON t.album_id = a.id
+         WHERE a.album_id = $1 AND a.lang = $2
+         ORDER BY t.order_index ASC`,
+        [purchase.album_id, album.lang]
+      );
+    } catch (dbError) {
+      console.error('❌ [download-album] Database error when querying tracks:', dbError);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Database error when fetching tracks',
+          details: dbError instanceof Error ? dbError.message : String(dbError),
+        }),
+      };
+    }
 
     if (tracksResult.rows.length === 0) {
       return {

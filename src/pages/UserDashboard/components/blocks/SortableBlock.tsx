@@ -100,6 +100,7 @@ export function SortableBlock({
             onBlur={onBlur}
             onEnter={(atEnd) => onEnter(block.id, atEnd)}
             onBackspace={(isEmpty, atStart) => onBackspace(isEmpty, atStart)}
+            onFormat={(type) => onFormat?.(block.id, type)}
           />
         );
       case 'subtitle':
@@ -112,6 +113,7 @@ export function SortableBlock({
             onBlur={onBlur}
             onEnter={(atEnd) => onEnter(block.id, atEnd)}
             onBackspace={(isEmpty, atStart) => onBackspace(isEmpty, atStart)}
+            onFormat={(type) => onFormat?.(block.id, type)}
           />
         );
       case 'quote':
@@ -124,6 +126,7 @@ export function SortableBlock({
             onBlur={onBlur}
             onEnter={(atEnd) => onEnter(block.id, atEnd)}
             onBackspace={(isEmpty, atStart) => onBackspace(isEmpty, atStart)}
+            onFormat={(type) => onFormat?.(block.id, type)}
           />
         );
       case 'list':

@@ -138,7 +138,7 @@ dialog {
 
     &__article-description {
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       line-height: 1.6;
       margin-bottom: var(--ms-0);
       margin-top: var(--ms-0);
@@ -561,6 +561,20 @@ dialog {
         $margin: 0,
         $padding: var(--ms-01) var(--ms-1),
         $border: 1px solid var(--dashboard-card-border),
+        $border-radius: var(--ms-01)
+      );
+    }
+
+    &__upload-button {
+      width: 100%;
+      text-align: center;
+      justify-content: flex-start;
+      text-transform: none;
+      letter-spacing: normal;
+
+      @include dashboard-button(
+        $margin: var(--ms-0) 0 0 0,
+        $padding: var(--ms-0) var(--ms-1),
         $border-radius: var(--ms-01)
       );
     }

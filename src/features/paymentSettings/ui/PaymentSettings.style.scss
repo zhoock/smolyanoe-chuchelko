@@ -71,10 +71,6 @@
   &__provider-card {
     display: flex;
     flex-direction: column;
-    padding: var(--ms-1);
-    background: var(--deep-black);
-    border: 1px solid var(--iron-slate);
-    border-radius: var(--ms-0);
     gap: var(--ms-0);
   }
 
@@ -88,16 +84,19 @@
 
   &__provider-heading {
     margin: 0;
+    font-family:
+      'apple-system', system-ui, 'blinkmacsystemfont', 'Segoe UI', 'roboto', 'Helvetica Neue',
+      'arial', sans-serif;
     color: var(--white);
-    font-size: var(--ms-0);
+    font-size: var(--dashboard-font-size);
     line-height: 1.5;
-    font-weight: 400;
+    letter-spacing: normal;
   }
 
   &__provider-details {
     margin: 0;
     color: var(--warm-concrete);
-    font-size: var(--ms-0);
+    font-size: var(--dashboard-font-size);
     line-height: 1.6;
   }
 
@@ -213,31 +212,37 @@
   }
 
   &__status-badge {
-    display: inline-flex;
-    padding: var(--ms-02) var(--ms-01);
-    font-size: calc(var(--ms-0) * 0.75);
-    border-radius: calc(var(--ms-0) * 1.5);
-    align-items: center;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-
     &--connected {
-      color: var(--honeydew-melon);
-      background: rgba(var(--honeydew-melon-rgb, 34 197 94) / 20%);
-      border: 1px solid var(--honeydew-melon);
+      display: inline-flex;
+      align-items: center;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: var(--dashboard-font-size);
+      line-height: 16px;
+
+      @include button-variant(
+        $color: var(--dashboard-button-primary-text),
+        $background: var(--dashboard-button-primary-bg),
+        $hover-color: var(--dashboard-button-primary-text),
+        $hover-background: var(--dashboard-button-primary-hover),
+        $margin: 0,
+        $padding: var(--ms-02) var(--ms-01),
+        $border: 0,
+        $border-radius: var(--ms-01)
+      );
     }
   }
 
   &__connected-date {
     color: var(--warm-concrete);
-    font-size: var(--ms-0);
+    font-size: var(--dashboard-font-size);
   }
 
   &__shop-id {
     padding: var(--ms-01);
     color: var(--white);
-    font-size: var(--ms-0);
+    font-size: var(--dashboard-font-size);
     background: rgba(var(--white-rgb, 255 255 255) / 5%);
     border: 1px solid var(--iron-slate);
     border-radius: var(--ms-01);
