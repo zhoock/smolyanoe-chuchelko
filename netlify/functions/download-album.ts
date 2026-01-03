@@ -16,7 +16,14 @@ export const handler: Handler = async (
   body?: string;
   isBase64Encoded?: boolean;
 }> => {
+  console.log('📦 [download-album] Handler called:', {
+    method: event.httpMethod,
+    path: event.path,
+    queryString: event.queryStringParameters,
+  });
+
   if (event.httpMethod !== 'GET') {
+    console.log('❌ [download-album] Invalid method:', event.httpMethod);
     return {
       statusCode: 405,
       headers: { 'Content-Type': 'application/json' },
@@ -26,6 +33,7 @@ export const handler: Handler = async (
 
   try {
     const purchaseToken = event.queryStringParameters?.token;
+    console.log('📦 [download-album] Purchase token:', purchaseToken ? 'present' : 'missing');
 
     if (!purchaseToken) {
       return {
