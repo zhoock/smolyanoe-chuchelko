@@ -6,7 +6,6 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
-import { createClient } from '@supabase/supabase-js';
 import archiver from 'archiver';
 
 export const handler: Handler = async (
@@ -342,111 +341,20 @@ export const handler: Handler = async (
       console.error('❌ Failed to update download count:', error);
     });
 
-    // Для локальной разработки возвращаем файл напрямую (нет лимита размера)
-    // Для production используем upload в Storage + redirect
-    const isLocalDev = !!process.env.NETLIFY_DEV;
-
-    if (isLocalDev) {
-      // Локальная разработка: возвращаем файл напрямую
-      console.log(
-        `📤 [download-album] Returning ZIP directly (local dev): ${zipBuffer.length} bytes`
-      );
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/zip',
-          'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
-          'Content-Length': zipBuffer.length.toString(),
-          'Cache-Control': 'no-cache',
-        },
-        body: zipBuffer.toString('base64'),
-        isBase64Encoded: true,
-      };
-    }
-
-    // Production: загружаем в Storage и возвращаем redirect
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-    const serviceRoleKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('❌ [download-album] Supabase credentials not found');
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Storage service not configured' }),
-      };
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
+    // Возвращаем файл напрямую (Supabase Storage не поддерживает ZIP файлы)
+    // Для локальной разработки и production используем один подход
+    console.log(`📤 [download-album] Returning ZIP directly: ${zipBuffer.length} bytes`);
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
+        'Content-Length': zipBuffer.length.toString(),
+        'Cache-Control': 'no-cache',
       },
-    });
-
-    // Временный путь для ZIP-файла (используем purchase_token для уникальности)
-    const tempStoragePath = `users/${storageUserId}/downloads/${purchaseToken}/${downloadFileName}`;
-
-    try {
-      console.log(`📤 [download-album] Uploading ZIP to storage: ${tempStoragePath}`);
-
-      // Загружаем ZIP в Storage
-      // Не указываем contentType - Supabase определит тип по расширению файла (.zip)
-      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-        .from(STORAGE_BUCKET_NAME)
-        .upload(tempStoragePath, zipBuffer, {
-          upsert: true, // Перезаписываем, если файл уже существует
-          cacheControl: '3600', // Кэш на 1 час
-        });
-
-      if (uploadError) {
-        console.error('❌ [download-album] Failed to upload ZIP to storage:', uploadError);
-        return {
-          statusCode: 500,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ error: 'Failed to upload ZIP file' }),
-        };
-      }
-
-      console.log(`✅ [download-album] ZIP uploaded successfully`);
-
-      // Получаем публичный URL
-      const { data: urlData } = supabaseAdmin.storage
-        .from(STORAGE_BUCKET_NAME)
-        .getPublicUrl(tempStoragePath);
-
-      if (!urlData?.publicUrl) {
-        console.error('❌ [download-album] Failed to get public URL');
-        return {
-          statusCode: 500,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ error: 'Failed to get download URL' }),
-        };
-      }
-
-      console.log(`✅ [download-album] Public URL generated: ${urlData.publicUrl}`);
-
-      // Редирект на прямой URL (избегаем ошибки 413 для больших файлов)
-      return {
-        statusCode: 302,
-        headers: {
-          Location: urlData.publicUrl,
-          'Cache-Control': 'no-cache',
-          'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
-        },
-      };
-    } catch (error) {
-      console.error('❌ [download-album] Error uploading ZIP:', error);
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Internal server error',
-        }),
-      };
-    }
+      body: zipBuffer.toString('base64'),
+      isBase64Encoded: true,
+    };
   } catch (error) {
     console.error('❌ Error in download-album:', error);
     return {
