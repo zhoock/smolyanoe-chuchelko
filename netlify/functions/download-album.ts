@@ -193,7 +193,7 @@ export const handler: Handler = async (
       };
     }
 
-    // Формируем имя файла для скачивания
+    // Формируем имя файла для скачивания (красивое имя с кириллицей)
     // ✅ Оставляем пробелы и дефисы, убираем только опасные символы
     const sanitizeFileName = (name: string): string => {
       return name
@@ -203,13 +203,16 @@ export const handler: Handler = async (
     };
 
     const albumFileName = sanitizeFileName(`${album.artist} - ${album.album}`);
-    const downloadFileName = `${albumFileName}.zip`;
+    const downloadFileName = `${albumFileName}.zip`; // Красивое имя для скачивания (может быть с кириллицей)
+
+    // ✅ ASCII-имя для Storage (Supabase не принимает кириллицу в ключах)
+    const storageZipFileName = `album-${purchase.album_id}.zip`;
 
     // Используем 'zhoock' для единообразия с фронтендом
     const storageUserId = 'zhoock';
 
-    // Путь для ZIP файла в Storage (используем purchase.id для уникальности и кэширования)
-    const zipStoragePath = `users/${storageUserId}/album-zips/${purchase.id}/${downloadFileName}`;
+    // Путь для ZIP файла в Storage (используем ASCII-имя для избежания Invalid key)
+    const zipStoragePath = `users/${storageUserId}/album-zips/${purchase.id}/${storageZipFileName}`;
 
     // 🔥 КЭШ: Надёжная проверка существования ZIP файла
     const supabaseAdmin = createSupabaseAdminClient();
@@ -235,7 +238,8 @@ export const handler: Handler = async (
         `ℹ️ [download-album] Could not list folder (will create ZIP): ${listError.message}`
       );
     } else {
-      const exists = !!listData?.some((f) => f.name === downloadFileName);
+      // ✅ Ищем файл по ASCII-имени (в Storage файл хранится с ASCII-именем)
+      const exists = !!listData?.some((f) => f.name === storageZipFileName);
 
       if (exists) {
         // ✅ Файл найден — создаём signed URL и возвращаем redirect
