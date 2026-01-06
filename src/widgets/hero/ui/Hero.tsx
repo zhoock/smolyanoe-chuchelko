@@ -27,7 +27,7 @@ function generateImageSetFromUrl(baseUrl: string): string {
 
   // Проверяем разные форматы URL
   if (baseUrl.includes('proxy-image')) {
-    // URL через proxy-image: /.netlify/functions/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
+    // URL через proxy-image: /api/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
     const pathMatch = baseUrl.match(/[?&]path=([^&]+)/);
     if (pathMatch) {
       try {
@@ -91,7 +91,7 @@ function generateImageSetFromUrl(baseUrl: string): string {
     let variantUrl = '';
     if (baseUrl.includes('proxy-image') || !baseUrl.includes('supabase.co')) {
       // Используем proxy-image для лучшей совместимости
-      variantUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`;
+      variantUrl = `${origin}/api/proxy-image?path=${encodeURIComponent(imagePath)}`;
     } else {
       // Используем прямой Supabase URL
       const supabaseBase = baseUrl.match(
