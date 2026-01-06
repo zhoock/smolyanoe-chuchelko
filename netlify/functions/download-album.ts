@@ -5,36 +5,7 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
-import { STORAGE_BUCKET_NAME } from '../../src/config/supabase';
-import { createClient } from '@supabase/supabase-js';
-
-/**
- * Создает Supabase admin client с service role key для работы с Storage
- * ⚠️ Безопасность: НЕ используем VITE_* переменные (только server env)
- */
-function createSupabaseAdminClient() {
-  // ✅ Только server env переменные (без VITE_*)
-  const supabaseUrl = process.env.SUPABASE_URL || '';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error('❌ [download-album] Supabase credentials not found');
-    return null;
-  }
-
-  try {
-    return createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-  } catch (error) {
-    console.error('❌ [download-album] Failed to create Supabase admin client:', error);
-    return null;
-  }
-}
+import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
 
 export const handler: Handler = async (
   event: HandlerEvent
