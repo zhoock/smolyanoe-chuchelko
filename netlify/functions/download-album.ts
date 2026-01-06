@@ -6,7 +6,35 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import { createClient } from '@supabase/supabase-js';
 import archiver from 'archiver';
+
+/**
+ * Создает Supabase admin client с service role key для работы с Storage
+ */
+function createSupabaseAdminClient() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('❌ [download-album] Supabase credentials not found');
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [download-album] Failed to create Supabase admin client:', error);
+    return null;
+  }
+}
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -84,6 +112,9 @@ export const handler: Handler = async (
 
     const purchase = purchaseResult.rows[0];
     console.log('📦 [download-album] Purchase found:', { albumId: purchase.album_id });
+
+    // Используем 'zhoock' для единообразия с фронтендом
+    const storageUserId = 'zhoock';
 
     // Получаем информацию об альбоме
     console.log('📦 [download-album] Querying album:', purchase.album_id);
@@ -194,7 +225,6 @@ export const handler: Handler = async (
     });
 
     const supabase = createSupabaseClient();
-    const storageUserId = 'zhoock';
     let filesAdded = 0;
 
     // Добавляем каждый трек в архив
@@ -341,20 +371,84 @@ export const handler: Handler = async (
       console.error('❌ Failed to update download count:', error);
     });
 
-    // Возвращаем файл напрямую (Supabase Storage не поддерживает ZIP файлы)
-    // Для локальной разработки и production используем один подход
-    console.log(`📤 [download-album] Returning ZIP directly: ${zipBuffer.length} bytes`);
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
-        'Content-Length': zipBuffer.length.toString(),
-        'Cache-Control': 'no-cache',
-      },
-      body: zipBuffer.toString('base64'),
-      isBase64Encoded: true,
-    };
+    // Загружаем ZIP в Storage и возвращаем redirect на signed URL
+    // Это решает проблему с лимитом размера ответа Netlify Functions (6MB)
+    const supabaseAdmin = createSupabaseAdminClient();
+    if (!supabaseAdmin) {
+      console.error('❌ [download-album] Failed to create Supabase admin client');
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Storage service not configured' }),
+      };
+    }
+
+    // Путь для ZIP файла в Storage (используем purchase.id для уникальности и кэширования)
+    const zipStoragePath = `users/${storageUserId}/album-zips/${purchase.id}/${downloadFileName}`;
+
+    try {
+      // Загружаем ZIP в Storage (upsert перезапишет, если файл уже существует)
+      console.log(`📤 [download-album] Uploading ZIP to storage: ${zipStoragePath}`);
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET_NAME)
+        .upload(zipStoragePath, zipBuffer, {
+          upsert: true, // Перезаписываем, если файл уже существует
+          cacheControl: '3600', // Кэш на 1 час
+        });
+
+      if (uploadError) {
+        console.error('❌ [download-album] Failed to upload ZIP to storage:', uploadError);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            error: 'Failed to upload ZIP file',
+            details: uploadError.message,
+          }),
+        };
+      }
+
+      console.log(`✅ [download-album] ZIP uploaded successfully to storage`);
+
+      // Создаем signed URL (действителен 10 минут)
+      console.log(`🔗 [download-album] Creating signed URL for: ${zipStoragePath}`);
+      const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET_NAME)
+        .createSignedUrl(zipStoragePath, 600); // 10 минут
+
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        console.error('❌ [download-album] Failed to create signed URL:', signedUrlError);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            error: 'Failed to create download URL',
+            details: signedUrlError?.message || 'Unknown error',
+          }),
+        };
+      }
+
+      console.log(`✅ [download-album] Signed URL created successfully`);
+
+      // Возвращаем redirect на signed URL (браузер скачает файл напрямую из Supabase)
+      return {
+        statusCode: 302,
+        headers: {
+          Location: signedUrlData.signedUrl,
+          'Cache-Control': 'no-cache',
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodedFileName}`,
+        },
+      };
+    } catch (error) {
+      console.error('❌ [download-album] Error in storage operations:', error);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Internal server error',
+        }),
+      };
+    }
   } catch (error) {
     console.error('❌ Error in download-album:', error);
     return {
