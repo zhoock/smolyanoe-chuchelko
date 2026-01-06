@@ -5,9 +5,8 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
-import { createSupabaseClient, STORAGE_BUCKET_NAME } from '../../src/config/supabase';
+import { STORAGE_BUCKET_NAME } from '../../src/config/supabase';
 import { createClient } from '@supabase/supabase-js';
-import archiver from 'archiver';
 
 /**
  * Создает Supabase admin client с service role key для работы с Storage
@@ -151,48 +150,6 @@ export const handler: Handler = async (
       lang: album.lang,
     });
 
-    // Получаем все треки альбома
-    console.log(
-      '📦 [download-album] Querying tracks for album:',
-      purchase.album_id,
-      'lang:',
-      album.lang
-    );
-    let tracksResult;
-    try {
-      tracksResult = await query<{
-        track_id: string;
-        title: string;
-        src: string | null;
-        order_index: number;
-      }>(
-        `SELECT t.track_id, t.title, t.src, t.order_index
-       FROM tracks t
-       INNER JOIN albums a ON t.album_id = a.id
-       WHERE a.album_id = $1 AND a.lang = $2
-       ORDER BY t.order_index ASC`,
-        [purchase.album_id, album.lang]
-      );
-    } catch (dbError) {
-      console.error('❌ [download-album] Database error when querying tracks:', dbError);
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: 'Database error when fetching tracks',
-          details: dbError instanceof Error ? dbError.message : String(dbError),
-        }),
-      };
-    }
-
-    if (tracksResult.rows.length === 0) {
-      return {
-        statusCode: 404,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'No tracks found for this album' }),
-      };
-    }
-
     // Формируем имя файла для скачивания (красивое имя с кириллицей)
     // ✅ Оставляем пробелы и дефисы, убираем только опасные символы
     const sanitizeFileName = (name: string): string => {
@@ -227,6 +184,7 @@ export const handler: Handler = async (
 
     // ✅ Сначала проверяем существование файла через list (более надёжно, чем createSignedUrl)
     const folder = `users/${storageUserId}/album-zips/${purchase.id}`;
+    const lockName = 'building.lock';
     console.log(`🔍 [download-album] Checking for existing ZIP in folder: ${folder}`);
 
     const { data: listData, error: listError } = await supabaseAdmin.storage
@@ -235,13 +193,13 @@ export const handler: Handler = async (
 
     if (listError) {
       console.log(
-        `ℹ️ [download-album] Could not list folder (will create ZIP): ${listError.message}`
+        `ℹ️ [download-album] Could not list folder (will trigger build): ${listError.message}`
       );
     } else {
       // ✅ Ищем файл по ASCII-имени (в Storage файл хранится с ASCII-именем)
-      const exists = !!listData?.some((f) => f.name === storageZipFileName);
+      const hasZip = !!listData?.some((f) => f.name === storageZipFileName);
 
-      if (exists) {
+      if (hasZip) {
         // ✅ Файл найден — создаём signed URL и возвращаем redirect
         console.log(`✅ [download-album] Found existing ZIP, creating signed URL`);
         const { data: existingSignedUrl, error: signedUrlError } = await supabaseAdmin.storage
@@ -253,7 +211,7 @@ export const handler: Handler = async (
             `⚠️ [download-album] Failed to create signed URL for existing file: ${signedUrlError.message}`
           );
         } else if (existingSignedUrl?.signedUrl) {
-          console.log(`✅ [download-album] Returning cached ZIP, skipping archive creation`);
+          console.log(`✅ [download-album] Returning cached ZIP`);
           const url = new URL(existingSignedUrl.signedUrl);
           url.searchParams.set('download', downloadFileName);
 
@@ -277,240 +235,59 @@ export const handler: Handler = async (
             },
           };
         }
-      } else {
-        console.log(`ℹ️ [download-album] ZIP not found in folder, will create new archive`);
-      }
-    }
-
-    // ZIP не найден — собираем архив
-    console.log('📦 [download-album] ZIP not found, creating archive:', {
-      albumId: purchase.album_id,
-      albumName: album.album,
-      tracksCount: tracksResult.rows.length,
-    });
-
-    // Создаем ZIP архив
-    const archive = archiver('zip', {
-      zlib: { level: 9 }, // Максимальное сжатие
-    });
-
-    // Собираем все chunks архива в массив
-    const chunks: Buffer[] = [];
-    archive.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-
-    // Создаем Promise для ожидания завершения архива
-    const archivePromise = new Promise<void>((resolve, reject) => {
-      archive.on('end', () => {
-        console.log('✅ [download-album] Archive finalized');
-        resolve();
-      });
-      archive.on('error', (err) => {
-        console.error('❌ [download-album] Archive error:', err);
-        reject(err);
-      });
-    });
-
-    const supabase = createSupabaseClient();
-    let filesAdded = 0;
-
-    // Добавляем каждый трек в архив
-    for (const track of tracksResult.rows) {
-      if (!track.src) {
-        console.warn(`⚠️ [download-album] Track ${track.track_id} has no src, skipping`);
-        continue;
       }
 
-      let audioUrl = track.src;
-      let normalizedPath = audioUrl.trim();
+      // ✅ Проверяем lock-файл для предотвращения параллельных сборок
+      const hasLock = !!listData?.some((f) => f.name === lockName);
 
-      // Если src - это уже полный URL, используем его
-      if (audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'))) {
+      if (!hasLock) {
+        // ✅ Создаём lock-файл перед запуском background функции
+        console.log(`🔒 [download-album] Creating lock file to prevent parallel builds`);
         try {
-          const fileResponse = await fetch(audioUrl);
-          if (!fileResponse.ok) {
-            console.warn(
-              `⚠️ [download-album] Failed to fetch ${track.track_id}: ${fileResponse.statusText}`
-            );
-            continue;
-          }
-          const fileBuffer = await fileResponse.arrayBuffer();
-          const extension = track.src.split('.').pop() || 'wav';
-          const fileName = `${String(track.order_index).padStart(2, '0')}. ${track.title}.${extension}`;
-          archive.append(Buffer.from(fileBuffer), { name: fileName });
-          filesAdded++;
-          continue;
-        } catch (error) {
-          console.warn(`⚠️ [download-album] Error fetching ${track.track_id}:`, error);
-          continue;
+          await supabaseAdmin.storage
+            .from(STORAGE_BUCKET_NAME)
+            .upload(`${folder}/${lockName}`, Buffer.from('1'), {
+              upsert: true,
+              contentType: 'text/plain',
+              cacheControl: '0',
+            });
+          console.log(`✅ [download-album] Lock file created`);
+
+          // Определяем origin для вызова background функции
+          const proto = event.headers['x-forwarded-proto'] || 'https';
+          const host = event.headers.host;
+          const origin = `${proto}://${host}`;
+
+          // ✅ Запускаем background функцию (fire-and-forget)
+          console.log(`🚀 [download-album] Triggering background build`);
+          fetch(
+            `${origin}/.netlify/functions/build-album-zip-background?token=${encodeURIComponent(purchaseToken)}`
+          ).catch((error) => {
+            // Логируем ошибку, но не блокируем ответ
+            console.warn('⚠️ [download-album] Failed to trigger background build:', error);
+          });
+        } catch (lockError) {
+          console.warn(
+            `⚠️ [download-album] Failed to create lock file: ${lockError instanceof Error ? lockError.message : String(lockError)}`
+          );
         }
-      }
-
-      // Нормализуем путь для Supabase Storage
-      if (normalizedPath.startsWith('/audio/')) {
-        normalizedPath = normalizedPath.slice(7);
-      } else if (normalizedPath.startsWith('/')) {
-        normalizedPath = normalizedPath.slice(1);
-      }
-
-      const fileName = normalizedPath.includes('/')
-        ? normalizedPath.split('/').pop() || normalizedPath
-        : normalizedPath;
-
-      // Пробуем несколько вариантов путей (как в download-track)
-      const albumIdVariants = [
-        purchase.album_id,
-        purchase.album_id.replace(/-remastered/i, '-Remastered'),
-        purchase.album_id.replace(/-remastered/i, ' Remastered'),
-        purchase.album_id.replace(/-remastered/i, 'Remastered'),
-        purchase.album_id.replace(/-/g, '_'),
-        '23-Remastered',
-        '23 Remastered',
-      ];
-
-      const possiblePaths = [
-        `users/${storageUserId}/audio/${normalizedPath}`,
-        ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`),
-      ];
-
-      let fileFound = false;
-      if (supabase) {
-        for (const storagePath of possiblePaths) {
-          try {
-            const { data: urlData } = supabase.storage
-              .from(STORAGE_BUCKET_NAME)
-              .getPublicUrl(storagePath);
-
-            if (urlData?.publicUrl) {
-              // ✅ Убрали HEAD, делаем сразу GET (быстрее)
-              const fileResponse = await fetch(urlData.publicUrl);
-              if (fileResponse.ok) {
-                console.log(`✅ [download-album] Found file at: ${storagePath}`);
-                const fileBuffer = await fileResponse.arrayBuffer();
-                const extension = fileName.split('.').pop() || 'wav';
-                const archiveFileName = `${String(track.order_index).padStart(2, '0')}. ${track.title}.${extension}`;
-                archive.append(Buffer.from(fileBuffer), { name: archiveFileName });
-                filesAdded++;
-                fileFound = true;
-                break;
-              }
-              // Если 404, пробуем следующий путь
-            }
-          } catch (error) {
-            console.warn(`⚠️ [download-album] Error checking path ${storagePath}:`, error);
-          }
-        }
-      }
-
-      if (!fileFound) {
-        console.warn(
-          `⚠️ [download-album] File not found for track ${track.track_id}: ${track.title}`
-        );
+      } else {
+        console.log(`ℹ️ [download-album] Build already in progress (lock file exists)`);
       }
     }
 
-    // Завершаем архив и ждем завершения
-    archive.finalize();
-    await archivePromise;
-
-    if (filesAdded === 0) {
-      return {
-        statusCode: 404,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'No track files found to download' }),
-      };
-    }
-
-    // Объединяем все chunks в один Buffer
-    const zipBuffer = Buffer.concat(chunks);
-
-    console.log(
-      `✅ [download-album] ZIP archive created: ${filesAdded} files, ${zipBuffer.length} bytes`
-    );
-
-    // Обновляем счетчик скачиваний (не блокируем ответ)
-    query(
-      `UPDATE purchases 
-       SET download_count = download_count + 1, 
-           last_downloaded_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [purchase.id]
-    ).catch((error) => {
-      console.error('❌ Failed to update download count:', error);
-    });
-
-    // Загружаем ZIP в Storage и возвращаем redirect на signed URL
-    // Это решает проблему с лимитом размера ответа Netlify Functions (6MB)
-    try {
-      // Загружаем ZIP в Storage (upsert перезапишет, если файл уже существует)
-      console.log(`📤 [download-album] Uploading ZIP to storage: ${zipStoragePath}`);
-      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-        .from(STORAGE_BUCKET_NAME)
-        .upload(zipStoragePath, zipBuffer, {
-          upsert: true, // Перезаписываем, если файл уже существует
-          cacheControl: '3600', // Кэш на 1 час
-          contentType: 'application/zip', // ✅ Явно указываем MIME тип
-        });
-
-      if (uploadError) {
-        console.error('❌ [download-album] Failed to upload ZIP to storage:', uploadError);
-        return {
-          statusCode: 500,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            error: 'Failed to upload ZIP file',
-            details: uploadError.message,
-          }),
-        };
-      }
-
-      console.log(`✅ [download-album] ZIP uploaded successfully to storage`);
-
-      // Создаем signed URL (действителен 10 минут)
-      console.log(`🔗 [download-album] Creating signed URL for: ${zipStoragePath}`);
-      const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
-        .from(STORAGE_BUCKET_NAME)
-        .createSignedUrl(zipStoragePath, 600); // 10 минут
-
-      if (signedUrlError || !signedUrlData?.signedUrl) {
-        console.error('❌ [download-album] Failed to create signed URL:', signedUrlError);
-        return {
-          statusCode: 500,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            error: 'Failed to create download URL',
-            details: signedUrlError?.message || 'Unknown error',
-          }),
-        };
-      }
-
-      console.log(`✅ [download-album] Signed URL created successfully`);
-
-      // ✅ Добавляем параметр download к signed URL для правильного имени файла
-      const url = new URL(signedUrlData.signedUrl);
-      url.searchParams.set('download', downloadFileName);
-
-      // Возвращаем redirect на signed URL (браузер скачает файл напрямую из Supabase)
-      // ✅ Убрали Content-Disposition из ответа Netlify (он не применится к редиректу)
-      return {
-        statusCode: 302,
-        headers: {
-          Location: url.toString(),
-          'Cache-Control': 'no-store',
-        },
-      };
-    } catch (error) {
-      console.error('❌ [download-album] Error in storage operations:', error);
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Internal server error',
-        }),
-      };
-    }
+    // Возвращаем 202 Accepted — ZIP собирается в фоне
+    return {
+      statusCode: 202,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      },
+      body: JSON.stringify({
+        status: 'building',
+        message: 'ZIP archive is being built. Please try again in a few moments.',
+      }),
+    };
   } catch (error) {
     console.error('❌ Error in download-album:', error);
     return {

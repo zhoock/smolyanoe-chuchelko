@@ -165,51 +165,37 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       });
 
       const url = getAlbumDownloadUrl(purchaseToken);
-      const response = await fetch(url);
 
-      if (!response.ok) {
-        throw new Error(`Failed to download: ${response.statusText}`);
-      }
+      // ✅ Обрабатываем 202 (building) и повторяем запрос
+      for (;;) {
+        const response = await fetch(url, {
+          redirect: 'manual', // Не следуем редиректам автоматически
+        });
 
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-
-      // Получаем имя файла из заголовка Content-Disposition или используем дефолтное
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'album.zip';
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)/);
-        if (filenameMatch) {
-          filename = decodeURIComponent(filenameMatch[1]);
-        } else {
-          const filenameMatch2 = contentDisposition.match(/filename="(.+)"/);
-          if (filenameMatch2) {
-            filename = filenameMatch2[1];
+        // ✅ 302 Found — ZIP готов, редирект на signed URL
+        if (response.status === 302) {
+          const location = response.headers.get('Location');
+          if (location) {
+            // ✅ Прямой редирект браузера (не загружаем 142MB в память через blob)
+            window.location.href = location;
+            return; // Успешно скачано
           }
         }
+
+        // ✅ 202 Accepted — ZIP собирается, ждём и повторяем
+        if (response.status === 202) {
+          await new Promise((resolve) => setTimeout(resolve, 2000)); // Ждём 2 секунды
+          continue; // Повторяем запрос
+        }
+
+        // ❌ Другие ошибки
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            (errorData as any)?.error || `Failed to download: ${response.statusText}`
+          );
+        }
       }
-
-      // Создаем временный элемент <a> для скачивания
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Освобождаем URL
-      window.URL.revokeObjectURL(downloadUrl);
-
-      // Показываем состояние "Скачано" на 2 секунды
-      setDownloadedItems((prev) => new Set(prev).add(`album-${purchaseToken}`));
-      setTimeout(() => {
-        setDownloadedItems((prev) => {
-          const next = new Set(prev);
-          next.delete(`album-${purchaseToken}`);
-          return next;
-        });
-      }, 2000);
     } catch (err) {
       console.error('Error downloading album:', err);
       alert(
