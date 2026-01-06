@@ -3,12 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import {
-  getMyPurchases,
-  getTrackDownloadUrl,
-  getAlbumDownloadUrl,
-  type Purchase,
-} from '@shared/api/purchases';
+import { getMyPurchases, getTrackDownloadUrl, type Purchase } from '@shared/api/purchases';
 import { getUserImageUrl } from '@shared/api/albums';
 import '../../UserDashboard.style.scss';
 
@@ -24,9 +19,8 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(!!userEmail);
-  // Состояния загрузки для каждого трека и альбома
+  // Состояния загрузки для каждого трека
   const [downloadingTracks, setDownloadingTracks] = useState<Set<string>>(new Set());
-  const [downloadingAlbums, setDownloadingAlbums] = useState<Set<string>>(new Set());
   const [downloadedItems, setDownloadedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -145,102 +139,6 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       setDownloadingTracks((prev) => {
         const next = new Set(prev);
         next.delete(downloadKey);
-        return next;
-      });
-    }
-  };
-
-  const handleDownloadAlbum = async (purchaseToken: string) => {
-    // Если уже скачивается, не делаем ничего
-    if (downloadingAlbums.has(purchaseToken)) {
-      return;
-    }
-
-    try {
-      setDownloadingAlbums((prev) => new Set(prev).add(purchaseToken));
-      setDownloadedItems((prev) => {
-        const next = new Set(prev);
-        next.delete(`album-${purchaseToken}`);
-        return next;
-      });
-
-      const url = getAlbumDownloadUrl(purchaseToken);
-
-      // ✅ Умный polling с экспоненциальной задержкой и лимитом времени
-      const MAX_WAIT_TIME = 3 * 60 * 1000; // 3 минуты максимум
-      const startTime = Date.now();
-      let delay = 1000; // Начинаем с 1 секунды
-      const MAX_DELAY = 8000; // Максимум 8 секунд между запросами
-
-      for (;;) {
-        // Проверяем лимит времени
-        if (Date.now() - startTime > MAX_WAIT_TIME) {
-          throw new Error(
-            'Build timeout: ZIP archive is taking too long to build. Please try again later.'
-          );
-        }
-
-        const response = await fetch(url, {
-          redirect: 'manual', // Не следуем редиректам автоматически
-        });
-
-        // ✅ 302 Found — ZIP готов, редирект на signed URL
-        if (response.status === 302) {
-          const location = response.headers.get('Location');
-          if (location) {
-            // ✅ Открываем в новой вкладке (не уводим пользователя со страницы)
-            const downloadWindow = window.open(location, '_blank', 'noopener');
-            if (!downloadWindow) {
-              // Fallback: если popup заблокирован, используем прямой редирект
-              window.location.href = location;
-            }
-
-            // Показываем состояние "Скачано" на 2 секунды
-            setDownloadedItems((prev) => new Set(prev).add(`album-${purchaseToken}`));
-            setTimeout(() => {
-              setDownloadedItems((prev) => {
-                const next = new Set(prev);
-                next.delete(`album-${purchaseToken}`);
-                return next;
-              });
-            }, 2000);
-            return; // Успешно скачано
-          }
-        }
-
-        // ✅ 202 Accepted — ZIP собирается, ждём и повторяем
-        if (response.status === 202) {
-          // Используем Retry-After из заголовка, если есть
-          const retryAfter = response.headers.get('Retry-After');
-          const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : delay;
-
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
-
-          // Экспоненциальная задержка: 1s → 2s → 3s → 5s → 8s
-          delay = Math.min(Math.floor(delay * 1.5), MAX_DELAY);
-          continue; // Повторяем запрос
-        }
-
-        // ❌ 500 и другие ошибки (включая error.json)
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            (errorData as any)?.error ||
-              (errorData as any)?.details ||
-              `Failed to download: ${response.statusText}`
-          );
-        }
-      }
-    } catch (err) {
-      console.error('Error downloading album:', err);
-      alert(
-        ui?.dashboard?.myPurchases?.errorDownloadingAlbum ??
-          'Error downloading album. Please try again.'
-      );
-    } finally {
-      setDownloadingAlbums((prev) => {
-        const next = new Set(prev);
-        next.delete(purchaseToken);
         return next;
       });
     }
@@ -386,45 +284,6 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                         </p>
                       )}
                     </div>
-                    <button
-                      className="user-dashboard__my-purchases-album-download"
-                      onClick={() => handleDownloadAlbum(purchase.purchaseToken)}
-                      title={ui?.dashboard?.myPurchases?.downloadFullAlbum ?? 'Download full album'}
-                      disabled={downloadingAlbums.has(purchase.purchaseToken)}
-                    >
-                      {downloadingAlbums.has(purchase.purchaseToken) ? (
-                        <>
-                          <svg
-                            className="user-dashboard__download-spinner"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 14 14"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <circle
-                              cx="7"
-                              cy="7"
-                              r="6"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeOpacity="0.3"
-                            />
-                            <path
-                              d="M 7 1 A 6 6 0 0 1 13 7"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          {ui?.dashboard?.myPurchases?.downloading ?? 'Downloading...'}
-                        </>
-                      ) : downloadedItems.has(`album-${purchase.purchaseToken}`) ? (
-                        (ui?.dashboard?.myPurchases?.downloaded ?? 'Downloaded')
-                      ) : (
-                        (ui?.dashboard?.myPurchases?.downloadAlbum ?? 'Download Album')
-                      )}
-                    </button>
                   </div>
 
                   <div className="user-dashboard__my-purchases-tracks">
