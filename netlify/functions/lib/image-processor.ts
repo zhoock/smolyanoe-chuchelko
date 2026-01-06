@@ -78,27 +78,14 @@ export async function generateHeroImageVariants(
   imageBuffer: Buffer,
   baseName: string
 ): Promise<Record<string, Buffer>> {
-  // Варианты для hero изображений: большие размеры для фона
-  // Desktop: 1920x1080, 2560x1440
-  // Tablet: 1280x720
-  // Mobile: 640x360
+  // Варианты для hero изображений: оптимизированное количество
+  // Используем только один размер (1920px) и несколько форматов для уменьшения времени обработки
+  // Browser выберет оптимальный формат из image-set()
   const variants: ImageVariant[] = [
-    // Mobile
-    { suffix: '-640.avif', width: 640, format: 'avif', quality: 80 },
-    { suffix: '-640.webp', width: 640, format: 'webp', quality: 85 },
-    { suffix: '-640.jpg', width: 640, format: 'jpg', quality: 85 },
-    // Tablet
-    { suffix: '-1280.avif', width: 1280, format: 'avif', quality: 80 },
-    { suffix: '-1280.webp', width: 1280, format: 'webp', quality: 85 },
-    { suffix: '-1280.jpg', width: 1280, format: 'jpg', quality: 85 },
-    // Desktop Full HD
+    // Desktop Full HD - основной размер для hero
     { suffix: '-1920.avif', width: 1920, format: 'avif', quality: 80 },
     { suffix: '-1920.webp', width: 1920, format: 'webp', quality: 85 },
     { suffix: '-1920.jpg', width: 1920, format: 'jpg', quality: 85 },
-    // Desktop 2K
-    { suffix: '-2560.avif', width: 2560, format: 'avif', quality: 80 },
-    { suffix: '-2560.webp', width: 2560, format: 'webp', quality: 85 },
-    { suffix: '-2560.jpg', width: 2560, format: 'jpg', quality: 85 },
   ];
 
   const results: Record<string, Buffer> = {};

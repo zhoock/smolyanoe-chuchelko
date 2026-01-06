@@ -75,7 +75,9 @@ interface UploadFileResponse {
 }
 
 function getStoragePath(userId: string, category: ImageCategory, fileName: string): string {
-  return `users/${userId}/${category}/${fileName}`;
+  // Для категории 'hero' используем 'zhoock' вместо UUID для совместимости с существующими путями
+  const targetUserId = category === 'hero' ? 'zhoock' : userId;
+  return `users/${targetUserId}/${category}/${fileName}`;
 }
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -136,6 +138,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // Для категории hero генерируем варианты изображений
     if (category === 'hero') {
+      // Для hero используем 'zhoock' вместо UUID
+      const heroUserId = 'zhoock';
+
       // Извлекаем базовое имя файла (без расширения)
       const baseName = extractBaseName(fileName);
 
@@ -143,7 +148,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       const variants = await generateHeroImageVariants(fileBuffer, baseName);
 
       // Удаляем старые варианты этого изображения (если есть)
-      const heroFolder = `users/${targetUserId}/hero`;
+      const heroFolder = `users/${heroUserId}/hero`;
       const { data: existingFiles } = await supabase.storage
         .from(STORAGE_BUCKET_NAME)
         .list(heroFolder, {
@@ -170,7 +175,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       const uploadErrors: string[] = [];
 
       for (const [variantFileName, buffer] of Object.entries(variants)) {
-        const variantPath = getStoragePath(targetUserId, category, variantFileName);
+        const variantPath = getStoragePath(heroUserId, category, variantFileName);
         const variantContentType = variantFileName.endsWith('.avif')
           ? 'image/avif'
           : variantFileName.endsWith('.webp')
@@ -205,16 +210,26 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
       console.log(`✅ Uploaded ${uploadedFiles.length} hero image variants`);
 
-      // Используем -1920.jpg как основной URL (Full HD версия)
+      // Используем -1920.jpg как основной файл (Full HD версия)
       const mainFileName = `${baseName}-1920.jpg`;
-      const mainPath = getStoragePath(targetUserId, category, mainFileName);
-      const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(mainPath);
+      const mainPath = getStoragePath(heroUserId, category, mainFileName);
 
+      // Для hero изображений возвращаем storagePath, клиент сформирует URL через getStorageFileUrl
+      // Это более надежно, чем формировать URL на сервере
+      console.log('📤 [upload-file] Hero image upload success:', {
+        mainPath,
+        baseName,
+        heroUserId,
+        category,
+      });
+
+      // Генерируем proxy URL на клиенте через getStorageFileUrl
+      // Возвращаем storagePath, который клиент использует для генерации URL
       return createSuccessResponse(
         {
-          url: urlData.publicUrl,
+          url: mainPath, // Возвращаем storagePath, клиент сформирует proxy URL
           storagePath: mainPath,
-          baseName, // Возвращаем базовое имя для генерации image-set на клиенте
+          baseName,
         },
         200
       );

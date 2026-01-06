@@ -380,14 +380,20 @@ export function CoverImageCropModal({
               </button>
               <button
                 type="button"
-                className="cover-image-crop-modal__button cover-image-crop-modal__button--save"
+                className={`cover-image-crop-modal__button cover-image-crop-modal__button--save ${
+                  isSaving ? 'cover-image-crop-modal__button--loading' : ''
+                }`}
                 onClick={handleSave}
                 disabled={isSaving}
               >
-                {isSaving
-                  ? (ui?.dashboard?.saving ?? 'Сохранение...')
-                  : (ui?.dashboard?.profileSettingsModal?.buttons?.setCover ??
-                    'Установить обложку')}
+                {isSaving ? (
+                  <>
+                    <span className="cover-image-crop-modal__button-spinner"></span>
+                    {ui?.dashboard?.saving ?? 'Сохранение...'}
+                  </>
+                ) : (
+                  (ui?.dashboard?.profileSettingsModal?.buttons?.setCover ?? 'Установить обложку')
+                )}
               </button>
             </>
           ) : (
@@ -409,14 +415,20 @@ export function CoverImageCropModal({
               </button>
               <button
                 type="button"
-                className="cover-image-crop-modal__button cover-image-crop-modal__button--save"
+                className={`cover-image-crop-modal__button cover-image-crop-modal__button--save ${
+                  isSaving ? 'cover-image-crop-modal__button--loading' : ''
+                }`}
                 onClick={handleSave}
                 disabled={!croppedAreaPixels || isSaving}
               >
-                {isSaving
-                  ? (ui?.dashboard?.saving ?? 'Сохранение...')
-                  : (ui?.dashboard?.profileSettingsModal?.buttons?.setCover ??
-                    'Установить обложку')}
+                {isSaving ? (
+                  <>
+                    <span className="cover-image-crop-modal__button-spinner"></span>
+                    {ui?.dashboard?.saving ?? 'Сохранение...'}
+                  </>
+                ) : (
+                  (ui?.dashboard?.profileSettingsModal?.buttons?.setCover ?? 'Установить обложку')
+                )}
               </button>
             </>
           )}

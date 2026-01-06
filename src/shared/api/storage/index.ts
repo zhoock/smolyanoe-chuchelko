@@ -29,7 +29,9 @@ export interface GetFileUrlOptions {
  * Получить путь к файлу в Storage
  */
 function getStoragePath(userId: string, category: ImageCategory, fileName: string): string {
-  return `users/${userId}/${category}/${fileName}`;
+  // Для категории 'hero' используем 'zhoock' вместо UUID для совместимости с существующими путями
+  const targetUserId = category === 'hero' ? 'zhoock' : userId;
+  return `users/${targetUserId}/${category}/${fileName}`;
 }
 
 /**
@@ -107,7 +109,48 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       return null;
     }
 
-    return result.data.url;
+    let finalUrl = result.data.url;
+
+    // Для hero изображений result.data.url может содержать storagePath или уже готовый URL
+    // Если это storagePath (начинается с "users/zhoock/hero/"), формируем proxy URL
+    if (category === 'hero') {
+      if (
+        finalUrl.startsWith('users/zhoock/hero/') ||
+        (finalUrl.startsWith('users/') && finalUrl.includes('/hero/'))
+      ) {
+        // Извлекаем fileName из storagePath
+        const pathParts = finalUrl.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+
+        // Формируем proxy URL
+        const origin =
+          typeof window !== 'undefined'
+            ? window.location.origin
+            : process.env.NETLIFY_SITE_URL || '';
+        finalUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(finalUrl)}`;
+
+        console.log('🔗 [uploadFile] Сформирован proxy URL для hero:', {
+          storagePath: result.data.url,
+          fileName,
+          finalUrl,
+        });
+      } else if (!finalUrl.includes('proxy-image') && !finalUrl.includes('supabase.co')) {
+        // Если URL не содержит proxy-image и не является Supabase URL, возможно это storagePath
+        // Попробуем сформировать proxy URL
+        const origin =
+          typeof window !== 'undefined'
+            ? window.location.origin
+            : process.env.NETLIFY_SITE_URL || '';
+        finalUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(finalUrl)}`;
+
+        console.log('🔗 [uploadFile] Сформирован proxy URL для hero (fallback):', {
+          originalUrl: result.data.url,
+          finalUrl,
+        });
+      }
+    }
+
+    return finalUrl;
   } catch (error) {
     console.error('Error in uploadFile:', error);
     return null;

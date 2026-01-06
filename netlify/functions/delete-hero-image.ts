@@ -85,20 +85,58 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // Извлекаем базовое имя файла из URL
     // URL может быть:
-    // 1. Полный URL: https://.../users/.../hero/hero-123-1920.jpg
-    // 2. image-set() строка: image-set(url('.../hero-123-1920.jpg') ...)
-    // 3. Простой путь: /images/hero/2.jpg
+    // 1. Proxy URL: /.netlify/functions/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
+    // 2. Полный URL: https://.../users/.../hero/hero-123-1920.jpg
+    // 3. image-set() строка: image-set(url('.../hero-123-1920.jpg') ...)
+    // 4. Storage path: users/zhoock/hero/hero-123-1920.jpg
     let fileName = '';
-    if (body.imageUrl.includes('image-set')) {
+    let storagePath = '';
+
+    if (body.imageUrl.includes('proxy-image')) {
+      // Извлекаем path из query параметра proxy-image URL
+      const pathMatch = body.imageUrl.match(/[?&]path=([^&]+)/);
+      if (pathMatch && pathMatch[1]) {
+        try {
+          storagePath = decodeURIComponent(pathMatch[1]);
+          // Извлекаем имя файла из storage path
+          fileName = storagePath.includes('/') ? storagePath.split('/').pop() || '' : storagePath;
+          console.log('📝 Extracted from proxy-image URL:', { storagePath, fileName });
+        } catch (e) {
+          console.error('Error decoding path from proxy-image URL:', e);
+          return createErrorResponse(400, 'Invalid proxy-image URL format');
+        }
+      } else {
+        return createErrorResponse(400, 'Could not extract path from proxy-image URL');
+      }
+    } else if (body.imageUrl.includes('image-set')) {
       // Извлекаем первый URL из image-set()
       const urlMatch = body.imageUrl.match(/url\(['"]([^'"]+)['"]\)/);
       if (urlMatch && urlMatch[1]) {
         const url = urlMatch[1];
-        // Извлекаем имя файла из URL
-        fileName = url.includes('/') ? url.split('/').pop() || '' : url;
+        // Проверяем, это proxy URL или обычный URL
+        if (url.includes('proxy-image')) {
+          const pathMatch = url.match(/[?&]path=([^&]+)/);
+          if (pathMatch && pathMatch[1]) {
+            try {
+              storagePath = decodeURIComponent(pathMatch[1]);
+              fileName = storagePath.includes('/')
+                ? storagePath.split('/').pop() || ''
+                : storagePath;
+            } catch (e) {
+              return createErrorResponse(400, 'Invalid proxy-image URL in image-set');
+            }
+          }
+        } else {
+          // Извлекаем имя файла из URL
+          fileName = url.includes('/') ? url.split('/').pop() || '' : url;
+        }
       } else {
         return createErrorResponse(400, 'Invalid image-set() format');
       }
+    } else if (body.imageUrl.startsWith('users/')) {
+      // Это storage path напрямую
+      storagePath = body.imageUrl;
+      fileName = storagePath.includes('/') ? storagePath.split('/').pop() || '' : storagePath;
     } else if (body.imageUrl.includes('/')) {
       // Извлекаем имя файла из полного URL или пути
       fileName = body.imageUrl.split('/').pop() || '';
@@ -115,7 +153,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     console.log('🗑️ Deleting hero image variants for base name:', baseName);
 
     // Находим все варианты этого изображения в Storage
-    const heroFolder = `users/${userId}/hero`;
+    // Для hero используем 'zhoock' вместо userId
+    const heroFolder = `users/zhoock/hero`;
     const { data: existingFiles, error: listError } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
       .list(heroFolder, {

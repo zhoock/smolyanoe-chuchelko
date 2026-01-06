@@ -95,7 +95,9 @@ export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
     const response = await fetch('/api/user-profile', {
       cache: 'no-cache',
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
         ...authHeader,
       },
     });
@@ -126,7 +128,35 @@ export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
     });
 
     if (result.success && result.data && result.data.headerImages) {
-      return result.data.headerImages;
+      // Преобразуем storagePath в proxy URL, если необходимо
+      const convertedImages = result.data.headerImages.map((url) => {
+        // Если это storagePath (начинается с "users/"), преобразуем в proxy URL
+        if (
+          url.startsWith('users/zhoock/hero/') ||
+          (url.startsWith('users/') && url.includes('/hero/'))
+        ) {
+          const origin =
+            typeof window !== 'undefined'
+              ? window.location.origin
+              : process.env.NETLIFY_SITE_URL || '';
+          const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(url)}`;
+          console.log('🔄 [loadHeaderImagesFromDatabase] Преобразован storagePath в proxy URL:', {
+            original: url,
+            converted: proxyUrl,
+          });
+          return proxyUrl;
+        }
+        // Если уже proxy URL или Supabase URL, возвращаем как есть
+        return url;
+      });
+
+      console.log('✅ [loadHeaderImagesFromDatabase] Header images после преобразования:', {
+        originalCount: result.data.headerImages.length,
+        convertedCount: convertedImages.length,
+        convertedImages,
+      });
+
+      return convertedImages;
     }
 
     console.warn('⚠️ [loadHeaderImagesFromDatabase] Header images не найдены в ответе');

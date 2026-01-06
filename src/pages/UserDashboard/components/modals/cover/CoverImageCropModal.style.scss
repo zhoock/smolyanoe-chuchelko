@@ -256,9 +256,13 @@
     }
 
     &--save {
+      display: flex;
       color: var(--dashboard-card-bg);
       background: var(--white);
       border: 1px solid var(--dashboard-card-border);
+      align-items: center;
+      justify-content: center;
+      gap: var(--ms-01);
 
       &:hover:not(:disabled) {
         color: var(--dashboard-card-bg);
@@ -269,6 +273,28 @@
       &:active:not(:disabled) {
         opacity: 0.8;
       }
+
+      &--loading {
+        position: relative;
+        pointer-events: none;
+      }
     }
+
+    &-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid currentcolor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

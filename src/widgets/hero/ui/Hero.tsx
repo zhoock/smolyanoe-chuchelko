@@ -13,7 +13,6 @@ import './style.scss';
 function generateImageSetFromUrl(baseUrl: string): string {
   // Если URL уже содержит image-set, нормализуем его (убираем переносы строк)
   if (baseUrl.includes('image-set')) {
-    // Убираем переносы строк и лишние пробелы для корректного использования в inline style
     return baseUrl.replace(/\n\s*/g, ' ').trim();
   }
 
@@ -22,34 +21,90 @@ function generateImageSetFromUrl(baseUrl: string): string {
     return `url('${baseUrl}')`;
   }
 
-  // Извлекаем базовое имя файла из URL
-  // Примеры:
-  // - https://.../hero-123-1920.jpg -> hero-123
-  // - https://.../hero-123-abc-1920.jpg -> hero-123-abc
-  const urlMatch = baseUrl.match(/([^/]+)-(\d+)\.(jpg|webp|avif)$/);
-  if (!urlMatch) {
-    // Если не удалось распарсить, возвращаем простой URL
+  // Извлекаем путь к файлу из URL
+  let storagePath = '';
+  let baseName = '';
+
+  // Проверяем разные форматы URL
+  if (baseUrl.includes('proxy-image')) {
+    // URL через proxy-image: /.netlify/functions/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
+    const pathMatch = baseUrl.match(/[?&]path=([^&]+)/);
+    if (pathMatch) {
+      try {
+        storagePath = decodeURIComponent(pathMatch[1]);
+        // Извлекаем имя файла из пути
+        const fileName = storagePath.split('/').pop() || '';
+        // Извлекаем базовое имя (hero-123 из hero-123-1920.jpg)
+        const nameMatch = fileName.match(/(.+)-(\d+)\.(jpg|webp|avif)$/);
+        if (nameMatch) {
+          baseName = nameMatch[1];
+        }
+      } catch (e) {
+        console.warn('⚠️ [Hero] Ошибка декодирования path:', e);
+        return `url('${baseUrl}')`;
+      }
+    }
+  } else if (baseUrl.includes('supabase.co/storage')) {
+    // Прямой Supabase URL: https://xxx.supabase.co/storage/v1/object/public/user-media/users/zhoock/hero/hero-123-1920.jpg
+    const storageMatch = baseUrl.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
+    if (storageMatch) {
+      storagePath = storageMatch[1];
+      const fileName = storagePath.split('/').pop() || '';
+      const nameMatch = fileName.match(/(.+)-(\d+)\.(jpg|webp|avif)$/);
+      if (nameMatch) {
+        baseName = nameMatch[1];
+      }
+    }
+  } else {
+    // Простой путь: users/zhoock/hero/hero-123-1920.jpg
+    storagePath = baseUrl;
+    const fileName = storagePath.split('/').pop() || '';
+    const nameMatch = fileName.match(/(.+)-(\d+)\.(jpg|webp|avif)$/);
+    if (nameMatch) {
+      baseName = nameMatch[1];
+    }
+  }
+
+  // Если не удалось извлечь базовое имя, возвращаем URL как есть
+  if (!baseName || !storagePath) {
+    console.warn('⚠️ [Hero] Не удалось распарсить URL, используем как есть:', baseUrl);
     return `url('${baseUrl}')`;
   }
 
-  const baseName = urlMatch[1]; // hero-123
-  const basePath = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1); // https://.../users/.../hero/
+  // Определяем базовый путь (без имени файла)
+  const pathParts = storagePath.split('/');
+  pathParts.pop(); // Убираем имя файла
+  const basePath = pathParts.join('/');
 
-  // Для background-image используем только один размер (1920px для desktop) и несколько форматов
-  // Браузер выберет оптимальный формат, но не будет загружать несколько размеров
-  const size = 1920; // Используем Full HD размер для desktop
-  const formats = ['avif', 'webp', 'jpg']; // Форматы в порядке приоритета
+  // Определяем origin для proxy-image
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  // Генерируем варианты для image-set (только форматы, один размер)
+  // Генерируем варианты для image-set (форматы: avif, webp, jpg)
+  const formats = ['avif', 'webp', 'jpg'];
+  const size = 1920; // Используем только 1920px вариант
   const variants: string[] = [];
+
   for (const format of formats) {
-    const variantUrl = `${basePath}${baseName}-${size}.${format}`;
+    const fileName = `${baseName}-${size}.${format}`;
+    const imagePath = `${basePath}/${fileName}`;
+
+    let variantUrl = '';
+    if (baseUrl.includes('proxy-image') || !baseUrl.includes('supabase.co')) {
+      // Используем proxy-image для лучшей совместимости
+      variantUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(imagePath)}`;
+    } else {
+      // Используем прямой Supabase URL
+      const supabaseBase = baseUrl.match(
+        /(https?:\/\/[^/]+\/storage\/v1\/object\/public\/[^/]+\/)/
+      );
+      variantUrl = supabaseBase ? `${supabaseBase[1]}${imagePath}` : baseUrl;
+    }
+
     const mimeType =
       format === 'avif' ? 'image/avif' : format === 'webp' ? 'image/webp' : 'image/jpeg';
     variants.push(`url('${variantUrl}') type('${mimeType}')`);
   }
 
-  // Убираем переносы строк для корректного использования в inline style
   return `image-set(${variants.join(', ')})`;
 }
 
@@ -68,15 +123,38 @@ export function Hero() {
       try {
         const images = await loadHeaderImagesFromDatabase();
         console.log('📸 [Hero] Загружены header images из БД:', images);
-        if (images && images.length > 0) {
-          setHeaderImages(images);
+
+        // Фильтруем только изображения из папки hero, удаляем старые из articles
+        const validHeroImages = (images || []).filter((url) => {
+          // Проверяем, что путь содержит '/hero/' или '/users/zhoock/hero'
+          const isValidHero =
+            url.includes('/hero/') ||
+            url.includes('/hero-') ||
+            (url.includes('proxy-image') && url.includes('hero'));
+
+          if (!isValidHero) {
+            console.warn('⚠️ [Hero] Найдено изображение не из папки hero, пропускаем:', url);
+          }
+
+          return isValidHero;
+        });
+
+        if (validHeroImages.length > 0) {
+          setHeaderImages(validHeroImages);
+          console.log('✅ [Hero] Валидные hero изображения:', validHeroImages.length);
         } else {
-          console.warn('⚠️ [Hero] Header images не найдены в БД (пустой массив)');
+          console.warn(
+            '⚠️ [Hero] Header images не найдены в БД или все из неправильной папки (пустой массив)'
+          );
+          // Принудительно очищаем изображения, если в БД их нет
+          setHeaderImages([]);
+          setBackgroundImage('');
         }
         imagesLoadedRef.current = true;
       } catch (error) {
         console.error('❌ [Hero] Ошибка загрузки header images из БД:', error);
         setHeaderImages([]);
+        setBackgroundImage('');
         imagesLoadedRef.current = true;
       }
     };
@@ -142,10 +220,27 @@ export function Hero() {
       }
     };
 
+    // Слушаем событие обновления header images
+    const handleHeaderImagesUpdate = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ images: string[] }>;
+      const newImages = customEvent.detail?.images;
+      if (Array.isArray(newImages)) {
+        console.log('🔄 [Hero] Получено событие обновления header images:', newImages);
+        setHeaderImages(newImages);
+        imagesLoadedRef.current = true;
+        // Если массив пустой, сразу очищаем фон
+        if (newImages.length === 0) {
+          setBackgroundImage('');
+        }
+      }
+    };
+
     window.addEventListener('profile-name-updated', handleProfileNameUpdate);
+    window.addEventListener('header-images-updated', handleHeaderImagesUpdate);
 
     return () => {
       window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
+      window.removeEventListener('header-images-updated', handleHeaderImagesUpdate);
     };
   }, []);
 

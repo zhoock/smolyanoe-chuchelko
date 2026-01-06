@@ -340,6 +340,10 @@ export function ProfileSettingsModal({
           }
           if (needsHeaderImagesUpdate) {
             updateData.headerImages = safeHeaderImages;
+            console.log('📤 [ProfileSettingsModal] Header images для сохранения:', {
+              count: safeHeaderImages.length,
+              urls: safeHeaderImages,
+            });
           }
 
           console.log('📤 [ProfileSettingsModal] Отправка данных:', updateData);
@@ -358,23 +362,45 @@ export function ProfileSettingsModal({
             throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
           }
 
-          // Отправляем событие для обновления Hero компонента, если изменилось название
+          // Отправляем событие для обновления Hero компонента
           if (needsSiteNameUpdate) {
             localStorage.setItem('profile-name', name);
             window.dispatchEvent(new CustomEvent('profile-name-updated', { detail: { name } }));
           }
+
+          // Отправляем событие для обновления header images в Hero компоненте
+          if (needsHeaderImagesUpdate) {
+            console.log(
+              '✅ [ProfileSettingsModal] Header images успешно сохранены в БД, отправляем событие обновления'
+            );
+            window.dispatchEvent(
+              new CustomEvent('header-images-updated', {
+                detail: { images: safeHeaderImages },
+              })
+            );
+          }
+
+          console.log('✅ [ProfileSettingsModal] Профиль успешно сохранен');
         } catch (error) {
-          console.error('Ошибка сохранения профиля:', error);
+          console.error('❌ [ProfileSettingsModal] Ошибка сохранения профиля:', error);
           alert(
             `Ошибка сохранения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
           );
           return;
         }
+      } else {
+        console.log('ℹ️ [ProfileSettingsModal] Нет изменений для сохранения');
       }
 
       setInitialName(name);
       setInitialHeaderImages([...(headerImages || [])]);
       setInitialAboutText(aboutText);
+
+      console.log('🔄 [ProfileSettingsModal] Обновлены начальные значения:', {
+        initialName: name,
+        initialHeaderImagesCount: (headerImages || []).length,
+      });
+
       onClose();
     }
   };
@@ -474,13 +500,20 @@ export function ProfileSettingsModal({
           const images = await loadHeaderImagesFromDatabase();
           // Гарантируем, что images всегда массив
           const safeImages = Array.isArray(images) ? images : [];
+          console.log('📥 [ProfileSettingsModal] Header images загружены из БД:', {
+            count: safeImages.length,
+            urls: safeImages,
+            raw: images,
+          });
           setHeaderImages(safeImages);
           setInitialHeaderImages(safeImages);
           if (safeImages.length > 0) {
             console.log('✅ Header images загружены:', safeImages.length);
+          } else {
+            console.log('ℹ️ Header images отсутствуют в БД (пустой массив)');
           }
         } catch (error) {
-          console.error('Ошибка загрузки header images:', error);
+          console.error('❌ Ошибка загрузки header images:', error);
           setHeaderImages([]);
           setInitialHeaderImages([]);
         } finally {
@@ -577,7 +610,8 @@ export function ProfileSettingsModal({
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, isDropdownOpen, hasChanges, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isDropdownOpen]);
 
   const handleSelectLanguage = (lang: 'ru' | 'en') => {
     setSelectedLang(lang);

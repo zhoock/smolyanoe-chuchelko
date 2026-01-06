@@ -31,11 +31,25 @@ const MAX_IMAGES = 10; // Максимальное количество изоб
 
 /**
  * Извлекает простой URL из image-set() строки для использования в <img src>
- * @param imageSetOrUrl - image-set() строка или простой URL
+ * @param imageSetOrUrl - image-set() строка или простой URL или storagePath
  * @returns простой URL для превью
  */
 function extractPreviewUrl(imageSetOrUrl: string): string {
-  // Если это уже простой URL, возвращаем как есть
+  // Если это storagePath (начинается с "users/"), преобразуем в proxy URL
+  if (
+    imageSetOrUrl.startsWith('users/zhoock/hero/') ||
+    (imageSetOrUrl.startsWith('users/') && imageSetOrUrl.includes('/hero/'))
+  ) {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(imageSetOrUrl)}`;
+    console.log('🔄 [extractPreviewUrl] Преобразован storagePath в proxy URL:', {
+      original: imageSetOrUrl,
+      converted: proxyUrl,
+    });
+    return proxyUrl;
+  }
+
+  // Если это уже простой URL (proxy URL или Supabase URL), возвращаем как есть
   if (!imageSetOrUrl.includes('image-set')) {
     return imageSetOrUrl;
   }
@@ -197,6 +211,12 @@ export function HeaderImagesUpload({
       }
 
       const fileName = `hero-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.jpg`;
+      console.log('📤 [HeaderImagesUpload] Загрузка hero изображения:', {
+        fileName,
+        fileSize: croppedBlob.size,
+        userId: user.id,
+      });
+
       const url = await uploadFile({
         userId: user.id,
         category: 'hero',
@@ -206,14 +226,45 @@ export function HeaderImagesUpload({
         upsert: false,
       });
 
+      console.log('📥 [HeaderImagesUpload] Результат загрузки:', {
+        url,
+        urlType: typeof url,
+        urlLength: url?.length,
+        isProxyUrl: url?.includes('proxy-image'),
+        isStoragePath: url?.startsWith('users/'),
+      });
+
       if (!url) {
         throw new Error('Failed to upload image');
       }
 
-      const newImages = [...images, url];
+      // Убеждаемся, что URL это proxy URL, а не storagePath
+      let finalUrl = url;
+      if (
+        url.startsWith('users/zhoock/hero/') ||
+        (url.startsWith('users/') && url.includes('/hero/'))
+      ) {
+        // Если это storagePath, преобразуем в proxy URL
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        finalUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(url)}`;
+        console.log('🔄 [HeaderImagesUpload] Преобразован storagePath в proxy URL:', {
+          original: url,
+          converted: finalUrl,
+        });
+      }
+
+      const newImages = [...images, finalUrl];
+      console.log('💾 [HeaderImagesUpload] Обновление списка изображений:', {
+        oldCount: images.length,
+        newCount: newImages.length,
+        newUrl: finalUrl,
+        allUrls: newImages,
+      });
+
       setImages(newImages);
 
       if (onImagesUpdated) {
+        console.log('📡 [HeaderImagesUpload] Отправка onImagesUpdated callback');
         onImagesUpdated(newImages);
       }
 
@@ -233,26 +284,53 @@ export function HeaderImagesUpload({
   const handleRemove = async (index: number) => {
     const imageToRemove = images[index];
     if (!imageToRemove) {
+      console.warn(
+        '⚠️ [HeaderImagesUpload] Попытка удалить изображение, но оно не найдено по индексу:',
+        index
+      );
       return;
     }
+
+    console.log('🗑️ [HeaderImagesUpload] Удаление изображения:', {
+      index,
+      url: imageToRemove,
+      totalImages: images.length,
+    });
 
     // Удаляем все варианты изображения из Storage
     try {
       const deleted = await deleteHeroImage(imageToRemove);
       if (!deleted) {
         console.warn(
-          '⚠️ Failed to delete hero image variants from storage, but continuing with removal from list'
+          '⚠️ [HeaderImagesUpload] Не удалось удалить варианты hero изображения из Storage, но продолжаем удаление из списка'
         );
+        // Показываем предупреждение, но продолжаем
+        alert(
+          'Изображение удалено из списка, но могут остаться файлы в хранилище. Сохраните изменения для применения.'
+        );
+      } else {
+        console.log('✅ [HeaderImagesUpload] Изображение успешно удалено из Storage');
       }
     } catch (error) {
-      console.error('Error deleting hero image from storage:', error);
+      console.error('❌ [HeaderImagesUpload] Ошибка удаления hero изображения из Storage:', error);
       // Продолжаем удаление из списка даже если удаление из Storage не удалось
+      alert(
+        'Ошибка удаления изображения из хранилища, но оно удалено из списка. Сохраните изменения для применения.'
+      );
     }
 
     // Удаляем URL из массива
     const newImages = images.filter((_, i) => i !== index);
+    console.log('📝 [HeaderImagesUpload] Обновление списка изображений после удаления:', {
+      oldCount: images.length,
+      newCount: newImages.length,
+      removedIndex: index,
+      remainingImages: newImages,
+    });
+
     setImages(newImages);
     if (onImagesUpdated) {
+      console.log('📡 [HeaderImagesUpload] Отправка обновленного списка в родительский компонент');
       onImagesUpdated(newImages);
     }
   };
