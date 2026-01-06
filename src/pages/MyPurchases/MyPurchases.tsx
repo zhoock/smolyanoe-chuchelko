@@ -195,4 +195,3 @@ function MyPurchases() {
 }
 
 export default MyPurchases;
-

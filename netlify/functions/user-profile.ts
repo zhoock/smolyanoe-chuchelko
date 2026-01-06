@@ -13,6 +13,7 @@ interface UserProfileRow {
   the_band: any; // JSONB
   header_images?: any; // JSONB
   password: string | null;
+  site_name?: string | null;
 }
 
 interface GetUserProfileResponse {
@@ -20,13 +21,15 @@ interface GetUserProfileResponse {
   data?: {
     theBand: string[];
     headerImages?: string[];
+    siteName?: string | null;
   };
   error?: string;
 }
 
 interface SaveUserProfileRequest {
-  theBand: string[];
+  theBand?: string[];
   headerImages?: string[];
+  siteName?: string;
 }
 
 interface SaveUserProfileResponse {
@@ -71,7 +74,7 @@ export const handler: Handler = async (
 
       try {
         result = await query<UserProfileRow>(
-          `SELECT the_band, header_images, password FROM users WHERE id = $1 AND is_active = true`,
+          `SELECT the_band, header_images, password, site_name FROM users WHERE id = $1 AND is_active = true`,
           [userId],
           0
         );
@@ -85,15 +88,15 @@ export const handler: Handler = async (
         if (errorMessage.includes('column')) {
           console.log('⚠️ Некоторые поля еще не существуют в БД, используем только доступные');
           try {
-            result = await query<{ the_band: any; header_images?: any }>(
-              `SELECT the_band, header_images FROM users WHERE id = $1 AND is_active = true`,
+            result = await query<{ the_band: any; header_images?: any; site_name?: string | null }>(
+              `SELECT the_band, header_images, site_name FROM users WHERE id = $1 AND is_active = true`,
               [userId],
               0
             );
             password = '';
           } catch (innerError) {
-            result = await query<{ the_band: any }>(
-              `SELECT the_band FROM users WHERE id = $1 AND is_active = true`,
+            result = await query<{ the_band: any; site_name?: string | null }>(
+              `SELECT the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
               [userId],
               0
             );
@@ -122,13 +125,14 @@ export const handler: Handler = async (
           ? user.header_images
           : []
         : [];
+      const siteName = (user as any).site_name || null;
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          data: { theBand, password, headerImages },
+          data: { theBand, password, headerImages, siteName },
         } as GetUserProfileResponse),
       };
     }
@@ -147,41 +151,63 @@ export const handler: Handler = async (
 
       const data: SaveUserProfileRequest = JSON.parse(event.body || '{}');
 
-      if (!data.theBand || !Array.isArray(data.theBand)) {
+      // Формируем список полей для обновления
+      const updateFields: string[] = [];
+      const updateValues: unknown[] = [];
+      let paramIndex = 1;
+
+      if (data.siteName !== undefined) {
+        updateFields.push(`site_name = $${paramIndex++}`);
+        updateValues.push(data.siteName || null);
+      }
+
+      if (data.theBand !== undefined) {
+        if (!Array.isArray(data.theBand)) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error: 'Invalid request data. theBand must be an array of strings',
+            } as SaveUserProfileResponse),
+          };
+        }
+        updateFields.push(`the_band = $${paramIndex++}::jsonb`);
+        updateValues.push(JSON.stringify(data.theBand));
+      }
+
+      if (data.headerImages !== undefined) {
+        updateFields.push(`header_images = $${paramIndex++}::jsonb`);
+        updateValues.push(JSON.stringify(data.headerImages || []));
+      }
+
+      if (updateFields.length === 0) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({
             success: false,
-            error: 'Invalid request data. Required: theBand (array of strings)',
+            error: 'No fields to update',
           } as SaveUserProfileResponse),
         };
       }
 
-      // Обновляем the_band и header_images (если указаны)
-      if (data.headerImages !== undefined) {
-        await query(
-          `UPDATE users 
-           SET the_band = $1::jsonb, 
-               header_images = $2::jsonb, 
-               updated_at = NOW()
-           WHERE id = $3 AND is_active = true`,
-          [JSON.stringify(data.theBand), JSON.stringify(data.headerImages || []), userId],
-          0
-        );
-      } else {
-        await query(
-          `UPDATE users 
-           SET the_band = $1::jsonb, updated_at = NOW()
-           WHERE id = $2 AND is_active = true`,
-          [JSON.stringify(data.theBand), userId],
-          0
-        );
-      }
+      updateFields.push(`updated_at = NOW()`);
+      updateValues.push(userId);
+
+      // Обновляем указанные поля
+      await query(
+        `UPDATE users 
+         SET ${updateFields.join(', ')}
+         WHERE id = $${paramIndex} AND is_active = true`,
+        updateValues,
+        0
+      );
 
       console.log('✅ User profile updated:', {
         userId,
-        theBandLength: data.theBand.length,
+        siteName: data.siteName,
+        theBandLength: data.theBand?.length || 0,
         headerImagesLength: data.headerImages?.length || 0,
       });
 

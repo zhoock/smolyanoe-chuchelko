@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
+import { getToken } from '@shared/lib/auth';
 import './style.scss';
 
 /**
@@ -55,6 +56,7 @@ function generateImageSetFromUrl(baseUrl: string): string {
 export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [headerImages, setHeaderImages] = useState<string[]>([]);
+  const [profileName, setProfileName] = useState<string>('');
   const location = useLocation();
   const lastPathRef = useRef<string>('');
   const imagesLoadedRef = useRef<boolean>(false);
@@ -65,15 +67,86 @@ export function Hero() {
     const loadImages = async () => {
       try {
         const images = await loadHeaderImagesFromDatabase();
-        setHeaderImages(images);
+        console.log('📸 [Hero] Загружены header images из БД:', images);
+        if (images && images.length > 0) {
+          setHeaderImages(images);
+        } else {
+          console.warn('⚠️ [Hero] Header images не найдены в БД (пустой массив)');
+        }
         imagesLoadedRef.current = true;
       } catch (error) {
-        console.warn('⚠️ Ошибка загрузки header images из БД:', error);
+        console.error('❌ [Hero] Ошибка загрузки header images из БД:', error);
         setHeaderImages([]);
         imagesLoadedRef.current = true;
       }
     };
     loadImages();
+  }, []);
+
+  // Загружаем название группы из API или localStorage
+  useEffect(() => {
+    const loadProfileName = async () => {
+      // Сначала проверяем localStorage для быстрого отображения
+      const storedName = localStorage.getItem('profile-name');
+      if (storedName) {
+        setProfileName(storedName);
+      }
+
+      try {
+        const token = getToken();
+        if (!token) {
+          // Если не авторизован, используем значение из localStorage или значение по умолчанию
+          if (!storedName) {
+            setProfileName('Смоляное чучелко');
+          }
+          return;
+        }
+
+        const response = await fetch('/api/user-profile', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.siteName) {
+            setProfileName(result.data.siteName);
+            // Сохраняем в localStorage для использования без авторизации
+            localStorage.setItem('profile-name', result.data.siteName);
+          } else if (!storedName) {
+            // Если в API нет siteName и нет в localStorage, используем значение по умолчанию
+            setProfileName('Смоляное чучелко');
+          }
+        } else if (!storedName) {
+          // Если запрос не удался и нет в localStorage, используем значение по умолчанию
+          setProfileName('Смоляное чучелко');
+        }
+      } catch (error) {
+        console.warn('⚠️ Ошибка загрузки названия группы из профиля:', error);
+        // В случае ошибки используем localStorage или значение по умолчанию
+        if (!storedName) {
+          setProfileName('Смоляное чучелко');
+        }
+      }
+    };
+
+    loadProfileName();
+
+    // Слушаем событие обновления названия группы
+    const handleProfileNameUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ name: string }>;
+      if (customEvent.detail?.name) {
+        setProfileName(customEvent.detail.name);
+      }
+    };
+
+    window.addEventListener('profile-name-updated', handleProfileNameUpdate);
+
+    return () => {
+      window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
+    };
   }, []);
 
   // Выбираем случайное изображение при загрузке данных или изменении пути
@@ -95,19 +168,26 @@ export function Hero() {
     lastPathRef.current = location.pathname;
     imageSelectedForPathRef.current = location.pathname;
 
+    // Выбираем изображение из БД
     if (headerImages.length > 0) {
       // Используем изображения из БД - случайный выбор
       const randomIndex = Math.floor(Math.random() * headerImages.length);
       const imageUrl = headerImages[randomIndex];
+      console.log('🎲 [Hero] Выбрано изображение:', { index: randomIndex, url: imageUrl });
       const imageSet = generateImageSetFromUrl(imageUrl);
       setBackgroundImage(imageSet);
+    } else {
+      console.warn('⚠️ [Hero] Нет изображений для отображения (headerImages пустой)');
+      setBackgroundImage('');
     }
-    // Если в БД нет данных, backgroundImage останется пустым (не будет фона)
   }, [location.pathname, headerImages]);
+
+  // Всегда показываем заголовок (с fallback значением)
+  const displayName = profileName || 'Смоляное чучелко';
 
   return (
     <section className="hero" style={{ backgroundImage }}>
-      <h1 className="hero__title">Cмоляное чучелко</h1>
+      <h1 className="hero__title">{displayName}</h1>
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { getUser } from '@shared/lib/auth';
+import { useCart } from '../model/CartContext';
 import './PurchasePopup.style.scss';
 
 type Step = 'cart' | 'checkout';
@@ -224,6 +225,7 @@ function CheckoutStep({
   onFormDataChange: (data: CheckoutFormData) => void;
   t: any;
 }) {
+  const { clearCart } = useCart();
   const [email, setEmail] = useState(formData.email);
   const [firstName, setFirstName] = useState(formData.firstName);
   const [lastName, setLastName] = useState(formData.lastName);
@@ -318,6 +320,9 @@ function CheckoutStep({
         setIsPaymentLoading(false);
         return;
       }
+
+      // Очищаем корзину после успешного создания платежа
+      clearCart();
 
       // Обработка результата согласно документации YooKassa:
       // Если статус pending (требуется 3D Secure), перенаправляем на confirmation_url

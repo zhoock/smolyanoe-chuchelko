@@ -30,6 +30,7 @@ interface RegisterRequest {
   email: string;
   password: string;
   name?: string;
+  siteName?: string;
 }
 
 interface LoginRequest {
@@ -85,11 +86,13 @@ export const handler: Handler = async (
       const passwordHash = await bcrypt.hash(data.password, 10);
 
       // Создаём пользователя (сохраняем пароль в открытом виде для админки и хеш для проверки)
+      // siteName берем из name, если siteName не указан явно (для обратной совместимости)
+      const siteName = data.siteName || data.name || null;
       const result = await query<UserRow>(
-        `INSERT INTO users (email, name, password, password_hash, is_active)
-         VALUES ($1, $2, $3, $4, true)
+        `INSERT INTO users (email, name, site_name, password, password_hash, is_active)
+         VALUES ($1, $2, $3, $4, $5, true)
          RETURNING id, email, name`,
-        [data.email.toLowerCase().trim(), data.name || null, data.password, passwordHash],
+        [data.email.toLowerCase().trim(), data.name || null, siteName, data.password, passwordHash],
         0
       );
 

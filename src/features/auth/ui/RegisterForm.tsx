@@ -20,6 +20,11 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     setError(null);
 
     // Валидация
+    if (!name || !name.trim()) {
+      setError('Site/Band Name is required');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Пароли не совпадают');
       return;
@@ -33,7 +38,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     setLoading(true);
 
     try {
-      const result = await register(email, password, name || undefined);
+      const result = await register(email, password, name.trim());
 
       if (result.success) {
         if (onSuccess) {
@@ -60,7 +65,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
       <div className="auth-form__field">
         <label htmlFor="register-name" className="auth-form__label">
-          Имя (необязательно)
+          Site/Band Name
         </label>
         <input
           id="register-name"
@@ -69,7 +74,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           className="auth-form__input"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          autoComplete="name"
+          placeholder="Enter the name of your band, or some other name for this site"
+          autoComplete="organization"
+          required
           disabled={loading}
         />
       </div>

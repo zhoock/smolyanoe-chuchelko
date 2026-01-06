@@ -84,7 +84,7 @@ export function isAuthenticated(): boolean {
 export async function register(
   email: string,
   password: string,
-  name?: string
+  siteName: string
 ): Promise<AuthResponse> {
   try {
     const response = await fetch('/api/auth/register', {
@@ -92,13 +92,15 @@ export async function register(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, name: siteName, siteName }),
     });
 
     const result: AuthResponse = await response.json();
 
     if (result.success && result.data) {
       saveAuth(result.data.token, result.data.user);
+      // Сохраняем siteName в localStorage для использования в Hero
+      localStorage.setItem('profile-name', siteName);
     }
 
     return result;

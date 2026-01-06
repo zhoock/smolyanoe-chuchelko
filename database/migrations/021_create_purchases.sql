@@ -45,3 +45,4 @@ COMMENT ON COLUMN purchases.download_count IS 'Количество скачив
 COMMENT ON COLUMN purchases.last_downloaded_at IS 'Дата последнего скачивания';
 
 
+

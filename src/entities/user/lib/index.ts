@@ -88,6 +88,10 @@ export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
     const { getAuthHeader } = await import('@shared/lib/auth');
     const authHeader = getAuthHeader();
 
+    console.log('📡 [loadHeaderImagesFromDatabase] Отправляем запрос к /api/user-profile', {
+      hasAuth: 'Authorization' in authHeader && !!authHeader.Authorization,
+    });
+
     const response = await fetch('/api/user-profile', {
       cache: 'no-cache',
       headers: {
@@ -96,26 +100,39 @@ export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
       },
     });
 
+    console.log('📡 [loadHeaderImagesFromDatabase] Ответ получен:', {
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers.get('content-type'),
+    });
+
     if (!response.ok) {
+      console.warn('⚠️ [loadHeaderImagesFromDatabase] Запрос не успешен:', response.status);
       return [];
     }
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
+      console.warn('⚠️ [loadHeaderImagesFromDatabase] Неверный content-type:', contentType);
       return [];
     }
 
     const result: UserProfileResponse = await response.json();
+    console.log('📡 [loadHeaderImagesFromDatabase] Результат:', {
+      success: result.success,
+      hasData: !!result.data,
+      headerImages: result.data?.headerImages,
+      headerImagesLength: result.data?.headerImages?.length || 0,
+    });
 
     if (result.success && result.data && result.data.headerImages) {
       return result.data.headerImages;
     }
 
+    console.warn('⚠️ [loadHeaderImagesFromDatabase] Header images не найдены в ответе');
     return [];
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ Ошибка загрузки header images из БД:', error);
-    }
+    console.error('❌ [loadHeaderImagesFromDatabase] Ошибка загрузки header images из БД:', error);
     return [];
   }
 }

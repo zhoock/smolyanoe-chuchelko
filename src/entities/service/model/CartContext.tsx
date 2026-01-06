@@ -1,10 +1,18 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+} from 'react';
 import type { IAlbums } from '@models';
 
 interface CartContextType {
   cartAlbums: IAlbums[];
   addToCart: (album: IAlbums) => void;
   removeFromCart: (albumId: string) => void;
+  clearCart: () => void;
   isCartEmpty: boolean;
   cartItemsCount: number;
 }
@@ -68,6 +76,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartAlbums((prevAlbums) => prevAlbums.filter((a) => a.albumId !== albumId));
   }, []);
 
+  const clearCart = useCallback(() => {
+    setCartAlbums([]);
+  }, []);
+
   const isCartEmpty = cartAlbums.length === 0;
   const cartItemsCount = cartAlbums.length;
 
@@ -77,6 +89,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cartAlbums,
         addToCart,
         removeFromCart,
+        clearCart,
         isCartEmpty,
         cartItemsCount,
       }}
@@ -93,4 +106,3 @@ export function useCart() {
   }
   return context;
 }
-

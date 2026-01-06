@@ -528,6 +528,31 @@ ADD COLUMN IF NOT EXISTS header_images JSONB DEFAULT '[]'::jsonb;
 COMMENT ON COLUMN users.header_images IS 'Массив URL изображений для шапки сайта (hero section)';
 `;
 
+const MIGRATION_023 = `
+-- Миграция: Добавление поля site_name в таблицу users
+-- Дата: 2025
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS site_name VARCHAR(255);
+
+-- Комментарий для поля
+COMMENT ON COLUMN users.site_name IS 'Название сайта/группы (Site/Band Name) из формы регистрации';
+`;
+
+const MIGRATION_024 = `
+-- Миграция: Установка site_name для владельца сайта
+-- Дата: 2025
+
+-- Обновляем site_name для пользователя zhoock@zhoock.ru
+UPDATE users
+SET site_name = 'Смоляное чучелко',
+    updated_at = NOW()
+WHERE email = 'zhoock@zhoock.ru' AND is_active = true;
+
+-- Комментарий
+COMMENT ON COLUMN users.site_name IS 'Название сайта/группы (Site/Band Name) из формы регистрации';
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -544,6 +569,8 @@ const MIGRATIONS: Record<string, string> = {
   '015_fix_synced_lyrics_null_duplicates.sql': MIGRATION_015,
   '017_add_is_draft_to_articles.sql': MIGRATION_017,
   '022_add_header_images_to_users.sql': MIGRATION_022,
+  '023_add_site_name_to_users.sql': MIGRATION_023,
+  '024_set_site_name_for_owner.sql': MIGRATION_024,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -685,6 +712,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '014_force_all_covers.sql',
       '015_fix_synced_lyrics_null_duplicates.sql',
       '017_add_is_draft_to_articles.sql',
+      '022_add_header_images_to_users.sql',
+      '023_add_site_name_to_users.sql',
+      '024_set_site_name_for_owner.sql',
     ];
 
     const results: MigrationResult[] = [];

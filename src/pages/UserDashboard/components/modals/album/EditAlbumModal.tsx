@@ -1548,6 +1548,8 @@ export function EditAlbumModal({
         artist: updateData.artist,
         hasDescription: !!updateData.description,
         hasCover: !!updateData.cover,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
       });
 
       const response = await fetch('/api/albums', {
@@ -1622,10 +1624,17 @@ export function EditAlbumModal({
       return result;
     } catch (error) {
       console.error('❌ Error updating album:', error);
+
+      // Проверяем, является ли ошибка ошибкой авторизации
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const isAuthError = errorMessage.includes('Unauthorized') || errorMessage.includes('401');
+
       setAlertModal({
         isOpen: true,
         title: 'Ошибка',
-        message: `Ошибка при сохранении альбома: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: isAuthError
+          ? 'Ошибка авторизации: ваша сессия истекла. Пожалуйста, обновите страницу и войдите в систему снова.'
+          : `Ошибка при сохранении альбома: ${errorMessage}`,
         variant: 'error',
       });
     } finally {
