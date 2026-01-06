@@ -166,8 +166,20 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
 
       const url = getAlbumDownloadUrl(purchaseToken);
 
-      // ✅ Обрабатываем 202 (building) и повторяем запрос
+      // ✅ Умный polling с экспоненциальной задержкой и лимитом времени
+      const MAX_WAIT_TIME = 3 * 60 * 1000; // 3 минуты максимум
+      const startTime = Date.now();
+      let delay = 1000; // Начинаем с 1 секунды
+      const MAX_DELAY = 8000; // Максимум 8 секунд между запросами
+
       for (;;) {
+        // Проверяем лимит времени
+        if (Date.now() - startTime > MAX_WAIT_TIME) {
+          throw new Error(
+            'Build timeout: ZIP archive is taking too long to build. Please try again later.'
+          );
+        }
+
         const response = await fetch(url, {
           redirect: 'manual', // Не следуем редиректам автоматически
         });
@@ -176,23 +188,46 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
         if (response.status === 302) {
           const location = response.headers.get('Location');
           if (location) {
-            // ✅ Прямой редирект браузера (не загружаем 142MB в память через blob)
-            window.location.href = location;
+            // ✅ Открываем в новой вкладке (не уводим пользователя со страницы)
+            const downloadWindow = window.open(location, '_blank', 'noopener');
+            if (!downloadWindow) {
+              // Fallback: если popup заблокирован, используем прямой редирект
+              window.location.href = location;
+            }
+
+            // Показываем состояние "Скачано" на 2 секунды
+            setDownloadedItems((prev) => new Set(prev).add(`album-${purchaseToken}`));
+            setTimeout(() => {
+              setDownloadedItems((prev) => {
+                const next = new Set(prev);
+                next.delete(`album-${purchaseToken}`);
+                return next;
+              });
+            }, 2000);
             return; // Успешно скачано
           }
         }
 
         // ✅ 202 Accepted — ZIP собирается, ждём и повторяем
         if (response.status === 202) {
-          await new Promise((resolve) => setTimeout(resolve, 2000)); // Ждём 2 секунды
+          // Используем Retry-After из заголовка, если есть
+          const retryAfter = response.headers.get('Retry-After');
+          const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : delay;
+
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+          // Экспоненциальная задержка: 1s → 2s → 3s → 5s → 8s
+          delay = Math.min(Math.floor(delay * 1.5), MAX_DELAY);
           continue; // Повторяем запрос
         }
 
-        // ❌ Другие ошибки
+        // ❌ 500 и другие ошибки (включая error.json)
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
-            (errorData as any)?.error || `Failed to download: ${response.statusText}`
+            (errorData as any)?.error ||
+              (errorData as any)?.details ||
+              `Failed to download: ${response.statusText}`
           );
         }
       }

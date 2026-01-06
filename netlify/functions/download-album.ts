@@ -185,95 +185,198 @@ export const handler: Handler = async (
     // ✅ Сначала проверяем существование файла через list (более надёжно, чем createSignedUrl)
     const folder = `users/${storageUserId}/album-zips/${purchase.id}`;
     const lockName = 'building.lock';
+    const errorFileName = 'error.json';
     console.log(`🔍 [download-album] Checking for existing ZIP in folder: ${folder}`);
 
-    const { data: listData, error: listError } = await supabaseAdmin.storage
+    const { data: listDataRaw, error: listError } = await supabaseAdmin.storage
       .from(STORAGE_BUCKET_NAME)
       .list(folder, { limit: 100 });
 
+    // ✅ Всегда работаем с listData, даже если была ошибка
+    const listData = listDataRaw ?? [];
     if (listError) {
-      console.log(
-        `ℹ️ [download-album] Could not list folder (will trigger build): ${listError.message}`
-      );
-    } else {
-      // ✅ Ищем файл по ASCII-имени (в Storage файл хранится с ASCII-именем)
-      const hasZip = !!listData?.some((f) => f.name === storageZipFileName);
+      console.warn(`⚠️ [download-album] List failed, continue anyway: ${listError.message}`);
+    }
 
-      if (hasZip) {
-        // ✅ Файл найден — создаём signed URL и возвращаем redirect
-        console.log(`✅ [download-album] Found existing ZIP, creating signed URL`);
-        const { data: existingSignedUrl, error: signedUrlError } = await supabaseAdmin.storage
-          .from(STORAGE_BUCKET_NAME)
-          .createSignedUrl(zipStoragePath, 600);
+    // ✅ 1) Проверяем наличие ZIP файла
+    const hasZip = !!listData?.some((f) => f.name === storageZipFileName);
 
-        if (signedUrlError) {
-          console.warn(
-            `⚠️ [download-album] Failed to create signed URL for existing file: ${signedUrlError.message}`
-          );
-        } else if (existingSignedUrl?.signedUrl) {
-          console.log(`✅ [download-album] Returning cached ZIP`);
-          const url = new URL(existingSignedUrl.signedUrl);
-          url.searchParams.set('download', downloadFileName);
+    if (hasZip) {
+      // ✅ Файл найден — создаём signed URL и возвращаем redirect
+      console.log(`✅ [download-album] Found existing ZIP, creating signed URL`);
+      const { data: existingSignedUrl, error: signedUrlError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET_NAME)
+        .createSignedUrl(zipStoragePath, 600);
 
-          // Обновляем счетчик скачиваний (не блокируем ответ)
-          query(
-            `UPDATE purchases 
+      if (signedUrlError) {
+        console.warn(
+          `⚠️ [download-album] Failed to create signed URL for existing file: ${signedUrlError.message}`
+        );
+      } else if (existingSignedUrl?.signedUrl) {
+        console.log(`✅ [download-album] Returning cached ZIP`);
+        const url = new URL(existingSignedUrl.signedUrl);
+        url.searchParams.set('download', downloadFileName);
+
+        // Обновляем счетчик скачиваний (не блокируем ответ)
+        query(
+          `UPDATE purchases 
              SET download_count = download_count + 1, 
                  last_downloaded_at = CURRENT_TIMESTAMP,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $1`,
-            [purchase.id]
-          ).catch((error) => {
-            console.error('❌ Failed to update download count:', error);
-          });
+          [purchase.id]
+        ).catch((error) => {
+          console.error('❌ Failed to update download count:', error);
+        });
 
+        return {
+          statusCode: 302,
+          headers: {
+            Location: url.toString(),
+            'Cache-Control': 'no-store',
+          },
+        };
+      }
+    }
+
+    // ✅ 2) Проверяем наличие error.json (сборка провалилась)
+    const hasError = !!listData?.some((f) => f.name === errorFileName);
+    if (hasError) {
+      console.log(`❌ [download-album] Found error.json, build failed previously`);
+      try {
+        const { data: errorData } = await supabaseAdmin.storage
+          .from(STORAGE_BUCKET_NAME)
+          .download(`${folder}/${errorFileName}`);
+        if (errorData) {
+          const errorText = await errorData.text();
+          const errorInfo = JSON.parse(errorText);
           return {
-            statusCode: 302,
-            headers: {
-              Location: url.toString(),
-              'Cache-Control': 'no-store',
-            },
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              error: 'Build failed',
+              details: errorInfo.message || 'Unknown error',
+              timestamp: errorInfo.timestamp,
+            }),
           };
         }
+      } catch (parseError) {
+        console.warn(`⚠️ [download-album] Failed to read error.json:`, parseError);
       }
+      // Если не удалось прочитать error.json, продолжаем как обычно
+    }
 
-      // ✅ Проверяем lock-файл для предотвращения параллельных сборок
-      const hasLock = !!listData?.some((f) => f.name === lockName);
+    // ✅ 3) Проверяем lock-файл (с проверкой на stale lock)
+    const lockFile = listData?.find((f) => f.name === lockName);
+    const hasLock = !!lockFile;
 
-      if (!hasLock) {
-        // ✅ Создаём lock-файл перед запуском background функции
-        console.log(`🔒 [download-album] Creating lock file to prevent parallel builds`);
+    if (hasLock) {
+      // ✅ Проверяем, не протух ли lock (старше 10 минут)
+      const lockAge = lockFile.created_at
+        ? Date.now() - new Date(lockFile.created_at).getTime()
+        : Infinity;
+      const STALE_LOCK_AGE = 10 * 60 * 1000; // 10 минут
+
+      if (lockAge > STALE_LOCK_AGE) {
+        console.log(
+          `⚠️ [download-album] Stale lock detected (${Math.round(lockAge / 1000)}s old), removing and restarting`
+        );
         try {
-          await supabaseAdmin.storage
-            .from(STORAGE_BUCKET_NAME)
-            .upload(`${folder}/${lockName}`, Buffer.from('1'), {
-              upsert: true,
-              contentType: 'text/plain',
-              cacheControl: '0',
-            });
-          console.log(`✅ [download-album] Lock file created`);
-
-          // Определяем origin для вызова background функции
-          const proto = event.headers['x-forwarded-proto'] || 'https';
-          const host = event.headers.host;
-          const origin = `${proto}://${host}`;
-
-          // ✅ Запускаем background функцию (fire-and-forget)
-          console.log(`🚀 [download-album] Triggering background build`);
-          fetch(
-            `${origin}/.netlify/functions/build-album-zip-background?token=${encodeURIComponent(purchaseToken)}`
-          ).catch((error) => {
-            // Логируем ошибку, но не блокируем ответ
-            console.warn('⚠️ [download-album] Failed to trigger background build:', error);
-          });
-        } catch (lockError) {
-          console.warn(
-            `⚠️ [download-album] Failed to create lock file: ${lockError instanceof Error ? lockError.message : String(lockError)}`
-          );
+          await supabaseAdmin.storage.from(STORAGE_BUCKET_NAME).remove([`${folder}/${lockName}`]);
+          console.log(`✅ [download-album] Stale lock removed`);
+          // Продолжаем создание нового lock ниже
+        } catch (removeError) {
+          console.warn(`⚠️ [download-album] Failed to remove stale lock:`, removeError);
+          // Если не удалось удалить, возвращаем building
+          return {
+            statusCode: 202,
+            headers: {
+              'Content-Type': 'application/json',
+              'Retry-After': '3',
+              'Cache-Control': 'no-store',
+            },
+            body: JSON.stringify({
+              status: 'building',
+              message: 'Build in progress. Please try again in a few moments.',
+            }),
+          };
         }
       } else {
-        console.log(`ℹ️ [download-album] Build already in progress (lock file exists)`);
+        // Lock свежий, сборка идёт
+        console.log(
+          `ℹ️ [download-album] Build already in progress (lock file exists, age: ${Math.round(lockAge / 1000)}s)`
+        );
+        return {
+          statusCode: 202,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': '3',
+            'Cache-Control': 'no-store',
+          },
+          body: JSON.stringify({
+            status: 'building',
+            message: 'Build in progress. Please try again in a few moments.',
+          }),
+        };
       }
+    }
+
+    // ✅ 4) Lock нет или был удалён — создаём новый и запускаем сборку
+    console.log(`🔒 [download-album] Creating lock file to prevent parallel builds`);
+    try {
+      const lockContent = JSON.stringify({ startedAt: Date.now() });
+      await supabaseAdmin.storage
+        .from(STORAGE_BUCKET_NAME)
+        .upload(`${folder}/${lockName}`, Buffer.from(lockContent), {
+          upsert: true,
+          contentType: 'application/json',
+          cacheControl: '0',
+        });
+      console.log(`✅ [download-album] Lock file created`);
+
+      // Определяем origin для вызова background функции
+      const proto = event.headers['x-forwarded-proto'] || 'https';
+      const host = event.headers.host;
+      const origin = `${proto}://${host}`;
+
+      // ✅ Запускаем background функцию с await и логами
+      // Netlify background functions доступны по URL с суффиксом -background
+      const triggerUrl = `${origin}/.netlify/functions/build-album-zip-background?token=${encodeURIComponent(purchaseToken)}`;
+      console.log(`🚀 [download-album] Triggering background build: ${triggerUrl}`);
+
+      try {
+        const triggerResponse = await fetch(triggerUrl, { method: 'POST' });
+        const triggerText = await triggerResponse.text();
+        console.log(`🚀 [download-album] Build trigger result:`, {
+          status: triggerResponse.status,
+          text: triggerText.slice(0, 300),
+        });
+      } catch (triggerError) {
+        console.error(`❌ [download-album] Failed to trigger background build:`, triggerError);
+        // Удаляем lock при ошибке триггера
+        try {
+          await supabaseAdmin.storage.from(STORAGE_BUCKET_NAME).remove([`${folder}/${lockName}`]);
+          console.log(`✅ [download-album] Lock removed after trigger error`);
+        } catch (removeError) {
+          console.warn(
+            `⚠️ [download-album] Failed to remove lock after trigger error:`,
+            removeError
+          );
+        }
+        throw triggerError;
+      }
+    } catch (lockError) {
+      console.warn(
+        `⚠️ [download-album] Failed to create lock file: ${lockError instanceof Error ? lockError.message : String(lockError)}`
+      );
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Failed to start build',
+          details: lockError instanceof Error ? lockError.message : String(lockError),
+        }),
+      };
     }
 
     // Возвращаем 202 Accepted — ZIP собирается в фоне
@@ -281,6 +384,7 @@ export const handler: Handler = async (
       statusCode: 202,
       headers: {
         'Content-Type': 'application/json',
+        'Retry-After': '3',
         'Cache-Control': 'no-store',
       },
       body: JSON.stringify({

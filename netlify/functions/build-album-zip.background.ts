@@ -100,6 +100,13 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const purchase = purchaseResult.rows[0];
     console.log('🔨 [build-album-zip-background] Purchase found:', { albumId: purchase.album_id });
 
+    // ✅ Определяем пути для lock и error файлов (нужны для finally)
+    const storageUserId = 'zhoock';
+    const folder = `users/${storageUserId}/album-zips/${purchase.id}`;
+    const lockName = 'building.lock';
+    const errorFileName = 'error.json';
+    const supabaseAdmin = createSupabaseAdminClient();
+
     // Получаем информацию об альбоме
     console.log('🔨 [build-album-zip-background] Querying album:', purchase.album_id);
     let albumResult;
@@ -184,16 +191,36 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     // Формируем имя файла для Storage (ASCII)
     const storageZipFileName = `album-${purchase.album_id}.zip`;
-    const storageUserId = 'zhoock';
-    const folder = `users/${storageUserId}/album-zips/${purchase.id}`;
-    const lockName = 'building.lock';
     const zipStoragePath = `${folder}/${storageZipFileName}`;
 
-    console.log('🔨 [build-album-zip-background] Creating archive:', {
+    console.log('🔨 [build] Started', {
+      token: purchaseToken.substring(0, 8),
       albumId: purchase.album_id,
       albumName: album.album,
       tracksCount: tracksResult.rows.length,
     });
+
+    // ✅ Функция санитизации имени файла
+    const sanitizeFileName = (name: string): string => {
+      return name
+        .replace(/[<>:"/\\|?*\x00-\x1F\x7F]/g, '_')
+        .replace(/_{2,}/g, '_')
+        .trim();
+    };
+
+    // ✅ Надёжное получение расширения из URL (без query параметров)
+    const getExtensionFromUrl = (url: string): string => {
+      try {
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        const ext = pathname.split('.').pop();
+        return ext || 'wav';
+      } catch {
+        // Если не URL, пробуем просто split
+        const parts = url.split('?')[0].split('.');
+        return parts.length > 1 ? parts.pop() || 'wav' : 'wav';
+      }
+    };
 
     // Создаем ZIP архив
     const archive = archiver('zip', {
@@ -218,7 +245,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       });
     });
 
-    const supabase = createSupabaseClient();
+    // Используем admin client для скачивания файлов (работает с приватными bucket)
     let filesAdded = 0;
 
     // Добавляем каждый трек в архив
@@ -239,18 +266,19 @@ export const handler: Handler = async (event: HandlerEvent) => {
           const fileResponse = await fetch(audioUrl);
           if (!fileResponse.ok) {
             console.warn(
-              `⚠️ [build-album-zip-background] Failed to fetch ${track.track_id}: ${fileResponse.statusText}`
+              `⚠️ [build] Failed to fetch ${track.track_id}: ${fileResponse.statusText}`
             );
             continue;
           }
           const fileBuffer = await fileResponse.arrayBuffer();
-          const extension = track.src.split('.').pop() || 'wav';
-          const fileName = `${String(track.order_index).padStart(2, '0')}. ${track.title}.${extension}`;
-          archive.append(Buffer.from(fileBuffer), { name: fileName });
+          const extension = getExtensionFromUrl(audioUrl);
+          const safeTitle = sanitizeFileName(track.title);
+          const archiveFileName = `${String(track.order_index).padStart(2, '0')}. ${safeTitle}.${extension}`;
+          archive.append(Buffer.from(fileBuffer), { name: archiveFileName });
           filesAdded++;
           continue;
         } catch (error) {
-          console.warn(`⚠️ [build-album-zip-background] Error fetching ${track.track_id}:`, error);
+          console.warn(`⚠️ [build] Error fetching ${track.track_id}:`, error);
           continue;
         }
       }
@@ -283,41 +311,34 @@ export const handler: Handler = async (event: HandlerEvent) => {
       ];
 
       let fileFound = false;
-      if (supabase) {
+      if (supabaseAdmin) {
         for (const storagePath of possiblePaths) {
           try {
-            const { data: urlData } = supabase.storage
+            // ✅ Используем storage.download вместо getPublicUrl + fetch (работает с приватными bucket)
+            const { data: fileData, error: downloadError } = await supabaseAdmin.storage
               .from(STORAGE_BUCKET_NAME)
-              .getPublicUrl(storagePath);
+              .download(storagePath);
 
-            if (urlData?.publicUrl) {
-              // ✅ Убрали HEAD, делаем сразу GET (быстрее)
-              const fileResponse = await fetch(urlData.publicUrl);
-              if (fileResponse.ok) {
-                console.log(`✅ [build-album-zip-background] Found file at: ${storagePath}`);
-                const fileBuffer = await fileResponse.arrayBuffer();
-                const extension = fileName.split('.').pop() || 'wav';
-                const archiveFileName = `${String(track.order_index).padStart(2, '0')}. ${track.title}.${extension}`;
-                archive.append(Buffer.from(fileBuffer), { name: archiveFileName });
-                filesAdded++;
-                fileFound = true;
-                break;
-              }
-              // Если 404, пробуем следующий путь
+            if (!downloadError && fileData) {
+              console.log(`✅ [build] Found file at: ${storagePath}`);
+              const arrayBuffer = await fileData.arrayBuffer();
+              const extension = getExtensionFromUrl(fileName) || 'wav';
+              const safeTitle = sanitizeFileName(track.title);
+              const archiveFileName = `${String(track.order_index).padStart(2, '0')}. ${safeTitle}.${extension}`;
+              archive.append(Buffer.from(arrayBuffer), { name: archiveFileName });
+              filesAdded++;
+              fileFound = true;
+              break;
             }
+            // Если ошибка, пробуем следующий путь
           } catch (error) {
-            console.warn(
-              `⚠️ [build-album-zip-background] Error checking path ${storagePath}:`,
-              error
-            );
+            console.warn(`⚠️ [build] Error checking path ${storagePath}:`, error);
           }
         }
       }
 
       if (!fileFound) {
-        console.warn(
-          `⚠️ [build-album-zip-background] File not found for track ${track.track_id}: ${track.title}`
-        );
+        console.warn(`⚠️ [build] File not found for track ${track.track_id}: ${track.title}`);
       }
     }
 
@@ -326,108 +347,92 @@ export const handler: Handler = async (event: HandlerEvent) => {
     await archivePromise;
 
     if (filesAdded === 0) {
-      console.error('❌ [build-album-zip-background] No track files found to download');
-      return {
-        statusCode: 404,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'No track files found to download' }),
-      };
+      throw new Error('No track files found to download');
     }
 
     // Объединяем все chunks в один Buffer
     const zipBuffer = Buffer.concat(chunks);
 
-    console.log(
-      `✅ [build-album-zip-background] ZIP archive created: ${filesAdded} files, ${zipBuffer.length} bytes`
-    );
+    console.log(`✅ [build] Archive created: ${filesAdded} files, ${zipBuffer.length} bytes`);
+
+    if (!supabaseAdmin) {
+      throw new Error('Storage service not configured');
+    }
 
     // Загружаем ZIP в Storage
-    const supabaseAdmin = createSupabaseAdminClient();
-    if (!supabaseAdmin) {
-      console.error('❌ [build-album-zip-background] Failed to create Supabase admin client');
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Storage service not configured' }),
-      };
+    console.log(`📤 [build] Uploading ZIP to storage: ${zipStoragePath}`);
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from(STORAGE_BUCKET_NAME)
+      .upload(zipStoragePath, zipBuffer, {
+        upsert: true,
+        cacheControl: '3600',
+        contentType: 'application/zip',
+      });
+
+    if (uploadError) {
+      throw new Error(`Failed to upload ZIP file: ${uploadError.message}`);
     }
 
+    console.log(`✅ [build] ZIP uploaded successfully`);
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ success: true, message: 'ZIP archive built and uploaded' }),
+    };
+  } catch (e: any) {
+    const errorMessage = e?.message || String(e);
+    console.error('❌ [build] Failed:', errorMessage);
+
+    // ✅ Записываем error.json для остановки бесконечного polling
     try {
-      // Загружаем ZIP в Storage (upsert перезапишет, если файл уже существует)
-      console.log(`📤 [build-album-zip-background] Uploading ZIP to storage: ${zipStoragePath}`);
-      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-        .from(STORAGE_BUCKET_NAME)
-        .upload(zipStoragePath, zipBuffer, {
-          upsert: true, // Перезаписываем, если файл уже существует
-          cacheControl: '3600', // Кэш на 1 час
-          contentType: 'application/zip', // ✅ Явно указываем MIME тип
-        });
-
-      if (uploadError) {
-        console.error(
-          '❌ [build-album-zip-background] Failed to upload ZIP to storage:',
-          uploadError
-        );
-        // ✅ Удаляем lock-файл при ошибке загрузки
+      const purchaseToken = event.queryStringParameters?.token;
+      if (purchaseToken) {
+        let purchaseId: string | undefined;
         try {
-          await supabaseAdmin.storage.from(STORAGE_BUCKET_NAME).remove([`${folder}/${lockName}`]);
-          console.log(`✅ [build-album-zip-background] Lock file removed after error`);
-        } catch (lockError) {
-          console.warn(
-            `⚠️ [build-album-zip-background] Failed to remove lock file: ${lockError instanceof Error ? lockError.message : String(lockError)}`
+          const purchaseResult = await query<{ id: string }>(
+            `SELECT id FROM purchases WHERE purchase_token = $1 LIMIT 1`,
+            [purchaseToken]
           );
+          if (purchaseResult.rows.length > 0) {
+            purchaseId = purchaseResult.rows[0].id;
+          }
+        } catch {
+          // Игнорируем ошибку получения purchase
         }
-        return {
-          statusCode: 500,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            error: 'Failed to upload ZIP file',
-            details: uploadError.message,
-          }),
-        };
-      }
 
-      console.log(`✅ [build-album-zip-background] ZIP uploaded successfully to storage`);
+        if (purchaseId) {
+          const storageUserId = 'zhoock';
+          const folder = `users/${storageUserId}/album-zips/${purchaseId}`;
+          const errorFileName = 'error.json';
+          const errorContent = JSON.stringify({
+            message: errorMessage,
+            timestamp: new Date().toISOString(),
+          });
 
-      // ✅ Удаляем lock-файл после успешной загрузки
-      try {
-        await supabaseAdmin.storage.from(STORAGE_BUCKET_NAME).remove([`${folder}/${lockName}`]);
-        console.log(`✅ [build-album-zip-background] Lock file removed`);
-      } catch (lockError) {
-        console.warn(
-          `⚠️ [build-album-zip-background] Failed to remove lock file: ${lockError instanceof Error ? lockError.message : String(lockError)}`
-        );
-      }
-
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ success: true, message: 'ZIP archive built and uploaded' }),
-      };
-    } catch (error) {
-      console.error('❌ [build-album-zip-background] Error in storage operations:', error);
-      // ✅ Удаляем lock-файл при ошибке
-      if (supabaseAdmin) {
-        try {
-          await supabaseAdmin.storage.from(STORAGE_BUCKET_NAME).remove([`${folder}/${lockName}`]);
-          console.log(`✅ [build-album-zip-background] Lock file removed after error`);
-        } catch (lockError) {
-          console.warn(
-            `⚠️ [build-album-zip-background] Failed to remove lock file: ${lockError instanceof Error ? lockError.message : String(lockError)}`
-          );
+          const supabaseAdmin = createSupabaseAdminClient();
+          if (supabaseAdmin) {
+            await supabaseAdmin.storage
+              .from(STORAGE_BUCKET_NAME)
+              .upload(`${folder}/${errorFileName}`, Buffer.from(errorContent), {
+                upsert: true,
+                contentType: 'application/json',
+                cacheControl: '0',
+              });
+            console.log(`✅ [build] Error.json written`);
+          }
         }
       }
-      return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Internal server error',
-        }),
-      };
+    } catch (errorJsonError) {
+      console.warn(`⚠️ [build] Failed to write error.json:`, errorJsonError);
     }
-  } catch (error) {
-    console.error('❌ Error in build-album-zip-background:', error);
-    // ✅ Пытаемся удалить lock-файл при общей ошибке (если purchase был получен)
+
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Build failed', details: errorMessage }),
+    };
+  } finally {
+    // ✅ ОБЯЗАТЕЛЬНО: удаляем lock в любом случае
     try {
       const purchaseToken = event.queryStringParameters?.token;
       if (purchaseToken) {
@@ -443,19 +448,12 @@ export const handler: Handler = async (event: HandlerEvent) => {
           const supabaseAdmin = createSupabaseAdminClient();
           if (supabaseAdmin) {
             await supabaseAdmin.storage.from(STORAGE_BUCKET_NAME).remove([`${folder}/${lockName}`]);
-            console.log(`✅ [build-album-zip-background] Lock file removed after general error`);
+            console.log(`🔓 [build] Lock removed`);
           }
         }
       }
     } catch (lockError) {
-      // Игнорируем ошибку удаления lock-файла
+      console.warn(`⚠️ [build] Failed to remove lock in finally:`, lockError);
     }
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        error: error instanceof Error ? error.message : 'Internal server error',
-      }),
-    };
   }
 };
