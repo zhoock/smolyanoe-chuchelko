@@ -1964,7 +1964,7 @@ function UserDashboard() {
                   }`}
                   onClick={() => setActiveTab('mixer')}
                 >
-                  {ui?.dashboard?.tabs?.mixer ?? 'Миксер'}
+                  {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
                 </button>
                 <button
                   type="button"
@@ -1993,7 +1993,11 @@ function UserDashboard() {
                 ) : activeTab === 'my-purchases' ? (
                   <MyPurchasesContent userEmail={user?.email} />
                 ) : activeTab === 'mixer' ? (
-                  <MixerAdmin ui={ui} />
+                  <MixerAdmin
+                    ui={ui || undefined}
+                    userId={user?.id || undefined}
+                    albums={albumsData}
+                  />
                 ) : activeTab === 'albums' ? (
                   <>
                     <h3 className="user-dashboard__section-title">

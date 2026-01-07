@@ -280,13 +280,44 @@ export const handler: Handler = async (
       const userId = event.httpMethod === 'GET' ? null : getUserIdFromEvent(event);
 
       // Возвращаем все альбомы для указанного языка
+      // Важно: используем DISTINCT ON для устранения дубликатов по album_id и lang
+      // Если есть несколько альбомов с одинаковым album_id и lang, берём самый новый
       const albumsResult = await query<AlbumRow>(
-        `SELECT a.*
-             FROM albums a
-             WHERE a.lang = $1 
-             ORDER BY a.created_at DESC`,
+        `SELECT DISTINCT ON (a.album_id, a.lang) 
+             a.id,
+             a.user_id,
+             a.album_id,
+             a.artist,
+             a.album,
+             a.full_name,
+             a.description,
+             a.cover,
+             a.release,
+             a.buttons,
+             a.details,
+             a.lang,
+             a.is_public,
+             a.created_at,
+             a.updated_at
+         FROM albums a
+         WHERE a.lang = $1 
+         ORDER BY a.album_id, a.lang, a.created_at DESC`,
         [lang]
       );
+
+      // 🔍 DEBUG: Логируем для 23-remastered
+      if (lang === 'ru') {
+        const remasteredAlbums = albumsResult.rows.filter((a) => a.album_id === '23-remastered');
+        console.log(`[albums.ts GET] 🔍 DEBUG: Альбомы 23-remastered (${lang}):`, {
+          count: remasteredAlbums.length,
+          albums: remasteredAlbums.map((a) => ({
+            id: a.id,
+            album_id: a.album_id,
+            lang: a.lang,
+            created_at: a.created_at,
+          })),
+        });
+      }
 
       // Загружаем треки для каждого альбома
       const albumsWithTracks = await Promise.all(
@@ -313,42 +344,100 @@ export const handler: Handler = async (
             }).catch(() => {});
             // #endregion
 
-            // Загружаем треки по строковому album_id, а не по UUID
-            // Это позволяет находить треки для всех языковых версий альбома
-            // Используем подзапрос с ROW_NUMBER для исключения дубликатов
+            // Загружаем треки по конкретному UUID альбома
+            // Важно: фильтруем напрямую по album_id (UUID) в таблице tracks,
+            // чтобы гарантированно получить треки только из этого альбома
             const tracksResult = await query<TrackRow>(
               `SELECT 
-                ranked.track_id,
-                ranked.title,
-                ranked.duration,
-                ranked.src,
-                ranked.content,
-                ranked.authorship,
-                ranked.synced_lyrics,
-                ranked.order_index
-              FROM (
-                SELECT 
-                  t.track_id,
-                  t.title,
-                  t.duration,
-                  t.src,
-                  t.content,
-                  t.authorship,
-                  t.synced_lyrics,
-                  t.order_index,
-                  ROW_NUMBER() OVER (
-                    PARTITION BY t.track_id 
-                    ORDER BY t.order_index ASC, a.created_at DESC
-                  ) as rn
-                FROM tracks t
-                INNER JOIN albums a ON t.album_id = a.id
-                WHERE a.album_id = $1
-                  AND a.lang = $2
-              ) ranked
-              WHERE ranked.rn = 1
-              ORDER BY ranked.order_index ASC`,
-              [album.album_id, album.lang]
+                t.track_id,
+                t.title,
+                t.duration,
+                t.src,
+                t.content,
+                t.authorship,
+                t.synced_lyrics,
+                t.order_index
+              FROM tracks t
+              WHERE t.album_id = $1
+              ORDER BY t.order_index ASC`,
+              [album.id]
             );
+
+            // 🔍 DEBUG: Логируем для 23-remastered
+            if (album.album_id === '23-remastered') {
+              console.log(`[albums.ts GET] 🔍 DEBUG tracks query for 23-remastered:`, {
+                albumId: album.album_id,
+                albumUUID: album.id,
+                lang: album.lang,
+                tracksCount: tracksResult.rows.length,
+                tracks: tracksResult.rows.map((t) => ({
+                  trackId: t.track_id,
+                  title: t.title,
+                  orderIndex: t.order_index,
+                })),
+              });
+
+              // Если найдено больше 3 треков, проверяем, нет ли дубликатов
+              if (tracksResult.rows.length > 3) {
+                console.log(
+                  `[albums.ts GET] ⚠️ ПРОБЛЕМА: Найдено ${tracksResult.rows.length} треков вместо 3!`
+                );
+                console.log(
+                  `[albums.ts GET] Проверяем все треки для album_id='23-remastered' в базе...`
+                );
+
+                // Проверяем все треки, связанные с любым альбомом с album_id='23-remastered'
+                const allTracksCheck = await query<{
+                  track_id: string;
+                  title: string;
+                  album_uuid: string;
+                  album_created_at: Date;
+                }>(
+                  `SELECT t.track_id, t.title, a.id as album_uuid, a.created_at as album_created_at
+                   FROM tracks t
+                   INNER JOIN albums a ON t.album_id = a.id
+                   WHERE a.album_id = $1 AND a.lang = $2
+                   ORDER BY a.created_at DESC, t.order_index ASC`,
+                  [album.album_id, album.lang]
+                );
+
+                console.log(
+                  `[albums.ts GET] Все треки для album_id='23-remastered' (${album.lang}):`,
+                  {
+                    totalTracksInDB: allTracksCheck.rows.length,
+                    uniqueAlbumUUIDs: Array.from(
+                      new Set(allTracksCheck.rows.map((r) => r.album_uuid))
+                    ),
+                    tracksByAlbum: allTracksCheck.rows.reduce(
+                      (acc, row) => {
+                        if (!acc[row.album_uuid]) {
+                          acc[row.album_uuid] = {
+                            albumUUID: row.album_uuid,
+                            created_at: row.album_created_at,
+                            tracks: [],
+                          };
+                        }
+                        acc[row.album_uuid].tracks.push({
+                          track_id: row.track_id,
+                          title: row.title,
+                        });
+                        return acc;
+                      },
+                      {} as Record<
+                        string,
+                        {
+                          albumUUID: string;
+                          created_at: Date;
+                          tracks: Array<{ track_id: string; title: string }>;
+                        }
+                      >
+                    ),
+                    currentAlbumUUID: album.id,
+                    tracksForCurrentAlbum: tracksResult.rows.length,
+                  }
+                );
+              }
+            }
 
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
@@ -411,10 +500,35 @@ export const handler: Handler = async (
                   trackId: t.track_id,
                   title: t.title,
                   src: t.src,
+                  orderIndex: t.order_index,
                   hasTitle: !!t.title,
                   hasSrc: !!t.src,
                 })),
+                sqlQuery: 'SELECT tracks WHERE album_id = $1 (UUID)',
+                albumUUID: album.id,
               });
+
+              // Проверяем, нет ли треков из других альбомов
+              console.log(`[albums.ts GET] 🔍 Проверка дубликатов для 23-remastered:`);
+              const duplicateCheck = await query<{
+                album_id: string;
+                track_id: string;
+                title: string;
+              }>(
+                `SELECT a.album_id, t.track_id, t.title
+                 FROM tracks t
+                 INNER JOIN albums a ON t.album_id = a.id
+                 WHERE t.track_id IN (${tracksResult.rows.map((_, i) => `$${i + 1}`).join(', ')})
+                   AND a.album_id != $${tracksResult.rows.length + 1}
+                   AND a.lang = $${tracksResult.rows.length + 2}`,
+                [...tracksResult.rows.map((t) => t.track_id), album.album_id, lang]
+              );
+              if (duplicateCheck.rows.length > 0) {
+                console.log(
+                  `[albums.ts GET] ⚠️ Найдены треки с такими же track_id в других альбомах:`,
+                  duplicateCheck.rows
+                );
+              }
             }
 
             // Загружаем синхронизации из таблицы synced_lyrics для всех треков одним запросом
@@ -890,36 +1004,22 @@ export const handler: Handler = async (
         // Загружаем треки для обновлённого альбома
         let tracksResult;
         try {
-          // Загружаем треки по строковому album_id, а не по UUID
-          // Это позволяет находить треки для всех языковых версий альбома
+          // Загружаем треки по конкретному UUID альбома
+          // Важно: фильтруем по конкретному альбому (UUID), чтобы не получить треки из других альбомов
           tracksResult = await query<TrackRow>(
             `SELECT 
-              ranked.track_id,
-              ranked.title,
-              ranked.duration,
-              ranked.src,
-              ranked.content,
-              ranked.authorship,
-              ranked.synced_lyrics,
-              ranked.order_index
-            FROM (
-              SELECT 
-                t.track_id,
-                t.title,
-                t.duration,
-                t.src,
-                t.content,
-                t.authorship,
-                t.synced_lyrics,
-                t.order_index,
-                ROW_NUMBER() OVER (PARTITION BY t.track_id ORDER BY t.order_index ASC, a.created_at DESC) as rn
-              FROM tracks t
-              INNER JOIN albums a ON t.album_id = a.id
-              WHERE a.album_id = $1
-            ) ranked
-            WHERE ranked.rn = 1
-            ORDER BY ranked.order_index ASC`,
-            [updatedAlbum.album_id]
+              t.track_id,
+              t.title,
+              t.duration,
+              t.src,
+              t.content,
+              t.authorship,
+              t.synced_lyrics,
+              t.order_index
+            FROM tracks t
+            WHERE t.album_id = $1
+            ORDER BY t.order_index ASC`,
+            [updatedAlbum.id]
           );
           console.log('[albums.ts PUT] Tracks loaded:', {
             count: tracksResult.rows.length,
@@ -965,36 +1065,22 @@ export const handler: Handler = async (
           // Загружаем треки для всех альбомов
           const allAlbumsWithTracks = await Promise.all(
             allAlbumsResult.rows.map(async (album) => {
-              // Загружаем треки по строковому album_id, а не по UUID
-              // Это позволяет находить треки для всех языковых версий альбома
+              // Загружаем треки по конкретному UUID альбома
+              // Важно: фильтруем по конкретному альбому (UUID), чтобы не получить треки из других альбомов
               const tracksResult = await query<TrackRow>(
                 `SELECT 
-                  ranked.track_id,
-                  ranked.title,
-                  ranked.duration,
-                  ranked.src,
-                  ranked.content,
-                  ranked.authorship,
-                  ranked.synced_lyrics,
-                  ranked.order_index
-                FROM (
-                  SELECT 
-                    t.track_id,
-                    t.title,
-                    t.duration,
-                    t.src,
-                    t.content,
-                    t.authorship,
-                    t.synced_lyrics,
-                    t.order_index,
-                    ROW_NUMBER() OVER (PARTITION BY t.track_id ORDER BY t.order_index ASC, a.created_at DESC) as rn
-                  FROM tracks t
-                  INNER JOIN albums a ON t.album_id = a.id
-                  WHERE a.album_id = $1
-                ) ranked
-                WHERE ranked.rn = 1
-                ORDER BY ranked.order_index ASC`,
-                [album.album_id]
+                  t.track_id,
+                  t.title,
+                  t.duration,
+                  t.src,
+                  t.content,
+                  t.authorship,
+                  t.synced_lyrics,
+                  t.order_index
+                FROM tracks t
+                WHERE t.album_id = $1
+                ORDER BY t.order_index ASC`,
+                [album.id]
               );
 
               return mapAlbumToApiFormat(album, tracksResult.rows);

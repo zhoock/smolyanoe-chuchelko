@@ -7,7 +7,7 @@ import {
   createSupabaseAdminClient,
   STORAGE_BUCKET_NAME,
 } from '@config/supabase';
-import { CURRENT_USER_CONFIG, type ImageCategory } from '@config/user';
+import { CURRENT_USER_CONFIG, getUserUserId, type ImageCategory } from '@config/user';
 
 export interface UploadFileOptions {
   userId?: string;
@@ -29,9 +29,26 @@ export interface GetFileUrlOptions {
  * Получить путь к файлу в Storage
  */
 function getStoragePath(userId: string, category: ImageCategory, fileName: string): string {
-  // Для категории 'hero' используем 'zhoock' вместо UUID для совместимости с существующими путями
-  const targetUserId = category === 'hero' ? 'zhoock' : userId;
-  return `users/${targetUserId}/${category}/${fileName}`;
+  // Используем UUID пользователя для всех категорий
+  // Это обеспечивает правильную изоляцию данных для мультипользовательской системы
+
+  // Обратная совместимость: если fileName уже содержит путь со старым 'zhoock', заменяем на UUID
+  // Это может произойти, если fileName содержит полный путь из базы данных
+  let normalizedFileName = fileName;
+  if (normalizedFileName.includes('users/zhoock/')) {
+    console.warn(
+      '[getStoragePath] Found old path with "zhoock", replacing with UUID:',
+      normalizedFileName
+    );
+    normalizedFileName = normalizedFileName.replace(/users\/zhoock\//g, `users/${userId}/`);
+  }
+
+  // Если fileName уже содержит полный путь (начинается с users/), возвращаем как есть
+  if (normalizedFileName.startsWith('users/')) {
+    return normalizedFileName;
+  }
+
+  return `users/${userId}/${category}/${normalizedFileName}`;
 }
 
 /**
@@ -57,34 +74,80 @@ async function fileToBase64(file: File | Blob): Promise<string> {
  */
 export async function uploadFile(options: UploadFileOptions): Promise<string | null> {
   try {
-    const { userId = CURRENT_USER_CONFIG.userId, category, file, fileName, contentType } = options;
+    // Получаем UUID текущего пользователя, или используем переданный userId, или fallback на 'zhoock'
+    const defaultUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
+    const { userId = defaultUserId, category, file, fileName, contentType } = options;
+
+    const fileSizeMB = file.size / (1024 * 1024);
+    console.log('📤 [uploadFile] Начало загрузки:', {
+      category,
+      fileName,
+      fileSize: file.size,
+      fileSizeMB: fileSizeMB.toFixed(2),
+      fileType: file instanceof File ? file.type : 'unknown',
+    });
+
+    // Предупреждение для больших файлов (Netlify Functions имеют лимит ~6MB для body)
+    if (fileSizeMB > 5) {
+      console.warn(
+        `⚠️ [uploadFile] Файл очень большой (${fileSizeMB.toFixed(2)}MB). Могут возникнуть проблемы с загрузкой через Netlify Function.`
+      );
+    }
 
     // Достаём токен (динамический импорт, чтобы избежать циклических зависимостей)
     const { getToken } = await import('@shared/lib/auth');
     const token = getToken();
     if (!token) {
-      console.error('User is not authenticated. Please log in to upload files.');
+      console.error('❌ [uploadFile] User is not authenticated. Please log in to upload files.');
       return null;
     }
 
+    console.log('🔄 [uploadFile] Конвертация в base64...');
+    const startConvert = Date.now();
     const fileBase64 = await fileToBase64(file);
+    const convertTime = Date.now() - startConvert;
+    console.log(
+      `✅ [uploadFile] Конвертация завершена за ${convertTime}ms, размер base64: ${fileBase64.length} символов`
+    );
 
+    const payload = {
+      fileBase64,
+      fileName,
+      userId,
+      category,
+      contentType: contentType || (file instanceof File ? file.type : 'image/jpeg'),
+      originalFileSize: file.size,
+      originalFileName: file instanceof File ? file.name : undefined,
+    };
+
+    const payloadSizeMB = JSON.stringify(payload).length / (1024 * 1024);
+    console.log('📡 [uploadFile] Отправка запроса к /api/upload-file...', {
+      payloadSize: JSON.stringify(payload).length,
+      payloadSizeMB: payloadSizeMB.toFixed(2),
+      fileName,
+      category,
+    });
+
+    if (payloadSizeMB > 5.5) {
+      console.error(
+        `❌ [uploadFile] Payload слишком большой (${payloadSizeMB.toFixed(2)}MB). Превышен лимит Netlify Function (~6MB).`
+      );
+      throw new Error(
+        `Файл слишком большой для загрузки через эту функцию (${(file.size / (1024 * 1024)).toFixed(2)}MB). Максимальный размер: ~5MB.`
+      );
+    }
+
+    const startFetch = Date.now();
     const response = await fetch('/api/upload-file', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        fileBase64,
-        fileName,
-        userId,
-        category,
-        contentType: contentType || (file instanceof File ? file.type : 'image/jpeg'),
-        originalFileSize: file.size,
-        originalFileName: file instanceof File ? file.name : undefined,
-      }),
+      body: JSON.stringify(payload),
     });
+    const fetchTime = Date.now() - startFetch;
+    console.log(`⏱️ [uploadFile] Запрос выполнен за ${fetchTime}ms, status: ${response.status}`);
 
     if (!response.ok) {
       let errorData;
@@ -103,21 +166,25 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       return null;
     }
 
+    console.log('📥 [uploadFile] Парсинг ответа...');
     const result = await response.json();
+    console.log('✅ [uploadFile] Ответ получен:', {
+      success: result.success,
+      hasUrl: !!result.data?.url,
+      hasError: !!result.error,
+    });
+
     if (!result.success || !result.data?.url) {
-      console.error('Upload failed:', result.error || 'Unknown error');
+      console.error('❌ [uploadFile] Upload failed:', result.error || 'Unknown error');
       return null;
     }
 
     let finalUrl = result.data.url;
 
     // Для hero изображений result.data.url может содержать storagePath или уже готовый URL
-    // Если это storagePath (начинается с "users/zhoock/hero/"), формируем proxy URL
+    // Если это storagePath (начинается с "users/.../hero/"), формируем proxy URL
     if (category === 'hero') {
-      if (
-        finalUrl.startsWith('users/zhoock/hero/') ||
-        (finalUrl.startsWith('users/') && finalUrl.includes('/hero/'))
-      ) {
+      if (finalUrl.startsWith('users/') && finalUrl.includes('/hero/')) {
         // Извлекаем fileName из storagePath
         const pathParts = finalUrl.split('/');
         const fileName = pathParts[pathParts.length - 1];
@@ -155,6 +222,76 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
     console.error('Error in uploadFile:', error);
     return null;
   }
+}
+
+/**
+ * Получить список файлов/папок в произвольном префиксе хранилища (public bucket)
+ * @param prefix полный путь внутри bucket, например "users/zhoock/audio" или "users/zhoock/audio/23_Mixer"
+ */
+export async function listStorageByPrefix(prefix: string): Promise<string[] | null> {
+  try {
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+      console.error('Supabase client is not available. Please set required environment variables.');
+      return null;
+    }
+
+    console.log('🔍 [listStorageByPrefix] Listing files in:', prefix);
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET_NAME)
+      .list(prefix, { limit: 1000 });
+
+    if (error) {
+      console.error('❌ [listStorageByPrefix] Error listing storage prefix:', {
+        prefix,
+        error: error.message,
+        errorCode: (error as any).statusCode,
+        errorName: error.name,
+      });
+      return null;
+    }
+
+    // Фильтруем только файлы (не папки)
+    // В Supabase Storage папки имеют id === null и metadata === null
+    // Файлы имеют id !== null
+    const files = (data || []).filter((item) => item.id !== null);
+    const folders = (data || []).filter((item) => item.id === null && item.metadata === null);
+
+    const fileNames = files.map((item) => item.name);
+    console.log('✅ [listStorageByPrefix] Found files:', {
+      prefix,
+      filesCount: fileNames.length,
+      foldersCount: folders.length,
+      files: fileNames,
+      folders: folders.map((f) => f.name),
+      allItems:
+        data?.map((item) => ({
+          name: item.name,
+          id: item.id,
+          isFile: item.id !== null,
+          isFolder: item.id === null && item.metadata === null,
+          updated_at: item.updated_at,
+          created_at: item.created_at,
+          last_accessed_at: item.last_accessed_at,
+          metadata: item.metadata,
+        })) || [],
+    });
+
+    return fileNames;
+  } catch (error) {
+    console.error('❌ [listStorageByPrefix] Exception:', error);
+    return null;
+  }
+}
+
+/**
+ * Сформировать прокси URL по полному пути в Storage
+ * @param storagePath полный путь, например "users/zhoock/audio/23_Mixer/01_FRB_drums.mp3"
+ */
+export function buildProxyUrlFromPath(storagePath: string): string {
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : process.env.NETLIFY_SITE_URL || '';
+  return `${origin}/api/proxy-image?path=${encodeURIComponent(storagePath)}`;
 }
 
 /**
@@ -213,7 +350,21 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
  * @returns Публичный URL файла
  */
 export function getStorageFileUrl(options: GetFileUrlOptions): string {
-  const { userId = CURRENT_USER_CONFIG.userId, category, fileName } = options;
+  // Получаем UUID текущего пользователя, или используем переданный userId, или fallback на UUID из конфига
+  const defaultUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
+  const { userId = defaultUserId, category, fileName } = options;
+
+  // Убираем логирование для предотвращения бесконечных циклов
+  // Если нужно отладить, используйте React DevTools или добавьте breakpoint
+  // if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+  //   console.log('[getStorageFileUrl]', {
+  //     category,
+  //     fileName,
+  //     userId: userId.substring(0, 8) + '...',
+  //     fromAuth: !!getUserUserId(),
+  //   });
+  // }
+
   const storagePath = getStoragePath(userId, category, fileName);
 
   // Для аудио лучше использовать прямой публичный URL, чтобы браузер корректно получал метаданные
@@ -241,7 +392,8 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
  */
 export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<string | null> {
   try {
-    const { userId = CURRENT_USER_CONFIG.userId, category, fileName, expiresIn = 3600 } = options;
+    const defaultUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
+    const { userId = defaultUserId, category, fileName, expiresIn = 3600 } = options;
 
     const supabase = createSupabaseClient();
     if (!supabase) {

@@ -23,6 +23,20 @@ export default function Album() {
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
+  // 🔍 DEBUG: Логируем данные альбома для диагностики
+  useEffect(() => {
+    if (albumId === '23-remastered' && album) {
+      console.log('[Album.tsx] 🔍 DEBUG 23-remastered:', {
+        albumId: album.albumId,
+        tracksCount: album.tracks?.length || 0,
+        tracks: album.tracks?.map((t) => ({
+          id: t.id,
+          title: t.title,
+        })),
+      });
+    }
+  }, [album, albumId]);
+
   // Определяем, пришли ли мы со страницы списка альбомов
   const cameFromAlbumsPage = useMemo(() => {
     if (typeof window === 'undefined') return false;

@@ -153,8 +153,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     console.log('🗑️ Deleting hero image variants for base name:', baseName);
 
     // Находим все варианты этого изображения в Storage
-    // Для hero используем 'zhoock' вместо userId
-    const heroFolder = `users/zhoock/hero`;
+    // Используем UUID пользователя из токена
+    const heroFolder = `users/${userId}/hero`;
     const { data: existingFiles, error: listError } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
       .list(heroFolder, {

@@ -164,6 +164,32 @@
       }
     }
 
+    &.is-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+
+      .stem-card__img {
+        filter: grayscale(100%) brightness(60%);
+      }
+
+      .stem-card__label {
+        opacity: 0.6;
+
+        .dot {
+          background: transparent;
+          border: 2px solid var(--text-color);
+          opacity: 0.5;
+        }
+      }
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
     /* stylelint-disable-next-line no-descending-specificity */
     &__img {
       aspect-ratio: 1 / 1;

@@ -95,6 +95,19 @@
   status = 200
   force = true
 
+# Stems
+[[redirects]]
+  from = "/api/stems/upload-url*"
+  to = "/.netlify/functions/get-stem-upload-url"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/stems/delete*"
+  to = "/.netlify/functions/delete-stem"
+  status = 200
+  force = true
+
 # Auth
 [[redirects]]
   from = "/api/auth/*"
@@ -202,6 +215,13 @@
 [[redirects]]
   from = "/api/tracks/upload*"
   to = "/.netlify/functions/upload-tracks"
+  status = 200
+  force = true
+
+# Stems upload
+[[redirects]]
+  from = "/api/stems/upload-url*"
+  to = "/.netlify/functions/get-stem-upload-url"
   status = 200
   force = true
 

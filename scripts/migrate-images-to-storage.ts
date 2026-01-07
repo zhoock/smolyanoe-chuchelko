@@ -37,6 +37,9 @@ import * as path from 'path';
 import { uploadFileAdmin } from '../src/shared/api/storage';
 import { CURRENT_USER_CONFIG, type ImageCategory } from '../src/config/user';
 
+// UUID пользователя zhoock@zhoock.ru (после миграции)
+const TARGET_USER_ID = 'af97f741-8dae-410b-94a6-3f828f9140a4';
+
 /**
  * Определяет MIME тип по расширению файла
  */
@@ -86,7 +89,8 @@ async function readFilesRecursively(
  */
 async function migrateLocalFilesToStorage() {
   const imagesDir = path.resolve(__dirname, '../src/images/users/zhoock');
-  const categories: ImageCategory[] = ['albums', 'articles', 'profile', 'stems', 'uploads'];
+  // Мигрируем albums и articles
+  const categories: ImageCategory[] = ['albums', 'articles'];
 
   console.log('🚀 Начало миграции файлов в Supabase Storage...\n');
   console.log(`📁 Исходная директория: ${imagesDir}\n`);
@@ -126,12 +130,21 @@ async function migrateLocalFilesToStorage() {
           const fileBuffer = await fs.readFile(filePath);
           const fileBlob = new Blob([fileBuffer], { type: contentType });
 
-          // Для вложенных директорий (например, stems/23/file.png) используем относительный путь как fileName
-          const storageFileName = relativePath.replace(/\\/g, '/'); // Заменяем обратные слеши на прямые для кроссплатформенности
+          // Для обложек альбомов и статей: убираем подпапки, оставляем только имя файла
+          // Файлы должны быть в корне albums/ или articles/, а не в подпапках
+          let storageFileName: string;
+          if (category === 'albums' || category === 'articles') {
+            // Для albums и articles берём только имя файла (без подпапок)
+            storageFileName = path.basename(filePath);
+          } else {
+            // Для других категорий сохраняем структуру подпапок
+            storageFileName = relativePath.replace(/\\/g, '/');
+          }
 
           console.log(`   📤 Загрузка: ${storageFileName}...`);
 
           const url = await uploadFileAdmin({
+            userId: TARGET_USER_ID, // Используем UUID вместо 'zhoock'
             category,
             file: fileBlob,
             fileName: storageFileName,

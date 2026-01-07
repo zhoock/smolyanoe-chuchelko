@@ -35,6 +35,7 @@ export const handler: Handler = async (
       id: string;
       album_id: string;
       customer_email: string;
+      user_id?: string;
     }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1`, [
       purchaseToken,
     ]);
@@ -48,6 +49,28 @@ export const handler: Handler = async (
     }
 
     const purchase = purchaseResult.rows[0];
+
+    // Определяем userId для Storage
+    // Используем UUID пользователя из токена (если есть) или определяем по альбому
+    let storageUserId = getUserIdFromEvent(event);
+
+    // Если userId не определен, пытаемся получить из альбома
+    if (!storageUserId && purchase.album_id) {
+      const albumResult = await query<{ user_id: string }>(
+        `SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1`,
+        [purchase.album_id]
+      );
+      if (albumResult.rows.length > 0 && albumResult.rows[0].user_id) {
+        storageUserId = albumResult.rows[0].user_id;
+      }
+    }
+
+    if (!storageUserId) {
+      // Fallback: используем старую папку 'zhoock' для обратной совместимости
+      // TODO: Убрать после полной миграции
+      console.warn('⚠️ [download-track] User ID not found, using fallback');
+      storageUserId = 'zhoock';
+    }
 
     // Получаем информацию о треке
     const trackResult = await query<{
@@ -130,8 +153,7 @@ export const handler: Handler = async (
       normalizedPath = normalizedPath.slice(1); // Убираем ведущий "/"
     }
 
-    // Используем 'zhoock' как userId для единообразия
-    const storageUserId = 'zhoock';
+    // storageUserId уже определен выше
 
     // Пробуем несколько вариантов путей
     // 1. Используем оригинальный путь из БД (normalizedPath уже содержит правильную папку, например "23-Remastered/01-track.wav")

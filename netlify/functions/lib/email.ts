@@ -110,7 +110,7 @@ export async function sendPurchaseEmail(
     
     <p style="color: #666; font-size: 14px; margin: 0;">
       Если у вас возникли вопросы, пожалуйста, свяжитесь с нами: 
-      <a href="mailto:support@smolyanoechuchelko.ru" style="color: #4CAF50;">support@smolyanoechuchelko.ru</a>
+      <a href="mailto:feedback@smolyanoechuchelko.ru" style="color: #4CAF50;">feedback@smolyanoechuchelko.ru</a>
     </p>
   </div>
 </body>

@@ -1,4 +1,4 @@
-import { CURRENT_USER_CONFIG, type ImageCategory } from '@config/user';
+import { CURRENT_USER_CONFIG, getUserUserId, type ImageCategory } from '@config/user';
 import { getStorageFileUrl } from '@shared/api/storage';
 
 export interface ImageUrlOptions {
@@ -85,9 +85,10 @@ export function getUserImageUrl(
   format: string = '.jpg',
   useSupabaseStorage?: boolean
 ): string {
-  // В будущем userId можно брать из контекста/Redux
+  // Получаем UUID текущего пользователя, или fallback на 'zhoock' для обратной совместимости
+  const userId = getUserUserId() || CURRENT_USER_CONFIG.userId;
   return getImageUrl(img, format, {
-    userId: CURRENT_USER_CONFIG.userId,
+    userId,
     category,
     useSupabaseStorage,
   });
@@ -125,8 +126,9 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   if (shouldUseStorage) {
     // Используем Supabase Storage
     // normalizedPath может быть с подпапками, например "23/01-Barnums-Fijian-Mermaid-1644.wav"
+    const userId = getUserUserId() || CURRENT_USER_CONFIG.userId;
     return getStorageFileUrl({
-      userId: CURRENT_USER_CONFIG.userId,
+      userId,
       category: 'audio',
       fileName: normalizedPath,
     });

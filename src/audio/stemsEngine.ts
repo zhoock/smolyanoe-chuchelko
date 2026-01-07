@@ -35,9 +35,18 @@ export class StemEngine {
     if (this.ctx.state === 'suspended') await this.ctx.resume();
   }
 
-  /** Предзагрузка и декодирование всех stem’ов; progress(0..1) — опциональный колбэк */
+  /** Предзагрузка и декодирование всех stem'ов; progress(0..1) — опциональный колбэк */
   async loadAll(progress?: (p: number) => void) {
-    const entries = Object.entries(this.stems) as [StemKind, string][];
+    const entries = Object.entries(this.stems).filter(
+      ([, url]) => url && typeof url === 'string' && url.trim() !== ''
+    ) as [StemKind, string][];
+
+    if (entries.length === 0) {
+      console.warn('[StemEngine] Нет валидных стемов для загрузки');
+      progress?.(1);
+      return;
+    }
+
     let done = 0;
     const total = entries.length;
 
@@ -46,17 +55,52 @@ export class StemEngine {
       progress?.(Math.min(1, done / total));
     };
 
-    await Promise.all(
+    // Используем Promise.allSettled вместо Promise.all, чтобы продолжать загрузку даже при ошибках
+    const results = await Promise.allSettled(
       entries.map(async ([kind, url]) => {
-        const resp = await fetch(url!, { cache: 'force-cache' });
+        console.log(`[StemEngine] Загрузка стема ${kind} с URL: ${url}`);
+        const resp = await fetch(url, { cache: 'force-cache' });
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}: ${resp.statusText} для ${kind} (${url})`);
+        }
+
+        const contentType = resp.headers.get('content-type');
+        if (!contentType || !contentType.startsWith('audio/')) {
+          console.warn(
+            `[StemEngine] Неожиданный Content-Type для ${kind}: ${contentType}. URL: ${url}`
+          );
+        }
+
         const buf = await resp.arrayBuffer();
+
+        if (buf.byteLength === 0) {
+          throw new Error(`Пустой буфер для ${kind} (${url})`);
+        }
+
         const audio = await this.ctx.decodeAudioData(buf);
         const gain = this.ctx.createGain();
         gain.connect(this.masterGain);
         this.nodes.set(kind, { buffer: audio, source: null, gain });
+        console.log(`✅ [StemEngine] Стем ${kind} успешно загружен`);
         oneDone();
       })
     );
+
+    // Проверяем результаты загрузки
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (failed.length > 0) {
+      console.warn(`[StemEngine] Не удалось загрузить ${failed.length} из ${total} стемов`);
+      failed.forEach((r) => {
+        if (r.status === 'rejected') {
+          console.error('[StemEngine] Ошибка загрузки стема:', r.reason);
+        }
+      });
+    }
+
+    if (this.nodes.size === 0) {
+      throw new Error('Не удалось загрузить ни одного стема');
+    }
   }
 
   /** Длительность (берём из первого буфера) */

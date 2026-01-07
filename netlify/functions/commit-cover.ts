@@ -82,11 +82,11 @@ interface CommitCoverResponse {
 
 /**
  * Получает финальный путь в Storage для обложки альбома
- * ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
+ * Использует UUID пользователя из токена
  */
 function getFinalStoragePath(userId: string, albumId: string, fileExtension: string): string {
-  // Используем 'zhoock' вместо UUID для единообразия с фронтендом
-  return `users/zhoock/albums/${albumId}-cover.${fileExtension}`;
+  // Используем UUID пользователя из токена
+  return `users/${userId}/albums/${albumId}-cover.${fileExtension}`;
 }
 
 /**
@@ -220,10 +220,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     });
 
     // Удаляем старые обложки альбома (если есть)
-    // ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
+    // Используем UUID пользователя из токена
     const { data: existingFiles } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
-      .list(`users/zhoock/albums`, {
+      .list(`users/${userId}/albums`, {
         limit: 100,
       });
 
@@ -284,9 +284,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       const suffix = suffixMatch ? suffixMatch[0] : '';
 
       // Формируем финальное имя файла
-      // ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
+      // Используем UUID пользователя из токена
       const finalFileName = suffix ? `${finalBaseName}${suffix}` : `${finalBaseName}.webp`;
-      const finalPath = `users/zhoock/albums/${finalFileName}`;
+      const finalPath = `users/${userId}/albums/${finalFileName}`;
 
       // Читаем данные файла
       const arrayBuffer = await draftData.arrayBuffer();
@@ -340,9 +340,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     console.log(`✅ Committed ${committedFiles.length} cover variants`);
 
     // Получаем публичный URL базового файла для превью (используем 448.webp)
-    // ВАЖНО: используем 'zhoock' вместо userId (UUID) для совместимости с getUserImageUrl()
+    // Используем UUID пользователя из токена
     const previewFileName = `${finalBaseName}-448.webp`;
-    const previewPath = `users/zhoock/albums/${previewFileName}`;
+    const previewPath = `users/${userId}/albums/${previewFileName}`;
     const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(previewPath);
 
     return createSuccessResponse(

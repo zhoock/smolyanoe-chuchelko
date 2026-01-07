@@ -75,9 +75,9 @@ interface UploadFileResponse {
 }
 
 function getStoragePath(userId: string, category: ImageCategory, fileName: string): string {
-  // Для категории 'hero' используем 'zhoock' вместо UUID для совместимости с существующими путями
-  const targetUserId = category === 'hero' ? 'zhoock' : userId;
-  return `users/${targetUserId}/${category}/${fileName}`;
+  // Используем UUID пользователя для всех категорий
+  // Это обеспечивает правильную изоляцию данных для мультипользовательской системы
+  return `users/${userId}/${category}/${fileName}`;
 }
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -124,10 +124,21 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     }
 
     // Декодируем base64 в Buffer
+    console.log('🔄 [upload-file] Декодирование base64...', {
+      base64Length: fileBase64.length,
+      category,
+      fileName,
+      originalFileSize,
+    });
+    const startDecode = Date.now();
     const fileBuffer = Buffer.from(fileBase64, 'base64');
+    const decodeTime = Date.now() - startDecode;
 
     // Проверяем размер файла
     const receivedSize = fileBuffer.length;
+    console.log(
+      `✅ [upload-file] Декодирование завершено за ${decodeTime}ms, размер буфера: ${receivedSize} байт`
+    );
     if (originalFileSize && Math.abs(receivedSize - originalFileSize) > 100) {
       console.warn('File size mismatch:', {
         originalFileSize,
@@ -138,8 +149,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // Для категории hero генерируем варианты изображений
     if (category === 'hero') {
-      // Для hero используем 'zhoock' вместо UUID
-      const heroUserId = 'zhoock';
+      // Используем UUID пользователя из токена
+      const heroUserId = userId;
 
       // Извлекаем базовое имя файла (без расширения)
       const baseName = extractBaseName(fileName);
@@ -237,45 +248,64 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // Для остальных категорий загружаем файл как есть
     // Формируем путь в Storage
-    const storagePath = getStoragePath(targetUserId, category, fileName);
+    // Используем UUID пользователя из токена для всех категорий
+    const audioUserId = targetUserId;
+    const storagePath = getStoragePath(audioUserId, category, fileName);
 
-    // Проверяем, существует ли файл с таким именем или любое изображение профиля
-    // Ищем все файлы в папке profile, чтобы удалить старые версии (например, profile.png, если загружаем profile.jpg)
-    const { data: existingFiles } = await supabase.storage
-      .from(STORAGE_BUCKET_NAME)
-      .list(`users/${targetUserId}/${category}`, {
-        limit: 100, // Получаем все файлы в папке
-      });
-
-    // Находим все файлы профиля (profile.*) для удаления старых версий
-    const profileFiles = existingFiles?.filter((f) => f.name.startsWith('profile.')) || [];
-
-    // Удаляем все старые файлы профиля (profile.*), чтобы избежать дублирования
-    // ВАЖНО: удаляем ВСЕ файлы profile.*, включая тот, который собираемся загрузить
-    if (profileFiles.length > 0) {
-      const filesToDelete = profileFiles.map((f) => getStoragePath(targetUserId, category, f.name));
-
-      // Удаляем все старые файлы
-      const { error: deleteError } = await supabase.storage
+    // Для категории profile удаляем старые файлы профиля
+    if (category === 'profile') {
+      // Проверяем, существует ли файл с таким именем или любое изображение профиля
+      // Ищем все файлы в папке profile, чтобы удалить старые версии (например, profile.png, если загружаем profile.jpg)
+      const { data: existingFiles } = await supabase.storage
         .from(STORAGE_BUCKET_NAME)
-        .remove(filesToDelete);
-
-      if (deleteError) {
-        console.warn('Failed to delete old files (will try upsert):', {
-          filesToDelete,
-          error: deleteError.message,
+        .list(`users/${targetUserId}/${category}`, {
+          limit: 100, // Получаем все файлы в папке
         });
+
+      // Находим все файлы профиля (profile.*) для удаления старых версий
+      const profileFiles = existingFiles?.filter((f) => f.name.startsWith('profile.')) || [];
+
+      // Удаляем все старые файлы профиля (profile.*), чтобы избежать дублирования
+      // ВАЖНО: удаляем ВСЕ файлы profile.*, включая тот, который собираемся загрузить
+      if (profileFiles.length > 0) {
+        const filesToDelete = profileFiles.map((f) =>
+          getStoragePath(targetUserId, category, f.name)
+        );
+
+        // Удаляем все старые файлы
+        const { error: deleteError } = await supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .remove(filesToDelete);
+
+        if (deleteError) {
+          console.warn('Failed to delete old files (will try upsert):', {
+            filesToDelete,
+            error: deleteError.message,
+          });
+        }
       }
     }
 
     // Загружаем новый файл в Supabase Storage
     // Используем upsert для гарантированной замены
+    const defaultContentType =
+      category === 'audio' ? 'audio/wav' : category === 'stems' ? 'image/jpeg' : 'image/jpeg';
+    const finalContentType = contentType || defaultContentType;
+
+    console.log('📤 [upload-file] Uploading file:', {
+      category,
+      storagePath,
+      fileSize: fileBuffer.length,
+      contentType: finalContentType,
+      targetUserId: targetUserId,
+    });
+
     const { data, error } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
       .upload(storagePath, fileBuffer, {
-        contentType: contentType || 'image/jpeg',
+        contentType: finalContentType,
         upsert: true, // Обязательно true для замены существующего файла
-        cacheControl: 'no-cache', // Отключаем кеш для обновления файла
+        cacheControl: category === 'audio' ? '3600' : 'no-cache', // Для audio кеш на 1 час
       });
 
     if (error) {
