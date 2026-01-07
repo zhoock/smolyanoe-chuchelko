@@ -1200,13 +1200,16 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                                         };
 
                                         return (
-                                          <label
+                                          <div
                                             key={cover.key}
                                             className={`mixer-admin__stem-card ${cover.status === 'uploading' ? 'mixer-admin__stem-card--uploading' : ''} ${cover.url ? 'mixer-admin__stem-card--uploaded' : ''}`}
                                           >
+                                            {/* input вынесен за пределы label, чтобы кнопка удаления не триггерила его */}
                                             <input
+                                              id={`stem-cover-${album.id}-${track.id}-${cover.key}`}
                                               type="file"
                                               accept="image/*"
+                                              style={{ display: 'none' }}
                                               onChange={(e) => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
@@ -1221,43 +1224,74 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                                               }}
                                               disabled={cover.status === 'uploading'}
                                             />
-                                            <div className="mixer-admin__stem-icon">
-                                              {getStemIcon(cover.key)}
-                                            </div>
-                                            <div className="mixer-admin__stem-label">
-                                              {cover.label}
-                                            </div>
-                                            <div className="mixer-admin__stem-indicator">
-                                              {cover.status === 'uploading' ? (
-                                                <span className="mixer-admin__stem-spinner">⟳</span>
-                                              ) : cover.url ? (
-                                                <button
-                                                  type="button"
-                                                  className="mixer-admin__stem-delete"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    e.preventDefault();
-                                                    handleStemCoverDelete(
-                                                      album.albumId || album.id,
-                                                      track,
-                                                      cover.key
-                                                    );
-                                                  }}
-                                                  title="Удалить обложку"
-                                                  aria-label="Удалить обложку"
-                                                >
-                                                  ✕
-                                                </button>
-                                              ) : (
-                                                <span className="mixer-admin__stem-arrow">⌄</span>
-                                              )}
-                                            </div>
+                                            {/* label используется только для клика по карточке (кроме кнопки удаления) */}
+                                            <label
+                                              htmlFor={`stem-cover-${album.id}-${track.id}-${cover.key}`}
+                                              className="mixer-admin__stem-card-label"
+                                              onClick={(e) => {
+                                                // Предотвращаем клик на label, если кликнули на кнопку удаления
+                                                const target = e.target as HTMLElement;
+                                                if (
+                                                  target.closest('.mixer-admin__stem-delete') ||
+                                                  target.classList.contains(
+                                                    'mixer-admin__stem-delete'
+                                                  )
+                                                ) {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  return false;
+                                                }
+                                              }}
+                                            >
+                                              <div className="mixer-admin__stem-icon">
+                                                {getStemIcon(cover.key)}
+                                              </div>
+                                              <div className="mixer-admin__stem-label">
+                                                {cover.label}
+                                              </div>
+                                              <div className="mixer-admin__stem-indicator">
+                                                {cover.status === 'uploading' ? (
+                                                  <span className="mixer-admin__stem-spinner">
+                                                    ⟳
+                                                  </span>
+                                                ) : cover.url ? (
+                                                  <span className="mixer-admin__stem-arrow">⌄</span>
+                                                ) : (
+                                                  <span className="mixer-admin__stem-arrow">⌄</span>
+                                                )}
+                                              </div>
+                                            </label>
+                                            {/* Кнопка удаления вынесена за пределы label */}
+                                            {cover.url && cover.status !== 'uploading' && (
+                                              <button
+                                                type="button"
+                                                className="mixer-admin__stem-delete"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  e.preventDefault();
+                                                  handleStemCoverDelete(
+                                                    album.albumId || album.id,
+                                                    track,
+                                                    cover.key
+                                                  );
+                                                }}
+                                                onMouseDown={(e) => {
+                                                  // Предотвращаем всплытие еще на этапе mousedown
+                                                  e.stopPropagation();
+                                                  e.preventDefault();
+                                                }}
+                                                title="Удалить обложку"
+                                                aria-label="Удалить обложку"
+                                              >
+                                                ✕
+                                              </button>
+                                            )}
                                             {cover.error && (
                                               <div className="mixer-admin__stem-error">
                                                 {cover.error}
                                               </div>
                                             )}
-                                          </label>
+                                          </div>
                                         );
                                       })}
                                     </div>

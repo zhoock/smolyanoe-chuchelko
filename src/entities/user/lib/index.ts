@@ -131,18 +131,28 @@ export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
       // Преобразуем storagePath в proxy URL, если необходимо
       const convertedImages = result.data.headerImages.map((url) => {
         // Если это storagePath (начинается с "users/"), преобразуем в proxy URL
-        if (
-          url.startsWith('users/zhoock/hero/') ||
-          (url.startsWith('users/') && url.includes('/hero/'))
-        ) {
+        if (url.startsWith('users/') && url.includes('/hero/')) {
+          // Извлекаем путь к файлу из storagePath
+          // Формат: users/{userId}/hero/hero-123-1920.jpg
+          // Для обратной совместимости поддерживаем и users/zhoock/hero/ и users/{UUID}/hero/
           const origin =
             typeof window !== 'undefined'
               ? window.location.origin
               : process.env.NETLIFY_SITE_URL || '';
-          const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(url)}`;
+
+          // Определяем правильный путь для proxy
+          // В production используем /api/proxy-image, в localhost - /.netlify/functions/proxy-image
+          const isProduction =
+            typeof window !== 'undefined' &&
+            !window.location.hostname.includes('localhost') &&
+            !window.location.hostname.includes('127.0.0.1');
+          const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+
+          const proxyUrl = `${origin}${proxyPath}?path=${encodeURIComponent(url)}`;
           console.log('🔄 [loadHeaderImagesFromDatabase] Преобразован storagePath в proxy URL:', {
             original: url,
             converted: proxyUrl,
+            isProduction,
           });
           return proxyUrl;
         }

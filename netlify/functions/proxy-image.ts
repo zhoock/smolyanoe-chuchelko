@@ -82,11 +82,23 @@ export const handler: Handler = async (
       decodedPath = imagePath;
     }
 
+    // Для обратной совместимости: заменяем users/zhoock/ на users/{UUID}/
+    // UUID для zhoock@zhoock.ru: af97f741-8dae-410b-94a6-3f828f9140a4
+    const ZHOOCK_UUID = 'af97f741-8dae-410b-94a6-3f828f9140a4';
+    if (decodedPath.includes('users/zhoock/')) {
+      decodedPath = decodedPath.replace(/users\/zhoock\//g, `users/${ZHOOCK_UUID}/`);
+      console.log('[proxy-image] Заменен путь zhoock на UUID:', {
+        original: imagePath,
+        replaced: decodedPath,
+      });
+    }
+
     console.log('[proxy-image] Request details:', {
       originalPath: imagePath,
       decodedPath,
       bucketName,
       hasSpecialChars: /[()]/.test(decodedPath), // Проверяем наличие скобок
+      hasZhoockPath: imagePath.includes('zhoock'),
     });
 
     // Формируем полный URL к изображению в Supabase Storage

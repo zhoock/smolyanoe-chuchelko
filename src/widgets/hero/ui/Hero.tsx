@@ -126,11 +126,12 @@ export function Hero() {
 
         // Фильтруем только изображения из папки hero, удаляем старые из articles
         const validHeroImages = (images || []).filter((url) => {
-          // Проверяем, что путь содержит '/hero/' или '/users/zhoock/hero'
+          // Проверяем, что путь содержит '/hero/' (работает для любого userId, включая UUID)
           const isValidHero =
             url.includes('/hero/') ||
             url.includes('/hero-') ||
-            (url.includes('proxy-image') && url.includes('hero'));
+            (url.includes('proxy-image') && url.includes('hero')) ||
+            (url.includes('users/') && url.includes('/hero/'));
 
           if (!isValidHero) {
             console.warn('⚠️ [Hero] Найдено изображение не из папки hero, пропускаем:', url);

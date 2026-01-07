@@ -381,7 +381,15 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
   // Для изображений оставляем прокси через Netlify функцию
   const origin =
     typeof window !== 'undefined' ? window.location.origin : process.env.NETLIFY_SITE_URL || '';
-  return `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(storagePath)}`;
+
+  // В production используем /api/proxy-image, в localhost - /.netlify/functions/proxy-image
+  const isProduction =
+    typeof window !== 'undefined' &&
+    !window.location.hostname.includes('localhost') &&
+    !window.location.hostname.includes('127.0.0.1');
+  const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+
+  return `${origin}${proxyPath}?path=${encodeURIComponent(storagePath)}`;
 }
 
 /**
