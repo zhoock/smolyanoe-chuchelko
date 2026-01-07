@@ -57,6 +57,7 @@ import { SyncLyricsModal } from './components/modals/lyrics/SyncLyricsModal';
 import { ProfileSettingsModal } from './components/modals/profile/ProfileSettingsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
+import { MixerAdmin } from './components/mixer/MixerAdmin';
 import type { IAlbums, IArticles, IInterface } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
@@ -614,20 +615,16 @@ function UserDashboard() {
 
   // Получаем вкладку из URL параметра или используем значение по умолчанию
   const tabParam = searchParams.get('tab');
-  const validTabs: Array<'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile'> = [
-    'albums',
-    'posts',
-    'payment-settings',
-    'my-purchases',
-    'profile',
-  ];
+  const validTabs: Array<
+    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer'
+  > = ['albums', 'posts', 'payment-settings', 'my-purchases', 'profile', 'mixer'];
   const initialTab =
     tabParam && validTabs.includes(tabParam as any)
-      ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile')
+      ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer')
       : 'albums';
 
   const [activeTab, setActiveTab] = useState<
-    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile'
+    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer'
   >(initialTab);
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
@@ -1629,13 +1626,14 @@ function UserDashboard() {
 
         // Проверяем наличие синхронизированного текста
         // Используем загруженные данные из БД, если они есть, иначе используем данные из track
-        const syncedLyrics = storedSyncedLyrics || track.syncedLyrics;// Проверяем наличие синхронизированного текста
+        const syncedLyrics = storedSyncedLyrics || track.syncedLyrics; // Проверяем наличие синхронизированного текста
         // Текст считается синхронизированным только если есть хотя бы одна строка с startTime > 0
         // (строки с startTime === 0 считаются несинхронизированными)
         const hasSyncedLyrics =
           Array.isArray(syncedLyrics) &&
           syncedLyrics.length > 0 &&
-          syncedLyrics.some((line) => line.startTime > 0);setEditLyricsModal({
+          syncedLyrics.some((line) => line.startTime > 0);
+        setEditLyricsModal({
           isOpen: true,
           albumId,
           trackId,
@@ -1962,6 +1960,15 @@ function UserDashboard() {
                 <button
                   type="button"
                   className={`user-dashboard__nav-item ${
+                    activeTab === 'mixer' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
+                  onClick={() => setActiveTab('mixer')}
+                >
+                  {ui?.dashboard?.tabs?.mixer ?? 'Миксер'}
+                </button>
+                <button
+                  type="button"
+                  className={`user-dashboard__nav-item ${
                     activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
                   }`}
                   onClick={() => setActiveTab('payment-settings')}
@@ -1985,6 +1992,8 @@ function UserDashboard() {
                   <PaymentSettings userId={user?.id || 'zhoock'} />
                 ) : activeTab === 'my-purchases' ? (
                   <MyPurchasesContent userEmail={user?.email} />
+                ) : activeTab === 'mixer' ? (
+                  <MixerAdmin ui={ui} />
                 ) : activeTab === 'albums' ? (
                   <>
                     <h3 className="user-dashboard__section-title">
@@ -2218,7 +2227,8 @@ function UserDashboard() {
                                                     track.syncedLyrics.length > 0 &&
                                                     track.syncedLyrics.some(
                                                       (line) => line.startTime > 0
-                                                    );return getLyricsActions(
+                                                    );
+                                                  return getLyricsActions(
                                                     track.lyricsStatus,
                                                     hasSyncedLyrics
                                                   );

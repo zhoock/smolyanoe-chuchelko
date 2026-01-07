@@ -53,7 +53,20 @@
         "albums": "Альбомы",
         "posts": "Статьи",
         "paymentSettings": "Настройки оплаты",
-        "myPurchases": "Мои покупки"
+        "myPurchases": "Мои покупки",
+        "mixer": "Миксер"
+      },
+      "mixer": {
+        "title": "Миксер",
+        "songsTitle": "Песни",
+        "songsDescription": "Список песен для управления микшером.",
+        "songsPlaceholder": "Список песен появится здесь.",
+        "stemsTitle": "Партии (stems)",
+        "stemsDescription": "Управление партиями выбранной песни: глушить, включать, загружать.",
+        "stemsPlaceholder": "Выберите песню, чтобы увидеть партии.",
+        "contentTitle": "Контент страницы (RU / EN)",
+        "contentDescription": "Описание страницы миксера и инфоблоки для RU и EN.",
+        "contentPlaceholder": "Добавьте описание и инфоблоки для обеих локалей."
       },
       "profile": "Профиль",
       "profileSettings": "Настройки профиля",

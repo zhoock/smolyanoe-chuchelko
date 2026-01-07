@@ -53,7 +53,20 @@
         "albums": "Albums",
         "posts": "Posts",
         "paymentSettings": "Payment Settings",
-        "myPurchases": "My Purchases"
+        "myPurchases": "My Purchases",
+        "mixer": "Mixer"
+      },
+      "mixer": {
+        "title": "Mixer",
+        "songsTitle": "Songs",
+        "songsDescription": "Songs available for the mixer.",
+        "songsPlaceholder": "Songs list will appear here.",
+        "stemsTitle": "Stems (parts)",
+        "stemsDescription": "Manage stems of the selected song: mute, solo, upload.",
+        "stemsPlaceholder": "Select a song to see its stems.",
+        "contentTitle": "Page content (RU / EN)",
+        "contentDescription": "Mixer page description and info blocks for RU and EN.",
+        "contentPlaceholder": "Add description and info blocks for both locales."
       },
       "profile": "Profile",
       "profileSettings": "Profile Settings",
