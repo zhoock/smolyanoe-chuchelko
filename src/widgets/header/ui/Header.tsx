@@ -1,9 +1,11 @@
 // src/widgets/header/ui/Header.tsx
 import { memo, useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
 import { useLang } from '@app/providers/lang'; // берём из контекста
+import { isAuthenticated, getUser } from '@shared/lib/auth';
+import { getUserImageUrl } from '@shared/api/albums';
 import type { SupportedLang } from '@shared/model/lang';
 import './style.scss';
 
@@ -20,6 +22,42 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
   const { lang, setLang } = useLang(); // язык из контекста
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const user = getUser();
+  const isAuth = isAuthenticated();
+
+  // Получаем URL аватара пользователя из localStorage (если был загружен)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuth || !user?.id) {
+      setAvatarUrl(null);
+      return;
+    }
+
+    // Пытаемся получить из localStorage (если был загружен через useAvatar)
+    try {
+      const savedUrl = localStorage.getItem('user-avatar-url');
+      if (savedUrl && savedUrl.startsWith('http')) {
+        setAvatarUrl(savedUrl);
+        return;
+      }
+    } catch (e) {
+      // Игнорируем ошибки
+    }
+
+    // Пытаемся получить из Supabase Storage
+    try {
+      const storageUrl = getUserImageUrl('profile', 'profile', '.png', true);
+      if (storageUrl && storageUrl.startsWith('http')) {
+        setAvatarUrl(storageUrl);
+      } else {
+        setAvatarUrl(null);
+      }
+    } catch (e) {
+      setAvatarUrl(null);
+    }
+  }, [isAuth, user?.id]);
 
   // Закрываем меню при клике вне
   useEffect(() => {
@@ -91,6 +129,48 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
             <div></div>
           </label>
         </div>
+
+        {/* Иконка профиля */}
+        {isAuth && (
+          <button
+            className="header__profile-button"
+            onClick={() => navigate('/dashboard')}
+            aria-label="Перейти в личный кабинет"
+            title="Личный кабинет"
+          >
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={user?.name || user?.email || 'Profile'}
+                className="header__profile-avatar"
+              />
+            ) : (
+              <svg
+                className="header__profile-icon"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
     </header>
   );

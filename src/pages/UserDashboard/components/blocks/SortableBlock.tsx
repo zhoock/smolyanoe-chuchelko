@@ -18,6 +18,7 @@ interface SortableBlockProps {
   isFocused: boolean;
   isSelected?: boolean;
   showVkPlus?: boolean;
+  userId?: string; // UUID владельца статьи для правильной загрузки изображений
   onUpdate: (blockId: string, updates: Partial<Block>) => void;
   onDelete: (blockId: string) => void;
   onFocus: (blockId: string) => void;
@@ -44,6 +45,7 @@ export function SortableBlock({
   isFocused,
   isSelected,
   showVkPlus,
+  userId,
   onUpdate,
   onDelete,
   onFocus,
@@ -146,6 +148,7 @@ export function SortableBlock({
           <BlockImage
             imageKey={block.imageKey}
             caption={block.caption}
+            userId={userId}
             onChange={(imageKey, caption) =>
               onUpdate(block.id, { imageKey, caption } as Partial<Block>)
             }
@@ -162,6 +165,7 @@ export function SortableBlock({
           <BlockCarousel
             imageKeys={block.imageKeys}
             caption={block.caption}
+            userId={userId}
             onChange={(imageKeys, caption) =>
               onUpdate(block.id, { imageKeys, caption } as Partial<Block>)
             }

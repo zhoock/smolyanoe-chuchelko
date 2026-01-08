@@ -108,6 +108,20 @@
   status = 200
   force = true
 
+# Musician application
+[[redirects]]
+  from = "/api/musician/apply*"
+  to = "/.netlify/functions/musician-apply"
+  status = 200
+  force = true
+
+# Admin musician operations
+[[redirects]]
+  from = "/api/admin/musician*"
+  to = "/.netlify/functions/admin-musician"
+  status = 200
+  force = true
+
 # Auth
 [[redirects]]
   from = "/api/auth/*"

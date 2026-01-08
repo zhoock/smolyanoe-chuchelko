@@ -134,7 +134,11 @@ export default function Album() {
         </nav>
 
         <div className="item">
-          <AlbumCover img={album.cover || ''} fullName={album.fullName} />
+          <AlbumCover
+            img={album.cover || ''}
+            fullName={album.fullName}
+            userId={album.userId || undefined}
+          />
           <Share />
         </div>
 

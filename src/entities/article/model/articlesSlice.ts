@@ -11,11 +11,11 @@ const initialState: ArticlesState = createInitialLangState<IArticles[]>([]);
 
 export const fetchArticles = createAsyncThunk<
   IArticles[],
-  { lang: SupportedLang; force?: boolean },
+  { lang: SupportedLang; force?: boolean; userOnly?: boolean },
   { rejectValue: string; state: RootState }
 >(
   'articles/fetchByLang',
-  async ({ lang }, { signal, rejectWithValue }) => {
+  async ({ lang, userOnly = false }, { signal, rejectWithValue }) => {
     const normalize = (data: any[]): IArticles[] =>
       data.map((article: any) => {
         // ВАЖНО: гарантируем, что id (UUID) всегда присутствует
@@ -29,6 +29,7 @@ export const fetchArticles = createAsyncThunk<
 
         return {
           id: article.id, // UUID из БД (может быть undefined для старых данных)
+          userId: article.userId, // UUID владельца статьи (может быть undefined для старых данных)
           articleId: article.articleId,
           nameArticle: article.nameArticle,
           img: article.img ?? '',
@@ -46,7 +47,11 @@ export const fetchArticles = createAsyncThunk<
       const authHeader = getAuthHeader();
 
       try {
-        const response = await fetch(`/api/articles-api?lang=${lang}`, {
+        // Если userOnly=true, загружаем только статьи текущего пользователя
+        // Для этого передаем includeDrafts=true, что требует авторизации
+        const url = `/api/articles-api?lang=${lang}${userOnly ? '&includeDrafts=true' : ''}`;
+
+        const response = await fetch(url, {
           signal,
           cache: 'no-cache',
           headers: {
@@ -65,7 +70,7 @@ export const fetchArticles = createAsyncThunk<
               console.log('[fetchArticles] First article from API:', payload.data[0]);
               console.log('[fetchArticles] First article has id?', !!payload.data[0]?.id);
             }
-          }// ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
+          } // ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
           const list = Array.isArray(payload) ? payload : (payload.data ?? payload.articles ?? []);
 
           if (!Array.isArray(list)) {
@@ -104,7 +109,8 @@ export const fetchArticles = createAsyncThunk<
       } catch (apiError) {
         // Если API недоступен или вернул ошибку - возвращаем ошибку
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        console.error('[fetchArticles] API request failed:', errorMessage);throw apiError;
+        console.error('[fetchArticles] API request failed:', errorMessage);
+        throw apiError;
       }
     } catch (error) {
       // Если API недоступен – отдаём ошибку

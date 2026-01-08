@@ -86,6 +86,9 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const dispatch = useAppDispatch();
   const texts = LANG_TEXTS[lang];
 
+  // Получаем userId из статьи для правильной загрузки изображений
+  const articleUserId = article.userId;
+
   // Состояние редактора
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [meta, setMeta] = useState<ArticleMeta>({ title: '', description: '' });
@@ -1507,24 +1510,54 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       // Если есть изображения, создаем Image-блоки для каждого
       if (files.length > 0) {
         const { uploadFile } = await import('@shared/api/storage');
-        const { CURRENT_USER_CONFIG } = await import('@config/user');
+        const { getUser } = await import('@shared/lib/auth');
+
+        // Получаем userId из статьи или из авторизованного пользователя
+        const currentUser = getUser();
+        const targetUserId = articleUserId || currentUser?.id;
+
+        if (!targetUserId) {
+          console.error('❌ [handlePaste] User ID not found. Cannot upload images.');
+          return;
+        }
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
+
+          // Нормализуем имя файла
           const fileExtension = file.name.split('.').pop() || 'jpg';
           const baseFileName = file.name.replace(/\.[^/.]+$/, '');
+          const normalizedBaseName =
+            baseFileName
+              .replace(/\s+/g, '_')
+              .replace(/[^a-zA-Z0-9._-]/g, '')
+              .replace(/_{2,}/g, '_')
+              .replace(/^_+|_+$/g, '') || 'article_image';
+
           const timestamp = Date.now() + i;
-          const fileName = `article_${timestamp}_${baseFileName}.${fileExtension}`;
-          const imageKey = `article_${timestamp}_${baseFileName}`;
+          const fileName = `article_${timestamp}_${normalizedBaseName}.${fileExtension}`;
 
           const url = await uploadFile({
-            userId: CURRENT_USER_CONFIG.userId,
+            userId: targetUserId,
             file,
             category: 'articles',
             fileName,
           });
 
           if (url) {
+            // Извлекаем imageKey из URL или storagePath
+            let imageKey: string;
+            if (url.startsWith('users/')) {
+              // Если это storagePath, извлекаем имя файла с расширением
+              const pathParts = url.split('/');
+              imageKey = pathParts[pathParts.length - 1] || fileName;
+            } else {
+              // Если это полный URL, извлекаем имя файла
+              const urlParts = url.split('/');
+              const fileNameFromUrl = urlParts[urlParts.length - 1]?.split('?')[0] || '';
+              imageKey = fileNameFromUrl || fileName;
+            }
+
             const newBlock: Block = {
               id: generateId(),
               type: 'image',
@@ -1839,6 +1872,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                           index={index}
                           isFocused={focusBlockId === block.id}
                           isSelected={selectedBlockId === block.id}
+                          userId={articleUserId}
                           showVkPlus={
                             (vkInserter?.afterBlockId === block.id || focusBlockId === block.id) &&
                             (((block.type === 'paragraph' ||
@@ -1995,6 +2029,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
               blockId={carouselEditModal!.blockId}
               initialImageKeys={carouselEditModal!.imageKeys}
               initialCaption={carouselEditModal!.caption}
+              userId={articleUserId}
               onSave={(imageKeys, caption) => {
                 // Сохраняем снимок перед изменением карусели
                 saveSnapshot();

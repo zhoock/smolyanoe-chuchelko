@@ -25,7 +25,12 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getUserImageUrl, formatDate } from '@shared/api/albums';
+import {
+  getUserImageUrl,
+  getImageUrl,
+  formatDate,
+  shouldUseSupabaseStorage,
+} from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
@@ -58,6 +63,9 @@ import { ProfileSettingsModal } from './components/modals/profile/ProfileSetting
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
+import { MusicianOnboarding } from './components/musician/MusicianOnboarding';
+import { MusicianStatusPending } from './components/musician/MusicianStatusPending';
+import { MusicianStatusRejected } from './components/musician/MusicianStatusRejected';
 import type { IAlbums, IArticles, IInterface } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
@@ -66,6 +74,16 @@ import {
   type TrackData,
 } from '@entities/album/lib/transformAlbumData';
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
+import { loadUserProfile } from '@entities/user/lib/loadUserProfile';
+import type { UserProfile } from '@shared/types/user';
+import {
+  isMusicianApproved,
+  isMusicianPending,
+  isMusicianRejected,
+  canApplyForMusician,
+  isAdmin,
+  hasFullAccess,
+} from '@shared/types/user';
 import './UserDashboard.style.scss';
 
 // Компонент для сортируемого трека
@@ -612,6 +630,69 @@ function UserDashboard() {
   const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const articlesFromStore = useAppSelector((state) => selectArticlesData(state, lang));
   const user = getUser();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Мемоизируем userId чтобы предотвратить бесконечные перерендеры
+  const userId = user?.id;
+
+  // Загружаем профиль пользователя с ролями и статусами
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProfile = async () => {
+      setIsLoadingProfile(true);
+      const profile = await loadUserProfile();
+      const currentUser = getUser(); // Получаем пользователя внутри эффекта
+
+      if (!isMounted) return;
+
+      if (profile && currentUser) {
+        setUserProfile({
+          ...profile,
+          id: currentUser.id,
+          email: currentUser.email || '',
+          name: currentUser.name || undefined,
+        });
+      }
+      setIsLoadingProfile(false);
+    };
+
+    if (userId) {
+      loadProfile();
+    } else {
+      setIsLoadingProfile(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]); // Используем только userId для предотвращения бесконечного цикла
+
+  // Определяем доступные вкладки в зависимости от роли и статуса
+  const getAvailableTabs = (): Array<
+    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer'
+  > => {
+    if (!userProfile) {
+      return ['profile', 'my-purchases']; // Профиль и Мои покупки для неавторизованных
+    }
+
+    // Админы имеют доступ ко всем вкладкам
+    if (isAdmin(userProfile)) {
+      return ['albums', 'posts', 'payment-settings', 'my-purchases', 'profile', 'mixer'];
+    }
+
+    if (isMusicianApproved(userProfile)) {
+      // Полный функционал для одобренных музыкантов
+      return ['albums', 'posts', 'payment-settings', 'my-purchases', 'profile', 'mixer'];
+    }
+
+    // Для новых пользователей (которые могут подать заявку) и тех, кто ждёт/отклонён
+    // Доступны только Профиль и Мои покупки
+    return ['profile', 'my-purchases'];
+  };
+
+  const availableTabs = getAvailableTabs();
 
   // Получаем вкладку из URL параметра или используем значение по умолчанию
   const tabParam = searchParams.get('tab');
@@ -621,7 +702,7 @@ function UserDashboard() {
   const initialTab =
     tabParam && validTabs.includes(tabParam as any)
       ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer')
-      : 'albums';
+      : availableTabs[0] || 'profile';
 
   const [activeTab, setActiveTab] = useState<
     'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer'
@@ -832,12 +913,42 @@ function UserDashboard() {
       }));
 
       // Загружаем файл
-      const { CURRENT_USER_CONFIG } = await import('@config/user');
+      // Получаем userId из авторизованного пользователя
+      const currentUser = getUser();
+      if (!currentUser?.id) {
+        setArticleCoverUpload((prev) => ({
+          ...prev,
+          [articleId]: {
+            ...(prev[articleId] || {
+              preview: null,
+              status: 'idle',
+              progress: 0,
+              error: null,
+              dragActive: false,
+            }),
+            status: 'error',
+            error: 'Необходима авторизация',
+          },
+        }));
+        return;
+      }
 
+      // Нормализуем имя файла: удаляем пробелы, специальные символы и кириллицу
+      // Оставляем только буквы (латиница), цифры, подчеркивания, дефисы и точки
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const baseFileName = file.name.replace(/\.[^/.]+$/, '');
+
+      // Нормализуем имя файла: заменяем пробелы на подчеркивания, удаляем небезопасные символы
+      const normalizedBaseName = baseFileName
+        .replace(/\s+/g, '_') // Заменяем пробелы на подчеркивания
+        .replace(/[^a-zA-Z0-9._-]/g, '') // Удаляем все символы кроме букв, цифр, точек, подчеркиваний и дефисов
+        .replace(/_{2,}/g, '_') // Заменяем множественные подчеркивания на одно
+        .replace(/^_+|_+$/g, ''); // Удаляем подчеркивания в начале и конце
+
       const timestamp = Date.now();
-      const fileName = `article_cover_${timestamp}_${baseFileName}.${fileExtension}`;
+      // Если после нормализации имя пустое, используем дефолтное имя
+      const safeBaseName = normalizedBaseName || 'article_cover';
+      const fileName = `article_cover_${timestamp}_${safeBaseName}.${fileExtension}`;
 
       setArticleCoverUpload((prev) => ({
         ...prev,
@@ -854,7 +965,7 @@ function UserDashboard() {
       }));
 
       const url = await uploadFile({
-        userId: CURRENT_USER_CONFIG.userId,
+        userId: currentUser.id,
         file,
         category: 'articles',
         fileName,
@@ -875,16 +986,50 @@ function UserDashboard() {
       }));
 
       if (url) {
+        console.log('✅ [handleArticleCoverFileUpload] Файл загружен, получен URL:', {
+          url,
+          articleId,
+          category: 'articles',
+          userId: currentUser.id,
+        });
+
         // Извлекаем imageKey из URL
-        const urlParts = url.split('/');
-        const fileNameFromUrl = urlParts[urlParts.length - 1]?.split('?')[0] || '';
-        const finalImageKey = fileNameFromUrl.replace(/\.(webp|jpg|jpeg|png)$/i, '');
+        // URL может быть полным (https://...) или storagePath (users/.../articles/file.jpg)
+        // ВАЖНО: Сохраняем полное имя файла с расширением, чтобы правильно формировать URL при отображении
+        let finalImageKey: string;
+
+        if (url.includes('/articles/')) {
+          // Если URL содержит путь к articles, извлекаем имя файла с расширением
+          const urlParts = url.split('/');
+          const fileNameFromUrl = urlParts[urlParts.length - 1]?.split('?')[0] || '';
+          finalImageKey = fileNameFromUrl; // Сохраняем с расширением
+        } else if (url.startsWith('users/')) {
+          // Если это storagePath, извлекаем имя файла с расширением
+          const pathParts = url.split('/');
+          const fileName = pathParts[pathParts.length - 1]?.split('?')[0] || '';
+          finalImageKey = fileName; // Сохраняем с расширением
+        } else {
+          // Fallback: пытаемся извлечь из последней части URL
+          const urlParts = url.split('/');
+          const fileNameFromUrl = urlParts[urlParts.length - 1]?.split('?')[0] || '';
+          finalImageKey = fileNameFromUrl; // Сохраняем с расширением
+        }
+
+        console.log('📝 [handleArticleCoverFileUpload] Извлечен imageKey:', {
+          finalImageKey,
+          originalUrl: url,
+        });
 
         // Обновляем статью через API
         const token = getToken();
         if (token) {
           const article = articlesFromStore.find((a) => a.articleId === articleId);
           if (article && article.id) {
+            console.log('💾 [handleArticleCoverFileUpload] Сохранение обложки в БД:', {
+              articleId: article.id,
+              imageKey: finalImageKey,
+            });
+
             const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
               method: 'PUT',
               headers: {
@@ -904,29 +1049,92 @@ function UserDashboard() {
             });
 
             if (response.ok) {
-              // Обновляем список статей
-              dispatch(fetchArticles({ lang, force: true }));
+              console.log('✅ [handleArticleCoverFileUpload] Обложка успешно сохранена в БД');
+
+              // Освобождаем локальный objectURL
+              if (articleCoverLocalPreviewRefs.current[articleId]) {
+                URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+                articleCoverLocalPreviewRefs.current[articleId] = null;
+              }
+
+              // Очищаем preview сразу, чтобы после обновления статей использовался img из статьи
+              setArticleCoverUpload((prev) => ({
+                ...prev,
+                [articleId]: {
+                  preview: null, // Очищаем preview, чтобы использовать img из статьи
+                  status: 'idle', // Возвращаем в idle после успешного сохранения
+                  progress: 0,
+                  error: null,
+                  dragActive: false,
+                },
+              }));
+
+              // Обновляем список статей - после этого статья будет содержать обновленный img
+              // И компонент перерендерится с новым img из Redux store
+              await dispatch(fetchArticles({ lang, force: true, userOnly: true }));
+            } else {
+              const errorData = await response.json().catch(() => ({}));
+              console.error('❌ [handleArticleCoverFileUpload] Ошибка сохранения обложки:', {
+                status: response.status,
+                error: errorData,
+              });
+
+              // Освобождаем objectURL в случае ошибки
+              if (articleCoverLocalPreviewRefs.current[articleId]) {
+                URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+                articleCoverLocalPreviewRefs.current[articleId] = null;
+              }
+
+              setArticleCoverUpload((prev) => ({
+                ...prev,
+                [articleId]: {
+                  ...(prev[articleId] || {
+                    preview: null,
+                    status: 'idle',
+                    progress: 0,
+                    error: null,
+                    dragActive: false,
+                  }),
+                  status: 'error',
+                  error: errorData?.error || 'Ошибка сохранения обложки',
+                },
+              }));
             }
+          } else {
+            console.error('❌ [handleArticleCoverFileUpload] Статья не найдена:', {
+              articleId,
+              foundArticle: !!article,
+              hasId: article?.id,
+            });
+
+            // Освобождаем objectURL в случае ошибки
+            if (articleCoverLocalPreviewRefs.current[articleId]) {
+              URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+              articleCoverLocalPreviewRefs.current[articleId] = null;
+            }
+
+            setArticleCoverUpload((prev) => ({
+              ...prev,
+              [articleId]: {
+                ...(prev[articleId] || {
+                  preview: null,
+                  status: 'idle',
+                  progress: 0,
+                  error: null,
+                  dragActive: false,
+                }),
+                status: 'error',
+                error: 'Статья не найдена',
+              },
+            }));
+          }
+        } else {
+          // Если нет токена, освобождаем objectURL
+          if (articleCoverLocalPreviewRefs.current[articleId]) {
+            URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+            articleCoverLocalPreviewRefs.current[articleId] = null;
           }
         }
-
-        // Освобождаем objectURL
-        if (articleCoverLocalPreviewRefs.current[articleId]) {
-          URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
-          articleCoverLocalPreviewRefs.current[articleId] = null;
-        }
-
-        // Устанавливаем финальный URL
-        setArticleCoverUpload((prev) => ({
-          ...prev,
-          [articleId]: {
-            preview: url,
-            status: 'uploaded',
-            progress: 100,
-            error: null,
-            dragActive: false,
-          },
-        }));
       } else {
         setArticleCoverUpload((prev) => ({
           ...prev,
@@ -970,8 +1178,13 @@ function UserDashboard() {
   }, [navigate]);
 
   // Загрузка альбомов
+  // Загружаем альбомы для админов и одобренных музыкантов
   useEffect(() => {
-    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
+    if (
+      userProfile &&
+      hasFullAccess(userProfile) &&
+      (albumsStatus === 'idle' || albumsStatus === 'failed')
+    ) {
       dispatch(fetchAlbums({ lang })).catch((error: any) => {
         // ConditionError - это нормально, condition отменил запрос
         if (error?.name === 'ConditionError') {
@@ -980,19 +1193,24 @@ function UserDashboard() {
         console.error('Error fetching albums:', error);
       });
     }
-  }, [dispatch, lang, albumsStatus]);
+  }, [dispatch, lang, albumsStatus, userProfile]);
 
-  // Загрузка статей при переключении на вкладку posts
+  // Загружаем статьи для админов и одобренных музыкантов
   useEffect(() => {
-    if (activeTab === 'posts' && (articlesStatus === 'idle' || articlesStatus === 'failed')) {
-      dispatch(fetchArticles({ lang })).catch((error: any) => {
+    if (
+      userProfile &&
+      hasFullAccess(userProfile) &&
+      activeTab === 'posts' &&
+      (articlesStatus === 'idle' || articlesStatus === 'failed')
+    ) {
+      dispatch(fetchArticles({ lang, userOnly: true })).catch((error: any) => {
         if (error?.name === 'ConditionError') {
           return;
         }
         console.error('Error fetching articles:', error);
       });
     }
-  }, [dispatch, lang, articlesStatus, activeTab]);
+  }, [dispatch, lang, articlesStatus, activeTab, userProfile]);
 
   // Преобразование данных из IAlbums[] в AlbumData[] и загрузка статусов треков
   useEffect(() => {
@@ -1337,7 +1555,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchArticles({ lang, force: true })).unwrap();
+      await dispatch(fetchArticles({ lang, force: true, userOnly: true })).unwrap();
 
       // Закрываем расширенный вид, если удаленная статья была открыта
       if (expandedArticleId === article.articleId) {
@@ -1930,68 +2148,262 @@ function UserDashboard() {
             <div className="user-dashboard__body">
               {/* Sidebar navigation */}
               <nav className="user-dashboard__sidebar">
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'profile' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => setActiveTab('profile')}
-                >
-                  {ui?.dashboard?.profile ?? 'Profile'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'albums' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => setActiveTab('albums')}
-                >
-                  {ui?.dashboard?.tabs?.albums ?? 'Albums'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'posts' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => setActiveTab('posts')}
-                >
-                  {ui?.dashboard?.tabs?.posts ?? 'Articles'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'mixer' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => setActiveTab('mixer')}
-                >
-                  {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => setActiveTab('payment-settings')}
-                >
-                  {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'my-purchases' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => setActiveTab('my-purchases')}
-                >
-                  {ui?.dashboard?.tabs?.myPurchases ?? 'My Purchases'}
-                </button>
+                {/* Вкладка "Профиль" доступна всем (для выхода) */}
+                {availableTabs.includes('profile') && (
+                  <button
+                    type="button"
+                    className={`user-dashboard__nav-item ${
+                      activeTab === 'profile' ? 'user-dashboard__nav-item--active' : ''
+                    }`}
+                    onClick={() => setActiveTab('profile')}
+                  >
+                    {ui?.dashboard?.profile ?? 'Profile'}
+                  </button>
+                )}
+
+                {/* Вкладка "Мои покупки" доступна всем */}
+                {availableTabs.includes('my-purchases') && (
+                  <button
+                    type="button"
+                    className={`user-dashboard__nav-item ${
+                      activeTab === 'my-purchases' ? 'user-dashboard__nav-item--active' : ''
+                    }`}
+                    onClick={() => setActiveTab('my-purchases')}
+                  >
+                    {ui?.dashboard?.tabs?.myPurchases ?? 'My Purchases'}
+                  </button>
+                )}
+
+                {/* Вкладки для админов и одобренных музыкантов */}
+                {userProfile && hasFullAccess(userProfile) && (
+                  <>
+                    {availableTabs.includes('albums') && (
+                      <button
+                        type="button"
+                        className={`user-dashboard__nav-item ${
+                          activeTab === 'albums' ? 'user-dashboard__nav-item--active' : ''
+                        }`}
+                        onClick={() => setActiveTab('albums')}
+                      >
+                        {ui?.dashboard?.tabs?.albums ?? 'Albums'}
+                      </button>
+                    )}
+                    {availableTabs.includes('posts') && (
+                      <button
+                        type="button"
+                        className={`user-dashboard__nav-item ${
+                          activeTab === 'posts' ? 'user-dashboard__nav-item--active' : ''
+                        }`}
+                        onClick={() => setActiveTab('posts')}
+                      >
+                        {ui?.dashboard?.tabs?.posts ?? 'Articles'}
+                      </button>
+                    )}
+                    {availableTabs.includes('mixer') && (
+                      <button
+                        type="button"
+                        className={`user-dashboard__nav-item ${
+                          activeTab === 'mixer' ? 'user-dashboard__nav-item--active' : ''
+                        }`}
+                        onClick={() => setActiveTab('mixer')}
+                      >
+                        {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
+                      </button>
+                    )}
+                    {availableTabs.includes('payment-settings') && (
+                      <button
+                        type="button"
+                        className={`user-dashboard__nav-item ${
+                          activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
+                        }`}
+                        onClick={() => setActiveTab('payment-settings')}
+                      >
+                        {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
+                      </button>
+                    )}
+                  </>
+                )}
               </nav>
 
               {/* Content area */}
               <div className="user-dashboard__content">
-                {activeTab === 'payment-settings' ? (
-                  <PaymentSettings userId={user?.id || 'zhoock'} />
+                {isLoadingProfile ? (
+                  <div className="user-dashboard__loading">Загрузка профиля...</div>
+                ) : !userProfile ? (
+                  <div className="user-dashboard__error">Ошибка загрузки профиля</div>
+                ) : activeTab === 'profile' ? (
+                  <div className="user-dashboard__profile-tab">
+                    <h3 className="user-dashboard__section-title">
+                      {ui?.dashboard?.profile ?? 'Profile'}
+                    </h3>
+                    <div className="user-dashboard__section">
+                      <div className="user-dashboard__profile-content">
+                        <div className="user-dashboard__avatar">
+                          <div
+                            className="user-dashboard__avatar-img"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
+                            onClick={handleAvatarClick}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleAvatarClick();
+                              }
+                            }}
+                          >
+                            <img
+                              src={avatarSrc}
+                              alt={ui?.dashboard?.profile ?? 'Profile'}
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                const applied = img.dataset.fallbackApplied;
+
+                                // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
+                                if (!applied) {
+                                  img.dataset.fallbackApplied = 'default';
+                                  img.src = '/images/avatar.png';
+                                  return;
+                                }
+
+                                // 2) если и дефолтный не загрузился — скрываем
+                                img.style.display = 'none';
+                              }}
+                            />
+                            {isUploadingAvatar && (
+                              <div
+                                className="user-dashboard__avatar-loader"
+                                aria-live="polite"
+                                aria-busy="true"
+                              >
+                                <div className="user-dashboard__avatar-spinner"></div>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="user-dashboard__avatar-edit"
+                              onClick={handleAvatarClick}
+                              disabled={isUploadingAvatar}
+                              aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
+                            >
+                              ✎
+                            </button>
+                          </div>
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            style={{
+                              position: 'absolute',
+                              width: '1px',
+                              height: '1px',
+                              opacity: 0,
+                              pointerEvents: 'none',
+                            }}
+                            onChange={handleAvatarChange}
+                          />
+                        </div>
+
+                        <div className="user-dashboard__profile-fields">
+                          <div className="user-dashboard__field">
+                            <label htmlFor="name">
+                              {ui?.dashboard?.profileFields?.name ?? 'Name'}
+                            </label>
+                            <input id="name" type="text" defaultValue={user?.name || ''} disabled />
+                          </div>
+
+                          <div className="user-dashboard__field">
+                            <label htmlFor="email">
+                              {ui?.dashboard?.profileFields?.email ?? 'Email'}
+                            </label>
+                            <input
+                              id="email"
+                              type="email"
+                              defaultValue={user?.email || ''}
+                              disabled
+                            />
+                          </div>
+                        </div>
+
+                        <div className="user-dashboard__profile-actions">
+                          <button
+                            type="button"
+                            className="user-dashboard__profile-settings-button"
+                            onClick={() => setIsProfileSettingsModalOpen(true)}
+                          >
+                            {ui?.dashboard?.profileSettings ?? 'Настройки профиля'}
+                          </button>
+                          <button
+                            type="button"
+                            className="user-dashboard__logout-button"
+                            onClick={() => {
+                              logout();
+                              navigate('/auth');
+                            }}
+                          >
+                            {ui?.dashboard?.logout ?? 'Logout'}
+                          </button>
+                        </div>
+
+                        {/* Экран "Стать музыкантом" для новых пользователей */}
+                        {userProfile &&
+                          !isAdmin(userProfile) &&
+                          canApplyForMusician(userProfile) && (
+                            <div className="user-dashboard__musician-onboarding-section">
+                              <MusicianOnboarding
+                                onSuccess={async () => {
+                                  // Перезагружаем профиль после успешной подачи заявки
+                                  const profile = await loadUserProfile();
+                                  if (profile && user) {
+                                    setUserProfile({
+                                      ...profile,
+                                      id: user.id,
+                                      email: user.email || '',
+                                      name: user.name || undefined,
+                                    });
+                                  }
+                                  // После подачи заявки вкладки обновятся автоматически
+                                }}
+                              />
+                            </div>
+                          )}
+
+                        {/* Статус "На рассмотрении" для пользователей с pending статусом */}
+                        {userProfile && !isAdmin(userProfile) && isMusicianPending(userProfile) && (
+                          <div className="user-dashboard__musician-status-section">
+                            <MusicianStatusPending />
+                          </div>
+                        )}
+
+                        {/* Статус "Отклонено" для пользователей с rejected статусом */}
+                        {userProfile &&
+                          !isAdmin(userProfile) &&
+                          isMusicianRejected(userProfile) && (
+                            <div className="user-dashboard__musician-status-section">
+                              <MusicianStatusRejected
+                                rejectReason={userProfile.musicianRejectReason}
+                                onReapply={async () => {
+                                  // Перезагружаем профиль после повторной подачи заявки
+                                  const profile = await loadUserProfile();
+                                  if (profile && user) {
+                                    setUserProfile({
+                                      ...profile,
+                                      id: user.id,
+                                      email: user.email || '',
+                                      name: user.name || undefined,
+                                    });
+                                  }
+                                }}
+                              />
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
                 ) : activeTab === 'my-purchases' ? (
                   <MyPurchasesContent userEmail={user?.email} />
+                ) : activeTab === 'payment-settings' ? (
+                  <PaymentSettings userId={user?.id || 'zhoock'} />
                 ) : activeTab === 'mixer' ? (
                   <MixerAdmin
                     ui={ui || undefined}
@@ -2347,13 +2759,41 @@ function UserDashboard() {
                                     <div className="user-dashboard__album-thumbnail">
                                       {article.img ? (
                                         <img
-                                          src={getUserImageUrl(article.img, 'articles')}
+                                          src={(() => {
+                                            const imageUrl = article.userId
+                                              ? getImageUrl(article.img, '.jpg', {
+                                                  userId: article.userId,
+                                                  category: 'articles',
+                                                  useSupabaseStorage: shouldUseSupabaseStorage(),
+                                                })
+                                              : getUserImageUrl(article.img, 'articles');
+                                            console.log(
+                                              '🖼️ [ArticleCover] Формирование URL изображения:',
+                                              {
+                                                articleId: article.articleId,
+                                                img: article.img,
+                                                userId: article.userId,
+                                                imageUrl,
+                                                hasUserId: !!article.userId,
+                                              }
+                                            );
+                                            return imageUrl;
+                                          })()}
                                           alt={article.nameArticle}
                                           loading="lazy"
                                           decoding="async"
                                           onError={(e) => {
                                             const img = e.target as HTMLImageElement;
                                             const currentSrc = img.src;
+                                            console.error(
+                                              '❌ [ArticleCover] Ошибка загрузки изображения:',
+                                              {
+                                                articleId: article.articleId,
+                                                img: article.img,
+                                                userId: article.userId,
+                                                currentSrc,
+                                              }
+                                            );
                                             if (!currentSrc.includes('&_retry=')) {
                                               img.src = `${currentSrc}&_retry=${Date.now()}`;
                                             }
@@ -2403,12 +2843,51 @@ function UserDashboard() {
 
                                         {(() => {
                                           const coverState = articleCoverUpload[article.articleId];
-                                          const hasCover = article.img || coverState?.preview;
+
+                                          // Используем preview только если статус uploading или uploaded, иначе используем img из статьи
+                                          const shouldUsePreview =
+                                            coverState?.status === 'uploading' ||
+                                            coverState?.status === 'uploaded';
+                                          const hasCover =
+                                            article.img ||
+                                            (shouldUsePreview && coverState?.preview);
 
                                           if (hasCover) {
-                                            const previewUrl =
-                                              coverState?.preview ||
-                                              getUserImageUrl(article.img || '', 'articles');
+                                            let previewUrl: string;
+
+                                            if (shouldUsePreview && coverState?.preview) {
+                                              // Если preview - это storagePath (начинается с users/), преобразуем в полный URL
+                                              if (coverState.preview.startsWith('users/')) {
+                                                const pathParts = coverState.preview.split('/');
+                                                const fileName =
+                                                  pathParts[pathParts.length - 1] || '';
+                                                // Получаем userId из preview пути или из статьи
+                                                const userIdFromPath =
+                                                  pathParts[1] || article.userId || '';
+                                                previewUrl = getImageUrl(fileName, '', {
+                                                  userId: userIdFromPath,
+                                                  category: 'articles',
+                                                  useSupabaseStorage: shouldUseSupabaseStorage(),
+                                                });
+                                              } else {
+                                                // Если это уже полный URL, используем как есть
+                                                previewUrl = coverState.preview;
+                                              }
+                                            } else if (article.img && article.userId) {
+                                              // Используем img из статьи с userId
+                                              previewUrl = getImageUrl(article.img, '.jpg', {
+                                                userId: article.userId,
+                                                category: 'articles',
+                                                useSupabaseStorage: shouldUseSupabaseStorage(),
+                                              });
+                                            } else {
+                                              // Fallback на старый способ
+                                              previewUrl = getUserImageUrl(
+                                                article.img || '',
+                                                'articles'
+                                              );
+                                            }
+
                                             return (
                                               <div className="user-dashboard__article-cover-wrap">
                                                 <div className="user-dashboard__article-cover-preview">
@@ -2600,122 +3079,6 @@ function UserDashboard() {
                       )}
                     </div>
                   </>
-                ) : activeTab === 'profile' ? (
-                  <div className="user-dashboard__profile-tab">
-                    <h3 className="user-dashboard__section-title">
-                      {ui?.dashboard?.profile ?? 'Profile'}
-                    </h3>
-                    <div className="user-dashboard__section">
-                      <div className="user-dashboard__profile-content">
-                        <div className="user-dashboard__avatar">
-                          <div
-                            className="user-dashboard__avatar-img"
-                            role="button"
-                            tabIndex={0}
-                            aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
-                            onClick={handleAvatarClick}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleAvatarClick();
-                              }
-                            }}
-                          >
-                            <img
-                              src={avatarSrc}
-                              alt={ui?.dashboard?.profile ?? 'Profile'}
-                              onError={(e) => {
-                                const img = e.target as HTMLImageElement;
-                                const applied = img.dataset.fallbackApplied;
-
-                                // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
-                                if (!applied) {
-                                  img.dataset.fallbackApplied = 'default';
-                                  img.src = '/images/avatar.png';
-                                  return;
-                                }
-
-                                // 2) если и дефолтный не загрузился — скрываем
-                                img.style.display = 'none';
-                              }}
-                            />
-                            {isUploadingAvatar && (
-                              <div
-                                className="user-dashboard__avatar-loader"
-                                aria-live="polite"
-                                aria-busy="true"
-                              >
-                                <div className="user-dashboard__avatar-spinner"></div>
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              className="user-dashboard__avatar-edit"
-                              onClick={handleAvatarClick}
-                              disabled={isUploadingAvatar}
-                              aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
-                            >
-                              ✎
-                            </button>
-                          </div>
-                          <input
-                            ref={avatarInputRef}
-                            type="file"
-                            accept="image/*"
-                            style={{
-                              position: 'absolute',
-                              width: '1px',
-                              height: '1px',
-                              opacity: 0,
-                              pointerEvents: 'none',
-                            }}
-                            onChange={handleAvatarChange}
-                          />
-                        </div>
-
-                        <div className="user-dashboard__profile-fields">
-                          <div className="user-dashboard__field">
-                            <label htmlFor="name">
-                              {ui?.dashboard?.profileFields?.name ?? 'Name'}
-                            </label>
-                            <input id="name" type="text" defaultValue={user?.name || ''} disabled />
-                          </div>
-
-                          <div className="user-dashboard__field">
-                            <label htmlFor="email">
-                              {ui?.dashboard?.profileFields?.email ?? 'Email'}
-                            </label>
-                            <input
-                              id="email"
-                              type="email"
-                              defaultValue={user?.email || ''}
-                              disabled
-                            />
-                          </div>
-                        </div>
-
-                        <div className="user-dashboard__profile-actions">
-                          <button
-                            type="button"
-                            className="user-dashboard__profile-settings-button"
-                            onClick={() => setIsProfileSettingsModalOpen(true)}
-                          >
-                            {ui?.dashboard?.profileSettings ?? 'Настройки профиля'}
-                          </button>
-                          <button
-                            type="button"
-                            className="user-dashboard__logout-button"
-                            onClick={() => {
-                              logout();
-                              navigate('/auth');
-                            }}
-                          >
-                            {ui?.dashboard?.logout ?? 'Logout'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 ) : null}
               </div>
             </div>

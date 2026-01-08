@@ -100,11 +100,47 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Парсим JSON body
     const body = parseJsonBody<Partial<UploadFileRequest>>(event.body, {});
 
-    const { fileBase64, fileName, category, contentType, originalFileSize } = body;
+    let { fileBase64, fileName, category, contentType, originalFileSize } = body;
 
     if (!fileBase64 || !fileName || !category) {
       return createErrorResponse(400, 'Missing required fields: fileBase64, fileName, category');
     }
+
+    // Нормализуем имя файла для безопасности: убираем пробелы и небезопасные символы
+    // Supabase Storage не принимает пробелы и некоторые специальные символы в пути
+    let normalizedFileName = fileName
+      .replace(/\s+/g, '_') // Заменяем пробелы на подчеркивания
+      .replace(/[^a-zA-Z0-9._-]/g, '') // Удаляем все символы кроме букв, цифр, точек, подчеркиваний и дефисов
+      .replace(/_{2,}/g, '_') // Заменяем множественные подчеркивания на одно
+      .replace(/^_+|_+$/g, ''); // Удаляем подчеркивания в начале и конце
+
+    // Если после нормализации имя стало пустым или слишком коротким, используем дефолтное
+    if (!normalizedFileName || normalizedFileName.length < 3) {
+      const extension = fileName.split('.').pop() || 'file';
+      normalizedFileName = `upload_${Date.now()}.${extension}`;
+      console.log('⚠️ [upload-file] Имя файла было заменено на дефолтное:', {
+        original: fileName,
+        normalized: normalizedFileName,
+      });
+    } else if (normalizedFileName !== fileName) {
+      console.log('⚠️ [upload-file] Имя файла было нормализовано:', {
+        original: fileName,
+        normalized: normalizedFileName,
+      });
+    }
+
+    // Ограничиваем длину имени файла (Supabase может иметь ограничения)
+    if (normalizedFileName.length > 200) {
+      const extension = normalizedFileName.split('.').pop() || '';
+      const baseName = normalizedFileName.replace(/\.[^/.]+$/, '');
+      normalizedFileName = baseName.substring(0, 200 - extension.length - 1) + '.' + extension;
+      console.log('⚠️ [upload-file] Имя файла было обрезано из-за длины:', {
+        original: fileName,
+        normalized: normalizedFileName,
+      });
+    }
+
+    fileName = normalizedFileName;
 
     // Используем userId из токена или из запроса (если указан)
     const targetUserId = body.userId || userId;
@@ -252,6 +288,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     const audioUserId = targetUserId;
     const storagePath = getStoragePath(audioUserId, category, fileName);
 
+    console.log('📤 [upload-file] Загрузка файла для категории:', {
+      category,
+      fileName,
+      storagePath,
+      targetUserId: audioUserId,
+    });
+
     // Для категории profile удаляем старые файлы профиля
     if (category === 'profile') {
       // Проверяем, существует ли файл с таким именем или любое изображение профиля
@@ -309,23 +352,40 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       });
 
     if (error) {
-      console.error('Error uploading file to Supabase Storage:', {
+      console.error('❌ Error uploading file to Supabase Storage:', {
         error: error.message,
         status: (error as any)?.status,
         name: error.name,
         storagePath,
         fileSize: fileBuffer.length,
+        category,
       });
       return createErrorResponse(500, `Failed to upload file: ${error.message}`);
     }
 
     if (!data) {
-      console.error('Upload succeeded but no data returned:', { storagePath });
+      console.error('❌ Upload succeeded but no data returned:', {
+        storagePath,
+        category,
+      });
       return createErrorResponse(500, 'Upload succeeded but no data returned');
     }
 
+    console.log('✅ [upload-file] Файл успешно загружен в Storage:', {
+      category,
+      storagePath,
+      fileName,
+      dataPath: data.path,
+    });
+
     // Получаем публичный URL файла сразу после загрузки
     const { data: urlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+
+    console.log('🔗 [upload-file] Сформирован публичный URL:', {
+      category,
+      storagePath,
+      publicUrl: urlData.publicUrl,
+    });
 
     return createSuccessResponse(
       {

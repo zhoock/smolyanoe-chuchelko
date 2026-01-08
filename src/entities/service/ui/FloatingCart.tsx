@@ -74,6 +74,7 @@ export function FloatingCart() {
                   size={56}
                   densities={[1, 2]}
                   sizes="56px"
+                  userId={album.userId || undefined}
                 />
               </div>
             ))}

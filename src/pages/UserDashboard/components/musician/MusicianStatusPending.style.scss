@@ -1,0 +1,24 @@
+.musician-status-pending {
+  margin: 0 auto;
+  padding: var(--ms-3);
+  text-align: center;
+  max-width: 500px;
+
+  &__icon {
+    font-size: 64px;
+    margin-bottom: var(--ms-1);
+  }
+
+  &__title {
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-2);
+    font-weight: 600;
+    margin-bottom: var(--ms-1);
+  }
+
+  &__description {
+    color: var(--dashboard-text-secondary);
+    font-size: var(--ms-0);
+    line-height: 1.5;
+  }
+}

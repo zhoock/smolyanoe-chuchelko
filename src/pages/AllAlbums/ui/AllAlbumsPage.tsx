@@ -97,7 +97,11 @@ export function AllAlbumsPage() {
             <div className="albums__list">
               {displayedAlbums.map((album) => (
                 <WrapperAlbumCover key={album.albumId} {...album} date={album.release.date}>
-                  <AlbumCover img={album.cover || ''} fullName={album.fullName} />
+                  <AlbumCover
+                    img={album.cover || ''}
+                    fullName={album.fullName}
+                    userId={album.userId || undefined}
+                  />
                 </WrapperAlbumCover>
               ))}
             </div>

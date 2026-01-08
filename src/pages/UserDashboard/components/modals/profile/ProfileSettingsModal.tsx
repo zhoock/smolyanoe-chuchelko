@@ -7,7 +7,6 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { getUser, getToken } from '@shared/lib/auth';
 import {
   loadTheBandFromDatabase,
-  loadTheBandFromProfileJson,
   saveTheBandToDatabase,
   loadHeaderImagesFromDatabase,
   saveHeaderImagesToDatabase,
@@ -20,6 +19,7 @@ interface ProfileSettingsModalProps {
   onClose: () => void;
   userName?: string;
   userEmail?: string;
+  defaultTab?: 'general' | 'profile' | 'security';
 }
 
 type TabType = 'general' | 'profile' | 'security';
@@ -29,10 +29,11 @@ export function ProfileSettingsModal({
   onClose,
   userName = 'Site Owner',
   userEmail = 'zhook@zhoock.ru',
+  defaultTab = 'general',
 }: ProfileSettingsModalProps) {
   const { lang: currentLang, setLang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));
-  const [activeTab, setActiveTab] = useState<TabType>('general');
+  const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   const [name, setName] = useState(userName);
   const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(currentLang || 'ru');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -167,7 +168,6 @@ export function ProfileSettingsModal({
       setPasswordError(null);
       setPasswordSuccess(false);
     }
-    onClose();
   };
 
   const handleSave = async () => {
@@ -280,37 +280,9 @@ export function ProfileSettingsModal({
       }
     } else if (activeTab === 'profile') {
       // Сохранение изменений профиля (имя, о группе, header images)
-      // Сохранение текста "О Группе"
-      if (aboutText !== initialAboutText) {
-        setIsSavingAboutText(true);
-        try {
-          // Разбиваем текст на параграфы по переносам строк
-          const paragraphs = aboutText
-            .split('\n')
-            .map((p) => p.trim())
-            .filter((p) => p.length > 0);
-
-          const result = await saveTheBandToDatabase(paragraphs);
-          if (!result.success) {
-            console.error('Ошибка сохранения текста "О Группе":', result.error);
-            alert(`Ошибка сохранения: ${result.error || 'Неизвестная ошибка'}`);
-            setIsSavingAboutText(false);
-            return;
-          }
-        } catch (error) {
-          console.error('Ошибка сохранения текста "О Группе":', error);
-          alert(
-            `Ошибка сохранения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
-          );
-          setIsSavingAboutText(false);
-          return;
-        } finally {
-          setIsSavingAboutText(false);
-        }
-      }
-
-      // Сохранение site_name (название группы) и header images
+      // Проверяем, какие данные нужно сохранить
       const needsSiteNameUpdate = name !== initialName;
+      const needsAboutTextUpdate = aboutText !== initialAboutText;
       const safeHeaderImages = Array.isArray(headerImages) ? headerImages : [];
       const safeInitialHeaderImages = Array.isArray(initialHeaderImages) ? initialHeaderImages : [];
       const needsHeaderImagesUpdate =
@@ -319,82 +291,109 @@ export function ProfileSettingsModal({
 
       console.log('💾 [ProfileSettingsModal] Сохранение профиля:', {
         needsSiteNameUpdate,
+        needsAboutTextUpdate,
         needsHeaderImagesUpdate,
         name,
         initialName,
+        aboutTextLength: aboutText.length,
+        initialAboutTextLength: initialAboutText.length,
         headerImagesLength: safeHeaderImages.length,
         initialHeaderImagesLength: safeInitialHeaderImages.length,
       });
 
-      if (needsSiteNameUpdate || needsHeaderImagesUpdate) {
-        try {
-          const token = getToken();
-          if (!token) {
-            alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
-            return;
-          }
-
-          const updateData: any = {};
-          if (needsSiteNameUpdate) {
-            updateData.siteName = name.trim() || null;
-          }
-          if (needsHeaderImagesUpdate) {
-            updateData.headerImages = safeHeaderImages;
-            console.log('📤 [ProfileSettingsModal] Header images для сохранения:', {
-              count: safeHeaderImages.length,
-              urls: safeHeaderImages,
-            });
-          }
-
-          console.log('📤 [ProfileSettingsModal] Отправка данных:', updateData);
-
-          const response = await fetch('/api/user-profile', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(updateData),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
-          }
-
-          // Отправляем событие для обновления Hero компонента
-          if (needsSiteNameUpdate) {
-            localStorage.setItem('profile-name', name);
-            window.dispatchEvent(new CustomEvent('profile-name-updated', { detail: { name } }));
-          }
-
-          // Отправляем событие для обновления header images в Hero компоненте
-          if (needsHeaderImagesUpdate) {
-            console.log(
-              '✅ [ProfileSettingsModal] Header images успешно сохранены в БД, отправляем событие обновления'
-            );
-            window.dispatchEvent(
-              new CustomEvent('header-images-updated', {
-                detail: { images: safeHeaderImages },
-              })
-            );
-          }
-
-          console.log('✅ [ProfileSettingsModal] Профиль успешно сохранен');
-        } catch (error) {
-          console.error('❌ [ProfileSettingsModal] Ошибка сохранения профиля:', error);
-          alert(
-            `Ошибка сохранения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
-          );
-          return;
-        }
-      } else {
+      // Если нет изменений, просто обновляем начальные значения
+      if (!needsSiteNameUpdate && !needsAboutTextUpdate && !needsHeaderImagesUpdate) {
         console.log('ℹ️ [ProfileSettingsModal] Нет изменений для сохранения');
+        setInitialName(name);
+        setInitialHeaderImages([...(headerImages || [])]);
+        setInitialAboutText(aboutText);
+        return;
       }
 
-      setInitialName(name);
-      setInitialHeaderImages([...(headerImages || [])]);
-      setInitialAboutText(aboutText);
+      try {
+        const token = getToken();
+        if (!token) {
+          alert('Ошибка: вы не авторизованы. Пожалуйста, войдите в систему.');
+          return;
+        }
+
+        // Формируем данные для сохранения
+        const updateData: any = {};
+
+        if (needsSiteNameUpdate) {
+          updateData.siteName = name.trim() || null;
+        }
+
+        if (needsAboutTextUpdate) {
+          // Разбиваем текст на параграфы по переносам строк
+          const paragraphs = aboutText
+            .split('\n')
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+          updateData.theBand = paragraphs;
+        }
+
+        if (needsHeaderImagesUpdate) {
+          updateData.headerImages = safeHeaderImages;
+          console.log('📤 [ProfileSettingsModal] Header images для сохранения:', {
+            count: safeHeaderImages.length,
+            urls: safeHeaderImages,
+          });
+        }
+
+        console.log('📤 [ProfileSettingsModal] Отправка данных для сохранения:', updateData);
+
+        const response = await fetch('/api/user-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ [ProfileSettingsModal] Ответ от сервера:', result);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Ошибка сохранения данных');
+        }
+
+        // Обновляем начальные значения после успешного сохранения
+        setInitialName(name);
+        setInitialHeaderImages([...(headerImages || [])]);
+        setInitialAboutText(aboutText);
+
+        // Отправляем события для обновления Hero компонента
+        if (needsSiteNameUpdate) {
+          localStorage.setItem('profile-name', name);
+          window.dispatchEvent(new CustomEvent('profile-name-updated', { detail: { name } }));
+        }
+
+        if (needsHeaderImagesUpdate) {
+          console.log(
+            '✅ [ProfileSettingsModal] Header images успешно сохранены в БД, отправляем событие обновления'
+          );
+          window.dispatchEvent(
+            new CustomEvent('header-images-updated', {
+              detail: { images: safeHeaderImages },
+            })
+          );
+        }
+
+        console.log('✅ [ProfileSettingsModal] Все данные профиля успешно сохранены');
+      } catch (error) {
+        console.error('❌ [ProfileSettingsModal] Ошибка сохранения профиля:', error);
+        alert(
+          `Ошибка сохранения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+        );
+        return;
+      }
 
       console.log('🔄 [ProfileSettingsModal] Обновлены начальные значения:', {
         initialName: name,
@@ -406,12 +405,13 @@ export function ProfileSettingsModal({
   };
 
   const handleHeaderClose = () => {
+    // Всегда закрываем модалку
+    // Если есть несохраненные изменения, отменяем их перед закрытием
     if (hasChanges) {
-      // Если есть изменения, отменяем их и закрываем
       handleCancel();
-    } else {
-      onClose();
     }
+    // Всегда вызываем onClose для закрытия модалки
+    onClose();
   };
 
   // Загрузка текущего пароля при открытии вкладки "Безопасность"
@@ -461,29 +461,20 @@ export function ProfileSettingsModal({
       const loadAboutText = async () => {
         setIsLoadingAboutText(true);
         try {
-          // Сначала пытаемся загрузить из БД
-          let theBand = await loadTheBandFromDatabase(currentLang || 'ru');
-          let source = 'БД';
-
-          // Если в БД нет данных, загружаем из profile.json как fallback
-          if (!theBand || theBand.length === 0) {
-            console.log('📝 Данных в БД нет, загружаем из profile.json...');
-            theBand = await loadTheBandFromProfileJson(currentLang || 'ru');
-            source = 'profile.json';
-          }
+          // В админке используем токен для загрузки данных авторизованного пользователя
+          const theBand = await loadTheBandFromDatabase(currentLang || 'ru', true);
 
           const text = theBand && theBand.length > 0 ? theBand.join('\n') : '';
           setAboutText(text);
           setInitialAboutText(text);
 
           if (theBand && theBand.length > 0) {
-            console.log('✅ Текст "О Группе" загружен:', {
-              source,
+            console.log('✅ Текст "О Группе" загружен из БД:', {
               paragraphs: theBand.length,
               lang: currentLang || 'ru',
             });
           } else {
-            console.log('ℹ️ Текст "О Группе" пуст, можно ввести новый');
+            console.log('ℹ️ Текст "О Группе" пуст в БД, можно ввести новый');
           }
         } catch (error) {
           console.error('Ошибка загрузки текста "О Группе":', error);
@@ -497,7 +488,8 @@ export function ProfileSettingsModal({
       const loadHeaderImages = async () => {
         setIsLoadingHeaderImages(true);
         try {
-          const images = await loadHeaderImagesFromDatabase();
+          // В админке используем токен для загрузки данных авторизованного пользователя
+          const images = await loadHeaderImagesFromDatabase(true);
           // Гарантируем, что images всегда массив
           const safeImages = Array.isArray(images) ? images : [];
           console.log('📥 [ProfileSettingsModal] Header images загружены из БД:', {

@@ -41,6 +41,16 @@ export function AlbumsSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
+  // Не отображаем секцию, если загрузка завершена и альбомов нет
+  if (
+    albumsStatus !== 'loading' &&
+    albumsStatus !== 'idle' &&
+    !albumsError &&
+    allAlbums.length === 0
+  ) {
+    return null;
+  }
+
   return (
     <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">
       <div className="wrapper">
@@ -55,7 +65,11 @@ export function AlbumsSection() {
             <div className="albums__list">
               {displayedAlbums.map((album) => (
                 <WrapperAlbumCover key={album.albumId} {...album} date={album.release.date}>
-                  <AlbumCover img={album.cover || ''} fullName={album.fullName} />
+                  <AlbumCover
+                    img={album.cover || ''}
+                    fullName={album.fullName}
+                    userId={album.userId || undefined}
+                  />
                 </WrapperAlbumCover>
               ))}
             </div>

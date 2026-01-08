@@ -14,6 +14,14 @@ interface UserProfileRow {
   header_images?: any; // JSONB
   password: string | null;
   site_name?: string | null;
+  role?: string;
+  musician_status?: string;
+  musician_reject_reason?: string | null;
+  musician_applied_at?: Date | null;
+  musician_approved_at?: Date | null;
+  artist_name?: string | null;
+  bio?: string | null;
+  links?: any; // JSONB
 }
 
 interface GetUserProfileResponse {
@@ -22,6 +30,14 @@ interface GetUserProfileResponse {
     theBand: string[];
     headerImages?: string[];
     siteName?: string | null;
+    role?: string;
+    musicianStatus?: string;
+    musicianRejectReason?: string | null;
+    musicianAppliedAt?: string | null;
+    musicianApprovedAt?: string | null;
+    artistName?: string | null;
+    bio?: string | null;
+    links?: string[];
   };
   error?: string;
 }
@@ -39,6 +55,7 @@ interface SaveUserProfileResponse {
 }
 
 import { extractUserIdFromToken } from './lib/jwt';
+import { getUserIdFromSubdomainOrEvent } from './lib/api-helpers';
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -55,7 +72,24 @@ export const handler: Handler = async (
   }
 
   try {
-    const userId = extractUserIdFromToken(event.headers.authorization);
+    // Для POST/PUT запросов (сохранение данных) всегда используем токен авторизации
+    // Для GET запросов: если есть токен, используем его, иначе используем поддомен
+    let userId: string | null = null;
+    if (event.httpMethod === 'GET') {
+      // Для GET запросов сначала проверяем токен (для админки),
+      // если токена нет, используем поддомен (для публичных страниц)
+      const { getUserIdFromEvent } = await import('./lib/api-helpers');
+      userId = getUserIdFromEvent(event);
+
+      // Если токен не найден, пробуем поддомен (для публичных страниц)
+      if (!userId) {
+        userId = await getUserIdFromSubdomainOrEvent(event);
+      }
+    } else {
+      // Для POST/PUT запросов (сохранение данных) всегда используем токен
+      const { getUserIdFromEvent } = await import('./lib/api-helpers');
+      userId = getUserIdFromEvent(event);
+    }
 
     if (event.httpMethod === 'GET') {
       if (!userId) {
@@ -74,7 +108,21 @@ export const handler: Handler = async (
 
       try {
         result = await query<UserProfileRow>(
-          `SELECT the_band, header_images, password, site_name FROM users WHERE id = $1 AND is_active = true`,
+          `SELECT 
+            the_band, 
+            header_images, 
+            password, 
+            site_name,
+            role,
+            musician_status,
+            musician_reject_reason,
+            musician_applied_at,
+            musician_approved_at,
+            artist_name,
+            bio,
+            links
+          FROM users 
+          WHERE id = $1 AND is_active = true`,
           [userId],
           0
         );
@@ -88,8 +136,15 @@ export const handler: Handler = async (
         if (errorMessage.includes('column')) {
           console.log('⚠️ Некоторые поля еще не существуют в БД, используем только доступные');
           try {
-            result = await query<{ the_band: any; header_images?: any; site_name?: string | null }>(
-              `SELECT the_band, header_images, site_name FROM users WHERE id = $1 AND is_active = true`,
+            result = await query<UserProfileRow>(
+              `SELECT 
+                the_band, 
+                header_images, 
+                site_name,
+                role,
+                musician_status
+              FROM users 
+              WHERE id = $1 AND is_active = true`,
               [userId],
               0
             );
@@ -127,12 +182,39 @@ export const handler: Handler = async (
         : [];
       const siteName = (user as any).site_name || null;
 
+      // Парсим links из JSONB
+      let links: string[] = [];
+      if (user.links) {
+        try {
+          links = Array.isArray(user.links) ? user.links : JSON.parse(user.links as any);
+        } catch (e) {
+          links = [];
+        }
+      }
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          data: { theBand, password, headerImages, siteName },
+          data: {
+            theBand,
+            password,
+            headerImages,
+            siteName,
+            role: user.role || 'user',
+            musicianStatus: user.musician_status || 'none',
+            musicianRejectReason: user.musician_reject_reason || null,
+            musicianAppliedAt: user.musician_applied_at
+              ? user.musician_applied_at.toISOString()
+              : null,
+            musicianApprovedAt: user.musician_approved_at
+              ? user.musician_approved_at.toISOString()
+              : null,
+            artistName: user.artist_name || null,
+            bio: user.bio || null,
+            links,
+          },
         } as GetUserProfileResponse),
       };
     }

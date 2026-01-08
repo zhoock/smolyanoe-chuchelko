@@ -171,7 +171,9 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
     console.log('✅ [uploadFile] Ответ получен:', {
       success: result.success,
       hasUrl: !!result.data?.url,
+      hasStoragePath: !!result.data?.storagePath,
       hasError: !!result.error,
+      category,
     });
 
     if (!result.success || !result.data?.url) {
@@ -179,7 +181,19 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       return null;
     }
 
+    // Для категории articles возвращаем storagePath, чтобы клиент мог правильно извлечь имя файла
+    // Для остальных категорий возвращаем публичный URL
     let finalUrl = result.data.url;
+
+    if (category === 'articles' && result.data.storagePath) {
+      // Для articles возвращаем storagePath вместо publicUrl
+      // Клиент будет использовать его для извлечения имени файла
+      finalUrl = result.data.storagePath;
+      console.log('📝 [uploadFile] Для articles возвращаем storagePath:', {
+        storagePath: finalUrl,
+        originalUrl: result.data.url,
+      });
+    }
 
     // Для hero изображений result.data.url может содержать storagePath или уже готовый URL
     // Если это storagePath (начинается с "users/.../hero/"), формируем proxy URL

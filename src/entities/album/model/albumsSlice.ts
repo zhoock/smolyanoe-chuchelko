@@ -22,6 +22,7 @@ export const fetchAlbums = createAsyncThunk<
       album: unknown
     ): album is {
       albumId: string;
+      userId?: string | null;
       artist: string;
       album: string;
       fullName?: string;
@@ -116,6 +117,7 @@ export const fetchAlbums = createAsyncThunk<
 
         return {
           albumId: album.albumId,
+          userId: album.userId || undefined,
           artist: album.artist,
           album: album.album,
           fullName: album.fullName || `${album.artist} — ${album.album}`,
@@ -161,10 +163,13 @@ export const fetchAlbums = createAsyncThunk<
           headers,
         });
 
-        clearTimeout(timeoutId);if (response.ok) {
-          const result = await response.json();if (result.success && result.data && Array.isArray(result.data)) {
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data && Array.isArray(result.data)) {
             // Если данных нет, возвращаем пустой массив
-            if (result.data.length === 0) {return [];
+            if (result.data.length === 0) {
+              return [];
             }
 
             // 🔍 DEBUG: Проверяем наличие duration в данных из API

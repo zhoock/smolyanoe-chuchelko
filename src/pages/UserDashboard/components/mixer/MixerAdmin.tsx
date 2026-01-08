@@ -1249,17 +1249,13 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                                               <div className="mixer-admin__stem-label">
                                                 {cover.label}
                                               </div>
-                                              <div className="mixer-admin__stem-indicator">
-                                                {cover.status === 'uploading' ? (
+                                              {cover.status === 'uploading' && (
+                                                <div className="mixer-admin__stem-indicator">
                                                   <span className="mixer-admin__stem-spinner">
                                                     ⟳
                                                   </span>
-                                                ) : cover.url ? (
-                                                  <span className="mixer-admin__stem-arrow">⌄</span>
-                                                ) : (
-                                                  <span className="mixer-admin__stem-arrow">⌄</span>
-                                                )}
-                                              </div>
+                                                </div>
+                                              )}
                                             </label>
                                             {/* Кнопка удаления вынесена за пределы label */}
                                             {cover.url && cover.status !== 'uploading' && (

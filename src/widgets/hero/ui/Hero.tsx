@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
+import { isSubdomainMultiTenancyEnabled, getCurrentSubdomain } from '@shared/lib/subdomain';
 import './style.scss';
 
 /**
@@ -162,10 +163,11 @@ export function Hero() {
     loadImages();
   }, []);
 
-  // Загружаем название группы из API или localStorage
+  // Загружаем название группы из профиля пользователя
+  // В dev режиме с поддоменами автоматически загружается профиль пользователя из поддомена
   useEffect(() => {
     const loadProfileName = async () => {
-      // Сначала проверяем localStorage для быстрого отображения
+      // Проверяем localStorage для быстрого отображения
       const storedName = localStorage.getItem('profile-name');
       if (storedName) {
         setProfileName(storedName);
@@ -173,18 +175,20 @@ export function Hero() {
 
       try {
         const token = getToken();
-        if (!token) {
-          // Если не авторизован, используем значение из localStorage или значение по умолчанию
+        // В dev режиме с поддоменами можно загрузить без токена (API определит пользователя по subdomain)
+        // В продакшн режиме требуется токен
+        if (!token && !isSubdomainMultiTenancyEnabled()) {
           if (!storedName) {
             setProfileName('Смоляное чучелко');
           }
           return;
         }
 
+        // Загружаем профиль (API автоматически определит пользователя из subdomain в dev режиме)
         const response = await fetch('/api/user-profile', {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
 
@@ -192,25 +196,22 @@ export function Hero() {
           const result = await response.json();
           if (result.success && result.data?.siteName) {
             setProfileName(result.data.siteName);
-            // Сохраняем в localStorage для использования без авторизации
             localStorage.setItem('profile-name', result.data.siteName);
           } else if (!storedName) {
-            // Если в API нет siteName и нет в localStorage, используем значение по умолчанию
             setProfileName('Смоляное чучелко');
           }
         } else if (!storedName) {
-          // Если запрос не удался и нет в localStorage, используем значение по умолчанию
           setProfileName('Смоляное чучелко');
         }
       } catch (error) {
         console.warn('⚠️ Ошибка загрузки названия группы из профиля:', error);
-        // В случае ошибки используем localStorage или значение по умолчанию
         if (!storedName) {
           setProfileName('Смоляное чучелко');
         }
       }
     };
 
+    // Вызываем функцию загрузки
     loadProfileName();
 
     // Слушаем событие обновления названия группы

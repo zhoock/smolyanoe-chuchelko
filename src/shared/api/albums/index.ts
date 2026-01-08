@@ -12,7 +12,7 @@ export interface ImageUrlOptions {
  * Проверяет, включено ли использование Supabase Storage
  */
 // Всегда используем Supabase Storage для медиа (обложки/аудио)
-function shouldUseSupabaseStorage(_options?: ImageUrlOptions): boolean {
+export function shouldUseSupabaseStorage(_options?: ImageUrlOptions): boolean {
   return true;
 }
 

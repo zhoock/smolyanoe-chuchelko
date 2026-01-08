@@ -16,6 +16,7 @@ import {
   CORS_HEADERS,
   validateLang,
   getUserIdFromEvent,
+  getUserIdFromSubdomainOrEvent,
   requireAuth,
   parseJsonBody,
   handleError,
@@ -55,6 +56,7 @@ interface TrackRow {
 
 interface AlbumData {
   albumId: string;
+  userId: string | null; // ID владельца альбома
   artist: string;
   album: string;
   fullName: string;
@@ -161,6 +163,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
 
   return {
     albumId: album.album_id,
+    userId: album.user_id, // Добавляем user_id владельца альбома
     artist: album.artist,
     album: album.album,
     fullName: album.full_name,
@@ -277,32 +280,56 @@ export const handler: Handler = async (
 
       // Для GET запросов авторизация не требуется - все альбомы публичные
       // Для POST/PUT/DELETE требуется авторизация (админка)
-      const userId = event.httpMethod === 'GET' ? null : getUserIdFromEvent(event);
+      // В dev режиме для GET используем subdomain для фильтрации альбомов по пользователю
+      // В продакшн режиме GET возвращает все публичные альбомы
+      const userId = await getUserIdFromSubdomainOrEvent(event);
 
-      // Возвращаем все альбомы для указанного языка
+      // Возвращаем альбомы для указанного языка
+      // Если userId определен (из subdomain в dev режиме), фильтруем по пользователю
+      // В продакшн режиме userId будет null и вернутся все альбомы
       // Важно: используем DISTINCT ON для устранения дубликатов по album_id и lang
       // Если есть несколько альбомов с одинаковым album_id и lang, берём самый новый
       const albumsResult = await query<AlbumRow>(
-        `SELECT DISTINCT ON (a.album_id, a.lang) 
-             a.id,
-             a.user_id,
-             a.album_id,
-             a.artist,
-             a.album,
-             a.full_name,
-             a.description,
-             a.cover,
-             a.release,
-             a.buttons,
-             a.details,
-             a.lang,
-             a.is_public,
-             a.created_at,
-             a.updated_at
-         FROM albums a
-         WHERE a.lang = $1 
-         ORDER BY a.album_id, a.lang, a.created_at DESC`,
-        [lang]
+        userId
+          ? `SELECT DISTINCT ON (a.album_id, a.lang) 
+               a.id,
+               a.user_id,
+               a.album_id,
+               a.artist,
+               a.album,
+               a.full_name,
+               a.description,
+               a.cover,
+               a.release,
+               a.buttons,
+               a.details,
+               a.lang,
+               a.is_public,
+               a.created_at,
+               a.updated_at
+           FROM albums a
+           WHERE a.lang = $1 AND a.user_id = $2
+           ORDER BY a.album_id, a.lang, a.created_at DESC`
+          : `SELECT DISTINCT ON (a.album_id, a.lang) 
+               a.id,
+               a.user_id,
+               a.album_id,
+               a.artist,
+               a.album,
+               a.full_name,
+               a.description,
+               a.cover,
+               a.release,
+               a.buttons,
+               a.details,
+               a.lang,
+               a.is_public,
+               a.created_at,
+               a.updated_at
+           FROM albums a
+           WHERE a.lang = $1 
+           ORDER BY a.album_id, a.lang, a.created_at DESC`,
+        userId ? [lang, userId] : [lang]
       );
 
       // 🔍 DEBUG: Логируем для 23-remastered
@@ -700,7 +727,7 @@ export const handler: Handler = async (
 
     // POST: создание альбома (требует авторизации)
     if (event.httpMethod === 'POST') {
-      const userId = requireAuth(event);
+      const userId = await getUserIdFromSubdomainOrEvent(event);
 
       if (!userId) {
         return createErrorResponse(401, 'Unauthorized. Authentication required.');
@@ -797,7 +824,7 @@ export const handler: Handler = async (
     // PUT: обновление альбома (требует авторизации)
     if (event.httpMethod === 'PUT') {
       try {
-        const userId = requireAuth(event);
+        const userId = await getUserIdFromSubdomainOrEvent(event);
 
         if (!userId) {
           return createErrorResponse(401, 'Unauthorized. Authentication required.');
@@ -1146,7 +1173,7 @@ export const handler: Handler = async (
     // PATCH: обновление порядка треков
     if (event.httpMethod === 'PATCH') {
       try {
-        const userId = requireAuth(event);
+        const userId = await getUserIdFromSubdomainOrEvent(event);
         if (!userId) {
           return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
         }
@@ -1221,7 +1248,7 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'DELETE') {
       try {
-        const userId = requireAuth(event);
+        const userId = await getUserIdFromSubdomainOrEvent(event);
 
         if (!userId) {
           return createErrorResponse(401, 'Unauthorized. Authentication required.');

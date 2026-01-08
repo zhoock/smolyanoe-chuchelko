@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getUserImageUrl, getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
 import type { ImageCategory } from '@config/user';
 import './style.scss';
 
@@ -7,9 +7,10 @@ interface ImageCarouselProps {
   images: string[];
   alt: string;
   category?: ImageCategory;
+  userId?: string; // UUID владельца изображений (для мультитенантности)
 }
 
-export function ImageCarousel({ images, alt, category = 'articles' }: ImageCarouselProps) {
+export function ImageCarousel({ images, alt, category = 'articles', userId }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCounter, setShowCounter] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -196,16 +197,26 @@ export function ImageCarousel({ images, alt, category = 'articles' }: ImageCarou
       )}
 
       <div ref={containerRef} className="image-carousel__container">
-        {images.map((img, index) => (
-          <div key={img} className="image-carousel__slide">
-            <img
-              src={getUserImageUrl(img, category)}
-              alt={index === 0 ? alt : `${alt} (${index + 1})`}
-              loading={index === 0 ? 'lazy' : 'lazy'}
-              decoding="async"
-            />
-          </div>
-        ))}
+        {images.map((img, index) => {
+          const imageUrl = userId
+            ? getImageUrl(img, '.jpg', {
+                userId,
+                category,
+                useSupabaseStorage: shouldUseSupabaseStorage(),
+              })
+            : getUserImageUrl(img, category);
+
+          return (
+            <div key={img} className="image-carousel__slide">
+              <img
+                src={imageUrl}
+                alt={index === 0 ? alt : `${alt} (${index + 1})`}
+                loading={index === 0 ? 'lazy' : 'lazy'}
+                decoding="async"
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Навигационные стрелки */}

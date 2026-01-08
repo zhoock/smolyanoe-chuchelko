@@ -230,7 +230,11 @@ export default function DashboardAlbumsOverview({
                 >
                   <div className="admin__album-cover">
                     {album.cover && (
-                      <AlbumCover img={album.cover} fullName={`${album.artist} - ${album.album}`} />
+                      <AlbumCover
+                        img={album.cover}
+                        fullName={`${album.artist} - ${album.album}`}
+                        userId={album.userId || undefined}
+                      />
                     )}
                   </div>
                   <div className="admin__album-info">

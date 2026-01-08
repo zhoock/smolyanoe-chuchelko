@@ -1,10 +1,11 @@
 // src/pages/UserDashboard/components/blocks/BlockCarousel.tsx
 import React, { useState } from 'react';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getUserImageUrl, getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
 
 interface BlockCarouselProps {
   imageKeys: string[];
   caption?: string;
+  userId?: string; // UUID владельца статьи для правильной загрузки изображений
   onChange: (imageKeys: string[], caption?: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
@@ -18,6 +19,7 @@ interface BlockCarouselProps {
 export function BlockCarousel({
   imageKeys,
   caption,
+  userId,
   onChange,
   onFocus,
   onBlur,
@@ -88,7 +90,16 @@ export function BlockCarousel({
     );
   }
 
-  const currentImageUrl = getUserImageUrl(imageKeys[currentIndex], 'articles');
+  // Формируем URL изображения с учетом userId
+  const currentImageUrl = imageKeys[currentIndex]
+    ? userId
+      ? getImageUrl(imageKeys[currentIndex], '.jpg', {
+          userId,
+          category: 'articles',
+          useSupabaseStorage: shouldUseSupabaseStorage(),
+        })
+      : getUserImageUrl(imageKeys[currentIndex], 'articles')
+    : '';
   const totalImages = imageKeys.length;
 
   return (

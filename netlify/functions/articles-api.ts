@@ -16,6 +16,7 @@ import {
   createSuccessMessageResponse,
   validateLang,
   getUserIdFromEvent,
+  getUserIdFromSubdomainOrEvent,
   requireAuth,
   parseJsonBody,
   handleError,
@@ -39,6 +40,7 @@ interface ArticleRow {
 
 interface ArticleData {
   id: string; // UUID из БД
+  userId: string; // UUID владельца статьи
   articleId: string; // строковый идентификатор (article_id)
   nameArticle: string;
   img: string;
@@ -87,6 +89,7 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
 
   const result = {
     id: article.id, // UUID из БД
+    userId: article.user_id, // UUID владельца статьи
     articleId: article.article_id, // строковый идентификатор
     nameArticle: article.name_article,
     img: article.img || '',
@@ -121,7 +124,16 @@ export const handler: Handler = async (
     // Для GET с includeDrafts=true также требуется авторизация
     const includeDrafts =
       event.httpMethod === 'GET' && event.queryStringParameters?.includeDrafts === 'true';
-    const userId = event.httpMethod === 'GET' && !includeDrafts ? null : getUserIdFromEvent(event);
+
+    // Для публичных страниц (без includeDrafts) определяем пользователя по поддомену
+    // Для дашборда (includeDrafts=true) используем токен авторизации
+    let userId: string | null = null;
+    if (includeDrafts) {
+      userId = getUserIdFromEvent(event);
+    } else {
+      // На публичных страницах определяем пользователя по поддомену (в dev режиме)
+      userId = await getUserIdFromSubdomainOrEvent(event);
+    }
 
     if (event.httpMethod === 'GET') {
       const { lang } = event.queryStringParameters || {};
@@ -139,17 +151,25 @@ export const handler: Handler = async (
           userId,
           hasAuthHeader: !!(event.headers?.authorization || event.headers?.Authorization),
         });
+      } else {
+        console.log('[articles-api] GET public articles:', {
+          hasUserId: !!userId,
+          userId,
+          host: event.headers?.host || event.headers?.Host,
+        });
       }
       // #endregion
       if (includeDrafts && !userId) {
         return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
       }
 
-      // Возвращаем все статьи для указанного языка
-      // Черновики включаются только если includeDrafts=true и пользователь авторизован
+      // Возвращаем статьи для указанного языка
+      // Если userId определен (через поддомен или токен), возвращаем только статьи этого пользователя
+      // Иначе возвращаем все опубликованные статьи (для обратной совместимости)
       const articlesResult = await query<ArticleRow>(
         `SELECT DISTINCT ON (article_id)
           id,
+          user_id,
           article_id,
           name_article,
           description,
@@ -160,9 +180,10 @@ export const handler: Handler = async (
           is_draft
         FROM articles
         WHERE lang = $1
+          ${userId ? `AND user_id = $2` : ''}
           ${includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)'}
         ORDER BY article_id, updated_at DESC`,
-        [lang]
+        userId ? [lang, userId] : [lang]
       );
 
       const articles = articlesResult.rows.map(mapArticleToApiFormat);

@@ -144,6 +144,7 @@ function CartStep({
                     size={64}
                     densities={[1, 2]}
                     sizes="80px"
+                    userId={album.userId || undefined}
                   />
                 ) : (
                   <div className="purchase-popup__item-thumbnail-placeholder" aria-hidden="true" />
@@ -584,6 +585,7 @@ function CheckoutStep({
                           size={64}
                           densities={[1, 2]}
                           sizes="64px"
+                          userId={album.userId || undefined}
                         />
                       ) : (
                         <div

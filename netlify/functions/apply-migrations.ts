@@ -553,6 +553,65 @@ WHERE email = 'zhoock@zhoock.ru' AND is_active = true;
 COMMENT ON COLUMN users.site_name IS 'Название сайта/группы (Site/Band Name) из формы регистрации';
 `;
 
+const MIGRATION_025 = `
+-- Миграция: Добавление ролей и статусов музыканта
+-- Дата: 2025
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'musician', 'admin')),
+ADD COLUMN IF NOT EXISTS musician_status TEXT NOT NULL DEFAULT 'none' CHECK (musician_status IN ('none', 'pending', 'approved', 'rejected')),
+ADD COLUMN IF NOT EXISTS musician_reject_reason TEXT,
+ADD COLUMN IF NOT EXISTS musician_applied_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS musician_approved_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS artist_name TEXT,
+ADD COLUMN IF NOT EXISTS bio TEXT,
+ADD COLUMN IF NOT EXISTS links JSONB DEFAULT '[]'::jsonb;
+
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_musician_status ON users(musician_status);
+CREATE INDEX IF NOT EXISTS idx_users_musician_pending ON users(musician_status) WHERE musician_status = 'pending';
+`;
+
+const MIGRATION_026 = `
+-- Миграция: RLS политики для защиты полей роли и статуса музыканта
+-- Дата: 2025
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY IF NOT EXISTS "Users can read their own data"
+ON users
+FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY IF NOT EXISTS "Users can update their own data with restrictions"
+ON users
+FOR UPDATE
+USING (auth.uid() = id)
+WITH CHECK (
+  auth.uid() = id
+  AND (
+    role = (SELECT role FROM users WHERE id = auth.uid())
+    OR role = 'user'
+  )
+  AND (
+    musician_status = (SELECT musician_status FROM users WHERE id = auth.uid())
+    OR (
+      (SELECT musician_status FROM users WHERE id = auth.uid()) IN ('none', 'rejected')
+      AND musician_status = 'pending'
+    )
+  )
+  AND (
+    musician_approved_at = (SELECT musician_approved_at FROM users WHERE id = auth.uid())
+    OR musician_approved_at IS NULL
+  )
+);
+
+CREATE POLICY IF NOT EXISTS "Users can insert their own data"
+ON users
+FOR INSERT
+WITH CHECK (auth.uid() = id);
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -571,6 +630,8 @@ const MIGRATIONS: Record<string, string> = {
   '022_add_header_images_to_users.sql': MIGRATION_022,
   '023_add_site_name_to_users.sql': MIGRATION_023,
   '024_set_site_name_for_owner.sql': MIGRATION_024,
+  '025_add_roles_and_musician_status.sql': MIGRATION_025,
+  '026_add_rls_policies_for_roles.sql': MIGRATION_026,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {

@@ -101,6 +101,7 @@ export async function register(
       saveAuth(result.data.token, result.data.user);
       // Сохраняем siteName в localStorage для использования в Hero
       localStorage.setItem('profile-name', siteName);
+      // Не делаем редирект здесь - пусть AuthPage обработает выбор языка и редирект
     }
 
     return result;
@@ -129,6 +130,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
 
     if (result.success && result.data) {
       saveAuth(result.data.token, result.data.user);
+      // Не делаем редирект здесь - пусть AuthPage обработает выбор языка и редирект
     }
 
     return result;

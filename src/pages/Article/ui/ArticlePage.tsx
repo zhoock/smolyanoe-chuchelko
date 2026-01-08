@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { getUserImageUrl } from '@shared/api/albums';
+import { getUserImageUrl, getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { ArticleSkeleton } from './ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -70,7 +70,8 @@ export function ArticlePage() {
     alt,
     images,
     type,
-  }: ArticledetailsProps) {// Определяем, есть ли карусель: проверяем images или img как массив
+  }: ArticledetailsProps) {
+    // Определяем, есть ли карусель: проверяем images или img как массив
     const carouselImages =
       images && Array.isArray(images) ? images : Array.isArray(img) ? img : null;
     const singleImage = !carouselImages && img && typeof img === 'string' ? img : null;
@@ -81,16 +82,30 @@ export function ArticlePage() {
         {carouselImages && carouselImages.length > 0 && (
           <div className="uncollapse">
             {/* #region agent log */}
-            {(() => {return null;
+            {(() => {
+              return null;
             })()}
             {/* #endregion */}
-            <ImageCarousel images={carouselImages} alt={alt ?? ''} category="articles" />
+            <ImageCarousel
+              images={carouselImages}
+              alt={alt ?? ''}
+              category="articles"
+              userId={article?.userId}
+            />
           </div>
         )}
         {singleImage && (
           <div className="uncollapse">
             <img
-              src={getUserImageUrl(singleImage, 'articles')}
+              src={
+                article?.userId
+                  ? getImageUrl(singleImage, '', {
+                      userId: article.userId,
+                      category: 'articles',
+                      useSupabaseStorage: shouldUseSupabaseStorage(),
+                    })
+                  : getUserImageUrl(singleImage, 'articles')
+              }
               alt={alt ?? ''}
               loading="lazy"
               decoding="async"

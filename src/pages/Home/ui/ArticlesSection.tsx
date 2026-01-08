@@ -40,6 +40,16 @@ export function ArticlesSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
+  // Не отображаем секцию, если загрузка завершена и статей нет
+  if (
+    articlesStatus !== 'loading' &&
+    articlesStatus !== 'idle' &&
+    articlesStatus !== 'failed' &&
+    allArticles.length === 0
+  ) {
+    return null;
+  }
+
   return (
     <section
       id="articles"

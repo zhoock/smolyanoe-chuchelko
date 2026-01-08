@@ -40,6 +40,7 @@ const OfferPage = lazy(() => import('@pages/Offer'));
 const UserDashboard = lazy(() => import('@pages/UserDashboard/UserDashboard'));
 const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
 const PaymentSuccess = lazy(() => import('@pages/PaymentSuccess/PaymentSuccess'));
+const AdminMusicianModeration = lazy(() => import('@pages/AdminMusicianModeration'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -189,16 +190,17 @@ function Layout() {
     '/dashboard/:tab',
     '/dashboard-new',
     '/auth',
+    '/admin/musician-moderation',
   ];
 
   const isKnownRoute = knownRoutes.some((pattern) =>
     matchPath({ path: pattern, end: true }, location.pathname)
   );
-  
+
   const isPaymentRoute = ['/pay/success', '/pay/fail'].some((pattern) =>
     matchPath({ path: pattern, end: true }, location.pathname)
   );
-  
+
   const shouldHideChrome = !isKnownRoute;
 
   const standardRoutes = (
@@ -298,6 +300,14 @@ function Layout() {
           element={
             <Suspense fallback={<PageLoader />}>
               <StemsPlayground />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/musician-moderation"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <AdminMusicianModeration />
             </Suspense>
           }
         />

@@ -873,6 +873,7 @@ export default function EditSyncLyrics({
                 img={album.cover || ''}
                 fullName={`${album.artist} - ${album.album}`}
                 size={448}
+                userId={album.userId || undefined}
               />
             </div>
             <div className="admin-sync__player-info">

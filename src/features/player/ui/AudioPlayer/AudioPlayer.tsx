@@ -657,10 +657,11 @@ export default function AudioPlayer({
         key={`album-cover-${albumId}`}
         img={album.cover || ''}
         fullName={album.fullName}
+        userId={album.userId || undefined}
         onColorsExtracted={handleColorsExtracted}
       />
     ),
-    [albumId, album.cover, album.fullName, handleColorsExtracted]
+    [albumId, album.cover, album.fullName, album.userId, handleColorsExtracted]
   );
 
   /**

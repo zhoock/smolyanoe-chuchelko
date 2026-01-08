@@ -5,6 +5,11 @@
 
 import type { HandlerEvent } from '@netlify/functions';
 import { extractUserIdFromToken } from './jwt';
+import {
+  isSubdomainMultiTenancyEnabled,
+  extractSubdomainFromEvent,
+  getUserIdBySubdomain,
+} from './subdomain-helpers';
 
 /**
  * Стандартные CORS заголовки для всех API endpoints
@@ -111,6 +116,38 @@ export function getUserIdFromEvent(event: HandlerEvent): string | null {
     ((event as any).clientContext?.user?.token as string | undefined);
 
   return extractUserIdFromToken(auth);
+}
+
+/**
+ * Получает user_id из поддомена (dev режим) или из токена
+ * В dev режиме сначала проверяет поддомен, затем токен
+ * В продакшн режиме использует только токен
+ * @returns user_id или null
+ */
+export async function getUserIdFromSubdomainOrEvent(event: HandlerEvent): Promise<string | null> {
+  // В продакшн режиме используем только токен
+  if (!isSubdomainMultiTenancyEnabled()) {
+    return getUserIdFromEvent(event);
+  }
+
+  // В dev режиме сначала проверяем поддомен
+  const subdomain = extractSubdomainFromEvent(event);
+  if (subdomain) {
+    const userId = await getUserIdBySubdomain(subdomain);
+    if (userId) {
+      console.log(
+        `🏠 [getUserIdFromSubdomainOrEvent] Using subdomain "${subdomain}" → userId: ${userId}`
+      );
+      return userId;
+    } else {
+      console.warn(
+        `⚠️ [getUserIdFromSubdomainOrEvent] Subdomain "${subdomain}" not found in database`
+      );
+    }
+  }
+
+  // Если поддомен не найден или не указан, используем токен
+  return getUserIdFromEvent(event);
 }
 
 /**

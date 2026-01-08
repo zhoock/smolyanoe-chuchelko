@@ -1,0 +1,216 @@
+.admin-musician-moderation {
+  margin: 0 auto;
+  padding: var(--ms-2);
+  max-width: 1200px;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--ms-2);
+  }
+
+  &__title {
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-2);
+    font-weight: 600;
+  }
+
+  &__refresh {
+    padding: var(--ms-0) var(--ms-1);
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    background: var(--dashboard-bg-secondary);
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--ms-01);
+    transition: background-color 0.2s;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--dashboard-hover-bg);
+    }
+  }
+
+  &__error {
+    padding: var(--ms-1);
+    color: var(--error-color, #ff5757);
+    background: rgb(255 87 87 / 10%);
+    border: 1px solid var(--error-color, #ff5757);
+    border-radius: var(--ms-01);
+    margin-bottom: var(--ms-2);
+  }
+
+  &__loading,
+  &__empty {
+    padding: var(--ms-2);
+    color: var(--dashboard-text-secondary);
+    text-align: center;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-2);
+  }
+
+  &__card {
+    padding: var(--ms-2);
+    background: var(--dashboard-card-bg);
+    border: 1px solid var(--dashboard-card-border);
+    border-radius: var(--ms-01);
+  }
+
+  &__card-header {
+    margin-bottom: var(--ms-1);
+  }
+
+  &__card-title {
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-1);
+    font-weight: 600;
+    margin-bottom: var(--ms-0);
+  }
+
+  &__card-meta {
+    display: flex;
+    color: var(--dashboard-text-secondary);
+    font-size: var(--ms-0);
+    flex-direction: column;
+    gap: var(--ms-0);
+  }
+
+  &__meta-item {
+    strong {
+      color: var(--dashboard-text-primary);
+    }
+  }
+
+  &__card-section {
+    margin: var(--ms-1) 0;
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+
+    strong {
+      display: block;
+      margin-bottom: var(--ms-0);
+    }
+  }
+
+  &__bio {
+    margin: 0;
+    padding: var(--ms-0);
+    line-height: 1.5;
+    background: var(--dashboard-bg-secondary);
+    border-radius: var(--ms-01);
+    white-space: pre-wrap;
+  }
+
+  &__links {
+    display: flex;
+    margin: var(--ms-0) 0 0;
+    padding: 0;
+    list-style: none;
+    flex-direction: column;
+    gap: var(--ms-0);
+  }
+
+  &__link {
+    color: var(--accent-color, var(--dark-greenish-yellow));
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__card-actions {
+    margin-top: var(--ms-2);
+    padding-top: var(--ms-2);
+    border-top: 1px solid var(--dashboard-border);
+  }
+
+  &__reject-section {
+    margin-bottom: var(--ms-1);
+  }
+
+  &__reject-label {
+    display: block;
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    font-weight: 500;
+    margin-bottom: var(--ms-0);
+  }
+
+  &__reject-input {
+    width: 100%;
+    padding: var(--ms-0);
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    background: var(--dashboard-bg-secondary);
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--ms-01);
+    font-family: inherit;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-color, var(--dark-greenish-yellow));
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__buttons {
+    display: flex;
+    gap: var(--ms-1);
+    justify-content: flex-end;
+  }
+
+  &__approve {
+    padding: var(--ms-0) var(--ms-2);
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    background: var(--accent-color, var(--dark-greenish-yellow));
+    border: none;
+    border-radius: var(--ms-01);
+    transition: opacity 0.2s;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+  }
+
+  &__reject {
+    padding: var(--ms-0) var(--ms-2);
+    color: white;
+    font-size: var(--ms-0);
+    background: var(--error-color, #ff5757);
+    border: none;
+    border-radius: var(--ms-01);
+    transition: opacity 0.2s;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+  }
+}

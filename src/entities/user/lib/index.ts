@@ -18,18 +18,35 @@ export interface UserProfileResponse {
 
 /**
  * Загружает описание группы (theBand) из БД для текущего пользователя
+ * На публичных страницах определяет пользователя по поддомену
+ * В админке использует токен авторизации
  */
-export async function loadTheBandFromDatabase(lang: string): Promise<string[] | null> {
+export async function loadTheBandFromDatabase(
+  lang: string,
+  useAuth: boolean = false
+): Promise<string[] | null> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
+    // Если useAuth=true или находимся в админке (дашборд), используем токен
+    // Иначе полагаемся на определение пользователя по поддомену (для публичных страниц)
+    const { getToken, isAuthenticated } = await import('@shared/lib/auth');
+    const isInDashboard =
+      typeof window !== 'undefined' && window.location.pathname.includes('/dashboard');
+    const shouldUseAuth = useAuth || isInDashboard || isAuthenticated();
+
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache',
+    };
+
+    if (shouldUseAuth) {
+      const token = getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
 
     const response = await fetch(`/api/user-profile?lang=${lang}`, {
       cache: 'no-cache',
-      headers: {
-        'Cache-Control': 'no-cache',
-        ...authHeader,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -82,24 +99,39 @@ export async function loadTheBandFromProfileJson(lang: string): Promise<string[]
 
 /**
  * Загружает изображения для шапки (header images) из БД для текущего пользователя
+ * На публичных страницах определяет пользователя по поддомену
+ * В админке использует токен авторизации
  */
-export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
+export async function loadHeaderImagesFromDatabase(useAuth: boolean = false): Promise<string[]> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
+    // Если useAuth=true или находимся в админке (дашборд), используем токен
+    // Иначе полагаемся на определение пользователя по поддомену (для публичных страниц)
+    const { getToken, isAuthenticated } = await import('@shared/lib/auth');
+    const isInDashboard =
+      typeof window !== 'undefined' && window.location.pathname.includes('/dashboard');
+    const shouldUseAuth = useAuth || isInDashboard || isAuthenticated();
+
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    };
+
+    if (shouldUseAuth) {
+      const token = getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
 
     console.log('📡 [loadHeaderImagesFromDatabase] Отправляем запрос к /api/user-profile', {
-      hasAuth: 'Authorization' in authHeader && !!authHeader.Authorization,
+      useAuth: shouldUseAuth,
+      hasToken: shouldUseAuth && !!getToken(),
     });
 
     const response = await fetch('/api/user-profile', {
       cache: 'no-cache',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
-        ...authHeader,
-      },
+      headers,
     });
 
     console.log('📡 [loadHeaderImagesFromDatabase] Ответ получен:', {
@@ -184,8 +216,15 @@ export async function saveHeaderImagesToDatabase(
   headerImages: string[]
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
+    const { getToken } = await import('@shared/lib/auth');
+    const token = getToken();
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'Unauthorized. Please log in.',
+      };
+    }
 
     // Загружаем текущие данные профиля
     const currentTheBand = (await loadTheBandFromDatabase('ru')) || [];
@@ -196,7 +235,7 @@ export async function saveHeaderImagesToDatabase(
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
-        ...authHeader,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         theBand: currentTheBand,
@@ -248,8 +287,15 @@ export async function saveTheBandToDatabase(
   theBand: string[]
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
+    const { getToken } = await import('@shared/lib/auth');
+    const token = getToken();
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'Unauthorized. Please log in.',
+      };
+    }
 
     const response = await fetch('/api/user-profile', {
       method: 'POST',
@@ -257,7 +303,7 @@ export async function saveTheBandToDatabase(
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache',
-        ...authHeader,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ theBand }),
     });

@@ -1,0 +1,199 @@
+.musician-onboarding {
+  margin: 0 auto;
+  padding: var(--ms-2);
+  max-width: 600px;
+
+  &__title {
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-2);
+    font-weight: 600;
+    margin-bottom: var(--ms-0);
+  }
+
+  &__description {
+    color: var(--dashboard-text-secondary);
+    font-size: var(--ms-0);
+    line-height: 1.5;
+    margin-bottom: var(--ms-2);
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-1);
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-0);
+  }
+
+  &__label {
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    font-weight: 500;
+  }
+
+  &__required {
+    color: var(--error-color, #ff5757);
+  }
+
+  &__textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+  }
+
+  &__input,
+  &__textarea {
+    padding: var(--ms-0) var(--ms-1);
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    background: var(--dashboard-bg-secondary);
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--ms-01);
+    transition: border-color 0.2s;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-color, var(--dark-greenish-yellow));
+    }
+  }
+
+  &__links-input {
+    display: flex;
+    gap: var(--ms-0);
+  }
+
+  &__add-link {
+    padding: var(--ms-0) var(--ms-1);
+    color: var(--dashboard-text-primary);
+    font-size: var(--ms-0);
+    background: var(--dashboard-bg-secondary);
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--ms-01);
+    transition: background-color 0.2s;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--dashboard-hover-bg);
+    }
+  }
+
+  &__links-list {
+    display: flex;
+    margin: var(--ms-0) 0 0;
+    padding: 0;
+    list-style: none;
+    flex-direction: column;
+    gap: var(--ms-0);
+  }
+
+  &__link-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-0);
+    padding: var(--ms-0);
+    background: var(--dashboard-bg-secondary);
+    border-radius: var(--ms-01);
+  }
+
+  &__link {
+    flex: 1;
+    color: var(--accent-color, var(--dark-greenish-yellow));
+    text-decoration: none;
+    font-size: var(--ms-0);
+    word-break: break-all;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__remove-link {
+    display: flex;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    color: var(--dashboard-text-secondary);
+    font-size: 16px;
+    background: transparent;
+    border: none;
+    transition: color 0.2s;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--error-color, #ff5757);
+    }
+  }
+
+  &__error {
+    padding: var(--ms-0);
+    color: var(--error-color, #ff5757);
+    font-size: var(--ms-0);
+    background: rgb(255 87 87 / 10%);
+    border: 1px solid var(--error-color, #ff5757);
+    border-radius: var(--ms-01);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--ms-1);
+    justify-content: flex-end;
+    margin-top: var(--ms-1);
+  }
+
+  &__cancel,
+  &__submit {
+    padding: var(--ms-0) var(--ms-2);
+    font-size: var(--ms-0);
+    border-radius: var(--ms-01);
+    cursor: pointer;
+    transition:
+      background-color 0.2s,
+      opacity 0.2s;
+  }
+
+  &__cancel {
+    color: var(--dashboard-text-primary);
+    background: var(--dashboard-bg-secondary);
+    border: 1px solid var(--dashboard-border);
+
+    &:hover:not(:disabled) {
+      background: var(--dashboard-hover-bg);
+    }
+  }
+
+  &__submit {
+    color: var(--dashboard-text-primary);
+    background: var(--accent-color, var(--dark-greenish-yellow));
+    border: none;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+  }
+}
