@@ -174,9 +174,28 @@ function isKnownCategory(value: string): value is ImageCategory {
   return IMAGE_CATEGORIES.includes(value as ImageCategory);
 }
 
+function ensureExtension(path: string, extension: string | null | undefined): string {
+  if (!extension) {
+    return path;
+  }
+
+  const [base, query = ''] = path.split('?');
+  const hasExt = /\.[a-z0-9]+$/i.test(base);
+
+  if (hasExt) {
+    return path;
+  }
+
+  return `${base}${extension}${query ? `?${query}` : ''}`;
+}
+
 export function buildUserMediaUrl(
   img: string,
-  options?: { userId?: string | null; defaultCategory?: ImageCategory }
+  options?: {
+    userId?: string | null;
+    defaultCategory?: ImageCategory;
+    defaultExtension?: string | null;
+  }
 ): string {
   if (!img) {
     return '';
@@ -196,15 +215,17 @@ export function buildUserMediaUrl(
   }
 
   const defaultCategory = options?.defaultCategory ?? 'articles';
+  const defaultExtension = options?.defaultExtension ?? '.jpg';
   const effectiveUserId = options?.userId ?? getUserUserId() ?? CURRENT_USER_CONFIG.userId;
 
   const normalized = trimmed.replace(/^\/+/, '');
 
   if (normalized.startsWith('users/')) {
-    return getImageUrl(normalized, '', {
+    const fileName = ensureExtension(normalized, defaultExtension);
+    return getStorageFileUrl({
       userId: effectiveUserId ?? undefined,
       category: defaultCategory,
-      useSupabaseStorage: shouldUseSupabaseStorage(),
+      fileName,
     });
   }
 
@@ -217,7 +238,9 @@ export function buildUserMediaUrl(
     fileName = segments.slice(1).join('/');
   }
 
-  return getImageUrl(fileName, '', {
+  const finalFileName = ensureExtension(fileName, defaultExtension);
+
+  return getImageUrl(finalFileName, '', {
     userId: effectiveUserId ?? undefined,
     category,
     useSupabaseStorage: shouldUseSupabaseStorage(),

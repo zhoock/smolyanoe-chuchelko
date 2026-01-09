@@ -16,6 +16,7 @@ export function ArticlePreview({ articleId, userId, img, nameArticle, date }: Ar
   const imageUrl = buildUserMediaUrl(img, {
     userId: userId ?? undefined,
     defaultCategory: 'articles',
+    defaultExtension: '.jpg',
   });
 
   return (

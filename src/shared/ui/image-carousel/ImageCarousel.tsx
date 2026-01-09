@@ -198,9 +198,11 @@ export function ImageCarousel({ images, alt, category = 'articles', userId }: Im
 
       <div ref={containerRef} className="image-carousel__container">
         {images.map((img, index) => {
+          const defaultExtension = category === 'hero' ? '.webp' : '.jpg';
           const imageUrl = buildUserMediaUrl(img, {
             userId,
             defaultCategory: category,
+            defaultExtension,
           });
 
           return (

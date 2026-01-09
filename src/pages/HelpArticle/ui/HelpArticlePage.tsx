@@ -381,6 +381,7 @@ function ArticleContent({
                 src={buildUserMediaUrl(details.img, {
                   userId: ownerUserId ?? undefined,
                   defaultCategory: 'articles',
+                  defaultExtension: '.jpg',
                 })}
                 alt={details.alt ?? ''}
                 loading="lazy"

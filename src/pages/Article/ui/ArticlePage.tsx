@@ -118,6 +118,7 @@ export function ArticlePage() {
               src={buildUserMediaUrl(singleImage, {
                 userId: ownerUserId ?? undefined,
                 defaultCategory: 'articles',
+                defaultExtension: '.jpg',
               })}
               alt={alt ?? ''}
               loading="lazy"
