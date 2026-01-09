@@ -21,6 +21,7 @@ import { useLang } from '@app/providers/lang';
 import { getToken } from '@shared/lib/auth';
 import { fetchArticles } from '@entities/article';
 import type { IArticles } from '@models';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import type { Block, ArticleMeta, BlockType } from './EditArticleModalV2.utils';
 import {
   normalizeDetailsToBlocks,
@@ -83,6 +84,7 @@ const LANG_TEXTS = {
 
 export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModalV2Props) {
   const { lang } = useLang();
+  const { username } = useProfileContext();
   const dispatch = useAppDispatch();
   const texts = LANG_TEXTS[lang];
 
@@ -181,7 +183,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Загрузка статьи при открытии
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !username) return;
 
     const loadArticle = async () => {
       // Если это новая статья (articleId начинается с "new-"), пропускаем загрузку
@@ -206,7 +208,9 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         const token = getToken();
         if (!token) return;
 
-        const fetchUrl = `/api/articles-api?lang=${lang}&includeDrafts=true`;
+        const fetchUrl = `/api/articles-api?lang=${lang}&username=${encodeURIComponent(
+          username
+        )}&includeDrafts=true`;
         const response = await fetch(fetchUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -256,7 +260,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     };
 
     loadArticle();
-  }, [isOpen, article.articleId, lang]);
+  }, [isOpen, article.articleId, lang, username]);
 
   // Очистка при закрытии
   useEffect(() => {
@@ -285,7 +289,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     // Для новой статьи не делаем автосохранение (только при публикации)
     if (currentArticle.articleId.startsWith('new-')) return;
 
-    if (!currentArticle.id) return;
+    if (!currentArticle.id || !username) return;
 
     // Отменяем предыдущий запрос
     if (abortControllerRef.current) {
@@ -314,7 +318,9 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       };
 
       const response = await fetch(
-        `/api/articles-api?id=${encodeURIComponent(currentArticle.id)}`,
+        `/api/articles-api?id=${encodeURIComponent(
+          currentArticle.id
+        )}&username=${encodeURIComponent(username)}`,
         {
           method: 'PUT',
           headers: {
@@ -331,7 +337,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setLastSaved(new Date());
         // Обновляем Redux store
         try {
-          await dispatch(fetchArticles({ lang, force: true })).unwrap();
+          await dispatch(fetchArticles({ lang, username, force: true })).unwrap();
         } catch (error) {
           console.warn('Failed to update Redux store:', error);
         }
@@ -353,7 +359,18 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         }, 2000);
       }
     }
-  }, [blocks, meta, currentArticle, originalIsDraft, lang, dispatch, isOpen, article, saveStatus]);
+  }, [
+    blocks,
+    meta,
+    currentArticle,
+    originalIsDraft,
+    lang,
+    dispatch,
+    isOpen,
+    article,
+    saveStatus,
+    username,
+  ]);
 
   // Debounced автосохранение
   const debouncedAutoSave = useRef(
@@ -451,7 +468,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Публикация
   const handlePublish = useCallback(async () => {
-    if (!currentArticle) return;
+    if (!currentArticle || !username) return;
 
     setIsPublishing(true);
     setSaveStatus('saving');
@@ -487,8 +504,10 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       // Для новой статьи используем POST, для существующей - PUT
       const isNewArticle = currentArticle.articleId.startsWith('new-') || !currentArticle.id;
       const url = isNewArticle
-        ? '/api/articles-api'
-        : `/api/articles-api?id=${encodeURIComponent(currentArticle.id || '')}`;
+        ? `/api/articles-api?username=${encodeURIComponent(username)}`
+        : `/api/articles-api?id=${encodeURIComponent(
+            currentArticle.id || ''
+          )}&username=${encodeURIComponent(username)}`;
       const method = isNewArticle ? 'POST' : 'PUT';
 
       const response = await fetch(url, {
@@ -506,7 +525,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setInitialBlocks(JSON.parse(JSON.stringify(blocks))); // Deep copy
         setInitialMeta({ ...meta });
         // Обновляем Redux store
-        await dispatch(fetchArticles({ lang, force: true })).unwrap();
+        await dispatch(fetchArticles({ lang, username, force: true })).unwrap();
         onClose();
       } else {
         setSaveStatus('error');
@@ -517,7 +536,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     } finally {
       setIsPublishing(false);
     }
-  }, [blocks, meta, currentArticle, lang, dispatch, onClose, article]);
+  }, [blocks, meta, currentArticle, lang, dispatch, onClose, article, username]);
 
   // Создание нового блока по типу
   const createBlock = useCallback((type: BlockType): Block => {

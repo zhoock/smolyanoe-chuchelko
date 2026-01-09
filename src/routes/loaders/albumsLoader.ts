@@ -28,9 +28,12 @@ export type AlbumsDeferred = {
 export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<AlbumsDeferred> {
   const { signal, url } = request;
   const { pathname } = new URL(url);
+  const segments = pathname.split('/').filter(Boolean);
+  const username = segments[0] || null;
   const store = getStore();
   const state = store.getState();
   const lang = selectCurrentLang(state);
+  const shouldLoadUserContent = Boolean(username);
 
   // СЛОВАРЬ НУЖЕН ВЕЗДЕ: шапка, меню, футер, aboutus и т.д.
   let templateC: Promise<IInterface[]>;
@@ -77,8 +80,8 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   let templateB: Promise<IArticles[]> = Promise.resolve([]);
   let templateD: Promise<IArticles[]> = Promise.resolve([]); // help articles
 
-  // Альбомы нужны на "/", "/albums*" и "/dashboard/*" (дашборд)
-  if (pathname === '/' || pathname.startsWith('/albums') || pathname.startsWith('/dashboard')) {
+  // Альбомы запрашиваем для любых страниц профиля
+  if (shouldLoadUserContent && username) {
     const status = selectAlbumsStatus(state, lang);
     if (status === 'succeeded') {
       templateA = Promise.resolve(selectAlbumsData(state, lang));
@@ -88,7 +91,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
       const currentData = selectAlbumsData(state, lang);
       templateA = Promise.resolve(currentData || []);
     } else {
-      const fetchThunkPromise = store.dispatch(fetchAlbums({ lang }));
+      const fetchThunkPromise = store.dispatch(fetchAlbums({ lang, username }));
 
       const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
 
@@ -118,8 +121,8 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     }
   }
 
-  // Статьи нужны на "/" (главная) и "/articles*"
-  if (pathname === '/' || pathname.startsWith('/articles')) {
+  // Посты пользователя
+  if (shouldLoadUserContent && username) {
     const status = selectArticlesStatus(state, lang);
     if (status === 'succeeded') {
       templateB = Promise.resolve(selectArticlesData(state, lang));
@@ -129,7 +132,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
       const currentData = selectArticlesData(state, lang);
       templateB = Promise.resolve(currentData || []);
     } else {
-      const fetchThunkPromise = store.dispatch(fetchArticles({ lang }));
+      const fetchThunkPromise = store.dispatch(fetchArticles({ lang, username }));
 
       const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
 
@@ -160,7 +163,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   }
 
   // Статьи помощи нужны на "/help/articles*"
-  if (pathname.startsWith('/help/articles')) {
+  if (shouldLoadUserContent && username && segments[1] === 'help') {
     const status = selectHelpArticlesStatus(state, lang);
     if (status === 'succeeded') {
       templateD = Promise.resolve(selectHelpArticlesData(state, lang));

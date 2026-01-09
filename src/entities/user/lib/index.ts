@@ -23,7 +23,7 @@ export interface UserProfileResponse {
  */
 export async function loadTheBandFromDatabase(
   lang: string,
-  useAuth: boolean = false
+  options: { username?: string; useAuth?: boolean } = {}
 ): Promise<string[] | null> {
   try {
     // Если useAuth=true или находимся в админке (дашборд), используем токен
@@ -31,7 +31,8 @@ export async function loadTheBandFromDatabase(
     const { getToken, isAuthenticated } = await import('@shared/lib/auth');
     const isInDashboard =
       typeof window !== 'undefined' && window.location.pathname.includes('/dashboard');
-    const shouldUseAuth = useAuth || isInDashboard || isAuthenticated();
+    const shouldUseAuth =
+      options.useAuth !== undefined ? options.useAuth : isInDashboard || isAuthenticated();
 
     const headers: Record<string, string> = {
       'Cache-Control': 'no-cache',
@@ -44,7 +45,13 @@ export async function loadTheBandFromDatabase(
       }
     }
 
-    const response = await fetch(`/api/user-profile?lang=${lang}`, {
+    const params = new URLSearchParams({ lang });
+    if (options.username) {
+      params.set('username', options.username);
+    }
+
+    const queryString = params.toString();
+    const response = await fetch(`/api/user-profile${queryString ? `?${queryString}` : ''}`, {
       cache: 'no-cache',
       headers,
     });
@@ -102,7 +109,10 @@ export async function loadTheBandFromProfileJson(lang: string): Promise<string[]
  * На публичных страницах определяет пользователя по поддомену
  * В админке использует токен авторизации
  */
-export async function loadHeaderImagesFromDatabase(useAuth: boolean = false): Promise<string[]> {
+export async function loadHeaderImagesFromDatabase(
+  username?: string,
+  useAuth: boolean = false
+): Promise<string[]> {
   try {
     // Если useAuth=true или находимся в админке (дашборд), используем токен
     // Иначе полагаемся на определение пользователя по поддомену (для публичных страниц)
@@ -129,7 +139,13 @@ export async function loadHeaderImagesFromDatabase(useAuth: boolean = false): Pr
       hasToken: shouldUseAuth && !!getToken(),
     });
 
-    const response = await fetch('/api/user-profile', {
+    const params = new URLSearchParams();
+    if (username) {
+      params.set('username', username);
+    }
+
+    const queryString = params.toString();
+    const response = await fetch(`/api/user-profile${queryString ? `?${queryString}` : ''}`, {
       cache: 'no-cache',
       headers,
     });

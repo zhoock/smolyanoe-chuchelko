@@ -48,6 +48,28 @@
 Опциональные:
 
 - `NETLIFY_SITE_URL` - URL продакшн сайта (для проксирования API вместо локальных функций)
+- `SUBDOMAIN_BASE_DOMAIN` / `VITE_SUBDOMAIN_BASE_DOMAIN` - базовый домен для пользовательских поддоменов (например, `smolyanoechuchelko.ru`)
+- `ENABLE_SUBDOMAIN_MULTI_TENANCY` / `VITE_ENABLE_SUBDOMAIN_MULTI_TENANCY` - включает модель социальной сети как локально, так и в production
+- `DATABASE_URL_STAGING` - строка подключения к отдельной staging-базе (используется локальными Netlify Functions)
+- `NETLIFY_STAGING_URL` - staging-деплой фронтенда, куда проксируются API при `npm start`
+- `USE_PROD_API` - если установить `true`, фронтенд будет отправлять запросы на продакшн (по умолчанию оставляем `false`)
+
+### Поддомены и staging-окружение
+
+Для работы в мультипользовательском режиме создайте или обновите `.env.local` и пропишите ключевые переменные:
+
+```bash
+SUBDOMAIN_BASE_DOMAIN=smolyanoechuchelko.ru
+ENABLE_SUBDOMAIN_MULTI_TENANCY=true
+DATABASE_URL_STAGING=postgres://user:password@staging-host:5432/database
+NETLIFY_STAGING_URL=https://staging.smolyanoechuchelko.ru
+USE_PROD_API=false
+```
+
+- `SUBDOMAIN_BASE_DOMAIN` сообщает приложениям основной домен, чтобы `username.example.ru` резолвился к нужному пользователю.
+- `DATABASE_URL_STAGING` изолирует локальные изменения от боевой базы.
+- `NETLIFY_STAGING_URL` позволяет фронтенду проксировать запросы на staging-функции, если вы запускаете только webpack dev server.
+- `USE_PROD_API=true` используйте осознанно — только если нужен прямой доступ к продакшн API.
 
 ## Команды
 
@@ -121,10 +143,10 @@
 Если вы хотите запустить только фронтенд без Netlify функций:
 
 ```bash
-NETLIFY_SITE_URL=https://smolyanoechuchelko.ru npm start
+NETLIFY_STAGING_URL=https://staging.smolyanoechuchelko.ru npm start
 ```
 
-Это запустит webpack dev server, который будет проксировать API запросы на продакшн сайт.
+Это запустит webpack dev server, который будет проксировать API запросы на staging. Если нужно сходить на продакшн, установите `USE_PROD_API=true`, но по умолчанию держите `false`, чтобы не создавать данные на продакшне.
 
 ## Проверка работы
 

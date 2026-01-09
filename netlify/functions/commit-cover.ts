@@ -254,7 +254,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
           return false;
         })
-        .map((f) => `users/zhoock/albums/${f.name}`) || [];
+        .flatMap((f) => [
+          `users/${userId}/albums/${f.name}`,
+          `albums/users/${userId}/albums/${f.name}`, // legacy path cleanup
+        ]) || [];
 
     if (oldCoverFiles.length > 0) {
       console.log(`Removing ${oldCoverFiles.length} old cover files`);

@@ -6,13 +6,14 @@ import { NavigationProps } from '@models';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './style.scss';
 
 const NavigationComponent = ({ onToggle }: NavigationProps) => {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  // UI словарь загружается через loader
+  const { username } = useProfileContext();
 
   const fallbackLabels = {
     stems: lang === 'en' ? 'mixer' : 'миксер',
@@ -26,7 +27,7 @@ const NavigationComponent = ({ onToggle }: NavigationProps) => {
   return (
     <nav className="header__menu">
       <ul className="header__links-list">
-        {[{ to: '/stems', label: labels.stems }].map(({ to, label }) => (
+        {[{ to: `/${username}/stems`, label: labels.stems }].map(({ to, label }) => (
           <li key={to}>
             <NavLink
               to={to}

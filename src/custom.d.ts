@@ -21,6 +21,11 @@ declare global {
     readonly VITE_SUPABASE_ANON_KEY?: string;
     readonly VITE_SUPABASE_SERVICE_ROLE_KEY?: string;
     readonly VITE_USE_SUPABASE_STORAGE?: string;
+    readonly VITE_SUBDOMAIN_BASE_DOMAIN?: string;
+    readonly VITE_SUBDOMAIN_BASE_DOMAINS?: string;
+    readonly VITE_PRIMARY_DOMAIN?: string;
+    readonly VITE_ENABLE_SUBDOMAIN_MULTI_TENANCY?: string;
+    readonly VITE_DISABLE_SUBDOMAIN_MULTI_TENANCY?: string;
   }
 
   interface ImportMeta {

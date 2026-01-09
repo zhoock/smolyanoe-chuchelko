@@ -7,6 +7,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectAlbumsData } from '@entities/album';
 import { loadTheBandFromDatabase, loadTheBandFromProfileJson } from '@entities/user/lib';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import aboutStyles from './AboutSection.module.scss';
 
 type AboutSectionProps = {
@@ -19,6 +20,7 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const { username } = useProfileContext();
 
   // Состояние для theBand из БД
   const [theBandFromDb, setTheBandFromDb] = useState<string[] | null>(null);
@@ -36,7 +38,7 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     (async () => {
       setIsLoadingTheBand(true);
       try {
-        const theBand = await loadTheBandFromDatabase(lang);
+        const theBand = await loadTheBandFromDatabase(lang, { username });
         if (!cancelled) {
           setTheBandFromDb(theBand);
         }
@@ -55,7 +57,7 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, username]);
 
   // Загружаем theBand из profile.json (fallback)
   useEffect(() => {

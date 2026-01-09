@@ -8,6 +8,11 @@ Object.defineProperty(window, 'scrollTo', {
   writable: true,
 });
 
+// По умолчанию эмулируем путь с username, чтобы thunk-и могли определить пользователя из URL
+if (typeof window !== 'undefined' && window.history && window.location) {
+  window.history.replaceState({}, '', '/testuser');
+}
+
 // Мокируем HTMLDialogElement.showModal, который не реализован в jsdom
 if (typeof HTMLDialogElement !== 'undefined') {
   HTMLDialogElement.prototype.showModal = jest.fn(function (this: HTMLDialogElement) {

@@ -16,7 +16,8 @@ import {
   CORS_HEADERS,
   validateLang,
   getUserIdFromEvent,
-  getUserIdFromSubdomainOrEvent,
+  getUserIdFromUsernameOrEvent,
+  getUsernameFromEvent,
   requireAuth,
   parseJsonBody,
   handleError,
@@ -282,7 +283,7 @@ export const handler: Handler = async (
       // Для POST/PUT/DELETE требуется авторизация (админка)
       // В dev режиме для GET используем subdomain для фильтрации альбомов по пользователю
       // В продакшн режиме GET возвращает все публичные альбомы
-      const userId = await getUserIdFromSubdomainOrEvent(event);
+      const userId = await getUserIdFromUsernameOrEvent(event);
 
       // Возвращаем альбомы для указанного языка
       // Если userId определен (из subdomain в dev режиме), фильтруем по пользователю
@@ -727,7 +728,7 @@ export const handler: Handler = async (
 
     // POST: создание альбома (требует авторизации)
     if (event.httpMethod === 'POST') {
-      const userId = await getUserIdFromSubdomainOrEvent(event);
+      const userId = await getUserIdFromUsernameOrEvent(event);
 
       if (!userId) {
         return createErrorResponse(401, 'Unauthorized. Authentication required.');
@@ -824,7 +825,7 @@ export const handler: Handler = async (
     // PUT: обновление альбома (требует авторизации)
     if (event.httpMethod === 'PUT') {
       try {
-        const userId = await getUserIdFromSubdomainOrEvent(event);
+        const userId = await getUserIdFromUsernameOrEvent(event);
 
         if (!userId) {
           return createErrorResponse(401, 'Unauthorized. Authentication required.');
@@ -1173,7 +1174,7 @@ export const handler: Handler = async (
     // PATCH: обновление порядка треков
     if (event.httpMethod === 'PATCH') {
       try {
-        const userId = await getUserIdFromSubdomainOrEvent(event);
+        const userId = await getUserIdFromUsernameOrEvent(event);
         if (!userId) {
           return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
         }
@@ -1248,7 +1249,7 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'DELETE') {
       try {
-        const userId = await getUserIdFromSubdomainOrEvent(event);
+        const userId = await getUserIdFromUsernameOrEvent(event);
 
         if (!userId) {
           return createErrorResponse(401, 'Unauthorized. Authentication required.');
@@ -1273,18 +1274,75 @@ export const handler: Handler = async (
             userId,
           });
 
-          // Находим альбом пользователя по album_id и lang
-          const albumResult = await query<AlbumRow>(
-            `SELECT id, album_id, lang, user_id FROM albums
-             WHERE album_id = $1 AND lang = $2
-             AND user_id = $3
+          // Присваиваем альбом пользователю, если он пока не закреплён
+          await query(
+            `UPDATE albums
+             SET user_id = $1, updated_at = NOW()
+             WHERE album_id = $2
+               AND lang = $3
+               AND (user_id IS NULL OR user_id = $1)`,
+            [userId, albumIdFromQuery, langFromQuery]
+          );
+
+          let albumResult = await query<AlbumRow>(
+            `SELECT id, album_id, lang, user_id
+             FROM albums
+             WHERE album_id = $1 AND lang = $2 AND user_id = $3
              ORDER BY created_at DESC
              LIMIT 1`,
             [albumIdFromQuery, langFromQuery, userId]
           );
 
           if (albumResult.rows.length === 0) {
-            return createErrorResponse(404, 'Album not found.');
+            const fallbackAlbumResult = await query<AlbumRow>(
+              `SELECT id, album_id, lang, user_id
+               FROM albums
+               WHERE album_id = $1
+               ORDER BY created_at DESC
+               LIMIT 1`,
+              [albumIdFromQuery]
+            );
+
+            if (fallbackAlbumResult.rows.length === 0) {
+              return createErrorResponse(404, 'Album not found.');
+            }
+
+            const fallbackAlbum = fallbackAlbumResult.rows[0];
+            if (fallbackAlbum.user_id && fallbackAlbum.user_id !== userId) {
+              return createErrorResponse(403, 'Access denied.');
+            }
+
+            await query(
+              `UPDATE albums
+               SET user_id = $1, updated_at = NOW()
+               WHERE album_id = $2
+                 AND (user_id IS NULL OR user_id = $1)`,
+              [userId, albumIdFromQuery]
+            );
+
+            albumResult = await query<AlbumRow>(
+              `SELECT id, album_id, lang, user_id
+               FROM albums
+               WHERE album_id = $1 AND lang = $2 AND user_id = $3
+               ORDER BY created_at DESC
+               LIMIT 1`,
+              [albumIdFromQuery, langFromQuery, userId]
+            );
+
+            if (albumResult.rows.length === 0) {
+              albumResult = await query<AlbumRow>(
+                `SELECT id, album_id, lang, user_id
+                 FROM albums
+                 WHERE album_id = $1 AND user_id = $2
+                 ORDER BY created_at DESC
+                 LIMIT 1`,
+                [albumIdFromQuery, userId]
+              );
+
+              if (albumResult.rows.length === 0) {
+                return createErrorResponse(404, 'Album not found.');
+              }
+            }
           }
 
           const album = albumResult.rows[0];
@@ -1301,6 +1359,14 @@ export const handler: Handler = async (
           }
 
           const track = trackResult.rows[0];
+
+          await query(
+            `UPDATE synced_lyrics
+             SET user_id = $1
+             WHERE album_id = $2
+               AND (user_id IS NULL OR user_id = $1)`,
+            [userId, albumIdFromQuery]
+          );
 
           // Удаляем аудиофайл из Supabase Storage, если он есть
           if (track.src) {
@@ -1398,8 +1464,8 @@ export const handler: Handler = async (
           // Также удаляем синхронизированные тексты для этого трека
           await query(
             `DELETE FROM synced_lyrics 
-             WHERE album_id = $1 AND track_id = $2 AND lang = $3`,
-            [albumIdFromQuery, String(trackId), langFromQuery]
+             WHERE album_id = $1 AND track_id = $2 AND user_id = $3`,
+            [albumIdFromQuery, String(trackId), userId]
           );
 
           console.log('✅ DELETE /api/albums - Track deleted:', {
@@ -1445,19 +1511,65 @@ export const handler: Handler = async (
           userId,
         });
 
-        // Сначала находим все записи альбома пользователя (все языковые версии)
-        const findAlbumsResult = await query<AlbumRow>(
-          `SELECT id, album_id, lang, user_id, cover FROM albums 
-          WHERE album_id = $1 
-            AND user_id = $2`,
+        await query(
+          `UPDATE albums
+           SET user_id = $1, updated_at = NOW()
+           WHERE album_id = $2
+             AND (user_id IS NULL OR user_id = $1)`,
+          [userId, data.albumId]
+        );
+
+        let findAlbumsResult = await query<AlbumRow>(
+          `SELECT id, album_id, lang, user_id, cover
+           FROM albums 
+           WHERE album_id = $1 
+             AND user_id = $2`,
           [data.albumId, userId]
         );
 
         if (findAlbumsResult.rows.length === 0) {
-          return createErrorResponse(
-            404,
-            'Album not found or you do not have permission to delete it.'
+          const fallbackAlbums = await query<AlbumRow>(
+            `SELECT id, album_id, lang, user_id, cover
+             FROM albums
+             WHERE album_id = $1
+             LIMIT 1`,
+            [data.albumId]
           );
+
+          if (fallbackAlbums.rows.length === 0) {
+            return createErrorResponse(
+              404,
+              'Album not found or you do not have permission to delete it.'
+            );
+          }
+
+          const fallbackAlbum = fallbackAlbums.rows[0];
+          if (fallbackAlbum.user_id && fallbackAlbum.user_id !== userId) {
+            return createErrorResponse(403, 'Access denied.');
+          }
+
+          await query(
+            `UPDATE albums
+             SET user_id = $1, updated_at = NOW()
+             WHERE album_id = $2
+               AND (user_id IS NULL OR user_id = $1)`,
+            [userId, data.albumId]
+          );
+
+          findAlbumsResult = await query<AlbumRow>(
+            `SELECT id, album_id, lang, user_id, cover
+             FROM albums 
+             WHERE album_id = $1 
+               AND user_id = $2`,
+            [data.albumId, userId]
+          );
+
+          if (findAlbumsResult.rows.length === 0) {
+            return createErrorResponse(
+              404,
+              'Album not found or you do not have permission to delete it.'
+            );
+          }
         }
 
         const albumIds = findAlbumsResult.rows.map((row) => row.id);
@@ -1469,6 +1581,14 @@ export const handler: Handler = async (
         if (albumIds.length > 0) {
           await query(`DELETE FROM tracks WHERE album_id = ANY($1::uuid[])`, [albumIds]);
         }
+
+        await query(
+          `UPDATE synced_lyrics
+           SET user_id = $1
+           WHERE album_id = $2
+             AND (user_id IS NULL OR user_id = $1)`,
+          [userId, data.albumId]
+        );
 
         // Удаляем все синхронизированные тексты альбома пользователя (для всех языковых версий)
         await query(
@@ -1532,7 +1652,10 @@ export const handler: Handler = async (
                   `${coverBaseName}-1344.jpg`,
                 ];
 
-                const coverPaths = coverVariants.map((variant) => `users/zhoock/albums/${variant}`);
+                const coverPaths = coverVariants.flatMap((variant) => [
+                  `users/${userId}/albums/${variant}`,
+                  `albums/users/${userId}/albums/${variant}`, // legacy path cleanup
+                ]);
                 allCoverPaths.push(...coverPaths);
               }
 

@@ -2,8 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
-import { getToken } from '@shared/lib/auth';
-import { isSubdomainMultiTenancyEnabled, getCurrentSubdomain } from '@shared/lib/subdomain';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './style.scss';
 
 /**
@@ -118,16 +117,20 @@ export function Hero() {
   const imagesLoadedRef = useRef<boolean>(false);
   const imageSelectedForPathRef = useRef<string>('');
 
+  const { username, profile, isOwner, loading } = useProfileContext();
+
   // Загружаем изображения из БД
   useEffect(() => {
     const loadImages = async () => {
+      if (loading) {
+        return;
+      }
+
       try {
-        const images = await loadHeaderImagesFromDatabase();
+        const images = await loadHeaderImagesFromDatabase(username, isOwner);
         console.log('📸 [Hero] Загружены header images из БД:', images);
 
-        // Фильтруем только изображения из папки hero, удаляем старые из articles
         const validHeroImages = (images || []).filter((url) => {
-          // Проверяем, что путь содержит '/hero/' (работает для любого userId, включая UUID)
           const isValidHero =
             url.includes('/hero/') ||
             url.includes('/hero-') ||
@@ -148,7 +151,6 @@ export function Hero() {
           console.warn(
             '⚠️ [Hero] Header images не найдены в БД или все из неправильной папки (пустой массив)'
           );
-          // Принудительно очищаем изображения, если в БД их нет
           setHeaderImages([]);
           setBackgroundImage('');
         }
@@ -161,64 +163,28 @@ export function Hero() {
       }
     };
     loadImages();
-  }, []);
+  }, [username, isOwner, loading]);
 
-  // Загружаем название группы из профиля пользователя
-  // В dev режиме с поддоменами автоматически загружается профиль пользователя из поддомена
+  // Загружаем название профиля пользователя
   useEffect(() => {
-    const loadProfileName = async () => {
-      // Проверяем localStorage для быстрого отображения
-      const storedName = localStorage.getItem('profile-name');
-      if (storedName) {
-        setProfileName(storedName);
-      }
+    const storageKey = `profile-name:${username}`;
+    const storedName = localStorage.getItem(storageKey);
 
-      try {
-        const token = getToken();
-        // В dev режиме с поддоменами можно загрузить без токена (API определит пользователя по subdomain)
-        // В продакшн режиме требуется токен
-        if (!token && !isSubdomainMultiTenancyEnabled()) {
-          if (!storedName) {
-            setProfileName('Смоляное чучелко');
-          }
-          return;
-        }
-
-        // Загружаем профиль (API автоматически определит пользователя из subdomain в dev режиме)
-        const response = await fetch('/api/user-profile', {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data?.siteName) {
-            setProfileName(result.data.siteName);
-            localStorage.setItem('profile-name', result.data.siteName);
-          } else if (!storedName) {
-            setProfileName('Смоляное чучелко');
-          }
-        } else if (!storedName) {
-          setProfileName('Смоляное чучелко');
-        }
-      } catch (error) {
-        console.warn('⚠️ Ошибка загрузки названия группы из профиля:', error);
-        if (!storedName) {
-          setProfileName('Смоляное чучелко');
-        }
-      }
-    };
-
-    // Вызываем функцию загрузки
-    loadProfileName();
+    if (profile?.siteName) {
+      setProfileName(profile.siteName);
+      localStorage.setItem(storageKey, profile.siteName);
+    } else if (storedName) {
+      setProfileName(storedName);
+    } else {
+      setProfileName(username);
+    }
 
     // Слушаем событие обновления названия группы
     const handleProfileNameUpdate = (event: Event) => {
       const customEvent = event as CustomEvent<{ name: string }>;
       if (customEvent.detail?.name) {
         setProfileName(customEvent.detail.name);
+        localStorage.setItem(storageKey, customEvent.detail.name);
       }
     };
 
@@ -244,7 +210,7 @@ export function Hero() {
       window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
       window.removeEventListener('header-images-updated', handleHeaderImagesUpdate);
     };
-  }, []);
+  }, [profile?.siteName, username]);
 
   // Выбираем случайное изображение при загрузке данных или изменении пути
   useEffect(() => {

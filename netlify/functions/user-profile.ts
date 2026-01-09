@@ -27,6 +27,8 @@ interface UserProfileRow {
 interface GetUserProfileResponse {
   success: boolean;
   data?: {
+    userId: string;
+    username: string;
     theBand: string[];
     headerImages?: string[];
     siteName?: string | null;
@@ -38,6 +40,7 @@ interface GetUserProfileResponse {
     artistName?: string | null;
     bio?: string | null;
     links?: string[];
+    password?: string;
   };
   error?: string;
 }
@@ -55,7 +58,12 @@ interface SaveUserProfileResponse {
 }
 
 import { extractUserIdFromToken } from './lib/jwt';
-import { getUserIdFromSubdomainOrEvent } from './lib/api-helpers';
+import {
+  getUserIdFromEvent,
+  getUsernameFromEvent,
+  getUserIdFromUsernameOrEvent,
+} from './lib/api-helpers';
+import { getUserByUsername } from './lib/username-helpers';
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -72,32 +80,42 @@ export const handler: Handler = async (
   }
 
   try {
-    // Для POST/PUT запросов (сохранение данных) всегда используем токен авторизации
-    // Для GET запросов: если есть токен, используем его, иначе используем поддомен
+    const requestedUsername = getUsernameFromEvent(event);
     let userId: string | null = null;
-    if (event.httpMethod === 'GET') {
-      // Для GET запросов сначала проверяем токен (для админки),
-      // если токена нет, используем поддомен (для публичных страниц)
-      const { getUserIdFromEvent } = await import('./lib/api-helpers');
-      userId = getUserIdFromEvent(event);
+    let resolvedUsername: string | null = null;
 
-      // Если токен не найден, пробуем поддомен (для публичных страниц)
-      if (!userId) {
-        userId = await getUserIdFromSubdomainOrEvent(event);
+    if (event.httpMethod === 'GET') {
+      if (requestedUsername) {
+        const userRecord = await getUserByUsername(requestedUsername);
+        if (!userRecord) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ success: false, error: 'User not found' }),
+          };
+        }
+        userId = userRecord.id;
+        resolvedUsername = userRecord.username;
+      } else {
+        userId = getUserIdFromEvent(event);
+        if (!userId) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ success: false, error: 'User not found' }),
+          };
+        }
       }
     } else {
-      // Для POST/PUT запросов (сохранение данных) всегда используем токен
-      const { getUserIdFromEvent } = await import('./lib/api-helpers');
       userId = getUserIdFromEvent(event);
     }
 
     if (event.httpMethod === 'GET') {
       if (!userId) {
-        // Если пользователь не авторизован, возвращаем null (будет использован JSON fallback)
         return {
-          statusCode: 200,
+          statusCode: 404,
           headers,
-          body: JSON.stringify({ success: true, data: null } as GetUserProfileResponse),
+          body: JSON.stringify({ success: false, error: 'User not found' }),
         };
       }
 
@@ -109,6 +127,7 @@ export const handler: Handler = async (
       try {
         result = await query<UserProfileRow>(
           `SELECT 
+            username,
             the_band, 
             header_images, 
             password, 
@@ -138,6 +157,7 @@ export const handler: Handler = async (
           try {
             result = await query<UserProfileRow>(
               `SELECT 
+                username,
                 the_band, 
                 header_images, 
                 site_name,
@@ -150,8 +170,8 @@ export const handler: Handler = async (
             );
             password = '';
           } catch (innerError) {
-            result = await query<{ the_band: any; site_name?: string | null }>(
-              `SELECT the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
+            result = await query<{ username: string; the_band: any; site_name?: string | null }>(
+              `SELECT username, the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
               [userId],
               0
             );
@@ -174,6 +194,10 @@ export const handler: Handler = async (
       }
 
       const user = result.rows[0];
+      const usernameFromDb = (user as any).username || null;
+      if (!resolvedUsername && usernameFromDb) {
+        resolvedUsername = usernameFromDb;
+      }
       const theBand = user.the_band ? (Array.isArray(user.the_band) ? user.the_band : []) : [];
       const headerImages = user.header_images
         ? Array.isArray(user.header_images)
@@ -198,8 +222,10 @@ export const handler: Handler = async (
         body: JSON.stringify({
           success: true,
           data: {
-            theBand,
+            userId,
+            username: resolvedUsername || usernameFromDb || '',
             password,
+            theBand,
             headerImages,
             siteName,
             role: user.role || 'user',

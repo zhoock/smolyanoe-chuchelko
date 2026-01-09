@@ -12,11 +12,20 @@ const initialState: AlbumsState = createInitialLangState<IAlbums[]>([]);
 
 export const fetchAlbums = createAsyncThunk<
   IAlbums[],
-  { lang: SupportedLang; force?: boolean },
+  { lang: SupportedLang; username?: string; force?: boolean },
   { rejectValue: string; state: RootState }
 >(
   'albums/fetchByLang',
-  async ({ lang }, { signal, rejectWithValue }) => {
+  async ({ lang, username }, { signal, rejectWithValue }) => {
+    const resolvedUsername =
+      username ||
+      (typeof window !== 'undefined'
+        ? window.location.pathname.split('/').filter(Boolean)[0] || ''
+        : '');
+
+    if (!resolvedUsername) {
+      return rejectWithValue('Username is required to load albums.');
+    }
     // Type guard для проверки структуры альбома
     const isValidAlbum = (
       album: unknown
@@ -157,7 +166,8 @@ export const fetchAlbums = createAsyncThunk<
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await fetch(`/api/albums?lang=${lang}`, {
+        const params = new URLSearchParams({ lang, username: resolvedUsername });
+        const response = await fetch(`/api/albums?${params.toString()}`, {
           signal: controller.signal,
           cache: 'no-store',
           headers,

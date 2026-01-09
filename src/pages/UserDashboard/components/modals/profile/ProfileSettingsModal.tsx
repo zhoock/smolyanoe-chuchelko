@@ -462,7 +462,7 @@ export function ProfileSettingsModal({
         setIsLoadingAboutText(true);
         try {
           // В админке используем токен для загрузки данных авторизованного пользователя
-          const theBand = await loadTheBandFromDatabase(currentLang || 'ru', true);
+          const theBand = await loadTheBandFromDatabase(currentLang || 'ru', { useAuth: true });
 
           const text = theBand && theBand.length > 0 ? theBand.join('\n') : '';
           setAboutText(text);
@@ -489,7 +489,7 @@ export function ProfileSettingsModal({
         setIsLoadingHeaderImages(true);
         try {
           // В админке используем токен для загрузки данных авторизованного пользователя
-          const images = await loadHeaderImagesFromDatabase(true);
+          const images = await loadHeaderImagesFromDatabase(undefined, true);
           // Гарантируем, что images всегда массив
           const safeImages = Array.isArray(images) ? images : [];
           console.log('📥 [ProfileSettingsModal] Header images загружены из БД:', {

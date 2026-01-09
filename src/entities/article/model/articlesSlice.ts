@@ -11,11 +11,20 @@ const initialState: ArticlesState = createInitialLangState<IArticles[]>([]);
 
 export const fetchArticles = createAsyncThunk<
   IArticles[],
-  { lang: SupportedLang; force?: boolean; userOnly?: boolean },
+  { lang: SupportedLang; username?: string; force?: boolean; userOnly?: boolean },
   { rejectValue: string; state: RootState }
 >(
   'articles/fetchByLang',
-  async ({ lang, userOnly = false }, { signal, rejectWithValue }) => {
+  async ({ lang, username, userOnly = false }, { signal, rejectWithValue }) => {
+    const resolvedUsername =
+      username ||
+      (typeof window !== 'undefined'
+        ? window.location.pathname.split('/').filter(Boolean)[0] || ''
+        : '');
+
+    if (!resolvedUsername) {
+      return rejectWithValue('Username is required to load posts.');
+    }
     const normalize = (data: any[]): IArticles[] =>
       data.map((article: any) => {
         // ВАЖНО: гарантируем, что id (UUID) всегда присутствует
@@ -49,7 +58,12 @@ export const fetchArticles = createAsyncThunk<
       try {
         // Если userOnly=true, загружаем только статьи текущего пользователя
         // Для этого передаем includeDrafts=true, что требует авторизации
-        const url = `/api/articles-api?lang=${lang}${userOnly ? '&includeDrafts=true' : ''}`;
+        const params = new URLSearchParams({ lang, username: resolvedUsername });
+        if (userOnly) {
+          params.set('includeDrafts', 'true');
+        }
+
+        const url = `/api/articles-api?${params.toString()}`;
 
         const response = await fetch(url, {
           signal,
@@ -103,6 +117,12 @@ export const fetchArticles = createAsyncThunk<
 
           return normalized;
         } else {
+          if (response.status === 404) {
+            console.warn(
+              '[fetchArticles] API returned 404 (user not found). Returning empty articles list.'
+            );
+            return [];
+          }
           // Если ответ не OK, выбрасываем ошибку
           throw new Error(`Failed to fetch articles. Status: ${response.status}`);
         }

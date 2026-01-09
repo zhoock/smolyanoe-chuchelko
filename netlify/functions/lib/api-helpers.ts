@@ -5,11 +5,8 @@
 
 import type { HandlerEvent } from '@netlify/functions';
 import { extractUserIdFromToken } from './jwt';
-import {
-  isSubdomainMultiTenancyEnabled,
-  extractSubdomainFromEvent,
-  getUserIdBySubdomain,
-} from './subdomain-helpers';
+import { getUserByUsername } from './username-helpers';
+import { getUserIdFromSubdomainOrToken } from './subdomain-helpers';
 
 /**
  * Стандартные CORS заголовки для всех API endpoints
@@ -119,35 +116,47 @@ export function getUserIdFromEvent(event: HandlerEvent): string | null {
 }
 
 /**
- * Получает user_id из поддомена (dev режим) или из токена
- * В dev режиме сначала проверяет поддомен, затем токен
- * В продакшн режиме использует только токен
- * @returns user_id или null
+ * Извлекает username из query параметров (если указан)
  */
-export async function getUserIdFromSubdomainOrEvent(event: HandlerEvent): Promise<string | null> {
-  // В продакшн режиме используем только токен
-  if (!isSubdomainMultiTenancyEnabled()) {
-    return getUserIdFromEvent(event);
+export function getUsernameFromEvent(event: HandlerEvent): string | null {
+  const usernameParam = event.queryStringParameters?.username;
+  if (!usernameParam) {
+    return null;
+  }
+  return usernameParam.trim().toLowerCase();
+}
+
+/**
+ * Получает user_id по username (из query) или из токена авторизации
+ */
+export async function getUserIdFromUsernameOrEvent(event: HandlerEvent): Promise<string | null> {
+  const username = getUsernameFromEvent(event);
+  if (username) {
+    const user = await getUserByUsername(username);
+    if (user) {
+      return user.id;
+    }
+    return null;
   }
 
-  // В dev режиме сначала проверяем поддомен
-  const subdomain = extractSubdomainFromEvent(event);
-  if (subdomain) {
-    const userId = await getUserIdBySubdomain(subdomain);
-    if (userId) {
-      console.log(
-        `🏠 [getUserIdFromSubdomainOrEvent] Using subdomain "${subdomain}" → userId: ${userId}`
-      );
-      return userId;
-    } else {
-      console.warn(
-        `⚠️ [getUserIdFromSubdomainOrEvent] Subdomain "${subdomain}" not found in database`
-      );
+  return getUserIdFromEvent(event);
+}
+
+/**
+ * @deprecated Используйте getUserIdFromUsernameOrEvent. Оставлено для обратной совместимости.
+ * В первую очередь пытается получить пользователя по username (query string),
+ * если не найден — использует старую логику поддоменов/токена.
+ */
+export async function getUserIdFromSubdomainOrEvent(event: HandlerEvent): Promise<string | null> {
+  const username = getUsernameFromEvent(event);
+  if (username) {
+    const user = await getUserByUsername(username);
+    if (user) {
+      return user.id;
     }
   }
 
-  // Если поддомен не найден или не указан, используем токен
-  return getUserIdFromEvent(event);
+  return getUserIdFromSubdomainOrToken(event, getUserIdFromEvent);
 }
 
 /**

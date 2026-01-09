@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isAuthenticated } from '@shared/lib/auth';
 import { loadUserProfile } from '@entities/user/lib/loadUserProfile';
 import { isAdmin } from '@shared/types/user';
-import { isSubdomainMultiTenancyEnabled, redirectToSubdomain } from '@shared/lib/subdomain';
 import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
@@ -26,11 +25,8 @@ export function AuthPage() {
     // Не делаем автоматический редирект, если показывается модалка выбора языка
     if (isAuthenticated() && !showLanguageModal) {
       // Если есть returnTo, перенаправляем туда, иначе в dashboard
-      if (returnTo) {
-        navigate(returnTo, { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      const fallbackPath = returnTo || '/';
+      navigate(fallbackPath, { replace: true });
     }
   }, [navigate, showLanguageModal, returnTo]);
 
@@ -46,35 +42,21 @@ export function AuthPage() {
 
   const handleRedirect = async () => {
     try {
-      // Проверяем, является ли пользователь админом
       const userProfile = await loadUserProfile();
-      const userIsAdmin = userProfile && isAdmin(userProfile);
+      const redirectBase = userProfile?.username ? `/${userProfile.username}` : '';
+      const defaultPath = redirectBase ? `${redirectBase}/dashboard` : '/';
+      const redirectPath = returnTo || defaultPath;
 
-      if (userIsAdmin) {
-        // Админы остаются на главном домене
-        const redirectPath = returnTo || '/dashboard';
-        navigate(redirectPath, { replace: true });
-      } else {
-        // Для обычных пользователей в dev режиме редиректим на поддомен
-        if (isSubdomainMultiTenancyEnabled()) {
-          const { getUser } = await import('@shared/lib/auth');
-          const user = getUser();
-          if (user && user.email) {
-            const subdomain = user.email.split('@')[0];
-            if (subdomain) {
-              redirectToSubdomain(subdomain, '/dashboard');
-              return;
-            }
-          }
-        }
-        // Если поддомены не включены или не удалось определить поддомен
-        const redirectPath = returnTo || '/dashboard';
-        navigate(redirectPath, { replace: true });
+      if (userProfile && isAdmin(userProfile)) {
+        navigate(returnTo || '/admin/musician-moderation', { replace: true });
+        return;
       }
+
+      navigate(redirectPath, { replace: true });
     } catch (error) {
       console.warn('⚠️ Failed to determine redirect path, using default:', error);
-      const redirectPath = returnTo || '/dashboard';
-      navigate(redirectPath, { replace: true });
+      const fallback = returnTo || '/';
+      navigate(fallback, { replace: true });
     }
   };
 

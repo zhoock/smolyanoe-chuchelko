@@ -9,6 +9,7 @@ export type MusicianStatus = 'none' | 'pending' | 'approved' | 'rejected';
 export interface UserProfile {
   id: string;
   email: string;
+  username: string;
   name?: string;
   role: UserRole;
   musicianStatus: MusicianStatus;

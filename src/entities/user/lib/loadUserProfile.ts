@@ -37,8 +37,9 @@ export async function loadUserProfile(): Promise<UserProfile | null> {
     const data = result.data;
 
     return {
-      id: user.id,
+      id: result.data.userId || user.id,
       email: user.email || '',
+      username: result.data.username || (user.email ? user.email.split('@')[0] : ''),
       name: user.name || undefined,
       role: (data.role as any) || 'user',
       musicianStatus: (data.musicianStatus as any) || 'none',

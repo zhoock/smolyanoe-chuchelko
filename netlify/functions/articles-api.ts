@@ -16,11 +16,12 @@ import {
   createSuccessMessageResponse,
   validateLang,
   getUserIdFromEvent,
-  getUserIdFromSubdomainOrEvent,
+  getUsernameFromEvent,
   requireAuth,
   parseJsonBody,
   handleError,
 } from './lib/api-helpers';
+import { getUserByUsername } from './lib/username-helpers';
 import type { ApiResponse, SupportedLang } from './lib/types';
 
 interface ArticleRow {
@@ -125,15 +126,14 @@ export const handler: Handler = async (
     const includeDrafts =
       event.httpMethod === 'GET' && event.queryStringParameters?.includeDrafts === 'true';
 
-    // Для публичных страниц (без includeDrafts) определяем пользователя по поддомену
-    // Для дашборда (includeDrafts=true) используем токен авторизации
-    let userId: string | null = null;
-    if (includeDrafts) {
-      userId = getUserIdFromEvent(event);
-    } else {
-      // На публичных страницах определяем пользователя по поддомену (в dev режиме)
-      userId = await getUserIdFromSubdomainOrEvent(event);
+    const username = getUsernameFromEvent(event);
+    const usernameOwner = username ? await getUserByUsername(username) : null;
+
+    if (username && !usernameOwner) {
+      return createErrorResponse(404, 'User not found');
     }
+
+    const authUserId = getUserIdFromEvent(event);
 
     if (event.httpMethod === 'GET') {
       const { lang } = event.queryStringParameters || {};
@@ -142,25 +142,35 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
+      if (!usernameOwner) {
+        return createErrorResponse(400, 'Username parameter is required.');
+      }
+
+      const targetUserId = usernameOwner.id;
+
       // Проверяем, нужно ли включать черновики (для редактирования в админке, требует авторизации)
       // #region agent log
       if (includeDrafts) {
         console.log('[articles-api] GET with includeDrafts:', {
           includeDrafts,
-          hasUserId: !!userId,
-          userId,
+          hasAuthUserId: !!authUserId,
+          authUserId,
+          requestedUserId: targetUserId,
           hasAuthHeader: !!(event.headers?.authorization || event.headers?.Authorization),
         });
       } else {
         console.log('[articles-api] GET public articles:', {
-          hasUserId: !!userId,
-          userId,
+          requestedUserId: targetUserId,
           host: event.headers?.host || event.headers?.Host,
         });
       }
       // #endregion
-      if (includeDrafts && !userId) {
+      if (includeDrafts && !authUserId) {
         return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
+      }
+
+      if (includeDrafts && authUserId !== targetUserId) {
+        return createErrorResponse(403, 'Access denied.');
       }
 
       // Возвращаем статьи для указанного языка
@@ -180,10 +190,10 @@ export const handler: Handler = async (
           is_draft
         FROM articles
         WHERE lang = $1
-          ${userId ? `AND user_id = $2` : ''}
+          AND user_id = $2
           ${includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)'}
         ORDER BY article_id, updated_at DESC`,
-        userId ? [lang, userId] : [lang]
+        [lang, targetUserId]
       );
 
       const articles = articlesResult.rows.map(mapArticleToApiFormat);
@@ -192,8 +202,14 @@ export const handler: Handler = async (
     }
 
     if (event.httpMethod === 'POST') {
+      const userId = requireAuth(event);
+
       if (!userId) {
         return createErrorResponse(401, 'Unauthorized');
+      }
+
+      if (usernameOwner && usernameOwner.id !== userId) {
+        return createErrorResponse(403, 'Access denied.');
       }
 
       const data = parseJsonBody<CreateArticleRequest>(event.body, {} as CreateArticleRequest);
@@ -242,15 +258,26 @@ export const handler: Handler = async (
     }
 
     if (event.httpMethod === 'PUT') {
+      const userId = requireAuth(event);
+
       console.log('[articles-api PUT] Request received', {
         hasUserId: !!userId,
-        userId: userId?.substring(0, 10) + '...',
+        userId: userId ? `${userId.substring(0, 10)}...` : null,
         queryParams: event.queryStringParameters,
       });
 
       if (!userId) {
         console.log('[articles-api PUT] Unauthorized: no userId');
         return createErrorResponse(401, 'Unauthorized');
+      }
+
+      if (usernameOwner && usernameOwner.id !== userId) {
+        console.log('[articles-api PUT] Access denied: username mismatch', {
+          username,
+          usernameOwnerId: usernameOwner.id,
+          userId,
+        });
+        return createErrorResponse(403, 'Access denied.');
       }
 
       const { id } = event.queryStringParameters || {};
@@ -388,8 +415,14 @@ export const handler: Handler = async (
     }
 
     if (event.httpMethod === 'DELETE') {
+      const userId = requireAuth(event);
+
       if (!userId) {
         return createErrorResponse(401, 'Unauthorized');
+      }
+
+      if (usernameOwner && usernameOwner.id !== userId) {
+        return createErrorResponse(403, 'Access denied.');
       }
 
       const { id } = event.queryStringParameters || {};

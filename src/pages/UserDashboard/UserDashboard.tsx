@@ -85,6 +85,7 @@ import {
   hasFullAccess,
 } from '@shared/types/user';
 import './UserDashboard.style.scss';
+import { useProfileContext } from '@shared/context/ProfileContext';
 
 // Компонент для сортируемого трека
 interface SortableTrackItemProps {
@@ -620,6 +621,7 @@ function SortableTrackItem({
 function UserDashboard() {
   const { lang, setLang } = useLang();
   const dispatch = useAppDispatch();
+  const { username } = useProfileContext();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1030,23 +1032,31 @@ function UserDashboard() {
               imageKey: finalImageKey,
             });
 
-            const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                articleId: article.articleId,
-                nameArticle: article.nameArticle,
-                description: article.description,
-                img: finalImageKey,
-                date: article.date,
-                details: article.details,
-                lang: lang,
-                isDraft: article.isDraft ?? true,
-              }),
-            });
+            if (!username) {
+              console.warn('Username is not available, cannot update article cover.');
+              return;
+            }
+
+            const response = await fetch(
+              `/api/articles-api?id=${encodeURIComponent(article.id)}&username=${encodeURIComponent(username)}`,
+              {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  articleId: article.articleId,
+                  nameArticle: article.nameArticle,
+                  description: article.description,
+                  img: finalImageKey,
+                  date: article.date,
+                  details: article.details,
+                  lang: lang,
+                  isDraft: article.isDraft ?? true,
+                }),
+              }
+            );
 
             if (response.ok) {
               console.log('✅ [handleArticleCoverFileUpload] Обложка успешно сохранена в БД');
@@ -1071,7 +1081,7 @@ function UserDashboard() {
 
               // Обновляем список статей - после этого статья будет содержать обновленный img
               // И компонент перерендерится с новым img из Redux store
-              await dispatch(fetchArticles({ lang, force: true, userOnly: true }));
+              await dispatch(fetchArticles({ lang, username, force: true, userOnly: true }));
             } else {
               const errorData = await response.json().catch(() => ({}));
               console.error('❌ [handleArticleCoverFileUpload] Ошибка сохранения обложки:', {
@@ -1185,7 +1195,7 @@ function UserDashboard() {
       hasFullAccess(userProfile) &&
       (albumsStatus === 'idle' || albumsStatus === 'failed')
     ) {
-      dispatch(fetchAlbums({ lang })).catch((error: any) => {
+      dispatch(fetchAlbums({ lang, username })).catch((error: any) => {
         // ConditionError - это нормально, condition отменил запрос
         if (error?.name === 'ConditionError') {
           return;
@@ -1203,7 +1213,7 @@ function UserDashboard() {
       activeTab === 'posts' &&
       (articlesStatus === 'idle' || articlesStatus === 'failed')
     ) {
-      dispatch(fetchArticles({ lang, userOnly: true })).catch((error: any) => {
+      dispatch(fetchArticles({ lang, username, userOnly: true })).catch((error: any) => {
         if (error?.name === 'ConditionError') {
           return;
         }
@@ -1339,7 +1349,7 @@ function UserDashboard() {
       }
 
       // Обновляем данные из БД для синхронизации
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
       console.log('✅ Tracks reordered successfully');
     } catch (error) {
       console.error('❌ Error reordering tracks:', error);
@@ -1428,7 +1438,7 @@ function UserDashboard() {
         variant: 'error',
       });
       // Откатываем изменения в локальном состоянии
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
     }
   };
 
@@ -1464,7 +1474,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
 
       console.log('✅ Track deleted successfully:', { albumId, trackId });
     } catch (error) {
@@ -1541,13 +1551,27 @@ function UserDashboard() {
       }
 
       // Удаляем статью через API
-      const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      if (!username) {
+        setAlertModal({
+          isOpen: true,
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `/api/articles-api?id=${encodeURIComponent(article.id)}&username=${encodeURIComponent(username)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -1555,7 +1579,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchArticles({ lang, force: true, userOnly: true })).unwrap();
+      await dispatch(fetchArticles({ lang, username, force: true, userOnly: true })).unwrap();
 
       // Закрываем расширенный вид, если удаленная статья была открыта
       if (expandedArticleId === article.articleId) {
@@ -1607,7 +1631,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
 
       // Удаляем альбом из локального состояния
       setAlbumsData((prev) => prev.filter((a) => a.id !== albumId));
@@ -1725,7 +1749,7 @@ function UserDashboard() {
         try {
           // Небольшая задержка для гарантии обновления БД
           await new Promise((resolve) => setTimeout(resolve, 300));
-          await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+          await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
           console.log('✅ [handleTrackUpload] Albums refreshed from database');
         } catch (fetchError: any) {
           // ConditionError - это нормально, condition отменил запрос
@@ -3138,7 +3162,7 @@ function UserDashboard() {
           onSave={async () => {
             // Перезагружаем альбомы из БД, чтобы получить актуальные синхронизированные тексты
             try {
-              await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+              await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
             } catch (error) {
               console.error('❌ Error reloading albums after sync save:', error);
             }
@@ -3231,7 +3255,7 @@ function UserDashboard() {
                 updatedAlbumId: updatedAlbum?.albumId,
                 isNewAlbum: !editAlbumModal.albumId,
               });
-              const result = await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+              const result = await dispatch(fetchAlbums({ lang, username, force: true })).unwrap();
               console.log('✅ [UserDashboard] Albums fetched:', {
                 count: result?.length || 0,
                 albumIds: result?.map((a: IAlbums) => a.albumId) || [],
