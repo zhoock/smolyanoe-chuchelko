@@ -305,6 +305,7 @@ export function HelpArticlePage() {
             formatDate={formatDate}
             lang={locale}
             createAnchor={createAnchor}
+            buildProfilePath={buildProfilePath}
           />
         </div>
       </div>
@@ -328,7 +329,8 @@ function ArticleContent({
   formatDate,
   lang,
   createAnchor,
-}: ArticleContentProps) {
+  buildProfilePath,
+}: ArticleContentProps & { buildProfilePath: (path?: string) => string }) {
   if (!article) {
     if (status === 'loading' || status === 'idle') {
       return <ArticleSkeleton />;

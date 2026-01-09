@@ -172,6 +172,7 @@ export function ArticlePage() {
           formatDate={formatDate}
           lang={locale}
           renderBlock={Block}
+          buildProfilePath={buildProfilePath}
         />
       </div>
     </section>
@@ -185,6 +186,7 @@ type ArticleContentProps = {
   formatDate: (value: string) => string;
   lang: LocaleKey;
   renderBlock: (details: ArticledetailsProps) => JSX.Element;
+  buildProfilePath: (path?: string) => string;
 };
 
 function ArticleContent({
@@ -194,6 +196,7 @@ function ArticleContent({
   formatDate,
   lang,
   renderBlock,
+  buildProfilePath,
 }: ArticleContentProps) {
   if (!article) {
     if (status === 'loading' || status === 'idle') {
