@@ -118,6 +118,7 @@ export default function EditSyncLyrics({
           artist: album.artist,
           fullName: album.fullName,
           cover: album.cover ?? null,
+          userId: album.userId ?? null,
         })
       );
       dispatch(

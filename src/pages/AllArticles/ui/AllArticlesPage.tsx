@@ -1,6 +1,6 @@
 // src/pages/AllArticles/ui/AllArticlesPage.tsx
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArticlePreview } from '@entities/article';
@@ -10,6 +10,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import '@entities/article/ui/style.scss';
 import './style.scss';
 
@@ -21,6 +22,17 @@ export function AllArticlesPage() {
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const { username } = useProfileContext();
+  const basePath = useMemo(() => `/${username}`, [username]);
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return basePath;
+      }
+      return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [basePath]
+  );
 
   const [displayedCount, setDisplayedCount] = useState(BATCH_SIZE);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -82,7 +94,7 @@ export function AllArticlesPage() {
       <div className="wrapper">
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
-            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
+            <li>{ui?.links?.home ? <Link to={buildProfilePath()}>{ui.links.home}</Link> : null}</li>
           </ul>
         </nav>
 

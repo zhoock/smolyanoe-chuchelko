@@ -155,6 +155,9 @@ export const PlayerShell: React.FC = () => {
     };
 
     const playbackTime = savedState.time ?? { current: 0, duration: NaN };
+    const persistedAlbumMeta = savedState.albumMeta
+      ? { ...savedState.albumMeta, userId: savedState.albumMeta.userId ?? null }
+      : null;
 
     dispatch(
       playerActions.hydrateFromPersistedState({
@@ -167,7 +170,7 @@ export const PlayerShell: React.FC = () => {
           savedState.albumMeta?.album ??
           savedState.albumMeta?.fullName ??
           null,
-        albumMeta: savedState.albumMeta ?? null,
+        albumMeta: persistedAlbumMeta,
         sourceLocation: savedState.sourceLocation ?? fallbackSourceLocation,
         volume: savedState.volume ?? 50,
         isPlaying: savedState.isPlaying ?? false,
@@ -308,6 +311,7 @@ export const PlayerShell: React.FC = () => {
 
     return {
       albumId: albumMeta.albumId ?? undefined,
+      userId: albumMeta.userId ?? null,
       artist: albumMeta.artist ?? '',
       album: albumMeta.album ?? '',
       fullName:
@@ -508,6 +512,7 @@ export const PlayerShell: React.FC = () => {
         <MiniPlayer
           title={currentTrack.title}
           cover={albumMeta.cover}
+          userId={albumMeta.userId}
           isPlaying={isPlaying}
           onToggle={handleToggle}
           onExpand={handleExpand}

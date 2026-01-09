@@ -10,7 +10,7 @@ export function ArticlePreview({ articleId, userId, img, nameArticle, date }: Ar
   const { lang } = useLang() as { lang: LocaleKey };
   const { formatDate } = formatDateInWords[lang];
   const { username } = useProfileContext();
-  const articleHref = `/${username}/articles/${articleId}`;
+  const articleHref = `/${username}/posts/${articleId}`;
 
   // Используем userId из статьи для загрузки изображения
   const imageUrl = userId

@@ -231,7 +231,7 @@ export function HelpArticlePage() {
           className={`help-article__sidebar ${isSidebarOpen ? 'help-article__sidebar--open' : 'help-article__sidebar--closed'}`}
         >
           <nav className="help-article__nav">
-            <Link to={buildProfilePath('/articles')} className="help-article__back-link">
+            <Link to={buildProfilePath('/posts')} className="help-article__back-link">
               {lang === 'en' ? '« All articles' : '« Все статьи'}
             </Link>
 
@@ -244,7 +244,7 @@ export function HelpArticlePage() {
                     return (
                       <li key={article.id} className="help-article__article-item">
                         <Link
-                          to={buildProfilePath(`/help/articles/${article.id}`)}
+                          to={buildProfilePath(`/help/${article.id}`)}
                           className={`help-article__article-link ${isActive ? 'help-article__article-link--active' : ''}`}
                           aria-current={isActive ? 'page' : undefined}
                           onClick={() => {
@@ -320,6 +320,7 @@ type ArticleContentProps = {
   formatDate: (value: string) => string;
   lang: LocaleKey;
   createAnchor: (text: string) => string;
+  buildProfilePath: (path?: string) => string;
 };
 
 function ArticleContent({
@@ -330,7 +331,7 @@ function ArticleContent({
   lang,
   createAnchor,
   buildProfilePath,
-}: ArticleContentProps & { buildProfilePath: (path?: string) => string }) {
+}: ArticleContentProps) {
   if (!article) {
     if (status === 'loading' || status === 'idle') {
       return <ArticleSkeleton />;
@@ -351,7 +352,7 @@ function ArticleContent({
 
   const seoTitle = article.nameArticle;
   const seoDesc = article.description;
-  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/help/articles/${article.articleId}`)}`;
+  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/help/${article.articleId}`)}`;
   const canonical = lang === 'en' ? `${canonicalBase}?lang=en` : canonicalBase;
 
   // Создаем Block с доступом к createAnchor

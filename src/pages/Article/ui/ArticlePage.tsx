@@ -53,7 +53,7 @@ export function ArticlePage() {
     const previousPath = sessionStorage.getItem('previousPath');
     if (previousPath) {
       // Проверяем, что предыдущий путь - это страница списка статей
-      return previousPath.startsWith(buildProfilePath('/articles'));
+      return previousPath.startsWith(buildProfilePath('/posts'));
     }
 
     // Fallback: проверяем document.referrer (работает при полной перезагрузке страницы)
@@ -67,7 +67,7 @@ export function ArticlePage() {
       if (referrerUrl.origin !== origin) return false;
 
       const pathname = referrerUrl.pathname;
-      return pathname.startsWith(buildProfilePath('/articles'));
+      return pathname.startsWith(buildProfilePath('/posts'));
     } catch {
       return false;
     }
@@ -159,7 +159,7 @@ export function ArticlePage() {
             {/* Показываем "Все статьи" только если пришли со страницы списка */}
             {cameFromArticlesPage && ui?.titles?.articles && (
               <li>
-                <Link to={buildProfilePath('/articles')}>{ui.titles.articles}</Link>
+                <Link to={buildProfilePath('/posts')}>{ui.titles.articles}</Link>
               </li>
             )}
           </ul>
@@ -218,7 +218,7 @@ function ArticleContent({
 
   const seoTitle = article.nameArticle;
   const seoDesc = article.description;
-  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/articles/${article.articleId}`)}`;
+  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/posts/${article.articleId}`)}`;
   const canonical = lang === 'en' ? `${canonicalBase}?lang=en` : canonicalBase;
 
   return (

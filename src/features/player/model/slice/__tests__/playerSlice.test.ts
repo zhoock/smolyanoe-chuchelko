@@ -661,6 +661,7 @@ describe('playerSlice', () => {
               artist: null,
               fullName: null,
               cover: null,
+              userId: null,
             },
           },
         },
@@ -689,6 +690,7 @@ describe('playerSlice', () => {
         artist: 'Test Artist',
         fullName: 'Test Artist — Test Album',
         cover: 'cover',
+        userId: null,
       };
 
       store.dispatch(playerActions.setAlbumMeta(albumMeta));
@@ -711,6 +713,7 @@ describe('playerSlice', () => {
               artist: 'Test Artist',
               fullName: 'Test Artist — Test Album',
               cover: 'cover',
+              userId: null,
             },
           },
         },
@@ -736,6 +739,7 @@ describe('playerSlice', () => {
               artist: 'Old Artist',
               fullName: 'Old Artist — Old Album',
               cover: null,
+              userId: null,
             },
           },
         },
@@ -747,6 +751,7 @@ describe('playerSlice', () => {
         artist: 'New Artist',
         fullName: 'New Artist — New Album',
         cover: 'new-cover',
+        userId: 'user-2',
       };
 
       store.dispatch(playerActions.setAlbumMeta(newAlbumMeta));
@@ -1078,6 +1083,7 @@ describe('playerSlice', () => {
             artist: 'Test Artist',
             fullName: 'Test Artist — Test Album',
             cover: null,
+            userId: 'user-1',
           },
           sourceLocation: {
             pathname: '/album/test-album',

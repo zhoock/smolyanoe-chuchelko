@@ -16,6 +16,7 @@ export interface PlayerAlbumMeta {
   artist: string | null;
   fullName: string | null;
   cover: string | null;
+  userId: string | null;
 }
 
 export interface PlayerSourceLocation {

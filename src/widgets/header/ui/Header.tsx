@@ -25,6 +25,7 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
   const navigate = useNavigate();
   const user = getUser();
   const isAuth = isAuthenticated();
+  const isProfileButtonVisible = false;
 
   // Получаем URL аватара пользователя из localStorage (если был загружен)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -131,7 +132,8 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
         </div>
 
         {/* Иконка профиля */}
-        {isAuth && (
+        {/* TODO(Codex): временно скрываем кнопку профиля */}
+        {isAuth && isProfileButtonVisible && (
           <button
             className="header__profile-button"
             onClick={() => navigate('/dashboard')}
@@ -140,7 +142,7 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
           >
             {avatarUrl ? (
               <img
-                src={avatarUrl}
+                src={avatarUrl ?? ''}
                 alt={user?.name || user?.email || 'Profile'}
                 className="header__profile-avatar"
               />

@@ -8,6 +8,11 @@ export interface ImageUrlOptions {
   useSupabaseStorage?: boolean; // Использовать Supabase Storage вместо локальных файлов
 }
 
+export interface AudioUrlOptions {
+  userId?: string | null;
+  useSupabaseStorage?: boolean;
+}
+
 /**
  * Проверяет, включено ли использование Supabase Storage
  */
@@ -106,7 +111,11 @@ export function getUserImageUrl(
  * getUserAudioUrl('/audio/23/01-Barnums-Fijian-Mermaid-1644.wav') // '/audio/23/01-Barnums-Fijian-Mermaid-1644.wav' или Supabase Storage URL
  * getUserAudioUrl('EP_Mixer/01_PPB_drums.mp3', true) // Supabase Storage URL
  */
-export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean): string {
+export function getUserAudioUrl(audioPath: string, options?: boolean | AudioUrlOptions): string {
+  if (!audioPath) {
+    return '';
+  }
+
   // Если это уже полный URL (http:// или https://), возвращаем как есть
   if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
     return audioPath;
@@ -115,26 +124,39 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   // Убираем префикс /audio/ если он есть
   const normalizedPath = audioPath.startsWith('/audio/') ? audioPath.slice(7) : audioPath;
 
+  if (!normalizedPath) {
+    return '';
+  }
+
+  let useSupabaseStorage: boolean | undefined;
+  let explicitUserId: string | null | undefined;
+
+  if (typeof options === 'boolean') {
+    useSupabaseStorage = options;
+  } else if (options) {
+    useSupabaseStorage = options.useSupabaseStorage;
+    explicitUserId = options.userId ?? null;
+  }
+
   // Проверяем, нужно ли использовать Supabase Storage
   const shouldUseStorage =
-    useSupabaseStorage !== undefined
-      ? useSupabaseStorage
-      : typeof window !== 'undefined'
-        ? import.meta.env.VITE_USE_SUPABASE_STORAGE === 'true'
-        : process.env.USE_SUPABASE_STORAGE === 'true';
+    useSupabaseStorage !== undefined ? useSupabaseStorage : shouldUseSupabaseStorage();
 
   if (shouldUseStorage) {
     // Используем Supabase Storage
     // normalizedPath может быть с подпапками, например "23/01-Barnums-Fijian-Mermaid-1644.wav"
-    const userId = getUserUserId() || CURRENT_USER_CONFIG.userId;
+    const userId = explicitUserId ?? getUserUserId() ?? CURRENT_USER_CONFIG.userId;
     return getStorageFileUrl({
-      userId,
+      userId: userId ?? undefined,
       category: 'audio',
       fileName: normalizedPath,
     });
   }
 
   // Локальные файлы
+  if (normalizedPath.startsWith('/')) {
+    return normalizedPath;
+  }
   return `/audio/${normalizedPath}`;
 }
 

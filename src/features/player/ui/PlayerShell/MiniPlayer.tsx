@@ -16,6 +16,7 @@ interface ForwardHandlers {
 interface MiniPlayerProps {
   title: string;
   cover?: string | null;
+  userId?: string | null;
   isPlaying: boolean;
   onToggle: () => void;
   onExpand: () => void;
@@ -26,6 +27,7 @@ interface MiniPlayerProps {
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   title,
   cover,
+  userId,
   isPlaying,
   onToggle,
   onExpand,
@@ -49,7 +51,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     >
       <div className="mini-player__cover">
         {cover ? (
-          <AlbumCover img={cover} fullName="" size={64} densities={[1, 2]} sizes="64px" />
+          <AlbumCover
+            img={cover}
+            fullName=""
+            userId={userId ?? undefined}
+            size={64}
+            densities={[1, 2]}
+            sizes="64px"
+          />
         ) : (
           <div className="mini-player__cover-placeholder" aria-hidden />
         )}

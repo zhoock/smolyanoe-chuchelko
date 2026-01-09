@@ -85,7 +85,7 @@ export function ArticlesSection() {
 
             {hasMore && (
               <div className="articles__more">
-                <Link to={buildProfilePath('/articles')} className="articles__more-button">
+                <Link to={buildProfilePath('/posts')} className="articles__more-button">
                   {ui?.buttons?.viewAllArticles?.replace('{count}', String(allArticles.length)) ??
                     `Все статьи (${allArticles.length})`}
                 </Link>

@@ -16,11 +16,26 @@ import './style.scss';
 /**
  * Преобразует треки, заменяя пути к аудио файлам на Supabase Storage URL, если это включено
  */
-function transformTracksForStorage(tracks: TracksProps[]): TracksProps[] {
-  return tracks.map((track) => ({
-    ...track,
-    src: getUserAudioUrl(track.src),
-  }));
+function transformTracksForStorage(
+  tracks: TracksProps[] | undefined,
+  ownerUserId?: string | null
+): TracksProps[] {
+  if (!tracks || tracks.length === 0) {
+    return [];
+  }
+
+  return tracks.map((track) => {
+    if (!track?.src) {
+      return track;
+    }
+
+    return {
+      ...track,
+      src: getUserAudioUrl(track.src, {
+        userId: ownerUserId ?? undefined,
+      }),
+    };
+  });
 }
 
 /**
@@ -70,7 +85,9 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
             Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
           );
 
-          dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+          dispatch(
+            playerActions.setPlaylist(transformTracksForStorage(album.tracks, album.userId))
+          );
           dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
           dispatch(
             playerActions.setAlbumInfo({
@@ -85,6 +102,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
               artist: album.artist,
               fullName: album.fullName ?? `${album.artist} — ${album.album}`,
               cover: album.cover ?? null,
+              userId: album.userId ?? null,
             })
           );
           dispatch(
@@ -96,7 +114,9 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           dispatch(playerActions.setVolume(savedState.volume));
           dispatch(playerActions.pause());
         } else {
-          dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+          dispatch(
+            playerActions.setPlaylist(transformTracksForStorage(album.tracks, album.userId))
+          );
           dispatch(playerActions.setCurrentTrackIndex(0));
           dispatch(
             playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album })
@@ -108,6 +128,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
               artist: album.artist,
               fullName: album.fullName ?? `${album.artist} — ${album.album}`,
               cover: album.cover ?? null,
+              userId: album.userId ?? null,
             })
           );
           dispatch(
@@ -164,7 +185,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       const playlist = album.tracks || [];
       const selectedTrack = playlist[trackIndex];
 
-      dispatch(playerActions.setPlaylist(transformTracksForStorage(playlist)));
+      dispatch(playerActions.setPlaylist(transformTracksForStorage(playlist, album.userId)));
 
       if (selectedTrack) {
         const currentState = store.getState().player;
@@ -187,6 +208,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           artist: album.artist,
           fullName: album.fullName ?? `${album.artist} — ${album.album}`,
           cover: album.cover ?? null,
+          userId: album.userId ?? null,
         })
       );
       dispatch(
