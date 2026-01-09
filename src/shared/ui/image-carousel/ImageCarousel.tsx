@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getUserImageUrl, getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
+import { buildUserMediaUrl } from '@shared/api/albums';
 import type { ImageCategory } from '@config/user';
 import './style.scss';
 
@@ -198,13 +198,10 @@ export function ImageCarousel({ images, alt, category = 'articles', userId }: Im
 
       <div ref={containerRef} className="image-carousel__container">
         {images.map((img, index) => {
-          const imageUrl = userId
-            ? getImageUrl(img, '.jpg', {
-                userId,
-                category,
-                useSupabaseStorage: shouldUseSupabaseStorage(),
-              })
-            : getUserImageUrl(img, category);
+          const imageUrl = buildUserMediaUrl(img, {
+            userId,
+            defaultCategory: category,
+          });
 
           return (
             <div key={img} className="image-carousel__slide">

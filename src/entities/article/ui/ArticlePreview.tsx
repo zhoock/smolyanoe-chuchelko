@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
-import { getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
+import { buildUserMediaUrl } from '@shared/api/albums';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import { useProfileContext } from '@shared/context/ProfileContext';
@@ -13,13 +13,10 @@ export function ArticlePreview({ articleId, userId, img, nameArticle, date }: Ar
   const articleHref = `/${username}/posts/${articleId}`;
 
   // Используем userId из статьи для загрузки изображения
-  const imageUrl = userId
-    ? getImageUrl(img, '.jpg', {
-        userId,
-        category: 'articles',
-        useSupabaseStorage: shouldUseSupabaseStorage(),
-      })
-    : getImageUrl(img, '.jpg'); // Fallback для обратной совместимости
+  const imageUrl = buildUserMediaUrl(img, {
+    userId: userId ?? undefined,
+    defaultCategory: 'articles',
+  });
 
   return (
     <article className="articles__card">

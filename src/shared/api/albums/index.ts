@@ -160,6 +160,70 @@ export function getUserAudioUrl(audioPath: string, options?: boolean | AudioUrlO
   return `/audio/${normalizedPath}`;
 }
 
+const IMAGE_CATEGORIES: ImageCategory[] = [
+  'albums',
+  'articles',
+  'profile',
+  'uploads',
+  'stems',
+  'audio',
+  'hero',
+];
+
+function isKnownCategory(value: string): value is ImageCategory {
+  return IMAGE_CATEGORIES.includes(value as ImageCategory);
+}
+
+export function buildUserMediaUrl(
+  img: string,
+  options?: { userId?: string | null; defaultCategory?: ImageCategory }
+): string {
+  if (!img) {
+    return '';
+  }
+
+  const trimmed = img.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:')
+  ) {
+    return trimmed;
+  }
+
+  const defaultCategory = options?.defaultCategory ?? 'articles';
+  const effectiveUserId = options?.userId ?? getUserUserId() ?? CURRENT_USER_CONFIG.userId;
+
+  const normalized = trimmed.replace(/^\/+/, '');
+
+  if (normalized.startsWith('users/')) {
+    return getImageUrl(normalized, '', {
+      userId: effectiveUserId ?? undefined,
+      category: defaultCategory,
+      useSupabaseStorage: shouldUseSupabaseStorage(),
+    });
+  }
+
+  const segments = normalized.split('/');
+  let category: ImageCategory = defaultCategory;
+  let fileName = normalized;
+
+  if (segments.length > 1 && isKnownCategory(segments[0])) {
+    category = segments[0];
+    fileName = segments.slice(1).join('/');
+  }
+
+  return getImageUrl(fileName, '', {
+    userId: effectiveUserId ?? undefined,
+    category,
+    useSupabaseStorage: shouldUseSupabaseStorage(),
+  });
+}
+
 /**
  * Форматирует дату для отображения в формате DD/MM/YYYY
  * Поддерживает ISO формат (YYYY-MM-DD) и другие форматы дат

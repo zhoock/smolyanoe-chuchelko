@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { getUserImageUrl } from '@shared/api/albums';
+import { buildUserMediaUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { ArticleSkeleton } from '@pages/Article/ui/ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -73,7 +73,7 @@ export function HelpArticlePage() {
   const helpArticles = useAppSelector((state) => selectHelpArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
-  const { username } = useProfileContext();
+  const { username, profile } = useProfileContext();
   const basePath = useMemo(() => `/${username}`, [username]);
   const buildProfilePath = useCallback(
     (path: string = '') => {
@@ -84,6 +84,7 @@ export function HelpArticlePage() {
     },
     [basePath]
   );
+  const ownerUserId = useMemo(() => profile?.userId ?? null, [profile?.userId]);
 
   // Состояние видимости сайдбара (сохраняем в localStorage)
   // На мобильных устройствах по умолчанию скрыт, на десктопе - открыт
@@ -306,6 +307,7 @@ export function HelpArticlePage() {
             lang={locale}
             createAnchor={createAnchor}
             buildProfilePath={buildProfilePath}
+            ownerUserId={ownerUserId}
           />
         </div>
       </div>
@@ -321,6 +323,7 @@ type ArticleContentProps = {
   lang: LocaleKey;
   createAnchor: (text: string) => string;
   buildProfilePath: (path?: string) => string;
+  ownerUserId: string | null;
 };
 
 function ArticleContent({
@@ -331,6 +334,7 @@ function ArticleContent({
   lang,
   createAnchor,
   buildProfilePath,
+  ownerUserId,
 }: ArticleContentProps) {
   if (!article) {
     if (status === 'loading' || status === 'idle') {
@@ -366,10 +370,18 @@ function ArticleContent({
         {details.img && (
           <div className="uncollapse">
             {Array.isArray(details.img) ? (
-              <ImageCarousel images={details.img} alt={details.alt ?? ''} category="articles" />
+              <ImageCarousel
+                images={details.img}
+                alt={details.alt ?? ''}
+                category="articles"
+                userId={ownerUserId ?? undefined}
+              />
             ) : (
               <img
-                src={getUserImageUrl(details.img, 'articles')}
+                src={buildUserMediaUrl(details.img, {
+                  userId: ownerUserId ?? undefined,
+                  defaultCategory: 'articles',
+                })}
                 alt={details.alt ?? ''}
                 loading="lazy"
                 decoding="async"

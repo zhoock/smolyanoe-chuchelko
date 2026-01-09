@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-import { getUserImageUrl, getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
+import { buildUserMediaUrl } from '@shared/api/albums';
 import type { ArticledetailsProps } from '@models';
 import { ArticleSkeleton } from './ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -33,7 +33,7 @@ export function ArticlePage() {
   const article = useAppSelector((state) => selectArticleById(state, lang, articleId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
-  const { username } = useProfileContext();
+  const { username, profile } = useProfileContext();
   const basePath = useMemo(() => `/${username}`, [username]);
   const buildProfilePath = useCallback(
     (path: string = '') => {
@@ -43,6 +43,11 @@ export function ArticlePage() {
       return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
     },
     [basePath]
+  );
+
+  const ownerUserId = useMemo(
+    () => article?.userId ?? profile?.userId ?? null,
+    [article?.userId, profile?.userId]
   );
 
   // Определяем, пришли ли мы со страницы списка статей
@@ -102,22 +107,18 @@ export function ArticlePage() {
               images={carouselImages}
               alt={alt ?? ''}
               category="articles"
-              userId={article?.userId}
+              userId={ownerUserId ?? undefined}
             />
           </div>
         )}
         {singleImage && (
           <div className="uncollapse">
+            {/* Унифицированный резолвер поддерживает hero/, articles/, users/<uuid>/... и абсолютные URL */}
             <img
-              src={
-                article?.userId
-                  ? getImageUrl(singleImage, '', {
-                      userId: article.userId,
-                      category: 'articles',
-                      useSupabaseStorage: shouldUseSupabaseStorage(),
-                    })
-                  : getUserImageUrl(singleImage, 'articles')
-              }
+              src={buildUserMediaUrl(singleImage, {
+                userId: ownerUserId ?? undefined,
+                defaultCategory: 'articles',
+              })}
               alt={alt ?? ''}
               loading="lazy"
               decoding="async"
