@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
@@ -20,6 +20,7 @@ import {
 } from '@entities/helpArticle';
 import type { RequestStatus } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './style.scss';
 
 // Категории статей помощи
@@ -72,6 +73,17 @@ export function HelpArticlePage() {
   const helpArticles = useAppSelector((state) => selectHelpArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
+  const { username } = useProfileContext();
+  const basePath = useMemo(() => `/${username}`, [username]);
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return basePath;
+      }
+      return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [basePath]
+  );
 
   // Состояние видимости сайдбара (сохраняем в localStorage)
   // На мобильных устройствах по умолчанию скрыт, на десктопе - открыт
@@ -219,7 +231,7 @@ export function HelpArticlePage() {
           className={`help-article__sidebar ${isSidebarOpen ? 'help-article__sidebar--open' : 'help-article__sidebar--closed'}`}
         >
           <nav className="help-article__nav">
-            <Link to="/articles" className="help-article__back-link">
+            <Link to={buildProfilePath('/articles')} className="help-article__back-link">
               {lang === 'en' ? '« All articles' : '« Все статьи'}
             </Link>
 
@@ -232,7 +244,7 @@ export function HelpArticlePage() {
                     return (
                       <li key={article.id} className="help-article__article-item">
                         <Link
-                          to={`/help/articles/${article.id}`}
+                          to={buildProfilePath(`/help/articles/${article.id}`)}
                           className={`help-article__article-link ${isActive ? 'help-article__article-link--active' : ''}`}
                           aria-current={isActive ? 'page' : undefined}
                           onClick={() => {
@@ -337,10 +349,8 @@ function ArticleContent({
 
   const seoTitle = article.nameArticle;
   const seoDesc = article.description;
-  const canonical =
-    lang === 'en'
-      ? `https://smolyanoechuchelko.ru/en/help/articles/${article.articleId}`
-      : `https://smolyanoechuchelko.ru/help/articles/${article.articleId}`;
+  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/help/articles/${article.articleId}`)}`;
+  const canonical = lang === 'en' ? `${canonicalBase}?lang=en` : canonicalBase;
 
   // Создаем Block с доступом к createAnchor
   const BlockWithAnchor = (details: ArticledetailsProps) => {

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
@@ -17,6 +17,7 @@ import {
   type RequestStatus,
 } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
@@ -32,6 +33,17 @@ export function ArticlePage() {
   const article = useAppSelector((state) => selectArticleById(state, lang, articleId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
+  const { username } = useProfileContext();
+  const basePath = useMemo(() => `/${username}`, [username]);
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return basePath;
+      }
+      return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [basePath]
+  );
 
   // Определяем, пришли ли мы со страницы списка статей
   const cameFromArticlesPage = useMemo(() => {
@@ -41,7 +53,7 @@ export function ArticlePage() {
     const previousPath = sessionStorage.getItem('previousPath');
     if (previousPath) {
       // Проверяем, что предыдущий путь - это страница списка статей
-      return previousPath === '/articles' || previousPath === '/en/articles';
+      return previousPath.startsWith(buildProfilePath('/articles'));
     }
 
     // Fallback: проверяем document.referrer (работает при полной перезагрузке страницы)
@@ -55,11 +67,11 @@ export function ArticlePage() {
       if (referrerUrl.origin !== origin) return false;
 
       const pathname = referrerUrl.pathname;
-      return pathname === '/articles' || pathname === '/en/articles';
+      return pathname.startsWith(buildProfilePath('/articles'));
     } catch {
       return false;
     }
-  }, []);
+  }, [buildProfilePath]);
 
   function Block({
     title,
@@ -141,13 +153,13 @@ export function ArticlePage() {
           <ul>
             {ui?.links?.home && (
               <li>
-                <Link to="/">{ui.links.home}</Link>
+                <Link to={buildProfilePath()}>{ui.links.home}</Link>
               </li>
             )}
             {/* Показываем "Все статьи" только если пришли со страницы списка */}
             {cameFromArticlesPage && ui?.titles?.articles && (
               <li>
-                <Link to="/articles">{ui.titles.articles}</Link>
+                <Link to={buildProfilePath('/articles')}>{ui.titles.articles}</Link>
               </li>
             )}
           </ul>
@@ -203,10 +215,8 @@ function ArticleContent({
 
   const seoTitle = article.nameArticle;
   const seoDesc = article.description;
-  const canonical =
-    lang === 'en'
-      ? `https://smolyanoechuchelko.ru/en/articles/${article.articleId}`
-      : `https://smolyanoechuchelko.ru/articles/${article.articleId}`;
+  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/articles/${article.articleId}`)}`;
+  const canonical = lang === 'en' ? `${canonicalBase}?lang=en` : canonicalBase;
 
   return (
     <>

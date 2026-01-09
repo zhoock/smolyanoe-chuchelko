@@ -3,11 +3,14 @@ import type { ArticleProps } from '@/models';
 import { getImageUrl, shouldUseSupabaseStorage } from '@shared/api/albums';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './style.scss';
 
 export function ArticlePreview({ articleId, userId, img, nameArticle, date }: ArticleProps) {
   const { lang } = useLang() as { lang: LocaleKey };
   const { formatDate } = formatDateInWords[lang];
+  const { username } = useProfileContext();
+  const articleHref = `/${username}/articles/${articleId}`;
 
   // Используем userId из статьи для загрузки изображения
   const imageUrl = userId
@@ -20,7 +23,7 @@ export function ArticlePreview({ articleId, userId, img, nameArticle, date }: Ar
 
   return (
     <article className="articles__card">
-      <Link to={`/articles/${articleId}`}>
+      <Link to={articleHref}>
         <div className="articles__picture">
           <img src={imageUrl} alt={nameArticle} loading="lazy" decoding="async" />
         </div>

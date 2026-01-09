@@ -1,6 +1,6 @@
 // src/pages/Album/Album.tsx
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
@@ -14,6 +14,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 
 export default function Album() {
   const { lang } = useLang();
@@ -22,6 +23,17 @@ export default function Album() {
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const { username } = useProfileContext();
+  const profileBasePath = `/${username}`;
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return profileBasePath;
+      }
+      return `${profileBasePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [profileBasePath]
+  );
 
   // 🔍 DEBUG: Логируем данные альбома для диагностики
   useEffect(() => {
@@ -45,7 +57,7 @@ export default function Album() {
     const previousPath = sessionStorage.getItem('previousPath');
     if (previousPath) {
       // Проверяем, что предыдущий путь - это страница списка альбомов
-      return previousPath === '/albums' || previousPath === '/en/albums';
+      return previousPath.startsWith(buildProfilePath('/albums'));
     }
 
     // Fallback: проверяем document.referrer (работает при полной перезагрузке страницы)
@@ -59,11 +71,11 @@ export default function Album() {
       if (referrerUrl.origin !== origin) return false;
 
       const pathname = referrerUrl.pathname;
-      return pathname === '/albums' || pathname === '/en/albums';
+      return pathname.startsWith(buildProfilePath('/albums'));
     } catch {
       return false;
     }
-  }, []);
+  }, [buildProfilePath]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -99,10 +111,8 @@ export default function Album() {
   const seoTitle = album.fullName;
   const seoDesc = album.description;
 
-  const canonical =
-    lang === 'en'
-      ? `https://smolyanoechuchelko.ru/en/albums/${album.albumId}`
-      : `https://smolyanoechuchelko.ru/albums/${album.albumId}`;
+  const canonicalBase = `https://smolyanoechuchelko.ru${buildProfilePath(`/albums/${album.albumId}`)}`;
+  const canonical = lang === 'en' ? `${canonicalBase}?lang=en` : canonicalBase;
 
   return (
     <section className="album main-background" aria-label="Блок c альбомом">
@@ -121,13 +131,13 @@ export default function Album() {
           <ul>
             {ui?.links?.home && (
               <li>
-                <Link to="/">{ui.links.home}</Link>
+                <Link to={buildProfilePath()}>{ui.links.home}</Link>
               </li>
             )}
             {/* Показываем "Все альбомы" только если пришли со страницы списка */}
             {cameFromAlbumsPage && ui?.titles?.albums && (
               <li>
-                <Link to="/albums">{ui.titles.albums}</Link>
+                <Link to={buildProfilePath('/albums')}>{ui.titles.albums}</Link>
               </li>
             )}
           </ul>

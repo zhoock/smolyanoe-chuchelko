@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
@@ -7,6 +7,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './ArticlesSection.scss';
 
 // Адаптивное количество статей для отображения на главной
@@ -22,6 +23,17 @@ export function ArticlesSection() {
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const { username } = useProfileContext();
+  const basePath = useMemo(() => `/${username}`, [username]);
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return basePath;
+      }
+      return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [basePath]
+  );
 
   const [initialCount, setInitialCount] = useState(getInitialCount);
 
@@ -73,7 +85,7 @@ export function ArticlesSection() {
 
             {hasMore && (
               <div className="articles__more">
-                <Link to="/articles" className="articles__more-button">
+                <Link to={buildProfilePath('/articles')} className="articles__more-button">
                   {ui?.buttons?.viewAllArticles?.replace('{count}', String(allArticles.length)) ??
                     `Все статьи (${allArticles.length})`}
                 </Link>

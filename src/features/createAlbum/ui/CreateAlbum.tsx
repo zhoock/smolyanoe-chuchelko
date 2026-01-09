@@ -4,10 +4,11 @@
  * Позволяет вручную заполнить данные альбома и добавить треки.
  */
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { IAlbums, TracksProps } from '@models';
 import { getAudioDuration } from '@shared/lib/audio/getAudioDuration';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './CreateAlbum.style.scss';
 interface TrackDraft {
   id: string;
@@ -321,6 +322,11 @@ interface CreateAlbumProps {
 
 export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
   const [draft, setDraft] = useState<AlbumDraft>(emptyAlbum);
+  const { username } = useProfileContext();
+  const dashboardAlbumsPath = useMemo(
+    () => (username ? `/${username}/dashboard/albums` : '/dashboard/albums'),
+    [username]
+  );
 
   const handleAlbumChange = useCallback((field: AlbumBaseField, value: string) => {
     setDraft((prev) => ({
@@ -474,7 +480,7 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
                 ← Назад
               </button>
             ) : (
-              <Link to="/dashboard/albums" className="album-builder__back">
+              <Link to={dashboardAlbumsPath} className="album-builder__back">
                 ← Назад
               </Link>
             )}

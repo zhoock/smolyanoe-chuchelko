@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -7,6 +7,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumsData } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useProfileContext } from '@shared/context/ProfileContext';
 import './AlbumsSection.scss';
 
 // Адаптивное количество альбомов для отображения на главной
@@ -23,6 +24,17 @@ export function AlbumsSection() {
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const allAlbums = useAppSelector((state) => selectAlbumsData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const { username } = useProfileContext();
+  const basePath = useMemo(() => `/${username}`, [username]);
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return basePath;
+      }
+      return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [basePath]
+  );
 
   const [initialCount, setInitialCount] = useState(getInitialCount);
 
@@ -76,7 +88,7 @@ export function AlbumsSection() {
 
             {hasMore && (
               <div className="albums__more">
-                <Link to="/albums" className="albums__more-button">
+                <Link to={buildProfilePath('/albums')} className="albums__more-button">
                   {ui?.buttons?.viewAllAlbums?.replace('{count}', String(allAlbums.length)) ??
                     `Все альбомы (${allAlbums.length})`}
                 </Link>

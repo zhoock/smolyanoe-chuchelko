@@ -3,7 +3,7 @@
  * Главная страница личного кабинета.
  * Отображает список альбомов с прогрессом синхронизации.
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -24,6 +24,7 @@ import {
   type TrackStatus,
 } from '@widgets/dashboard/lib/trackStatus';
 import './DashboardAlbumsOverview.style.scss';
+import { useProfileContext } from '@shared/context/ProfileContext';
 
 interface AlbumStats {
   total: number;
@@ -99,6 +100,17 @@ export default function DashboardAlbumsOverview({
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
   const [albumsStats, setAlbumsStats] = useState<Map<string, AlbumStats>>(new Map());
+  const { username } = useProfileContext();
+  const basePath = useMemo(() => `/${username}`, [username]);
+  const buildProfilePath = useCallback(
+    (path: string = '') => {
+      if (!path) {
+        return basePath;
+      }
+      return `${basePath}${path.startsWith('/') ? path : `/${path}`}`;
+    },
+    [basePath]
+  );
 
   // Создаем стабильный ключ для массива альбомов, чтобы избежать бесконечного цикла
   const albumsKey = useMemo(() => albums?.map((a) => a.albumId || '').join(',') || '', [albums]);
@@ -189,7 +201,7 @@ export default function DashboardAlbumsOverview({
               <span className="admin__create-button-text">Добавить альбом</span>
             </button>
           ) : (
-            <Link to="/dashboard/albums/new" className="admin__create-button">
+            <Link to={buildProfilePath('/dashboard/albums/new')} className="admin__create-button">
               <span className="admin__create-button-icon">+</span>
               <span className="admin__create-button-text">Добавить альбом</span>
             </Link>
@@ -217,7 +229,7 @@ export default function DashboardAlbumsOverview({
                   onAlbumSelect(album.albumId);
                 } else if (album.albumId) {
                   // Fallback на роутинг, если callback не передан
-                  window.location.href = `/dashboard/albums/${album.albumId}`;
+                  window.location.href = buildProfilePath(`/dashboard/albums/${album.albumId}`);
                 }
               };
 
