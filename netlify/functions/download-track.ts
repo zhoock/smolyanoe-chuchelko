@@ -50,13 +50,11 @@ export const handler: Handler = async (
 
     const purchase = purchaseResult.rows[0];
 
-    // Определяем userId для Storage
-    // Используем UUID пользователя из токена (если есть) или определяем по альбому
-    let storageUserId = getUserIdFromEvent(event);
+    // Определяем userId для Storage из альбома (для скачивания покупок не нужен токен)
+    let storageUserId: string | null = null;
 
-    // Если userId не определен, пытаемся получить из альбома
-    if (!storageUserId && purchase.album_id) {
-      const albumResult = await query<{ user_id: string }>(
+    if (purchase.album_id) {
+      const albumResult = await query<{ user_id: string | null }>(
         `SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1`,
         [purchase.album_id]
       );
@@ -102,32 +100,8 @@ export const handler: Handler = async (
       albumId: purchase.album_id,
       src: track.src,
       title: track.title,
+      storageUserId,
     });
-
-    // Если src - это уже полный URL, используем его
-    if (audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'))) {
-      console.log('✅ [download-track] Using direct URL:', audioUrl);
-      // Обновляем счетчик скачиваний (не блокируем ответ)
-      query(
-        `UPDATE purchases 
-         SET download_count = download_count + 1, 
-             last_downloaded_at = CURRENT_TIMESTAMP,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1`,
-        [purchase.id]
-      ).catch((error) => {
-        console.error('❌ Failed to update download count:', error);
-      });
-
-      // Редирект на прямой URL
-      return {
-        statusCode: 302,
-        headers: {
-          Location: audioUrl,
-          'Cache-Control': 'no-cache',
-        },
-      };
-    }
 
     if (!audioUrl) {
       console.error('❌ [download-track] Track src is empty');
@@ -138,13 +112,67 @@ export const handler: Handler = async (
       };
     }
 
-    // Если src - относительный путь, конвертируем в Supabase Storage URL
-    // Формат пути может быть:
-    // - "/audio/23/01-Barnums-Fijian-Mermaid-1644.wav"
-    // - "/audio/23-Remastered/01-Barnums-Fijian-Mermaid-1644.wav"
-    // - "23/01-Barnums-Fijian-Mermaid-1644.wav"
-    // - Полный URL из Supabase Storage (уже обработан выше)
+    // Если src - это уже полный URL, пробуем его использовать
+    if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+      console.log('🔍 [download-track] Track src is a full URL, checking if it works...');
+      try {
+        const headResponse = await fetch(audioUrl, { method: 'HEAD' });
+        if (headResponse.ok) {
+          console.log('✅ [download-track] Direct URL works:', audioUrl);
+          // Обновляем счетчик скачиваний (не блокируем ответ)
+          query(
+            `UPDATE purchases 
+             SET download_count = download_count + 1, 
+                 last_downloaded_at = CURRENT_TIMESTAMP,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [purchase.id]
+          ).catch((error) => {
+            console.error('❌ Failed to update download count:', error);
+          });
 
+          // Редирект на прямой URL
+          return {
+            statusCode: 302,
+            headers: {
+              Location: audioUrl,
+              'Cache-Control': 'no-cache',
+            },
+          };
+        } else {
+          console.log(
+            `⚠️ [download-track] Direct URL failed (${headResponse.status}), will try to extract path from URL`
+          );
+          // Пытаемся извлечь путь из URL
+          try {
+            const urlObj = new URL(audioUrl);
+            // Формат: https://...supabase.co/storage/v1/object/public/user-media/users/{userId}/audio/...
+            const pathMatch = urlObj.pathname.match(/\/user-media\/(.+)/);
+            if (pathMatch && pathMatch[1]) {
+              audioUrl = pathMatch[1]; // Извлекаем путь: users/{userId}/audio/...
+              console.log('✅ [download-track] Extracted path from URL:', audioUrl);
+            }
+          } catch (urlError) {
+            console.log('⚠️ [download-track] Failed to parse URL, will try as relative path');
+          }
+        }
+      } catch (fetchError) {
+        console.log('⚠️ [download-track] Error checking direct URL, will try to extract path');
+        // Пытаемся извлечь путь из URL
+        try {
+          const urlObj = new URL(audioUrl);
+          const pathMatch = urlObj.pathname.match(/\/user-media\/(.+)/);
+          if (pathMatch && pathMatch[1]) {
+            audioUrl = pathMatch[1];
+            console.log('✅ [download-track] Extracted path from URL:', audioUrl);
+          }
+        } catch (urlError) {
+          console.log('⚠️ [download-track] Failed to parse URL');
+        }
+      }
+    }
+
+    // Теперь audioUrl должен быть либо относительным путем, либо путем вида users/{userId}/audio/...
     // Убираем ведущий слеш и префикс /audio/ если есть
     let normalizedPath = audioUrl.trim();
     if (normalizedPath.startsWith('/audio/')) {
@@ -153,42 +181,52 @@ export const handler: Handler = async (
       normalizedPath = normalizedPath.slice(1); // Убираем ведущий "/"
     }
 
-    // storageUserId уже определен выше
-
     // Пробуем несколько вариантов путей
-    // 1. Используем оригинальный путь из БД (normalizedPath уже содержит правильную папку, например "23-Remastered/01-track.wav")
-    // 2. Пробуем варианты с album_id из покупки
     const possiblePaths: string[] = [];
 
-    // Вариант 1: Оригинальный путь из БД (приоритет, так как он содержит правильное имя папки)
-    if (normalizedPath) {
-      possiblePaths.push(`users/${storageUserId}/audio/${normalizedPath}`);
-    }
-
-    // Вариант 2: Извлекаем имя файла и пробуем разные варианты album_id
-    const fileName = normalizedPath.includes('/')
-      ? normalizedPath.split('/').pop() || normalizedPath
-      : normalizedPath;
-
-    // Варианты album_id с разными регистрами и форматами
-    const albumIdVariants = [
-      purchase.album_id, // "23-remastered"
-      purchase.album_id.replace(/-remastered/i, '-Remastered'), // "23-Remastered"
-      purchase.album_id.replace(/-remastered/i, ' Remastered'), // "23 Remastered" (с пробелом)
-      purchase.album_id.replace(/-remastered/i, 'Remastered'), // "23Remastered"
-      purchase.album_id.replace(/-/g, '_'), // "23_remastered"
-      '23-Remastered', // Прямой вариант с заглавной R
-      '23 Remastered', // С пробелом
-    ];
-
-    // Добавляем варианты с album_id
-    possiblePaths.push(
-      ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`)
-    );
-
-    // Если normalizedPath уже содержит users/zhoock/audio, используем его как есть
+    // Если путь уже содержит users/{userId}/audio, обновляем userId если нужно
     if (normalizedPath.startsWith('users/')) {
-      possiblePaths.push(normalizedPath);
+      // Извлекаем текущий userId из пути
+      const pathParts = normalizedPath.split('/');
+      if (pathParts.length >= 4 && pathParts[0] === 'users' && pathParts[2] === 'audio') {
+        const oldUserId = pathParts[1];
+        // Заменяем userId на правильный
+        const newPath = `users/${storageUserId}/audio/${pathParts.slice(3).join('/')}`;
+        // Сначала пробуем путь с правильным userId
+        possiblePaths.push(newPath);
+        // Также пробуем оригинальный путь, если userId отличается
+        if (oldUserId !== storageUserId) {
+          possiblePaths.push(normalizedPath);
+        }
+      } else {
+        possiblePaths.push(normalizedPath);
+      }
+    } else {
+      // Оригинальный путь из БД (приоритет, так как он содержит правильное имя папки)
+      if (normalizedPath) {
+        possiblePaths.push(`users/${storageUserId}/audio/${normalizedPath}`);
+      }
+
+      // Извлекаем имя файла и пробуем разные варианты album_id
+      const fileName = normalizedPath.includes('/')
+        ? normalizedPath.split('/').pop() || normalizedPath
+        : normalizedPath;
+
+      // Варианты album_id с разными регистрами и форматами
+      const albumIdVariants = [
+        purchase.album_id, // "23-remastered"
+        purchase.album_id.replace(/-remastered/i, '-Remastered'), // "23-Remastered"
+        purchase.album_id.replace(/-remastered/i, ' Remastered'), // "23 Remastered" (с пробелом)
+        purchase.album_id.replace(/-remastered/i, 'Remastered'), // "23Remastered"
+        purchase.album_id.replace(/-/g, '_'), // "23_remastered"
+        '23-Remastered', // Прямой вариант с заглавной R
+        '23 Remastered', // С пробелом
+      ];
+
+      // Добавляем варианты с album_id
+      possiblePaths.push(
+        ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`)
+      );
     }
 
     // Убираем дубликаты
