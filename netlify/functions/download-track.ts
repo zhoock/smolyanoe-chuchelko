@@ -6,6 +6,7 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import { getUserIdFromEvent } from './lib/api-helpers';
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -22,6 +23,14 @@ export const handler: Handler = async (
     const purchaseToken = event.queryStringParameters?.token;
     const trackId = event.queryStringParameters?.track;
 
+    console.log('🔍 [download-track] Request received:', {
+      purchaseToken,
+      trackId,
+      hasToken: !!purchaseToken,
+      tokenLength: purchaseToken?.length,
+      queryParams: event.queryStringParameters,
+    });
+
     if (!purchaseToken || !trackId) {
       return {
         statusCode: 400,
@@ -31,16 +40,34 @@ export const handler: Handler = async (
     }
 
     // Проверяем, что покупка существует
+    console.log('🔍 [download-track] Searching for purchase with token:', purchaseToken);
     const purchaseResult = await query<{
       id: string;
       album_id: string;
       customer_email: string;
       user_id?: string;
-    }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1`, [
+    }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1::uuid`, [
       purchaseToken,
     ]);
 
+    console.log('🔍 [download-track] Purchase query result:', {
+      rowsCount: purchaseResult.rows.length,
+      found: purchaseResult.rows.length > 0,
+      purchaseId: purchaseResult.rows[0]?.id,
+      albumId: purchaseResult.rows[0]?.album_id,
+      customerEmail: purchaseResult.rows[0]?.customer_email,
+    });
+
     if (purchaseResult.rows.length === 0) {
+      console.error('❌ [download-track] Purchase not found:', {
+        purchaseToken,
+        tokenLength: purchaseToken.length,
+        tokenFormat: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          purchaseToken
+        )
+          ? 'valid UUID format'
+          : 'invalid UUID format',
+      });
       return {
         statusCode: 404,
         headers: { 'Content-Type': 'application/json' },
