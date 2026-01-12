@@ -44,6 +44,14 @@ export function useLyricsAutoScroll({
     const container = lyricsContainerRef.current;
     if (!container || !syncedLyrics || syncedLyrics.length === 0 || !showLyrics) return;
 
+    // ВАЖНО: Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
+    // В этом случае не выполняем автоскролл, так как нет активных строк для синхронизации
+    const hasActualSync = syncedLyrics.some((line) => line.startTime > 0);
+    if (!hasActualSync) {
+      // Это обычный текст без синхронизации - не выполняем автоскролл
+      return;
+    }
+
     // Если мы только что восстановили позицию прокрутки, блокируем автоскролл
     if (justRestoredScrollRef.current) {
       debugLog('🚫 Blocking auto-scroll: position was just restored');
@@ -208,18 +216,19 @@ export function useLyricsAutoScroll({
       }
     }
 
-    // ВАЖНО: Проверяем, что первые несколько элементов отрендерены правильно
-    // Это важно для предотвращения прокрутки вниз на проде, где элементы могут рендериться медленнее
+    // ВАЖНО: Проверяем, что все предыдущие элементы отрендерены правильно
+    // Это критично для предотвращения прокрутки вниз на проде, где элементы могут рендериться медленнее
+    // Особенно важно для строк >= 4, так как проблема возникает именно с ними
     if (currentLineIndexComputed >= 4) {
-      // Для строк начиная с 4-й, проверяем, что первые 3 строки отрендерены и имеют правильные позиции
+      // Для строк начиная с 4-й, проверяем, что все предыдущие строки отрендерены и имеют правильные позиции
       let allPreviousLinesReady = true;
-      for (let i = 0; i < Math.min(3, currentLineIndexComputed); i++) {
+      for (let i = 0; i < currentLineIndexComputed; i++) {
         const prevLineElement = lineRefs.current.get(i);
         if (!prevLineElement || prevLineElement.offsetHeight === 0) {
           allPreviousLinesReady = false;
           break;
         }
-        // Проверяем, что позиция предыдущей строки меньше текущей
+        // Проверяем, что позиция предыдущей строки меньше следующей (логичный порядок)
         if (i > 0) {
           const prevPrevLineElement = lineRefs.current.get(i - 1);
           if (prevPrevLineElement && prevPrevLineElement.offsetTop >= prevLineElement.offsetTop) {
@@ -227,9 +236,20 @@ export function useLyricsAutoScroll({
             break;
           }
         }
+        // Проверяем, что позиция предыдущей строки меньше текущей (важно!)
+        if (prevLineElement.offsetTop >= lineTop) {
+          allPreviousLinesReady = false;
+          break;
+        }
       }
       if (!allPreviousLinesReady) {
-        debugLog('⏳ First lines not ready yet, skipping auto-scroll to prevent scroll to bottom');
+        debugLog(
+          '⏳ Previous lines not ready yet, skipping auto-scroll to prevent scroll to bottom',
+          {
+            currentLineIndex: currentLineIndexComputed,
+            lineTop,
+          }
+        );
         return;
       }
     }
