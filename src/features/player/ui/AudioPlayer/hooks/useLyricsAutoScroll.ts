@@ -86,8 +86,20 @@ export function useLyricsAutoScroll({
       return;
     }
 
+    // ВАЖНО: Проверяем, что элемент строки существует и отрендерен
+    // Если элемента еще нет, пропускаем автоскролл (это может произойти при первом рендере)
     const lineElement = lineRefs.current.get(currentLineIndexComputed);
-    if (!lineElement) return;
+    if (!lineElement) {
+      // Элемент еще не отрендерен, пропускаем автоскролл до следующего обновления
+      return;
+    }
+
+    // Дополнительная проверка: если элемент еще не имеет размеров (не отрендерен полностью),
+    // пропускаем автоскролл
+    // Проверяем offsetHeight (высота элемента) - если 0, значит элемент не отрендерен
+    if (lineElement.offsetHeight === 0) {
+      return;
+    }
 
     // Проверяем, не прокручивал ли пользователь вручную недавно
     const timeSinceUserScroll = Date.now() - userScrollTimestampRef.current;

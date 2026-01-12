@@ -39,61 +39,45 @@ export function useCurrentLineIndex({
     let activeIndex: number | null = null;
 
     // Если время меньше startTime первой строки - нет активной строки (промежуток без текста в начале)
-    if (lines.length > 0 && timeValue < lines[0].startTime) {
-      activeIndex = null;
-    } else {
-      // Ищем активную строку среди всех строк
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const nextLine = lines[i + 1];
+    if (lines.length === 0 || timeValue < lines[0].startTime) {
+      return null;
+    }
 
-        // Определяем границу окончания строки
-        // Если endTime задан - используем его, иначе используем startTime следующей строки (или Infinity для последней)
-        const lineEndTime =
-          line.endTime !== undefined ? line.endTime : nextLine ? nextLine.startTime : Infinity;
+    // Ищем активную строку среди всех строк
+    // Проходим по всем строкам и находим первую строку, в диапазон которой попадает текущее время
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const nextLine = lines[i + 1];
 
-        // Если время попадает в диапазон текущей строки
-        // ВАЖНО: если endTime === startTime следующей строки, в момент t = endTime активна должна быть следующая строка
-        // Поэтому для текущей строки используем строгое < для endTime
-        if (timeValue >= line.startTime && timeValue < lineEndTime) {
-          activeIndex = i;
-          break;
-        }
+      // Определяем границу окончания строки
+      // Если endTime задан - используем его, иначе используем startTime следующей строки (или Infinity для последней)
+      let lineEndTime: number;
+      if (line.endTime !== undefined) {
+        lineEndTime = line.endTime;
+      } else if (nextLine) {
+        lineEndTime = nextLine.startTime;
+      } else {
+        // Последняя строка без endTime - активна до конца трека
+        lineEndTime = Infinity;
+      }
 
-        // Специальная обработка: если endTime текущей строки === startTime следующей,
-        // и время равно этому значению, то активна должна быть следующая строка
-        // (это обработается на следующей итерации цикла)
+      // Проверяем, попадает ли время в диапазон текущей строки
+      // ВАЖНО: используем строгое < для endTime, чтобы при равенстве времени и endTime активной была следующая строка
+      if (timeValue >= line.startTime && timeValue < lineEndTime) {
+        activeIndex = i;
+        break; // Нашли активную строку, выходим из цикла
+      }
 
-        // Если это последняя строка
-        if (!nextLine) {
-          // Если время больше startTime последней строки - оставляем её активной
-          // (даже если время прошло endTime - показываем последнюю строку до конца трека)
-          if (timeValue >= line.startTime) {
-            activeIndex = i;
-            break;
-          }
-          // Если время меньше startTime последней строки - не устанавливаем активную строку
-          break;
-        }
-
-        // Если есть следующая строка и время между текущей и следующей
-        if (
-          line.endTime !== undefined &&
-          timeValue >= line.endTime &&
-          timeValue < nextLine.startTime
-        ) {
-          // Промежуток между строками - показываем предыдущую (если она была и время в её диапазоне)
-          if (i > 0) {
-            const prevLine = lines[i - 1];
-            if (
-              timeValue >= prevLine.startTime &&
-              (prevLine.endTime === undefined || timeValue < prevLine.endTime)
-            ) {
-              activeIndex = i - 1;
-            }
-          }
-          break;
-        }
+      // Если это последняя строка и мы дошли сюда, значит время >= lineEndTime
+      // Для последней строки без endTime это может быть только если lineEndTime === Infinity
+      // Но в этом случае условие выше должно было сработать
+      // Для последней строки с endTime - если время >= endTime, то строка уже не активна
+      if (!nextLine) {
+        // Если это последняя строка и время >= startTime, но >= endTime
+        // И endTime был Infinity (не был задан), то строка должна быть активна
+        // Но это уже обработано выше
+        // Если endTime был задан и время >= endTime, строка не активна
+        break;
       }
     }
 
