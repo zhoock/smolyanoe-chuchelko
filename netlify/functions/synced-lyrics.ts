@@ -93,29 +93,109 @@ export const handler: Handler = async (
         };
       }
 
-      // Извлекаем user_id из токена (если есть)
-      const userId = getUserIdFromEvent(event);
+      // Извлекаем user_id из токена (если есть) - для авторизованных пользователей
+      const currentUserId = getUserIdFromEvent(event);
 
       console.log('[synced-lyrics.ts GET] Loading synced lyrics:', {
         albumId,
         trackId,
         lang,
-        userId,
+        currentUserId,
       });
 
-      // Сначала ищем синхронизированный текст в таблице synced_lyrics
-      // Загружаем синхронизации пользователя
-      // ORDER BY updated_at DESC для получения самой свежей записи
-      const syncedResult = await query<SyncedLyricsRow>(
-        `SELECT synced_lyrics, authorship 
-         FROM synced_lyrics 
-         WHERE album_id = $1 AND track_id = $2 AND lang = $3
-           AND user_id = $4
-         ORDER BY updated_at DESC
-         LIMIT 1`,
-        [albumId, String(trackId), lang, userId],
-        0 // Без retry для GET запросов - они должны быть быстрыми
-      );
+      // Сначала находим альбом по album_id и lang
+      // Если пользователь авторизован, ищем сначала его альбом, затем любой публичный
+      // Если не авторизован, ищем любой альбом (публичный или любой по album_id)
+      let albumResult;
+      if (currentUserId) {
+        // Если пользователь авторизован, сначала ищем его альбом
+        albumResult = await query<{ id: string; user_id: string | null }>(
+          `SELECT id, user_id FROM albums 
+           WHERE album_id = $1 AND lang = $2 AND user_id = $3
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [albumId, lang, currentUserId],
+          0
+        );
+
+        // Если не нашли альбом пользователя, ищем любой публичный
+        if (albumResult.rows.length === 0) {
+          albumResult = await query<{ id: string; user_id: string | null }>(
+            `SELECT id, user_id FROM albums 
+             WHERE album_id = $1 AND lang = $2 AND (user_id IS NULL OR is_public = true)
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [albumId, lang],
+            0
+          );
+        }
+      } else {
+        // Если пользователь не авторизован, ищем любой альбом (публичный или любой по album_id)
+        albumResult = await query<{ id: string; user_id: string | null }>(
+          `SELECT id, user_id FROM albums 
+           WHERE album_id = $1 AND lang = $2
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [albumId, lang],
+          0
+        );
+      }
+
+      if (albumResult.rows.length === 0) {
+        console.log('[synced-lyrics.ts GET] No album found:', {
+          albumId,
+          lang,
+        });
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            data: undefined,
+          } as SyncedLyricsResponse),
+        };
+      }
+
+      const albumDbId = albumResult.rows[0].id;
+      const albumUserId = albumResult.rows[0].user_id;
+
+      console.log('[synced-lyrics.ts GET] Found album:', {
+        albumId,
+        lang,
+        albumDbId,
+        albumUserId,
+        isUserAlbum: albumUserId === currentUserId,
+        isPublicAlbum: albumUserId === null,
+      });
+
+      // Теперь загружаем синхронизации для владельца альбома (albumUserId)
+      // Если albumUserId null, это публичный альбом, но синхронизации могут быть сохранены с user_id = null
+      let syncedResult;
+      if (albumUserId === null) {
+        // Если альбом публичный (user_id IS NULL), ищем синхронизации с user_id IS NULL
+        syncedResult = await query<SyncedLyricsRow>(
+          `SELECT synced_lyrics, authorship 
+           FROM synced_lyrics 
+           WHERE album_id = $1 AND track_id = $2 AND lang = $3
+             AND user_id IS NULL
+           ORDER BY updated_at DESC
+           LIMIT 1`,
+          [albumId, String(trackId), lang],
+          0 // Без retry для GET запросов - они должны быть быстрыми
+        );
+      } else {
+        // Если альбом принадлежит пользователю, ищем синхронизации для этого пользователя
+        syncedResult = await query<SyncedLyricsRow>(
+          `SELECT synced_lyrics, authorship 
+           FROM synced_lyrics 
+           WHERE album_id = $1 AND track_id = $2 AND lang = $3
+             AND user_id = $4
+           ORDER BY updated_at DESC
+           LIMIT 1`,
+          [albumId, String(trackId), lang, albumUserId],
+          0 // Без retry для GET запросов - они должны быть быстрыми
+        );
+      }
 
       // Если нашли синхронизированный текст, возвращаем его
       if (syncedResult.rows.length > 0) {
@@ -139,16 +219,6 @@ export const handler: Handler = async (
       }
 
       // Если синхронизированного текста нет, проверяем tracks.content
-      // Находим альбом пользователя
-      const albumResult = await query<{ id: string; user_id: string | null }>(
-        `SELECT id, user_id FROM albums 
-         WHERE album_id = $1 AND lang = $2
-           AND user_id = $3
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [albumId, lang, userId],
-        0
-      );
 
       if (albumResult.rows.length === 0) {
         console.log('[synced-lyrics.ts GET] No album found:', {
@@ -164,18 +234,6 @@ export const handler: Handler = async (
           } as SyncedLyricsResponse),
         };
       }
-
-      const albumDbId = albumResult.rows[0].id;
-      const albumUserId = albumResult.rows[0].user_id;
-
-      console.log('[synced-lyrics.ts GET] Found album for tracks.content:', {
-        albumId,
-        lang,
-        albumDbId,
-        albumUserId,
-        isUserAlbum: albumUserId === userId,
-        isPublicAlbum: albumUserId === null,
-      });
 
       // Загружаем текст из tracks.content
       console.log('[synced-lyrics.ts GET] Loading track text from tracks.content:', {
