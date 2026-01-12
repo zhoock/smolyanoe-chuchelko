@@ -274,7 +274,8 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
                     `SELECT a.artist, a.album, a.lang, o.customer_first_name, o.customer_last_name
                      FROM albums a
                      INNER JOIN orders o ON a.album_id = o.album_id
-                     WHERE a.album_id = $1 AND a.lang = o.lang
+                     WHERE a.album_id = $1
+                     ORDER BY CASE WHEN a.lang = 'ru' THEN 1 ELSE 2 END
                      LIMIT 1`,
                     [albumId]
                   ).then((albumResult) => {
