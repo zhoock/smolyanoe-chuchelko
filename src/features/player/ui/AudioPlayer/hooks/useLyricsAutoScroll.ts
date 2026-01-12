@@ -182,36 +182,56 @@ export function useLyricsAutoScroll({
       return;
     }
 
-    // ВАЖНО: Проверяем, что предыдущие элементы тоже отрендерены
-    // Если текущая строка не первая, проверяем, что предыдущая строка существует и имеет правильную позицию
+    // ВАЖНО: Проверяем разумность позиции строки относительно предыдущей
+    // Если разница между offsetTop текущей строки и предыдущей слишком большая, это ошибка
     if (currentLineIndexComputed > 0) {
       const prevLineElement = lineRefs.current.get(currentLineIndexComputed - 1);
-      if (!prevLineElement || prevLineElement.offsetHeight === 0) {
-        debugLog('⏳ Previous line not ready yet, skipping auto-scroll');
-        return;
-      }
-      // Проверяем, что позиция предыдущей строки меньше текущей (логичный порядок)
-      if (prevLineElement.offsetTop >= lineTop) {
-        debugLog('⚠️ Line order invalid, skipping auto-scroll', {
-          prevLineTop: prevLineElement.offsetTop,
-          currentLineTop: lineTop,
-        });
-        return;
+      if (prevLineElement && prevLineElement.offsetHeight > 0) {
+        const prevLineTop = prevLineElement.offsetTop;
+        const prevLineHeight = prevLineElement.offsetHeight;
+        const expectedLineTop = prevLineTop + prevLineHeight;
+        const actualDifference = lineTop - prevLineTop;
+
+        // Если разница слишком большая (больше 500px), это скорее всего ошибка
+        // Нормальная разница должна быть примерно равна высоте предыдущей строки плюс отступы
+        if (actualDifference > 500) {
+          debugLog('⚠️ Unreasonable line position difference, skipping auto-scroll', {
+            currentLineIndex: currentLineIndexComputed,
+            prevLineTop,
+            currentLineTop: lineTop,
+            actualDifference,
+            prevLineHeight,
+            expectedDifference: prevLineHeight + 20, // примерная высота строки + отступы
+          });
+          return;
+        }
       }
     }
 
-    // ВАЖНО: При первой загрузке, если текущая строка близка к последней и время трека в начале,
-    // это может быть ошибка рендеринга - пропускаем автоскролл
-    const isLastLine = currentLineIndexComputed === syncedLyrics.length - 1;
-    const isNearEnd = currentLineIndexComputed >= syncedLyrics.length - 2;
-    const timeValue = time.current;
-    const firstLine = syncedLyrics[0];
-    const isNearStart = timeValue < firstLine.startTime + 5; // Первые 5 секунд
-
-    if (isNearEnd && isNearStart && scrollTop === 0) {
-      // Скорее всего это первая загрузка и элементы еще не правильно позиционированы
-      debugLog('⏳ Initial load detected, skipping auto-scroll to prevent scroll to bottom');
-      return;
+    // ВАЖНО: Проверяем, что первые несколько элементов отрендерены правильно
+    // Это важно для предотвращения прокрутки вниз на проде, где элементы могут рендериться медленнее
+    if (currentLineIndexComputed >= 4) {
+      // Для строк начиная с 4-й, проверяем, что первые 3 строки отрендерены и имеют правильные позиции
+      let allPreviousLinesReady = true;
+      for (let i = 0; i < Math.min(3, currentLineIndexComputed); i++) {
+        const prevLineElement = lineRefs.current.get(i);
+        if (!prevLineElement || prevLineElement.offsetHeight === 0) {
+          allPreviousLinesReady = false;
+          break;
+        }
+        // Проверяем, что позиция предыдущей строки меньше текущей
+        if (i > 0) {
+          const prevPrevLineElement = lineRefs.current.get(i - 1);
+          if (prevPrevLineElement && prevPrevLineElement.offsetTop >= prevLineElement.offsetTop) {
+            allPreviousLinesReady = false;
+            break;
+          }
+        }
+      }
+      if (!allPreviousLinesReady) {
+        debugLog('⏳ First lines not ready yet, skipping auto-scroll to prevent scroll to bottom');
+        return;
+      }
     }
 
     // Увеличенный отступ сверху, чтобы активная строка была выше (примерно 25-30% высоты контейнера)
@@ -223,8 +243,27 @@ export function useLyricsAutoScroll({
     const desiredScrollTop = Math.max(0, lineTop - topOffset);
 
     // ВАЖНО: Ограничиваем desiredScrollTop максимальным значением (не больше scrollHeight)
-    const maxScrollTop = scrollHeight - containerHeight;
+    const maxScrollTop = Math.max(0, scrollHeight - containerHeight);
     const clampedDesiredScrollTop = Math.min(desiredScrollTop, maxScrollTop);
+
+    // ВАЖНО: Проверяем, что желаемая позиция скролла разумна
+    // Если desiredScrollTop намного больше текущей позиции, это может быть ошибка
+    // Особенно если мы находимся в начале трека
+    const timeValue = time.current;
+    const firstLine = syncedLyrics[0];
+    const isNearStart = timeValue < firstLine.startTime + 10; // Первые 10 секунд
+    const scrollJump = clampedDesiredScrollTop - scrollTop;
+
+    // Если мы в начале трека и пытаемся прокрутить слишком далеко, пропускаем
+    if (isNearStart && scrollJump > containerHeight * 2) {
+      debugLog('⚠️ Suspicious scroll jump detected near start, skipping auto-scroll', {
+        scrollJump,
+        containerHeight,
+        currentScrollTop: scrollTop,
+        desiredScrollTop: clampedDesiredScrollTop,
+      });
+      return;
+    }
 
     const currentLineTopRelative = lineTop - scrollTop;
 
