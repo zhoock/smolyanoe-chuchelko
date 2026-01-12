@@ -162,6 +162,57 @@ export function useLyricsAutoScroll({
     const lineHeight = lineElement.offsetHeight;
     const containerHeight = container.clientHeight;
     const scrollTop = container.scrollTop;
+    const scrollHeight = container.scrollHeight;
+
+    // ВАЖНО: Проверяем, что контейнер уже имеет правильные размеры
+    // Если scrollHeight равен clientHeight или очень мал, элементы еще не полностью отрендерены
+    if (scrollHeight <= containerHeight || scrollHeight < 100) {
+      debugLog('⏳ Container not ready yet, skipping auto-scroll');
+      return;
+    }
+
+    // ВАЖНО: Проверяем, что offsetTop строки имеет разумное значение
+    // Если offsetTop очень большой (больше scrollHeight), элемент еще не в правильной позиции
+    if (lineTop > scrollHeight + 1000) {
+      debugLog('⚠️ Line element position invalid, skipping auto-scroll', {
+        lineTop,
+        scrollHeight,
+        currentLineIndex: currentLineIndexComputed,
+      });
+      return;
+    }
+
+    // ВАЖНО: Проверяем, что предыдущие элементы тоже отрендерены
+    // Если текущая строка не первая, проверяем, что предыдущая строка существует и имеет правильную позицию
+    if (currentLineIndexComputed > 0) {
+      const prevLineElement = lineRefs.current.get(currentLineIndexComputed - 1);
+      if (!prevLineElement || prevLineElement.offsetHeight === 0) {
+        debugLog('⏳ Previous line not ready yet, skipping auto-scroll');
+        return;
+      }
+      // Проверяем, что позиция предыдущей строки меньше текущей (логичный порядок)
+      if (prevLineElement.offsetTop >= lineTop) {
+        debugLog('⚠️ Line order invalid, skipping auto-scroll', {
+          prevLineTop: prevLineElement.offsetTop,
+          currentLineTop: lineTop,
+        });
+        return;
+      }
+    }
+
+    // ВАЖНО: При первой загрузке, если текущая строка близка к последней и время трека в начале,
+    // это может быть ошибка рендеринга - пропускаем автоскролл
+    const isLastLine = currentLineIndexComputed === syncedLyrics.length - 1;
+    const isNearEnd = currentLineIndexComputed >= syncedLyrics.length - 2;
+    const timeValue = time.current;
+    const firstLine = syncedLyrics[0];
+    const isNearStart = timeValue < firstLine.startTime + 5; // Первые 5 секунд
+
+    if (isNearEnd && isNearStart && scrollTop === 0) {
+      // Скорее всего это первая загрузка и элементы еще не правильно позиционированы
+      debugLog('⏳ Initial load detected, skipping auto-scroll to prevent scroll to bottom');
+      return;
+    }
 
     // Увеличенный отступ сверху, чтобы активная строка была выше (примерно 25-30% высоты контейнера)
     const topOffset = Math.min(containerHeight * 0.25, 120);
@@ -170,6 +221,11 @@ export function useLyricsAutoScroll({
 
     // Вычисляем желаемую позицию скролла (чтобы строка была на 25% от верха)
     const desiredScrollTop = Math.max(0, lineTop - topOffset);
+
+    // ВАЖНО: Ограничиваем desiredScrollTop максимальным значением (не больше scrollHeight)
+    const maxScrollTop = scrollHeight - containerHeight;
+    const clampedDesiredScrollTop = Math.min(desiredScrollTop, maxScrollTop);
+
     const currentLineTopRelative = lineTop - scrollTop;
 
     // Проверяем, находится ли строка в правильной позиции (около 25% от верха)
@@ -180,7 +236,7 @@ export function useLyricsAutoScroll({
 
     // ВАЖНО: Если пользователь прокрутил дальше текущей активной строки, не пытаемся прокрутить обратно
     // Это предотвращает конфликт и зацикливание анимации
-    const userScrolledAhead = scrollTop > desiredScrollTop + 50; // 50px допуск
+    const userScrolledAhead = scrollTop > clampedDesiredScrollTop + 50; // 50px допуск
 
     if (userScrolledAhead) {
       if (timeSinceUserScroll < USER_SCROLL_RETURN_DELAY) {
@@ -198,8 +254,8 @@ export function useLyricsAutoScroll({
 
     // Если строка не в правильной позиции или обрезана - скроллим
     if (!isInCorrectPosition || !isFullyVisibleBottom) {
-      // Используем плавный скролл с разной длительностью для iOS и десктопа
-      smoothScrollTo(container, desiredScrollTop, isIOSDevice ? 300 : 300);
+      // Используем зафиксированную позицию скролла
+      smoothScrollTo(container, clampedDesiredScrollTop, isIOSDevice ? 300 : 300);
     }
 
     return () => {
