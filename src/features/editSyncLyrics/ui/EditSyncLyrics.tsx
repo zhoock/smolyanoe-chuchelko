@@ -180,26 +180,8 @@ export default function EditSyncLyrics({
             });
           }
           setSyncedLines((prev) => {
-            // Если текст пустой - очищаем все строки (кроме авторства, если оно есть)
+            // Если текст пустой - очищаем все строки
             if (!textToUse || !textToUse.trim()) {
-              // Если есть авторство - оставляем только его
-              if (storedAuthorship) {
-                const existingAuthorship = prev.find((line) => line.text === storedAuthorship);
-                if (existingAuthorship) {
-                  // Сохраняем таймкоды для авторства
-                  return [existingAuthorship];
-                } else {
-                  // Новое авторство без таймкодов
-                  return [
-                    {
-                      text: storedAuthorship,
-                      startTime: durationRef.current || 0,
-                      endTime: undefined,
-                    },
-                  ];
-                }
-              }
-              // Если нет авторства и текст пустой - возвращаем пустой массив
               return [];
             }
 
@@ -215,21 +197,8 @@ export default function EditSyncLyrics({
               endTime: undefined,
             }));
 
-            // Добавляем авторство в конец, если оно есть
-            if (storedAuthorship) {
-              const existingAuthorship = prev.find((line) => line.text === storedAuthorship);
-              if (existingAuthorship) {
-                // Сохраняем таймкоды для авторства
-                newLines.push(existingAuthorship);
-              } else {
-                // Новое авторство без таймкодов
-                newLines.push({
-                  text: storedAuthorship,
-                  startTime: durationRef.current || 0,
-                  endTime: undefined,
-                });
-              }
-            }
+            // Authorship должен быть частью syncedLines как обычная строка
+            // Не добавляем authorship отдельно - он должен быть частью текста или сохраненных синхронизаций
 
             return newLines;
           });
@@ -444,14 +413,21 @@ export default function EditSyncLyrics({
         }));
       }
 
-      // Добавляем строку авторства в конец, если она есть
-      if (trackAuthorship) {
-        // Проверяем, не добавлена ли уже строка авторства в конец
-        const lastLine = linesToDisplay[linesToDisplay.length - 1];
-        if (!lastLine || lastLine.text !== trackAuthorship) {
+      // Authorship должен быть частью syncedLyrics как обычная строка
+      // Если authorship есть, но отсутствует в linesToDisplay, добавляем его только если он не был сохранен с таймерами
+      // НО: если authorship уже есть в linesToDisplay с таймерами, НЕ добавляем его снова
+      if (trackAuthorship && trackAuthorship.trim()) {
+        const trackAuthorshipTrimmed = trackAuthorship.trim();
+        const hasAuthorshipInLines = linesToDisplay.some(
+          (line) => line.text.trim() === trackAuthorshipTrimmed
+        );
+
+        // Если authorship отсутствует в linesToDisplay, добавляем его только для отображения
+        // НО НЕ устанавливаем endTime: duration - пусть пользователь сам установит тайминг
+        if (!hasAuthorshipInLines) {
           linesToDisplay.push({
-            text: trackAuthorship,
-            startTime: durationRef.current || 0,
+            text: trackAuthorshipTrimmed,
+            startTime: 0,
             endTime: undefined,
           });
         }
@@ -461,6 +437,7 @@ export default function EditSyncLyrics({
         console.log('✅ Установка синхронизаций:', {
           linesCount: linesToDisplay.length,
           firstLine: linesToDisplay[0]?.text?.substring(0, 30),
+          hasAuthorship: trackAuthorship && trackAuthorship.trim() ? true : false,
         });
       }
 
@@ -577,9 +554,16 @@ export default function EditSyncLyrics({
 
     // Фильтруем строки авторства из syncedLines перед сохранением
     // (если у строки авторства нет таймкодов, она не должна сохраняться в syncedLyrics)
+    const trackAuthorshipTrimmed = trackAuthorship.trim();
     const linesToSave = syncedLines.filter((line, index) => {
       // Если это последняя строка и она совпадает с authorship, проверяем наличие таймкодов
-      if (index === syncedLines.length - 1 && trackAuthorship && line.text === trackAuthorship) {
+      // Используем trim() для корректного сравнения
+      if (
+        index === syncedLines.length - 1 &&
+        trackAuthorshipTrimmed &&
+        line.text.trim() === trackAuthorshipTrimmed
+      ) {
+        // Сохраняем authorship только если у него есть таймкоды
         return line.startTime > 0 || line.endTime !== undefined;
       }
       return true;
@@ -609,19 +593,10 @@ export default function EditSyncLyrics({
       // чтобы отобразить актуальные сохранённые данные
       const savedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
       if (savedSync && savedSync.length > 0) {
-        // Добавляем авторство в конец, если оно есть
-        const updatedLines = [...savedSync];
-        if (trackAuthorship) {
-          const lastLine = updatedLines[updatedLines.length - 1];
-          if (!lastLine || lastLine.text !== trackAuthorship) {
-            updatedLines.push({
-              text: trackAuthorship,
-              startTime: durationRef.current || 0,
-              endTime: undefined,
-            });
-          }
-        }
-        setSyncedLines(updatedLines);
+        // Используем сохраненные синхронизации как есть
+        // Authorship уже там, если был сохранен с таймерами
+        // НЕ добавляем authorship автоматически - он должен быть частью syncedLyrics
+        setSyncedLines(savedSync);
       }
 
       // Обновляем хэш текста, чтобы предотвратить повторную инициализацию
