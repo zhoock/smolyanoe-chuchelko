@@ -237,21 +237,21 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
           const customerEmail = order.customer_email || paymentStatus.metadata?.customerEmail;
 
           if (albumId && customerEmail) {
-            // ВАЖНО: Проверяем, не было ли уже отправлено письмо (webhook мог уже отправить)
-            // Письмо отправляем только если заказ был обновлен недавно (в течение последних 30 секунд)
-            const orderUpdateTime = new Date(order.updated_at);
-            const now = new Date();
-            const timeSinceUpdate = (now.getTime() - orderUpdateTime.getTime()) / 1000; // секунды
+            // ВАЖНО: Проверяем, не было ли уже отправлено письмо через webhook
+            // Проверяем наличие записи в webhook_events для payment.succeeded
+            const webhookEventId = `notification-payment.succeeded-${paymentStatus.id}`;
+            const webhookCheck = await query<{ id: string }>(
+              'SELECT id FROM webhook_events WHERE provider = $1 AND event_id = $2',
+              ['yookassa', webhookEventId]
+            );
 
-            // Если заказ был обновлен более 30 секунд назад, пропускаем отправку
-            // (значит webhook уже должен был отправить письмо)
-            if (timeSinceUpdate > 30) {
+            if (webhookCheck.rows.length > 0) {
               console.log(
-                'ℹ️ [get-payment-status] Skipping email send - order was updated too long ago:',
+                'ℹ️ [get-payment-status] Skipping email send - webhook already processed payment:',
                 {
                   orderId,
-                  timeSinceUpdate: `${timeSinceUpdate.toFixed(1)}s`,
-                  updatedAt: orderUpdateTime.toISOString(),
+                  paymentId: paymentStatus.id,
+                  webhookEventId,
                 }
               );
               // Все равно создаем/обновляем purchase, но не отправляем email
