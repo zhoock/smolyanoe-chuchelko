@@ -229,19 +229,3 @@ export function handleError(
 
   return createErrorResponse(500, userMessage);
 }
-
-// Явный реэкспорт для обеспечения правильной работы сборщика Netlify Functions
-export {
-  getUserIdFromEvent,
-  requireAuth,
-  requireAdmin,
-  isAdmin,
-  CORS_HEADERS,
-  createOptionsResponse,
-  createErrorResponse,
-  createSuccessResponse,
-  createSuccessMessageResponse,
-  validateLang,
-  parseJsonBody,
-  handleError,
-};
