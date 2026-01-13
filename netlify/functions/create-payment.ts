@@ -634,6 +634,8 @@ export const handler: Handler = async (
               currency: yookassaCurrency, // Принудительно RUB для YooKassa
             },
             vat_code: 1, // НДС не облагается (для цифровых товаров в РФ часто используется код 1)
+            payment_subject: 'commodity', // Обязательно для production: товар
+            payment_mode: 'full_prepayment', // Обязательно для production: полная предоплата
           },
         ],
       },
