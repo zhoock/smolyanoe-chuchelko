@@ -2,7 +2,7 @@
  * Утилиты для работы с JWT токенами
  */
 
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 
 // Секретный ключ для подписи JWT (должен быть в переменных окружения)
 const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -72,4 +72,30 @@ export function extractUserIdFromToken(authHeader: string | undefined): string |
   }
 
   return payload.userId;
+}
+
+/**
+ * Извлекает email из JWT токена из Authorization header
+ * @param authHeader - Значение заголовка Authorization (например, "Bearer <token>")
+ * @returns email или null, если токен невалиден или отсутствует
+ */
+export function extractEmailFromToken(authHeader: string | undefined): string | null {
+  if (!authHeader) {
+    return null;
+  }
+
+  // Проверяем формат "Bearer <token>"
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return null;
+  }
+
+  const token = parts[1];
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.email) {
+    return null;
+  }
+
+  return payload.email;
 }
