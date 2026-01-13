@@ -4,7 +4,7 @@
  */
 
 import type { HandlerEvent } from '@netlify/functions';
-import { extractUserIdFromToken } from './jwt';
+import { extractUserIdFromToken, extractEmailFromToken } from './jwt';
 
 /**
  * Стандартные CORS заголовки для всех API endpoints
@@ -142,6 +142,50 @@ export function requireAuth(event: HandlerEvent): string | null {
 }
 
 /**
+ * Проверяет, является ли пользователь админом (zhoock@zhoock.ru)
+ * @param userEmail - Email пользователя
+ * @returns true если пользователь - админ, false иначе
+ */
+export function isAdmin(userEmail: string): boolean {
+  return userEmail.toLowerCase().trim() === 'zhoock@zhoock.ru';
+}
+
+/**
+ * Проверяет авторизацию и права админа
+ * @returns userId если пользователь авторизован и является админом, null иначе
+ */
+export function requireAdmin(event: HandlerEvent): string | null {
+  const userId = getUserIdFromEvent(event);
+  if (!userId) {
+    console.warn('⚠️ requireAdmin: Authorization failed - no userId');
+    return null;
+  }
+
+  // Получаем email из токена
+  const auth =
+    (event.headers?.authorization as string | undefined) ||
+    (event.headers?.Authorization as string | undefined) ||
+    ((event as any).clientContext?.user?.token as string | undefined);
+
+  if (!auth) {
+    console.warn('⚠️ requireAdmin: Authorization header not found');
+    return null;
+  }
+
+  try {
+    const email = extractEmailFromToken(auth);
+    if (!email || !isAdmin(email)) {
+      console.warn('⚠️ requireAdmin: User is not admin', { userId, email });
+      return null;
+    }
+    return userId;
+  } catch (error) {
+    console.error('❌ Error checking admin status:', error);
+    return null;
+  }
+}
+
+/**
  * Парсит JSON body с обработкой ошибок
  * @throws {Error} Если JSON невалиден, выбрасывает ошибку для возврата 400
  */
@@ -185,3 +229,19 @@ export function handleError(
 
   return createErrorResponse(500, userMessage);
 }
+
+// Явный реэкспорт для обеспечения правильной работы сборщика Netlify Functions
+export {
+  getUserIdFromEvent,
+  requireAuth,
+  requireAdmin,
+  isAdmin,
+  CORS_HEADERS,
+  createOptionsResponse,
+  createErrorResponse,
+  createSuccessResponse,
+  createSuccessMessageResponse,
+  validateLang,
+  parseJsonBody,
+  handleError,
+};
