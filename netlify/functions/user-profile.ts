@@ -7,6 +7,7 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
+import { getUserIdFromEvent, requireAdmin } from './lib/api-helpers';
 
 interface UserProfileRow {
   id: string;
@@ -37,8 +38,6 @@ interface SaveUserProfileResponse {
   message?: string;
   error?: string;
 }
-
-import { getUserIdFromEvent, requireAdmin } from './lib/api-helpers';
 
 export const handler: Handler = async (
   event: HandlerEvent
