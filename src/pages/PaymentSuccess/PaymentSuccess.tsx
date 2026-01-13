@@ -64,10 +64,12 @@ function PaymentSuccess() {
   const navigate = useNavigate();
   const paymentIdParam = searchParams.get('paymentId');
   const orderIdParam = searchParams.get('orderId');
+  const returnTo = searchParams.get('returnTo'); // Исходная страница для возврата
   const [payment, setPayment] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pollingCount, setPollingCount] = useState(0);
+  const [redirectCountdown, setRedirectCountdown] = useState(3); // Таймер обратного отсчета
   const maxPollingAttempts = 20; // ~1.5 минуты (20 * 5 секунд)
   const pollingInterval = 5000; // 5 секунд для более быстрого обновления
 
@@ -177,6 +179,34 @@ function PaymentSuccess() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentIdParam, orderIdParam]);
 
+  // Автоматический редирект на исходную страницу после успешной оплаты
+  useEffect(() => {
+    if (payment?.status === 'succeeded' && returnTo) {
+      // Запускаем таймер обратного отсчета
+      const countdownInterval = setInterval(() => {
+        setRedirectCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            // Редирект на исходную страницу с полной перезагрузкой для обновления данных
+            // Очищаем query параметры из returnTo, чтобы избежать проблем с загрузкой
+            try {
+              const returnUrl = new URL(returnTo, window.location.origin);
+              // Оставляем только pathname, убираем все query параметры
+              window.location.href = returnUrl.pathname;
+            } catch {
+              // Если не удалось распарсить URL, используем как есть
+              window.location.href = returnTo;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(countdownInterval);
+    }
+  }, [payment?.status, returnTo]);
+
   /**
    * Маппинг статусов YooKassa в UI сообщения
    */
@@ -253,7 +283,7 @@ function PaymentSuccess() {
                   <h1 className="payment-success__title">{statusInfo.title}</h1>
                   <p className="payment-success__message">{statusInfo.message}</p>
 
-                  {isSucceeded && (
+                  {isSucceeded && !returnTo && (
                     <div className="payment-success__details">
                       <p>
                         <strong>Сумма:</strong> {payment.amount.value} {payment.amount.currency}
@@ -330,22 +360,75 @@ function PaymentSuccess() {
 
                   {isSucceeded && (
                     <div className="payment-success__success-actions">
-                      {payment.metadata?.customerEmail && (
-                        <button
-                          type="button"
-                          className="payment-success__button payment-success__button--primary"
-                          onClick={() => navigate('/dashboard-new?tab=my-purchases')}
-                        >
-                          Мои покупки
-                        </button>
+                      {returnTo ? (
+                        <>
+                          <div className="payment-success__success-message">
+                            <p className="payment-success__success-icon">✅</p>
+                            <p className="payment-success__success-text">
+                              Оплата прошла. Ссылка на скачивание отправлена на email{' '}
+                              <strong>{payment.metadata?.customerEmail || ''}</strong>
+                            </p>
+                            {redirectCountdown > 0 && (
+                              <p className="payment-success__redirect-note">
+                                Возвращаемся на исходную страницу через {redirectCountdown}{' '}
+                                {redirectCountdown === 1 ? 'секунду' : 'секунды'}...
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="payment-success__button payment-success__button--primary"
+                            onClick={() => {
+                              // Редирект с полной перезагрузкой для обновления данных
+                              try {
+                                const returnUrl = new URL(returnTo, window.location.origin);
+                                // Оставляем только pathname, убираем все query параметры
+                                window.location.href = returnUrl.pathname;
+                              } catch {
+                                // Если не удалось распарсить URL, используем как есть
+                                window.location.href = returnTo;
+                              }
+                            }}
+                          >
+                            Вернуться сейчас
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="payment-success__details">
+                            <p>
+                              <strong>Сумма:</strong> {payment.amount.value}{' '}
+                              {payment.amount.currency}
+                            </p>
+                            {payment.metadata?.customerEmail && (
+                              <p>
+                                <strong>Email:</strong> {payment.metadata.customerEmail}
+                              </p>
+                            )}
+                            {payment.metadata?.orderId && (
+                              <p>
+                                <strong>Номер заказа:</strong> {payment.metadata.orderId}
+                              </p>
+                            )}
+                          </div>
+                          {payment.metadata?.customerEmail && (
+                            <button
+                              type="button"
+                              className="payment-success__button payment-success__button--primary"
+                              onClick={() => navigate('/dashboard-new?tab=my-purchases')}
+                            >
+                              Мои покупки
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="payment-success__button"
+                            onClick={() => navigate('/')}
+                          >
+                            На главную
+                          </button>
+                        </>
                       )}
-                      <button
-                        type="button"
-                        className="payment-success__button"
-                        onClick={() => navigate('/')}
-                      >
-                        На главную
-                      </button>
                     </div>
                   )}
                 </div>

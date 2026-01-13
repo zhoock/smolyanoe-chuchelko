@@ -294,9 +294,16 @@ function CheckoutStep({
       // Формируем описание товара
       const description = `${album.album} - ${album.artist} (download)`;
 
-      // Формируем return URL
+      // Сохраняем исходную страницу для возврата после оплаты
+      // Используем только pathname, чтобы избежать проблем с query параметрами при редиректе
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+      const returnTo = currentPath;
+
+      // Формируем return URL с сохранением исходной страницы
       const returnUrl =
-        typeof window !== 'undefined' ? `${window.location.origin}/pay/success` : '';
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/pay/success?returnTo=${encodeURIComponent(returnTo)}`
+          : '';
 
       // Создаем платеж через ЮKassa API
       if (!album.albumId) {

@@ -223,8 +223,9 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
         const orderResult = await query<{
           album_id: string;
           customer_email: string;
+          updated_at: Date;
         }>(
-          `SELECT album_id, customer_email 
+          `SELECT album_id, customer_email, updated_at 
            FROM orders 
            WHERE id = $1`,
           [orderId]
@@ -236,122 +237,152 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
           const customerEmail = order.customer_email || paymentStatus.metadata?.customerEmail;
 
           if (albumId && customerEmail) {
-            // Создаем запись о покупке (или получаем существующую)
-            const purchaseResult = await query<{
-              id: string;
-              purchase_token: string;
-            }>(
-              `INSERT INTO purchases (order_id, customer_email, album_id)
-               VALUES ($1, $2, $3)
-               ON CONFLICT (customer_email, album_id) 
-               DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
-               RETURNING id, purchase_token`,
-              [orderId, customerEmail, albumId]
-            );
+            // ВАЖНО: Проверяем, не было ли уже отправлено письмо (webhook мог уже отправить)
+            // Письмо отправляем только если заказ был обновлен недавно (в течение последних 30 секунд)
+            const orderUpdateTime = new Date(order.updated_at);
+            const now = new Date();
+            const timeSinceUpdate = (now.getTime() - orderUpdateTime.getTime()) / 1000; // секунды
 
-            if (purchaseResult.rows.length > 0) {
-              const purchase = purchaseResult.rows[0];
-              console.log('✅ Purchase created/updated:', {
-                purchaseId: purchase.id,
-                purchaseToken: purchase.purchase_token,
-                orderId,
-                albumId,
-                customerEmail,
-              });
+            // Если заказ был обновлен более 30 секунд назад, пропускаем отправку
+            // (значит webhook уже должен был отправить письмо)
+            if (timeSinceUpdate > 30) {
+              console.log(
+                'ℹ️ [get-payment-status] Skipping email send - order was updated too long ago:',
+                {
+                  orderId,
+                  timeSinceUpdate: `${timeSinceUpdate.toFixed(1)}s`,
+                  updatedAt: orderUpdateTime.toISOString(),
+                }
+              );
+              // Все равно создаем/обновляем purchase, но не отправляем email
+              await query(
+                `INSERT INTO purchases (order_id, customer_email, album_id)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (customer_email, album_id) 
+                 DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP`,
+                [orderId, customerEmail, albumId]
+              );
+            } else {
+              // Создаем запись о покупке (или получаем существующую)
+              const purchaseResult = await query<{
+                id: string;
+                purchase_token: string;
+              }>(
+                `INSERT INTO purchases (order_id, customer_email, album_id)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (customer_email, album_id) 
+                 DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
+                 RETURNING id, purchase_token`,
+                [orderId, customerEmail, albumId]
+              );
 
-              // Отправляем email (не блокируем основной поток)
-              // Это резервный механизм на случай, если webhook не сработал
-              import('./lib/email')
-                .then(({ sendPurchaseEmail }) => {
-                  // Получаем информацию об альбоме и треках
-                  return query<{
-                    artist: string;
-                    album: string;
-                    lang: string;
-                    customer_first_name: string | null;
-                    customer_last_name: string | null;
-                  }>(
-                    `SELECT a.artist, a.album, a.lang, o.customer_first_name, o.customer_last_name
+              if (purchaseResult.rows.length > 0) {
+                const purchase = purchaseResult.rows[0];
+                console.log('✅ Purchase created/updated:', {
+                  purchaseId: purchase.id,
+                  purchaseToken: purchase.purchase_token,
+                  orderId,
+                  albumId,
+                  customerEmail,
+                });
+
+                // Отправляем email (не блокируем основной поток)
+                // Это резервный механизм на случай, если webhook не сработал
+                import('./lib/email')
+                  .then(({ sendPurchaseEmail }) => {
+                    // Получаем информацию об альбоме и треках
+                    return query<{
+                      artist: string;
+                      album: string;
+                      lang: string;
+                      customer_first_name: string | null;
+                      customer_last_name: string | null;
+                    }>(
+                      `SELECT a.artist, a.album, a.lang, o.customer_first_name, o.customer_last_name
                      FROM albums a
                      INNER JOIN orders o ON a.album_id = o.album_id
                      WHERE a.album_id = $1
                      ORDER BY CASE WHEN a.lang = 'ru' THEN 1 ELSE 2 END
                      LIMIT 1`,
-                    [albumId]
-                  ).then((albumResult) => {
-                    if (albumResult.rows.length > 0) {
-                      const album = albumResult.rows[0];
+                      [albumId]
+                    ).then((albumResult) => {
+                      if (albumResult.rows.length > 0) {
+                        const album = albumResult.rows[0];
 
-                      // Получаем треки альбома
-                      return query<{
-                        track_id: string;
-                        title: string;
-                      }>(
-                        `SELECT t.track_id, t.title 
+                        // Получаем треки альбома
+                        return query<{
+                          track_id: string;
+                          title: string;
+                        }>(
+                          `SELECT t.track_id, t.title 
                          FROM tracks t
                          INNER JOIN albums a ON t.album_id = a.id
                          WHERE a.album_id = $1 AND a.lang = $2
                          ORDER BY t.order_index ASC`,
-                        [albumId, album.lang]
-                      ).then((tracksResult) => {
-                        const tracks = tracksResult.rows.map((row) => ({
-                          trackId: row.track_id,
-                          title: row.title,
-                        }));
+                          [albumId, album.lang]
+                        ).then((tracksResult) => {
+                          const tracks = tracksResult.rows.map((row) => ({
+                            trackId: row.track_id,
+                            title: row.title,
+                          }));
 
-                        const customerName =
-                          album.customer_first_name && album.customer_last_name
-                            ? `${album.customer_first_name} ${album.customer_last_name}`
-                            : album.customer_first_name || undefined;
+                          const customerName =
+                            album.customer_first_name && album.customer_last_name
+                              ? `${album.customer_first_name} ${album.customer_last_name}`
+                              : album.customer_first_name || undefined;
 
-                        console.log('📧 [get-payment-status] Attempting to send purchase email:', {
-                          to: customerEmail,
-                          customerName,
-                          albumName: album.album,
-                          artistName: album.artist,
-                          orderId,
-                          tracksCount: tracks.length,
-                          hasResendKey: !!process.env.RESEND_API_KEY,
+                          console.log(
+                            '📧 [get-payment-status] Attempting to send purchase email:',
+                            {
+                              to: customerEmail,
+                              customerName,
+                              albumName: album.album,
+                              artistName: album.artist,
+                              orderId,
+                              tracksCount: tracks.length,
+                              hasResendKey: !!process.env.RESEND_API_KEY,
+                            }
+                          );
+
+                          return sendPurchaseEmail({
+                            to: customerEmail,
+                            customerName,
+                            albumName: album.album,
+                            artistName: album.artist,
+                            orderId,
+                            purchaseToken: purchase.purchase_token,
+                            tracks,
+                            siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+                          });
                         });
-
-                        return sendPurchaseEmail({
-                          to: customerEmail,
-                          customerName,
-                          albumName: album.album,
-                          artistName: album.artist,
-                          orderId,
-                          purchaseToken: purchase.purchase_token,
-                          tracks,
-                          siteUrl: process.env.NETLIFY_SITE_URL || undefined,
-                        });
+                      }
+                      return Promise.resolve({ success: false, error: 'Album not found' });
+                    });
+                  })
+                  .then((result) => {
+                    if (result?.success) {
+                      console.log('✅ [get-payment-status] Purchase email sent successfully:', {
+                        to: customerEmail,
+                        orderId,
+                      });
+                    } else {
+                      console.error('❌ [get-payment-status] Failed to send purchase email:', {
+                        to: customerEmail,
+                        orderId,
+                        error: result?.error,
                       });
                     }
-                    return Promise.resolve({ success: false, error: 'Album not found' });
-                  });
-                })
-                .then((result) => {
-                  if (result?.success) {
-                    console.log('✅ [get-payment-status] Purchase email sent successfully:', {
+                  })
+                  .catch((emailError) => {
+                    console.error('❌ [get-payment-status] Error sending purchase email:', {
                       to: customerEmail,
                       orderId,
+                      error: emailError instanceof Error ? emailError.message : String(emailError),
+                      stack: emailError instanceof Error ? emailError.stack : undefined,
                     });
-                  } else {
-                    console.error('❌ [get-payment-status] Failed to send purchase email:', {
-                      to: customerEmail,
-                      orderId,
-                      error: result?.error,
-                    });
-                  }
-                })
-                .catch((emailError) => {
-                  console.error('❌ [get-payment-status] Error sending purchase email:', {
-                    to: customerEmail,
-                    orderId,
-                    error: emailError instanceof Error ? emailError.message : String(emailError),
-                    stack: emailError instanceof Error ? emailError.stack : undefined,
+                    // Не выбрасываем ошибку, чтобы не блокировать основной поток
                   });
-                  // Не выбрасываем ошибку, чтобы не блокировать основной поток
-                });
+              }
             }
           } else {
             console.warn('⚠️ Cannot create purchase: missing albumId or customerEmail', {
