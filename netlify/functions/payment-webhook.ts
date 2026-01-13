@@ -215,16 +215,30 @@ export const handler: Handler = async (
                 });
 
                 // Получаем информацию об альбоме и треках
+                console.log('🔍 Fetching album info for email:', { albumId });
                 const albumResult = await query<{
                   artist: string;
                   album: string;
                   lang: string;
                 }>(`SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`, [albumId]);
 
+                console.log('📦 Album query result:', {
+                  albumId,
+                  found: albumResult.rows.length > 0,
+                  album: albumResult.rows[0] || null,
+                });
+
                 if (albumResult.rows.length > 0) {
                   const album = albumResult.rows[0];
+                  console.log('✅ Album found:', {
+                    albumId,
+                    artist: album.artist,
+                    albumName: album.album,
+                    lang: album.lang,
+                  });
 
                   // Получаем треки альбома
+                  console.log('🔍 Fetching tracks for email:', { albumId, lang: album.lang });
                   const tracksResult = await query<{
                     track_id: string;
                     title: string;
@@ -236,6 +250,12 @@ export const handler: Handler = async (
                      ORDER BY t.order_index ASC`,
                     [albumId, album.lang]
                   );
+
+                  console.log('📦 Tracks query result:', {
+                    albumId,
+                    lang: album.lang,
+                    tracksCount: tracksResult.rows.length,
+                  });
 
                   const tracks = tracksResult.rows.map((row) => ({
                     trackId: row.track_id,
@@ -294,12 +314,23 @@ export const handler: Handler = async (
                     // Не выбрасываем ошибку, чтобы не блокировать webhook
                   }
                 } else {
-                  console.warn('⚠️ Album not found for purchase email:', { albumId });
+                  console.error('❌ Album not found for purchase email:', {
+                    albumId,
+                    orderId,
+                    customerEmail,
+                    purchaseId: purchase.id,
+                  });
                 }
               }
             }
           } catch (purchaseError) {
-            console.error('❌ Error creating purchase or sending email:', purchaseError);
+            console.error('❌ Error creating purchase or sending email:', {
+              error: purchaseError instanceof Error ? purchaseError.message : String(purchaseError),
+              stack: purchaseError instanceof Error ? purchaseError.stack : undefined,
+              orderId,
+              albumId: payment.metadata?.albumId,
+              customerEmail: payment.metadata?.customerEmail,
+            });
             // Не блокируем webhook, продолжаем выполнение
           }
         }
