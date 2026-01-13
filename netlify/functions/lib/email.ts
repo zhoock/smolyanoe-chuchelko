@@ -39,7 +39,6 @@ export async function sendPurchaseEmail(
 
     const siteUrl =
       options.siteUrl || process.env.NETLIFY_SITE_URL || 'https://smolyanoechuchelko.ru';
-    const myPurchasesUrl = `${siteUrl}/dashboard-new?tab=my-purchases`;
 
     // Формируем список треков с ссылками на скачивание
     const tracksList = options.tracks
@@ -96,16 +95,6 @@ export async function sendPurchaseEmail(
       </tbody>
     </table>
     
-    <div style="margin-top: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 4px;">
-      <p style="margin: 0 0 15px 0; color: #666;">
-        <strong>💾 Все ваши покупки доступны в личном кабинете:</strong>
-      </p>
-      <a href="${myPurchasesUrl}" 
-         style="display: inline-block; padding: 12px 24px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 500;">
-        Открыть мои покупки
-      </a>
-    </div>
-    
     <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
     
     <p style="color: #666; font-size: 14px; margin: 0;">
@@ -129,9 +118,7 @@ ${options.artistName} — ${options.albumName}
 Треки:
 ${options.tracks.map((t, i) => `${i + 1}. ${t.title}\n   Скачать: ${siteUrl}/api/download?token=${options.purchaseToken}&track=${t.trackId}`).join('\n')}
 
-Все ваши покупки доступны по ссылке: ${myPurchasesUrl}
-
-Если у вас возникли вопросы, пожалуйста, свяжитесь с нами: support@smolyanoechuchelko.ru
+Если у вас возникли вопросы, пожалуйста, свяжитесь с нами: feedback@smolyanoechuchelko.ru
     `;
 
     const result = await resend.emails.send({
