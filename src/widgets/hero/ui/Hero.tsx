@@ -6,106 +6,39 @@ import { getToken } from '@shared/lib/auth';
 import './style.scss';
 
 /**
- * Генерирует image-set() строку из базового URL изображения
- * @param baseUrl - базовый URL изображения (например, https://.../hero-123-1920.jpg)
- * @returns image-set() строка с вариантами для разных форматов (без размеров)
+ * Преобразует URL изображения в формат для background-image
+ * Всегда возвращает простой url(), так как многие браузеры не поддерживают image-set в inline style
+ * @param imageUrl - URL изображения (может быть proxy URL или уже в формате url())
+ * @returns простой URL в формате url('...')
  */
-function generateImageSetFromUrl(baseUrl: string): string {
-  // Если URL уже содержит image-set, нормализуем его (убираем переносы строк)
-  if (baseUrl.includes('image-set')) {
-    return baseUrl.replace(/\n\s*/g, ' ').trim();
+function formatBackgroundImageUrl(imageUrl: string): string {
+  if (!imageUrl || !imageUrl.trim()) {
+    return '';
   }
 
-  // Если это локальный путь (начинается с /images/), возвращаем простой URL
-  if (baseUrl.startsWith('/images/')) {
-    return `url('${baseUrl}')`;
+  // Если это уже правильный формат url('...'), возвращаем как есть
+  if (imageUrl.startsWith("url('") || imageUrl.startsWith('url("')) {
+    return imageUrl;
   }
 
-  // Извлекаем путь к файлу из URL
-  let storagePath = '';
-  let baseName = '';
-
-  // Проверяем разные форматы URL
-  if (baseUrl.includes('proxy-image')) {
-    // URL через proxy-image: /api/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
-    const pathMatch = baseUrl.match(/[?&]path=([^&]+)/);
-    if (pathMatch) {
-      try {
-        storagePath = decodeURIComponent(pathMatch[1]);
-        // Извлекаем имя файла из пути
-        const fileName = storagePath.split('/').pop() || '';
-        // Извлекаем базовое имя (hero-123 из hero-123-1920.jpg)
-        const nameMatch = fileName.match(/(.+)-(\d+)\.(jpg|webp|avif)$/);
-        if (nameMatch) {
-          baseName = nameMatch[1];
-        }
-      } catch (e) {
-        console.warn('⚠️ [Hero] Ошибка декодирования path:', e);
-        return `url('${baseUrl}')`;
-      }
+  // Если это image-set, извлекаем первый доступный URL (jpg приоритет)
+  if (imageUrl.includes('image-set')) {
+    const jpgMatch = imageUrl.match(/url\(["']([^"']+\.jpg[^"']*)["']\)/);
+    if (jpgMatch && jpgMatch[1]) {
+      return `url('${jpgMatch[1]}')`;
     }
-  } else if (baseUrl.includes('supabase.co/storage')) {
-    // Прямой Supabase URL: https://xxx.supabase.co/storage/v1/object/public/user-media/users/zhoock/hero/hero-123-1920.jpg
-    const storageMatch = baseUrl.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
-    if (storageMatch) {
-      storagePath = storageMatch[1];
-      const fileName = storagePath.split('/').pop() || '';
-      const nameMatch = fileName.match(/(.+)-(\d+)\.(jpg|webp|avif)$/);
-      if (nameMatch) {
-        baseName = nameMatch[1];
-      }
+    const webpMatch = imageUrl.match(/url\(["']([^"']+\.webp[^"']*)["']\)/);
+    if (webpMatch && webpMatch[1]) {
+      return `url('${webpMatch[1]}')`;
     }
-  } else {
-    // Простой путь: users/zhoock/hero/hero-123-1920.jpg
-    storagePath = baseUrl;
-    const fileName = storagePath.split('/').pop() || '';
-    const nameMatch = fileName.match(/(.+)-(\d+)\.(jpg|webp|avif)$/);
-    if (nameMatch) {
-      baseName = nameMatch[1];
+    const firstMatch = imageUrl.match(/url\(["']([^"']+)["']\)/);
+    if (firstMatch && firstMatch[1]) {
+      return `url('${firstMatch[1]}')`;
     }
   }
 
-  // Если не удалось извлечь базовое имя, возвращаем URL как есть
-  if (!baseName || !storagePath) {
-    console.warn('⚠️ [Hero] Не удалось распарсить URL, используем как есть:', baseUrl);
-    return `url('${baseUrl}')`;
-  }
-
-  // Определяем базовый путь (без имени файла)
-  const pathParts = storagePath.split('/');
-  pathParts.pop(); // Убираем имя файла
-  const basePath = pathParts.join('/');
-
-  // Определяем origin для proxy-image
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
-  // Генерируем варианты для image-set (форматы: avif, webp, jpg)
-  const formats = ['avif', 'webp', 'jpg'];
-  const size = 1920; // Используем только 1920px вариант
-  const variants: string[] = [];
-
-  for (const format of formats) {
-    const fileName = `${baseName}-${size}.${format}`;
-    const imagePath = `${basePath}/${fileName}`;
-
-    let variantUrl = '';
-    if (baseUrl.includes('proxy-image') || !baseUrl.includes('supabase.co')) {
-      // Используем proxy-image для лучшей совместимости
-      variantUrl = `${origin}/api/proxy-image?path=${encodeURIComponent(imagePath)}`;
-    } else {
-      // Используем прямой Supabase URL
-      const supabaseBase = baseUrl.match(
-        /(https?:\/\/[^/]+\/storage\/v1\/object\/public\/[^/]+\/)/
-      );
-      variantUrl = supabaseBase ? `${supabaseBase[1]}${imagePath}` : baseUrl;
-    }
-
-    const mimeType =
-      format === 'avif' ? 'image/avif' : format === 'webp' ? 'image/webp' : 'image/jpeg';
-    variants.push(`url('${variantUrl}') type('${mimeType}')`);
-  }
-
-  return `image-set(${variants.join(', ')})`;
+  // Для обычного URL просто оборачиваем в url()
+  return `url('${imageUrl}')`;
 }
 
 export function Hero() {
@@ -121,7 +54,8 @@ export function Hero() {
   useEffect(() => {
     const loadImages = async () => {
       try {
-        const images = await loadHeaderImagesFromDatabase();
+        // Для публичных страниц не передаем useAuth=true, API вернет данные админа
+        const images = await loadHeaderImagesFromDatabase(false);
         console.log('📸 [Hero] Загружены header images из БД:', images);
 
         // Фильтруем только изображения из папки hero, удаляем старые из articles
@@ -270,8 +204,33 @@ export function Hero() {
       const randomIndex = Math.floor(Math.random() * headerImages.length);
       const imageUrl = headerImages[randomIndex];
       console.log('🎲 [Hero] Выбрано изображение:', { index: randomIndex, url: imageUrl });
-      const imageSet = generateImageSetFromUrl(imageUrl);
-      setBackgroundImage(imageSet);
+
+      // Преобразуем URL в формат для background-image (простой url(), без image-set)
+      const backgroundImageUrl = formatBackgroundImageUrl(imageUrl);
+      setBackgroundImage(backgroundImageUrl);
+
+      // Предзагружаем изображение для улучшения производительности
+      if (imageUrl && !imageUrl.startsWith('url(')) {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = imageUrl;
+
+        // Добавляем только один preload link за раз
+        const existingLink = document.querySelector('link[rel="preload"][as="image"]');
+        if (existingLink) {
+          existingLink.remove();
+        }
+
+        document.head.appendChild(link);
+
+        // Очищаем link через 10 секунд
+        setTimeout(() => {
+          if (link.parentNode) {
+            link.parentNode.removeChild(link);
+          }
+        }, 10000);
+      }
     } else {
       console.warn('⚠️ [Hero] Нет изображений для отображения (headerImages пустой)');
       setBackgroundImage('');
@@ -282,7 +241,7 @@ export function Hero() {
   const displayName = profileName || 'Смоляное чучелко';
 
   return (
-    <section className="hero" style={{ backgroundImage }}>
+    <section className="hero" style={{ backgroundImage: backgroundImage || undefined }}>
       <h1 className="hero__title">{displayName}</h1>
     </section>
   );

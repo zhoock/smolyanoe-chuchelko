@@ -38,7 +38,7 @@ interface SaveUserProfileResponse {
   error?: string;
 }
 
-import { extractUserIdFromToken } from './lib/jwt';
+import { getUserIdFromEvent, requireAdmin } from './lib/api-helpers';
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -55,16 +55,34 @@ export const handler: Handler = async (
   }
 
   try {
-    const userId = extractUserIdFromToken(event.headers.authorization);
+    // Для GET запросов используется getUserIdFromEvent (для админки)
+    // Для POST требуется права админа
+    const userId = event.httpMethod === 'GET' ? getUserIdFromEvent(event) : requireAdmin(event);
 
     if (event.httpMethod === 'GET') {
-      if (!userId) {
-        // Если пользователь не авторизован, возвращаем null (будет использован JSON fallback)
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({ success: true, data: null } as GetUserProfileResponse),
-        };
+      // Если пользователь не авторизован, используем данные админа (zhoock@zhoock.ru) для публичных страниц
+      let targetUserId = userId;
+      if (!targetUserId) {
+        console.log(
+          '📡 [user-profile] GET: Пользователь не авторизован, используем данные админа для публичных страниц'
+        );
+        // Находим ID админа по email
+        const adminResult = await query<{ id: string }>(
+          `SELECT id FROM users WHERE email = 'zhoock@zhoock.ru' AND is_active = true LIMIT 1`,
+          [],
+          0
+        );
+        if (adminResult.rows.length > 0) {
+          targetUserId = adminResult.rows[0].id;
+          console.log('✅ [user-profile] GET: Найден ID админа:', targetUserId);
+        } else {
+          console.warn('⚠️ [user-profile] GET: Админ не найден в БД');
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ success: true, data: null } as GetUserProfileResponse),
+          };
+        }
       }
 
       // Пытаемся получить данные, включая password (если поле существует)
@@ -75,7 +93,7 @@ export const handler: Handler = async (
       try {
         result = await query<UserProfileRow>(
           `SELECT the_band, header_images, password, site_name FROM users WHERE id = $1 AND is_active = true`,
-          [userId],
+          [targetUserId],
           0
         );
 
@@ -90,14 +108,14 @@ export const handler: Handler = async (
           try {
             result = await query<{ the_band: any; header_images?: any; site_name?: string | null }>(
               `SELECT the_band, header_images, site_name FROM users WHERE id = $1 AND is_active = true`,
-              [userId],
+              [targetUserId],
               0
             );
             password = '';
           } catch (innerError) {
             result = await query<{ the_band: any; site_name?: string | null }>(
               `SELECT the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
-              [userId],
+              [targetUserId],
               0
             );
             password = '';
@@ -140,11 +158,11 @@ export const handler: Handler = async (
     if (event.httpMethod === 'POST') {
       if (!userId) {
         return {
-          statusCode: 401,
+          statusCode: 403,
           headers,
           body: JSON.stringify({
             success: false,
-            error: 'Unauthorized',
+            error: 'Forbidden. Only admin can update user profile.',
           } as SaveUserProfileResponse),
         };
       }

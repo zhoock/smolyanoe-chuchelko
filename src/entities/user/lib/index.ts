@@ -83,13 +83,19 @@ export async function loadTheBandFromProfileJson(lang: string): Promise<string[]
 /**
  * Загружает изображения для шапки (header images) из БД для текущего пользователя
  */
-export async function loadHeaderImagesFromDatabase(): Promise<string[]> {
+export async function loadHeaderImagesFromDatabase(useAuth: boolean = false): Promise<string[]> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
+    // Для публичных страниц не передаем Authorization header
+    // API вернет данные админа для публичного доступа
+    let authHeader = {};
+    if (useAuth) {
+      const { getAuthHeader } = await import('@shared/lib/auth');
+      authHeader = getAuthHeader();
+    }
 
     console.log('📡 [loadHeaderImagesFromDatabase] Отправляем запрос к /api/user-profile', {
-      hasAuth: 'Authorization' in authHeader && !!authHeader.Authorization,
+      useAuth,
+      hasAuth: useAuth && 'Authorization' in authHeader && !!authHeader.Authorization,
     });
 
     const response = await fetch('/api/user-profile', {
