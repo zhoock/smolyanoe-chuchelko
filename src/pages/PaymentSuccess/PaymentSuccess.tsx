@@ -69,7 +69,7 @@ function PaymentSuccess() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pollingCount, setPollingCount] = useState(0);
-  const [redirectCountdown, setRedirectCountdown] = useState(3); // Таймер обратного отсчета
+  const [redirectCountdown, setRedirectCountdown] = useState(5); // Таймер обратного отсчета
   const maxPollingAttempts = 20; // ~1.5 минуты (20 * 5 секунд)
   const pollingInterval = 5000; // 5 секунд для более быстрого обновления
 
@@ -359,77 +359,85 @@ function PaymentSuccess() {
                   )}
 
                   {isSucceeded && (
-                    <div className="payment-success__success-actions">
-                      {returnTo ? (
-                        <>
-                          <div className="payment-success__success-message">
-                            <p className="payment-success__success-icon">✅</p>
-                            <p className="payment-success__success-text">
-                              Оплата прошла. Ссылка на скачивание отправлена на email{' '}
-                              <strong>{payment.metadata?.customerEmail || ''}</strong>
-                            </p>
-                            {redirectCountdown > 0 && (
-                              <p className="payment-success__redirect-note">
-                                Возвращаемся на исходную страницу через {redirectCountdown}{' '}
-                                {redirectCountdown === 1 ? 'секунду' : 'секунды'}...
+                    <>
+                      <div className="payment-success__success-actions">
+                        {returnTo ? (
+                          <>
+                            <div className="payment-success__success-message">
+                              <img
+                                src="/images/users/zhoock/tarbaby/successful-payment.png"
+                                alt="Оплата успешна"
+                                className="payment-success__success-icon"
+                              />
+                              <p className="payment-success__success-text">
+                                Ссылка на скачивание отправлена на email{' '}
+                                <strong>{payment.metadata?.customerEmail || ''}</strong>
                               </p>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            className="payment-success__button payment-success__button--primary"
-                            onClick={() => {
-                              // Редирект с полной перезагрузкой для обновления данных
-                              try {
-                                const returnUrl = new URL(returnTo, window.location.origin);
-                                // Оставляем только pathname, убираем все query параметры
-                                window.location.href = returnUrl.pathname;
-                              } catch {
-                                // Если не удалось распарсить URL, используем как есть
-                                window.location.href = returnTo;
-                              }
-                            }}
-                          >
-                            Вернуться сейчас
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="payment-success__details">
-                            <p>
-                              <strong>Сумма:</strong> {payment.amount.value}{' '}
-                              {payment.amount.currency}
-                            </p>
+                              {redirectCountdown > 0 && (
+                                <p className="payment-success__redirect-note">
+                                  Возвращаемся на исходную страницу через {redirectCountdown}{' '}
+                                  {redirectCountdown === 1 ? 'секунду' : 'секунды'}...
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="payment-success__details">
+                              <p>
+                                <strong>Сумма:</strong> {payment.amount.value}{' '}
+                                {payment.amount.currency}
+                              </p>
+                              {payment.metadata?.customerEmail && (
+                                <p>
+                                  <strong>Email:</strong> {payment.metadata.customerEmail}
+                                </p>
+                              )}
+                              {payment.metadata?.orderId && (
+                                <p>
+                                  <strong>Номер заказа:</strong> {payment.metadata.orderId}
+                                </p>
+                              )}
+                            </div>
                             {payment.metadata?.customerEmail && (
-                              <p>
-                                <strong>Email:</strong> {payment.metadata.customerEmail}
-                              </p>
+                              <button
+                                type="button"
+                                className="payment-success__button payment-success__button--primary"
+                                onClick={() => navigate('/dashboard-new?tab=my-purchases')}
+                              >
+                                Мои покупки
+                              </button>
                             )}
-                            {payment.metadata?.orderId && (
-                              <p>
-                                <strong>Номер заказа:</strong> {payment.metadata.orderId}
-                              </p>
-                            )}
-                          </div>
-                          {payment.metadata?.customerEmail && (
                             <button
                               type="button"
-                              className="payment-success__button payment-success__button--primary"
-                              onClick={() => navigate('/dashboard-new?tab=my-purchases')}
+                              className="payment-success__button"
+                              onClick={() => navigate('/')}
                             >
-                              Мои покупки
+                              На главную
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            className="payment-success__button"
-                            onClick={() => navigate('/')}
-                          >
-                            На главную
-                          </button>
-                        </>
+                          </>
+                        )}
+                      </div>
+                      {returnTo && (
+                        <button
+                          type="button"
+                          className="payment-success__button payment-success__button--primary"
+                          onClick={() => {
+                            // Редирект с полной перезагрузкой для обновления данных
+                            try {
+                              const returnUrl = new URL(returnTo, window.location.origin);
+                              // Оставляем только pathname, убираем все query параметры
+                              window.location.href = returnUrl.pathname;
+                            } catch {
+                              // Если не удалось распарсить URL, используем как есть
+                              window.location.href = returnTo;
+                            }
+                          }}
+                        >
+                          Вернуться сейчас
+                        </button>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               );
