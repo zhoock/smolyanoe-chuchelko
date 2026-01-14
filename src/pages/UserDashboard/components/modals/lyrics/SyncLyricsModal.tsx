@@ -218,6 +218,8 @@ export function SyncLyricsModal({
           storedExtras.length > 0 ? storedExtras[storedExtras.length - 1] : null;
 
         // 4) build lyrics lines
+        // ✅ ВАЖНО: Используем умное сопоставление с учетом порядка и контекста
+        // чтобы дубликаты (припевы) получали правильные тайминги
         let linesToDisplay: SyncedLyricsLine[] = [];
 
         if (contentLines.length === 0) {
@@ -227,34 +229,92 @@ export function SyncLyricsModal({
             contentSet.has(normalize(l.text || ''))
           );
 
-          if (storedOnlyLyrics.length === contentLines.length) {
-            linesToDisplay = contentLines.map((lineText, i) => {
-              const byText = storedOnlyLyrics.find(
-                (s) => normalize(s.text || '') === normalize(lineText)
-              );
-              const byIndex = storedOnlyLyrics[i];
-              const src = byText || byIndex;
+          // Создаем массив для отслеживания использованных строк из storedOnlyLyrics
+          const usedIndices = new Set<number>();
 
-              return {
-                text: lineText.trim(),
-                startTime: src?.startTime ?? 0,
-                endTime: src?.endTime,
-              };
-            });
-          } else {
-            linesToDisplay = contentLines.map((lineText) => {
-              const matched = storedOnlyLyrics.find(
-                (s) => normalize(s.text || '') === normalize(lineText)
-              );
-              return matched
-                ? {
-                    text: lineText.trim(),
-                    startTime: matched.startTime ?? 0,
-                    endTime: matched.endTime,
+          // Функция для поиска лучшего совпадения с учетом контекста
+          const findBestMatch = (
+            lineText: string,
+            lineIndex: number,
+            availableStored: SyncedLyricsLine[]
+          ): SyncedLyricsLine | null => {
+            const normalizedText = normalize(lineText);
+
+            // Сначала пытаемся найти точное совпадение по позиции (если количество строк совпадает)
+            if (storedOnlyLyrics.length === contentLines.length) {
+              const byIndex = storedOnlyLyrics[lineIndex];
+              if (
+                byIndex &&
+                !usedIndices.has(lineIndex) &&
+                normalize(byIndex.text || '') === normalizedText
+              ) {
+                usedIndices.add(lineIndex);
+                return byIndex;
+              }
+            }
+
+            // Ищем совпадение с учетом контекста (предыдущие/следующие строки)
+            // Это помогает различать дубликаты припевов
+            for (let i = 0; i < availableStored.length; i++) {
+              if (usedIndices.has(i)) continue;
+
+              const stored = availableStored[i];
+              if (normalize(stored.text || '') !== normalizedText) continue;
+
+              // Проверяем контекст: предыдущая строка
+              if (lineIndex > 0) {
+                const prevContentLine = normalize(contentLines[lineIndex - 1]);
+                if (i > 0) {
+                  const prevStoredLine = availableStored[i - 1];
+                  if (prevStoredLine && normalize(prevStoredLine.text || '') === prevContentLine) {
+                    // Контекст совпадает - это хорошее совпадение
+                    usedIndices.add(i);
+                    return stored;
                   }
-                : createEmptyLine(lineText);
-            });
-          }
+                }
+              }
+
+              // Проверяем контекст: следующая строка
+              if (lineIndex < contentLines.length - 1) {
+                const nextContentLine = normalize(contentLines[lineIndex + 1]);
+                if (i < availableStored.length - 1) {
+                  const nextStoredLine = availableStored[i + 1];
+                  if (
+                    nextStoredLine &&
+                    normalize(nextStoredLine.text || '') === nextContentLine &&
+                    !usedIndices.has(i + 1)
+                  ) {
+                    // Контекст совпадает - это хорошее совпадение
+                    usedIndices.add(i);
+                    return stored;
+                  }
+                }
+              }
+            }
+
+            // Если контекст не помог, используем первое доступное совпадение
+            for (let i = 0; i < availableStored.length; i++) {
+              if (usedIndices.has(i)) continue;
+              const stored = availableStored[i];
+              if (normalize(stored.text || '') === normalizedText) {
+                usedIndices.add(i);
+                return stored;
+              }
+            }
+
+            return null;
+          };
+
+          linesToDisplay = contentLines.map((lineText, i) => {
+            const matched = findBestMatch(lineText, i, storedOnlyLyrics);
+            return matched
+              ? {
+                  text: lineText.trim(),
+                  startTime: matched.startTime ?? 0,
+                  endTime: matched.endTime,
+                }
+              : createEmptyLine(lineText);
+          });
         } else {
           linesToDisplay = contentLines.map(createEmptyLine);
         }
@@ -376,21 +436,19 @@ export function SyncLyricsModal({
         storedAuthorship || trackAuthorship || propAuthorship || ''
       );
 
-      // dedupe by text
-      const seen = new Set<string>();
-      const cleaned = syncedLines.filter((l) => {
-        const t = normalize(l.text || '');
-        if (!t) return false;
-        if (seen.has(t)) return false;
-        seen.add(t);
-        return true;
-      });
-
-      // enforce authorship endTime=duration
-      const linesToSave = cleaned.map((line) => {
-        const isAuth = authorshipToSave && normalize(line.text || '') === authorshipToSave;
-        return isAuth ? { ...line, endTime: duration > 0 ? duration : line.endTime } : line;
-      });
+      // ✅ ВАЖНО: НЕ удаляем дубликаты - припевы могут повторяться с разными таймингами
+      // Фильтруем только пустые строки и авторство (авторство сохраняется отдельным полем)
+      const linesToSave = syncedLines
+        .filter((l) => {
+          const t = normalize(l.text || '');
+          // Удаляем пустые строки и строки авторства (авторство сохраняется отдельно)
+          return t.length > 0 && t !== authorshipToSave;
+        })
+        .map((line) => {
+          // enforce authorship endTime=duration (на случай если авторство все же попало)
+          const isAuth = authorshipToSave && normalize(line.text || '') === authorshipToSave;
+          return isAuth ? { ...line, endTime: duration > 0 ? duration : line.endTime } : line;
+        });
 
       const result = await saveSyncedLyrics({
         albumId,
