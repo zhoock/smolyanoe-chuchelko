@@ -278,6 +278,14 @@ dialog {
       }
     }
 
+    &__time-disabled {
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+      font-variant-numeric: tabular-nums;
+      opacity: 0.5;
+      user-select: none;
+    }
+
     &__clear-btn {
       display: flex;
       align-items: center;
@@ -328,6 +336,7 @@ dialog {
       &--primary {
         @include dashboard-button;
 
+        // stylelint-disable-next-line no-duplicate-selectors
         & {
           color: var(--dashboard-card-bg);
           background: var(--white);

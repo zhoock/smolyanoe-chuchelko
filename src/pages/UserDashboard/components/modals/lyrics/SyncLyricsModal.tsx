@@ -21,12 +21,11 @@ interface SyncLyricsModalProps {
   trackId: string;
   trackTitle: string;
   trackSrc?: string;
-  authorship?: string; // Fallback для авторства, если не загрузилось из БД
+  authorship?: string; // fallback
   onClose: () => void;
   onSave?: () => void;
 }
 
-// Форматирование времени для отображения (с миллисекундами для тайм-кодов)
 const formatTime = (seconds: number): string => {
   if (isNaN(seconds) || !Number.isFinite(seconds)) return '0:00.00';
   const mins = Math.floor(seconds / 60);
@@ -35,7 +34,6 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
 };
 
-// Форматирование времени для отображения (MM:SS)
 const formatTimeCompact = (seconds: number): string => {
   if (isNaN(seconds) || !Number.isFinite(seconds)) return '0:00';
   const mins = Math.floor(seconds / 60);
@@ -55,7 +53,9 @@ export function SyncLyricsModal({
 }: SyncLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+
   const [syncedLines, setSyncedLines] = useState<SyncedLyricsLine[]>([]);
+  const [trackAuthorship, setTrackAuthorship] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -63,7 +63,12 @@ export function SyncLyricsModal({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // IMPORTANT: race-protection
+  const requestIdRef = useRef(0);
+
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
     title?: string;
@@ -71,21 +76,15 @@ export function SyncLyricsModal({
     variant?: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
 
-  // Инициализация аудио элемента
+  // Audio init
   useEffect(() => {
     if (!trackSrc) return;
 
     const audio = new Audio(trackSrc);
     audioRef.current = audio;
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
-
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => setDuration(audio.duration);
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
@@ -105,33 +104,37 @@ export function SyncLyricsModal({
     };
   }, [trackSrc]);
 
-  // Загрузка данных при открытии модального окна
+  // Data load on open / track change
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      // invalidate any pending async chain if modal closed
+      requestIdRef.current += 1;
+      return;
+    }
+
+    const currentRequestId = ++requestIdRef.current;
+    const isRequestValid = () => currentRequestId === requestIdRef.current;
 
     const loadData = async () => {
+      // reset state immediately (so no "old track" flashes)
+      setSyncedLines([]);
+      setTrackAuthorship('');
       setIsLoading(true);
       setIsDirty(false);
       setIsSaved(false);
 
+      let authorshipDetected = '';
+
       try {
-        // Всегда загружаем текст из БД для актуальности данных
         const textToUse = await loadTrackTextFromDatabase(albumId, trackId, lang).catch((error) => {
           console.error('[SyncLyricsModal] Failed to load text from DB:', error);
           return '';
         });
 
-        console.log('[SyncLyricsModal] Loaded text from DB:', {
-          albumId,
-          trackId,
-          lang,
-          textLength: textToUse?.length || 0,
-          textPreview: textToUse?.substring(0, 50) || 'empty',
-        });
+        if (!isRequestValid()) return;
 
         let linesToDisplay: SyncedLyricsLine[] = [];
 
-        // Вспомогательная функция для создания строки с нулевыми таймкодами
         const createEmptyLine = (text: string): SyncedLyricsLine => ({
           text: text.trim(),
           startTime: 0,
@@ -139,36 +142,30 @@ export function SyncLyricsModal({
         });
 
         if (textToUse) {
-          // Если есть текст, разбиваем на строки
           const contentLines = textToUse.split('\n').filter((line) => line.trim());
 
-          // Пытаемся загрузить сохраненные синхронизации из БД (необязательно)
-          // Очищаем кэш перед загрузкой, чтобы получить актуальные данные
           clearSyncedLyricsCache(albumId, trackId, lang);
+
           try {
             const storedSync = await loadSyncedLyricsFromStorage(albumId, trackId, lang);
+            if (!isRequestValid()) return;
 
             if (storedSync && storedSync.length > 0) {
-              // Загружаем авторство для фильтрации
               const storedAuthorship = await loadAuthorshipFromStorage(
                 albumId,
                 trackId,
                 lang
               ).catch(() => null);
-              const trackAuthorship = (storedAuthorship || propAuthorship || '').trim();
+              if (!isRequestValid()) return;
 
-              // Фильтруем авторство из сохраненных синхронизаций
+              const a = (storedAuthorship || propAuthorship || '').trim();
+
               const storedMain = storedSync.filter((line) => {
                 const lineText = (line.text || '').trim();
-                return !(trackAuthorship && lineText === trackAuthorship);
+                return !(a && lineText === a);
               });
 
-              // Используем сохраненные синхронизации
-              // Если количество строк совпадает - используем сохраненные синхронизации напрямую
-              // (текст и таймкоды из БД - это источник истины)
               if (storedMain.length === contentLines.length) {
-                // Количество строк совпадает - используем сохраненные синхронизации
-                // но обновляем текст из БД (на случай если текст изменился)
                 linesToDisplay = storedMain.map((storedLine, index) => {
                   const currentLine = contentLines[index];
                   return {
@@ -178,77 +175,81 @@ export function SyncLyricsModal({
                   };
                 });
               } else {
-                // Количество строк не совпадает - сопоставляем по тексту
                 linesToDisplay = contentLines.map((currentLine) => {
-                  // Ищем строку в сохраненных синхронизациях по тексту
                   const matchedLine = storedMain.find(
                     (stored) => stored.text.trim() === currentLine.trim()
                   );
-                  if (matchedLine) {
-                    return {
-                      text: currentLine.trim(),
-                      startTime: matchedLine.startTime,
-                      endTime: matchedLine.endTime,
-                    };
-                  } else {
-                    return createEmptyLine(currentLine);
-                  }
+                  return matchedLine
+                    ? {
+                        text: currentLine.trim(),
+                        startTime: matchedLine.startTime,
+                        endTime: matchedLine.endTime,
+                      }
+                    : createEmptyLine(currentLine);
                 });
               }
             } else {
-              // Нет сохраненных синхронизаций, создаем новые строки
               linesToDisplay = contentLines.map(createEmptyLine);
             }
           } catch (syncError) {
-            // Если не удалось загрузить синхронизации, просто используем текст
             console.error('[SyncLyricsModal] Error loading synced lyrics:', syncError);
             linesToDisplay = contentLines.map(createEmptyLine);
           }
         } else {
-          // Если нет текста, показываем пустое состояние
           linesToDisplay = [];
         }
 
-        // Загружаем авторство и добавляем его в конец списка строк (для отображения)
-        // При сохранении авторство будет отфильтровано из syncedLyrics и сохранено отдельным полем
+        // authorship (display-only last row)
         try {
           const storedAuthorship = await Promise.race([
             loadAuthorshipFromStorage(albumId, trackId, lang),
             new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 5000)),
           ]);
 
+          if (!isRequestValid()) return;
+
           const authorshipToUse = storedAuthorship || propAuthorship || null;
 
-          // Добавляем авторство как последнюю строку (с таймкодом = duration или 0)
           if (authorshipToUse && authorshipToUse.trim()) {
-            const lastLine = linesToDisplay[linesToDisplay.length - 1];
-            // Проверяем, не добавлено ли авторство уже (чтобы не дублировать)
-            if (!lastLine || lastLine.text.trim() !== authorshipToUse.trim()) {
+            const trimmed = authorshipToUse.trim();
+            authorshipDetected = trimmed;
+
+            const last = linesToDisplay[linesToDisplay.length - 1];
+            if (!last || last.text.trim() !== trimmed) {
               linesToDisplay.push({
-                text: authorshipToUse.trim(),
-                startTime: duration || 0,
+                text: trimmed,
+                startTime: 0,
                 endTime: undefined,
               });
             }
           }
         } catch (authorshipError) {
-          // Игнорируем ошибки загрузки авторства
           console.warn('Не удалось загрузить авторство:', authorshipError);
         }
 
+        if (!isRequestValid()) return;
+
+        setTrackAuthorship(authorshipDetected);
         setSyncedLines(linesToDisplay);
       } catch (error) {
         console.error('Ошибка загрузки данных:', error);
+        if (!isRequestValid()) return;
         setSyncedLines([]);
       } finally {
-        setIsLoading(false);
+        if (isRequestValid()) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadData();
-  }, [isOpen, albumId, trackId, lang, duration]);
 
-  // Установить тайм-код для конкретной строки
+    // cleanup: invalidate this request chain on unmount/dep change
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [isOpen, albumId, trackId, lang, propAuthorship]);
+
   const setLineTime = useCallback(
     (lineIndex: number, field: 'startTime' | 'endTime') => {
       const time = currentTime;
@@ -262,13 +263,9 @@ export function SyncLyricsModal({
           [field]: time,
         };
 
-        // Если устанавливаем startTime, автоматически устанавливаем/обновляем endTime предыдущей строки
         if (field === 'startTime' && lineIndex > 0) {
           const prevLine = newLines[lineIndex - 1];
-          newLines[lineIndex - 1] = {
-            ...prevLine,
-            endTime: time,
-          };
+          newLines[lineIndex - 1] = { ...prevLine, endTime: time };
         }
 
         setIsDirty(true);
@@ -278,7 +275,6 @@ export function SyncLyricsModal({
     [currentTime]
   );
 
-  // Сбросить endTime для конкретной строки
   const clearEndTime = useCallback((lineIndex: number) => {
     setSyncedLines((prev) => {
       const newLines = [...prev];
@@ -292,7 +288,6 @@ export function SyncLyricsModal({
     });
   }, []);
 
-  // Сохранить синхронизации
   const handleSave = useCallback(async () => {
     if (syncedLines.length === 0) {
       setAlertModal({
@@ -307,16 +302,14 @@ export function SyncLyricsModal({
     setIsSaving(true);
 
     try {
-      // Загружаем авторство
-      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang);
-      const trackAuthorship = (storedAuthorship || propAuthorship || '').trim();
+      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(
+        () => null
+      );
+      const authorshipToSave = (storedAuthorship || trackAuthorship || propAuthorship || '').trim();
 
-      // Фильтруем строки авторства из syncedLines перед сохранением
-      // Авторство хранится отдельным полем authorship, не должно быть в syncedLyrics
       const linesToSave = syncedLines.filter((line) => {
         const lineText = (line.text || '').trim();
-        // Исключаем строки, которые совпадают с авторством
-        return !(trackAuthorship && lineText === trackAuthorship);
+        return !(authorshipToSave && lineText === authorshipToSave);
       });
 
       const result = await saveSyncedLyrics({
@@ -324,25 +317,22 @@ export function SyncLyricsModal({
         trackId,
         lang,
         syncedLyrics: linesToSave,
-        authorship: trackAuthorship.trim() || undefined,
+        authorship: authorshipToSave || undefined,
       });
 
       if (result.success) {
         setIsDirty(false);
         setIsSaved(true);
-        // Очищаем кэш синхронизаций, чтобы при следующей загрузке получить актуальные данные
         clearSyncedLyricsCache(albumId, trackId, lang);
-        // Останавливаем воспроизведение и сбрасываем время
+
         if (audioRef.current) {
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
           setIsPlaying(false);
           setCurrentTime(0);
         }
-        // Вызываем callback для обновления статуса трека
-        if (onSave) {
-          onSave();
-        }
+
+        onSave?.();
       } else {
         setAlertModal({
           isOpen: true,
@@ -362,9 +352,8 @@ export function SyncLyricsModal({
     } finally {
       setIsSaving(false);
     }
-  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave]);
+  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave, trackAuthorship]);
 
-  // Переключение play/pause
   const togglePlayPause = useCallback(() => {
     if (!audioRef.current) return;
 
@@ -372,14 +361,11 @@ export function SyncLyricsModal({
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play().catch((error) => {
-        console.error('Ошибка воспроизведения:', error);
-      });
+      audioRef.current.play().catch((error) => console.error('Ошибка воспроизведения:', error));
       setIsPlaying(true);
     }
   }, [isPlaying]);
 
-  // Обработка клика по прогресс-бару
   const handleProgressClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
       if (!audioRef.current || !duration) return;
@@ -414,7 +400,6 @@ export function SyncLyricsModal({
 
             <div className="sync-lyrics-modal__divider"></div>
 
-            {/* Проигрыватель */}
             <div className="sync-lyrics-modal__player">
               <button
                 type="button"
@@ -464,7 +449,6 @@ export function SyncLyricsModal({
 
             <div className="sync-lyrics-modal__divider"></div>
 
-            {/* Таблица строк с тайм-кодами */}
             <div className="sync-lyrics-modal__content">
               {isLoading ? (
                 <div className="sync-lyrics-modal__loading">Загрузка...</div>
@@ -489,66 +473,82 @@ export function SyncLyricsModal({
                     </div>
                     <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--clear"></div>
                   </div>
+
                   <div className="sync-lyrics-modal__table-body">
-                    {syncedLines.map((line, index) => (
-                      <div key={index} className="sync-lyrics-modal__table-row">
-                        <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--number">
-                          {index + 1}
+                    {syncedLines.map((line, index) => {
+                      const isAuthorshipLine =
+                        trackAuthorship && line.text.trim() === trackAuthorship.trim();
+
+                      return (
+                        <div key={index} className="sync-lyrics-modal__table-row">
+                          <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--number">
+                            {index + 1}
+                          </div>
+                          <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--lyrics">
+                            {line.text}
+                          </div>
+
+                          <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--start">
+                            {isAuthorshipLine ? (
+                              <span className="sync-lyrics-modal__time-disabled">—</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setLineTime(index, 'startTime')}
+                                className="sync-lyrics-modal__time-btn"
+                                disabled={currentTime === 0 && !isPlaying}
+                              >
+                                {formatTime(line.startTime)}
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
+                            {isAuthorshipLine ? (
+                              <span className="sync-lyrics-modal__time-disabled">—</span>
+                            ) : line.endTime !== undefined && line.endTime > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setLineTime(index, 'endTime')}
+                                className="sync-lyrics-modal__time-btn"
+                                disabled={currentTime === 0 && !isPlaying}
+                              >
+                                {formatTime(line.endTime)}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setLineTime(index, 'endTime')}
+                                className="sync-lyrics-modal__time-btn sync-lyrics-modal__time-btn--set"
+                                disabled={currentTime === 0 && !isPlaying}
+                              >
+                                Set end
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--clear">
+                            {!isAuthorshipLine &&
+                              line.endTime !== undefined &&
+                              line.endTime > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => clearEndTime(index)}
+                                  className="sync-lyrics-modal__clear-btn"
+                                  title="Сбросить конец строки"
+                                >
+                                  ×
+                                </button>
+                              )}
+                          </div>
                         </div>
-                        <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--lyrics">
-                          {line.text}
-                        </div>
-                        <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--start">
-                          <button
-                            type="button"
-                            onClick={() => setLineTime(index, 'startTime')}
-                            className="sync-lyrics-modal__time-btn"
-                            disabled={currentTime === 0 && !isPlaying}
-                          >
-                            {formatTime(line.startTime)}
-                          </button>
-                        </div>
-                        <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
-                          {line.endTime !== undefined && line.endTime > 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => setLineTime(index, 'endTime')}
-                              className="sync-lyrics-modal__time-btn"
-                              disabled={currentTime === 0 && !isPlaying}
-                            >
-                              {formatTime(line.endTime)}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setLineTime(index, 'endTime')}
-                              className="sync-lyrics-modal__time-btn sync-lyrics-modal__time-btn--set"
-                              disabled={currentTime === 0 && !isPlaying}
-                            >
-                              Set end
-                            </button>
-                          )}
-                        </div>
-                        <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--clear">
-                          {line.endTime !== undefined && line.endTime > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => clearEndTime(index)}
-                              className="sync-lyrics-modal__clear-btn"
-                              title="Сбросить конец строки"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Кнопки действий */}
             {!isLoading && syncedLines.length > 0 && (
               <>
                 <div className="sync-lyrics-modal__divider"></div>
@@ -560,6 +560,7 @@ export function SyncLyricsModal({
                   >
                     {ui?.dashboard?.cancel ?? 'Cancel'}
                   </button>
+
                   <div className="sync-lyrics-modal__actions-right">
                     {isSaved && (
                       <span className="sync-lyrics-modal__saved-indicator">
@@ -587,7 +588,6 @@ export function SyncLyricsModal({
         </div>
       </Popup>
 
-      {/* Alert Modal */}
       {alertModal && (
         <AlertModal
           isOpen={alertModal.isOpen}
