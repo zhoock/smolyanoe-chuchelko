@@ -212,10 +212,11 @@ export function SyncLyricsModal({
 
         if (!isRequestValid()) return;
 
-        // 3) detect extras from stored (обычно старое авторство или мусор)
-        const storedExtras = storedSync.filter((l) => !contentSet.has(normalize(l.text || '')));
-        const storedExtraCandidate =
-          storedExtras.length > 0 ? storedExtras[storedExtras.length - 1] : null;
+        // 3) Находим авторство в сохраненных данных (если есть)
+        // ✅ ВАЖНО: Авторство теперь сохраняется как часть syncedLyrics, ищем его там
+        const storedAuthLine = authorshipToUse
+          ? storedSync.find((l) => normalize(l.text || '') === normalize(authorshipToUse))
+          : null;
 
         // 4) build lyrics lines
         // ✅ ВАЖНО: Используем умное сопоставление с учетом порядка и контекста
@@ -319,15 +320,24 @@ export function SyncLyricsModal({
           linesToDisplay = contentLines.map(createEmptyLine);
         }
 
-        // 5) add ONE authorship line at end (с сохранением startTime от старого extra)
+        // 5) add ONE authorship line at end (с сохранением startTime из сохраненных данных)
         if (authorshipToUse) {
-          const preservedStart = storedExtraCandidate?.startTime ?? 0;
+          // Проверяем, не добавлено ли авторство уже в linesToDisplay
+          const hasAuthorshipInDisplay = linesToDisplay.some(
+            (l) => normalize(l.text || '') === normalize(authorshipToUse)
+          );
 
-          linesToDisplay.push({
-            text: authorshipToUse,
-            startTime: preservedStart,
-            endTime: undefined, // дотянем до duration позже
-          });
+          if (!hasAuthorshipInDisplay) {
+            // Используем тайминг из сохраненных данных, если есть
+            const preservedStart = storedAuthLine?.startTime ?? 0;
+            const preservedEnd = storedAuthLine?.endTime;
+
+            linesToDisplay.push({
+              text: authorshipToUse,
+              startTime: preservedStart, // Сохраняем тайминг из БД
+              endTime: preservedEnd, // Сохраняем endTime из БД
+            });
+          }
         }
 
         if (!isRequestValid()) return;
@@ -436,18 +446,21 @@ export function SyncLyricsModal({
         storedAuthorship || trackAuthorship || propAuthorship || ''
       );
 
-      // ✅ ВАЖНО: НЕ удаляем дубликаты - припевы могут повторяться с разными таймингами
-      // Фильтруем только пустые строки и авторство (авторство сохраняется отдельным полем)
+      // ✅ ВАЖНО: Авторство ДОЛЖНО быть частью syncedLyrics, чтобы сохранить его тайминг
+      // Фильтруем только пустые строки, НЕ фильтруем авторство
       const linesToSave = syncedLines
         .filter((l) => {
           const t = normalize(l.text || '');
-          // Удаляем пустые строки и строки авторства (авторство сохраняется отдельно)
-          return t.length > 0 && t !== authorshipToSave;
+          // Удаляем только пустые строки
+          return t.length > 0;
         })
         .map((line) => {
-          // enforce authorship endTime=duration (на случай если авторство все же попало)
+          // Для авторства устанавливаем endTime=duration, если не задан
           const isAuth = authorshipToSave && normalize(line.text || '') === authorshipToSave;
-          return isAuth ? { ...line, endTime: duration > 0 ? duration : line.endTime } : line;
+          if (isAuth && line.endTime === undefined && duration > 0) {
+            return { ...line, endTime: duration };
+          }
+          return line;
         });
 
       const result = await saveSyncedLyrics({
@@ -459,6 +472,10 @@ export function SyncLyricsModal({
       });
 
       if (result.success) {
+        // ✅ ВАЖНО: Авторство уже в linesToSave с правильным таймингом
+        // Обновляем локальное состояние тем же массивом, что был сохранен
+        setSyncedLines(linesToSave);
+
         setIsDirty(false);
         setIsSaved(true);
         clearSyncedLyricsCache(albumId, trackId, lang);
