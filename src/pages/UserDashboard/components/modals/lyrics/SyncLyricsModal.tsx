@@ -160,24 +160,22 @@ export function SyncLyricsModal({
 
               const a = (storedAuthorship || propAuthorship || '').trim();
 
-              const storedMain = storedSync.filter((line) => {
-                const lineText = (line.text || '').trim();
-                return !(a && lineText === a);
-              });
+              // ВАЖНО: больше НЕ фильтруем авторство из syncedLyrics здесь.
+              // Оно должно отображаться и синхронизироваться (end до конца трека).
 
-              if (storedMain.length === contentLines.length) {
-                linesToDisplay = storedMain.map((storedLine, index) => {
+              if (storedSync.length === contentLines.length) {
+                linesToDisplay = storedSync.map((storedLine, index) => {
                   const currentLine = contentLines[index];
                   return {
-                    text: currentLine ? currentLine.trim() : storedLine.text.trim(),
+                    text: currentLine ? currentLine.trim() : (storedLine.text || '').trim(),
                     startTime: storedLine.startTime,
                     endTime: storedLine.endTime,
                   };
                 });
               } else {
                 linesToDisplay = contentLines.map((currentLine) => {
-                  const matchedLine = storedMain.find(
-                    (stored) => stored.text.trim() === currentLine.trim()
+                  const matchedLine = storedSync.find(
+                    (stored) => (stored.text || '').trim() === currentLine.trim()
                   );
                   return matchedLine
                     ? {
@@ -187,6 +185,28 @@ export function SyncLyricsModal({
                       }
                     : createEmptyLine(currentLine);
                 });
+
+                // Если в storedSync была строка авторства — добавим её в конец, если её нет в тексте
+                if (a) {
+                  const hasAuthInStored = storedSync.some(
+                    (l) => (l.text || '').trim() === a.trim()
+                  );
+                  const hasAuthInLines = linesToDisplay.some(
+                    (l) => (l.text || '').trim() === a.trim()
+                  );
+                  if (hasAuthInStored && !hasAuthInLines) {
+                    const storedAuthLine = storedSync.find(
+                      (l) => (l.text || '').trim() === a.trim()
+                    );
+                    if (storedAuthLine) {
+                      linesToDisplay.push({
+                        text: a.trim(),
+                        startTime: storedAuthLine.startTime ?? 0,
+                        endTime: storedAuthLine.endTime,
+                      });
+                    }
+                  }
+                }
               }
             } else {
               linesToDisplay = contentLines.map(createEmptyLine);
@@ -199,7 +219,7 @@ export function SyncLyricsModal({
           linesToDisplay = [];
         }
 
-        // authorship (display-only last row)
+        // authorship (last row)
         try {
           const storedAuthorship = await Promise.race([
             loadAuthorshipFromStorage(albumId, trackId, lang),
@@ -215,11 +235,11 @@ export function SyncLyricsModal({
             authorshipDetected = trimmed;
 
             const last = linesToDisplay[linesToDisplay.length - 1];
-            if (!last || last.text.trim() !== trimmed) {
+            if (!last || (last.text || '').trim() !== trimmed) {
               linesToDisplay.push({
                 text: trimmed,
                 startTime: 0,
-                endTime: undefined,
+                endTime: duration > 0 ? duration : undefined, // если duration уже известна
               });
             }
           }
@@ -248,7 +268,18 @@ export function SyncLyricsModal({
     return () => {
       requestIdRef.current += 1;
     };
-  }, [isOpen, albumId, trackId, lang, propAuthorship]);
+  }, [isOpen, albumId, trackId, lang, propAuthorship, duration]);
+
+  // Когда duration появляется/меняется — фиксируем endTime=duration у строки авторства
+  useEffect(() => {
+    if (!duration || !trackAuthorship) return;
+    setSyncedLines((prev) =>
+      prev.map((line) => {
+        const isAuthorshipLine = (line.text || '').trim() === trackAuthorship.trim();
+        return isAuthorshipLine ? { ...line, endTime: duration } : line;
+      })
+    );
+  }, [duration, trackAuthorship]);
 
   const setLineTime = useCallback(
     (lineIndex: number, field: 'startTime' | 'endTime') => {
@@ -258,12 +289,23 @@ export function SyncLyricsModal({
         const newLines = [...prev];
         if (!newLines[lineIndex]) return prev;
 
-        newLines[lineIndex] = {
+        const nextLine: SyncedLyricsLine = {
           ...newLines[lineIndex],
           [field]: time,
         };
 
-        if (field === 'startTime' && lineIndex > 0) {
+        const isAuthorshipLine =
+          trackAuthorship && (nextLine.text || '').trim() === trackAuthorship.trim();
+
+        // Авторство: endTime всегда до конца трека
+        if (isAuthorshipLine && field === 'startTime') {
+          nextLine.endTime = duration > 0 ? duration : nextLine.endTime;
+        }
+
+        newLines[lineIndex] = nextLine;
+
+        // Обычные строки: если ставим startTime — закрываем предыдущую строку
+        if (!isAuthorshipLine && field === 'startTime' && lineIndex > 0) {
           const prevLine = newLines[lineIndex - 1];
           newLines[lineIndex - 1] = { ...prevLine, endTime: time };
         }
@@ -272,7 +314,7 @@ export function SyncLyricsModal({
         return newLines;
       });
     },
-    [currentTime]
+    [currentTime, duration, trackAuthorship]
   );
 
   const clearEndTime = useCallback((lineIndex: number) => {
@@ -307,9 +349,16 @@ export function SyncLyricsModal({
       );
       const authorshipToSave = (storedAuthorship || trackAuthorship || propAuthorship || '').trim();
 
-      const linesToSave = syncedLines.filter((line) => {
-        const lineText = (line.text || '').trim();
-        return !(authorshipToSave && lineText === authorshipToSave);
+      // НЕ удаляем строку авторства из syncedLyrics — она должна храниться и отображаться.
+      // Но гарантируем, что её endTime = duration.
+      const linesToSave = syncedLines.map((line) => {
+        const isAuthLine = authorshipToSave && (line.text || '').trim() === authorshipToSave.trim();
+
+        if (isAuthLine) {
+          return { ...line, endTime: duration > 0 ? duration : line.endTime };
+        }
+
+        return line;
       });
 
       const result = await saveSyncedLyrics({
@@ -352,7 +401,7 @@ export function SyncLyricsModal({
     } finally {
       setIsSaving(false);
     }
-  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave, trackAuthorship]);
+  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave, trackAuthorship, duration]);
 
   const togglePlayPause = useCallback(() => {
     if (!audioRef.current) return;
@@ -437,6 +486,7 @@ export function SyncLyricsModal({
                   </svg>
                 )}
               </button>
+
               <div className="sync-lyrics-modal__time">{formatTimeCompact(currentTime)}</div>
               <div className="sync-lyrics-modal__progress-bar" onClick={handleProgressClick}>
                 <div
@@ -477,35 +527,36 @@ export function SyncLyricsModal({
                   <div className="sync-lyrics-modal__table-body">
                     {syncedLines.map((line, index) => {
                       const isAuthorshipLine =
-                        trackAuthorship && line.text.trim() === trackAuthorship.trim();
+                        trackAuthorship && (line.text || '').trim() === trackAuthorship.trim();
 
                       return (
                         <div key={index} className="sync-lyrics-modal__table-row">
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--number">
                             {index + 1}
                           </div>
+
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--lyrics">
                             {line.text}
                           </div>
 
+                          {/* Start: авторство тоже можно таймить (как в Apple Music) */}
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--start">
-                            {isAuthorshipLine ? (
-                              <span className="sync-lyrics-modal__time-disabled">—</span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setLineTime(index, 'startTime')}
-                                className="sync-lyrics-modal__time-btn"
-                                disabled={currentTime === 0 && !isPlaying}
-                              >
-                                {formatTime(line.startTime)}
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => setLineTime(index, 'startTime')}
+                              className="sync-lyrics-modal__time-btn"
+                              disabled={currentTime === 0 && !isPlaying}
+                            >
+                              {formatTime(line.startTime)}
+                            </button>
                           </div>
 
+                          {/* End: у авторства всегда до конца трека */}
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
                             {isAuthorshipLine ? (
-                              <span className="sync-lyrics-modal__time-disabled">—</span>
+                              <span className="sync-lyrics-modal__time-disabled">
+                                {formatTime(duration)}
+                              </span>
                             ) : line.endTime !== undefined && line.endTime > 0 ? (
                               <button
                                 type="button"
