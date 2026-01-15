@@ -1,6 +1,11 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { SyncedLyricsLine, TracksProps } from '@models';
-import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
+import {
+  loadSyncedLyricsFromStorage,
+  loadAuthorshipFromStorage,
+  subscribeToCacheInvalidation,
+  getCacheVersion,
+} from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import { debugLog } from '../utils/debug';
 
@@ -37,6 +42,9 @@ export function useLyricsContent({
 }: UseLyricsContentParams) {
   // Актуальный ключ трека: по нему валидируем async-результаты
   const trackKeyRef = useRef<string | null>(null);
+
+  // ✅ Версия кэша для принудительной перезагрузки после очистки кэша
+  const [cacheVersion, setCacheVersion] = useState(() => getCacheVersion());
 
   const getTrackKey = () => {
     if (!currentTrack) return null;
@@ -80,6 +88,22 @@ export function useLyricsContent({
     setIsLoadingSyncedLyrics,
     setHasSyncedLyricsAvailable,
   ]);
+
+  // ✅ Подписка на инвалидацию кэша для принудительной перезагрузки после сохранения
+  useEffect(() => {
+    if (!currentTrack) return;
+
+    const unsubscribe = subscribeToCacheInvalidation(
+      () => {
+        // Принудительно обновляем версию кэша для перезагрузки данных
+        setCacheVersion(getCacheVersion());
+      },
+      albumId,
+      currentTrack.id,
+      lang
+    );
+    return unsubscribe;
+  }, [currentTrack, albumId, lang]);
 
   // 2) Загрузка SYNCED lyrics (karaoke)
   useEffect(() => {
@@ -173,6 +197,7 @@ export function useLyricsContent({
     albumId,
     lang,
     duration,
+    cacheVersion, // ✅ Добавляем cacheVersion для принудительной перезагрузки после очистки кэша
     setSyncedLyrics,
     setAuthorshipText,
     setCurrentLineIndex,
