@@ -17,32 +17,12 @@ interface UseLyricsContentParams {
   setHasSyncedLyricsAvailable: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-/**
- * Проверяет синхронно наличие синхронизированного текста
- */
-function checkSyncedLyricsAvailableSync(
-  currentTrack: TracksProps | null,
-  albumId: string,
-  lang: string
-): boolean {
-  if (!currentTrack) {
-    return false;
-  }
+const normalize = (text: string) => text.replace(/\r\n/g, '\n').trim();
 
-  // Проверяем синхронно наличие в currentTrack
-  if (currentTrack.syncedLyrics && currentTrack.syncedLyrics.length > 0) {
-    const isActuallySynced = currentTrack.syncedLyrics.some((line) => line.startTime > 0);
-    if (isActuallySynced) {
-      return true;
-    }
-  }
-
-  return false;
+function isActuallySynced(lines: SyncedLyricsLine[]) {
+  return lines.some((l) => (l?.startTime ?? 0) > 0);
 }
 
-/**
- * Хук для загрузки контента lyrics (синхронизированный текст, обычный текст, авторство)
- */
 export function useLyricsContent({
   currentTrack,
   albumId,
@@ -55,40 +35,39 @@ export function useLyricsContent({
   setIsLoadingSyncedLyrics,
   setHasSyncedLyricsAvailable,
 }: UseLyricsContentParams) {
-  // ✅ ВАЖНО: Ref для отслеживания текущего трека и проверки актуальности данных
-  const currentTrackRef = useRef<{ id: string; albumId: string; lang: string } | null>(null);
-  const requestIdRef = useRef(0);
+  // Актуальный ключ трека: по нему валидируем async-результаты
+  const trackKeyRef = useRef<string | null>(null);
 
-  // ✅ СИНХРОННАЯ ОЧИСТКА ПРИ ПЕРЕКЛЮЧЕНИИ ТРЕКА (до paint)
-  // Это предотвращает показ старого текста на несколько секунд
+  const getTrackKey = () => {
+    if (!currentTrack) return null;
+    return `${albumId}::${String(currentTrack.id)}::${lang}`;
+  };
+
+  const isKeyActual = (key: string | null) => key !== null && key === trackKeyRef.current;
+
+  // 1) СИНХРОННАЯ ОЧИСТКА при смене трека (до paint)
   useLayoutEffect(() => {
-    const trackKey = currentTrack ? `${albumId}::${currentTrack.id}::${lang}` : null;
-    const prevKey = currentTrackRef.current
-      ? `${currentTrackRef.current.albumId}::${currentTrackRef.current.id}::${currentTrackRef.current.lang}`
-      : null;
+    const nextKey = getTrackKey();
+    const prevKey = trackKeyRef.current;
 
-    // Если трек изменился - мгновенно очищаем состояние ДО загрузки новых данных
-    if (trackKey !== prevKey) {
-      // Инвалидируем все pending запросы
-      requestIdRef.current += 1;
+    if (nextKey === prevKey) return;
 
-      // Мгновенно очищаем UI (синхронно, до paint)
-      setSyncedLyrics(null);
-      setAuthorshipText(null);
-      setCurrentLineIndex(null);
-      setPlainLyricsContent(null);
-      setIsLoadingSyncedLyrics(true);
+    trackKeyRef.current = nextKey;
 
-      // Обновляем ref
-      if (currentTrack) {
-        currentTrackRef.current = {
-          id: String(currentTrack.id),
-          albumId,
-          lang,
-        };
-      } else {
-        currentTrackRef.current = null;
-      }
+    // мгновенно очищаем UI
+    setSyncedLyrics(null);
+    setAuthorshipText(null);
+    setCurrentLineIndex(null);
+    setPlainLyricsContent(null);
+
+    // включаем загрузку синхры, если трек есть
+    setIsLoadingSyncedLyrics(!!currentTrack);
+
+    // быстрый хинт: есть ли синхра прямо в currentTrack
+    if (currentTrack?.syncedLyrics?.length) {
+      setHasSyncedLyricsAvailable(isActuallySynced(currentTrack.syncedLyrics));
+    } else {
+      setHasSyncedLyricsAvailable(false);
     }
   }, [
     currentTrack,
@@ -99,111 +78,96 @@ export function useLyricsContent({
     setCurrentLineIndex,
     setPlainLyricsContent,
     setIsLoadingSyncedLyrics,
+    setHasSyncedLyricsAvailable,
   ]);
 
-  // Синхронно проверяем наличие синхронизированного текста
+  // 2) Загрузка SYNCED lyrics (karaoke)
   useEffect(() => {
-    const hasSynced = checkSyncedLyricsAvailableSync(currentTrack, albumId, lang);
-    setHasSyncedLyricsAvailable(hasSynced);
-  }, [currentTrack, albumId, lang, setHasSyncedLyricsAvailable]);
-
-  // Загружаем синхронизации для текущего трека
-  useEffect(() => {
-    if (!currentTrack) {
+    const key = getTrackKey();
+    if (!currentTrack || !key) {
       setIsLoadingSyncedLyrics(false);
       return;
     }
 
-    // Вычисляем albumId
-    const albumIdComputed = albumId;
-    const trackId = currentTrack.id;
+    let cancelled = false;
 
-    // Создаем уникальный ID для этого запроса
-    const currentRequestId = ++requestIdRef.current;
-    const isRequestValid = () => {
-      // Проверяем, что трек не изменился с момента начала запроса
-      const currentKey = `${albumIdComputed}::${String(trackId)}::${lang}`;
-      const refKey = currentTrackRef.current
-        ? `${currentTrackRef.current.albumId}::${currentTrackRef.current.id}::${currentTrackRef.current.lang}`
-        : null;
-      return currentRequestId === requestIdRef.current && currentKey === refKey;
-    };
-
-    // Устанавливаем состояние загрузки
-    setIsLoadingSyncedLyrics(true);
-
-    // Загружаем синхронизации асинхронно
     (async () => {
       try {
-        if (!isRequestValid()) return;
+        // 2.1 пробуем storage
+        const storedSync = await loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
+        if (cancelled || !isKeyActual(key)) return;
 
-        const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, trackId, lang);
-
-        if (!isRequestValid()) return;
-
-        const baseSynced: SyncedLyricsLine[] | null | undefined =
-          storedSync || currentTrack.syncedLyrics;
-
-        if (baseSynced && baseSynced.length > 0) {
-          // Проверяем, действительно ли текст синхронизирован
-          // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
-          const isActuallySynced = baseSynced.some((line) => line.startTime > 0);
-
-          if (isActuallySynced) {
-            if (!isRequestValid()) return;
-
-            // Текст действительно синхронизирован - загружаем авторство и добавляем его в конец
-            const storedAuthorship = await loadAuthorshipFromStorage(
-              albumIdComputed,
-              trackId,
-              lang
-            );
-
-            if (!isRequestValid()) return;
-
-            const authorship = currentTrack.authorship || storedAuthorship;
-
-            const synced = [...baseSynced];
-
-            // Добавляем авторство в конец, если оно есть и ещё не добавлено
-            if (authorship) {
-              const lastLine = synced[synced.length - 1];
-              // Проверяем, не является ли последняя строка уже авторством
-              if (!lastLine || lastLine.text !== authorship) {
-                synced.push({
-                  text: authorship,
-                  startTime: duration || 0,
-                  endTime: undefined,
-                });
-              }
-            }
-
-            if (isRequestValid()) {
-              setSyncedLyrics(synced);
-              setAuthorshipText(authorship || null);
-            }
-          } else {
-            // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем как синхронизированный
-            // Он будет отображаться как обычный текст через plainLyricsContent
-            if (isRequestValid()) {
-              setSyncedLyrics(null);
-              setAuthorshipText(null);
-              setCurrentLineIndex(null);
-            }
-          }
+        // уточняем hasSyncedLyricsAvailable по факту storage (важно для мобилки)
+        if (storedSync && storedSync.length > 0 && isActuallySynced(storedSync)) {
+          setHasSyncedLyricsAvailable(true);
+        } else if (storedSync === null) {
+          // ✅ ВАЖНО: если storage явно сказал "нет синхры" (null) — не показываем скелетон
+          setHasSyncedLyricsAvailable(false);
         } else {
-          if (isRequestValid()) {
-            setSyncedLyrics(null);
-            setAuthorshipText(null);
-            setCurrentLineIndex(null);
+          // если storage пуст (undefined/ошибка), но в track есть синхра — оставим true
+          const hint =
+            currentTrack.syncedLyrics?.length && isActuallySynced(currentTrack.syncedLyrics);
+          setHasSyncedLyricsAvailable(!!hint);
+        }
+
+        // 2.2 выбираем базовую синхру: storage или fallback из currentTrack (только если реально synced)
+        let base: SyncedLyricsLine[] | null = null;
+
+        if (storedSync && storedSync.length > 0 && isActuallySynced(storedSync)) {
+          base = storedSync;
+        } else if (
+          // ✅ ВАЖНО: если storage явно сказал "нет синхры" (null) — не берём fallback из currentTrack
+          storedSync !== null &&
+          currentTrack.syncedLyrics?.length &&
+          isActuallySynced(currentTrack.syncedLyrics)
+        ) {
+          base = currentTrack.syncedLyrics;
+        }
+
+        if (!base) {
+          setSyncedLyrics(null);
+          setAuthorshipText(null);
+          setCurrentLineIndex(null);
+          return;
+        }
+
+        // 2.3 авторство
+        const storedAuthorship = await loadAuthorshipFromStorage(albumId, currentTrack.id, lang);
+        if (cancelled || !isKeyActual(key)) return;
+
+        const authorship = currentTrack.authorship || storedAuthorship || null;
+
+        const synced = [...base];
+        if (authorship) {
+          const last = synced[synced.length - 1];
+          if (!last || last.text !== authorship) {
+            synced.push({
+              text: authorship,
+              startTime: Number.isFinite(duration) && duration > 0 ? duration : 0,
+              endTime: undefined,
+            });
           }
         }
+
+        setSyncedLyrics(synced);
+        setAuthorshipText(authorship);
+      } catch (error) {
+        debugLog('useLyricsContent: failed to load synced lyrics', { error });
+        if (!cancelled && isKeyActual(key)) {
+          setSyncedLyrics(null);
+          setAuthorshipText(null);
+          setCurrentLineIndex(null);
+        }
       } finally {
-        if (isRequestValid()) {
+        if (!cancelled && isKeyActual(key)) {
           setIsLoadingSyncedLyrics(false);
         }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     currentTrack,
     albumId,
@@ -213,65 +177,67 @@ export function useLyricsContent({
     setAuthorshipText,
     setCurrentLineIndex,
     setIsLoadingSyncedLyrics,
+    setHasSyncedLyricsAvailable,
   ]);
 
-  // Загружаем обычный текст (не синхронизированный) из БД или JSON
+  // 3) Загрузка PLAIN lyrics (обычный текст)
   useEffect(() => {
-    if (!currentTrack) {
+    const key = getTrackKey();
+    if (!currentTrack || !key) {
       setPlainLyricsContent(null);
       return;
     }
 
-    const albumIdComputed = albumId;
-    const trackId = currentTrack.id;
+    let cancelled = false;
 
-    // Создаем уникальный ID для этого запроса
-    const currentRequestId = ++requestIdRef.current;
-    const isRequestValid = () => {
-      // Проверяем, что трек не изменился с момента начала запроса
-      const currentKey = `${albumIdComputed}::${String(trackId)}::${lang}`;
-      const refKey = currentTrackRef.current
-        ? `${currentTrackRef.current.albumId}::${currentTrackRef.current.id}::${currentTrackRef.current.lang}`
-        : null;
-      return currentRequestId === requestIdRef.current && currentKey === refKey;
-    };
-
-    const normalize = (text: string) => text.replace(/\r\n/g, '\n').trim();
-
-    // Сначала проверяем текст из JSON (синхронно)
-    if (currentTrack.content && currentTrack.content.trim().length > 0) {
-      if (isRequestValid()) {
+    // 3.1 сначала JSON
+    if (currentTrack.content?.trim()) {
+      if (!cancelled && isKeyActual(key)) {
         setPlainLyricsContent(normalize(currentTrack.content));
       }
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
-    // Затем проверяем localStorage (dev mode) - синхронно
-    const storedContentKey = `karaoke-text:${albumIdComputed}:${trackId}:${lang}`;
-
+    // 3.2 затем localStorage (dev)
+    const storedContentKey = `karaoke-text:${albumId}:${currentTrack.id}:${lang}`;
     try {
       const stored =
         typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
-      if (stored && stored.trim().length > 0) {
-        if (isRequestValid()) {
+      if (stored?.trim()) {
+        if (!cancelled && isKeyActual(key)) {
           setPlainLyricsContent(normalize(stored));
         }
-        return;
+        return () => {
+          cancelled = true;
+        };
       }
     } catch (error) {
       debugLog('Cannot read stored text content', { error });
     }
 
-    // Если текст не найден в JSON и localStorage, загружаем из БД (асинхронно)
+    // 3.3 затем БД
     (async () => {
-      const textFromDb = await loadTrackTextFromDatabase(albumIdComputed, trackId, lang);
-      if (isRequestValid()) {
-        if (textFromDb && textFromDb.trim().length > 0) {
+      try {
+        const textFromDb = await loadTrackTextFromDatabase(albumId, currentTrack.id, lang);
+        if (cancelled || !isKeyActual(key)) return;
+
+        if (textFromDb?.trim()) {
           setPlainLyricsContent(normalize(textFromDb));
         } else {
           setPlainLyricsContent(null);
         }
+      } catch (error) {
+        debugLog('useLyricsContent: failed to load plain lyrics', { error });
+        if (!cancelled && isKeyActual(key)) {
+          setPlainLyricsContent(null);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentTrack, albumId, lang, setPlainLyricsContent]);
 }

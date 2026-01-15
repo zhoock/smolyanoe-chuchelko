@@ -687,11 +687,9 @@ export default function AudioPlayer({
   });
 
   /**
-   * Автоматически скрываем текст при смене трека, если трек не добавлен в караоке.
-   * Проверяем только наличие синхронизированного текста (syncedLyrics),
-   * а не обычного текста (content).
-   * ВАЖНО: Используем useRef для отслеживания смены трека, чтобы гарантировать срабатывание эффекта.
-   * ВАЖНО: При скрытии текста также обновляем класс обложки, чтобы он соответствовал текущему isPlaying.
+   * Сброс состояния при смене трека.
+   * Сбрасываем режим прозрачности, позицию прокрутки и другие флаги.
+   * Авто-выключение текста для треков без текста выполняется отдельным эффектом по результатам useLyricsContent.
    */
   useEffect(() => {
     if (!currentTrack) {
@@ -726,41 +724,20 @@ export default function AudioPlayer({
     // Сбрасываем флаг прокрутки до конца при смене трека
     userScrolledToEndRef.current = false;
     showControls();
-
-    // Проверяем только синхронизированный текст (караоке), не обычный content
-    // Используем ту же логику, что и при загрузке синхронизированного текста
-    const albumIdComputed = albumId;
-
-    // Загружаем синхронизации асинхронно
-    (async () => {
-      const storedSync = await loadSyncedLyricsFromStorage(albumIdComputed, currentTrack.id, lang);
-      const baseSynced: SyncedLyricsLine[] | null | undefined =
-        storedSync || currentTrack.syncedLyrics;
-
-      // Проверяем только наличие синхронизированного текста (караоке)
-      // НЕ проверяем currentTrack.content, так как это обычный текст, не караоке
-      const hasSyncedLyrics = baseSynced && baseSynced.length > 0;
-
-      let hasPlainLyrics = false;
-      if (currentTrack.content && currentTrack.content.trim().length > 0) {
-        hasPlainLyrics = true;
-      } else {
-        const storedContentKey = `karaoke-text:${albumIdComputed}:${currentTrack.id}:${lang}`;
-        try {
-          const stored =
-            typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
-          hasPlainLyrics = !!(stored && stored.trim().length > 0);
-        } catch (error) {
-          debugLog('Cannot read stored text content', { error });
-        }
-      }
-
-      // Если трек не добавлен в караоке и нет обычного текста — скрываем блок
-      if (!hasSyncedLyrics && !hasPlainLyrics) {
-        setShowLyrics(false);
-      }
-    })();
   }, [currentTrack, albumId, lang, showControls]);
+
+  // Авто-выключение текста для треков без текста (по результатам useLyricsContent)
+  useEffect(() => {
+    if (
+      !isLoadingSyncedLyrics &&
+      !syncedLyrics &&
+      !plainLyricsContent &&
+      currentTrack &&
+      showLyrics
+    ) {
+      setShowLyrics(false);
+    }
+  }, [isLoadingSyncedLyrics, syncedLyrics, plainLyricsContent, currentTrack, showLyrics]);
 
   // Определяем текущую строку на основе времени воспроизведения
   const currentLineIndexComputed = useCurrentLineIndex({
@@ -863,7 +840,12 @@ export default function AudioPlayer({
 
   const hasPlainLyrics = !!plainLyricsContent;
 
-  const hasTextToShow = hasSyncedLyricsAvailable || hasPlainLyrics;
+  // Вычисление "синхра точно есть/возможна" (для кнопки "текст")
+  const hasSyncedLyricsHint = !!(
+    currentTrack?.syncedLyrics && currentTrack.syncedLyrics.some((l) => (l.startTime ?? 0) > 0)
+  );
+
+  const hasTextToShow = hasSyncedLyricsAvailable || hasSyncedLyricsHint || hasPlainLyrics;
 
   // Ref для прямого доступа к элементу отображения времени
   const timeDisplayRef = useRef<HTMLDivElement | null>(null);
@@ -992,16 +974,17 @@ export default function AudioPlayer({
     .join(' ');
 
   const shouldRenderSyncedLyrics = showLyrics && !!(syncedLyrics && syncedLyrics.length > 0);
-  // Показываем обычный текст только если нет синхронизированной версии (даже если она еще загружается)
-  // Если синхронизированная версия существует, показываем скелетон вместо обычного текста
+
+  // Если есть шанс, что у трека есть синхра — предпочитаем skeleton, а не plain
+  // ✅ ВАЖНО: не используем hasSyncedLyricsHint, если загрузка завершена и синхры нет
+  // (иначе на проде будет показываться скелетон вместо plain текста)
+  const shouldPreferSynced =
+    hasSyncedLyricsAvailable || (isLoadingSyncedLyrics && hasSyncedLyricsHint);
+
+  const shouldRenderSkeleton = showLyrics && !shouldRenderSyncedLyrics && shouldPreferSynced;
+
   const shouldRenderPlainLyrics =
-    showLyrics &&
-    !shouldRenderSyncedLyrics &&
-    !hasSyncedLyricsAvailable &&
-    !isLoadingSyncedLyrics &&
-    !!plainLyricsContent;
-  const shouldRenderSkeleton =
-    showLyrics && !shouldRenderSyncedLyrics && (hasSyncedLyricsAvailable || isLoadingSyncedLyrics);
+    showLyrics && !shouldRenderSyncedLyrics && !shouldPreferSynced && !!plainLyricsContent;
 
   useEffect(() => {
     if (!isFullScreenPlayer) {
