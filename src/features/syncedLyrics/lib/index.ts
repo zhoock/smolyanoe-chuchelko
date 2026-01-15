@@ -7,45 +7,8 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
-const DEFAULT_CACHE_TTL = 30 * 1000; // 30 секунд по умолчанию (уменьшено для быстрого обновления на мобилке)
-
-// Версия кэша для принудительной инвалидации (инкрементируется при очистке)
-let cacheVersion = 0;
-// Слушатели инвалидации с информацией о треке для фильтрации
-interface CacheInvalidationListener {
-  callback: (albumId: string, trackId: string | number, lang: string) => void;
-  albumId?: string;
-  trackId?: string | number;
-  lang?: string;
-}
-const cacheVersionListeners = new Set<CacheInvalidationListener>();
-
-/**
- * Подписывается на изменения версии кэша (для принудительной перезагрузки данных)
- * @param callback - функция, которая будет вызвана при инвалидации кэша
- * @param albumId - опционально: фильтр по albumId
- * @param trackId - опционально: фильтр по trackId
- * @param lang - опционально: фильтр по lang
- */
-export function subscribeToCacheInvalidation(
-  callback: (albumId: string, trackId: string | number, lang: string) => void,
-  albumId?: string,
-  trackId?: string | number,
-  lang?: string
-): () => void {
-  const listener: CacheInvalidationListener = { callback, albumId, trackId, lang };
-  cacheVersionListeners.add(listener);
-  return () => {
-    cacheVersionListeners.delete(listener);
-  };
-}
-
-/**
- * Получает текущую версию кэша (для использования в зависимостях useEffect)
- */
-export function getCacheVersion(): number {
-  return cacheVersion;
-}
+// ✅ Короткий TTL для быстрого обновления на мобилке
+const DEFAULT_CACHE_TTL = 5 * 1000; // 5 секунд по умолчанию
 
 // Глобальная очередь запросов для ограничения параллелизма
 // Это предотвращает перегрузку Supabase pooler множественными одновременными запросами
@@ -137,31 +100,6 @@ export function clearSyncedLyricsCache(
   } else {
     cache.clear();
   }
-
-  // ✅ Инкрементируем версию кэша и уведомляем подписчиков для принудительной перезагрузки
-  cacheVersion++;
-  cacheVersionListeners.forEach((listener) => {
-    try {
-      // Если указаны фильтры, проверяем соответствие
-      if (albumId && trackId && lang) {
-        // Очистка для конкретного трека - уведомляем только соответствующих подписчиков
-        const matches =
-          (!listener.albumId || listener.albumId === albumId) &&
-          (!listener.trackId || String(listener.trackId) === String(trackId)) &&
-          (!listener.lang || listener.lang === lang);
-        if (matches) {
-          listener.callback(albumId, trackId, lang);
-        }
-      } else {
-        // Очистка всего кэша - уведомляем всех подписчиков с их параметрами
-        if (listener.albumId && listener.trackId && listener.lang) {
-          listener.callback(listener.albumId, listener.trackId, listener.lang);
-        }
-      }
-    } catch (error) {
-      console.error('Ошибка в callback инвалидации кэша:', error);
-    }
-  });
 }
 
 export interface SaveSyncedLyricsRequest {
@@ -315,7 +253,7 @@ export async function loadSyncedLyricsFromStorage(
         if (!response.ok) {
           // ✅ фикс мобилки: кэшируем null, чтобы старые данные не “жили” бесконечно
           if (response.status === 404) {
-            setCachedData(cacheKey, null, 30 * 1000);
+            setCachedData(cacheKey, null, 10 * 1000);
             return null;
           }
 
@@ -356,8 +294,7 @@ export async function loadSyncedLyricsFromStorage(
         }
 
         // ✅ TTL: синхра/не синхра протухает и мобилка подтягивает актуальное состояние
-        // Уменьшен TTL до 30 секунд для быстрого обновления на мобилке
-        setCachedData(cacheKey, syncedLyrics, 30 * 1000);
+        setCachedData(cacheKey, syncedLyrics, 5 * 1000);
 
         return syncedLyrics;
       } catch (fetchError) {

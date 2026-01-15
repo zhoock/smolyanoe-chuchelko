@@ -3,8 +3,7 @@ import type { SyncedLyricsLine, TracksProps } from '@models';
 import {
   loadSyncedLyricsFromStorage,
   loadAuthorshipFromStorage,
-  subscribeToCacheInvalidation,
-  getCacheVersion,
+  clearSyncedLyricsCache,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import { debugLog } from '../utils/debug';
@@ -42,9 +41,6 @@ export function useLyricsContent({
 }: UseLyricsContentParams) {
   // Актуальный ключ трека: по нему валидируем async-результаты
   const trackKeyRef = useRef<string | null>(null);
-
-  // ✅ Версия кэша для принудительной перезагрузки после очистки кэша
-  const [cacheVersion, setCacheVersion] = useState(() => getCacheVersion());
 
   const getTrackKey = () => {
     if (!currentTrack) return null;
@@ -89,20 +85,21 @@ export function useLyricsContent({
     setHasSyncedLyricsAvailable,
   ]);
 
-  // ✅ Подписка на инвалидацию кэша для принудительной перезагрузки после сохранения
+  // ✅ Принудительная перезагрузка при возврате фокуса/видимости страницы (для мобилок)
   useEffect(() => {
-    if (!currentTrack) return;
+    if (!currentTrack || typeof window === 'undefined') return;
 
-    const unsubscribe = subscribeToCacheInvalidation(
-      () => {
-        // Принудительно обновляем версию кэша для перезагрузки данных
-        setCacheVersion(getCacheVersion());
-      },
-      albumId,
-      currentTrack.id,
-      lang
-    );
-    return unsubscribe;
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Страница стала видимой - очищаем кэш для перезагрузки данных
+        clearSyncedLyricsCache(albumId, currentTrack.id, lang);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [currentTrack, albumId, lang]);
 
   // 2) Загрузка SYNCED lyrics (karaoke)
@@ -197,7 +194,6 @@ export function useLyricsContent({
     albumId,
     lang,
     duration,
-    cacheVersion, // ✅ Добавляем cacheVersion для принудительной перезагрузки после очистки кэша
     setSyncedLyrics,
     setAuthorshipText,
     setCurrentLineIndex,
