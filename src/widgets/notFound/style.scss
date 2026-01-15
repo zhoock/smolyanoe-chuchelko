@@ -13,7 +13,7 @@
     inline-size: min(100vi, 1000px);
     margin: 0;
 
-    @media (orientation: landscape) {
+    @media (height <= 480px) and (orientation: landscape) {
       inline-size: 425px;
     }
   }

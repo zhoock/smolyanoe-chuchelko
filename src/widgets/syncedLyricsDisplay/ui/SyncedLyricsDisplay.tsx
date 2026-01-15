@@ -26,6 +26,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
 
   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
   const [syncedLyrics, setSyncedLyrics] = useState<SyncedLyricsLine[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Refs для автоскролла
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
@@ -39,8 +40,12 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     if (!currentTrack) {
       setSyncedLyrics(null);
       setCurrentLineIndex(null);
+      setIsLoading(false);
       return;
     }
+
+    let cancelled = false;
+    setIsLoading(true);
 
     // Вычисляем albumId
     const albumId =
@@ -48,28 +53,60 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
 
     // Загружаем синхронизации асинхронно
     (async () => {
-      const storedSync = await loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
-      const synced = storedSync || currentTrack.syncedLyrics;
+      try {
+        const storedSync = await loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
+        if (cancelled) return;
 
-      if (synced && synced.length > 0) {
-        // Проверяем, действительно ли текст синхронизирован
-        // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
-        const isActuallySynced = synced.some((line) => line.startTime > 0);
+        // ✅ ВАЖНО: Проверяем синхронизацию перед использованием fallback
+        // На мобильных устройствах storedSync может быть null из-за медленной сети,
+        // но не должны использовать несинхронизированные данные из currentTrack.syncedLyrics
+        let synced = storedSync;
 
-        if (isActuallySynced) {
-          // Текст действительно синхронизирован - показываем его
-          setSyncedLyrics(synced);
+        // Используем fallback только если storedSync === null И currentTrack.syncedLyrics синхронизирован
+        if (!synced && currentTrack.syncedLyrics && currentTrack.syncedLyrics.length > 0) {
+          const isTrackSynced = currentTrack.syncedLyrics.some((line) => line.startTime > 0);
+          // Используем fallback только если данные действительно синхронизированы
+          if (isTrackSynced) {
+            synced = currentTrack.syncedLyrics;
+          }
+        }
+
+        if (cancelled) return;
+
+        if (synced && synced.length > 0) {
+          // Проверяем, действительно ли текст синхронизирован
+          // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
+          const isActuallySynced = synced.some((line) => line.startTime > 0);
+
+          if (isActuallySynced) {
+            // Текст действительно синхронизирован - показываем его
+            setSyncedLyrics(synced);
+          } else {
+            // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем
+            // Он будет отображаться как обычный текст через другой компонент
+            setSyncedLyrics(null);
+            setCurrentLineIndex(null);
+          }
         } else {
-          // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем
-          // Он будет отображаться как обычный текст через другой компонент
           setSyncedLyrics(null);
           setCurrentLineIndex(null);
         }
-      } else {
-        setSyncedLyrics(null);
-        setCurrentLineIndex(null);
+      } catch (error) {
+        // В случае ошибки также сбрасываем состояние
+        if (!cancelled) {
+          setSyncedLyrics(null);
+          setCurrentLineIndex(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentTrack, album, lang]);
 
   // Определяем текущую строку на основе времени воспроизведения
@@ -175,8 +212,33 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     }
   }, [currentLineIndex]);
 
-  // Если нет трека или синхронизаций - не отображаем ничего
-  if (!currentTrack || !syncedLyrics || syncedLyrics.length === 0) {
+  // Если нет трека - не отображаем ничего
+  if (!currentTrack) {
+    return null;
+  }
+
+  // Показываем скелетон во время загрузки
+  if (isLoading) {
+    return (
+      <div className="synced-lyrics-display">
+        <div className="synced-lyrics-display__container">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <div
+              key={index}
+              className="synced-lyrics-display__skeleton-line"
+              style={{
+                width: `${Math.random() * 30 + 60}%`,
+                animationDelay: `${index * 0.1}s`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Если нет синхронизаций - не отображаем ничего
+  if (!syncedLyrics || syncedLyrics.length === 0) {
     return null;
   }
 
