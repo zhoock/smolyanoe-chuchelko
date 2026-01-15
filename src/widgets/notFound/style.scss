@@ -7,11 +7,19 @@
   justify-items: center;
   place-content: center;
   min-block-size: 100vh;
+  background: none !important;
+
+  img {
+    inline-size: min(100vi, 1000px);
+    margin: 0;
+
+    @media (orientation: landscape) {
+      inline-size: 425px;
+    }
+  }
 
   button {
-    inline-size: fit-content;
-
-    @include button-variant;
+    @include button-variant($margin: 0 0 var(--ms-1) 0);
   }
 }
 
