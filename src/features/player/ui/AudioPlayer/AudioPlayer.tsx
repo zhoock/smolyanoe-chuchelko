@@ -18,6 +18,7 @@ import { clearImageColorCache } from '@shared/lib/hooks/useImageColor';
 import { loadSyncedLyricsFromStorage, loadAuthorshipFromStorage } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import { useLang } from '@app/providers/lang';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 
 import { debugLog, trackDebug } from './utils/debug';
 import { formatTimerValue } from './utils/formatTime';
@@ -64,6 +65,7 @@ export default function AudioPlayer({
 
   // Состояние для синхронизированного текста
   const { lang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [syncedLyrics, setSyncedLyrics] = useState<SyncedLyricsLine[] | null>(null);
   const [authorshipText, setAuthorshipText] = useState<string | null>(null); // текст авторства
   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
@@ -1145,7 +1147,7 @@ export default function AudioPlayer({
                         aria-label={`Перемотать к ${line.text}`}
                       >
                         {authorshipText && line.text === authorshipText
-                          ? `Авторство: ${line.text}`
+                          ? `${ui?.dashboard?.authorship ?? 'Авторство: '}${line.text}`
                           : line.text}
                       </div>
                     </React.Fragment>
