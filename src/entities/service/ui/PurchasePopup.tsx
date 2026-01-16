@@ -320,6 +320,10 @@ function CheckoutStep({
         albumId: album.albumId,
         customerEmail: email,
         returnUrl,
+        billingData: {
+          firstName,
+          lastName,
+        },
       });
 
       if (!paymentResult.success) {
@@ -629,10 +633,6 @@ function CheckoutStep({
           </div>
 
           <div className="purchase-popup__checkout-totals">
-            <div className="purchase-popup__checkout-subtotal">
-              {t?.checkout?.checkout?.subtotal || 'Subtotal'}{' '}
-              <span>{getAlbumPrice(album).formatted}</span>
-            </div>
             <div className="purchase-popup__checkout-total">
               {t?.checkout?.checkout?.total || 'Total'}{' '}
               <span>{getAlbumPrice(album).formatted}</span>
