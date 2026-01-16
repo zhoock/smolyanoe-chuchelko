@@ -40,7 +40,10 @@
       "allArticlesPageDesc": "Browse all articles and posts"
     },
     "links": {
-      "home": "home"
+      "home": "home",
+      "publicOffer": "Public Offer",
+      "offerPageTitle": "Public Offer",
+      "offerPageDescription": "Public offer for retail purchase and sale agreement via remote means"
     },
     "stems": {
       "pageTitle": "Mixer",

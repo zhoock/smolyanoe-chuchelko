@@ -49,9 +49,7 @@ function FooterComponent() {
           </li>
           <li>
             <small>
-              <Link to="/offer" className="footer__link">
-                {lang === 'ru' ? 'Публичная оферта' : 'Public Offer'}
-              </Link>
+              <Link to="/offer">{ui?.links?.publicOffer ?? 'Публичная оферта'}</Link>
             </small>
           </li>
         </ul>

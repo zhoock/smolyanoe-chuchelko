@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
 import { getJSON } from '@shared/api/http';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './style.scss';
 
 interface OfferData {
@@ -35,6 +37,7 @@ interface OfferData {
 
 export function OfferPage() {
   const { lang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [offerData, setOfferData] = useState<OfferData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,13 +103,12 @@ export function OfferPage() {
   return (
     <>
       <Helmet>
-        <title>{lang === 'ru' ? 'Публичная оферта' : 'Public Offer'}</title>
+        <title>{ui?.links?.offerPageTitle ?? 'Публичная оферта'}</title>
         <meta
           name="description"
           content={
-            lang === 'ru'
-              ? 'Публичная оферта о заключении договора розничной купли-продажи товаров дистанционным способом'
-              : 'Public offer for retail purchase and sale agreement via remote means'
+            ui?.links?.offerPageDescription ??
+            'Публичная оферта о заключении договора розничной купли-продажи товаров дистанционным способом'
           }
         />
       </Helmet>
