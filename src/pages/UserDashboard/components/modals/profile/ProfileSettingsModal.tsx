@@ -8,6 +8,7 @@ import { getUser, getToken } from '@shared/lib/auth';
 import {
   loadTheBandFromDatabase,
   loadTheBandFromProfileJson,
+  loadTheBandBilingualFromDatabase,
   saveTheBandToDatabase,
   loadHeaderImagesFromDatabase,
   saveHeaderImagesToDatabase,
@@ -39,7 +40,9 @@ export function ProfileSettingsModal({
   const [headerImages, setHeaderImages] = useState<string[]>([]);
   const [initialHeaderImages, setInitialHeaderImages] = useState<string[]>([]);
   const [isLoadingHeaderImages, setIsLoadingHeaderImages] = useState(false);
-  const [aboutText, setAboutText] = useState<string>('');
+  const [aboutTextRu, setAboutTextRu] = useState<string>('');
+  const [aboutTextEn, setAboutTextEn] = useState<string>('');
+  const [aboutText, setAboutText] = useState<string>(''); // Текущий текст для выбранного языка
   const [isLoadingAboutText, setIsLoadingAboutText] = useState(false);
   const [isSavingAboutText, setIsSavingAboutText] = useState(false);
 
@@ -61,6 +64,8 @@ export function ProfileSettingsModal({
   // Исходные значения для отслеживания изменений
   const [initialName, setInitialName] = useState(userName);
   const [initialLang, setInitialLang] = useState<'ru' | 'en'>(currentLang || 'ru');
+  const [initialAboutTextRu, setInitialAboutTextRu] = useState<string>('');
+  const [initialAboutTextEn, setInitialAboutTextEn] = useState<string>('');
   const [initialAboutText, setInitialAboutText] = useState<string>('');
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -158,7 +163,8 @@ export function ProfileSettingsModal({
       setSelectedLang(initialLang);
     } else if (activeTab === 'profile') {
       setName(initialName);
-      setAboutText(initialAboutText);
+      // Восстанавливаем текст для текущего выбранного языка
+      setAboutText(selectedLang === 'ru' ? initialAboutTextRu : initialAboutTextEn);
       setHeaderImages([...(initialHeaderImages || [])]);
     } else if (activeTab === 'security') {
       setCurrentPassword('');
@@ -280,7 +286,7 @@ export function ProfileSettingsModal({
       }
     } else if (activeTab === 'profile') {
       // Сохранение изменений профиля (имя, о группе, header images)
-      // Сохранение текста "О Группе"
+      // Сохранение текста "О Группе" для текущего выбранного языка
       if (aboutText !== initialAboutText) {
         setIsSavingAboutText(true);
         try {
@@ -290,12 +296,24 @@ export function ProfileSettingsModal({
             .map((p) => p.trim())
             .filter((p) => p.length > 0);
 
-          const result = await saveTheBandToDatabase(paragraphs);
+          // Сохраняем только для текущего выбранного языка
+          // API автоматически сохранит оба языка (обновит только выбранный, сохранив другой)
+          const result = await saveTheBandToDatabase(paragraphs, selectedLang);
+
           if (!result.success) {
             console.error('Ошибка сохранения текста "О Группе":', result.error);
             alert(`Ошибка сохранения: ${result.error || 'Неизвестная ошибка'}`);
             setIsSavingAboutText(false);
             return;
+          }
+
+          // Обновляем локальное состояние для сохраненного языка
+          if (selectedLang === 'ru') {
+            setAboutTextRu(aboutText);
+            setInitialAboutTextRu(aboutText);
+          } else {
+            setAboutTextEn(aboutText);
+            setInitialAboutTextEn(aboutText);
           }
         } catch (error) {
           console.error('Ошибка сохранения текста "О Группе":', error);
@@ -461,33 +479,59 @@ export function ProfileSettingsModal({
       const loadAboutText = async () => {
         setIsLoadingAboutText(true);
         try {
-          // Сначала пытаемся загрузить из БД
-          let theBand = await loadTheBandFromDatabase(currentLang || 'ru');
+          // Загружаем оба языка из БД
+          const bilingualData = await loadTheBandBilingualFromDatabase();
           let source = 'БД';
 
           // Если в БД нет данных, загружаем из profile.json как fallback
-          if (!theBand || theBand.length === 0) {
+          if (
+            (!bilingualData.ru || bilingualData.ru.length === 0) &&
+            (!bilingualData.en || bilingualData.en.length === 0)
+          ) {
             console.log('📝 Данных в БД нет, загружаем из profile.json...');
-            theBand = await loadTheBandFromProfileJson(currentLang || 'ru');
+            const ruFromJson = await loadTheBandFromProfileJson('ru');
+            const enFromJson = await loadTheBandFromProfileJson('en');
+            bilingualData.ru = ruFromJson;
+            bilingualData.en = enFromJson;
             source = 'profile.json';
           }
 
-          const text = theBand && theBand.length > 0 ? theBand.join('\n') : '';
-          setAboutText(text);
-          setInitialAboutText(text);
+          const textRu =
+            bilingualData.ru && bilingualData.ru.length > 0 ? bilingualData.ru.join('\n') : '';
+          const textEn =
+            bilingualData.en && bilingualData.en.length > 0 ? bilingualData.en.join('\n') : '';
 
-          if (theBand && theBand.length > 0) {
+          // Сохраняем оба языка в состояние
+          setAboutTextRu(textRu);
+          setAboutTextEn(textEn);
+          setInitialAboutTextRu(textRu);
+          setInitialAboutTextEn(textEn);
+
+          // Показываем текст для текущего выбранного языка
+          const currentText = selectedLang === 'ru' ? textRu : textEn;
+          setAboutText(currentText);
+          setInitialAboutText(currentText);
+
+          if (
+            (bilingualData.ru && bilingualData.ru.length > 0) ||
+            (bilingualData.en && bilingualData.en.length > 0)
+          ) {
             console.log('✅ Текст "О Группе" загружен:', {
               source,
-              paragraphs: theBand.length,
-              lang: currentLang || 'ru',
+              ruParagraphs: bilingualData.ru?.length || 0,
+              enParagraphs: bilingualData.en?.length || 0,
+              currentLang: selectedLang,
             });
           } else {
             console.log('ℹ️ Текст "О Группе" пуст, можно ввести новый');
           }
         } catch (error) {
           console.error('Ошибка загрузки текста "О Группе":', error);
+          setAboutTextRu('');
+          setAboutTextEn('');
           setAboutText('');
+          setInitialAboutTextRu('');
+          setInitialAboutTextEn('');
           setInitialAboutText('');
         } finally {
           setIsLoadingAboutText(false);
@@ -524,7 +568,16 @@ export function ProfileSettingsModal({
       loadAboutText();
       loadHeaderImages();
     }
-  }, [isOpen, activeTab, currentLang]);
+  }, [isOpen, activeTab, selectedLang]);
+
+  // Обновляем отображаемый текст при изменении выбранного языка
+  useEffect(() => {
+    if (isOpen && activeTab === 'profile') {
+      const currentText = selectedLang === 'ru' ? aboutTextRu : aboutTextEn;
+      setAboutText(currentText);
+      setInitialAboutText(currentText);
+    }
+  }, [selectedLang, isOpen, activeTab, aboutTextRu, aboutTextEn]);
 
   // Сброс значений при открытии модального окна
   useEffect(() => {
@@ -776,6 +829,7 @@ export function ProfileSettingsModal({
                   <div className="profile-settings-modal__field">
                     <label htmlFor="profile-about" className="profile-settings-modal__label">
                       {ui?.dashboard?.profileSettingsModal?.fields?.aboutBand ?? 'О Группе'}
+                      {selectedLang === 'ru' ? ' (RU)' : ' (EN)'}
                     </label>
                     {isLoadingAboutText ? (
                       <div className="profile-settings-modal__loading">
@@ -786,8 +840,11 @@ export function ProfileSettingsModal({
                         id="profile-about"
                         className="profile-settings-modal__textarea"
                         placeholder={
-                          ui?.dashboard?.profileSettingsModal?.placeholders?.aboutBand ??
-                          'Введите описание группы. Каждая строка будет отдельным параграфом.'
+                          selectedLang === 'ru'
+                            ? (ui?.dashboard?.profileSettingsModal?.placeholders?.aboutBand ??
+                              'Введите описание группы на русском языке. Каждая строка будет отдельным параграфом.')
+                            : (ui?.dashboard?.profileSettingsModal?.placeholders?.aboutBand ??
+                              'Enter band description in English. Each line will be a separate paragraph.')
                         }
                         value={aboutText}
                         onChange={(e) => setAboutText(e.target.value)}
@@ -795,8 +852,11 @@ export function ProfileSettingsModal({
                       />
                     )}
                     <div className="profile-settings-modal__field-hint">
-                      {ui?.dashboard?.profileSettingsModal?.hints?.aboutBand ??
-                        'Каждая строка будет отдельным параграфом в описании группы'}
+                      {selectedLang === 'ru'
+                        ? (ui?.dashboard?.profileSettingsModal?.hints?.aboutBand ??
+                          'Каждая строка будет отдельным параграфом в описании группы')
+                        : (ui?.dashboard?.profileSettingsModal?.hints?.aboutBand ??
+                          'Each line will be a separate paragraph in the band description')}
                     </div>
                   </div>
 

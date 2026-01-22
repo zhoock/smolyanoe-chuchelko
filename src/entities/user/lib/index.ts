@@ -193,9 +193,8 @@ export async function saveHeaderImagesToDatabase(
     const { getAuthHeader } = await import('@shared/lib/auth');
     const authHeader = getAuthHeader();
 
-    // Загружаем текущие данные профиля
-    const currentTheBand = (await loadTheBandFromDatabase('ru')) || [];
-
+    // Не загружаем theBand при сохранении headerImages, чтобы не перезаписывать его
+    // API обработает это корректно, сохранив только headerImages
     const response = await fetch('/api/user-profile', {
       method: 'POST',
       cache: 'no-cache',
@@ -205,7 +204,6 @@ export async function saveHeaderImagesToDatabase(
         ...authHeader,
       },
       body: JSON.stringify({
-        theBand: currentTheBand,
         headerImages,
       }),
     });
@@ -248,14 +246,62 @@ export async function saveHeaderImagesToDatabase(
 }
 
 /**
+ * Загружает описание группы (theBand) для обоих языков из БД
+ * Используется в админ-панели для отображения обоих версий
+ */
+export async function loadTheBandBilingualFromDatabase(): Promise<{
+  ru: string[] | null;
+  en: string[] | null;
+}> {
+  try {
+    const [ruData, enData] = await Promise.all([
+      loadTheBandFromDatabase('ru'),
+      loadTheBandFromDatabase('en'),
+    ]);
+
+    return {
+      ru: ruData,
+      en: enData,
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Ошибка загрузки bilingual theBand из БД:', error);
+    }
+    return { ru: null, en: null };
+  }
+}
+
+/**
  * Сохраняет описание группы (theBand) в БД для текущего пользователя
+ * Поддерживает как старый формат (один массив), так и новый (отдельно ru/en)
  */
 export async function saveTheBandToDatabase(
-  theBand: string[]
+  theBand: string[] | { ru: string[]; en: string[] },
+  lang?: 'ru' | 'en'
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const { getAuthHeader } = await import('@shared/lib/auth');
     const authHeader = getAuthHeader();
+
+    // Определяем формат данных
+    let requestBody: { theBand?: string[]; theBandRu?: string[]; theBandEn?: string[] };
+
+    if (Array.isArray(theBand)) {
+      // Старый формат или сохранение одного языка
+      if (lang) {
+        // Сохраняем только указанный язык
+        requestBody = lang === 'ru' ? { theBandRu: theBand } : { theBandEn: theBand };
+      } else {
+        // Для обратной совместимости: сохраняем оба языка одинаково
+        requestBody = { theBand };
+      }
+    } else {
+      // Новый формат: объект с ru и en
+      requestBody = {
+        theBandRu: theBand.ru,
+        theBandEn: theBand.en,
+      };
+    }
 
     const response = await fetch('/api/user-profile', {
       method: 'POST',
@@ -265,7 +311,7 @@ export async function saveTheBandToDatabase(
         'Cache-Control': 'no-cache',
         ...authHeader,
       },
-      body: JSON.stringify({ theBand }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

@@ -7,7 +7,7 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
-import { getUserIdFromEvent, requireAdmin } from './lib/api-helpers';
+import { getUserIdFromEvent, requireAuth } from './lib/api-helpers';
 
 interface UserProfileRow {
   id: string;
@@ -28,7 +28,9 @@ interface GetUserProfileResponse {
 }
 
 interface SaveUserProfileRequest {
-  theBand?: string[];
+  theBand?: string[]; // Legacy: для обратной совместимости
+  theBandRu?: string[]; // Новый формат: русская версия
+  theBandEn?: string[]; // Новый формат: английская версия
   headerImages?: string[];
   siteName?: string;
 }
@@ -55,8 +57,8 @@ export const handler: Handler = async (
 
   try {
     // Для GET запросов используется getUserIdFromEvent (для админки)
-    // Для POST требуется права админа
-    const userId = event.httpMethod === 'GET' ? getUserIdFromEvent(event) : requireAdmin(event);
+    // Для POST требуется авторизация (пользователь может обновлять свой профиль)
+    const userId = event.httpMethod === 'GET' ? getUserIdFromEvent(event) : requireAuth(event);
 
     if (event.httpMethod === 'GET') {
       // Если пользователь не авторизован, используем данные админа (zhoock@zhoock.ru) для публичных страниц
@@ -79,7 +81,7 @@ export const handler: Handler = async (
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ success: true, data: null } as GetUserProfileResponse),
+            body: JSON.stringify({ success: true, data: undefined } as GetUserProfileResponse),
           };
         }
       }
@@ -136,7 +138,24 @@ export const handler: Handler = async (
       }
 
       const user = result.rows[0];
-      const theBand = user.the_band ? (Array.isArray(user.the_band) ? user.the_band : []) : [];
+
+      // Получаем язык из query параметров (по умолчанию 'ru')
+      const lang = (event.queryStringParameters?.lang || 'ru').toLowerCase();
+      const validLang = lang === 'en' ? 'en' : 'ru';
+
+      // Извлекаем theBand в зависимости от формата данных
+      let theBand: string[] = [];
+      if (user.the_band) {
+        if (Array.isArray(user.the_band)) {
+          // Старый формат (массив) - для обратной совместимости
+          theBand = user.the_band;
+        } else if (typeof user.the_band === 'object' && user.the_band !== null) {
+          // Новый формат (объект с ru/en)
+          const bandObj = user.the_band as { ru?: string[]; en?: string[] };
+          theBand = bandObj[validLang] || bandObj.ru || bandObj.en || [];
+        }
+      }
+
       const headerImages = user.header_images
         ? Array.isArray(user.header_images)
           ? user.header_images
@@ -157,11 +176,11 @@ export const handler: Handler = async (
     if (event.httpMethod === 'POST') {
       if (!userId) {
         return {
-          statusCode: 403,
+          statusCode: 401,
           headers,
           body: JSON.stringify({
             success: false,
-            error: 'Forbidden. Only admin can update user profile.',
+            error: 'Unauthorized. Please provide a valid authentication token.',
           } as SaveUserProfileResponse),
         };
       }
@@ -178,19 +197,90 @@ export const handler: Handler = async (
         updateValues.push(data.siteName || null);
       }
 
-      if (data.theBand !== undefined) {
-        if (!Array.isArray(data.theBand)) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({
-              success: false,
-              error: 'Invalid request data. theBand must be an array of strings',
-            } as SaveUserProfileResponse),
-          };
+      // Обработка theBand: поддерживаем как старый формат (theBand), так и новый (theBandRu/theBandEn)
+      if (
+        data.theBandRu !== undefined ||
+        data.theBandEn !== undefined ||
+        data.theBand !== undefined
+      ) {
+        // Сначала загружаем текущие данные, чтобы сохранить обе языковые версии
+        let currentBandObj: { ru?: string[]; en?: string[] } = {};
+
+        try {
+          const currentResult = await query<{ the_band: any }>(
+            `SELECT the_band FROM users WHERE id = $1 AND is_active = true`,
+            [userId],
+            0
+          );
+
+          if (currentResult.rows.length > 0 && currentResult.rows[0].the_band) {
+            const currentBand = currentResult.rows[0].the_band;
+            if (Array.isArray(currentBand)) {
+              // Старый формат - преобразуем в новый
+              currentBandObj = { ru: currentBand, en: currentBand };
+            } else if (typeof currentBand === 'object' && currentBand !== null) {
+              // Уже новый формат
+              currentBandObj = {
+                ru: currentBand.ru || [],
+                en: currentBand.en || [],
+              };
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Ошибка загрузки текущих данных the_band:', error);
         }
+
+        // Обновляем данные в зависимости от того, что пришло
+        if (data.theBandRu !== undefined) {
+          if (!Array.isArray(data.theBandRu)) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: 'Invalid request data. theBandRu must be an array of strings',
+              } as SaveUserProfileResponse),
+            };
+          }
+          currentBandObj.ru = data.theBandRu;
+        }
+
+        if (data.theBandEn !== undefined) {
+          if (!Array.isArray(data.theBandEn)) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: 'Invalid request data. theBandEn must be an array of strings',
+              } as SaveUserProfileResponse),
+            };
+          }
+          currentBandObj.en = data.theBandEn;
+        }
+
+        // Обратная совместимость: если пришел старый формат theBand, обновляем оба языка
+        if (data.theBand !== undefined) {
+          if (!Array.isArray(data.theBand)) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: 'Invalid request data. theBand must be an array of strings',
+              } as SaveUserProfileResponse),
+            };
+          }
+          // Если не указаны явно ru/en, обновляем оба языка одинаково (для обратной совместимости)
+          if (data.theBandRu === undefined && data.theBandEn === undefined) {
+            currentBandObj.ru = data.theBand;
+            currentBandObj.en = data.theBand;
+          }
+        }
+
+        // Сохраняем обновленный объект
         updateFields.push(`the_band = $${paramIndex++}::jsonb`);
-        updateValues.push(JSON.stringify(data.theBand));
+        updateValues.push(JSON.stringify(currentBandObj));
       }
 
       if (data.headerImages !== undefined) {
@@ -224,7 +314,9 @@ export const handler: Handler = async (
       console.log('✅ User profile updated:', {
         userId,
         siteName: data.siteName,
-        theBandLength: data.theBand?.length || 0,
+        theBandRuLength: data.theBandRu?.length || 0,
+        theBandEnLength: data.theBandEn?.length || 0,
+        theBandLength: data.theBand?.length || 0, // Legacy
         headerImagesLength: data.headerImages?.length || 0,
       });
 
