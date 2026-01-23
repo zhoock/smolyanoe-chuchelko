@@ -189,30 +189,90 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
         const pathParts = finalUrl.split('/');
         const fileName = pathParts[pathParts.length - 1];
 
-        // Формируем proxy URL
-        const origin =
-          typeof window !== 'undefined'
-            ? window.location.origin
-            : process.env.NETLIFY_SITE_URL || '';
-        finalUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(finalUrl)}`;
+        // Формируем proxy URL с правильным определением production
+        let origin = '';
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          const protocol = window.location.protocol;
+          const port = window.location.port;
+
+          const isProduction =
+            hostname !== 'localhost' &&
+            hostname !== '127.0.0.1' &&
+            !hostname.includes('localhost') &&
+            !hostname.includes('127.0.0.1') &&
+            (hostname.includes('smolyanoechuchelko.ru') || hostname.includes('netlify.app'));
+
+          if (isProduction) {
+            origin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+          } else {
+            origin = window.location.origin;
+          }
+        } else {
+          origin = process.env.NETLIFY_SITE_URL || '';
+        }
+
+        const isProduction =
+          typeof window !== 'undefined' &&
+          window.location.hostname !== 'localhost' &&
+          window.location.hostname !== '127.0.0.1' &&
+          !window.location.hostname.includes('localhost') &&
+          !window.location.hostname.includes('127.0.0.1') &&
+          (window.location.hostname.includes('smolyanoechuchelko.ru') ||
+            window.location.hostname.includes('netlify.app'));
+
+        const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+        finalUrl = `${origin}${proxyPath}?path=${encodeURIComponent(finalUrl)}`;
 
         console.log('🔗 [uploadFile] Сформирован proxy URL для hero:', {
           storagePath: result.data.url,
           fileName,
           finalUrl,
+          isProduction,
+          origin,
         });
       } else if (!finalUrl.includes('proxy-image') && !finalUrl.includes('supabase.co')) {
         // Если URL не содержит proxy-image и не является Supabase URL, возможно это storagePath
         // Попробуем сформировать proxy URL
-        const origin =
-          typeof window !== 'undefined'
-            ? window.location.origin
-            : process.env.NETLIFY_SITE_URL || '';
-        finalUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(finalUrl)}`;
+        let origin = '';
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          const protocol = window.location.protocol;
+          const port = window.location.port;
+
+          const isProduction =
+            hostname !== 'localhost' &&
+            hostname !== '127.0.0.1' &&
+            !hostname.includes('localhost') &&
+            !hostname.includes('127.0.0.1') &&
+            (hostname.includes('smolyanoechuchelko.ru') || hostname.includes('netlify.app'));
+
+          if (isProduction) {
+            origin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+          } else {
+            origin = window.location.origin;
+          }
+        } else {
+          origin = process.env.NETLIFY_SITE_URL || '';
+        }
+
+        const isProduction =
+          typeof window !== 'undefined' &&
+          window.location.hostname !== 'localhost' &&
+          window.location.hostname !== '127.0.0.1' &&
+          !window.location.hostname.includes('localhost') &&
+          !window.location.hostname.includes('127.0.0.1') &&
+          (window.location.hostname.includes('smolyanoechuchelko.ru') ||
+            window.location.hostname.includes('netlify.app'));
+
+        const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+        finalUrl = `${origin}${proxyPath}?path=${encodeURIComponent(finalUrl)}`;
 
         console.log('🔗 [uploadFile] Сформирован proxy URL для hero (fallback):', {
           originalUrl: result.data.url,
           finalUrl,
+          isProduction,
+          origin,
         });
       }
     }
@@ -469,15 +529,33 @@ export async function deleteStorageFile(
  */
 export async function deleteHeroImage(imageUrl: string): Promise<boolean> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
+    const { getAuthHeader, getToken } = await import('@shared/lib/auth');
+    const token = getToken();
+
+    if (!token) {
+      console.error('❌ [deleteHeroImage] Token not found. User is not authenticated.');
+      return false;
+    }
+
     const authHeader = getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...authHeader,
+    };
+
+    // Убеждаемся, что Authorization заголовок присутствует
+    if (!headers.Authorization && !headers.authorization) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    console.log('🗑️ [deleteHeroImage] Sending delete request:', {
+      imageUrl,
+      hasAuth: !!headers.Authorization || !!headers.authorization,
+    });
 
     const response = await fetch('/api/delete-hero-image', {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        ...authHeader,
-      },
+      headers,
       body: JSON.stringify({ imageUrl }),
     });
 

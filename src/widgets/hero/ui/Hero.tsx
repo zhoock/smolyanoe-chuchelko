@@ -205,16 +205,54 @@ export function Hero() {
       const imageUrl = headerImages[randomIndex];
       console.log('🎲 [Hero] Выбрано изображение:', { index: randomIndex, url: imageUrl });
 
+      // Проверяем и исправляем localhost URL перед установкой
+      let cleanImageUrl = imageUrl;
+      if (
+        imageUrl &&
+        (imageUrl.includes('localhost') ||
+          imageUrl.includes('127.0.0.1') ||
+          imageUrl.includes(':8080'))
+      ) {
+        // Извлекаем path из URL
+        const pathMatch = imageUrl.match(/[?&]path=([^&]+)/);
+        if (pathMatch) {
+          const path = decodeURIComponent(pathMatch[1]);
+          const hostname = window.location.hostname;
+          const protocol = window.location.protocol;
+          const port = window.location.port;
+
+          const isProduction =
+            hostname !== 'localhost' &&
+            hostname !== '127.0.0.1' &&
+            !hostname.includes('localhost') &&
+            !hostname.includes('127.0.0.1') &&
+            !hostname.includes(':8080') &&
+            (hostname.includes('smolyanoechuchelko.ru') || hostname.includes('netlify.app'));
+
+          const origin = isProduction
+            ? `${protocol}//${hostname}${port && port !== '8080' ? `:${port}` : ''}`
+            : window.location.origin;
+          const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+          cleanImageUrl = `${origin}${proxyPath}?path=${encodeURIComponent(path)}`;
+
+          console.log('🔄 [Hero] Исправлен localhost URL:', {
+            old: imageUrl,
+            new: cleanImageUrl,
+          });
+        }
+      }
+
       // Преобразуем URL в формат для background-image (простой url(), без image-set)
-      const backgroundImageUrl = formatBackgroundImageUrl(imageUrl);
+      const backgroundImageUrl = formatBackgroundImageUrl(cleanImageUrl);
       setBackgroundImage(backgroundImageUrl);
 
-      // Предзагружаем изображение для улучшения производительности
+      // Предзагружаем выбранное изображение для улучшения производительности
       if (imageUrl && !imageUrl.startsWith('url(')) {
+        const cleanUrl = imageUrl.replace(/^url\(['"]?|['"]?\)$/g, '');
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
-        link.href = imageUrl;
+        link.href = cleanUrl;
 
         // Добавляем только один preload link за раз
         const existingLink = document.querySelector('link[rel="preload"][as="image"]');
@@ -231,6 +269,19 @@ export function Hero() {
           }
         }, 10000);
       }
+
+      // Предзагружаем все остальные изображения для быстрого переключения
+      // Это особенно важно для мобильных устройств
+      headerImages.forEach((url, index) => {
+        if (index !== randomIndex && url && !url.startsWith('url(')) {
+          const cleanUrl = url.replace(/^url\(['"]?|['"]?\)$/g, '');
+          // Создаем Image объект для предзагрузки (более надежно, чем link preload)
+          const img = new Image();
+          img.src = cleanUrl;
+          // Не добавляем обработчики ошибок, чтобы не засорять консоль
+          // Изображение просто загрузится в кэш браузера
+        }
+      });
     } else {
       console.warn('⚠️ [Hero] Нет изображений для отображения (headerImages пустой)');
       setBackgroundImage('');

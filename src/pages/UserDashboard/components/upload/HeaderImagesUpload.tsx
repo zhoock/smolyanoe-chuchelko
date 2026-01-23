@@ -245,11 +245,43 @@ export function HeaderImagesUpload({
         (url.startsWith('users/') && url.includes('/hero/'))
       ) {
         // Если это storagePath, преобразуем в proxy URL
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        finalUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(url)}`;
+        // Используем правильное определение production URL
+        let origin = '';
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          const protocol = window.location.protocol;
+          const port = window.location.port;
+
+          const isProduction =
+            hostname !== 'localhost' &&
+            hostname !== '127.0.0.1' &&
+            !hostname.includes('localhost') &&
+            !hostname.includes('127.0.0.1') &&
+            (hostname.includes('smolyanoechuchelko.ru') || hostname.includes('netlify.app'));
+
+          if (isProduction) {
+            origin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+          } else {
+            origin = window.location.origin;
+          }
+        }
+
+        const isProduction =
+          typeof window !== 'undefined' &&
+          window.location.hostname !== 'localhost' &&
+          window.location.hostname !== '127.0.0.1' &&
+          !window.location.hostname.includes('localhost') &&
+          !window.location.hostname.includes('127.0.0.1') &&
+          (window.location.hostname.includes('smolyanoechuchelko.ru') ||
+            window.location.hostname.includes('netlify.app'));
+
+        const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+        finalUrl = `${origin}${proxyPath}?path=${encodeURIComponent(url)}`;
         console.log('🔄 [HeaderImagesUpload] Преобразован storagePath в proxy URL:', {
           original: url,
           converted: finalUrl,
+          isProduction,
+          origin,
         });
       }
 
