@@ -119,18 +119,42 @@ export async function saveSyncedLyrics(
   data: SaveSyncedLyricsRequest
 ): Promise<SaveSyncedLyricsResponse> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
+    const { getAuthHeader, getToken } = await import('@shared/lib/auth');
+    const token = getToken();
+
+    if (!token) {
+      console.error('❌ [saveSyncedLyrics] Token not found. User is not authenticated.');
+      return {
+        success: false,
+        message: 'Unauthorized. Please log in to save synced lyrics.',
+      };
+    }
+
     const authHeader = getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+      Pragma: 'no-cache',
+      ...authHeader,
+    };
+
+    // Убеждаемся, что Authorization заголовок присутствует
+    if (!headers.Authorization && !headers.authorization) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    console.log('💾 [saveSyncedLyrics] Sending save request:', {
+      albumId: data.albumId,
+      trackId: data.trackId,
+      lang: data.lang,
+      linesCount: data.syncedLyrics.length,
+      hasAuth: !!headers.Authorization || !!headers.authorization,
+    });
 
     const response = await fetch('/api/synced-lyrics', {
       method: 'POST',
       cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-        Pragma: 'no-cache',
-        ...authHeader,
-      },
+      headers,
       body: JSON.stringify(data),
     });
 
