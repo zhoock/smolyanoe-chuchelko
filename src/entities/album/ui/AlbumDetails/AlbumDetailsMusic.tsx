@@ -167,33 +167,60 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
               return finalText ? <li key={i}>{finalText}</li> : null;
             }
 
-            // Объекты с text и link
-            if (typeof item === 'object' && item !== null && 'text' in item && 'link' in item) {
-              const oldItem = item as { text: string[]; link: string };
+            // Объекты с text: поддерживаем и старый формат ["", "Имя", " — роль"],
+            // и новый формат ["Имя", "роль"] (с link или без него)
+            if (typeof item === 'object' && item !== null && 'text' in item) {
+              const textItem = item as { text: string[]; link?: string };
+              const parts = Array.isArray(textItem.text) ? textItem.text : [];
 
-              // Формируем текст
-              let textBefore = oldItem.text[0] || '';
-              let textAfter = oldItem.text[2] || '';
+              // Новый формат producing: ["Имя", "роль"]
+              if (parts.length === 2) {
+                const name = (parts[0] || '').trim();
+                const role = ensurePeriod((parts[1] || '').trim());
+                if (!name && !role) return null;
 
-              // Добавляем точку в конце для всех блоков
-              textAfter = ensurePeriod(textAfter);
+                if (textItem.link && textItem.link.trim()) {
+                  return (
+                    <li key={i}>
+                      <a
+                        className="album-details__link"
+                        href={textItem.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {name}
+                      </a>
+                      {role && ` — ${role}`}
+                    </li>
+                  );
+                }
 
-              return (
-                <li key={i}>
-                  {textBefore}
-                  {textBefore && ' '}
-                  <a
-                    className="album-details__link"
-                    href={oldItem.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {oldItem.text[1]}
-                  </a>
-                  {textAfter && ' '}
-                  {textAfter}
-                </li>
-              );
+                return <li key={i}>{name && role ? `${name} — ${role}` : `${name}${role}`}</li>;
+              }
+
+              // Старый формат с link: ["", "Имя", " — роль"]
+              if (parts.length >= 3 && textItem.link && textItem.link.trim()) {
+                const textBefore = parts[0] || '';
+                const linkedText = parts[1] || '';
+                const textAfter = ensurePeriod(parts[2] || '');
+
+                return (
+                  <li key={i}>
+                    {textBefore}
+                    {textBefore && ' '}
+                    <a
+                      className="album-details__link"
+                      href={textItem.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {linkedText}
+                    </a>
+                    {textAfter && ' '}
+                    {textAfter}
+                  </li>
+                );
+              }
             }
 
             // Если формат не распознан, пропускаем

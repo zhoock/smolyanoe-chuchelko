@@ -404,7 +404,11 @@ export function EditAlbumModal({
     const producer: BandMember[] = [];
     const producingDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
-          (detail) => detail && (detail.title === 'Producing' || detail.title === 'Продюсирование')
+          (detail) =>
+            detail &&
+            (detail.title === 'Producing' ||
+              detail.title === 'Продюсирование' ||
+              detail.title === 'Продюсер')
         )
       : null;
 
@@ -1377,6 +1381,41 @@ export function EditAlbumModal({
       setSessionMusicianName('');
       setSessionMusicianRole('');
       setSessionMusicianURL('');
+    }
+
+    // Применяем незавершенные изменения producer
+    if (producerName.trim() && producerRole.trim()) {
+      const url =
+        producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
+
+      if (editingProducerIndex !== null) {
+        // Редактируем существующего producer
+        const updated = [...(finalFormData.producer || [])];
+        updated[editingProducerIndex] = {
+          name: producerName.trim(),
+          role: producerRole.trim(),
+          url,
+        };
+        finalFormData = { ...finalFormData, producer: updated };
+      } else {
+        // Добавляем нового producer
+        finalFormData = {
+          ...finalFormData,
+          producer: [
+            ...(finalFormData.producer || []),
+            { name: producerName.trim(), role: producerRole.trim(), url },
+          ],
+        };
+      }
+
+      // Обновляем formData для UI
+      setFormData(finalFormData);
+
+      // Сбрасываем состояние
+      setEditingProducerIndex(null);
+      setProducerName('');
+      setProducerRole('');
+      setProducerURL('');
     }
 
     // Используем lang для сохранения
