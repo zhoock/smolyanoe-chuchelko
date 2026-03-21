@@ -735,7 +735,9 @@ export function SyncLyricsModal({
                       disabled={!isDirty || isSaving}
                       className="sync-lyrics-modal__button sync-lyrics-modal__button--primary"
                     >
-                      {isSaving ? 'Saving...' : 'Save Sync'}
+                      {isSaving
+                        ? (ui?.dashboard?.saving ?? 'Saving...')
+                        : (ui?.dashboard?.save ?? 'Save')}
                     </button>
                   </div>
                 </div>
