@@ -7,7 +7,7 @@ import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectAlbumsData, fetchAlbums } from '@entities/album';
 import { useLang } from '@app/providers/lang';
-import { getToken } from '@shared/lib/auth';
+import { getToken, getUser } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums } from '@models';
@@ -122,6 +122,13 @@ export function EditAlbumModal({
     message: string;
     variant?: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
+
+  const getProfileArtistName = (): string => {
+    const authName = getUser()?.name?.trim();
+    if (authName) return authName;
+    const storedName = localStorage.getItem('profile-name')?.trim();
+    return storedName || '';
+  };
 
   // ========= FIX: objectURL lifecycle =========
   const localPreviewUrlRef = useRef<string | null>(null);
@@ -561,7 +568,6 @@ export function EditAlbumModal({
 
       return {
         ...prevForm,
-        artist: album.artist || prevForm.artist,
         title: album.album || prevForm.title,
         releaseDate: releaseDate || prevForm.releaseDate,
         upcEan: upc || prevForm.upcEan,
@@ -712,7 +718,8 @@ export function EditAlbumModal({
         : null;
 
       // Подготавливаем параметры для uploadCoverDraft
-      const uploadArtist = formData.artist || albumData?.artist || originalAlbum?.artist || '';
+      const uploadArtist =
+        getProfileArtistName() || albumData?.artist || originalAlbum?.artist || '';
       const uploadAlbum = formData.title || albumData?.album || originalAlbum?.album || '';
       const uploadAlbumId = albumId || undefined;
 
@@ -1148,16 +1155,18 @@ export function EditAlbumModal({
       albumsFromStoreLength: albumsFromStore.length,
     });
 
+    const profileArtistName = getProfileArtistName();
+    const effectiveArtistName = profileArtistName.trim();
+
     // Если albumId не передан, генерируем его из названия альбома и артиста
     let finalAlbumId = albumId;
     if (!finalAlbumId) {
       // Проверяем, что есть минимальные данные для генерации albumId
-      if (!formData.artist || !formData.title) {
+      if (!formData.title) {
         setAlertModal({
           isOpen: true,
           title: 'Ошибка',
-          message:
-            'Ошибка: для создания нового альбома необходимо заполнить поля "Artist / Group name" и "Album title".',
+          message: 'Ошибка: для создания нового альбома необходимо заполнить поле "Album title".',
           variant: 'error',
         });
         setIsSaving(false);
@@ -1246,9 +1255,9 @@ export function EditAlbumModal({
         return titleSlug ? `${artistSlug}-${titleSlug}` : artistSlug;
       };
 
-      finalAlbumId = generateAlbumId(formData.artist, formData.title);
+      finalAlbumId = generateAlbumId(effectiveArtistName, formData.title);
       console.log('🆕 [EditAlbumModal] Generated albumId for new album:', {
-        artist: formData.artist,
+        artist: effectiveArtistName,
         title: formData.title,
         generatedAlbumId: finalAlbumId,
       });
@@ -1268,12 +1277,12 @@ export function EditAlbumModal({
     });
 
     // Если версии нет, нужен хотя бы минимальный набор данных для создания
-    if (!exists && (!formData.artist || !formData.title)) {
+    if (!exists && !formData.title) {
       setAlertModal({
         isOpen: true,
         title: 'Ошибка',
         message:
-          'Ошибка: для создания новой версии альбома необходимо заполнить поля "Artist / Group name" и "Album title".',
+          'Ошибка: для создания новой версии альбома необходимо заполнить поле "Album title".',
         variant: 'error',
       });
       setIsSaving(false);
@@ -1282,12 +1291,11 @@ export function EditAlbumModal({
 
     // Если версия существует, проверяем обязательные поля
     if (exists) {
-      if (!formData.artist && !originalAlbum.artist) {
+      if (!effectiveArtistName && !originalAlbum.artist) {
         setAlertModal({
           isOpen: true,
           title: 'Ошибка',
-          message:
-            'Ошибка: не найдено название группы для альбома. Заполните поле "Artist / Group name" и попробуйте снова.',
+          message: 'Ошибка: не найдено название группы в профиле исполнителя.',
           variant: 'error',
         });
         setIsSaving(false);
@@ -1427,7 +1435,7 @@ export function EditAlbumModal({
     if (currentCoverDraftKey) {
       try {
         const commitResult = await commitCover(currentCoverDraftKey, finalAlbumId, {
-          artist: formData.artist || originalAlbum?.artist || '',
+          artist: effectiveArtistName || originalAlbum?.artist || '',
           album: formData.title || originalAlbum?.album || '',
           lang: normalizedLang,
         });
@@ -1452,17 +1460,33 @@ export function EditAlbumModal({
             console.warn('⚠️ [EditAlbumModal] Cover commit succeeded but baseName not found');
           }
         } else {
-          // Не блокируем сохранение альбома, если обложка не закоммитилась
           const errorMessage = !commitResult.success ? commitResult.error : 'Unknown error';
-          console.warn('⚠️ [EditAlbumModal] Cover commit failed, continuing without cover:', {
-            error: errorMessage,
+          console.error('❌ [EditAlbumModal] Cover commit failed:', { error: errorMessage });
+          setUploadStatus('error');
+          setUploadError(errorMessage || 'Failed to commit cover');
+          setAlertModal({
+            isOpen: true,
+            title: 'Ошибка',
+            message:
+              'Не удалось сохранить обложку альбома. Повторите загрузку обложки и попробуйте снова.',
+            variant: 'error',
           });
+          setIsSaving(false);
+          return;
         }
       } catch (e) {
-        // Не блокируем сохранение альбома, если обложка не закоммитилась
-        console.warn('⚠️ [EditAlbumModal] Cover commit error, continuing without cover:', {
-          error: e instanceof Error ? e.message : 'Unknown error',
+        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+        console.error('❌ [EditAlbumModal] Cover commit error:', { error: errorMessage });
+        setUploadStatus('error');
+        setUploadError(errorMessage);
+        setAlertModal({
+          isOpen: true,
+          title: 'Ошибка',
+          message: 'Ошибка при сохранении обложки альбома. Попробуйте еще раз.',
+          variant: 'error',
         });
+        setIsSaving(false);
+        return;
       }
     }
 
@@ -1473,7 +1497,7 @@ export function EditAlbumModal({
     } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined);
 
     // Формируем fullName из artist и album
-    const artistName = formData.artist || originalAlbum?.artist || '';
+    const artistName = effectiveArtistName || originalAlbum?.artist || '';
     const albumTitle = formData.title || originalAlbum?.album || '';
     const fullName = `${artistName} — ${albumTitle}`;
 
@@ -1481,7 +1505,7 @@ export function EditAlbumModal({
       method,
       lang,
       formDataTitle: formData.title,
-      formDataArtist: formData.artist,
+      formDataArtist: effectiveArtistName,
       originalAlbumTitle: originalAlbum?.album,
       originalAlbumArtist: originalAlbum?.artist,
     });
@@ -1698,22 +1722,6 @@ export function EditAlbumModal({
       return (
         <>
           <div className="edit-album-modal__divider" />
-
-          <div className="edit-album-modal__field">
-            <label htmlFor="artist-name" className="edit-album-modal__label">
-              {ui?.dashboard?.editAlbumModal?.fieldLabels?.artistGroupName ?? 'Artist / Group name'}
-            </label>
-            <input
-              id="artist-name"
-              name="artist"
-              type="text"
-              autoComplete="organization"
-              className="edit-album-modal__input"
-              required
-              value={formData.artist ?? ''}
-              onChange={(e) => setFormData((s) => ({ ...s, artist: e.target.value }))}
-            />
-          </div>
 
           <div className="edit-album-modal__field">
             <label htmlFor="album-title" className="edit-album-modal__label">

@@ -297,7 +297,6 @@ export function formatDateInput(value: string): string {
 }
 
 export const makeEmptyForm = (): AlbumFormData => ({
-  artist: '',
   title: '',
   releaseDate: '',
   upcEan: '',
@@ -356,9 +355,6 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
   if (step === 1) {
     // Шаг 1: Basic Info
     const errors: string[] = [];
-    if (!formData.artist || !formData.artist.trim()) {
-      errors.push('Artist / Group name');
-    }
     if (!formData.title || !formData.title.trim()) {
       errors.push('Album title');
     }

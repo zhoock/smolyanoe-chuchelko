@@ -33,6 +33,14 @@ interface RegisterRequest {
   siteName?: string;
 }
 
+interface SlugRow {
+  public_slug: string;
+}
+
+interface UsernameRow {
+  username: string;
+}
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -48,6 +56,87 @@ interface AuthData {
 }
 
 type AuthResponse = ApiResponse<AuthData>;
+
+function slugify(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'artist';
+}
+
+async function generateUniquePublicSlug(
+  siteName: string | null | undefined,
+  name: string | null | undefined,
+  email: string
+): Promise<string> {
+  const emailLocalPart = email.split('@')[0] || 'artist';
+  const baseValue = siteName || name || emailLocalPart;
+  const baseSlug = slugify(baseValue);
+
+  const existingSlugs = await query<SlugRow>(
+    `SELECT public_slug
+     FROM users
+     WHERE public_slug = $1
+        OR public_slug LIKE $2`,
+    [baseSlug, `${baseSlug}-%`],
+    0
+  );
+
+  const usedSlugs = new Set(
+    existingSlugs.rows.map((row) => row.public_slug).filter((slug): slug is string => !!slug)
+  );
+
+  if (!usedSlugs.has(baseSlug)) {
+    return baseSlug;
+  }
+
+  let suffix = 2;
+  while (usedSlugs.has(`${baseSlug}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseSlug}-${suffix}`;
+}
+
+async function generateUniqueUsername(
+  siteName: string | null | undefined,
+  name: string | null | undefined,
+  email: string
+): Promise<string> {
+  const emailLocalPart = email.split('@')[0] || 'artist';
+  const baseValue = siteName || name || emailLocalPart;
+  const baseUsername = slugify(baseValue);
+
+  const existingUsernames = await query<UsernameRow>(
+    `SELECT username
+     FROM users
+     WHERE username = $1
+        OR username LIKE $2`,
+    [baseUsername, `${baseUsername}-%`],
+    0
+  );
+
+  const usedUsernames = new Set(
+    existingUsernames.rows
+      .map((row) => row.username)
+      .filter((username): username is string => !!username)
+  );
+
+  if (!usedUsernames.has(baseUsername)) {
+    return baseUsername;
+  }
+
+  let suffix = 2;
+  while (usedUsernames.has(`${baseUsername}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseUsername}-${suffix}`;
+}
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -87,14 +176,55 @@ export const handler: Handler = async (
 
       // Создаём пользователя (сохраняем пароль в открытом виде для админки и хеш для проверки)
       // siteName берем из name, если siteName не указан явно (для обратной совместимости)
+      const normalizedEmail = data.email.toLowerCase().trim();
       const siteName = data.siteName || data.name || null;
-      const result = await query<UserRow>(
-        `INSERT INTO users (email, name, site_name, password, password_hash, is_active)
-         VALUES ($1, $2, $3, $4, $5, true)
-         RETURNING id, email, name`,
-        [data.email.toLowerCase().trim(), data.name || null, siteName, data.password, passwordHash],
-        0
-      );
+
+      // Защита от race-condition: если сработает уникальный индекс на username/public_slug, делаем повтор.
+      let result: Awaited<ReturnType<typeof query<UserRow>>> | null = null;
+      let lastError: unknown = null;
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const publicSlug = await generateUniquePublicSlug(
+            siteName,
+            data.name || null,
+            normalizedEmail
+          );
+          const username = await generateUniqueUsername(
+            siteName,
+            data.name || null,
+            normalizedEmail
+          );
+
+          result = await query<UserRow>(
+            `INSERT INTO users (email, name, username, site_name, public_slug, password, password_hash, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+             RETURNING id, email, name`,
+            [
+              normalizedEmail,
+              data.name || null,
+              username,
+              siteName,
+              publicSlug,
+              data.password,
+              passwordHash,
+            ],
+            0
+          );
+          break;
+        } catch (error: any) {
+          const isUniqueViolation = error?.code === '23505';
+          if (isUniqueViolation && attempt < 1) {
+            lastError = error;
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      if (!result) {
+        throw lastError || new Error('Failed to create user after retry');
+      }
 
       const user = result.rows[0];
 

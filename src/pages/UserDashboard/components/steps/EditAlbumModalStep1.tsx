@@ -40,22 +40,6 @@ export function EditAlbumModalStep1({
       <div className="edit-album-modal__divider" />
 
       <div className="edit-album-modal__field">
-        <label htmlFor="artist-name" className="edit-album-modal__label">
-          Artist / Group name
-        </label>
-        <input
-          id="artist-name"
-          name="artist"
-          type="text"
-          autoComplete="organization"
-          className="edit-album-modal__input"
-          required
-          value={formData.artist ?? ''}
-          onChange={(e) => onFormDataChange('artist', e.target.value)}
-        />
-      </div>
-
-      <div className="edit-album-modal__field">
         <label htmlFor="album-title" className="edit-album-modal__label">
           Album title
         </label>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getImageUrl } from '@shared/api/albums';
 import type { ImageCategory } from '@config/user';
 import './style.scss';
 
@@ -7,9 +7,10 @@ interface ImageCarouselProps {
   images: string[];
   alt: string;
   category?: ImageCategory;
+  userId?: string;
 }
 
-export function ImageCarousel({ images, alt, category = 'articles' }: ImageCarouselProps) {
+export function ImageCarousel({ images, alt, category = 'articles', userId }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCounter, setShowCounter] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -199,7 +200,7 @@ export function ImageCarousel({ images, alt, category = 'articles' }: ImageCarou
         {images.map((img, index) => (
           <div key={img} className="image-carousel__slide">
             <img
-              src={getUserImageUrl(img, category)}
+              src={getImageUrl(img, '.jpg', userId ? { userId, category } : undefined)}
               alt={index === 0 ? alt : `${alt} (${index + 1})`}
               loading={index === 0 ? 'lazy' : 'lazy'}
               decoding="async"

@@ -8,9 +8,12 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { getUserIdFromEvent, requireAuth } from './lib/api-helpers';
+import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
 interface UserProfileRow {
   id: string;
+  name?: string | null;
+  public_slug?: string | null;
   the_band: any; // JSONB
   header_images?: any; // JSONB
   password: string | null;
@@ -20,6 +23,8 @@ interface UserProfileRow {
 interface GetUserProfileResponse {
   success: boolean;
   data?: {
+    name?: string | null;
+    publicSlug?: string | null;
     theBand: string[];
     headerImages?: string[];
     siteName?: string | null;
@@ -33,6 +38,7 @@ interface SaveUserProfileRequest {
   theBandEn?: string[]; // Новый формат: английская версия
   headerImages?: string[];
   siteName?: string;
+  publicSlug?: string;
 }
 
 interface SaveUserProfileResponse {
@@ -61,28 +67,26 @@ export const handler: Handler = async (
     const userId = event.httpMethod === 'GET' ? getUserIdFromEvent(event) : requireAuth(event);
 
     if (event.httpMethod === 'GET') {
-      // Если пользователь не авторизован, используем данные админа (zhoock@zhoock.ru) для публичных страниц
       let targetUserId = userId;
-      if (!targetUserId) {
-        console.log(
-          '📡 [user-profile] GET: Пользователь не авторизован, используем данные админа для публичных страниц'
-        );
-        // Находим ID админа по email
-        const adminResult = await query<{ id: string }>(
-          `SELECT id FROM users WHERE email = 'zhoock@zhoock.ru' AND is_active = true LIMIT 1`,
-          [],
-          0
-        );
-        if (adminResult.rows.length > 0) {
-          targetUserId = adminResult.rows[0].id;
-          console.log('✅ [user-profile] GET: Найден ID админа:', targetUserId);
-        } else {
-          console.warn('⚠️ [user-profile] GET: Админ не найден в БД');
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({ success: true, data: undefined } as GetUserProfileResponse),
-          };
+      const artistSlug = event.queryStringParameters?.artist;
+
+      // Публичный режим: если artist передан ИЛИ пользователь не авторизован
+      // В этом режиме не опираемся на JWT для выбора артиста.
+      if (artistSlug || !targetUserId) {
+        try {
+          targetUserId = await resolvePublicArtistUserId(artistSlug);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return {
+              statusCode: error.statusCode,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: error.message,
+              } as GetUserProfileResponse),
+            };
+          }
+          throw error;
         }
       }
 
@@ -93,7 +97,7 @@ export const handler: Handler = async (
 
       try {
         result = await query<UserProfileRow>(
-          `SELECT the_band, header_images, password, site_name FROM users WHERE id = $1 AND is_active = true`,
+          `SELECT name, public_slug, the_band, header_images, password, site_name FROM users WHERE id = $1 AND is_active = true`,
           [targetUserId],
           0
         );
@@ -107,15 +111,26 @@ export const handler: Handler = async (
         if (errorMessage.includes('column')) {
           console.log('⚠️ Некоторые поля еще не существуют в БД, используем только доступные');
           try {
-            result = await query<{ the_band: any; header_images?: any; site_name?: string | null }>(
-              `SELECT the_band, header_images, site_name FROM users WHERE id = $1 AND is_active = true`,
+            result = await query<{
+              name?: string | null;
+              public_slug?: string | null;
+              the_band: any;
+              header_images?: any;
+              site_name?: string | null;
+            }>(
+              `SELECT name, public_slug, the_band, header_images, site_name FROM users WHERE id = $1 AND is_active = true`,
               [targetUserId],
               0
             );
             password = '';
           } catch (innerError) {
-            result = await query<{ the_band: any; site_name?: string | null }>(
-              `SELECT the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
+            result = await query<{
+              name?: string | null;
+              public_slug?: string | null;
+              the_band: any;
+              site_name?: string | null;
+            }>(
+              `SELECT name, public_slug, the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
               [targetUserId],
               0
             );
@@ -161,14 +176,16 @@ export const handler: Handler = async (
           ? user.header_images
           : []
         : [];
-      const siteName = (user as any).site_name || null;
+      const profileName = (user as any).name || null;
+      const siteName = (user as any).site_name || profileName || null;
+      const publicSlug = (user as any).public_slug || null;
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          data: { theBand, password, headerImages, siteName },
+          data: { name: profileName, publicSlug, theBand, password, headerImages, siteName },
         } as GetUserProfileResponse),
       };
     }
@@ -193,8 +210,60 @@ export const handler: Handler = async (
       let paramIndex = 1;
 
       if (data.siteName !== undefined) {
+        const normalizedName = data.siteName?.trim() || null;
+        // name is source of truth; keep site_name in sync for backward compatibility
+        updateFields.push(`name = $${paramIndex++}`);
+        updateValues.push(normalizedName);
         updateFields.push(`site_name = $${paramIndex++}`);
-        updateValues.push(data.siteName || null);
+        updateValues.push(normalizedName);
+      }
+
+      if (data.publicSlug !== undefined) {
+        const normalizedSlug = data.publicSlug.trim().toLowerCase();
+        const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+        if (!normalizedSlug) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error: 'publicSlug cannot be empty',
+            } as SaveUserProfileResponse),
+          };
+        }
+
+        if (!slugPattern.test(normalizedSlug)) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error:
+                'Invalid publicSlug format. Use lowercase latin letters, numbers and hyphens only.',
+            } as SaveUserProfileResponse),
+          };
+        }
+
+        const slugExistsResult = await query<{ id: string }>(
+          `SELECT id FROM users WHERE public_slug = $1 AND id <> $2 AND is_active = true LIMIT 1`,
+          [normalizedSlug, userId],
+          0
+        );
+
+        if (slugExistsResult.rows.length > 0) {
+          return {
+            statusCode: 409,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error: 'publicSlug is already in use',
+            } as SaveUserProfileResponse),
+          };
+        }
+
+        updateFields.push(`public_slug = $${paramIndex++}`);
+        updateValues.push(normalizedSlug);
       }
 
       // Обработка theBand: поддерживаем как старый формат (theBand), так и новый (theBandRu/theBandEn)

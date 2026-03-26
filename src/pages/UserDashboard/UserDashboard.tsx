@@ -1,7 +1,7 @@
 // src/pages/UserDashboard/UserDashboard.tsx
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -604,6 +604,7 @@ function UserDashboard() {
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
@@ -709,6 +710,25 @@ function UserDashboard() {
     };
   }>({});
   const articleCoverLocalPreviewRefs = useRef<{ [articleId: string]: string | null }>({});
+
+  // В админке artist из query не используется: удаляем его из URL, оставляя только tab.
+  useEffect(() => {
+    const artistParam = searchParams.get('artist');
+    if (!artistParam) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('artist');
+    const nextQuery = nextParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextQuery ? `?${nextQuery}` : '',
+      },
+      { replace: true }
+    );
+  }, [searchParams, navigate, location.pathname]);
 
   // Функции для загрузки обложки статьи
   const handleArticleCoverDrag = (articleId: string, e: React.DragEvent) => {
@@ -2678,7 +2698,13 @@ function UserDashboard() {
                             <label htmlFor="name">
                               {ui?.dashboard?.profileFields?.name ?? 'Name'}
                             </label>
-                            <input id="name" type="text" defaultValue={user?.name || ''} disabled />
+                            <input
+                              id="name"
+                              type="text"
+                              value={user?.name || ''}
+                              disabled
+                              readOnly
+                            />
                           </div>
 
                           <div className="user-dashboard__field">
@@ -2688,8 +2714,9 @@ function UserDashboard() {
                             <input
                               id="email"
                               type="email"
-                              defaultValue={user?.email || ''}
+                              value={user?.email || ''}
                               disabled
+                              readOnly
                             />
                           </div>
                         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
 import { Text } from '@shared/ui/text';
 import { Hamburger } from '@shared/ui/hamburger';
@@ -17,8 +18,10 @@ type AboutSectionProps = {
 
 export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSectionProps) {
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const hasArtistParam = !!searchParams.get('artist');
 
   // Состояние для theBand из БД
   const [theBandFromDb, setTheBandFromDb] = useState<string[] | null>(null);
@@ -57,8 +60,13 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     };
   }, [lang]);
 
-  // Загружаем theBand из profile.json (fallback)
+  // Загружаем theBand из profile.json (fallback только для default-режима без artist)
   useEffect(() => {
+    if (hasArtistParam) {
+      setTheBandFromProfileJson(null);
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
@@ -78,13 +86,16 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, hasArtistParam]);
 
-  // Используем theBand из БД, если есть и не пустой, иначе из profile.json (fallback)
+  // В artist-режиме показываем только данные выбранного артиста (без fallback на default content).
+  // В default-режиме сохраняем старый fallback на profile.json.
   const theBand = (
-    theBandFromDb !== null && theBandFromDb.length > 0
-      ? theBandFromDb
-      : theBandFromProfileJson || []
+    hasArtistParam
+      ? theBandFromDb || []
+      : theBandFromDb && theBandFromDb.length > 0
+        ? theBandFromDb
+        : theBandFromProfileJson || []
   ).filter(Boolean);
   const previewParagraph = theBand[0];
   const showLabel = ui?.buttons?.show ?? '';

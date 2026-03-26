@@ -64,9 +64,9 @@ function createSupabaseAdminClient() {
 interface CommitCoverRequest {
   draftKey: string;
   albumId: string;
-  artist: string;
-  album: string;
-  lang: 'ru' | 'en';
+  artist?: string;
+  album?: string;
+  lang?: 'ru' | 'en';
 }
 
 interface CommitCoverResponse {
@@ -117,19 +117,11 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Парсим JSON body
     const body = parseJsonBody<Partial<CommitCoverRequest>>(event.body, {});
 
-    const { draftKey, albumId, artist, album, lang } = body;
+    const { draftKey, albumId } = body;
 
     // Валидация полей
-    if (!draftKey || !albumId || !artist || !album || !lang) {
-      return createErrorResponse(
-        400,
-        'Missing required fields: albumId, artist, album, lang (must be "en" or "ru")'
-      );
-    }
-
-    // Проверяем, что lang в правильном формате
-    if (lang !== 'ru' && lang !== 'en') {
-      return createErrorResponse(400, 'lang must be "en" or "ru"');
+    if (!draftKey || !albumId) {
+      return createErrorResponse(400, 'Missing required fields: draftKey, albumId');
     }
 
     // Проверяем, что draftKey принадлежит текущему пользователю
@@ -254,7 +246,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
           return false;
         })
-        .map((f) => `users/zhoock/albums/${f.name}`) || [];
+        .map((f) => `users/${userId}/albums/${f.name}`) || [];
 
     if (oldCoverFiles.length > 0) {
       console.log(`Removing ${oldCoverFiles.length} old cover files`);

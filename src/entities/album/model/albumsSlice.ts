@@ -5,6 +5,7 @@ import type { IAlbums } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
 import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 import { getToken } from '@shared/lib/auth';
+import { buildApiUrl } from '@shared/lib/artistQuery';
 
 import type { AlbumsState } from './types';
 
@@ -21,6 +22,7 @@ export const fetchAlbums = createAsyncThunk<
     const isValidAlbum = (
       album: unknown
     ): album is {
+      userId?: string;
       albumId: string;
       artist: string;
       album: string;
@@ -115,6 +117,7 @@ export const fetchAlbums = createAsyncThunk<
           : [];
 
         return {
+          userId: album.userId,
           albumId: album.albumId,
           artist: album.artist,
           album: album.album,
@@ -145,26 +148,33 @@ export const fetchAlbums = createAsyncThunk<
           }
         }
 
-        // ВАЖНО: Добавляем токен авторизации, чтобы сервер вернул пользовательские альбомы
-        // Без токена сервер возвращает только публичные альбомы (user_id IS NULL)
+        const isDashboardRoute =
+          typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
         const token = getToken();
         const headers: Record<string, string> = {
           'Cache-Control': 'no-cache',
         };
-        if (token) {
+        // В админке используем JWT, в публичном режиме (/ и /?artist=...) не передаем токен.
+        if (isDashboardRoute && token) {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await fetch(`/api/albums?lang=${lang}`, {
-          signal: controller.signal,
-          cache: 'no-store',
-          headers,
-        });
+        const response = await fetch(
+          buildApiUrl('/api/albums', { lang }, { includeArtist: true }),
+          {
+            signal: controller.signal,
+            cache: 'no-store',
+            headers,
+          }
+        );
 
-        clearTimeout(timeoutId);if (response.ok) {
-          const result = await response.json();if (result.success && result.data && Array.isArray(result.data)) {
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data && Array.isArray(result.data)) {
             // Если данных нет, возвращаем пустой массив
-            if (result.data.length === 0) {return [];
+            if (result.data.length === 0) {
+              return [];
             }
 
             // 🔍 DEBUG: Проверяем наличие duration в данных из API

@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getImageUrl } from '@shared/api/albums';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import './style.scss';
 
-export function ArticlePreview({ articleId, img, nameArticle, date }: ArticleProps) {
+export function ArticlePreview({ articleId, img, nameArticle, date, userId }: ArticleProps) {
   const { lang } = useLang() as { lang: LocaleKey };
   const { formatDate } = formatDateInWords[lang];
 
@@ -14,7 +14,7 @@ export function ArticlePreview({ articleId, img, nameArticle, date }: ArticlePro
       <Link to={`/articles/${articleId}`}>
         <div className="articles__picture">
           <img
-            src={getUserImageUrl(img, 'articles')}
+            src={getImageUrl(img, '.jpg', userId ? { userId, category: 'articles' } : undefined)}
             alt={nameArticle}
             loading="lazy"
             decoding="async"

@@ -1,6 +1,6 @@
 // src/entities/album/ui/AlbumCover.tsx
 import { memo, useMemo } from 'react';
-import { getUserImageUrl } from '@shared/api/albums';
+import { getImageUrl } from '@shared/api/albums';
 import type { CoverProps } from 'models';
 import { useImageColor } from '@shared/lib/hooks/useImageColor';
 
@@ -64,12 +64,14 @@ function supaSuffix(format: ImageFormat, targetPx: number): string | null {
 
 const buildSrcSet = ({
   img,
+  userId,
   baseSize,
   format,
   densities,
   cacheBust,
 }: {
   img: string;
+  userId?: string;
   baseSize: number;
   format: ImageFormat;
   densities: Density[];
@@ -90,7 +92,7 @@ const buildSrcSet = ({
 
       if (!suffix) return null;
 
-      const url = getUserImageUrl(img, 'albums', suffix);
+      const url = getImageUrl(img, suffix, userId ? { userId, category: 'albums' } : undefined);
       return `${withCacheBust(url, cacheBust)} ${formatDescriptor(density)}`;
     })
     .filter(Boolean)
@@ -102,6 +104,7 @@ const buildSrcSet = ({
  */
 function AlbumCover({
   img,
+  userId,
   fullName,
   size = DEFAULT_BASE_SIZE,
   densities,
@@ -128,24 +131,26 @@ function AlbumCover({
     () =>
       buildSrcSet({
         img,
+        userId,
         baseSize: effectiveBaseSize,
         format: 'webp',
         densities: densitySteps,
         cacheBust,
       }),
-    [img, effectiveBaseSize, densitySteps, cacheBust]
+    [img, userId, effectiveBaseSize, densitySteps, cacheBust]
   );
 
   const jpegSrcSet = useMemo(
     () =>
       buildSrcSet({
         img,
+        userId,
         baseSize: effectiveBaseSize,
         format: 'jpg',
         densities: densitySteps,
         cacheBust,
       }),
-    [img, effectiveBaseSize, densitySteps, cacheBust]
+    [img, userId, effectiveBaseSize, densitySteps, cacheBust]
   );
 
   const fallbackSrc = useMemo(() => {
@@ -153,17 +158,17 @@ function AlbumCover({
 
     if (useSupabaseStorage) {
       const suffix = supaSuffix('webp', effectiveBaseSize) ?? '-448.webp';
-      const url = getUserImageUrl(img, 'albums', suffix);
+      const url = getImageUrl(img, suffix, userId ? { userId, category: 'albums' } : undefined);
       return withCacheBust(url, cacheBust);
     }
 
     const primarySuffix = DENSITY_SUFFIX.jpg[1]?.(effectiveBaseSize);
     const baseUrl = primarySuffix
-      ? getUserImageUrl(img, 'albums', primarySuffix)
-      : getUserImageUrl(img, 'albums');
+      ? getImageUrl(img, primarySuffix, userId ? { userId, category: 'albums' } : undefined)
+      : getImageUrl(img, '.jpg', userId ? { userId, category: 'albums' } : undefined);
 
     return withCacheBust(baseUrl, cacheBust);
-  }, [img, effectiveBaseSize, cacheBust]);
+  }, [img, userId, effectiveBaseSize, cacheBust]);
 
   const resolvedSizes =
     sizes ??

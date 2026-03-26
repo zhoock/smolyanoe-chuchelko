@@ -33,7 +33,6 @@ export interface StreamingLink {
 }
 
 export interface AlbumFormData {
-  artist: string;
   title: string;
   releaseDate: string;
   upcEan: string;

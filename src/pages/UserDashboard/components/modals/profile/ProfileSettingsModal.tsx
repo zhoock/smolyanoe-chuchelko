@@ -4,11 +4,9 @@ import { Popup } from '@shared/ui/popup';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { getUser, getToken } from '@shared/lib/auth';
+import { getUser, getToken, updateStoredUserName } from '@shared/lib/auth';
 import {
   loadTheBandFromDatabase,
-  loadTheBandFromProfileJson,
-  loadTheBandBilingualFromDatabase,
   saveTheBandToDatabase,
   loadHeaderImagesFromDatabase,
   saveHeaderImagesToDatabase,
@@ -35,6 +33,7 @@ export function ProfileSettingsModal({
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [name, setName] = useState(userName);
+  const [publicSlug, setPublicSlug] = useState('');
   const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(currentLang || 'ru');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [headerImages, setHeaderImages] = useState<string[]>([]);
@@ -63,6 +62,7 @@ export function ProfileSettingsModal({
 
   // Исходные значения для отслеживания изменений
   const [initialName, setInitialName] = useState(userName);
+  const [initialPublicSlug, setInitialPublicSlug] = useState('');
   const [initialLang, setInitialLang] = useState<'ru' | 'en'>(currentLang || 'ru');
   const [initialAboutTextRu, setInitialAboutTextRu] = useState<string>('');
   const [initialAboutTextEn, setInitialAboutTextEn] = useState<string>('');
@@ -77,6 +77,15 @@ export function ProfileSettingsModal({
   ];
 
   const selectedLanguage = languages.find((l) => l.value === selectedLang) || languages[0];
+
+  const normalizePublicSlug = useCallback((value: string): string => {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  }, []);
 
   // Закрытие dropdown при клике вне
   useEffect(() => {
@@ -149,6 +158,7 @@ export function ProfileSettingsModal({
     (activeTab === 'general' && selectedLang !== initialLang) ||
     (activeTab === 'profile' &&
       (name !== initialName ||
+        publicSlug !== initialPublicSlug ||
         aboutText !== initialAboutText ||
         (headerImages || []).length !== (initialHeaderImages || []).length ||
         (headerImages || []).some((url, index) => url !== (initialHeaderImages || [])[index]))) ||
@@ -163,6 +173,7 @@ export function ProfileSettingsModal({
       setSelectedLang(initialLang);
     } else if (activeTab === 'profile') {
       setName(initialName);
+      setPublicSlug(initialPublicSlug);
       // Восстанавливаем текст для текущего выбранного языка
       setAboutText(selectedLang === 'ru' ? initialAboutTextRu : initialAboutTextEn);
       setHeaderImages([...(initialHeaderImages || [])]);
@@ -329,6 +340,7 @@ export function ProfileSettingsModal({
 
       // Сохранение site_name (название группы) и header images
       const needsSiteNameUpdate = name !== initialName;
+      const needsPublicSlugUpdate = publicSlug !== initialPublicSlug;
       const safeHeaderImages = Array.isArray(headerImages) ? headerImages : [];
       const safeInitialHeaderImages = Array.isArray(initialHeaderImages) ? initialHeaderImages : [];
       const needsHeaderImagesUpdate =
@@ -337,6 +349,7 @@ export function ProfileSettingsModal({
 
       console.log('💾 [ProfileSettingsModal] Сохранение профиля:', {
         needsSiteNameUpdate,
+        needsPublicSlugUpdate,
         needsHeaderImagesUpdate,
         name,
         initialName,
@@ -344,7 +357,7 @@ export function ProfileSettingsModal({
         initialHeaderImagesLength: safeInitialHeaderImages.length,
       });
 
-      if (needsSiteNameUpdate || needsHeaderImagesUpdate) {
+      if (needsSiteNameUpdate || needsPublicSlugUpdate || needsHeaderImagesUpdate) {
         try {
           const token = getToken();
           if (!token) {
@@ -355,6 +368,9 @@ export function ProfileSettingsModal({
           const updateData: any = {};
           if (needsSiteNameUpdate) {
             updateData.siteName = name.trim() || null;
+          }
+          if (needsPublicSlugUpdate) {
+            updateData.publicSlug = publicSlug.trim();
           }
           if (needsHeaderImagesUpdate) {
             updateData.headerImages = safeHeaderImages;
@@ -383,6 +399,7 @@ export function ProfileSettingsModal({
           // Отправляем событие для обновления Hero компонента
           if (needsSiteNameUpdate) {
             localStorage.setItem('profile-name', name);
+            updateStoredUserName(name);
             window.dispatchEvent(new CustomEvent('profile-name-updated', { detail: { name } }));
           }
 
@@ -411,6 +428,7 @@ export function ProfileSettingsModal({
       }
 
       setInitialName(name);
+      setInitialPublicSlug(publicSlug);
       setInitialHeaderImages([...(headerImages || [])]);
       setInitialAboutText(aboutText);
 
@@ -480,21 +498,12 @@ export function ProfileSettingsModal({
         setIsLoadingAboutText(true);
         try {
           // Загружаем оба языка из БД
-          const bilingualData = await loadTheBandBilingualFromDatabase();
-          let source = 'БД';
-
-          // Если в БД нет данных, загружаем из profile.json как fallback
-          if (
-            (!bilingualData.ru || bilingualData.ru.length === 0) &&
-            (!bilingualData.en || bilingualData.en.length === 0)
-          ) {
-            console.log('📝 Данных в БД нет, загружаем из profile.json...');
-            const ruFromJson = await loadTheBandFromProfileJson('ru');
-            const enFromJson = await loadTheBandFromProfileJson('en');
-            bilingualData.ru = ruFromJson;
-            bilingualData.en = enFromJson;
-            source = 'profile.json';
-          }
+          const [ruData, enData] = await Promise.all([
+            loadTheBandFromDatabase('ru', { includeArtist: false, useAuth: true }),
+            loadTheBandFromDatabase('en', { includeArtist: false, useAuth: true }),
+          ]);
+          const bilingualData = { ru: ruData, en: enData };
+          const source = 'БД';
 
           const textRu =
             bilingualData.ru && bilingualData.ru.length > 0 ? bilingualData.ru.join('\n') : '';
@@ -541,7 +550,10 @@ export function ProfileSettingsModal({
       const loadHeaderImages = async () => {
         setIsLoadingHeaderImages(true);
         try {
-          const images = await loadHeaderImagesFromDatabase();
+          const images = await loadHeaderImagesFromDatabase(true, {
+            includeArtist: false,
+            useAuth: true,
+          });
           // Гарантируем, что images всегда массив
           const safeImages = Array.isArray(images) ? images : [];
           console.log('📥 [ProfileSettingsModal] Header images загружены из БД:', {
@@ -604,11 +616,16 @@ export function ProfileSettingsModal({
 
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.data?.siteName) {
-              setInitialName(result.data.siteName);
-              setName(result.data.siteName);
+            const profileName = result.success
+              ? (result.data?.name ?? result.data?.siteName ?? null)
+              : null;
+            const loadedPublicSlug = result.success ? (result.data?.publicSlug ?? '') : '';
+            if (profileName) {
+              setInitialName(profileName);
+              setName(profileName);
               // Сохраняем в localStorage для использования в Hero
-              localStorage.setItem('profile-name', result.data.siteName);
+              localStorage.setItem('profile-name', profileName);
+              updateStoredUserName(profileName);
             } else {
               // Если в API нет siteName, используем значение из localStorage или userName
               const storedName = localStorage.getItem('profile-name');
@@ -616,12 +633,16 @@ export function ProfileSettingsModal({
               setInitialName(initialUserName);
               setName(initialUserName);
             }
+            setInitialPublicSlug(loadedPublicSlug);
+            setPublicSlug(loadedPublicSlug);
           } else {
             // В случае ошибки используем значение из localStorage или userName
             const storedName = localStorage.getItem('profile-name');
             const initialUserName = storedName || userName || '';
             setInitialName(initialUserName);
             setName(initialUserName);
+            setInitialPublicSlug('');
+            setPublicSlug('');
           }
         } catch (error) {
           console.warn('⚠️ Ошибка загрузки site_name из профиля:', error);
@@ -630,6 +651,8 @@ export function ProfileSettingsModal({
           const initialUserName = storedName || userName || '';
           setInitialName(initialUserName);
           setName(initialUserName);
+          setInitialPublicSlug('');
+          setPublicSlug('');
         }
       };
 
@@ -811,6 +834,24 @@ export function ProfileSettingsModal({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
+                  </div>
+
+                  <div className="profile-settings-modal__field">
+                    <label htmlFor="profile-public-slug" className="profile-settings-modal__label">
+                      Public URL (slug)
+                    </label>
+                    <input
+                      id="profile-public-slug"
+                      type="text"
+                      className="profile-settings-modal__input"
+                      placeholder="my-band"
+                      value={publicSlug}
+                      onChange={(e) => setPublicSlug(normalizePublicSlug(e.target.value))}
+                      onBlur={(e) => setPublicSlug(normalizePublicSlug(e.target.value))}
+                    />
+                    <div className="profile-settings-modal__field-hint">
+                      Изменение slug может повлиять на существующие публичные ссылки.
+                    </div>
                   </div>
 
                   <div className="profile-settings-modal__field">

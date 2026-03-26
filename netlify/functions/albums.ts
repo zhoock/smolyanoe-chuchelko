@@ -22,6 +22,7 @@ import {
 } from './lib/api-helpers';
 import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
+import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
 interface AlbumRow {
   id: string;
@@ -54,6 +55,7 @@ interface TrackRow {
 }
 
 interface AlbumData {
+  userId?: string;
   albumId: string;
   artist: string;
   album: string;
@@ -75,6 +77,10 @@ interface TrackData {
   content?: string;
   authorship?: string;
   syncedLyrics?: unknown;
+}
+
+interface AlbumOwnerSlugRow {
+  public_slug: string;
 }
 
 interface CreateAlbumRequest {
@@ -160,6 +166,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
   }
 
   return {
+    userId: album.user_id || undefined,
     albumId: album.album_id,
     artist: album.artist,
     album: album.album,
@@ -269,21 +276,67 @@ export const handler: Handler = async (
   try {
     // GET: загрузка альбомов
     if (event.httpMethod === 'GET') {
-      const { lang } = event.queryStringParameters || {};
+      const { lang, artist, resolveOwnerByAlbumId, albumId } = event.queryStringParameters || {};
 
       if (!validateLang(lang)) {
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Для GET запросов авторизация не требуется - все альбомы публичные
-      // Для POST/PUT/DELETE требуется авторизация (админка)
-      const userId = event.httpMethod === 'GET' ? null : getUserIdFromEvent(event);
+      // Resolve helper: find artist slug by albumId (used for smart redirect from /albums/:id).
+      if (resolveOwnerByAlbumId === 'true') {
+        if (!albumId) {
+          return createErrorResponse(400, 'albumId is required when resolveOwnerByAlbumId=true');
+        }
 
-      // Возвращаем все альбомы для указанного языка
-      // Важно: используем DISTINCT ON для устранения дубликатов по album_id и lang
-      // Если есть несколько альбомов с одинаковым album_id и lang, берём самый новый
+        const ownerResult = await query<AlbumOwnerSlugRow>(
+          `SELECT u.public_slug
+           FROM albums a
+           INNER JOIN users u ON u.id = a.user_id
+           WHERE a.album_id = $1
+             AND a.lang = $2
+             AND u.is_active = true
+             AND u.public_slug IS NOT NULL
+           ORDER BY a.updated_at DESC NULLS LAST, a.created_at DESC
+           LIMIT 1`,
+          [albumId, lang]
+        );
+
+        if (ownerResult.rows.length === 0) {
+          return createErrorResponse(404, 'Album owner slug not found');
+        }
+
+        return createSuccessResponse({ artistSlug: ownerResult.rows[0].public_slug });
+      }
+
+      const authUserId = getUserIdFromEvent(event);
+      let targetUserId: string;
+
+      if (artist) {
+        try {
+          targetUserId = await resolvePublicArtistUserId(artist);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return createErrorResponse(error.statusCode, error.message);
+          }
+          throw error;
+        }
+      } else if (authUserId) {
+        // Приватный режим для админки: если есть JWT и artist не указан, берем владельца токена.
+        targetUserId = authUserId;
+      } else {
+        try {
+          targetUserId = await resolvePublicArtistUserId(undefined);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return createErrorResponse(error.statusCode, error.message);
+          }
+          throw error;
+        }
+      }
+
+      // Возвращаем альбомы только выбранного артиста (owner user_id)
       const albumsResult = await query<AlbumRow>(
-        `SELECT DISTINCT ON (a.album_id, a.lang) 
+        `SELECT
              a.id,
              a.user_id,
              a.album_id,
@@ -300,9 +353,10 @@ export const handler: Handler = async (
              a.created_at,
              a.updated_at
          FROM albums a
-         WHERE a.lang = $1 
-         ORDER BY a.album_id, a.lang, a.created_at DESC`,
-        [lang]
+         WHERE a.lang = $1
+           AND a.user_id = $2
+         ORDER BY a.album_id, a.created_at DESC`,
+        [lang, targetUserId]
       );
 
       // 🔍 DEBUG: Логируем для 23-remastered
@@ -1505,7 +1559,9 @@ export const handler: Handler = async (
                   `${coverBaseName}-1344.jpg`,
                 ];
 
-                const coverPaths = coverVariants.map((variant) => `users/zhoock/albums/${variant}`);
+                const coverPaths = coverVariants.map(
+                  (variant) => `users/${userId}/albums/${variant}`
+                );
                 allCoverPaths.push(...coverPaths);
               }
 

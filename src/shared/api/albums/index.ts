@@ -40,8 +40,16 @@ export function getImageUrl(
   format: string = '.jpg',
   options?: ImageUrlOptions
 ): string {
-  // Если это уже полный URL (http:// или https://), возвращаем как есть
-  if (img.startsWith('http://') || img.startsWith('https://')) {
+  // Если это уже готовый URL, возвращаем как есть
+  // (важно для multi-artist: backend может присылать proxy/cdn ссылки напрямую).
+  if (
+    img.startsWith('http://') ||
+    img.startsWith('https://') ||
+    img.startsWith('data:') ||
+    img.startsWith('blob:') ||
+    img.startsWith('/api/proxy-image') ||
+    img.startsWith('/.netlify/functions/proxy-image')
+  ) {
     return img;
   }
 

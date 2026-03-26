@@ -1,6 +1,7 @@
 /**
  * Утилиты для работы с профилем пользователя и данными текущего пользователя
  */
+import { buildApiUrl } from '@shared/lib/artistQuery';
 
 export interface UserProfile {
   theBand: string[];
@@ -16,15 +17,28 @@ export interface UserProfileResponse {
   error?: string;
 }
 
+interface UserProfileLoadOptions {
+  includeArtist?: boolean;
+  useAuth?: boolean;
+}
+
 /**
  * Загружает описание группы (theBand) из БД для текущего пользователя
  */
-export async function loadTheBandFromDatabase(lang: string): Promise<string[] | null> {
+export async function loadTheBandFromDatabase(
+  lang: string,
+  options: UserProfileLoadOptions = {}
+): Promise<string[] | null> {
   try {
-    const { getAuthHeader } = await import('@shared/lib/auth');
-    const authHeader = getAuthHeader();
+    const includeArtist = options.includeArtist ?? true;
+    const useAuth = options.useAuth ?? false;
+    let authHeader = {};
+    if (useAuth) {
+      const { getAuthHeader } = await import('@shared/lib/auth');
+      authHeader = getAuthHeader();
+    }
 
-    const response = await fetch(`/api/user-profile?lang=${lang}`, {
+    const response = await fetch(buildApiUrl('/api/user-profile', { lang }, { includeArtist }), {
       cache: 'no-cache',
       headers: {
         'Cache-Control': 'no-cache',
@@ -83,8 +97,12 @@ export async function loadTheBandFromProfileJson(lang: string): Promise<string[]
 /**
  * Загружает изображения для шапки (header images) из БД для текущего пользователя
  */
-export async function loadHeaderImagesFromDatabase(useAuth: boolean = false): Promise<string[]> {
+export async function loadHeaderImagesFromDatabase(
+  useAuth: boolean = false,
+  options: UserProfileLoadOptions = {}
+): Promise<string[]> {
   try {
+    const includeArtist = options.includeArtist ?? true;
     // Для публичных страниц не передаем Authorization header
     // API вернет данные админа для публичного доступа
     let authHeader = {};
@@ -98,7 +116,7 @@ export async function loadHeaderImagesFromDatabase(useAuth: boolean = false): Pr
       hasAuth: useAuth && 'Authorization' in authHeader && !!authHeader.Authorization,
     });
 
-    const response = await fetch('/api/user-profile', {
+    const response = await fetch(buildApiUrl('/api/user-profile', {}, { includeArtist }), {
       cache: 'no-cache',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',

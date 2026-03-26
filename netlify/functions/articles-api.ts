@@ -21,6 +21,7 @@ import {
   handleError,
 } from './lib/api-helpers';
 import type { ApiResponse, SupportedLang } from './lib/types';
+import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
 interface ArticleRow {
   id: string;
@@ -39,6 +40,7 @@ interface ArticleRow {
 
 interface ArticleData {
   id: string; // UUID из БД
+  userId?: string;
   articleId: string; // строковый идентификатор (article_id)
   nameArticle: string;
   img: string;
@@ -87,6 +89,7 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
 
   const result = {
     id: article.id, // UUID из БД
+    userId: article.user_id || undefined,
     articleId: article.article_id, // строковый идентификатор
     nameArticle: article.name_article,
     img: article.img || '',
@@ -121,10 +124,15 @@ export const handler: Handler = async (
     // Для GET с includeDrafts=true также требуется авторизация
     const includeDrafts =
       event.httpMethod === 'GET' && event.queryStringParameters?.includeDrafts === 'true';
-    const userId = event.httpMethod === 'GET' && !includeDrafts ? null : getUserIdFromEvent(event);
+    const userId =
+      event.httpMethod === 'GET'
+        ? includeDrafts
+          ? getUserIdFromEvent(event)
+          : null
+        : getUserIdFromEvent(event);
 
     if (event.httpMethod === 'GET') {
-      const { lang } = event.queryStringParameters || {};
+      const { lang, id } = event.queryStringParameters || {};
 
       if (!validateLang(lang)) {
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
@@ -145,25 +153,130 @@ export const handler: Handler = async (
         return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
       }
 
-      // Возвращаем все статьи для указанного языка
-      // Черновики включаются только если includeDrafts=true и пользователь авторизован
-      const articlesResult = await query<ArticleRow>(
-        `SELECT DISTINCT ON (article_id)
-          id,
-          article_id,
-          name_article,
-          description,
-          img,
-          date,
-          details,
-          lang,
-          is_draft
-        FROM articles
-        WHERE lang = $1
-          ${includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)'}
-        ORDER BY article_id, updated_at DESC`,
-        [lang]
-      );
+      // GET по id (UUID или legacy article_id): возвращаем только статью текущего контекста владельца.
+      if (id) {
+        let articleResult;
+
+        if (includeDrafts) {
+          // Админ-режим: всегда только текущий пользователь из JWT.
+          articleResult = await query<ArticleRow>(
+            `SELECT
+              id,
+              user_id,
+              article_id,
+              name_article,
+              description,
+              img,
+              date,
+              details,
+              lang,
+              is_draft
+            FROM articles
+            WHERE (id = $1 OR article_id = $1)
+              AND user_id = $2
+              AND lang = $3
+            ORDER BY updated_at DESC
+            LIMIT 1`,
+            [id, userId, lang]
+          );
+        } else {
+          // Публичный режим: только контекст выбранного артиста.
+          const artistSlug = event.queryStringParameters?.artist;
+          let targetUserId: string;
+          try {
+            targetUserId = await resolvePublicArtistUserId(artistSlug);
+          } catch (error) {
+            if (error instanceof PublicArtistResolverError) {
+              return createErrorResponse(error.statusCode, error.message);
+            }
+            throw error;
+          }
+
+          articleResult = await query<ArticleRow>(
+            `SELECT
+              id,
+              user_id,
+              article_id,
+              name_article,
+              description,
+              img,
+              date,
+              details,
+              lang,
+              is_draft
+            FROM articles
+            WHERE (id = $1 OR article_id = $1)
+              AND user_id = $2
+              AND lang = $3
+              AND (is_draft = false OR is_draft IS NULL)
+            ORDER BY updated_at DESC
+            LIMIT 1`,
+            [id, targetUserId, lang]
+          );
+        }
+
+        if (articleResult.rows.length === 0) {
+          return createSuccessResponse([]);
+        }
+
+        return createSuccessResponse([mapArticleToApiFormat(articleResult.rows[0])]);
+      }
+
+      let articlesResult;
+
+      if (includeDrafts) {
+        // Админ-режим: показываем статьи текущего пользователя, включая черновики.
+        articlesResult = await query<ArticleRow>(
+          `SELECT
+            id,
+            user_id,
+            article_id,
+            name_article,
+            description,
+            img,
+            date,
+            details,
+            lang,
+            is_draft
+          FROM articles
+          WHERE lang = $1
+            AND user_id = $2
+          ORDER BY updated_at DESC, article_id ASC`,
+          [lang, userId]
+        );
+      } else {
+        // Публичный режим: не зависит от JWT, работает в контексте выбранного артиста.
+        const artistSlug = event.queryStringParameters?.artist;
+        let targetUserId: string;
+        try {
+          targetUserId = await resolvePublicArtistUserId(artistSlug);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return createErrorResponse(error.statusCode, error.message);
+          }
+          throw error;
+        }
+
+        articlesResult = await query<ArticleRow>(
+          `SELECT
+            id,
+            user_id,
+            article_id,
+            name_article,
+            description,
+            img,
+            date,
+            details,
+            lang,
+            is_draft
+          FROM articles
+          WHERE lang = $1
+            AND user_id = $2
+            AND (is_draft = false OR is_draft IS NULL)
+          ORDER BY updated_at DESC, article_id ASC`,
+          [lang, targetUserId]
+        );
+      }
 
       const articles = articlesResult.rows.map(mapArticleToApiFormat);
 
@@ -198,7 +311,7 @@ export const handler: Handler = async (
       const result = await query<ArticleRow>(
         `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, NOW(), NOW())
-         RETURNING id, article_id, name_article, description, img, date, details, lang, is_draft`,
+         RETURNING id, user_id, article_id, name_article, description, img, date, details, lang, is_draft`,
         [
           userId,
           data.articleId,

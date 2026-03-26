@@ -614,6 +614,106 @@ END $$;
 COMMENT ON COLUMN users.the_band IS 'Описание группы в двуязычном формате: {ru: [...], en: [...]} - массивы строк для русского и английского языков';
 `;
 
+const MIGRATION_027 = `
+-- Миграция: Добавление public_slug и default-флага публичного сайта
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS public_slug VARCHAR(255);
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS is_default_public_site BOOLEAN NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN users.public_slug IS 'Публичный slug артиста для маршрутизации контента';
+COMMENT ON COLUMN users.is_default_public_site IS 'Является ли пользователь дефолтным публичным артистом';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_slug_unique
+ON users (public_slug)
+WHERE public_slug IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_single_default_public_site
+ON users (is_default_public_site)
+WHERE is_default_public_site = true;
+`;
+
+const MIGRATION_028 = `
+-- Миграция: Backfill public_slug и нормализация default-пользователя
+DO $$
+DECLARE
+  user_record RECORD;
+  base_source TEXT;
+  base_slug TEXT;
+  candidate_slug TEXT;
+  suffix INTEGER;
+  chosen_default_id UUID;
+BEGIN
+  FOR user_record IN
+    SELECT id, email, name, site_name
+    FROM users
+    WHERE public_slug IS NULL OR btrim(public_slug) = ''
+    ORDER BY created_at ASC, id ASC
+  LOOP
+    base_source := COALESCE(NULLIF(btrim(user_record.site_name), ''), NULLIF(btrim(user_record.name), ''));
+
+    IF base_source IS NULL OR base_source = '' THEN
+      base_source := split_part(user_record.email, '@', 1);
+    END IF;
+
+    base_slug := lower(base_source);
+    base_slug := regexp_replace(base_slug, '[^a-z0-9]+', '-', 'g');
+    base_slug := regexp_replace(base_slug, '-{2,}', '-', 'g');
+    base_slug := btrim(base_slug, '-');
+
+    IF base_slug IS NULL OR base_slug = '' THEN
+      base_slug := 'artist';
+    END IF;
+
+    candidate_slug := base_slug;
+    suffix := 2;
+
+    WHILE EXISTS (
+      SELECT 1
+      FROM users u
+      WHERE u.public_slug = candidate_slug
+        AND u.id <> user_record.id
+    ) LOOP
+      candidate_slug := base_slug || '-' || suffix::TEXT;
+      suffix := suffix + 1;
+    END LOOP;
+
+    UPDATE users
+    SET public_slug = candidate_slug,
+        updated_at = NOW()
+    WHERE id = user_record.id;
+  END LOOP;
+
+  UPDATE users
+  SET is_default_public_site = false
+  WHERE is_default_public_site = true;
+
+  SELECT id INTO chosen_default_id
+  FROM users
+  WHERE email = 'zhoock@zhoock.ru' AND is_active = true
+  ORDER BY created_at ASC
+  LIMIT 1;
+
+  IF chosen_default_id IS NULL THEN
+    SELECT id INTO chosen_default_id
+    FROM users
+    WHERE is_active = true
+    ORDER BY created_at ASC, id ASC
+    LIMIT 1;
+  END IF;
+
+  IF chosen_default_id IS NULL THEN
+    RAISE EXCEPTION 'Configuration error: no active users found to set default public site';
+  END IF;
+
+  UPDATE users
+  SET is_default_public_site = true,
+      updated_at = NOW()
+  WHERE id = chosen_default_id;
+END $$;
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -633,6 +733,8 @@ const MIGRATIONS: Record<string, string> = {
   '023_add_site_name_to_users.sql': MIGRATION_023,
   '024_set_site_name_for_owner.sql': MIGRATION_024,
   '026_make_the_band_bilingual.sql': MIGRATION_026,
+  '027_add_public_slug_and_default_flag.sql': MIGRATION_027,
+  '028_backfill_public_slug_and_default_user.sql': MIGRATION_028,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -778,6 +880,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '023_add_site_name_to_users.sql',
       '024_set_site_name_for_owner.sql',
       '026_make_the_band_bilingual.sql',
+      '027_add_public_slug_and_default_flag.sql',
+      '028_backfill_public_slug_and_default_user.sql',
     ];
 
     const results: MigrationResult[] = [];

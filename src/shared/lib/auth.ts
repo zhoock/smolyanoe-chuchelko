@@ -60,6 +60,20 @@ export function getUser(): AuthUser | null {
 }
 
 /**
+ * Обновляет имя пользователя в localStorage (auth_user)
+ */
+export function updateStoredUserName(name: string | null): void {
+  try {
+    const user = getUser();
+    if (!user) return;
+    const updatedUser: AuthUser = { ...user, name };
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+  } catch (error) {
+    console.error('❌ Failed to update stored user name:', error);
+  }
+}
+
+/**
  * Удаляет токен и данные пользователя из localStorage
  */
 export function clearAuth(): void {

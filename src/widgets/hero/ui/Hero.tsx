@@ -1,8 +1,9 @@
 // src/widgets/hero/ui/Hero.tsx
 import { useEffect, useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
+import { buildApiUrl } from '@shared/lib/artistQuery';
 import './style.scss';
 
 /**
@@ -46,9 +47,12 @@ export function Hero() {
   const [headerImages, setHeaderImages] = useState<string[]>([]);
   const [profileName, setProfileName] = useState<string>('');
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const lastPathRef = useRef<string>('');
   const imagesLoadedRef = useRef<boolean>(false);
   const imageSelectedForPathRef = useRef<string>('');
+  const hasArtistParam = !!searchParams.get('artist');
+  const isDashboardRoute = location.pathname.startsWith('/dashboard');
 
   // Загружаем изображения из БД
   useEffect(() => {
@@ -96,52 +100,67 @@ export function Hero() {
     loadImages();
   }, []);
 
-  // Загружаем название группы из API или localStorage
+  // Загружаем название группы:
+  // - public (/ и /?artist=...): всегда из API public профиля, без JWT
+  // - admin (/dashboard): из профиля текущего JWT пользователя
   useEffect(() => {
     const loadProfileName = async () => {
-      // Сначала проверяем localStorage для быстрого отображения
-      const storedName = localStorage.getItem('profile-name');
-      if (storedName) {
-        setProfileName(storedName);
+      if (!isDashboardRoute) {
+        try {
+          const response = await fetch(
+            buildApiUrl('/api/user-profile', {}, { includeArtist: true }),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            const profileName = result.success
+              ? (result.data?.siteName ?? result.data?.name ?? '')
+              : '';
+            setProfileName(profileName);
+          } else {
+            setProfileName('');
+          }
+        } catch (error) {
+          console.warn('⚠️ Ошибка загрузки названия группы выбранного артиста:', error);
+          setProfileName('');
+        }
+        return;
       }
 
       try {
         const token = getToken();
         if (!token) {
-          // Если не авторизован, используем значение из localStorage или значение по умолчанию
-          if (!storedName) {
-            setProfileName('Смоляное чучелко');
-          }
+          setProfileName('');
           return;
         }
 
-        const response = await fetch('/api/user-profile', {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          buildApiUrl('/api/user-profile', {}, { includeArtist: false }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (response.ok) {
           const result = await response.json();
-          if (result.success && result.data?.siteName) {
-            setProfileName(result.data.siteName);
-            // Сохраняем в localStorage для использования без авторизации
-            localStorage.setItem('profile-name', result.data.siteName);
-          } else if (!storedName) {
-            // Если в API нет siteName и нет в localStorage, используем значение по умолчанию
-            setProfileName('Смоляное чучелко');
-          }
-        } else if (!storedName) {
-          // Если запрос не удался и нет в localStorage, используем значение по умолчанию
-          setProfileName('Смоляное чучелко');
+          const profileName = result.success
+            ? (result.data?.name ?? result.data?.siteName ?? '')
+            : '';
+          setProfileName(profileName);
+        } else {
+          setProfileName('');
         }
       } catch (error) {
-        console.warn('⚠️ Ошибка загрузки названия группы из профиля:', error);
-        // В случае ошибки используем localStorage или значение по умолчанию
-        if (!storedName) {
-          setProfileName('Смоляное чучелко');
-        }
+        console.warn('⚠️ Ошибка загрузки названия группы в админке:', error);
+        setProfileName('');
       }
     };
 
@@ -177,7 +196,7 @@ export function Hero() {
       window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
       window.removeEventListener('header-images-updated', handleHeaderImagesUpdate);
     };
-  }, []);
+  }, [hasArtistParam, isDashboardRoute, location.pathname, location.search]);
 
   // Выбираем случайное изображение при загрузке данных или изменении пути
   useEffect(() => {
@@ -288,8 +307,9 @@ export function Hero() {
     }
   }, [location.pathname, headerImages]);
 
-  // Всегда показываем заголовок (с fallback значением)
-  const displayName = profileName || 'Смоляное чучелко';
+  // Для artist-режима не подставляем дефолтное имя, чтобы не смешивать данные.
+  // Для default-режима сохраняем текущее поведение.
+  const displayName = hasArtistParam ? profileName || '' : profileName || 'Смоляное чучелко';
 
   return (
     <section className="hero" style={{ backgroundImage: backgroundImage || undefined }}>

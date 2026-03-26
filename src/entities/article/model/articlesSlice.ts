@@ -4,6 +4,7 @@ import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
 import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
+import { buildApiUrl } from '@shared/lib/artistQuery';
 
 import type { ArticlesState } from './types';
 
@@ -29,6 +30,7 @@ export const fetchArticles = createAsyncThunk<
 
         return {
           id: article.id, // UUID из БД (может быть undefined для старых данных)
+          userId: article.userId,
           articleId: article.articleId,
           nameArticle: article.nameArticle,
           img: article.img ?? '',
@@ -44,16 +46,28 @@ export const fetchArticles = createAsyncThunk<
       // Импортируем динамически, чтобы избежать циклических зависимостей
       const { getAuthHeader } = await import('@shared/lib/auth');
       const authHeader = getAuthHeader();
+      const isDashboardRoute =
+        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
 
       try {
-        const response = await fetch(`/api/articles-api?lang=${lang}`, {
-          signal,
-          cache: 'no-cache',
-          headers: {
-            'Cache-Control': 'no-cache',
-            ...authHeader,
-          },
-        });
+        const response = await fetch(
+          buildApiUrl(
+            '/api/articles-api',
+            {
+              lang,
+              includeDrafts: isDashboardRoute ? true : undefined,
+            },
+            { includeArtist: !isDashboardRoute }
+          ),
+          {
+            signal,
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              ...authHeader,
+            },
+          }
+        );
 
         if (response.ok) {
           const payload = await response.json();
@@ -65,7 +79,7 @@ export const fetchArticles = createAsyncThunk<
               console.log('[fetchArticles] First article from API:', payload.data[0]);
               console.log('[fetchArticles] First article has id?', !!payload.data[0]?.id);
             }
-          }// ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
+          } // ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
           const list = Array.isArray(payload) ? payload : (payload.data ?? payload.articles ?? []);
 
           if (!Array.isArray(list)) {
@@ -104,7 +118,8 @@ export const fetchArticles = createAsyncThunk<
       } catch (apiError) {
         // Если API недоступен или вернул ошибку - возвращаем ошибку
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        console.error('[fetchArticles] API request failed:', errorMessage);throw apiError;
+        console.error('[fetchArticles] API request failed:', errorMessage);
+        throw apiError;
       }
     } catch (error) {
       // Если API недоступен – отдаём ошибку

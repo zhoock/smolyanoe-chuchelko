@@ -1,7 +1,7 @@
 // src/pages/Album/Album.tsx
 
 import { useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { AlbumCover, AlbumDetails } from '@entities/album';
@@ -17,6 +17,8 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 
 export default function Album() {
   const { lang } = useLang();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { albumId = '' } = useParams<{ albumId: string }>();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
@@ -65,9 +67,56 @@ export default function Album() {
     }
   }, []);
 
+  const artistParam = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('artist');
+  }, [location.search]);
+
+  const albumsListLink = artistParam
+    ? `/albums?artist=${encodeURIComponent(artistParam)}`
+    : '/albums';
+
+  useEffect(() => {
+    // Smart fallback for direct URL without ?artist:
+    // if album is not found in default context, resolve owner slug and redirect.
+    if (!albumId || album || artistParam || albumsStatus !== 'succeeded') return;
+
+    let isCancelled = false;
+
+    const resolveOwnerAndRedirect = async () => {
+      try {
+        const response = await fetch(
+          `/api/albums?resolveOwnerByAlbumId=true&albumId=${encodeURIComponent(albumId)}&lang=${encodeURIComponent(lang)}`
+        );
+        if (!response.ok) return;
+
+        const result = await response.json();
+        const artistSlug = result?.success ? result?.data?.artistSlug : null;
+        if (!artistSlug || isCancelled) return;
+
+        navigate(`/albums/${albumId}?artist=${encodeURIComponent(artistSlug)}`, { replace: true });
+      } catch {
+        // noop: keep standard "album not found" behavior if resolve fails
+      }
+    };
+
+    void resolveOwnerAndRedirect();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [albumId, album, artistParam, albumsStatus, lang, navigate]);
+
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [albumId]);
+
+  useEffect(() => {
+    if (!album?.artist) return;
+    window.dispatchEvent(
+      new CustomEvent('profile-name-updated', { detail: { name: album.artist } })
+    );
+  }, [album?.artist]);
 
   // Данные загружаются через loader
 
@@ -127,14 +176,14 @@ export default function Album() {
             {/* Показываем "Все альбомы" только если пришли со страницы списка */}
             {cameFromAlbumsPage && ui?.titles?.albums && (
               <li>
-                <Link to="/albums">{ui.titles.albums}</Link>
+                <Link to={albumsListLink}>{ui.titles.albums}</Link>
               </li>
             )}
           </ul>
         </nav>
 
         <div className="item">
-          <AlbumCover img={album.cover || ''} fullName={album.fullName} />
+          <AlbumCover img={album.cover || ''} userId={album.userId} fullName={album.fullName} />
           <Share />
         </div>
 

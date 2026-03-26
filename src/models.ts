@@ -26,6 +26,7 @@ export interface PopupProps extends HamburgerProps {
  */
 
 export interface IAlbums {
+  userId?: string;
   /** Идентификатор альбома */
   albumId?: string;
   /** Название группы */
@@ -101,6 +102,7 @@ export interface TracksProps {
 
 export interface CoverProps {
   img: string;
+  userId?: string;
   fullName: string;
   size?: number;
   densities?: Array<1 | 2 | 3>;
@@ -113,6 +115,7 @@ export interface String {
 
 export type IArticles = {
   id?: string; // UUID из БД (опционально для обратной совместимости)
+  userId?: string;
   articleId: string; // строковый идентификатор (article_id)
   nameArticle: string;
   img: string;
@@ -124,6 +127,7 @@ export type IArticles = {
 
 export interface ArticledetailsProps {
   id?: number; // опционально, может отсутствовать в новой структуре
+  userId?: string;
   type?: 'text' | 'image' | 'carousel'; // тип блока
   title?: string;
   img?: string; // для одиночного изображения
@@ -135,6 +139,7 @@ export interface ArticledetailsProps {
 }
 
 export interface ArticleProps {
+  userId?: string;
   articleId: string;
   img: string;
   nameArticle: string;
