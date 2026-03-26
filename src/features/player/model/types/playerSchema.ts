@@ -12,6 +12,7 @@ import type { TracksProps } from '@models';
 
 export interface PlayerAlbumMeta {
   albumId: string | null;
+  userId?: string | null;
   album: string | null;
   artist: string | null;
   fullName: string | null;

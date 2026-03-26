@@ -17,26 +17,26 @@ describe('NotFoundPage integration tests', () => {
     jest.clearAllMocks();
   });
 
-  test('должен отобразить заголовок "Страница не найдена"', () => {
+  test('должен отобразить иллюстрацию 404', () => {
     renderWithProviders(<NotFoundPage />, {
       preloadedState: {
         lang: { current: 'en' },
       },
     });
 
-    expect(screen.getByText('Страница не найдена')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /404 - страница не найдена/i })).toBeInTheDocument();
   });
 
-  test('должен отобразить SVG логотип с правильными aria-атрибутами', () => {
+  test('должен отобразить 404 изображение', () => {
     renderWithProviders(<NotFoundPage />, {
       preloadedState: {
         lang: { current: 'en' },
       },
     });
 
-    const logo = screen.getByRole('img', { name: /smolyanoe chuchelko — logo/i });
+    const logo = screen.getByRole('img', { name: /404 - страница не найдена/i });
     expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute('aria-labelledby', 't d');
+    expect(logo).toHaveAttribute('src', '/images/users/zhoock/tarbaby/404.png');
   });
 
   test('должен отобразить кнопку "Вернуться на главную"', () => {
@@ -66,16 +66,13 @@ describe('NotFoundPage integration tests', () => {
     });
   });
 
-  test('должен отобразить описание логотипа', () => {
+  test('должен отобразить кнопку возврата', () => {
     renderWithProviders(<NotFoundPage />, {
       preloadedState: {
         lang: { current: 'en' },
       },
     });
 
-    const description = screen.getByText(
-      /двухцветный силуэт головы с пустыми глазами, разрезом рта и «соломой» наверху/i
-    );
-    expect(description).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /вернуться на главную/i })).toBeInTheDocument();
   });
 });

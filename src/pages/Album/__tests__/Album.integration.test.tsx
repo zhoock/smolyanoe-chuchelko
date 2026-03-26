@@ -71,8 +71,8 @@ describe('Album integration tests', () => {
       },
     });
 
-    // Проверяем наличие aria-label с альбомом
-    expect(screen.getByLabelText(/блок c альбомом/i)).toBeInTheDocument();
+    // В loading/idle рендерится skeleton
+    expect(screen.getByLabelText(/скелетон альбома/i)).toBeInTheDocument();
   });
 
   test('должен отобразить ошибку при failed статусе', () => {

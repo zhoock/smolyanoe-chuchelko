@@ -235,7 +235,7 @@ describe('HomePage integration tests', () => {
     }
   });
 
-  test('должен работать независимо для разных языков', () => {
+  test('должен рендерить только cloud-сцену независимо от языка', () => {
     const ruUiDictionary = {
       menu: {},
       titles: {
@@ -296,11 +296,10 @@ describe('HomePage integration tests', () => {
       },
     });
 
-    // Проверяем наличие текста на разных языках
-    expect(screen.getByText('Альбомы')).toBeInTheDocument();
-    expect(screen.getByText('Статьи')).toBeInTheDocument();
-    // "Группа" входит в состав заголовка "Группа Artist 1", может встречаться несколько раз
-    const groupTexts = screen.getAllByText(/Группа/);
-    expect(groupTexts.length).toBeGreaterThan(0);
+    const scene = screen.getByLabelText('Cloud scene');
+    expect(scene).toBeInTheDocument();
+
+    const canvases = scene.querySelectorAll('canvas');
+    expect(canvases.length).toBe(2);
   });
 });

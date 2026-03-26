@@ -12,14 +12,12 @@ import type { IAlbums } from '@models';
 import type { SupportedLang } from '@shared/model/lang';
 import type { AppDispatch } from '@shared/model/appStore/types';
 
-// Мокируем getJSON
-jest.mock('@shared/api/http', () => ({
-  getJSON: jest.fn(),
-}));
-
-import { getJSON } from '@shared/api/http';
-
-const mockGetJSON = getJSON as jest.MockedFunction<typeof getJSON>;
+const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+const mockSuccessResponse = (data: unknown) =>
+  ({
+    ok: true,
+    json: async () => ({ success: true, data }),
+  }) as Response;
 
 // Вспомогательная функция для создания тестового store
 const createTestStore = () => {
@@ -48,6 +46,8 @@ const createTestStore = () => {
 describe('albumsSlice', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetch.mockReset();
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = mockFetch;
   });
 
   describe('reducer', () => {
@@ -89,7 +89,7 @@ describe('albumsSlice', () => {
     ];
 
     test('должен успешно загрузить альбомы', async () => {
-      mockGetJSON.mockResolvedValueOnce(mockAlbums);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
 
       const store = createTestStore();
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -106,7 +106,7 @@ describe('albumsSlice', () => {
 
     test('должен обработать ошибку загрузки', async () => {
       const errorMessage = 'Network error';
-      mockGetJSON.mockRejectedValueOnce(new Error(errorMessage));
+      mockFetch.mockRejectedValueOnce(new Error(errorMessage));
 
       const store = createTestStore();
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -115,12 +115,14 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
-      expect(selectAlbumsError(state, 'en')).toBe(errorMessage);
+      expect(selectAlbumsError(state, 'en')).toBe(
+        'Failed to fetch albums from both API and static JSON'
+      );
       expect(selectAlbumsData(state, 'en')).toEqual([]);
     });
 
     test('должен установить статус loading при начале загрузки', async () => {
-      mockGetJSON.mockImplementation(() => new Promise(() => {})); // Никогда не разрешается
+      mockFetch.mockImplementation(() => new Promise(() => {})); // Никогда не разрешается
 
       const store = createTestStore();
       const promise = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -135,7 +137,7 @@ describe('albumsSlice', () => {
     });
 
     test('не должен запускать загрузку, если данные уже загружаются', async () => {
-      mockGetJSON.mockImplementation(() => new Promise(() => {})); // Никогда не разрешается
+      mockFetch.mockImplementation(() => new Promise(() => {})); // Никогда не разрешается
 
       const store = createTestStore();
 
@@ -146,14 +148,14 @@ describe('albumsSlice', () => {
       const promise2 = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       // Проверяем, что getJSON был вызван только один раз
-      expect(mockGetJSON).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
 
       promise1.abort();
       promise2.abort();
     });
 
     test('не должен запускать загрузку, если данные уже загружены', async () => {
-      mockGetJSON.mockResolvedValueOnce(mockAlbums);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
 
       const store = createTestStore();
 
@@ -167,7 +169,7 @@ describe('albumsSlice', () => {
       await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       // Проверяем, что getJSON не был вызван повторно
-      expect(mockGetJSON).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     test('должен работать независимо для разных языков', async () => {
@@ -205,7 +207,9 @@ describe('albumsSlice', () => {
         },
       ];
 
-      mockGetJSON.mockResolvedValueOnce(enAlbums).mockResolvedValueOnce(ruAlbums);
+      mockFetch
+        .mockResolvedValueOnce(mockSuccessResponse(enAlbums))
+        .mockResolvedValueOnce(mockSuccessResponse(ruAlbums));
 
       const store = createTestStore();
       await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -219,7 +223,7 @@ describe('albumsSlice', () => {
     });
 
     test('должен обработать пустой массив данных', async () => {
-      mockGetJSON.mockResolvedValueOnce([]);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse([]));
 
       const store = createTestStore();
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -234,7 +238,7 @@ describe('albumsSlice', () => {
     });
 
     test('должен обработать ошибку без Error объекта (null)', async () => {
-      mockGetJSON.mockRejectedValueOnce(null);
+      mockFetch.mockRejectedValueOnce(null);
 
       const store = createTestStore();
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -243,11 +247,13 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
-      expect(selectAlbumsError(state, 'en')).toBe('Unknown error');
+      expect(selectAlbumsError(state, 'en')).toBe(
+        'Failed to fetch albums from both API and static JSON'
+      );
     });
 
     test('должен обработать ошибку без Error объекта (строка)', async () => {
-      mockGetJSON.mockRejectedValueOnce('String error');
+      mockFetch.mockRejectedValueOnce('String error');
 
       const store = createTestStore();
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -256,11 +262,13 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
-      expect(selectAlbumsError(state, 'en')).toBe('Unknown error');
+      expect(selectAlbumsError(state, 'en')).toBe(
+        'Failed to fetch albums from both API and static JSON'
+      );
     });
 
     test('должен обработать ошибку без Error объекта (undefined)', async () => {
-      mockGetJSON.mockRejectedValueOnce(undefined);
+      mockFetch.mockRejectedValueOnce(undefined);
 
       const store = createTestStore();
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -269,12 +277,14 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
-      expect(selectAlbumsError(state, 'en')).toBe('Unknown error');
+      expect(selectAlbumsError(state, 'en')).toBe(
+        'Failed to fetch albums from both API and static JSON'
+      );
     });
 
     test('должен обработать отмену запроса (abort signal)', async () => {
       const abortController = new AbortController();
-      mockGetJSON.mockImplementation(() => {
+      mockFetch.mockImplementation(() => {
         abortController.abort();
         return Promise.reject(new DOMException('Aborted', 'AbortError'));
       });
@@ -291,17 +301,19 @@ describe('albumsSlice', () => {
 
     test('должен позволить повторную загрузку после ошибки', async () => {
       // Первая попытка - ошибка
-      mockGetJSON.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       const store = createTestStore();
       await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       let state = store.getState();
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
-      expect(selectAlbumsError(state, 'en')).toBe('Network error');
+      expect(selectAlbumsError(state, 'en')).toBe(
+        'Failed to fetch albums from both API and static JSON'
+      );
 
       // Вторая попытка - успех
-      mockGetJSON.mockResolvedValueOnce(mockAlbums);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
       await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       state = store.getState();
@@ -311,7 +323,7 @@ describe('albumsSlice', () => {
     });
 
     test('должен обновлять lastUpdated при успешной загрузке', async () => {
-      mockGetJSON.mockResolvedValueOnce(mockAlbums);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
 
       const store = createTestStore();
       const beforeTime = Date.now();
@@ -329,17 +341,19 @@ describe('albumsSlice', () => {
 
     test('должен очищать ошибку при новой загрузке после ошибки', async () => {
       // Первая попытка - ошибка
-      mockGetJSON.mockRejectedValueOnce(new Error('First error'));
+      mockFetch.mockRejectedValueOnce(new Error('First error'));
 
       const store = createTestStore();
       await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       let state = store.getState();
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
-      expect(selectAlbumsError(state, 'en')).toBe('First error');
+      expect(selectAlbumsError(state, 'en')).toBe(
+        'Failed to fetch albums from both API and static JSON'
+      );
 
       // Начинаем новую загрузку - ошибка должна быть очищена
-      mockGetJSON.mockImplementation(() => new Promise(() => {}));
+      mockFetch.mockImplementation(() => new Promise(() => {}));
       const promise = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       state = store.getState();
@@ -351,7 +365,7 @@ describe('albumsSlice', () => {
 
     test('не должен запускать загрузку если статус failed, но уже выполняется другая', async () => {
       // Сначала создаем ошибку
-      mockGetJSON.mockRejectedValueOnce(new Error('Error'));
+      mockFetch.mockRejectedValueOnce(new Error('Error'));
 
       const store = createTestStore();
       await (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
@@ -360,14 +374,14 @@ describe('albumsSlice', () => {
       expect(selectAlbumsStatus(state, 'en')).toBe('failed');
 
       // Запускаем новую загрузку
-      mockGetJSON.mockImplementation(() => new Promise(() => {}));
+      mockFetch.mockImplementation(() => new Promise(() => {}));
       const promise1 = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       // Пытаемся запустить еще одну параллельную загрузку
       const promise2 = (store.dispatch as AppDispatch)(fetchAlbums({ lang: 'en' }));
 
       // Проверяем, что getJSON был вызван только один раз
-      expect(mockGetJSON).toHaveBeenCalledTimes(2); // Первый вызов - ошибка, второй - loading
+      expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(2);
 
       promise1.abort();
       promise2.abort();

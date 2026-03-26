@@ -184,13 +184,23 @@ module.exports = {
     }),
 
     // Поддержка Vite-стиля переменных окружения (import.meta.env)
-    // Преобразует process.env.VITE_* в import.meta.env.VITE_*
+    // Преобразует process.env.VITE_* в import.meta.env.VITE_* и process.env.VITE_*
     new webpack.DefinePlugin({
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || ''),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(
         process.env.VITE_SUPABASE_ANON_KEY || ''
       ),
       'import.meta.env.VITE_USE_SUPABASE_STORAGE': JSON.stringify(
+        process.env.VITE_USE_SUPABASE_STORAGE || 'false'
+      ),
+      'process.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || ''),
+      'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(
+        process.env.VITE_SUPABASE_ANON_KEY || ''
+      ),
+      'process.env.VITE_SUPABASE_SERVICE_ROLE_KEY': JSON.stringify(
+        process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
+      ),
+      'process.env.VITE_USE_SUPABASE_STORAGE': JSON.stringify(
         process.env.VITE_USE_SUPABASE_STORAGE || 'false'
       ),
     }),

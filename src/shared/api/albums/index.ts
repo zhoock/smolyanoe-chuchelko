@@ -127,9 +127,8 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   const shouldUseStorage =
     useSupabaseStorage !== undefined
       ? useSupabaseStorage
-      : typeof window !== 'undefined'
-        ? import.meta.env.VITE_USE_SUPABASE_STORAGE === 'true'
-        : process.env.USE_SUPABASE_STORAGE === 'true';
+      : process.env.VITE_USE_SUPABASE_STORAGE === 'true' ||
+        process.env.USE_SUPABASE_STORAGE === 'true';
 
   if (shouldUseStorage) {
     // Используем Supabase Storage

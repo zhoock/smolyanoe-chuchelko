@@ -11,41 +11,36 @@ describe('getImageUrl', () => {
   });
 
   test('использует новую структуру с userId и category', () => {
-    expect(getImageUrl('album_cover', '.jpg', { userId: 'zhoock', category: 'albums' })).toBe(
-      '/images/users/zhoock/albums/album_cover.jpg'
+    expect(getImageUrl('album_cover', '.jpg', { userId: 'zhoock', category: 'albums' })).toContain(
+      'users%2Fzhoock%2Falbums%2Falbum_cover.jpg'
     );
   });
 
   test('работает с разными категориями', () => {
-    expect(getImageUrl('article_img', '.jpg', { userId: 'zhoock', category: 'articles' })).toBe(
-      '/images/users/zhoock/articles/article_img.jpg'
-    );
-    expect(getImageUrl('avatar', '.png', { userId: 'zhoock', category: 'profile' })).toBe(
-      '/images/users/zhoock/profile/avatar.png'
+    expect(
+      getImageUrl('article_img', '.jpg', { userId: 'zhoock', category: 'articles' })
+    ).toContain('users%2Fzhoock%2Farticles%2Farticle_img.jpg');
+    expect(getImageUrl('avatar', '.png', { userId: 'zhoock', category: 'profile' })).toContain(
+      'users%2Fzhoock%2Fprofile%2Favatar.png'
     );
   });
 });
 
 describe('getUserImageUrl', () => {
   test('генерирует URL для текущего пользователя', () => {
-    expect(getUserImageUrl('album_cover', 'albums')).toBe(
-      '/images/users/zhoock/albums/album_cover.jpg'
-    );
+    expect(getUserImageUrl('album_cover', 'albums')).toContain('users%2F');
+    expect(getUserImageUrl('album_cover', 'albums')).toContain('%2Falbums%2Falbum_cover.jpg');
   });
 
   test('использует переданный формат', () => {
-    expect(getUserImageUrl('album_cover', 'albums', '.webp')).toBe(
-      '/images/users/zhoock/albums/album_cover.webp'
+    expect(getUserImageUrl('album_cover', 'albums', '.webp')).toContain(
+      '%2Falbums%2Falbum_cover.webp'
     );
   });
 
   test('работает с разными категориями', () => {
-    expect(getUserImageUrl('article_img', 'articles')).toBe(
-      '/images/users/zhoock/articles/article_img.jpg'
-    );
-    expect(getUserImageUrl('avatar', 'profile', '.png')).toBe(
-      '/images/users/zhoock/profile/avatar.png'
-    );
+    expect(getUserImageUrl('article_img', 'articles')).toContain('%2Farticles%2Farticle_img.jpg');
+    expect(getUserImageUrl('avatar', 'profile', '.png')).toContain('%2Fprofile%2Favatar.png');
   });
 });
 

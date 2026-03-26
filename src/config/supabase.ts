@@ -10,20 +10,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // Для клиентской части (React) используем VITE_ префикс
 // Для серверной части (Netlify Functions) используем без префикса
 const getSupabaseUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    // Клиентская часть - используем import.meta.env (поддерживается через webpack DefinePlugin)
-    return import.meta.env.VITE_SUPABASE_URL || '';
-  }
-  // Серверная часть (Netlify Functions) - используем VITE_ переменные
   return process.env.VITE_SUPABASE_URL || '';
 };
 
 const getSupabaseAnonKey = (): string => {
-  if (typeof window !== 'undefined') {
-    // Клиентская часть - используем import.meta.env (поддерживается через webpack DefinePlugin)
-    return import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  }
-  // Серверная часть (Netlify Functions) - используем VITE_ переменные
   return process.env.VITE_SUPABASE_ANON_KEY || '';
 };
 
@@ -109,9 +99,7 @@ export const supabase = createSupabaseClient();
 export function createSupabaseAdminClient(): SupabaseClient | null {
   const supabaseUrl = getSupabaseUrl();
   const serviceRoleKey =
-    typeof window !== 'undefined'
-      ? import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''
-      : process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
     if (process.env.NODE_ENV !== 'production') {

@@ -308,6 +308,7 @@ export const PlayerShell: React.FC = () => {
 
     return {
       albumId: albumMeta.albumId ?? undefined,
+      userId: albumMeta.userId ?? undefined,
       artist: albumMeta.artist ?? '',
       album: albumMeta.album ?? '',
       fullName:
@@ -508,6 +509,7 @@ export const PlayerShell: React.FC = () => {
         <MiniPlayer
           title={currentTrack.title}
           cover={albumMeta.cover}
+          userId={albumMeta.userId ?? undefined}
           isPlaying={isPlaying}
           onToggle={handleToggle}
           onExpand={handleExpand}

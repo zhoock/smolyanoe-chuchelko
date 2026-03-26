@@ -658,6 +658,7 @@ export default function AudioPlayer({
       <AlbumCover
         key={`album-cover-${albumId}`}
         img={album.cover || ''}
+        userId={album.userId}
         fullName={album.fullName}
         onColorsExtracted={handleColorsExtracted}
       />

@@ -194,12 +194,13 @@ function Layout() {
   const isKnownRoute = knownRoutes.some((pattern) =>
     matchPath({ path: pattern, end: true }, location.pathname)
   );
-  
+
   const isPaymentRoute = ['/pay/success', '/pay/fail'].some((pattern) =>
     matchPath({ path: pattern, end: true }, location.pathname)
   );
-  
+
   const shouldHideChrome = !isKnownRoute;
+  const isHomeRoute = location.pathname === '/' || location.pathname === '/en';
 
   const standardRoutes = (
     <>
@@ -369,11 +370,17 @@ function Layout() {
         <ErrorBoundary>
           <main>{notFoundRoutes}</main>
         </ErrorBoundary>
+      ) : isHomeRoute ? (
+        <ErrorBoundary>
+          <main>
+            <ErrorBoundary>{standardRoutes}</ErrorBoundary>
+          </main>
+        </ErrorBoundary>
       ) : (
         <ErrorBoundary>
           <Header theme={theme} onToggleTheme={toggleTheme} />
           <main>
-            <Hero />
+            {!isHomeRoute && <Hero />}
 
             {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 

@@ -1,23 +1,33 @@
-import { AlbumsSection } from './AlbumsSection';
-import { ArticlesSection } from './ArticlesSection';
-import { AboutSection } from './AboutSection';
-import { useHomeData } from '@pages/Home/model/useHomeData';
-import '@entities/album/ui/style.scss';
-import '@entities/article/ui/style.scss';
+import { CloudCanvas } from '../../../components/view/CloudCanvas';
+import { CloudNoise } from '../../../components/view/CloudNoise';
+import { useEffect, useRef } from 'react';
 
 export function HomePage() {
-  const { isAboutModalOpen, openAboutModal, closeAboutModal } = useHomeData();
+  const sceneRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!sceneRef.current) return;
+
+    const cloud = new CloudCanvas(sceneRef.current, (artistId) => {
+      window.dispatchEvent(new CustomEvent('player:open', { detail: { artistId } }));
+    });
+    const noise = new CloudNoise(sceneRef.current, () => cloud.getClusterCenters());
+
+    return () => {
+      noise.destroy();
+      cloud.destroy();
+      if (sceneRef.current) {
+        sceneRef.current.innerHTML = '';
+      }
+    };
+  }, []);
 
   return (
-    <>
-      <AlbumsSection />
-      <ArticlesSection />
-      <AboutSection
-        isAboutModalOpen={isAboutModalOpen}
-        onOpen={openAboutModal}
-        onClose={closeAboutModal}
-      />
-    </>
+    <section
+      aria-label="Cloud scene"
+      ref={sceneRef}
+      style={{ width: '100%', height: '100vh', position: 'relative' }}
+    />
   );
 }
 

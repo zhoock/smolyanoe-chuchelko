@@ -81,6 +81,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           dispatch(
             playerActions.setAlbumMeta({
               albumId: savedState.albumId,
+              userId: album.userId ?? null,
               album: album.album,
               artist: album.artist,
               fullName: album.fullName ?? `${album.artist} — ${album.album}`,
@@ -104,6 +105,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           dispatch(
             playerActions.setAlbumMeta({
               albumId: currentAlbumId,
+              userId: album.userId ?? null,
               album: album.album,
               artist: album.artist,
               fullName: album.fullName ?? `${album.artist} — ${album.album}`,
@@ -183,6 +185,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       dispatch(
         playerActions.setAlbumMeta({
           albumId,
+          userId: album.userId ?? null,
           album: album.album,
           artist: album.artist,
           fullName: album.fullName ?? `${album.artist} — ${album.album}`,
