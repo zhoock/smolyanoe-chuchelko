@@ -32,6 +32,10 @@ export class Universe3D {
   private uiLayer!: HTMLElement;
   private activeCard: HTMLElement | null = null;
   private onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
+  private isDragging = false;
+  private lastPointerX = 0;
+  private lastPointerY = 0;
+  private lastPinchDistance = 0;
 
   constructor(
     container: HTMLElement,
@@ -365,83 +369,75 @@ export class Universe3D {
   }
 
   private initControls() {
-    const isInteractionLocked = () => this.activeCard !== null;
-
-    // zoom (мышь)
-    window.addEventListener(
-      'wheel',
-      (e) => {
-        if (isInteractionLocked()) {
-          e.preventDefault();
-          return;
-        }
-        this.targetZ += e.deltaY * 0.002;
-        this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
-      },
-      { passive: false }
-    );
-
-    // drag
-    let isDown = false;
-    let lastX = 0;
-    let lastY = 0;
-
-    window.addEventListener('mousedown', (e) => {
-      if (isInteractionLocked()) return;
-      isDown = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
-
-    window.addEventListener('mouseup', () => {
-      isDown = false;
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!isDown || isInteractionLocked()) return;
-
-      const dx = (e.clientX - lastX) * 0.005;
-      const dy = (e.clientY - lastY) * 0.005;
-
-      this.camera.position.x -= dx;
-      this.camera.position.y += dy;
-
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
-
-    // 🔥 multitouch zoom
-    let lastDist = 0;
-
-    window.addEventListener(
-      'touchmove',
-      (e) => {
-        if (isInteractionLocked()) {
-          e.preventDefault();
-          return;
-        }
-
-        if (e.touches.length === 2) {
-          const dx = e.touches[0].clientX - e.touches[1].clientX;
-          const dy = e.touches[0].clientY - e.touches[1].clientY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (lastDist) {
-            const delta = dist - lastDist;
-            this.targetZ -= delta * 0.01;
-            this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
-          }
-
-          lastDist = dist;
-        }
-      },
-      { passive: false }
-    );
-
-    window.addEventListener('touchend', () => {
-      lastDist = 0;
-    });
+    window.addEventListener('wheel', this.handleWheel, { passive: false });
+    window.addEventListener('mousedown', this.handleMouseDown);
+    window.addEventListener('mouseup', this.handleMouseUp);
+    window.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    window.addEventListener('touchend', this.handleTouchEnd);
   }
+
+  private isInteractionLocked() {
+    return this.activeCard !== null;
+  }
+
+  private handleWheel = (e: WheelEvent) => {
+    if (this.isInteractionLocked()) {
+      e.preventDefault();
+      return;
+    }
+    this.targetZ += e.deltaY * 0.002;
+    this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
+  };
+
+  private handleMouseDown = (e: MouseEvent) => {
+    if (this.isInteractionLocked()) return;
+    this.isDragging = true;
+    this.lastPointerX = e.clientX;
+    this.lastPointerY = e.clientY;
+  };
+
+  private handleMouseUp = () => {
+    this.isDragging = false;
+  };
+
+  private handleMouseMove = (e: MouseEvent) => {
+    if (!this.isDragging || this.isInteractionLocked()) return;
+
+    const dx = (e.clientX - this.lastPointerX) * 0.005;
+    const dy = (e.clientY - this.lastPointerY) * 0.005;
+
+    this.camera.position.x -= dx;
+    this.camera.position.y += dy;
+
+    this.lastPointerX = e.clientX;
+    this.lastPointerY = e.clientY;
+  };
+
+  private handleTouchMove = (e: TouchEvent) => {
+    if (this.isInteractionLocked()) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (this.lastPinchDistance) {
+        const delta = dist - this.lastPinchDistance;
+        this.targetZ -= delta * 0.01;
+        this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
+      }
+
+      this.lastPinchDistance = dist;
+    }
+  };
+
+  private handleTouchEnd = () => {
+    this.lastPinchDistance = 0;
+  };
 
   private noise2D(x: number, y: number) {
     return Math.sin(x * 2.1 + y * 3.7) * 0.5 + 0.5;
@@ -530,6 +526,12 @@ export class Universe3D {
     if (this.animationId) cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('click', this.onClick);
+    window.removeEventListener('wheel', this.handleWheel);
+    window.removeEventListener('mousedown', this.handleMouseDown);
+    window.removeEventListener('mouseup', this.handleMouseUp);
+    window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('touchmove', this.handleTouchMove);
+    window.removeEventListener('touchend', this.handleTouchEnd);
     this.activeCard?.remove();
     this.uiLayer?.remove();
     this.renderer.dispose();

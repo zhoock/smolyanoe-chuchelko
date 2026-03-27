@@ -1,4 +1,5 @@
 import type { SyncedLyricsLine } from '@models';
+import { buildApiUrl } from '@shared/lib/artistQuery';
 
 // Простой in-memory кэш для синхронизаций с настраиваемым TTL
 interface CacheEntry {
@@ -262,15 +263,20 @@ export async function loadSyncedLyricsFromStorage(
         const { getAuthHeader } = await import('@shared/lib/auth');
         const authHeader = getAuthHeader();
 
-        const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-            Pragma: 'no-cache',
-            ...authHeader,
-          },
-          signal: finalSignal,
-        });
+        const response = await fetch(
+          buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
+            includeArtist: true,
+          }),
+          {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+              Pragma: 'no-cache',
+              ...authHeader,
+            },
+            signal: finalSignal,
+          }
+        );
 
         clearTimeout(timeoutId);
 
@@ -379,15 +385,20 @@ export async function loadAuthorshipFromStorage(
         const { getAuthHeader } = await import('@shared/lib/auth');
         const authHeader = getAuthHeader();
 
-        const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
-            Pragma: 'no-cache',
-            ...authHeader,
-          },
-          signal: finalSignal,
-        });
+        const response = await fetch(
+          buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
+            includeArtist: true,
+          }),
+          {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+              Pragma: 'no-cache',
+              ...authHeader,
+            },
+            signal: finalSignal,
+          }
+        );
 
         clearTimeout(timeoutId);
 
