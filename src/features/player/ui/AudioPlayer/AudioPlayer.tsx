@@ -5,7 +5,7 @@
  * Компонент получает данные из стейта через селекторы и диспатчит действия для управления плеером.
  */
 import React, { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
 import { AlbumCover } from '@entities/album';
 import type { IAlbums, SyncedLyricsLine } from '@models';
@@ -44,6 +44,7 @@ export default function AudioPlayer({
   // Получаем функцию для диспатча действий
   const dispatch = useAppDispatch();
   const location = useLocation();
+  const navigate = useNavigate();
   const isFullScreenPlayer = location.hash === '#player';
   const [isLandscapeBlocked, setIsLandscapeBlocked] = useState(false);
 
@@ -60,6 +61,7 @@ export default function AudioPlayer({
   const currentTrack = useAppSelector(playerSelectors.selectCurrentTrack); // объект текущего трека
   const shuffle = useAppSelector(playerSelectors.selectShuffle); // включено ли перемешивание треков
   const repeat = useAppSelector(playerSelectors.selectRepeat); // режим зацикливания: 'none' | 'all' | 'one'
+  const albumMeta = useAppSelector(playerSelectors.selectAlbumMeta);
 
   const INACTIVITY_TIMEOUT = 5000;
 
@@ -989,6 +991,18 @@ export default function AudioPlayer({
   const shouldRenderPlainLyrics =
     showLyrics && !shouldRenderSyncedLyrics && !shouldPreferSynced && !!plainLyricsContent;
 
+  const handleArtistProfileOpen = useCallback(() => {
+    const slug = albumMeta?.publicSlug;
+    if (!slug) return;
+    const target = {
+      pathname: '/',
+      search: `?artist=${encodeURIComponent(slug)}`,
+    };
+    // Keep PlayerShell close flow consistent: when dialog closes, it will navigate to sourceLocation.
+    dispatch(playerActions.setSourceLocation(target));
+    navigate({ ...target, hash: '' }, { replace: false });
+  }, [albumMeta?.publicSlug, dispatch, navigate]);
+
   useEffect(() => {
     if (!isFullScreenPlayer) {
       return;
@@ -1037,7 +1051,33 @@ export default function AudioPlayer({
         </div>
         <div className="player__track-info">
           <h2>{currentTrack?.title || 'Unknown Track'}</h2>
-          <h3>{album.artist || 'Unknown Artist'}</h3>
+          <h3
+            className={albumMeta?.publicSlug ? 'player__artist-link' : undefined}
+            role={albumMeta?.publicSlug ? 'link' : undefined}
+            tabIndex={albumMeta?.publicSlug ? 0 : undefined}
+            onClick={
+              albumMeta?.publicSlug
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleArtistProfileOpen();
+                  }
+                : undefined
+            }
+            onKeyDown={
+              albumMeta?.publicSlug
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleArtistProfileOpen();
+                    }
+                  }
+                : undefined
+            }
+          >
+            {album.artist || 'Unknown Artist'}
+          </h3>
         </div>
       </div>
 

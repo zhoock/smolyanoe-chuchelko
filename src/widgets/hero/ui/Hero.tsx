@@ -46,6 +46,8 @@ export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [headerImages, setHeaderImages] = useState<string[]>([]);
   const [profileName, setProfileName] = useState<string>('');
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isImagesLoading, setIsImagesLoading] = useState(false);
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const lastPathRef = useRef<string>('');
@@ -57,6 +59,11 @@ export function Hero() {
   // Загружаем изображения из БД
   useEffect(() => {
     const loadImages = async () => {
+      setIsImagesLoading(true);
+      imagesLoadedRef.current = false;
+      setHeaderImages([]);
+      setBackgroundImage('');
+
       try {
         // Для публичных страниц не передаем useAuth=true, API вернет данные админа
         const images = await loadHeaderImagesFromDatabase(false);
@@ -95,16 +102,21 @@ export function Hero() {
         setHeaderImages([]);
         setBackgroundImage('');
         imagesLoadedRef.current = true;
+      } finally {
+        setIsImagesLoading(false);
       }
     };
     loadImages();
-  }, []);
+  }, [location.search]);
 
   // Загружаем название группы:
   // - public (/ и /?artist=...): всегда из API public профиля, без JWT
   // - admin (/dashboard): из профиля текущего JWT пользователя
   useEffect(() => {
     const loadProfileName = async () => {
+      setIsProfileLoading(true);
+      setProfileName('');
+
       if (!isDashboardRoute) {
         try {
           const response = await fetch(
@@ -128,6 +140,8 @@ export function Hero() {
         } catch (error) {
           console.warn('⚠️ Ошибка загрузки названия группы выбранного артиста:', error);
           setProfileName('');
+        } finally {
+          setIsProfileLoading(false);
         }
         return;
       }
@@ -161,6 +175,8 @@ export function Hero() {
       } catch (error) {
         console.warn('⚠️ Ошибка загрузки названия группы в админке:', error);
         setProfileName('');
+      } finally {
+        setIsProfileLoading(false);
       }
     };
 
@@ -309,7 +325,12 @@ export function Hero() {
 
   // Для artist-режима не подставляем дефолтное имя, чтобы не смешивать данные.
   // Для default-режима сохраняем текущее поведение.
-  const displayName = hasArtistParam ? profileName || '' : profileName || 'Смоляное чучелко';
+  const isArtistLoading = hasArtistParam && (isProfileLoading || isImagesLoading);
+  const displayName = hasArtistParam
+    ? isArtistLoading
+      ? ''
+      : profileName || ''
+    : profileName || 'Смоляное чучелко';
 
   return (
     <section className="hero" style={{ backgroundImage: backgroundImage || undefined }}>

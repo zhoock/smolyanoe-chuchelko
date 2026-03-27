@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
 import { Text } from '@shared/ui/text';
 import { Hamburger } from '@shared/ui/hamburger';
@@ -18,6 +18,7 @@ type AboutSectionProps = {
 
 export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSectionProps) {
   const { lang } = useLang();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
@@ -58,7 +59,7 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, location.search]);
 
   // Загружаем theBand из profile.json (fallback только для default-режима без artist)
   useEffect(() => {

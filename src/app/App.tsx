@@ -201,6 +201,8 @@ function Layout() {
 
   const shouldHideChrome = !isKnownRoute;
   const isHomeRoute = location.pathname === '/' || location.pathname === '/en';
+  const hasArtistParam = new URLSearchParams(location.search).has('artist');
+  const isHomeSceneRoute = isHomeRoute && !hasArtistParam;
 
   const standardRoutes = (
     <>
@@ -370,17 +372,18 @@ function Layout() {
         <ErrorBoundary>
           <main>{notFoundRoutes}</main>
         </ErrorBoundary>
-      ) : isHomeRoute ? (
+      ) : isHomeSceneRoute ? (
         <ErrorBoundary>
           <main>
             <ErrorBoundary>{standardRoutes}</ErrorBoundary>
           </main>
+          <PlayerShell />
         </ErrorBoundary>
       ) : (
         <ErrorBoundary>
           <Header theme={theme} onToggleTheme={toggleTheme} />
           <main>
-            {!isHomeRoute && <Hero />}
+            {!isHomeSceneRoute && <Hero />}
 
             {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
