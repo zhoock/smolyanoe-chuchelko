@@ -6,15 +6,24 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+type SafeEnv = Record<string, string | undefined>;
+
+function getSafeEnv(): SafeEnv {
+  const g = globalThis as unknown as { process?: { env?: SafeEnv } };
+  return g.process?.env ?? {};
+}
+
 // Получаем URL и ключ из переменных окружения
 // Для клиентской части (React) используем VITE_ префикс
 // Для серверной части (Netlify Functions) используем без префикса
 const getSupabaseUrl = (): string => {
-  return process.env.VITE_SUPABASE_URL || '';
+  const env = getSafeEnv();
+  return env.VITE_SUPABASE_URL || '';
 };
 
 const getSupabaseAnonKey = (): string => {
-  return process.env.VITE_SUPABASE_ANON_KEY || '';
+  const env = getSafeEnv();
+  return env.VITE_SUPABASE_ANON_KEY || '';
 };
 
 // Кеш для клиентов Supabase (singleton pattern)
@@ -33,7 +42,8 @@ export function createSupabaseClient(options?: { authToken?: string }): Supabase
 
   // Проверяем наличие переменных окружения
   if (!supabaseUrl || !supabaseAnonKey) {
-    if (process.env.NODE_ENV !== 'production') {
+    const env = getSafeEnv();
+    if (env.NODE_ENV !== 'production') {
       console.warn('⚠️ Supabase credentials not found. Please set required environment variables.');
     }
     // Возвращаем null вместо создания клиента с пустыми значениями
@@ -97,12 +107,12 @@ export const supabase = createSupabaseClient();
  * @returns Supabase клиент с service role key или null, если переменные не установлены
  */
 export function createSupabaseAdminClient(): SupabaseClient | null {
+  const env = getSafeEnv();
   const supabaseUrl = getSupabaseUrl();
-  const serviceRoleKey =
-    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const serviceRoleKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (env.NODE_ENV !== 'production') {
       console.warn(
         '⚠️ Supabase service role key not found. Please set VITE_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY environment variable.'
       );

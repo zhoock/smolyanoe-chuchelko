@@ -1,5 +1,4 @@
-import { CloudCanvas } from '../../../components/view/CloudCanvas';
-import { CloudNoise } from '../../../components/view/CloudNoise';
+import { Universe3D } from '../../../components/view/Universe3D';
 import { useEffect, useRef } from 'react';
 
 export function HomePage() {
@@ -8,14 +7,10 @@ export function HomePage() {
   useEffect(() => {
     if (!sceneRef.current) return;
 
-    const cloud = new CloudCanvas(sceneRef.current, (artistId) => {
-      window.dispatchEvent(new CustomEvent('player:open', { detail: { artistId } }));
-    });
-    const noise = new CloudNoise(sceneRef.current, () => cloud.getClusterCenters());
+    const universe = new Universe3D(sceneRef.current);
 
     return () => {
-      noise.destroy();
-      cloud.destroy();
+      universe.destroy();
       if (sceneRef.current) {
         sceneRef.current.innerHTML = '';
       }

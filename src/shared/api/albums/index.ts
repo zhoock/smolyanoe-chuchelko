@@ -8,6 +8,13 @@ export interface ImageUrlOptions {
   useSupabaseStorage?: boolean; // Использовать Supabase Storage вместо локальных файлов
 }
 
+type SafeEnv = Record<string, string | undefined>;
+
+function getSafeEnv(): SafeEnv {
+  const g = globalThis as unknown as { process?: { env?: SafeEnv } };
+  return g.process?.env ?? {};
+}
+
 /**
  * Проверяет, включено ли использование Supabase Storage
  */
@@ -127,8 +134,8 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   const shouldUseStorage =
     useSupabaseStorage !== undefined
       ? useSupabaseStorage
-      : process.env.VITE_USE_SUPABASE_STORAGE === 'true' ||
-        process.env.USE_SUPABASE_STORAGE === 'true';
+      : getSafeEnv().VITE_USE_SUPABASE_STORAGE === 'true' ||
+        getSafeEnv().USE_SUPABASE_STORAGE === 'true';
 
   if (shouldUseStorage) {
     // Используем Supabase Storage
