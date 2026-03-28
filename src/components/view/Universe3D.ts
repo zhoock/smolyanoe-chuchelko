@@ -31,6 +31,8 @@ export class Universe3D {
   private clickableNodes: THREE.Object3D[] = [];
   private uiLayer!: HTMLElement;
   private activeCard: HTMLElement | null = null;
+  /** Mesh the card is tied to; position is reprojected on resize and each frame. */
+  private cardAnchorObject: THREE.Object3D | null = null;
   private onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
   private isDragging = false;
   private lastPointerX = 0;
@@ -73,6 +75,7 @@ export class Universe3D {
 
     window.addEventListener('click', this.onClick);
     window.addEventListener('resize', this.onResize);
+    window.visualViewport?.addEventListener('resize', this.onResize);
 
     this.animate();
   }
@@ -287,30 +290,127 @@ export class Universe3D {
     }
 
     if (this.activeCard) {
-      this.activeCard.remove();
-      this.activeCard = null;
+      this.dismissCard();
     }
   };
 
-  private showCard(obj: THREE.Object3D) {
-    if (this.activeCard) {
-      this.activeCard.remove();
-      this.activeCard = null;
-    }
+  private dismissCard() {
+    this.activeCard?.remove();
+    this.activeCard = null;
+    this.cardAnchorObject = null;
+  }
 
+  /** Viewport Y (px): max bottom edge of the card (above mini-player or viewport). */
+  private getViewportBottomLimitY(): number {
+    const margin = 16;
+    const gapAboveMiniPlayer = 12;
+    const mini = document.querySelector('.mini-player');
+    if (mini) {
+      return mini.getBoundingClientRect().top - gapAboveMiniPlayer;
+    }
+    const vv = window.visualViewport;
+    const h = vv?.height ?? window.innerHeight;
+    return h - margin;
+  }
+
+  /** Project cluster point to coordinates inside `uiLayer` (matches position:absolute). */
+  private projectObjectToLayer(obj: THREE.Object3D): { x: number; y: number } {
     const worldPos = new THREE.Vector3();
     obj.getWorldPosition(worldPos);
     worldPos.project(this.camera);
 
-    const anchorX = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
-    const anchorY = (-worldPos.y * 0.5 + 0.5) * window.innerHeight;
+    const canvas = this.renderer.domElement;
+    const cRect = canvas.getBoundingClientRect();
+    const layerRect = this.uiLayer.getBoundingClientRect();
 
-    const cardWidth = 320;
-    const cardHeight = 400;
+    const xV = (worldPos.x * 0.5 + 0.5) * cRect.width + cRect.left;
+    const yV = (-worldPos.y * 0.5 + 0.5) * cRect.height + cRect.top;
+
+    return {
+      x: xV - layerRect.left,
+      y: yV - layerRect.top,
+    };
+  }
+
+  /** Full layout: measure height, optional scroll, clamp so the card stays in the safe rect. */
+  private layoutCard(card: HTMLElement, anchorX: number, anchorY: number) {
     const margin = 16;
+    const layerRect = this.uiLayer.getBoundingClientRect();
+    const bottomLimitViewport = this.getViewportBottomLimitY();
+    const maxBottomLocal = bottomLimitViewport - layerRect.top;
+    const minTopLocal = Math.max(0, margin - layerRect.top);
+    const availableHeight = Math.max(120, maxBottomLocal - minTopLocal);
 
-    const left = Math.min(Math.max(anchorX + 22, margin), window.innerWidth - cardWidth - margin);
-    const top = Math.min(Math.max(anchorY - 90, margin), window.innerHeight - cardHeight - margin);
+    card.style.maxHeight = '';
+    card.style.minHeight = '';
+    card.style.overflowY = '';
+
+    let rect = card.getBoundingClientRect();
+    let h = rect.height;
+    const w = rect.width;
+
+    if (h > availableHeight) {
+      card.style.minHeight = '0';
+      card.style.maxHeight = `${availableHeight}px`;
+      card.style.overflowY = 'auto';
+      rect = card.getBoundingClientRect();
+      h = rect.height;
+    }
+
+    this.positionCardAtAnchor(card, anchorX, anchorY, h, w);
+  }
+
+  /**
+   * Place card near projected point using layer + viewport bounds.
+   * Pass h/w from a fresh measure; if omitted, reads from DOM (e.g. per-frame follow).
+   */
+  private positionCardAtAnchor(
+    card: HTMLElement,
+    anchorX: number,
+    anchorY: number,
+    h?: number,
+    w?: number
+  ) {
+    const margin = 16;
+    const layerRect = this.uiLayer.getBoundingClientRect();
+    const bottomLimitViewport = this.getViewportBottomLimitY();
+    const maxBottomLocal = bottomLimitViewport - layerRect.top;
+    const minTopLocal = Math.max(0, margin - layerRect.top);
+    const minLeftLocal = Math.max(0, margin - layerRect.left);
+    const maxRightViewport = window.innerWidth - margin;
+
+    const rect = card.getBoundingClientRect();
+    const hh = h ?? rect.height;
+    const ww = w ?? rect.width;
+
+    const offsetX = 22;
+    const offsetY = -90;
+
+    let left = anchorX + offsetX;
+    let top = anchorY + offsetY;
+
+    const maxLeft = Math.min(layerRect.width - ww, maxRightViewport - layerRect.left - ww);
+    left = THREE.MathUtils.clamp(left, minLeftLocal, Math.max(minLeftLocal, maxLeft));
+
+    const maxTop = maxBottomLocal - hh;
+    top = THREE.MathUtils.clamp(top, minTopLocal, Math.max(minTopLocal, maxTop));
+
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+  }
+
+  private layoutCardFromObject() {
+    if (!this.activeCard || !this.cardAnchorObject) return;
+    const { x, y } = this.projectObjectToLayer(this.cardAnchorObject);
+    this.layoutCard(this.activeCard, x, y);
+  }
+
+  private showCard(obj: THREE.Object3D) {
+    if (this.activeCard) {
+      this.dismissCard();
+    }
+
+    this.cardAnchorObject = obj;
 
     const data = obj.userData as Partial<SceneArtist>;
     const title = data.name ?? 'Unknown artist';
@@ -321,8 +421,7 @@ export class Universe3D {
 
     const card = document.createElement('div');
     card.className = 'universe3d-card';
-    card.style.left = `${left}px`;
-    card.style.top = `${top}px`;
+    card.style.visibility = 'hidden';
     card.innerHTML = `
       <button class="universe3d-card__close" type="button" aria-label="Close">×</button>
       <div class="universe3d-card__media" aria-hidden="true">
@@ -340,13 +439,20 @@ export class Universe3D {
       </div>
     `;
 
+    const coverImg = card.querySelector('.universe3d-card__media-image');
+    if (coverImg instanceof HTMLImageElement) {
+      coverImg.addEventListener('load', () => {
+        if (this.activeCard !== card || !this.cardAnchorObject) return;
+        this.layoutCardFromObject();
+      });
+    }
+
     const closeButton = card.querySelector('.universe3d-card__close');
     if (closeButton instanceof HTMLButtonElement) {
       closeButton.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.activeCard?.remove();
-        this.activeCard = null;
+        this.dismissCard();
       });
     }
 
@@ -358,14 +464,19 @@ export class Universe3D {
         if (!this.onPlayArtist) return;
         const started = await this.onPlayArtist(data as SceneArtist);
         if (started) {
-          this.activeCard?.remove();
-          this.activeCard = null;
+          this.dismissCard();
         }
       });
     }
 
     this.uiLayer.appendChild(card);
     this.activeCard = card;
+
+    requestAnimationFrame(() => {
+      if (this.activeCard !== card || !this.cardAnchorObject) return;
+      this.layoutCardFromObject();
+      card.style.visibility = '';
+    });
   }
 
   private initControls() {
@@ -513,6 +624,12 @@ export class Universe3D {
     });
 
     this.renderer.render(this.scene, this.camera);
+
+    if (this.activeCard && this.cardAnchorObject) {
+      const { x, y } = this.projectObjectToLayer(this.cardAnchorObject);
+      this.positionCardAtAnchor(this.activeCard, x, y);
+    }
+
     this.animationId = requestAnimationFrame(this.animate);
   };
 
@@ -520,11 +637,15 @@ export class Universe3D {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    if (this.activeCard && this.cardAnchorObject) {
+      this.layoutCardFromObject();
+    }
   };
 
   destroy() {
     if (this.animationId) cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
+    window.visualViewport?.removeEventListener('resize', this.onResize);
     window.removeEventListener('click', this.onClick);
     window.removeEventListener('wheel', this.handleWheel);
     window.removeEventListener('mousedown', this.handleMouseDown);
@@ -532,7 +653,7 @@ export class Universe3D {
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('touchmove', this.handleTouchMove);
     window.removeEventListener('touchend', this.handleTouchEnd);
-    this.activeCard?.remove();
+    this.dismissCard();
     this.uiLayer?.remove();
     this.renderer.dispose();
   }
