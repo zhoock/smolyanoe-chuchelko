@@ -52,6 +52,13 @@ export function HomePage() {
 
       if (cancelled || !sceneRef.current) return;
       universe = new Universe3D(sceneRef.current, artists, {
+        onNavigateToArtist: (publicSlug) => {
+          navigate({
+            pathname: '/',
+            search: `?artist=${encodeURIComponent(publicSlug)}`,
+            hash: '',
+          });
+        },
         onPlayArtist: async (artist) => {
           if (!artist?.publicSlug) return false;
 

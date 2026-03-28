@@ -3,6 +3,195 @@ import * as THREE from 'three';
 /** Manhattan distance (px) before touch pan counts as drag, not tap. */
 const TOUCH_MOVE_THRESHOLD_PX = 5;
 
+/** Max XY offset vs clusterSize; disk for labels = this × CLOUD_ARTIST_DISK_FR (must match buildClusters). */
+const CLOUD_INNER_RADIUS_FACTOR = 0.78;
+/** Random disk stays inside fog, not on outer rim (fraction of inner radius). */
+const CLOUD_ARTIST_DISK_FR = 0.62;
+/** Depth spread vs spreadZ base (stay inside volume). */
+const CLOUD_ARTIST_Z_FR = 0.68;
+
+/** Target spacing ≈ (volume / n)^(1/3); lower = tighter packing. */
+const CLOUD_LABEL_PACK_FR = 0.52;
+/** Clamp min separation to [floor, cap] × clusterSize (world units). */
+const CLOUD_LABEL_MIN_SEP_FLOOR_FR = 0.052;
+const CLOUD_LABEL_MIN_SEP_CAP_FR = 0.22;
+/** Multiply minDist when a full pass fails to place all points. */
+const CLOUD_LABEL_MIN_RELAX = 0.9;
+const CLOUD_LABEL_MAX_PLACE_ROUNDS = 120;
+const CLOUD_LABEL_MAX_ATTEMPTS_PER_POINT = 8000;
+
+function sampleUniformInCloudCylinder(
+  diskRadius: number,
+  spreadZHalf: number,
+  target: THREE.Vector3
+): void {
+  const theta = Math.random() * Math.PI * 2;
+  const r = diskRadius * Math.sqrt(Math.random());
+  const z = (Math.random() * 2 - 1) * spreadZHalf;
+  target.set(Math.cos(theta) * r, Math.sin(theta) * r, z);
+}
+
+function tryPlaceCloudLabels(
+  count: number,
+  diskRadius: number,
+  spreadZHalf: number,
+  minDist: number,
+  maxAttemptsPerPoint: number
+): THREE.Vector3[] | null {
+  if (count <= 0) {
+    return [];
+  }
+
+  const positions: THREE.Vector3[] = [];
+  const cellMap = new Map<string, number[]>();
+  const minDistSq = minDist * minDist;
+  const scratch = new THREE.Vector3();
+
+  const cellKey = (x: number, y: number, z: number) =>
+    `${Math.floor(x / minDist)},${Math.floor(y / minDist)},${Math.floor(z / minDist)}`;
+
+  const tooCloseToExisting = (p: THREE.Vector3): boolean => {
+    const ix = Math.floor(p.x / minDist);
+    const iy = Math.floor(p.y / minDist);
+    const iz = Math.floor(p.z / minDist);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const bucket = cellMap.get(cellKey(ix + dx, iy + dy, iz + dz));
+          if (!bucket) {
+            continue;
+          }
+          for (const j of bucket) {
+            if (positions[j].distanceToSquared(p) < minDistSq - 1e-10) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  for (let i = 0; i < count; i++) {
+    let placed = false;
+    for (let attempt = 0; attempt < maxAttemptsPerPoint; attempt++) {
+      sampleUniformInCloudCylinder(diskRadius, spreadZHalf, scratch);
+      if (!tooCloseToExisting(scratch)) {
+        const idx = positions.length;
+        positions.push(new THREE.Vector3().copy(scratch));
+        const key = cellKey(scratch.x, scratch.y, scratch.z);
+        let list = cellMap.get(key);
+        if (!list) {
+          list = [];
+          cellMap.set(key, list);
+        }
+        list.push(idx);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      return null;
+    }
+  }
+
+  return positions;
+}
+
+/**
+ * Uniform samples in a cylinder (disk × z) with minimum 3D separation; relaxes spacing until all fit.
+ */
+function sampleCloudLabelPositionsWithMinSep(
+  count: number,
+  diskRadius: number,
+  spreadZHalf: number,
+  clusterSize: number
+): THREE.Vector3[] {
+  if (count <= 0) {
+    return [];
+  }
+
+  const cylVolume = Math.PI * diskRadius * diskRadius * (2 * spreadZHalf);
+  let minDist = CLOUD_LABEL_PACK_FR * Math.pow(cylVolume / Math.max(count, 1), 1 / 3);
+  minDist = Math.max(
+    clusterSize * CLOUD_LABEL_MIN_SEP_FLOOR_FR,
+    Math.min(clusterSize * CLOUD_LABEL_MIN_SEP_CAP_FR, minDist)
+  );
+
+  for (let round = 0; round < CLOUD_LABEL_MAX_PLACE_ROUNDS; round++) {
+    const maxAp = CLOUD_LABEL_MAX_ATTEMPTS_PER_POINT + round * 400;
+    const placed = tryPlaceCloudLabels(count, diskRadius, spreadZHalf, minDist, maxAp);
+    if (placed) {
+      return placed;
+    }
+    minDist *= CLOUD_LABEL_MIN_RELAX;
+  }
+
+  // Hard cap: micro-separation so rejection succeeds with very high attempt budget.
+  const floorD = Math.max(clusterSize * 1e-4, minDist * 0.25);
+  let last = tryPlaceCloudLabels(count, diskRadius, spreadZHalf, floorD, 120_000);
+  if (last) {
+    return last;
+  }
+  last = tryPlaceCloudLabels(count, diskRadius, spreadZHalf, clusterSize * 1e-5, 200_000);
+  if (last) {
+    return last;
+  }
+
+  const fallback: THREE.Vector3[] = [];
+  const s = new THREE.Vector3();
+  for (let i = 0; i < count; i++) {
+    sampleUniformInCloudCylinder(diskRadius, spreadZHalf, s);
+    fallback.push(new THREE.Vector3().copy(s));
+  }
+  return fallback;
+}
+
+/**
+ * Preview: many sprite labels with varied mock names to stress-test cluster layout.
+ * Set ENABLED to `true` locally, then delete this whole block (or set ENABLED to `false`) when done.
+ */
+const MOCK_CLUSTER_NAME_PREVIEW = {
+  ENABLED: false,
+  /** How many points + labels per cloud (independent of API artist count). */
+  SPRITES_PER_CLUSTER: 96,
+  NAMES: [
+    'КИНО',
+    'П',
+    'Очень длинное название коллектива для проверки переполнения',
+    'Smolyanoe Chuchelko',
+    'Гр.',
+    'Ария',
+    '…',
+    'Название средней длины',
+    'X',
+    'Два слова',
+    'Три слова подряд здесь',
+    'Ночные снайперы',
+    'Би-2',
+    'Земфира',
+    'Сплин',
+    'Ленинград',
+    'Мумий Тролль',
+    'Пикник',
+    'Чайф',
+    'Король и Шут',
+    'Алиса',
+    'DDT',
+    'Наутилус',
+    'Крематорий',
+    'Агата Кристи',
+    'Кино Pro',
+    'Very Long Mock Band Name For Overflow Test Number Seventeen',
+    'К',
+    'Условное название',
+    'Группа (скобки)',
+    'Name / Slash',
+    '123',
+    'И ещё одна',
+  ],
+} as const;
+
 export type SceneArtist = {
   name: string;
   publicSlug: string;
@@ -39,6 +228,7 @@ export class Universe3D {
   /** Mesh the card is tied to; position is reprojected on resize and each frame. */
   private cardAnchorObject: THREE.Object3D | null = null;
   private onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
+  private onNavigateToArtist?: (publicSlug: string) => void;
   private isDragging = false;
   private lastPointerX = 0;
   private lastPointerY = 0;
@@ -59,7 +249,10 @@ export class Universe3D {
   constructor(
     container: HTMLElement,
     artists: SceneArtist[] = [],
-    options?: { onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean> }
+    options?: {
+      onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
+      onNavigateToArtist?: (publicSlug: string) => void;
+    }
   ) {
     this.scene = new THREE.Scene();
 
@@ -86,6 +279,7 @@ export class Universe3D {
     container.appendChild(ui);
     this.uiLayer = ui;
     this.onPlayArtist = options?.onPlayArtist;
+    this.onNavigateToArtist = options?.onNavigateToArtist;
 
     const clusters = this.buildClusters(artists);
     this.cloudGroups = clusters.map((cluster) =>
@@ -114,7 +308,24 @@ export class Universe3D {
 
     const genres = Array.from(grouped.keys());
     const count = genres.length || 1;
-    const radius = count === 1 ? 0 : 2.2;
+
+    const maxArtistsInAnyCluster = Math.max(
+      1,
+      ...Array.from(grouped.values()).map((arr) => arr.length)
+    );
+    /** Same as createCloud roster size heuristic (preview = SPRITES_PER_CLUSTER per cloud). */
+    const effectiveArtistCount = MOCK_CLUSTER_NAME_PREVIEW.ENABLED
+      ? MOCK_CLUSTER_NAME_PREVIEW.SPRITES_PER_CLUSTER
+      : maxArtistsInAnyCluster;
+
+    const clusterSize = Math.sqrt(Math.max(4, effectiveArtistCount) / 4);
+    /** Same as createCloud: max horizontal extent of random disk. */
+    const maxSpiralRadius = CLOUD_INNER_RADIUS_FACTOR * CLOUD_ARTIST_DISK_FR * clusterSize;
+    /** Neighbor center distance ≥ 2× cloud footprint + margin. */
+    const minChordBetweenClusters = Math.max(14, 2 * maxSpiralRadius + 6);
+
+    const radius =
+      count <= 1 ? 0 : Math.max(3, minChordBetweenClusters / (2 * Math.sin(Math.PI / count)));
     const palette = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5];
 
     return genres.map((genre, index) => {
@@ -129,6 +340,31 @@ export class Universe3D {
         artists: grouped.get(genre) ?? [],
       };
     });
+  }
+
+  /** Preview-only: many synthetic artists per cloud; real API list is only used as a template. */
+  private artistsForCloudSprites(seed: SceneArtist[]): SceneArtist[] {
+    if (!MOCK_CLUSTER_NAME_PREVIEW.ENABLED) {
+      return seed;
+    }
+
+    const cfg = MOCK_CLUSTER_NAME_PREVIEW;
+    const n = cfg.SPRITES_PER_CLUSTER;
+    const base =
+      seed.length > 0
+        ? seed[0]
+        : ({
+            name: 'Preview',
+            publicSlug: 'preview-seed',
+            genre: 'other',
+            mood: 'neutral',
+          } as SceneArtist);
+
+    return Array.from({ length: n }, (_, i) => ({
+      ...base,
+      name: cfg.NAMES[i % cfg.NAMES.length],
+      publicSlug: `__preview__${i}`,
+    }));
   }
 
   private createMaterial(color: THREE.Color, offset: number) {
@@ -212,7 +448,7 @@ export class Universe3D {
           float density = shape * n;
           density += shape * 0.25;
 
-          vec3 color = u_color * density;
+          vec3 color = u_color * density * 0.88;
 
           gl_FragColor = vec4(color, density * 0.6);
         }
@@ -223,21 +459,38 @@ export class Universe3D {
   private createCloud(color: THREE.Color, position: THREE.Vector3, users: SceneArtist[]) {
     const group = new THREE.Group();
 
+    const roster = this.artistsForCloudSprites(users);
+    const n = Math.max(1, roster.length);
+    /** >=1; grows with √n so more labels → more spacing (legacy box ≈4 artists @ factor 1). */
+    const clusterSize = Math.sqrt(Math.max(4, n) / 4);
+    const innerRadiusMax = CLOUD_INNER_RADIUS_FACTOR * clusterSize;
+    const spreadZ = 0.85 * clusterSize;
+    const diskRadius = innerRadiusMax * CLOUD_ARTIST_DISK_FR;
+    const spreadZHalf = spreadZ * CLOUD_ARTIST_Z_FR * 0.5;
+
+    const labelPositions = sampleCloudLabelPositionsWithMinSep(
+      roster.length,
+      diskRadius,
+      spreadZHalf,
+      clusterSize
+    );
+
     const geometry = new THREE.PlaneGeometry(3, 3);
 
     for (let i = 0; i < 5; i++) {
       const material = this.createMaterial(color, i * 5);
       const layer = new THREE.Mesh(geometry, material);
 
-      layer.position.z = -i * 0.5;
-      layer.position.x = (Math.random() - 0.5) * 0.3;
-      layer.position.y = (Math.random() - 0.5) * 0.3;
+      layer.scale.setScalar(clusterSize);
+      layer.position.z = -i * 0.5 * clusterSize;
+      layer.position.x = (Math.random() - 0.5) * 0.3 * clusterSize;
+      layer.position.y = (Math.random() - 0.5) * 0.3 * clusterSize;
 
       group.add(layer);
     }
 
-    // 🔥 ГЛУБИНА ГРУПП (аккуратно)
-    users.forEach((user) => {
+    // 🔥 Группы: случайно в цилиндре внутри облака + минимальный 3D зазор между метками
+    roster.forEach((user, i) => {
       const geo = new THREE.SphereGeometry(0.07, 16, 16);
 
       const mat = new THREE.MeshBasicMaterial({
@@ -248,14 +501,17 @@ export class Universe3D {
 
       const mesh = new THREE.Mesh(geo, mat);
 
-      const z = (Math.random() - 0.5) * 2; // 🔥 глубина
-
-      mesh.position.set((Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2, z);
-      const scale = 0.05 + (1 - (z + 1) / 2) * 0.1;
+      const pos = labelPositions[i]!;
+      mesh.position.copy(pos);
+      const z = pos.z;
+      const zNorm = spreadZ > 1e-6 ? z / (spreadZ * CLOUD_ARTIST_Z_FR) : 0;
+      const scale = 0.05 + (1 - (zNorm + 1) / 2) * 0.1;
       mesh.scale.setScalar(scale);
 
       mesh.userData = user;
-      this.clickableNodes.push(mesh);
+      if (!user.publicSlug.startsWith('__preview__')) {
+        this.clickableNodes.push(mesh);
+      }
 
       group.add(mesh);
 
@@ -445,6 +701,11 @@ export class Universe3D {
     }
   }
 
+  /** Same profile URL shape as AudioPlayer `handleArtistProfileOpen` (`/?artist=`). */
+  private buildArtistProfileHref(publicSlug: string): string {
+    return `/?artist=${encodeURIComponent(publicSlug)}`;
+  }
+
   private focusOnObject(obj: THREE.Object3D) {
     const pos = new THREE.Vector3();
     obj.getWorldPosition(pos);
@@ -476,7 +737,7 @@ export class Universe3D {
       <button class="universe3d-card__close" type="button" aria-label="Close">×</button>
       <div class="universe3d-card__media" aria-hidden="true"></div>
       <div class="universe3d-card__body">
-        <div class="universe3d-card__title">${title}</div>
+        <div class="universe3d-card__title"></div>
         <div class="universe3d-card__chips">
           <span class="universe3d-card__chip">${genre}</span>
           <span class="universe3d-card__chip">${mood}</span>
@@ -486,6 +747,30 @@ export class Universe3D {
         <button class="universe3d-card__play" type="button">Play</button>
       </div>
     `;
+
+    const titleSlot = card.querySelector('.universe3d-card__title');
+    if (titleSlot) {
+      const slug = typeof data.publicSlug === 'string' ? data.publicSlug.trim() : '';
+      if (slug) {
+        const link = document.createElement('a');
+        link.className = 'universe3d-card__title';
+        link.href = this.buildArtistProfileHref(slug);
+        link.textContent = title;
+        link.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.onNavigateToArtist) {
+            e.preventDefault();
+            this.dismissCard();
+            this.onNavigateToArtist(slug);
+          } else {
+            this.dismissCard();
+          }
+        });
+        titleSlot.replaceWith(link);
+      } else {
+        titleSlot.textContent = title;
+      }
+    }
 
     const mediaEl = card.querySelector('.universe3d-card__media');
     if (mediaEl && coverUrl) {

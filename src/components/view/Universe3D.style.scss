@@ -1,3 +1,5 @@
+@use '../../scss/abstracts/mixins' as *;
+
 .universe3d-ui-layer {
   position: absolute;
   inset: 0;
@@ -7,8 +9,8 @@
 
 .universe3d-card {
   position: absolute;
-  width: min(320px, calc(100vw - 32px));
-  min-height: 360px;
+  width: min(calc(17.778 * var(--ms-0)), calc(100vw - 2 * var(--ms-0)));
+  min-height: calc(20 * var(--ms-0));
   pointer-events: auto;
   background: linear-gradient(
     180deg,
@@ -16,20 +18,20 @@
     color-mix(in srgb, var(--main-background-color, #11111a) 94%, transparent) 100%
   );
   border: 1px solid color-mix(in srgb, var(--hr-color, #4b4d55) 70%, transparent);
-  border-radius: 20px;
-  box-shadow: 0 14px 42px rgb(0 0 0 / 38%);
-  backdrop-filter: blur(8px);
+  border-radius: var(--ms-0);
+  box-shadow: 0 var(--ms-01) var(--ms-2) rgb(0 0 0 / 38%);
+  backdrop-filter: blur(calc(var(--ms-0) * 8 / 18));
   overflow: hidden;
 }
 
 .universe3d-card__close {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 32px;
-  height: 32px;
+  top: var(--ms-01);
+  right: var(--ms-01);
+  width: var(--ms-1);
+  height: var(--ms-1);
   color: var(--text-color, #ffffff);
-  font-size: 24px;
+  font-size: calc(var(--ms-0) + var(--ms-02));
   line-height: 1;
   background: color-mix(in srgb, var(--extra-background-color, #101015) 70%, transparent);
   border: 1px solid color-mix(in srgb, var(--hr-color, #4b4d55) 60%, transparent);
@@ -43,8 +45,8 @@
 
 .universe3d-card__media {
   position: relative;
-  width: calc(100% - 36px);
-  margin: 18px auto 0;
+  width: calc(100% - 2 * var(--ms-0));
+  margin: var(--ms-0) auto 0;
   aspect-ratio: 1 / 1;
   background:
     radial-gradient(
@@ -55,7 +57,7 @@
     ),
     linear-gradient(160deg, rgb(255 255 255 / 5%), rgb(255 255 255 / 0%));
   border: 1px solid color-mix(in srgb, var(--hr-color, #4b4d55) 60%, transparent);
-  border-radius: 14px;
+  border-radius: calc(var(--ms-01) + var(--ms-02));
   overflow: hidden;
 }
 
@@ -67,27 +69,28 @@
 }
 
 .universe3d-card__body {
-  padding: 14px 18px 8px;
+  padding: var(--ms-01) var(--ms-0) var(--ms-02);
 }
 
 .universe3d-card__title {
-  color: var(--text-color, #ffffff);
-  font-weight: 700;
-  font-size: clamp(28px, 3.5vw, 50px);
-  line-height: 1.05;
+  text-decoration: none;
+  font-family: var(--base-accent-font);
+
+  @include link-colors(--link-color, --link-color-hover);
+  @include adjust-font-size-to($ms-1, 0);
 }
 
 .universe3d-card__chips {
-  margin-top: 12px;
+  margin-top: var(--ms-01);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--ms-01);
 }
 
 .universe3d-card__chip {
-  padding: 8px 16px;
+  padding: var(--ms-02) var(--ms-0);
   color: var(--text-color, #ffffff);
-  font-size: 14px;
+  font-size: var(--dashboard-font-size);
   line-height: 1;
   background: color-mix(in srgb, var(--button-background-color, #272a35) 76%, transparent);
   border: 1px solid color-mix(in srgb, var(--hr-color, #3b3e48) 70%, transparent);
@@ -95,31 +98,13 @@
 }
 
 .universe3d-card__footer {
-  margin-top: 10px;
-  padding: 16px 18px 18px;
+  margin-top: var(--ms-01);
+  padding: var(--ms-0);
   border-top: 1px solid color-mix(in srgb, var(--hr-color, #3b3e48) 70%, transparent);
 }
 
 .universe3d-card__play {
-  display: block;
   width: 100%;
-  min-height: 50px;
-  color: var(--button-color, #ffffff);
-  font-size: 40px;
-  line-height: 1;
-  background: var(--button-background-color, #2a2e3b);
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease;
-}
 
-.universe3d-card__play:hover {
-  background: var(--button-background-color-hover, #3c4454);
-}
-
-.universe3d-card__play:active {
-  transform: translateY(1px) scale(0.995);
+  @include button-variant($margin: 0);
 }
