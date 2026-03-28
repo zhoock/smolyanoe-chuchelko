@@ -156,7 +156,7 @@ export function HomePage() {
     <section
       aria-label="Cloud scene"
       ref={sceneRef}
-      style={{ width: '100%', height: '100vh', position: 'relative' }}
+      style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
     />
   );
 }

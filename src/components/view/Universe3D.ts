@@ -67,7 +67,12 @@ export class Universe3D {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(this.renderer.domElement);
+    const canvas = this.renderer.domElement;
+    canvas.style.touchAction = 'none';
+    canvas.style.webkitUserSelect = 'none';
+    canvas.style.userSelect = 'none';
+    canvas.style.setProperty('-webkit-tap-highlight-color', 'transparent');
+    container.appendChild(canvas);
 
     const ui = document.createElement('div');
     ui.className = 'universe3d-ui-layer';
@@ -573,16 +578,16 @@ export class Universe3D {
     }
 
     if (e.touches.length === 2) {
+      this.lastPinchDistance = 0;
       this.touchHadPinch = true;
       this.touchPanCommitted = false;
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      this.lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
     }
   };
 
   private handleTouchMove = (e: TouchEvent) => {
-    e.preventDefault();
+    if (e.touches.length === 1 || e.touches.length === 2) {
+      e.preventDefault();
+    }
 
     if (this.isInteractionLocked()) {
       if (e.touches.length === 1) {
@@ -594,6 +599,10 @@ export class Universe3D {
         }
       }
       return;
+    }
+
+    if (e.touches.length !== 2) {
+      this.lastPinchDistance = 0;
     }
 
     if (e.touches.length === 1) {
@@ -608,16 +617,20 @@ export class Universe3D {
         this.touchPanCommitted = true;
       }
 
-      if (this.touchPanCommitted) {
-        const dx = (t.clientX - this.lastPointerX) * 0.005;
-        const dy = (t.clientY - this.lastPointerY) * 0.005;
-
-        this.camera.position.x -= dx;
-        this.camera.position.y += dy;
-
+      if (!this.touchPanCommitted) {
         this.lastPointerX = t.clientX;
         this.lastPointerY = t.clientY;
+        return;
       }
+
+      const dx = (t.clientX - this.lastPointerX) * 0.005;
+      const dy = (t.clientY - this.lastPointerY) * 0.005;
+
+      this.camera.position.x -= dx;
+      this.camera.position.y += dy;
+
+      this.lastPointerX = t.clientX;
+      this.lastPointerY = t.clientY;
     }
 
     if (e.touches.length === 2) {
@@ -626,17 +639,31 @@ export class Universe3D {
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (this.lastPinchDistance) {
-        const delta = dist - this.lastPinchDistance;
-        this.targetZ -= delta * 0.01;
-        this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
+      if (this.lastPinchDistance === 0) {
+        this.lastPinchDistance = dist;
+        return;
       }
+
+      const delta = dist - this.lastPinchDistance;
+      this.targetZ -= delta * 0.01;
+      this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
 
       this.lastPinchDistance = dist;
     }
   };
 
   private handleTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) {
+      this.lastPinchDistance = 0;
+    }
+    if (e.touches.length === 1) {
+      const tr = e.touches[0];
+      this.lastPointerX = tr.clientX;
+      this.lastPointerY = tr.clientY;
+      this.touchStartX = tr.clientX;
+      this.touchStartY = tr.clientY;
+      this.touchPanCommitted = false;
+    }
     const t = e.changedTouches[0];
     if (!t) {
       if (e.touches.length === 0) {

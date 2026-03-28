@@ -204,6 +204,17 @@ function Layout() {
   const hasArtistParam = new URLSearchParams(location.search).has('artist');
   const isHomeSceneRoute = isHomeRoute && !hasArtistParam;
 
+  useLayoutEffect(() => {
+    if (isHomeSceneRoute) {
+      document.body.classList.add('page--home-scene');
+    } else {
+      document.body.classList.remove('page--home-scene');
+    }
+    return () => {
+      document.body.classList.remove('page--home-scene');
+    };
+  }, [isHomeSceneRoute]);
+
   const standardRoutes = (
     <>
       <Routes>
