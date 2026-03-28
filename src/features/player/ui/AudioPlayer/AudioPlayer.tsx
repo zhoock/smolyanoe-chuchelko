@@ -682,6 +682,7 @@ export default function AudioPlayer({
     currentTrack,
     albumId,
     lang,
+    artistSlugForPublicApi: albumMeta?.publicSlug ?? null,
     duration: time.duration,
     setSyncedLyrics,
     setPlainLyricsContent,
@@ -991,8 +992,16 @@ export default function AudioPlayer({
   const shouldRenderPlainLyrics =
     showLyrics && !shouldRenderSyncedLyrics && !shouldPreferSynced && !!plainLyricsContent;
 
+  /** Slug for public profile link: Redux meta (e.g. Home/Universe3D) or `?artist=` on current URL (album pages). */
+  const artistSlugForProfileLink = useMemo(() => {
+    const fromMeta = albumMeta?.publicSlug?.trim();
+    if (fromMeta) return fromMeta;
+    const fromSearch = new URLSearchParams(location.search).get('artist')?.trim();
+    return fromSearch || null;
+  }, [albumMeta?.publicSlug, location.search]);
+
   const handleArtistProfileOpen = useCallback(() => {
-    const slug = albumMeta?.publicSlug;
+    const slug = artistSlugForProfileLink;
     if (!slug) return;
     const target = {
       pathname: '/',
@@ -1001,7 +1010,7 @@ export default function AudioPlayer({
     // Keep PlayerShell close flow consistent: when dialog closes, it will navigate to sourceLocation.
     dispatch(playerActions.setSourceLocation(target));
     navigate({ ...target, hash: '' }, { replace: false });
-  }, [albumMeta?.publicSlug, dispatch, navigate]);
+  }, [artistSlugForProfileLink, dispatch, navigate]);
 
   useEffect(() => {
     if (!isFullScreenPlayer) {
@@ -1052,11 +1061,11 @@ export default function AudioPlayer({
         <div className="player__track-info">
           <h2>{currentTrack?.title || 'Unknown Track'}</h2>
           <h3
-            className={albumMeta?.publicSlug ? 'player__artist-link' : undefined}
-            role={albumMeta?.publicSlug ? 'link' : undefined}
-            tabIndex={albumMeta?.publicSlug ? 0 : undefined}
+            className={artistSlugForProfileLink ? 'player__artist-link' : undefined}
+            role={artistSlugForProfileLink ? 'link' : undefined}
+            tabIndex={artistSlugForProfileLink ? 0 : undefined}
             onClick={
-              albumMeta?.publicSlug
+              artistSlugForProfileLink
                 ? (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -1065,7 +1074,7 @@ export default function AudioPlayer({
                 : undefined
             }
             onKeyDown={
-              albumMeta?.publicSlug
+              artistSlugForProfileLink
                 ? (e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();

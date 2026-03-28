@@ -227,7 +227,9 @@ export async function loadSyncedLyricsFromStorage(
   albumId: string,
   trackId: string | number,
   lang: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** When URL has no ?artist=, use playing artist (e.g. publicSlug from Redux player) */
+  artistSlugForPublicApi?: string | null
 ): Promise<SyncedLyricsLine[] | null> {
   const cacheKey = getCacheKey(albumId, trackId, lang);
   const cachedData = getCachedData(cacheKey);
@@ -266,6 +268,7 @@ export async function loadSyncedLyricsFromStorage(
         const response = await fetch(
           buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
             includeArtist: true,
+            artistSlugOverride: artistSlugForPublicApi ?? null,
           }),
           {
             cache: 'no-store',
@@ -355,7 +358,8 @@ export async function loadAuthorshipFromStorage(
   albumId: string,
   trackId: string | number,
   lang: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  artistSlugForPublicApi?: string | null
 ): Promise<string | null> {
   return queueRequest(async () => {
     try {
@@ -388,6 +392,7 @@ export async function loadAuthorshipFromStorage(
         const response = await fetch(
           buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
             includeArtist: true,
+            artistSlugOverride: artistSlugForPublicApi ?? null,
           }),
           {
             cache: 'no-store',

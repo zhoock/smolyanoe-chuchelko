@@ -1,5 +1,11 @@
 interface BuildApiUrlOptions {
   includeArtist?: boolean;
+  /**
+   * When the URL has no `?artist=` (e.g. home `/`), use this public slug so API resolves
+   * the playing artist. Needed so logged-in admins still load the correct user's synced
+   * lyrics (backend would otherwise use JWT user id).
+   */
+  artistSlugOverride?: string | null;
 }
 
 function getArtistFromSearch(search: string): string | null {
@@ -37,9 +43,13 @@ export function buildApiUrl(
   }
 
   if (includeArtist && shouldIncludeArtistOnCurrentPage() && typeof window !== 'undefined') {
-    const artist = getArtistFromSearch(window.location.search);
-    if (artist) {
-      query.set('artist', artist);
+    const fromUrl = getArtistFromSearch(window.location.search);
+    const slug =
+      (fromUrl && fromUrl.trim()) ||
+      (options.artistSlugOverride && String(options.artistSlugOverride).trim()) ||
+      null;
+    if (slug) {
+      query.set('artist', slug);
     }
   }
 

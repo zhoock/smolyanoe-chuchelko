@@ -39,6 +39,12 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const artistSlugFromUrl = useMemo(() => {
+    const raw = new URLSearchParams(location.search).get('artist');
+    const t = raw?.trim();
+    return t || null;
+  }, [location.search]);
+
   // UI словарь загружается через loader
 
   useEffect(() => {
@@ -82,6 +88,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
             playerActions.setAlbumMeta({
               albumId: savedState.albumId,
               userId: album.userId ?? null,
+              publicSlug: artistSlugFromUrl ?? undefined,
               album: album.album,
               artist: album.artist,
               fullName: album.fullName ?? `${album.artist} — ${album.album}`,
@@ -106,6 +113,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
             playerActions.setAlbumMeta({
               albumId: currentAlbumId,
               userId: album.userId ?? null,
+              publicSlug: artistSlugFromUrl ?? undefined,
               album: album.album,
               artist: album.artist,
               fullName: album.fullName ?? `${album.artist} — ${album.album}`,
@@ -186,6 +194,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         playerActions.setAlbumMeta({
           albumId,
           userId: album.userId ?? null,
+          publicSlug: artistSlugFromUrl ?? undefined,
           album: album.album,
           artist: album.artist,
           fullName: album.fullName ?? `${album.artist} — ${album.album}`,

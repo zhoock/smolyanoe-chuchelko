@@ -23,6 +23,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
   const currentTrackIndex = useAppSelector(playerSelectors.selectCurrentTrackIndex);
   const currentTime = useAppSelector(playerSelectors.selectTime);
   const playlist = useAppSelector(playerSelectors.selectPlaylist);
+  const albumMeta = useAppSelector(playerSelectors.selectAlbumMeta);
 
   const [currentLineIndex, setCurrentLineIndex] = useState<number | null>(null);
   const [syncedLyrics, setSyncedLyrics] = useState<SyncedLyricsLine[] | null>(null);
@@ -54,7 +55,13 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     // Загружаем синхронизации асинхронно
     (async () => {
       try {
-        const storedSync = await loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
+        const storedSync = await loadSyncedLyricsFromStorage(
+          albumId,
+          currentTrack.id,
+          lang,
+          undefined,
+          albumMeta?.publicSlug ?? null
+        );
         if (cancelled) return;
 
         // ✅ ВАЖНО: Проверяем синхронизацию перед использованием fallback
@@ -107,7 +114,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, album, lang]);
+  }, [currentTrack, album, lang, albumMeta?.publicSlug]);
 
   // Определяем текущую строку на основе времени воспроизведения
   useEffect(() => {

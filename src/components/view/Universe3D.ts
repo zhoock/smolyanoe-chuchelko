@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/** Manhattan distance (px) before touch pan counts as drag, not tap. */
+const TOUCH_MOVE_THRESHOLD_PX = 5;
+
 export type SceneArtist = {
   name: string;
   publicSlug: string;
@@ -38,6 +41,13 @@ export class Universe3D {
   private lastPointerX = 0;
   private lastPointerY = 0;
   private lastPinchDistance = 0;
+
+  private touchStartX = 0;
+  private touchStartY = 0;
+  /** True after movement exceeds threshold (single-finger pan). */
+  private touchPanCommitted = false;
+  /** True if two-finger pinch occurred in this gesture. */
+  private touchHadPinch = false;
 
   constructor(
     container: HTMLElement,
@@ -216,7 +226,7 @@ export class Universe3D {
 
     // 🔥 ГЛУБИНА ГРУПП (аккуратно)
     users.forEach((user) => {
-      const geo = new THREE.SphereGeometry(0.05, 16, 16);
+      const geo = new THREE.SphereGeometry(0.07, 16, 16);
 
       const mat = new THREE.MeshBasicMaterial({
         color: color,
@@ -405,6 +415,24 @@ export class Universe3D {
     this.layoutCard(this.activeCard, x, y);
   }
 
+  /**
+   * Same-origin relative URLs and absolute http(s)://localhost URLs must use the
+   * current page origin so images work on phones (LAN IP) instead of resolving to device localhost.
+   */
+  private resolveHeaderImageUrl(raw: string): string {
+    const trimmed = raw.trim();
+    if (!trimmed) return '';
+    try {
+      const u = new URL(trimmed, window.location.href);
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+        return `${window.location.origin}${u.pathname}${u.search}${u.hash}`;
+      }
+      return u.href;
+    } catch {
+      return trimmed;
+    }
+  }
+
   private showCard(obj: THREE.Object3D) {
     if (this.activeCard) {
       this.dismissCard();
@@ -424,9 +452,7 @@ export class Universe3D {
     card.style.visibility = 'hidden';
     card.innerHTML = `
       <button class="universe3d-card__close" type="button" aria-label="Close">×</button>
-      <div class="universe3d-card__media" aria-hidden="true">
-        ${coverUrl ? `<img class="universe3d-card__media-image" src="${coverUrl}" alt="${title}" />` : ''}
-      </div>
+      <div class="universe3d-card__media" aria-hidden="true"></div>
       <div class="universe3d-card__body">
         <div class="universe3d-card__title">${title}</div>
         <div class="universe3d-card__chips">
@@ -439,12 +465,19 @@ export class Universe3D {
       </div>
     `;
 
-    const coverImg = card.querySelector('.universe3d-card__media-image');
-    if (coverImg instanceof HTMLImageElement) {
-      coverImg.addEventListener('load', () => {
+    const mediaEl = card.querySelector('.universe3d-card__media');
+    if (mediaEl && coverUrl) {
+      const img = document.createElement('img');
+      img.className = 'universe3d-card__media-image';
+      img.alt = title;
+      img.loading = 'eager';
+      img.decoding = 'async';
+      img.src = this.resolveHeaderImageUrl(coverUrl);
+      img.addEventListener('load', () => {
         if (this.activeCard !== card || !this.cardAnchorObject) return;
         this.layoutCardFromObject();
       });
+      mediaEl.appendChild(img);
     }
 
     const closeButton = card.querySelector('.universe3d-card__close');
@@ -484,8 +517,12 @@ export class Universe3D {
     window.addEventListener('mousedown', this.handleMouseDown);
     window.addEventListener('mouseup', this.handleMouseUp);
     window.addEventListener('mousemove', this.handleMouseMove);
-    window.addEventListener('touchmove', this.handleTouchMove, { passive: false });
-    window.addEventListener('touchend', this.handleTouchEnd);
+
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', this.handleTouchEnd);
+    canvas.addEventListener('touchcancel', this.handleTouchCancel);
   }
 
   private isInteractionLocked() {
@@ -525,13 +562,66 @@ export class Universe3D {
     this.lastPointerY = e.clientY;
   };
 
-  private handleTouchMove = (e: TouchEvent) => {
-    if (this.isInteractionLocked()) {
-      e.preventDefault();
-      return;
+  private handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 1) {
+      this.touchStartX = e.touches[0].clientX;
+      this.touchStartY = e.touches[0].clientY;
+      this.lastPointerX = e.touches[0].clientX;
+      this.lastPointerY = e.touches[0].clientY;
+      this.touchPanCommitted = false;
+      this.touchHadPinch = false;
     }
 
     if (e.touches.length === 2) {
+      this.touchHadPinch = true;
+      this.touchPanCommitted = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      this.lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
+    }
+  };
+
+  private handleTouchMove = (e: TouchEvent) => {
+    e.preventDefault();
+
+    if (this.isInteractionLocked()) {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const dxFromStart = t.clientX - this.touchStartX;
+        const dyFromStart = t.clientY - this.touchStartY;
+        if (Math.abs(dxFromStart) + Math.abs(dyFromStart) > TOUCH_MOVE_THRESHOLD_PX) {
+          this.touchPanCommitted = true;
+        }
+      }
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const dxFromStart = t.clientX - this.touchStartX;
+      const dyFromStart = t.clientY - this.touchStartY;
+
+      if (
+        !this.touchPanCommitted &&
+        Math.abs(dxFromStart) + Math.abs(dyFromStart) > TOUCH_MOVE_THRESHOLD_PX
+      ) {
+        this.touchPanCommitted = true;
+      }
+
+      if (this.touchPanCommitted) {
+        const dx = (t.clientX - this.lastPointerX) * 0.005;
+        const dy = (t.clientY - this.lastPointerY) * 0.005;
+
+        this.camera.position.x -= dx;
+        this.camera.position.y += dy;
+
+        this.lastPointerX = t.clientX;
+        this.lastPointerY = t.clientY;
+      }
+    }
+
+    if (e.touches.length === 2) {
+      this.touchHadPinch = true;
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -546,9 +636,73 @@ export class Universe3D {
     }
   };
 
-  private handleTouchEnd = () => {
-    this.lastPinchDistance = 0;
+  private handleTouchEnd = (e: TouchEvent) => {
+    const t = e.changedTouches[0];
+    if (!t) {
+      if (e.touches.length === 0) {
+        this.resetTouchGestureState();
+      }
+      return;
+    }
+
+    const dx = t.clientX - this.touchStartX;
+    const dy = t.clientY - this.touchStartY;
+    const moved = Math.abs(dx) + Math.abs(dy);
+
+    const allFingersUp = e.touches.length === 0;
+
+    const isTap =
+      allFingersUp &&
+      !this.touchPanCommitted &&
+      !this.touchHadPinch &&
+      moved <= TOUCH_MOVE_THRESHOLD_PX;
+
+    if (isTap) {
+      this.performCanvasTouchTap(t.clientX, t.clientY);
+    }
+
+    if (allFingersUp) {
+      this.resetTouchGestureState();
+    }
   };
+
+  private handleTouchCancel = () => {
+    this.resetTouchGestureState();
+  };
+
+  private resetTouchGestureState() {
+    this.touchPanCommitted = false;
+    this.touchHadPinch = false;
+    this.lastPinchDistance = 0;
+  }
+
+  /** Raycast tap on canvas (mobile); ignores if tap is on the artist card overlay. */
+  private performCanvasTouchTap(clientX: number, clientY: number) {
+    const topEl = document.elementFromPoint(clientX, clientY);
+    if (this.activeCard && topEl && this.activeCard.contains(topEl)) {
+      return;
+    }
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+
+    this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    const intersects = this.raycaster.intersectObjects(this.clickableNodes, true);
+
+    for (let i = 0; i < intersects.length; i++) {
+      const obj = intersects[i].object;
+
+      if (obj.userData?.name) {
+        this.showCard(obj);
+        return;
+      }
+    }
+
+    this.dismissCard();
+  }
 
   private noise2D(x: number, y: number) {
     return Math.sin(x * 2.1 + y * 3.7) * 0.5 + 0.5;
@@ -651,8 +805,12 @@ export class Universe3D {
     window.removeEventListener('mousedown', this.handleMouseDown);
     window.removeEventListener('mouseup', this.handleMouseUp);
     window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('touchmove', this.handleTouchMove);
-    window.removeEventListener('touchend', this.handleTouchEnd);
+
+    const canvas = this.renderer.domElement;
+    canvas.removeEventListener('touchstart', this.handleTouchStart);
+    canvas.removeEventListener('touchmove', this.handleTouchMove);
+    canvas.removeEventListener('touchend', this.handleTouchEnd);
+    canvas.removeEventListener('touchcancel', this.handleTouchCancel);
     this.dismissCard();
     this.uiLayer?.remove();
     this.renderer.dispose();

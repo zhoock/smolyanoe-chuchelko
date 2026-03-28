@@ -12,6 +12,8 @@ interface UseLyricsContentParams {
   currentTrack: TracksProps | null;
   albumId: string;
   lang: string;
+  /** Public slug of the playing artist (Redux albumMeta); fixes synced-lyrics API when URL has no ?artist= and user is logged in as admin. */
+  artistSlugForPublicApi?: string | null;
   duration: number;
   setSyncedLyrics: React.Dispatch<React.SetStateAction<SyncedLyricsLine[] | null>>;
   setPlainLyricsContent: React.Dispatch<React.SetStateAction<string | null>>;
@@ -31,6 +33,7 @@ export function useLyricsContent({
   currentTrack,
   albumId,
   lang,
+  artistSlugForPublicApi,
   duration,
   setSyncedLyrics,
   setPlainLyricsContent,
@@ -115,7 +118,13 @@ export function useLyricsContent({
     (async () => {
       try {
         // 2.1 пробуем storage
-        const storedSync = await loadSyncedLyricsFromStorage(albumId, currentTrack.id, lang);
+        const storedSync = await loadSyncedLyricsFromStorage(
+          albumId,
+          currentTrack.id,
+          lang,
+          undefined,
+          artistSlugForPublicApi ?? null
+        );
         if (cancelled || !isKeyActual(key)) return;
 
         // уточняем hasSyncedLyricsAvailable по факту storage (важно для мобилки)
@@ -153,7 +162,13 @@ export function useLyricsContent({
         }
 
         // 2.3 авторство
-        const storedAuthorship = await loadAuthorshipFromStorage(albumId, currentTrack.id, lang);
+        const storedAuthorship = await loadAuthorshipFromStorage(
+          albumId,
+          currentTrack.id,
+          lang,
+          undefined,
+          artistSlugForPublicApi ?? null
+        );
         if (cancelled || !isKeyActual(key)) return;
 
         const authorship = currentTrack.authorship || storedAuthorship || null;
@@ -193,6 +208,7 @@ export function useLyricsContent({
     currentTrack,
     albumId,
     lang,
+    artistSlugForPublicApi,
     duration,
     setSyncedLyrics,
     setAuthorshipText,
