@@ -28,6 +28,8 @@ export class Universe3D {
   private animationId: number | null = null;
 
   private targetZ = 2;
+  private targetX = 0;
+  private targetY = 0;
 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
@@ -48,6 +50,11 @@ export class Universe3D {
   private touchPanCommitted = false;
   /** True if two-finger pinch occurred in this gesture. */
   private touchHadPinch = false;
+
+  private velocityX = 0;
+  private velocityY = 0;
+  private inertiaDamping = 0.92;
+  private minVelocity = 0.00001;
 
   constructor(
     container: HTMLElement,
@@ -438,7 +445,17 @@ export class Universe3D {
     }
   }
 
+  private focusOnObject(obj: THREE.Object3D) {
+    const pos = new THREE.Vector3();
+    obj.getWorldPosition(pos);
+
+    const verticalOffset = 0.5;
+    this.targetX = pos.x;
+    this.targetY = pos.y - verticalOffset;
+  }
+
   private showCard(obj: THREE.Object3D) {
+    this.focusOnObject(obj);
     if (this.activeCard) {
       this.dismissCard();
     }
@@ -569,6 +586,8 @@ export class Universe3D {
 
   private handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 1) {
+      this.velocityX = 0;
+      this.velocityY = 0;
       this.touchStartX = e.touches[0].clientX;
       this.touchStartY = e.touches[0].clientY;
       this.lastPointerX = e.touches[0].clientX;
@@ -628,6 +647,9 @@ export class Universe3D {
 
       this.camera.position.x -= dx;
       this.camera.position.y += dy;
+
+      this.velocityX = -dx;
+      this.velocityY = dy;
 
       this.lastPointerX = t.clientX;
       this.lastPointerY = t.clientY;
@@ -689,11 +711,17 @@ export class Universe3D {
     }
 
     if (allFingersUp) {
+      if (this.touchHadPinch) {
+        this.velocityX = 0;
+        this.velocityY = 0;
+      }
       this.resetTouchGestureState();
     }
   };
 
   private handleTouchCancel = () => {
+    this.velocityX = 0;
+    this.velocityY = 0;
     this.resetTouchGestureState();
   };
 
@@ -763,6 +791,30 @@ export class Universe3D {
     this.cloudGroups.forEach((group) => updateCloud(group));
 
     this.camera.position.z += (this.targetZ - this.camera.position.z) * 0.05;
+
+    if (
+      !this.touchPanCommitted &&
+      (Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity)
+    ) {
+      this.camera.position.x += this.velocityX;
+      this.camera.position.y += this.velocityY;
+
+      this.velocityX *= this.inertiaDamping;
+      this.velocityY *= this.inertiaDamping;
+    } else if (!this.touchPanCommitted) {
+      this.velocityX = 0;
+      this.velocityY = 0;
+    }
+
+    const panInertiaActive =
+      !this.touchPanCommitted &&
+      (Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity);
+
+    if (this.activeCard && !this.touchPanCommitted && !panInertiaActive) {
+      this.camera.position.x += (this.targetX - this.camera.position.x) * 0.03;
+      this.camera.position.y += (this.targetY - this.camera.position.y) * 0.03;
+    }
+
     const temp = new THREE.Vector3();
 
     this.scene.traverse((obj: any) => {
