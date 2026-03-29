@@ -932,6 +932,9 @@ export class Universe3D {
     this.camera.position.x -= dx;
     this.camera.position.y += dy;
 
+    this.targetX = this.camera.position.x;
+    this.targetY = this.camera.position.y;
+
     this.lastPointerX = e.clientX;
     this.lastPointerY = e.clientY;
   };
@@ -999,6 +1002,9 @@ export class Universe3D {
 
       this.camera.position.x -= dx;
       this.camera.position.y += dy;
+
+      this.targetX = this.camera.position.x;
+      this.targetY = this.camera.position.y;
 
       this.velocityX = -dx;
       this.velocityY = dy;

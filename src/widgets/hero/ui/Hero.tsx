@@ -340,10 +340,17 @@ export function Hero() {
 
   const artistParamKey = searchParams.get('artist')?.trim() ?? '';
 
+  /** Latest profile/header for canvas fallback without re-running Universe3D effect. */
+  const profileNameForCanvasRef = useRef(profileName);
+  const headerImagesForCanvasRef = useRef(headerImages);
+  profileNameForCanvasRef.current = profileName;
+  headerImagesForCanvasRef.current = headerImages;
+
   useEffect(() => {
     if (!hasArtistParam || !artistParamKey) return;
     const el = heroCanvasRef.current;
     if (!el) return;
+    if (el.childElementCount > 0) return;
 
     let universe: Universe3D | null = null;
     let cancelled = false;
@@ -365,21 +372,24 @@ export function Hero() {
 
       if (cancelled || !heroCanvasRef.current) return;
 
+      const profileNameNow = profileNameForCanvasRef.current;
+      const headerImagesNow = headerImagesForCanvasRef.current;
+
       if (!sceneArtist) {
         sceneArtist = {
-          name: profileName || artistParamKey,
+          name: profileNameNow || artistParamKey,
           publicSlug: artistParamKey,
           genre: 'other',
           mood: 'melancholic',
-          headerImages: headerImages.length > 0 ? [...headerImages] : undefined,
+          headerImages: headerImagesNow.length > 0 ? [...headerImagesNow] : undefined,
         };
-      } else if (headerImages.length > 0) {
+      } else if (headerImagesNow.length > 0) {
         sceneArtist = {
           ...sceneArtist,
           headerImages:
             sceneArtist.headerImages && sceneArtist.headerImages.length > 0
               ? sceneArtist.headerImages
-              : [...headerImages],
+              : [...headerImagesNow],
         };
       }
 
@@ -401,7 +411,10 @@ export function Hero() {
         };
       }
 
-      universe = new Universe3D(el, [sceneArtist], {
+      if (cancelled || !heroCanvasRef.current) return;
+      if (heroCanvasRef.current.childElementCount > 0) return;
+
+      universe = new Universe3D(heroCanvasRef.current, [sceneArtist], {
         disableCameraControls: true,
         embedInContainer: true,
         isHeroPreview: true,
@@ -415,7 +428,7 @@ export function Hero() {
       universe?.destroy();
       el.replaceChildren();
     };
-  }, [hasArtistParam, artistParamKey, profileName, headerImages]);
+  }, [artistParamKey]);
 
   return (
     <section className="hero" style={{ backgroundImage: backgroundImage || undefined }}>
