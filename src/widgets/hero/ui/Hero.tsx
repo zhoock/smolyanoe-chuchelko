@@ -4,7 +4,11 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
-import { Universe3D, type SceneArtist } from '@/components/view/Universe3D';
+import {
+  Universe3D,
+  type SceneArtist,
+  UNIVERSE_FOCUS_ARTIST_STORAGE_KEY,
+} from '@/components/view/Universe3D';
 import '@/components/view/Universe3D.style.scss';
 import './style.scss';
 
@@ -431,23 +435,21 @@ export function Hero() {
   }, [artistParamKey]);
 
   return (
-    <section className="hero" style={{ backgroundImage: backgroundImage || undefined }}>
-      {hasArtistParam && (
-        <div
-          ref={heroCanvasRef}
-          className="hero__canvas"
-          role="button"
-          tabIndex={0}
-          aria-label="Вернуться на главную"
-          onClick={() => navigate('/')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
+    <section
+      className={hasArtistParam ? 'hero hero--navigate-home' : 'hero'}
+      style={{ backgroundImage: backgroundImage || undefined }}
+      onClick={
+        hasArtistParam
+          ? () => {
+              if (artistParamKey) {
+                sessionStorage.setItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY, artistParamKey);
+              }
               navigate('/');
             }
-          }}
-        />
-      )}
+          : undefined
+      }
+    >
+      {hasArtistParam && <div ref={heroCanvasRef} className="hero__canvas" />}
       <h1 className="hero__title">{displayName}</h1>
     </section>
   );

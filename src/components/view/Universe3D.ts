@@ -242,6 +242,8 @@ export class Universe3D {
   private attachedWindowClick = false;
   /** Hero embed: ignore module-level mock preview so the real profile artist is shown. */
   private suppressMockClusterPreview = false;
+  /** Hero embed: larger cloud + closer camera for artist profile strip. */
+  private isHeroPreview = false;
   private clusterColorOption?: number;
   private isDragging = false;
   private lastPointerX = 0;
@@ -278,6 +280,7 @@ export class Universe3D {
     this.clusterColorOption = options?.clusterColor;
     this.useContainerSize = options?.embedInContainer === true;
     this.suppressMockClusterPreview = options?.isHeroPreview === true;
+    this.isHeroPreview = options?.isHeroPreview === true;
 
     this.scene = new THREE.Scene();
 
@@ -288,8 +291,8 @@ export class Universe3D {
     this.camera.position.set(0, 0, 2);
 
     if (options?.isHeroPreview) {
-      this.camera.position.z = 1.2;
-      this.targetZ = 1.2;
+      this.camera.position.z = 0.92;
+      this.targetZ = 0.92;
     }
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -317,6 +320,11 @@ export class Universe3D {
       this.createCloud(cluster.color, cluster.center, cluster.artists)
     );
     this.cloudGroups.forEach((group) => this.scene.add(group));
+
+    if (this.isHeroPreview) {
+      const heroCloudScale = 1.42;
+      this.cloudGroups.forEach((group) => group.scale.multiplyScalar(heroCloudScale));
+    }
 
     if (options?.disableCameraControls !== true) {
       this.initControls();

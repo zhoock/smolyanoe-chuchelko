@@ -27,6 +27,10 @@
     background-size: auto 15vw;
   }
 
+  &--navigate-home {
+    cursor: pointer;
+  }
+
   &::before {
     content: '';
     position: absolute;
@@ -79,5 +83,11 @@
     font-size: clamp(1.618rem, 1.1474rem + 2.3529vw, 2.618rem);
     letter-spacing: normal;
     text-transform: capitalize;
+  }
+
+  @media (width <= 768px) {
+    &__canvas {
+      display: none;
+    }
   }
 }
