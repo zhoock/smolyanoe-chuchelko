@@ -1,10 +1,14 @@
 // src/widgets/hero/ui/Hero.tsx
 import { useEffect, useState, useRef } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { Universe3D, type SceneArtist } from '@/components/view/Universe3D';
+import '@/components/view/Universe3D.style.scss';
 import './style.scss';
+
+const HERO_CLUSTER_PALETTE = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5] as const;
 
 /**
  * Преобразует URL изображения в формат для background-image
@@ -49,7 +53,9 @@ export function Hero() {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isImagesLoading, setIsImagesLoading] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const heroCanvasRef = useRef<HTMLDivElement | null>(null);
   const lastPathRef = useRef<string>('');
   const imagesLoadedRef = useRef<boolean>(false);
   const imageSelectedForPathRef = useRef<string>('');
@@ -332,8 +338,103 @@ export function Hero() {
       : profileName || ''
     : profileName || 'Смоляное чучелко';
 
+  const artistParamKey = searchParams.get('artist')?.trim() ?? '';
+
+  useEffect(() => {
+    if (!hasArtistParam || !artistParamKey) return;
+    const el = heroCanvasRef.current;
+    if (!el) return;
+
+    let universe: Universe3D | null = null;
+    let cancelled = false;
+
+    const run = async () => {
+      let sceneArtist: SceneArtist | null = null;
+      let allPublicArtists: SceneArtist[] = [];
+
+      try {
+        const response = await fetch('/api/public-artists');
+        const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
+        if (response.ok && payload.success && Array.isArray(payload.data)) {
+          allPublicArtists = payload.data;
+          sceneArtist = payload.data.find((a) => a.publicSlug?.trim() === artistParamKey) ?? null;
+        }
+      } catch {
+        // ignore: fallback artist below
+      }
+
+      if (cancelled || !heroCanvasRef.current) return;
+
+      if (!sceneArtist) {
+        sceneArtist = {
+          name: profileName || artistParamKey,
+          publicSlug: artistParamKey,
+          genre: 'other',
+          mood: 'melancholic',
+          headerImages: headerImages.length > 0 ? [...headerImages] : undefined,
+        };
+      } else if (headerImages.length > 0) {
+        sceneArtist = {
+          ...sceneArtist,
+          headerImages:
+            sceneArtist.headerImages && sceneArtist.headerImages.length > 0
+              ? sceneArtist.headerImages
+              : [...headerImages],
+        };
+      }
+
+      if (allPublicArtists.length > 0) {
+        const grouped = new Map<string, SceneArtist[]>();
+        allPublicArtists.forEach((a) => {
+          const g = (a.genre || 'other').trim() || 'other';
+          const b = grouped.get(g) ?? [];
+          b.push(a);
+          grouped.set(g, b);
+        });
+        const genres = Array.from(grouped.keys());
+        const gi = (sceneArtist.genre || 'other').trim() || 'other';
+        const gIdx = genres.indexOf(gi);
+        const paletteIdx = gIdx >= 0 ? gIdx : 0;
+        sceneArtist = {
+          ...sceneArtist,
+          clusterColor: HERO_CLUSTER_PALETTE[paletteIdx % HERO_CLUSTER_PALETTE.length],
+        };
+      }
+
+      universe = new Universe3D(el, [sceneArtist], {
+        disableCameraControls: true,
+        embedInContainer: true,
+        isHeroPreview: true,
+      });
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+      universe?.destroy();
+      el.replaceChildren();
+    };
+  }, [hasArtistParam, artistParamKey, profileName, headerImages]);
+
   return (
     <section className="hero" style={{ backgroundImage: backgroundImage || undefined }}>
+      {hasArtistParam && (
+        <div
+          ref={heroCanvasRef}
+          className="hero__canvas"
+          role="button"
+          tabIndex={0}
+          aria-label="Вернуться на главную"
+          onClick={() => navigate('/')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/');
+            }
+          }}
+        />
+      )}
       <h1 className="hero__title">{displayName}</h1>
     </section>
   );

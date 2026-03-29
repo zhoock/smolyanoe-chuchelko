@@ -1,4 +1,8 @@
-import { Universe3D, type SceneArtist } from '../../../components/view/Universe3D';
+import {
+  Universe3D,
+  type SceneArtist,
+  UNIVERSE_FOCUS_ARTIST_STORAGE_KEY,
+} from '../../../components/view/Universe3D';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
@@ -53,6 +57,7 @@ export function HomePage() {
       if (cancelled || !sceneRef.current) return;
       universe = new Universe3D(sceneRef.current, artists, {
         onNavigateToArtist: (publicSlug) => {
+          sessionStorage.setItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY, publicSlug);
           navigate({
             pathname: '/',
             search: `?artist=${encodeURIComponent(publicSlug)}`,
@@ -132,6 +137,14 @@ export function HomePage() {
           return true;
         },
       });
+
+      const focusSlug = sessionStorage.getItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
+      if (focusSlug) {
+        setTimeout(() => {
+          universe?.focusOnArtist(focusSlug);
+        }, 300);
+        sessionStorage.removeItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
+      }
     };
 
     void init();

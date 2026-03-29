@@ -192,12 +192,17 @@ const MOCK_CLUSTER_NAME_PREVIEW = {
   ],
 } as const;
 
+/** sessionStorage key: set before opening `/?artist=`, read on home cloud init to focus camera. */
+export const UNIVERSE_FOCUS_ARTIST_STORAGE_KEY = 'focusArtist';
+
 export type SceneArtist = {
   name: string;
   publicSlug: string;
   genre: string;
   mood: string;
   headerImages?: string[];
+  /** Hex (e.g. 0x4d80ff); overrides palette for cluster tint (hero / custom). */
+  clusterColor?: number;
 };
 
 type ClusterConfig = {
@@ -208,6 +213,7 @@ type ClusterConfig = {
 };
 
 export class Universe3D {
+  private containerEl: HTMLElement;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
@@ -229,6 +235,14 @@ export class Universe3D {
   private cardAnchorObject: THREE.Object3D | null = null;
   private onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
   private onNavigateToArtist?: (publicSlug: string) => void;
+  /** Extra sprites per cloud (cyclically from seed); mock preview stays off. */
+  private clusterPreviewSpriteCount?: number;
+  private useContainerSize = false;
+  private resizeObserver: ResizeObserver | null = null;
+  private attachedWindowClick = false;
+  /** Hero embed: ignore module-level mock preview so the real profile artist is shown. */
+  private suppressMockClusterPreview = false;
+  private clusterColorOption?: number;
   private isDragging = false;
   private lastPointerX = 0;
   private lastPointerY = 0;
@@ -252,22 +266,39 @@ export class Universe3D {
     options?: {
       onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
       onNavigateToArtist?: (publicSlug: string) => void;
+      clusterPreviewSpriteCount?: number;
+      clusterColor?: number;
+      disableCameraControls?: boolean;
+      embedInContainer?: boolean;
+      isHeroPreview?: boolean;
     }
   ) {
+    this.containerEl = container;
+    this.clusterPreviewSpriteCount = options?.clusterPreviewSpriteCount;
+    this.clusterColorOption = options?.clusterColor;
+    this.useContainerSize = options?.embedInContainer === true;
+    this.suppressMockClusterPreview = options?.isHeroPreview === true;
+
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
+    const sizeW = this.useContainerSize ? Math.max(1, container.clientWidth) : window.innerWidth;
+    const sizeH = this.useContainerSize ? Math.max(1, container.clientHeight) : window.innerHeight;
+
+    this.camera = new THREE.PerspectiveCamera(60, sizeW / sizeH, 0.1, 1000);
     this.camera.position.set(0, 0, 2);
 
+    if (options?.isHeroPreview) {
+      this.camera.position.z = 1.2;
+      this.targetZ = 1.2;
+    }
+
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(sizeW, sizeH);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     const canvas = this.renderer.domElement;
+    canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
     canvas.style.touchAction = 'none';
     canvas.style.webkitUserSelect = 'none';
     canvas.style.userSelect = 'none';
@@ -287,13 +318,37 @@ export class Universe3D {
     );
     this.cloudGroups.forEach((group) => this.scene.add(group));
 
-    this.initControls();
+    if (options?.disableCameraControls !== true) {
+      this.initControls();
+    }
 
-    window.addEventListener('click', this.onClick);
+    if (options?.isHeroPreview !== true) {
+      window.addEventListener('click', this.onClick);
+      this.attachedWindowClick = true;
+    }
+
     window.addEventListener('resize', this.onResize);
     window.visualViewport?.addEventListener('resize', this.onResize);
 
+    if (this.useContainerSize) {
+      this.resizeObserver = new ResizeObserver(() => this.onResize());
+      this.resizeObserver.observe(container);
+    }
+
     this.animate();
+  }
+
+  focusOnArtist(slug: string) {
+    const normalized = slug.trim();
+    if (!normalized) return;
+
+    const target = this.clickableNodes.find(
+      (obj) => (obj.userData as SceneArtist | undefined)?.publicSlug === normalized
+    );
+
+    if (!target) return;
+
+    this.focusOnObject(target);
   }
 
   private buildClusters(artists: SceneArtist[]): ClusterConfig[] {
@@ -314,9 +369,11 @@ export class Universe3D {
       ...Array.from(grouped.values()).map((arr) => arr.length)
     );
     /** Same as createCloud roster size heuristic (preview = SPRITES_PER_CLUSTER per cloud). */
-    const effectiveArtistCount = MOCK_CLUSTER_NAME_PREVIEW.ENABLED
-      ? MOCK_CLUSTER_NAME_PREVIEW.SPRITES_PER_CLUSTER
-      : maxArtistsInAnyCluster;
+    const previewN = this.clusterPreviewSpriteCount ?? 0;
+    const effectiveArtistCount =
+      MOCK_CLUSTER_NAME_PREVIEW.ENABLED && !this.suppressMockClusterPreview
+        ? MOCK_CLUSTER_NAME_PREVIEW.SPRITES_PER_CLUSTER
+        : Math.max(maxArtistsInAnyCluster, previewN);
 
     const clusterSize = Math.sqrt(Math.max(4, effectiveArtistCount) / 4);
     /** Same as createCloud: max horizontal extent of random disk. */
@@ -333,10 +390,12 @@ export class Universe3D {
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius * 0.6;
 
+      const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
+
       return {
         genre,
         center: new THREE.Vector3(x, y, 0),
-        color: new THREE.Color(palette[index % palette.length]),
+        color: new THREE.Color(externalColor ?? palette[index % palette.length]),
         artists: grouped.get(genre) ?? [],
       };
     });
@@ -344,27 +403,36 @@ export class Universe3D {
 
   /** Preview-only: many synthetic artists per cloud; real API list is only used as a template. */
   private artistsForCloudSprites(seed: SceneArtist[]): SceneArtist[] {
-    if (!MOCK_CLUSTER_NAME_PREVIEW.ENABLED) {
+    if (this.suppressMockClusterPreview) {
       return seed;
     }
 
-    const cfg = MOCK_CLUSTER_NAME_PREVIEW;
-    const n = cfg.SPRITES_PER_CLUSTER;
-    const base =
-      seed.length > 0
-        ? seed[0]
-        : ({
-            name: 'Preview',
-            publicSlug: 'preview-seed',
-            genre: 'other',
-            mood: 'neutral',
-          } as SceneArtist);
+    if (MOCK_CLUSTER_NAME_PREVIEW.ENABLED && !this.suppressMockClusterPreview) {
+      const cfg = MOCK_CLUSTER_NAME_PREVIEW;
+      const n = cfg.SPRITES_PER_CLUSTER;
+      const base =
+        seed.length > 0
+          ? seed[0]
+          : ({
+              name: 'Preview',
+              publicSlug: 'preview-seed',
+              genre: 'other',
+              mood: 'neutral',
+            } as SceneArtist);
 
-    return Array.from({ length: n }, (_, i) => ({
-      ...base,
-      name: cfg.NAMES[i % cfg.NAMES.length],
-      publicSlug: `__preview__${i}`,
-    }));
+      return Array.from({ length: n }, (_, i) => ({
+        ...base,
+        name: cfg.NAMES[i % cfg.NAMES.length],
+        publicSlug: `__preview__${i}`,
+      }));
+    }
+
+    const extra = this.clusterPreviewSpriteCount;
+    if (extra && extra > 0 && seed.length > 0) {
+      return Array.from({ length: extra }, (_, i) => seed[i % seed.length]!);
+    }
+
+    return seed;
   }
 
   private createMaterial(color: THREE.Color, offset: number) {
@@ -710,9 +778,8 @@ export class Universe3D {
     const pos = new THREE.Vector3();
     obj.getWorldPosition(pos);
 
-    const verticalOffset = 0.5;
     this.targetX = pos.x;
-    this.targetY = pos.y - verticalOffset;
+    this.targetY = pos.y;
   }
 
   private showCard(obj: THREE.Object3D) {
@@ -1095,9 +1162,9 @@ export class Universe3D {
       !this.touchPanCommitted &&
       (Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity);
 
-    if (this.activeCard && !this.touchPanCommitted && !panInertiaActive) {
-      this.camera.position.x += (this.targetX - this.camera.position.x) * 0.03;
-      this.camera.position.y += (this.targetY - this.camera.position.y) * 0.03;
+    if (!this.touchPanCommitted && !panInertiaActive) {
+      this.camera.position.x += (this.targetX - this.camera.position.x) * 0.05;
+      this.camera.position.y += (this.targetY - this.camera.position.y) * 0.05;
     }
 
     const temp = new THREE.Vector3();
@@ -1152,9 +1219,16 @@ export class Universe3D {
   };
 
   private onResize = () => {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    if (this.useContainerSize) {
+      const w = Math.max(1, this.containerEl.clientWidth);
+      const h = Math.max(1, this.containerEl.clientHeight);
+      this.camera.aspect = w / h;
+      this.renderer.setSize(w, h);
+    } else {
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
     if (this.activeCard && this.cardAnchorObject) {
       this.layoutCardFromObject();
     }
@@ -1162,9 +1236,13 @@ export class Universe3D {
 
   destroy() {
     if (this.animationId) cancelAnimationFrame(this.animationId);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     window.removeEventListener('resize', this.onResize);
     window.visualViewport?.removeEventListener('resize', this.onResize);
-    window.removeEventListener('click', this.onClick);
+    if (this.attachedWindowClick) {
+      window.removeEventListener('click', this.onClick);
+    }
     window.removeEventListener('wheel', this.handleWheel);
     window.removeEventListener('mousedown', this.handleMouseDown);
     window.removeEventListener('mouseup', this.handleMouseUp);

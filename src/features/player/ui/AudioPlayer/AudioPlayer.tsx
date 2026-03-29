@@ -33,6 +33,7 @@ import { usePlayerControls } from './hooks/usePlayerControls';
 import { useTimeDisplay } from './hooks/useTimeDisplay';
 import { useTrackNavigation } from './hooks/useTrackNavigation';
 import { usePlayerToggles } from './hooks/usePlayerToggles';
+import { UNIVERSE_FOCUS_ARTIST_STORAGE_KEY } from '@/components/view/Universe3D';
 
 export default function AudioPlayer({
   album,
@@ -1007,6 +1008,7 @@ export default function AudioPlayer({
       pathname: '/',
       search: `?artist=${encodeURIComponent(slug)}`,
     };
+    sessionStorage.setItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY, slug);
     // Keep PlayerShell close flow consistent: when dialog closes, it will navigate to sourceLocation.
     dispatch(playerActions.setSourceLocation(target));
     navigate({ ...target, hash: '' }, { replace: false });
