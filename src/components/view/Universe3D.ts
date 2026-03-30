@@ -532,6 +532,52 @@ export class Universe3D {
     });
   }
 
+  private truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+    if (!text) return '';
+    if (ctx.measureText(text).width <= maxWidth) return text;
+
+    const ellipsis = '…';
+    let truncated = text;
+
+    while (truncated.length > 0) {
+      truncated = truncated.slice(0, -1);
+      const candidate = `${truncated}${ellipsis}`;
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        return candidate;
+      }
+    }
+
+    // Если помещается только сама ellipsis, а не добавка после среза — вернем ее.
+    if (ctx.measureText(ellipsis).width <= maxWidth) return ellipsis;
+    return '';
+  }
+
+  private splitTextToLines(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number
+  ): string[] {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+        lines.push(currentLine.trim());
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine.trim()) {
+      lines.push(currentLine.trim());
+    }
+
+    return lines;
+  }
+
   private createCloud(color: THREE.Color, position: THREE.Vector3, users: SceneArtist[]) {
     const group = new THREE.Group();
 
@@ -598,7 +644,33 @@ export class Universe3D {
       const ctx = canvas.getContext('2d')!;
       ctx.fillStyle = 'white';
       ctx.font = '20px Arial';
-      ctx.fillText(user.name, 10, 40);
+      const maxWidth = canvas.width - 20;
+      const lines = this.splitTextToLines(ctx, user.name, maxWidth);
+
+      let displayLines: string[];
+
+      if (lines.length <= 2) {
+        displayLines = lines;
+      } else {
+        const firstLine = lines[0] ?? '';
+        let secondLine = lines[1] ?? '';
+
+        while (ctx.measureText(`${secondLine}…`).width > maxWidth && secondLine.length > 0) {
+          secondLine = secondLine.slice(0, -1);
+        }
+
+        displayLines = [firstLine, `${secondLine}…`];
+      }
+
+      // Extra guard for very long unbroken words.
+      displayLines = displayLines.map((line) => this.truncateText(ctx, line, maxWidth));
+
+      const lineHeight = 20;
+      const startY = 30;
+
+      displayLines.forEach((line, i) => {
+        ctx.fillText(line, 10, startY + i * lineHeight);
+      });
 
       const texture = new THREE.CanvasTexture(canvas);
 
@@ -606,12 +678,14 @@ export class Universe3D {
         new THREE.SpriteMaterial({
           map: texture,
           transparent: true,
+          opacity: 0,
         })
       );
-      (sprite.material as THREE.SpriteMaterial).opacity = 0.8;
 
       sprite.scale.set(0.6, 0.15, 1);
       sprite.position.copy(mesh.position).add(new THREE.Vector3(0, 0.1, 0));
+      sprite.userData.isLabel = true;
+      mesh.userData.label = sprite;
 
       group.add(sprite);
     });
@@ -1146,22 +1220,23 @@ export class Universe3D {
   private animate = () => {
     const t = this.clock.getElapsedTime();
 
-    const updateCloud = (cloud: THREE.Group) => {
+    // обновление шейдеров облака
+    this.cloudGroups.forEach((cloud) => {
       cloud.children.forEach((layer: any, i) => {
         if (layer.material?.uniforms?.u_time) {
           layer.material.uniforms.u_time.value = t + i * 5;
         }
       });
-    };
+    });
 
-    this.cloudGroups.forEach((group) => updateCloud(group));
-
+    // зум камеры
     this.camera.position.z += (this.targetZ - this.camera.position.z) * 0.05;
 
-    if (
-      !this.touchPanCommitted &&
-      (Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity)
-    ) {
+    // инерция
+    const hasInertia =
+      Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity;
+
+    if (!this.touchPanCommitted && hasInertia) {
       this.camera.position.x += this.velocityX;
       this.camera.position.y += this.velocityY;
 
@@ -1172,58 +1247,40 @@ export class Universe3D {
       this.velocityY = 0;
     }
 
-    const panInertiaActive =
-      !this.touchPanCommitted &&
-      (Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity);
-
-    if (!this.touchPanCommitted && !panInertiaActive) {
+    // движение к target
+    if (!this.touchPanCommitted && !hasInertia) {
       this.camera.position.x += (this.targetX - this.camera.position.x) * 0.05;
       this.camera.position.y += (this.targetY - this.camera.position.y) * 0.05;
     }
 
+    // ЛОГИКА ВИДИМОСТИ (главное)
     const temp = new THREE.Vector3();
 
-    this.scene.traverse((obj: any) => {
-      if (obj.userData?.name) {
-        const worldPos = obj.getWorldPosition(temp);
+    this.clickableNodes.forEach((mesh) => {
+      const sprite = mesh.userData?.label as THREE.Sprite | undefined;
+      if (!sprite) return;
 
-        const smoke = this.fbm(
-          worldPos.x * 0.8 + this.clock.elapsedTime * 0.03,
-          worldPos.y * 0.8 + this.clock.elapsedTime * 0.02
-        );
+      mesh.getWorldPosition(temp);
+      const distance = this.camera.position.distanceTo(temp);
 
-        const smokeFade = THREE.MathUtils.clamp(1.0 - smoke * 1.3, 0.0, 1);
+      const fadeStart = 4;
+      const fadeEnd = 1.2;
 
-        const distance = this.camera.position.distanceTo(worldPos);
-        const distFade = THREE.MathUtils.clamp(1.5 / distance, 0.5, 1);
+      const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
 
-        const proximity = THREE.MathUtils.clamp(1.5 / distance, 0, 1);
-        const smokeInfluence = THREE.MathUtils.lerp(smokeFade, 1.0, proximity);
-        const final = smokeInfluence * distFade;
+      const material = sprite.material as THREE.SpriteMaterial;
+      material.opacity = t;
+      sprite.visible = t > 0.01;
 
-        obj.material.opacity = distFade;
-        obj.scale.setScalar(0.05 + final * 0.15);
-      }
-
-      if (obj.type === 'Sprite') {
-        const worldPos = obj.getWorldPosition(temp);
-
-        const smoke = this.fbm(
-          worldPos.x * 0.8 + this.clock.elapsedTime * 0.03,
-          worldPos.y * 0.8 + this.clock.elapsedTime * 0.02
-        );
-
-        const smokeFade = THREE.MathUtils.clamp(1.0 - smoke * 1.3, 0.0, 1);
-
-        const distance = this.camera.position.distanceTo(worldPos);
-        const distFade = THREE.MathUtils.clamp(1.2 / distance, 0.3, 1);
-
-        obj.material.opacity = distFade;
-      }
+      // масштаб точки (приятный эффект)
+      const scale = 0.05 + t * 0.15;
+      mesh.scale.setScalar(scale);
     });
 
+    // рендер
     this.renderer.render(this.scene, this.camera);
 
+    // обновление карточки
     if (this.activeCard && this.cardAnchorObject) {
       const { x, y } = this.projectObjectToLayer(this.cardAnchorObject);
       this.positionCardAtAnchor(this.activeCard, x, y);
