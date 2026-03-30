@@ -309,7 +309,7 @@
           "acceptPreorders": "Принимать предзаказы"
         },
         "step2": {
-          "mood": "Жанр",
+          "genre": "Жанр",
           "tags": "Теги",
           "selectGenres": "Выберите жанры...",
           "addTagPlaceholder": "Добавить тег...",

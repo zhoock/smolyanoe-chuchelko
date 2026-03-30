@@ -218,7 +218,7 @@ export function EditAlbumModalStep1({
           name="description"
           autoComplete="off"
           className="edit-album-modal__textarea"
-          placeholder="Short story about the album, credits highlights, mood, etc."
+          placeholder="Short story about the album, credits highlights, genres, etc."
           required
           value={formData.description ?? ''}
           onChange={(e) => onFormDataChange('description', e.target.value)}

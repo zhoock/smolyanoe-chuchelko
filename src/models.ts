@@ -410,7 +410,7 @@ export interface IInterface {
         acceptPreorders: string;
       };
       step2?: {
-        mood: string;
+        genre: string;
         tags: string;
         selectGenres: string;
         addTagPlaceholder: string;

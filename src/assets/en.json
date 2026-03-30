@@ -280,7 +280,7 @@
           "upcEan": "UPC / EAN",
           "releaseDate": "DD/MM/YYYY",
           "preorderDate": "DD/MM/YYYY",
-          "description": "Short story about the album, credits highlights, mood, etc.",
+          "description": "Short story about the album, credits highlights, genres, etc.",
           "dragImageHere": "Drag image here",
           "chooseFile": "Choose file"
         },
@@ -309,7 +309,7 @@
           "acceptPreorders": "Accept pre-orders"
         },
         "step2": {
-          "mood": "Genre",
+          "genre": "Genre",
           "tags": "Tags",
           "selectGenres": "Select genres...",
           "addTagPlaceholder": "Add a tag...",

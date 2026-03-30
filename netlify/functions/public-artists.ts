@@ -11,15 +11,17 @@ interface PublicArtistRow {
   name: string | null;
   site_name: string | null;
   public_slug: string | null;
+  genre_code: string | null;
+  label_en: string | null;
+  label_ru: string | null;
   header_images: unknown;
-  details: unknown;
 }
 
 interface PublicArtistDto {
   name: string;
   publicSlug: string;
-  genre: string;
-  mood: string;
+  genreCode: string;
+  genreLabel: { en: string; ru: string };
   headerImages: string[];
 }
 
@@ -44,35 +46,6 @@ function toHeaderImageUrl(userId: string, image: string): string {
   return `/api/proxy-image?path=${encodeURIComponent(path)}`;
 }
 
-function extractGenreTokens(details: unknown): string[] {
-  if (!Array.isArray(details)) return [];
-
-  const genreBlock = details.find((item) => {
-    if (!item || typeof item !== 'object') return false;
-    const title = String((item as { title?: unknown }).title ?? '').toLowerCase();
-    return title.includes('genre') || title.includes('жанр');
-  }) as { content?: unknown } | undefined;
-
-  if (
-    !genreBlock?.content ||
-    !Array.isArray(genreBlock.content) ||
-    genreBlock.content.length === 0
-  ) {
-    return [];
-  }
-
-  const raw = String(genreBlock.content[0] ?? '')
-    .replace(/\.+$/, '')
-    .trim();
-
-  if (!raw) return [];
-
-  return raw
-    .split(',')
-    .map((token) => token.trim())
-    .filter(Boolean);
-}
-
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
@@ -91,25 +64,23 @@ export const handler: Handler = async (
          u.name,
          u.site_name,
          u.public_slug,
-         u.header_images,
-         latest.details
+         u.genre_code,
+         g.label_en,
+         g.label_ru,
+         u.header_images
        FROM users u
-       LEFT JOIN LATERAL (
-         SELECT details
-         FROM albums
-         WHERE user_id = u.id
-         ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
-         LIMIT 1
-       ) latest ON true
+       JOIN genres g ON g.code = u.genre_code
        WHERE u.is_active = true
          AND u.public_slug IS NOT NULL
        ORDER BY u.id ASC`
     );
 
     const artists: PublicArtistDto[] = rows.rows.map((row) => {
-      const tokens = extractGenreTokens(row.details);
-      const genre = tokens[0] || 'other';
-      const mood = tokens[1] || 'melancholic';
+      const genreCode = row.genre_code || 'other';
+      const genreLabel = {
+        en: row.label_en || 'Other',
+        ru: row.label_ru || 'Другое',
+      };
       const displayName = row.site_name || row.name || row.public_slug || 'Unknown artist';
 
       const headerImagesRaw = Array.isArray(row.header_images) ? row.header_images : [];
@@ -121,8 +92,8 @@ export const handler: Handler = async (
       return {
         name: displayName,
         publicSlug: row.public_slug || '',
-        genre,
-        mood,
+        genreCode,
+        genreLabel,
         headerImages: headerImageUrls,
       };
     });

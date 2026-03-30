@@ -383,8 +383,7 @@ export function Hero() {
         sceneArtist = {
           name: profileNameNow || artistParamKey,
           publicSlug: artistParamKey,
-          genre: 'other',
-          mood: 'melancholic',
+          genreCode: 'other',
           headerImages: headerImagesNow.length > 0 ? [...headerImagesNow] : undefined,
         };
       } else if (headerImagesNow.length > 0) {
@@ -400,13 +399,13 @@ export function Hero() {
       if (allPublicArtists.length > 0) {
         const grouped = new Map<string, SceneArtist[]>();
         allPublicArtists.forEach((a) => {
-          const g = (a.genre || 'other').trim() || 'other';
+          const g = a.genreCode || 'other';
           const b = grouped.get(g) ?? [];
           b.push(a);
           grouped.set(g, b);
         });
         const genres = Array.from(grouped.keys());
-        const gi = (sceneArtist.genre || 'other').trim() || 'other';
+        const gi = sceneArtist.genreCode || 'other';
         const gIdx = genres.indexOf(gi);
         const paletteIdx = gIdx >= 0 ? gIdx : 0;
         sceneArtist = {

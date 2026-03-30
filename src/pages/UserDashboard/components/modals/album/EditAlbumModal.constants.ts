@@ -1,25 +1,20 @@
 // src/pages/UserDashboard/components/EditAlbumModal.constants.ts
 
-export const GENRE_OPTIONS_EN = [
-  'Grunge',
-  'Alternative rock',
-  'Punk',
-  'Indie rock',
-  'Post-rock',
-  'Shoegaze',
-  'Noise rock',
-];
+export type GenreOption = {
+  code: string;
+  label: {
+    en: string;
+    ru: string;
+  };
+};
 
-export const GENRE_OPTIONS_RU = [
-  'Гранж',
-  'Альтернативный рок',
-  'Панк',
-  'Инди рок',
-  'Инди-рок',
-  'Пост-рок',
-  'Шугейз',
-  'Нойз рок',
-  'Нойз-рок',
+export const GENRE_OPTIONS: GenreOption[] = [
+  { code: 'grunge', label: { en: 'Grunge', ru: 'Гранж' } },
+  { code: 'alternative', label: { en: 'Alternative', ru: 'Альтернатива' } },
+  { code: 'punk', label: { en: 'Punk', ru: 'Панк' } },
+  { code: 'rock', label: { en: 'Rock', ru: 'Рок' } },
+  { code: 'metal', label: { en: 'Metal', ru: 'Метал' } },
+  { code: 'other', label: { en: 'Other', ru: 'Другое' } },
 ];
 
 export const MAX_TAGS = 10;

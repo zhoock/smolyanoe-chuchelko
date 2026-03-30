@@ -43,7 +43,7 @@ export interface AlbumFormData {
   regularPrice: string;
   currency: string;
   preorderReleaseDate: string;
-  mood: string[];
+  genreCodes: string[];
   tags: string[];
   albumCoverPhotographer: string;
   albumCoverPhotographerURL: string;

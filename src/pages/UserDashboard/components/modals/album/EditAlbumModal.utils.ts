@@ -307,7 +307,7 @@ export const makeEmptyForm = (): AlbumFormData => ({
   regularPrice: '9.99',
   currency: 'USD',
   preorderReleaseDate: '',
-  mood: [],
+  genreCodes: [],
   tags: [],
   albumCoverPhotographer: '',
   albumCoverPhotographerURL: '',
@@ -390,7 +390,7 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
 
   if (step === 2) {
     // Шаг 2: Music Details - Genre обязателен
-    if (!formData.mood || formData.mood.length === 0) {
+    if (!formData.genreCodes || formData.genreCodes.length === 0) {
       alert('Пожалуйста, выберите хотя бы один жанр (Genre).');
       return false;
     }
@@ -525,7 +525,7 @@ export const transformFormDataToAlbumFormat = (
   const details: unknown[] = [];
 
   // Genre должен быть первым элементом с id: 1
-  if (formData.mood && formData.mood.length > 0) {
+  if (formData.genreCodes && formData.genreCodes.length > 0) {
     // Форматируем жанры: все в нижнем регистре, кроме первой буквы первого слова первого жанра
     // Затем объединяем через запятую и добавляем точку в конце
     // Например: "Grunge, alternative rock." или "Grunge."
@@ -555,7 +555,7 @@ export const transformFormDataToAlbumFormat = (
       return `${allGenres}.`;
     };
 
-    const genreText = formatGenres(formData.mood);
+    const genreText = formatGenres(formData.genreCodes);
     if (genreText) {
       details.push({
         id: 1,

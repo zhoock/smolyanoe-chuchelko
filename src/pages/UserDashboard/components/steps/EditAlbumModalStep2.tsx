@@ -2,20 +2,20 @@
 import React from 'react';
 import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
-import { GENRE_OPTIONS_EN, GENRE_OPTIONS_RU, MAX_TAGS } from '../modals/album/EditAlbumModal.constants';
+import { GENRE_OPTIONS, MAX_TAGS } from '../modals/album/EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 
 interface EditAlbumModalStep2Props {
   formData: AlbumFormData;
   lang: SupportedLang;
-  moodDropdownOpen: boolean;
+  genreDropdownOpen: boolean;
   tagInput: string;
   tagError: string;
-  moodDropdownRef: React.RefObject<HTMLDivElement>;
+  genreDropdownRef: React.RefObject<HTMLDivElement>;
   tagInputRef: React.RefObject<HTMLInputElement>;
-  onMoodDropdownToggle: () => void;
-  onMoodToggle: (mood: string) => void;
-  onRemoveMood: (mood: string) => void;
+  onGenreDropdownToggle: () => void;
+  onGenreToggle: (genreCode: string) => void;
+  onRemoveGenre: (genreCode: string) => void;
   onTagInputChange: (value: string) => void;
   onTagInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onAddTag: () => void;
@@ -26,46 +26,49 @@ interface EditAlbumModalStep2Props {
 export function EditAlbumModalStep2({
   formData,
   lang,
-  moodDropdownOpen,
+  genreDropdownOpen,
   tagInput,
   tagError,
-  moodDropdownRef,
+  genreDropdownRef,
   tagInputRef,
-  onMoodDropdownToggle,
-  onMoodToggle,
-  onRemoveMood,
+  onGenreDropdownToggle,
+  onGenreToggle,
+  onRemoveGenre,
   onTagInputChange,
   onTagInputKeyDown,
   onAddTag,
   onRemoveTag,
   ui,
 }: EditAlbumModalStep2Props) {
-  const genreOptions = lang === 'ru' ? GENRE_OPTIONS_RU : GENRE_OPTIONS_EN;
+  const getGenreLabelByCode = (code: string) => {
+    const option = GENRE_OPTIONS.find((item) => item.code === code);
+    if (!option) return code;
+    return lang === 'ru' ? option.label.ru : option.label.en;
+  };
+  const step2Ui = ui?.dashboard?.editAlbumModal?.step2 as { genre?: string } | undefined;
 
   return (
     <>
       <div className="edit-album-modal__divider" />
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">
-          {ui?.dashboard?.editAlbumModal?.step2?.mood ?? 'Genre'}
-        </label>
+        <label className="edit-album-modal__label">{step2Ui?.genre ?? 'Genre'}</label>
 
-        <div className="edit-album-modal__multiselect" ref={moodDropdownRef}>
-          <div className="edit-album-modal__multiselect-input" onClick={onMoodDropdownToggle}>
-            {formData.mood.length > 0 ? (
+        <div className="edit-album-modal__multiselect" ref={genreDropdownRef}>
+          <div className="edit-album-modal__multiselect-input" onClick={onGenreDropdownToggle}>
+            {formData.genreCodes.length > 0 ? (
               <div className="edit-album-modal__tags-container">
-                {formData.mood.map((mood) => (
-                  <span key={mood} className="edit-album-modal__tag">
-                    {mood}
+                {formData.genreCodes.map((genreCode) => (
+                  <span key={genreCode} className="edit-album-modal__tag">
+                    {getGenreLabelByCode(genreCode)}
                     <button
                       type="button"
                       className="edit-album-modal__tag-remove"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onRemoveMood(mood);
+                        onRemoveGenre(genreCode);
                       }}
-                      aria-label={`${ui?.dashboard?.editAlbumModal?.step2?.removeTag ?? 'Remove'} ${mood}`}
+                      aria-label={`${ui?.dashboard?.editAlbumModal?.step2?.removeTag ?? 'Remove'} ${getGenreLabelByCode(genreCode)}`}
                     >
                       ×
                     </button>
@@ -79,20 +82,20 @@ export function EditAlbumModalStep2({
             )}
 
             <span className="edit-album-modal__multiselect-arrow">
-              {moodDropdownOpen ? '⌃' : '⌄'}
+              {genreDropdownOpen ? '⌃' : '⌄'}
             </span>
           </div>
 
-          {moodDropdownOpen && (
+          {genreDropdownOpen && (
             <div className="edit-album-modal__multiselect-dropdown">
-              {genreOptions.map((mood: string) => (
-                <label key={mood} className="edit-album-modal__multiselect-option">
+              {GENRE_OPTIONS.map((option) => (
+                <label key={option.code} className="edit-album-modal__multiselect-option">
                   <input
                     type="checkbox"
-                    checked={formData.mood.includes(mood)}
-                    onChange={() => onMoodToggle(mood)}
+                    checked={formData.genreCodes.includes(option.code)}
+                    onChange={() => onGenreToggle(option.code)}
                   />
-                  <span>{mood}</span>
+                  <span>{lang === 'ru' ? option.label.ru : option.label.en}</span>
                 </label>
               ))}
             </div>

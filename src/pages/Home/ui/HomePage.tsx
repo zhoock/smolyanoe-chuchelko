@@ -45,7 +45,7 @@ export function HomePage() {
       let artists: SceneArtist[] = [];
 
       try {
-        const response = await fetch('/api/public-artists');
+        const response = await fetch('/api/public-artists', { cache: 'no-store' });
         const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
         if (response.ok && payload.success && Array.isArray(payload.data)) {
           artists = payload.data;

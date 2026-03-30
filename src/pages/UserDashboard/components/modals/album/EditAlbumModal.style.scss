@@ -397,11 +397,9 @@ dialog {
       &--primary {
         @include dashboard-button;
 
-        & {
-          color: var(--dashboard-card-bg);
-          background: var(--white);
-          border: 1px solid var(--dashboard-card-border);
-        }
+        color: var(--dashboard-card-bg);
+        background: var(--white);
+        border: 1px solid var(--dashboard-card-border);
 
         &:hover {
           color: var(--dashboard-card-bg);
@@ -415,7 +413,7 @@ dialog {
       }
     }
 
-    // Multi-select for Mood
+    // Multi-select for genres
     &__multiselect {
       position: relative;
       width: 100%;

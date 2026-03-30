@@ -198,18 +198,23 @@ export const UNIVERSE_FOCUS_ARTIST_STORAGE_KEY = 'focusArtist';
 export type SceneArtist = {
   name: string;
   publicSlug: string;
-  genre: string;
-  mood: string;
+  genreCode: string;
+  genreLabel?: { ru: string; en: string };
   headerImages?: string[];
   /** Hex (e.g. 0x4d80ff); overrides palette for cluster tint (hero / custom). */
   clusterColor?: number;
 };
 
 type ClusterConfig = {
-  genre: string;
+  genreCode: string;
   center: THREE.Vector3;
   color: THREE.Color;
   artists: SceneArtist[];
+};
+
+type ClusterLabelRef = {
+  sprite: THREE.Sprite;
+  center: THREE.Vector3;
 };
 
 export class Universe3D {
@@ -218,6 +223,7 @@ export class Universe3D {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private cloudGroups: THREE.Group[] = [];
+  private clusterLabels: ClusterLabelRef[] = [];
 
   private clock = new THREE.Clock();
   private animationId: number | null = null;
@@ -321,6 +327,17 @@ export class Universe3D {
     );
     this.cloudGroups.forEach((group) => this.scene.add(group));
 
+    this.clusterLabels = clusters.map((cluster) => {
+      const labelText = this.getClusterLabelText(cluster);
+      const sprite = this.createClusterLabel(labelText);
+      sprite.position.set(cluster.center.x, cluster.center.y + 2.2, cluster.center.z);
+      this.scene.add(sprite);
+      return {
+        sprite,
+        center: cluster.center.clone(),
+      };
+    });
+
     if (this.isHeroPreview) {
       const heroCloudScale = 1.42;
       this.cloudGroups.forEach((group) => group.scale.multiplyScalar(heroCloudScale));
@@ -363,14 +380,14 @@ export class Universe3D {
     const grouped = new Map<string, SceneArtist[]>();
 
     artists.forEach((artist) => {
-      const genre = (artist.genre || 'other').trim() || 'other';
-      const bucket = grouped.get(genre) ?? [];
+      const genreCode = artist.genreCode || 'other';
+      const bucket = grouped.get(genreCode) ?? [];
       bucket.push(artist);
-      grouped.set(genre, bucket);
+      grouped.set(genreCode, bucket);
     });
 
-    const genres = Array.from(grouped.keys());
-    const count = genres.length || 1;
+    const genreCodes = Array.from(grouped.keys());
+    const count = genreCodes.length || 1;
 
     const maxArtistsInAnyCluster = Math.max(
       1,
@@ -393,7 +410,7 @@ export class Universe3D {
       count <= 1 ? 0 : Math.max(3, minChordBetweenClusters / (2 * Math.sin(Math.PI / count)));
     const palette = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5];
 
-    return genres.map((genre, index) => {
+    return genreCodes.map((genreCode, index) => {
       const angle = (index / count) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius * 0.6;
@@ -401,12 +418,43 @@ export class Universe3D {
       const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
 
       return {
-        genre,
+        genreCode,
         center: new THREE.Vector3(x, y, 0),
         color: new THREE.Color(externalColor ?? palette[index % palette.length]),
-        artists: grouped.get(genre) ?? [],
+        artists: grouped.get(genreCode) ?? [],
       };
     });
+  }
+
+  private createClusterLabel(text: string): THREE.Sprite {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '700 36px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(2.4, 0.6, 1);
+    return sprite;
+  }
+
+  private getClusterLabelText(cluster: ClusterConfig): string {
+    const langKey = document.documentElement.lang?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+    const fromArtist = cluster.artists.find((a) => a.genreLabel)?.genreLabel?.[langKey];
+    return fromArtist || cluster.genreCode;
   }
 
   /** Preview-only: many synthetic artists per cloud; real API list is only used as a template. */
@@ -424,8 +472,7 @@ export class Universe3D {
           : ({
               name: 'Preview',
               publicSlug: 'preview-seed',
-              genre: 'other',
-              mood: 'neutral',
+              genreCode: 'other',
             } as SceneArtist);
 
       return Array.from({ length: n }, (_, i) => ({
@@ -874,8 +921,9 @@ export class Universe3D {
 
     const data = obj.userData as Partial<SceneArtist>;
     const title = data.name ?? 'Unknown artist';
-    const genre = data.genre ?? 'other';
-    const mood = data.mood ?? 'melancholic';
+    const genreCode = data.genreCode ?? 'other';
+    const langKey = document.documentElement.lang?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+    const label = data.genreLabel?.[langKey] ?? genreCode;
     const coverUrl =
       Array.isArray(data.headerImages) && data.headerImages.length > 0 ? data.headerImages[0] : '';
 
@@ -888,8 +936,7 @@ export class Universe3D {
       <div class="universe3d-card__body">
         <div class="universe3d-card__title"></div>
         <div class="universe3d-card__chips">
-          <span class="universe3d-card__chip">${genre}</span>
-          <span class="universe3d-card__chip">${mood}</span>
+          <span class="universe3d-card__chip">${label}</span>
         </div>
       </div>
       <div class="universe3d-card__footer">
@@ -1275,6 +1322,16 @@ export class Universe3D {
       // масштаб точки (приятный эффект)
       const scale = 0.05 + t * 0.15;
       mesh.scale.setScalar(scale);
+    });
+
+    this.clusterLabels.forEach(({ sprite, center }) => {
+      const distance = this.camera.position.distanceTo(center);
+      const fadeStart = 5;
+      const fadeEnd = 3;
+      const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
+      const material = sprite.material as THREE.SpriteMaterial;
+      material.opacity = t;
+      sprite.visible = t > 0.01;
     });
 
     // рендер

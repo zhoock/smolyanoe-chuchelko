@@ -19,8 +19,7 @@ import type {
   StreamingLink,
 } from './EditAlbumModal.types';
 import {
-  GENRE_OPTIONS_EN,
-  GENRE_OPTIONS_RU,
+  GENRE_OPTIONS,
   MAX_TAGS,
   MIN_TAG_LENGTH,
   MAX_TAG_LENGTH,
@@ -76,11 +75,11 @@ export function EditAlbumModal({
   const [formData, setFormData] = useState<AlbumFormData>(makeEmptyForm());
 
   const [dragActive, setDragActive] = useState(false);
-  const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
+  const [genreDropdownOpen, setGenreDropdownOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [tagError, setTagError] = useState('');
 
-  const moodDropdownRef = useRef<HTMLDivElement>(null);
+  const genreDropdownRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
   const [bandMemberName, setBandMemberName] = useState('');
@@ -278,10 +277,7 @@ export function EditAlbumModal({
     }
 
     // --- парсинг Genre из details ---
-    const mood: string[] = [];
-
-    // Выбираем список опций жанров в зависимости от языка сайта
-    const genreOptions = lang === 'ru' ? GENRE_OPTIONS_RU : GENRE_OPTIONS_EN;
+    const genreCodes: string[] = [];
 
     const genreDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
@@ -314,18 +310,21 @@ export function EditAlbumModal({
               .filter((g: string) => g.length > 0);
 
             parsedGenres.forEach((parsedGenre: string) => {
-              // Ищем точное совпадение в genreOptions (case-insensitive)
-              const matchedOption = genreOptions.find((option) => {
-                const optionLower = option.toLowerCase();
+              const matchedOption = GENRE_OPTIONS.find((option) => {
+                const en = option.label.en.toLowerCase();
+                const ru = option.label.ru.toLowerCase();
                 return (
-                  optionLower === parsedGenre ||
-                  optionLower.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ')
+                  parsedGenre === option.code ||
+                  en === parsedGenre ||
+                  ru === parsedGenre ||
+                  en.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ') ||
+                  ru.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ')
                 );
               });
 
-              const finalOption = matchedOption || parsedGenre;
-              if (finalOption && !mood.includes(finalOption)) {
-                mood.push(finalOption);
+              const finalCode = matchedOption?.code;
+              if (finalCode && !genreCodes.includes(finalCode)) {
+                genreCodes.push(finalCode);
               }
             });
           } else {
@@ -339,19 +338,21 @@ export function EditAlbumModal({
               .filter((g: string) => g.length > 0);
 
             parsedGenres.forEach((parsedGenre: string) => {
-              // Ищем точное совпадение в genreOptions (case-insensitive)
-              const matchedOption = genreOptions.find((option) => {
-                const optionLower = option.toLowerCase();
+              const matchedOption = GENRE_OPTIONS.find((option) => {
+                const en = option.label.en.toLowerCase();
+                const ru = option.label.ru.toLowerCase();
                 return (
-                  optionLower === parsedGenre ||
-                  optionLower.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ')
+                  parsedGenre === option.code ||
+                  en === parsedGenre ||
+                  ru === parsedGenre ||
+                  en.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ') ||
+                  ru.replace(/\s+/g, ' ') === parsedGenre.replace(/\s+/g, ' ')
                 );
               });
 
-              // Используем matchedOption (с правильным регистром) или parsedGenre как fallback
-              const finalOption = matchedOption || parsedGenre;
-              if (finalOption && !mood.includes(finalOption)) {
-                mood.push(finalOption);
+              const finalCode = matchedOption?.code;
+              if (finalCode && !genreCodes.includes(finalCode)) {
+                genreCodes.push(finalCode);
               }
             });
           }
@@ -572,7 +573,7 @@ export function EditAlbumModal({
         releaseDate: releaseDate || prevForm.releaseDate,
         upcEan: upc || prevForm.upcEan,
         description: album.description || prevForm.description,
-        mood: mood.length > 0 ? mood : prevForm.mood || [],
+        genreCodes: genreCodes.length > 0 ? genreCodes : prevForm.genreCodes || [],
         allowDownloadSale:
           ((release as any).allowDownloadSale as 'no' | 'yes' | 'preorder') ||
           prevForm.allowDownloadSale ||
@@ -644,7 +645,7 @@ export function EditAlbumModal({
     setUploadError(null);
 
     setDragActive(false);
-    setMoodDropdownOpen(false);
+    setGenreDropdownOpen(false);
     setTagInput('');
     setTagError('');
     setBandMemberName('');
@@ -774,27 +775,30 @@ export function EditAlbumModal({
   // Закрытие dropdown при клике вне него
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (moodDropdownRef.current && !moodDropdownRef.current.contains(event.target as Node)) {
-        setMoodDropdownOpen(false);
+      if (genreDropdownRef.current && !genreDropdownRef.current.contains(event.target as Node)) {
+        setGenreDropdownOpen(false);
       }
     };
 
-    if (moodDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
+    if (genreDropdownOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [moodDropdownOpen]);
+  }, [genreDropdownOpen]);
 
-  const handleMoodToggle = (mood: string) => {
+  const handleGenreToggle = (genreCode: string) => {
     setFormData((prev) => {
-      const currentMood = prev.mood || [];
-      if (currentMood.includes(mood)) {
-        return { ...prev, mood: currentMood.filter((m) => m !== mood) };
+      const currentGenreCodes = prev.genreCodes || [];
+      if (currentGenreCodes.includes(genreCode)) {
+        return { ...prev, genreCodes: currentGenreCodes.filter((c) => c !== genreCode) };
       }
-      return { ...prev, mood: [...currentMood, mood] };
+      return { ...prev, genreCodes: [...currentGenreCodes, genreCode] };
     });
   };
 
-  const handleRemoveMood = (mood: string) => {
-    setFormData((prev) => ({ ...prev, mood: (prev.mood || []).filter((m) => m !== mood) }));
+  const handleRemoveGenre = (genreCode: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      genreCodes: (prev.genreCodes || []).filter((c) => c !== genreCode),
+    }));
   };
 
   const validateTag = (tag: string): string | null => {
@@ -1602,6 +1606,24 @@ export function EditAlbumModal({
         return;
       }
 
+      // Canonical genre source of truth for clustering/profile.
+      const selectedGenreCode = finalFormData.genreCodes[0] || 'other';
+      const profileUpdateResponse = await fetch('/api/user-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ genreCode: selectedGenreCode }),
+      });
+
+      if (!profileUpdateResponse.ok) {
+        const profileUpdateError = await profileUpdateResponse
+          .json()
+          .catch(() => ({ error: 'Failed to update genreCode in profile' }));
+        throw new Error(profileUpdateError?.error || 'Failed to update genreCode in profile');
+      }
+
       console.log('📤 [EditAlbumModal] Sending request:', {
         url: '/api/albums',
         method,
@@ -1909,7 +1931,7 @@ export function EditAlbumModal({
               className="edit-album-modal__textarea"
               placeholder={
                 ui?.dashboard?.editAlbumModal?.placeholders?.description ??
-                'Short story about the album, credits highlights, mood, etc.'
+                'Short story about the album, credits highlights, genres, etc.'
               }
               required
               value={formData.description ?? ''}
@@ -2091,14 +2113,14 @@ export function EditAlbumModal({
         <EditAlbumModalStep2
           formData={formData}
           lang={lang}
-          moodDropdownOpen={moodDropdownOpen}
+          genreDropdownOpen={genreDropdownOpen}
           tagInput={tagInput}
           tagError={tagError}
-          moodDropdownRef={moodDropdownRef}
+          genreDropdownRef={genreDropdownRef}
           tagInputRef={tagInputRef}
-          onMoodDropdownToggle={() => setMoodDropdownOpen(!moodDropdownOpen)}
-          onMoodToggle={handleMoodToggle}
-          onRemoveMood={handleRemoveMood}
+          onGenreDropdownToggle={() => setGenreDropdownOpen(!genreDropdownOpen)}
+          onGenreToggle={handleGenreToggle}
+          onRemoveGenre={handleRemoveGenre}
           onTagInputChange={(value) => {
             setTagInput(value);
             setTagError('');

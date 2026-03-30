@@ -39,6 +39,7 @@ interface SaveUserProfileRequest {
   headerImages?: string[];
   siteName?: string;
   publicSlug?: string;
+  genreCode?: string;
 }
 
 interface SaveUserProfileResponse {
@@ -264,6 +265,30 @@ export const handler: Handler = async (
 
         updateFields.push(`public_slug = $${paramIndex++}`);
         updateValues.push(normalizedSlug);
+      }
+
+      if (data.genreCode !== undefined) {
+        const normalizedGenreCode = data.genreCode.trim().toLowerCase() || 'other';
+
+        const genreExistsResult = await query<{ code: string }>(
+          `SELECT code FROM genres WHERE code = $1 LIMIT 1`,
+          [normalizedGenreCode],
+          0
+        );
+
+        if (genreExistsResult.rows.length === 0) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error: 'Invalid genreCode',
+            } as SaveUserProfileResponse),
+          };
+        }
+
+        updateFields.push(`genre_code = $${paramIndex++}`);
+        updateValues.push(normalizedGenreCode);
       }
 
       // Обработка theBand: поддерживаем как старый формат (theBand), так и новый (theBandRu/theBandEn)
