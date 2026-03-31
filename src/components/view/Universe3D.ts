@@ -219,6 +219,7 @@ export class Universe3D {
   private inertiaDamping = 0.92;
   private minVelocity = 0.00001;
   private tempVec3 = new THREE.Vector3();
+  private labelTextureCache = new Map<string, THREE.CanvasTexture>();
   private lastLabelUpdateCameraX = Number.NaN;
   private lastLabelUpdateCameraY = Number.NaN;
   private lastLabelUpdateCameraZ = Number.NaN;
@@ -539,6 +540,63 @@ export class Universe3D {
     return lines;
   }
 
+  private createArtistLabelSprite(name: string): THREE.Sprite {
+    let texture = this.labelTextureCache.get(name);
+    if (!texture) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = 'white';
+      ctx.font = '20px Arial';
+      const maxWidth = canvas.width - 20;
+      const lines = this.splitTextToLines(ctx, name, maxWidth);
+
+      let displayLines: string[];
+      if (lines.length <= 2) {
+        displayLines = lines;
+      } else {
+        const firstLine = lines[0] ?? '';
+        let secondLine = lines[1] ?? '';
+
+        while (ctx.measureText(`${secondLine}…`).width > maxWidth && secondLine.length > 0) {
+          secondLine = secondLine.slice(0, -1);
+        }
+
+        displayLines = [firstLine, `${secondLine}…`];
+      }
+
+      displayLines = displayLines.map((line) => this.truncateText(ctx, line, maxWidth));
+
+      const lineHeight = 20;
+      const startY = 30;
+      displayLines.forEach((line, i) => {
+        ctx.fillText(line, 10, startY + i * lineHeight);
+      });
+
+      texture = new THREE.CanvasTexture(canvas);
+      this.labelTextureCache.set(name, texture);
+    }
+
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0,
+    });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(0.6, 0.15, 1);
+    sprite.userData.isLabel = true;
+    return sprite;
+  }
+
+  private disposeArtistLabelSprite(sprite: THREE.Sprite) {
+    const material = sprite.material as THREE.SpriteMaterial;
+    // Cached texture can be shared between multiple sprites by name.
+    material.dispose();
+    this.scene.remove(sprite);
+  }
+
   private createCloud(color: THREE.Color, position: THREE.Vector3, users: SceneArtist[]) {
     const group = new THREE.Group();
 
@@ -592,63 +650,12 @@ export class Universe3D {
       mesh.scale.setScalar(scale);
 
       mesh.userData = user;
+      mesh.userData.label = null;
       if (!user.publicSlug.startsWith('__preview__')) {
         this.clickableNodes.push(mesh);
       }
 
       group.add(mesh);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 64;
-
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = 'white';
-      ctx.font = '20px Arial';
-      const maxWidth = canvas.width - 20;
-      const lines = this.splitTextToLines(ctx, user.name, maxWidth);
-
-      let displayLines: string[];
-
-      if (lines.length <= 2) {
-        displayLines = lines;
-      } else {
-        const firstLine = lines[0] ?? '';
-        let secondLine = lines[1] ?? '';
-
-        while (ctx.measureText(`${secondLine}…`).width > maxWidth && secondLine.length > 0) {
-          secondLine = secondLine.slice(0, -1);
-        }
-
-        displayLines = [firstLine, `${secondLine}…`];
-      }
-
-      // Extra guard for very long unbroken words.
-      displayLines = displayLines.map((line) => this.truncateText(ctx, line, maxWidth));
-
-      const lineHeight = 20;
-      const startY = 30;
-
-      displayLines.forEach((line, i) => {
-        ctx.fillText(line, 10, startY + i * lineHeight);
-      });
-
-      const texture = new THREE.CanvasTexture(canvas);
-
-      const sprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: texture,
-          transparent: true,
-          opacity: 0,
-        })
-      );
-
-      sprite.scale.set(0.6, 0.15, 1);
-      sprite.position.copy(mesh.position).add(new THREE.Vector3(0, 0.1, 0));
-      sprite.userData.isLabel = true;
-      mesh.userData.label = sprite;
-
-      group.add(sprite);
     });
 
     group.position.copy(position);
@@ -1249,20 +1256,40 @@ export class Universe3D {
       const temp = this.tempVec3;
 
       this.clickableNodes.forEach((mesh) => {
-        const sprite = mesh.userData?.label as THREE.Sprite | undefined;
-        if (!sprite) return;
-
         mesh.getWorldPosition(temp);
         const distance = this.camera.position.distanceTo(temp);
 
         const fadeStart = 4;
         const fadeEnd = 1.2;
+        const createLabelDistance = 3;
 
         const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
 
-        const material = sprite.material as THREE.SpriteMaterial;
-        material.opacity = t;
-        sprite.visible = t > 0.01;
+        let sprite = (mesh.userData?.label as THREE.Sprite | null) ?? null;
+        const FADE_SPEED = 0.04;
+        const REMOVE_THRESHOLD = 0.02;
+        if (distance < createLabelDistance) {
+          if (!sprite) {
+            const user = mesh.userData as SceneArtist;
+            sprite = this.createArtistLabelSprite(user.name);
+            this.scene.add(sprite);
+            mesh.userData.label = sprite;
+          }
+          sprite.position.set(temp.x, temp.y + 0.1, temp.z);
+          const material = sprite.material as THREE.SpriteMaterial;
+          material.opacity += (t - material.opacity) * FADE_SPEED;
+          sprite.visible = t > 0.01;
+        } else if (sprite) {
+          const material = sprite.material as THREE.SpriteMaterial;
+          material.opacity += (0 - material.opacity) * FADE_SPEED;
+          sprite.visible = material.opacity > 0.01;
+
+          if (material.opacity < REMOVE_THRESHOLD) {
+            this.disposeArtistLabelSprite(sprite);
+            mesh.userData.label = null;
+            sprite = null;
+          }
+        }
 
         // масштаб точки (приятный эффект)
         const scale = 0.05 + t * 0.15;
@@ -1327,6 +1354,12 @@ export class Universe3D {
     canvas.removeEventListener('touchmove', this.handleTouchMove);
     canvas.removeEventListener('touchend', this.handleTouchEnd);
     canvas.removeEventListener('touchcancel', this.handleTouchCancel);
+    this.clickableNodes.forEach((mesh) => {
+      const sprite = (mesh.userData?.label as THREE.Sprite | null) ?? null;
+      if (!sprite) return;
+      this.disposeArtistLabelSprite(sprite);
+      mesh.userData.label = null;
+    });
     this.dismissCard();
     this.uiLayer?.remove();
     this.renderer.dispose();
