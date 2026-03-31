@@ -12,10 +12,14 @@ import { getUserAudioUrl } from '@shared/api/albums';
 import type { IAlbums, TracksProps } from '@models';
 import { fetchAlbums } from '@entities/album';
 import { fetchArticles } from '@entities/article';
+import { generateMockArtists } from '@shared/lib/generateMockArtists';
+import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
 import '../../../components/view/Universe3D.style.scss';
+
+const USE_MOCKS = true;
 
 export function HomePage() {
   const dispatch = useAppDispatch();
@@ -42,17 +46,19 @@ export function HomePage() {
     let cancelled = false;
 
     const init = async () => {
-      let artists: SceneArtist[] = [];
+      let apiArtists: SceneArtist[] = [];
 
       try {
         const response = await fetch('/api/public-artists', { cache: 'no-store' });
         const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
         if (response.ok && payload.success && Array.isArray(payload.data)) {
-          artists = payload.data;
+          apiArtists = payload.data;
         }
       } catch (error) {
         console.warn('[HomePage] Failed to fetch /api/public-artists, using fallback data', error);
       }
+
+      const artists = prepareUniverseData(USE_MOCKS ? generateMockArtists(500) : apiArtists);
 
       if (cancelled || !sceneRef.current) return;
       universe = new Universe3D(sceneRef.current, artists, {

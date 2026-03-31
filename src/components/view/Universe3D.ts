@@ -147,51 +147,6 @@ function sampleCloudLabelPositionsWithMinSep(
   return fallback;
 }
 
-/**
- * Preview: many sprite labels with varied mock names to stress-test cluster layout.
- * Set ENABLED to `true` locally, then delete this whole block (or set ENABLED to `false`) when done.
- */
-const MOCK_CLUSTER_NAME_PREVIEW = {
-  ENABLED: false,
-  /** How many points + labels per cloud (independent of API artist count). */
-  SPRITES_PER_CLUSTER: 96,
-  NAMES: [
-    'КИНО',
-    'П',
-    'Очень длинное название коллектива для проверки переполнения',
-    'Smolyanoe Chuchelko',
-    'Гр.',
-    'Ария',
-    '…',
-    'Название средней длины',
-    'X',
-    'Два слова',
-    'Три слова подряд здесь',
-    'Ночные снайперы',
-    'Би-2',
-    'Земфира',
-    'Сплин',
-    'Ленинград',
-    'Мумий Тролль',
-    'Пикник',
-    'Чайф',
-    'Король и Шут',
-    'Алиса',
-    'DDT',
-    'Наутилус',
-    'Крематорий',
-    'Агата Кристи',
-    'Кино Pro',
-    'Very Long Mock Band Name For Overflow Test Number Seventeen',
-    'К',
-    'Условное название',
-    'Группа (скобки)',
-    'Name / Slash',
-    '123',
-    'И ещё одна',
-  ],
-} as const;
-
 /** sessionStorage key: set before opening `/?artist=`, read on home cloud init to focus camera. */
 export const UNIVERSE_FOCUS_ARTIST_STORAGE_KEY = 'focusArtist';
 
@@ -241,13 +196,9 @@ export class Universe3D {
   private cardAnchorObject: THREE.Object3D | null = null;
   private onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
   private onNavigateToArtist?: (publicSlug: string) => void;
-  /** Extra sprites per cloud (cyclically from seed); mock preview stays off. */
-  private clusterPreviewSpriteCount?: number;
   private useContainerSize = false;
   private resizeObserver: ResizeObserver | null = null;
   private attachedWindowClick = false;
-  /** Hero embed: ignore module-level mock preview so the real profile artist is shown. */
-  private suppressMockClusterPreview = false;
   /** Hero embed: larger cloud + closer camera for artist profile strip. */
   private isHeroPreview = false;
   private clusterColorOption?: number;
@@ -267,6 +218,10 @@ export class Universe3D {
   private velocityY = 0;
   private inertiaDamping = 0.92;
   private minVelocity = 0.00001;
+  private tempVec3 = new THREE.Vector3();
+  private lastLabelUpdateCameraX = Number.NaN;
+  private lastLabelUpdateCameraY = Number.NaN;
+  private lastLabelUpdateCameraZ = Number.NaN;
 
   constructor(
     container: HTMLElement,
@@ -274,7 +229,6 @@ export class Universe3D {
     options?: {
       onPlayArtist?: (artist: SceneArtist) => boolean | Promise<boolean>;
       onNavigateToArtist?: (publicSlug: string) => void;
-      clusterPreviewSpriteCount?: number;
       clusterColor?: number;
       disableCameraControls?: boolean;
       embedInContainer?: boolean;
@@ -282,10 +236,8 @@ export class Universe3D {
     }
   ) {
     this.containerEl = container;
-    this.clusterPreviewSpriteCount = options?.clusterPreviewSpriteCount;
     this.clusterColorOption = options?.clusterColor;
     this.useContainerSize = options?.embedInContainer === true;
-    this.suppressMockClusterPreview = options?.isHeroPreview === true;
     this.isHeroPreview = options?.isHeroPreview === true;
 
     this.scene = new THREE.Scene();
@@ -393,12 +345,7 @@ export class Universe3D {
       1,
       ...Array.from(grouped.values()).map((arr) => arr.length)
     );
-    /** Same as createCloud roster size heuristic (preview = SPRITES_PER_CLUSTER per cloud). */
-    const previewN = this.clusterPreviewSpriteCount ?? 0;
-    const effectiveArtistCount =
-      MOCK_CLUSTER_NAME_PREVIEW.ENABLED && !this.suppressMockClusterPreview
-        ? MOCK_CLUSTER_NAME_PREVIEW.SPRITES_PER_CLUSTER
-        : Math.max(maxArtistsInAnyCluster, previewN);
+    const effectiveArtistCount = maxArtistsInAnyCluster;
 
     const clusterSize = Math.sqrt(Math.max(4, effectiveArtistCount) / 4);
     /** Same as createCloud: max horizontal extent of random disk. */
@@ -455,39 +402,6 @@ export class Universe3D {
     const langKey = document.documentElement.lang?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
     const fromArtist = cluster.artists.find((a) => a.genreLabel)?.genreLabel?.[langKey];
     return fromArtist || cluster.genreCode;
-  }
-
-  /** Preview-only: many synthetic artists per cloud; real API list is only used as a template. */
-  private artistsForCloudSprites(seed: SceneArtist[]): SceneArtist[] {
-    if (this.suppressMockClusterPreview) {
-      return seed;
-    }
-
-    if (MOCK_CLUSTER_NAME_PREVIEW.ENABLED && !this.suppressMockClusterPreview) {
-      const cfg = MOCK_CLUSTER_NAME_PREVIEW;
-      const n = cfg.SPRITES_PER_CLUSTER;
-      const base =
-        seed.length > 0
-          ? seed[0]
-          : ({
-              name: 'Preview',
-              publicSlug: 'preview-seed',
-              genreCode: 'other',
-            } as SceneArtist);
-
-      return Array.from({ length: n }, (_, i) => ({
-        ...base,
-        name: cfg.NAMES[i % cfg.NAMES.length],
-        publicSlug: `__preview__${i}`,
-      }));
-    }
-
-    const extra = this.clusterPreviewSpriteCount;
-    if (extra && extra > 0 && seed.length > 0) {
-      return Array.from({ length: extra }, (_, i) => seed[i % seed.length]!);
-    }
-
-    return seed;
   }
 
   private createMaterial(color: THREE.Color, offset: number) {
@@ -628,7 +542,7 @@ export class Universe3D {
   private createCloud(color: THREE.Color, position: THREE.Vector3, users: SceneArtist[]) {
     const group = new THREE.Group();
 
-    const roster = this.artistsForCloudSprites(users);
+    const roster = users;
     const n = Math.max(1, roster.length);
     /** >=1; grows with √n so more labels → more spacing (legacy box ≈4 artists @ factor 1). */
     const clusterSize = Math.sqrt(Math.max(4, n) / 4);
@@ -1264,6 +1178,31 @@ export class Universe3D {
     return value;
   }
 
+  private shouldUpdateLabelVisibility(): boolean {
+    const { x, y, z } = this.camera.position;
+    const thresholdXY = 0.01;
+    const thresholdZ = 0.01;
+
+    const dx = Math.abs(x - this.lastLabelUpdateCameraX);
+    const dy = Math.abs(y - this.lastLabelUpdateCameraY);
+    const dz = Math.abs(z - this.lastLabelUpdateCameraZ);
+
+    const hasMeaningfulChange =
+      Number.isNaN(this.lastLabelUpdateCameraX) ||
+      dx >= thresholdXY ||
+      dy >= thresholdXY ||
+      dz >= thresholdZ;
+
+    if (!hasMeaningfulChange) {
+      return false;
+    }
+
+    this.lastLabelUpdateCameraX = x;
+    this.lastLabelUpdateCameraY = y;
+    this.lastLabelUpdateCameraZ = z;
+    return true;
+  }
+
   private animate = () => {
     const t = this.clock.getElapsedTime();
 
@@ -1300,39 +1239,46 @@ export class Universe3D {
       this.camera.position.y += (this.targetY - this.camera.position.y) * 0.05;
     }
 
-    // ЛОГИКА ВИДИМОСТИ (главное)
-    const temp = new THREE.Vector3();
+    const isMoving =
+      Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
+      Math.abs(this.targetY - this.camera.position.y) > 0.001 ||
+      Math.abs(this.targetZ - this.camera.position.z) > 0.001;
 
-    this.clickableNodes.forEach((mesh) => {
-      const sprite = mesh.userData?.label as THREE.Sprite | undefined;
-      if (!sprite) return;
+    if (this.shouldUpdateLabelVisibility() || isMoving) {
+      // ЛОГИКА ВИДИМОСТИ (главное)
+      const temp = this.tempVec3;
 
-      mesh.getWorldPosition(temp);
-      const distance = this.camera.position.distanceTo(temp);
+      this.clickableNodes.forEach((mesh) => {
+        const sprite = mesh.userData?.label as THREE.Sprite | undefined;
+        if (!sprite) return;
 
-      const fadeStart = 4;
-      const fadeEnd = 1.2;
+        mesh.getWorldPosition(temp);
+        const distance = this.camera.position.distanceTo(temp);
 
-      const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
+        const fadeStart = 4;
+        const fadeEnd = 1.2;
 
-      const material = sprite.material as THREE.SpriteMaterial;
-      material.opacity = t;
-      sprite.visible = t > 0.01;
+        const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
 
-      // масштаб точки (приятный эффект)
-      const scale = 0.05 + t * 0.15;
-      mesh.scale.setScalar(scale);
-    });
+        const material = sprite.material as THREE.SpriteMaterial;
+        material.opacity = t;
+        sprite.visible = t > 0.01;
 
-    this.clusterLabels.forEach(({ sprite, center }) => {
-      const distance = this.camera.position.distanceTo(center);
-      const fadeStart = 5;
-      const fadeEnd = 3;
-      const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
-      const material = sprite.material as THREE.SpriteMaterial;
-      material.opacity = t;
-      sprite.visible = t > 0.01;
-    });
+        // масштаб точки (приятный эффект)
+        const scale = 0.05 + t * 0.15;
+        mesh.scale.setScalar(scale);
+      });
+
+      this.clusterLabels.forEach(({ sprite, center }) => {
+        const distance = this.camera.position.distanceTo(center);
+        const fadeStart = 5;
+        const fadeEnd = 3;
+        const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
+        const material = sprite.material as THREE.SpriteMaterial;
+        material.opacity = t;
+        sprite.visible = t > 0.01;
+      });
+    }
 
     // рендер
     this.renderer.render(this.scene, this.camera);

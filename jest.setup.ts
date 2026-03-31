@@ -18,7 +18,7 @@ if (typeof HTMLDialogElement !== 'undefined') {
   });
 }
 
-// jsdom does not implement canvas/webgl APIs used by CloudCanvas/CloudNoise.
+// jsdom does not implement canvas/WebGL APIs used by Three.js views (e.g. Universe3D).
 const canvas2DContextMock = {
   clearRect: jest.fn(),
   beginPath: jest.fn(),

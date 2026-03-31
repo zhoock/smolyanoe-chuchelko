@@ -24,6 +24,7 @@
       "@entities/*": ["entities/*"],
       "@features/*": ["features/*"],
       "@widgets/*": ["widgets/*"],
+      "@components/*": ["components/*"],
       "@app/*": ["app/*"],
       "@routes/*": ["routes/*"],
       "@audio/*": ["audio/*"],

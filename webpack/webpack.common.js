@@ -41,6 +41,7 @@ module.exports = {
       '@entities': path.resolve(__dirname, '../src/entities'),
       '@features': path.resolve(__dirname, '../src/features'),
       '@widgets': path.resolve(__dirname, '../src/widgets'),
+      '@components': path.resolve(__dirname, '../src/components'),
       '@pages': path.resolve(__dirname, '../src/pages'),
       '@app': path.resolve(__dirname, '../src/app'),
       '@routes': path.resolve(__dirname, '../src/routes'),
