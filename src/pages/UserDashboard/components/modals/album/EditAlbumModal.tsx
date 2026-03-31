@@ -1621,7 +1621,11 @@ export function EditAlbumModal({
         const profileUpdateError = await profileUpdateResponse
           .json()
           .catch(() => ({ error: 'Failed to update genreCode in profile' }));
-        throw new Error(profileUpdateError?.error || 'Failed to update genreCode in profile');
+        const errorMessage = String(profileUpdateError?.error || '');
+        // No-op for unchanged profile payload: do not block album save.
+        if (errorMessage !== 'No fields to update') {
+          throw new Error(errorMessage || 'Failed to update genreCode in profile');
+        }
       }
 
       console.log('📤 [EditAlbumModal] Sending request:', {

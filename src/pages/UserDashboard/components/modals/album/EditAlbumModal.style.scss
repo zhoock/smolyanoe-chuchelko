@@ -395,11 +395,11 @@ dialog {
       }
 
       &--primary {
-        @include dashboard-button;
-
         color: var(--dashboard-card-bg);
         background: var(--white);
         border: 1px solid var(--dashboard-card-border);
+
+        @include dashboard-button;
 
         &:hover {
           color: var(--dashboard-card-bg);

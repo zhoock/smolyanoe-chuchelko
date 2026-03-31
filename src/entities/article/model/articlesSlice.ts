@@ -116,11 +116,20 @@ export const fetchArticles = createAsyncThunk<
           throw new Error(`Failed to fetch articles. Status: ${response.status}`);
         }
       } catch (apiError) {
-        // Если API недоступен или вернул ошибку - возвращаем ошибку
+        // Если API недоступен, пробуем fallback на статику (как в albumsSlice)
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        console.error('[fetchArticles] API request failed:', errorMessage);
-        throw apiError;
+        console.warn('[fetchArticles] API request failed, trying static fallback:', errorMessage);
       }
+
+      const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
+      if (fallback.ok) {
+        const data = await fallback.json();
+        if (Array.isArray(data)) {
+          return normalize(data);
+        }
+      }
+
+      throw new Error('Failed to fetch articles from both API and static JSON');
     } catch (error) {
       // Если API недоступен – отдаём ошибку
       if (error instanceof Error) {

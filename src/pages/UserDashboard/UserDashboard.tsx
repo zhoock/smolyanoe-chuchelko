@@ -613,6 +613,7 @@ function UserDashboard() {
   const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const articlesFromStore = useAppSelector((state) => selectArticlesData(state, lang));
   const user = getUser();
+  const userId = user?.id ?? null;
 
   // Получаем вкладку из URL параметра или используем значение по умолчанию
   const tabParam = searchParams.get('tab');
@@ -989,30 +990,30 @@ function UserDashboard() {
     }
   }, [navigate]);
 
-  // Загрузка альбомов
+  // Загрузка альбомов: всегда force при смене аккаунта/языка,
+  // чтобы не показывать данные предыдущего пользователя из Redux-кэша.
   useEffect(() => {
-    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
-      dispatch(fetchAlbums({ lang })).catch((error: any) => {
-        // ConditionError - это нормально, condition отменил запрос
-        if (error?.name === 'ConditionError') {
-          return;
-        }
-        console.error('Error fetching albums:', error);
-      });
-    }
-  }, [dispatch, lang, albumsStatus]);
+    dispatch(fetchAlbums({ lang, force: true })).catch((error: any) => {
+      // ConditionError - это нормально, condition отменил запрос
+      if (error?.name === 'ConditionError') {
+        return;
+      }
+      console.error('Error fetching albums:', error);
+    });
+  }, [dispatch, lang, userId]);
 
-  // Загрузка статей при переключении на вкладку posts
+  // Загрузка статей при переключении на вкладку posts.
+  // Тоже force, чтобы после релогина не было "хвостов" старого аккаунта.
   useEffect(() => {
-    if (activeTab === 'posts' && (articlesStatus === 'idle' || articlesStatus === 'failed')) {
-      dispatch(fetchArticles({ lang })).catch((error: any) => {
-        if (error?.name === 'ConditionError') {
-          return;
-        }
-        console.error('Error fetching articles:', error);
-      });
-    }
-  }, [dispatch, lang, articlesStatus, activeTab]);
+    if (activeTab !== 'posts') return;
+
+    dispatch(fetchArticles({ lang, force: true })).catch((error: any) => {
+      if (error?.name === 'ConditionError') {
+        return;
+      }
+      console.error('Error fetching articles:', error);
+    });
+  }, [dispatch, lang, userId, activeTab]);
 
   // Преобразование данных из IAlbums[] в AlbumData[] и загрузка статусов треков
   useEffect(() => {
