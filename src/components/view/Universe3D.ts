@@ -184,6 +184,8 @@ export class Universe3D {
   private animationId: number | null = null;
 
   private targetZ = 2;
+  private minCameraZ = 0.5;
+  private maxCameraZ = 6;
   private targetX = 0;
   private targetY = 0;
 
@@ -275,9 +277,23 @@ export class Universe3D {
     this.onNavigateToArtist = options?.onNavigateToArtist;
 
     const clusters = this.buildClusters(artists);
+    if (clusters.length > 0) {
+      const zValues = clusters.map((c) => c.center.z);
+      const minZ = Math.min(...zValues);
+      const maxZ = Math.max(...zValues);
+      const padding = 10;
+
+      this.minCameraZ = Math.min(minZ - padding, 0.5);
+      this.maxCameraZ = maxZ + padding;
+      this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
+    }
+
     this.cloudGroups = clusters.map((cluster) =>
       this.createCloud(cluster.color, cluster.center, cluster.artists)
     );
+    this.cloudGroups.forEach((cloud) => {
+      cloud.userData.basePosition = cloud.position.clone();
+    });
     this.cloudGroups.forEach((group) => this.scene.add(group));
 
     this.clusterLabels = clusters.map((cluster) => {
@@ -362,12 +378,14 @@ export class Universe3D {
       const angle = (index / count) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius * 0.6;
+      const depthRange = 40;
+      const z = (Math.random() - 0.5) * depthRange;
 
       const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
 
       return {
         genreCode,
-        center: new THREE.Vector3(x, y, 0),
+        center: new THREE.Vector3(x, y, z),
         color: new THREE.Color(externalColor ?? palette[index % palette.length]),
         artists: grouped.get(genreCode) ?? [],
       };
@@ -412,6 +430,7 @@ export class Universe3D {
       uniforms: {
         u_time: { value: offset },
         u_color: { value: color },
+        u_cameraPos: { value: new THREE.Vector3() },
         u_distort: {
           value: new THREE.Vector2(0.8 + Math.random() * 0.6, 0.8 + Math.random() * 0.6),
         },
@@ -419,17 +438,22 @@ export class Universe3D {
       },
       vertexShader: `
         varying vec2 vUv;
+        varying vec3 vWorldPos;
         void main() {
           vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
         }
       `,
       fragmentShader: `
         precision mediump float;
 
         varying vec2 vUv;
+        varying vec3 vWorldPos;
         uniform float u_time;
         uniform vec3 u_color;
+        uniform vec3 u_cameraPos;
         uniform vec2 u_distort;
         uniform float u_seed;
 
@@ -486,9 +510,17 @@ export class Universe3D {
           float density = shape * n;
           density += shape * 0.25;
 
-          vec3 color = u_color * density * 0.88;
-
-          gl_FragColor = vec4(color, density * 0.6);
+          float dist = distance(vWorldPos, u_cameraPos);
+          float fogNear = 5.0;
+          float fogFar = 60.0;
+          float depthFactor = smoothstep(fogNear, fogFar, dist);
+          vec3 baseColor = u_color * density * 0.88;
+          vec3 fogColor = vec3(0.5, 0.6, 0.8);
+          vec3 color = mix(baseColor, fogColor * density, depthFactor * 0.6);
+          float gray = dot(color, vec3(0.299, 0.587, 0.114));
+          color = mix(color, vec3(gray), depthFactor * 0.4);
+          float alpha = density * 0.6 * mix(1.0, 0.7, depthFactor);
+          gl_FragColor = vec4(color, alpha);
         }
       `,
     });
@@ -959,7 +991,7 @@ export class Universe3D {
       return;
     }
     this.targetZ += e.deltaY * 0.002;
-    this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
+    this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
   };
 
   private handleMouseDown = (e: MouseEvent) => {
@@ -1076,7 +1108,7 @@ export class Universe3D {
 
       const delta = dist - this.lastPinchDistance;
       this.targetZ -= delta * 0.01;
-      this.targetZ = THREE.MathUtils.clamp(this.targetZ, 0.5, 6);
+      this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
 
       this.lastPinchDistance = dist;
     }
@@ -1215,9 +1247,37 @@ export class Universe3D {
 
     // обновление шейдеров облака
     this.cloudGroups.forEach((cloud) => {
+      const base = cloud.userData.basePosition as THREE.Vector3;
+      if (!base) return;
+
+      const depthFactor = THREE.MathUtils.clamp((base.z + 40) / 80, 0, 1);
+      const strength = 0.35;
+      const parallax = 1.0 - depthFactor * strength;
+
+      const offsetX = (this.camera.position.x - this.targetX) * (1 - parallax);
+      const offsetY = (this.camera.position.y - this.targetY) * (1 - parallax);
+
+      cloud.position.set(base.x + offsetX, base.y + offsetY, base.z);
+
+      const worldPos = new THREE.Vector3();
+      cloud.getWorldPosition(worldPos);
+
+      const dist = this.camera.position.distanceTo(worldPos);
+      const near = 5;
+      const far = 60;
+
+      let depthT = (dist - near) / (far - near);
+      depthT = THREE.MathUtils.clamp(depthT, 0, 1);
+
+      const scale = THREE.MathUtils.lerp(1.0, 0.75, depthT);
+      cloud.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.08);
+
       cloud.children.forEach((layer: any, i) => {
         if (layer.material?.uniforms?.u_time) {
           layer.material.uniforms.u_time.value = t + i * 5;
+        }
+        if (layer.material?.uniforms?.u_cameraPos) {
+          layer.material.uniforms.u_cameraPos.value.copy(this.camera.position);
         }
       });
     });
