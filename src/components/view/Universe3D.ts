@@ -539,9 +539,11 @@ export class Universe3D {
           float warp =
             sin(uv.x * 3.0 + u_seed) * 0.1 +
             sin(uv.y * 4.0 - u_seed) * 0.1;
-
-          float d = length(uv + warp);
+          float distortion = fbm(uv * 2.5 + u_seed);
+          float d = length(uv + warp * 0.5 + distortion * 0.3);
           float shape = smoothstep(1.2, 0.2, d);
+          float core = smoothstep(0.4, 0.0, d);
+          core = pow(core, 1.8);
           float edgeFade = 1.0 - smoothstep(0.35, 0.75, length(vUv - 0.5));
           shape *= edgeFade;
 
@@ -552,8 +554,16 @@ export class Universe3D {
 
           float density = shape * n;
           density += shape * 0.25;
-
-          vec3 color = u_color * density * 0.88;
+          float holes = smoothstep(0.4, 0.7, n);
+          density *= (1.0 - holes * 0.6);
+          float coreNoise = fbm(uv * 3.0 + u_seed * 2.0);
+          core *= mix(0.7, 1.2, coreNoise);
+          vec3 colorA = u_color;
+          vec3 colorB = u_color * 0.5 + vec3(0.2, 0.1, 0.3);
+          vec3 color = mix(colorA, colorB, n);
+          color *= density;
+          vec3 coreColor = mix(u_color, vec3(1.0), 0.3);
+          color = mix(color, coreColor, core * 0.6);
 
           gl_FragColor = vec4(color, density * 0.6);
         }
