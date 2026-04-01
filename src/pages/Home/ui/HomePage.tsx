@@ -19,8 +19,6 @@ import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
 import '../../../components/view/Universe3D.style.scss';
 
-const USE_MOCKS = false;
-
 export function HomePage() {
   const dispatch = useAppDispatch();
   const location = useLocation();
@@ -29,6 +27,7 @@ export function HomePage() {
   const { lang } = useLang();
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [useMocks, setUseMocks] = useState(true);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
 
@@ -58,7 +57,7 @@ export function HomePage() {
         console.warn('[HomePage] Failed to fetch /api/public-artists, using fallback data', error);
       }
 
-      const artists = prepareUniverseData(USE_MOCKS ? generateMockArtists(500) : apiArtists);
+      const artists = prepareUniverseData(useMocks ? generateMockArtists(500) : apiArtists);
 
       if (cancelled || !sceneRef.current) return;
       universe = new Universe3D(sceneRef.current, artists, {
@@ -162,7 +161,7 @@ export function HomePage() {
         sceneRef.current.innerHTML = '';
       }
     };
-  }, [dispatch, hasArtistParam, lang, location.pathname, location.search, navigate]);
+  }, [dispatch, hasArtistParam, lang, location.pathname, location.search, navigate, useMocks]);
 
   if (hasArtistParam) {
     return (
@@ -181,9 +180,32 @@ export function HomePage() {
   return (
     <section
       aria-label="Cloud scene"
-      ref={sceneRef}
       style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
-    />
+    >
+      <button
+        type="button"
+        onClick={() => setUseMocks((prev) => !prev)}
+        style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          zIndex: 20,
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: '1px solid rgba(255,255,255,0.35)',
+          background: 'rgba(12,12,14,0.72)',
+          color: '#fff',
+          fontSize: 12,
+          cursor: 'pointer',
+        }}
+      >
+        {useMocks ? 'Mocks: ON' : 'Mocks: OFF'}
+      </button>
+      <div
+        ref={sceneRef}
+        style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
+      />
+    </section>
   );
 }
 
