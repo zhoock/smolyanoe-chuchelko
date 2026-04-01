@@ -19,6 +19,8 @@ import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
 import '../../../components/view/Universe3D.style.scss';
 
+const HOME_USE_MOCKS_STORAGE_KEY = 'homeUseMocks';
+
 export function HomePage() {
   const dispatch = useAppDispatch();
   const location = useLocation();
@@ -27,7 +29,13 @@ export function HomePage() {
   const { lang } = useLang();
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
-  const [useMocks, setUseMocks] = useState(true);
+  const [useMocks, setUseMocks] = useState(() => {
+    try {
+      return sessionStorage.getItem(HOME_USE_MOCKS_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
 
@@ -184,7 +192,13 @@ export function HomePage() {
     >
       <button
         type="button"
-        onClick={() => setUseMocks((prev) => !prev)}
+        onClick={() => {
+          setUseMocks((prev) => {
+            const next = !prev;
+            sessionStorage.setItem(HOME_USE_MOCKS_STORAGE_KEY, next ? '1' : '0');
+            return next;
+          });
+        }}
         style={{
           position: 'absolute',
           top: 12,
