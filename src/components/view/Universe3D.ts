@@ -789,6 +789,22 @@ export class Universe3D {
     return h - margin;
   }
 
+  private isMobile(): boolean {
+    return window.innerWidth < 768;
+  }
+
+  private centerCard(card: HTMLElement) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const rect = card.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    const left = (vw - w) / 2;
+    const top = (vh - h) / 2;
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+  }
+
   /** Project cluster point to coordinates inside `uiLayer` (matches position:absolute). */
   private projectObjectToLayer(obj: THREE.Object3D): { x: number; y: number } {
     const worldPos = new THREE.Vector3();
@@ -833,7 +849,11 @@ export class Universe3D {
       h = rect.height;
     }
 
-    this.positionCardAtAnchor(card, anchorX, anchorY, h, w);
+    if (this.isMobile()) {
+      this.centerCard(card);
+    } else {
+      this.positionCardAtAnchor(card, anchorX, anchorY, h, w);
+    }
   }
 
   /**
@@ -1393,9 +1413,13 @@ export class Universe3D {
     this.renderer.render(this.scene, this.camera);
 
     // обновление карточки
-    if (this.activeCard && this.cardAnchorObject) {
-      const { x, y } = this.projectObjectToLayer(this.cardAnchorObject);
-      this.positionCardAtAnchor(this.activeCard, x, y);
+    if (this.activeCard) {
+      if (this.isMobile()) {
+        this.centerCard(this.activeCard);
+      } else if (this.cardAnchorObject) {
+        const { x, y } = this.projectObjectToLayer(this.cardAnchorObject);
+        this.positionCardAtAnchor(this.activeCard, x, y);
+      }
     }
 
     this.animationId = requestAnimationFrame(this.animate);
