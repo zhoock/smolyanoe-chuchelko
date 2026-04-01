@@ -989,8 +989,14 @@ export class Universe3D {
   private handleMouseMove = (e: MouseEvent) => {
     if (!this.isDragging || this.isInteractionLocked()) return;
 
-    const dx = (e.clientX - this.lastPointerX) * 0.005;
-    const dy = (e.clientY - this.lastPointerY) * 0.005;
+    const rawDx = e.clientX - this.lastPointerX;
+    const rawDy = e.clientY - this.lastPointerY;
+    const speed = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+    const speedBoost = 1 + Math.min(speed * 0.01, 1.2);
+    const z = THREE.MathUtils.clamp(this.camera.position.z, 0.3, 10);
+    const depthFactor = THREE.MathUtils.clamp(Math.pow(z, 0.75), 0.5, 2.5);
+    const dx = rawDx * 0.005 * depthFactor * speedBoost;
+    const dy = rawDy * 0.005 * depthFactor * speedBoost;
 
     this.targetX -= dx;
     this.targetY += dy;
@@ -1056,15 +1062,14 @@ export class Universe3D {
         return;
       }
 
-      const now = performance.now();
-      const dt = now - this.lastMoveTime || 16;
       const rawDx = t.clientX - this.lastPointerX;
       const rawDy = t.clientY - this.lastPointerY;
-      const speed = Math.sqrt(rawDx * rawDx + rawDy * rawDy) / dt;
-      const SPEED_BOOST = 1 + Math.min(speed * 0.5, 2);
-      const dx = rawDx * 0.005 * SPEED_BOOST;
-      const dy = rawDy * 0.005 * SPEED_BOOST;
-      this.lastMoveTime = now;
+      const speed = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+      const speedBoost = 1 + Math.min(speed * 0.01, 1.2);
+      const z = THREE.MathUtils.clamp(this.camera.position.z, 0.3, 10);
+      const depthFactor = THREE.MathUtils.clamp(Math.pow(z, 0.75), 0.5, 2.5);
+      const dx = rawDx * 0.005 * depthFactor * speedBoost;
+      const dy = rawDy * 0.005 * depthFactor * speedBoost;
 
       this.targetX -= dx;
       this.targetY += dy;
