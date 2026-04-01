@@ -216,6 +216,7 @@ export class Universe3D {
   private touchPanCommitted = false;
   /** True if two-finger pinch occurred in this gesture. */
   private touchHadPinch = false;
+  private heroTime = 0;
 
   private tempVec3 = new THREE.Vector3();
   private labelTextureCache = new Map<string, THREE.CanvasTexture>();
@@ -241,6 +242,10 @@ export class Universe3D {
     this.isHeroPreview = options?.isHeroPreview === true;
 
     this.scene = new THREE.Scene();
+    if (this.isHeroPreview) {
+      this.targetX = 0;
+      this.targetY = 0;
+    }
 
     const sizeW = this.useContainerSize ? Math.max(1, container.clientWidth) : window.innerWidth;
     const sizeH = this.useContainerSize ? Math.max(1, container.clientHeight) : window.innerHeight;
@@ -303,7 +308,7 @@ export class Universe3D {
     });
 
     if (this.isHeroPreview) {
-      const heroCloudScale = 1.42;
+      const heroCloudScale = 1.8;
       this.cloudGroups.forEach((group) => group.scale.multiplyScalar(heroCloudScale));
     }
 
@@ -374,7 +379,12 @@ export class Universe3D {
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius * 0.6;
       const depthRange = 40;
-      const z = (Math.random() - 0.5) * depthRange;
+      let z;
+      if (this.isHeroPreview) {
+        z = 0;
+      } else {
+        z = (Math.random() - 0.5) * depthRange;
+      }
 
       const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
 
@@ -639,6 +649,9 @@ export class Universe3D {
       layer.position.z = -i * 0.5 * clusterSize;
       layer.position.x = (Math.random() - 0.5) * 0.3 * clusterSize;
       layer.position.y = (Math.random() - 0.5) * 0.3 * clusterSize;
+      if (this.isHeroPreview) {
+        layer.userData.isHeroCloud = true;
+      }
 
       group.add(layer);
     }
@@ -841,8 +854,13 @@ export class Universe3D {
     const pos = new THREE.Vector3();
     obj.getWorldPosition(pos);
 
+    // Центрируемся по XY.
     this.targetX = pos.x;
     this.targetY = pos.y;
+
+    // Корректируем глубину, чтобы камера мягко прилетала к объекту.
+    const desiredZ = THREE.MathUtils.clamp(pos.z + 1.5, this.minCameraZ, this.maxCameraZ);
+    this.targetZ = desiredZ;
   }
 
   private showCard(obj: THREE.Object3D) {
@@ -1221,6 +1239,9 @@ export class Universe3D {
 
   private animate = () => {
     const t = this.clock.getElapsedTime();
+    if (this.isHeroPreview) {
+      this.heroTime += 0.01;
+    }
 
     // обновление шейдеров облака
     this.cloudGroups.forEach((cloud) => {
@@ -1295,6 +1316,16 @@ export class Universe3D {
         const material = sprite.material as THREE.SpriteMaterial;
         material.opacity = t;
         sprite.visible = t > 0.01;
+      });
+    }
+
+    if (this.isHeroPreview) {
+      this.scene.traverse((obj) => {
+        if (obj.userData?.isHeroCloud) {
+          const baseScale = 1.8;
+          const breath = 1 + Math.sin(this.heroTime) * 0.04;
+          obj.scale.setScalar(baseScale * breath);
+        }
       });
     }
 
