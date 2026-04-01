@@ -208,6 +208,7 @@ export class Universe3D {
   private lastPointerX = 0;
   private lastPointerY = 0;
   private lastPinchDistance = 0;
+  private lastMoveTime = 0;
 
   private touchStartX = 0;
   private touchStartY = 0;
@@ -216,10 +217,6 @@ export class Universe3D {
   /** True if two-finger pinch occurred in this gesture. */
   private touchHadPinch = false;
 
-  private velocityX = 0;
-  private velocityY = 0;
-  private inertiaDamping = 0.92;
-  private minVelocity = 0.00001;
   private tempVec3 = new THREE.Vector3();
   private labelTextureCache = new Map<string, THREE.CanvasTexture>();
   private lastLabelUpdateCameraX = Number.NaN;
@@ -248,7 +245,8 @@ export class Universe3D {
     const sizeW = this.useContainerSize ? Math.max(1, container.clientWidth) : window.innerWidth;
     const sizeH = this.useContainerSize ? Math.max(1, container.clientHeight) : window.innerHeight;
 
-    this.camera = new THREE.PerspectiveCamera(60, sizeW / sizeH, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(70, sizeW / sizeH, 0.1, 1000);
+    this.camera.updateProjectionMatrix();
     this.camera.position.set(0, 0, 2);
 
     if (options?.isHeroPreview) {
@@ -291,9 +289,6 @@ export class Universe3D {
     this.cloudGroups = clusters.map((cluster) =>
       this.createCloud(cluster.color, cluster.center, cluster.artists)
     );
-    this.cloudGroups.forEach((cloud) => {
-      cloud.userData.basePosition = cloud.position.clone();
-    });
     this.cloudGroups.forEach((group) => this.scene.add(group));
 
     this.clusterLabels = clusters.map((cluster) => {
@@ -430,7 +425,6 @@ export class Universe3D {
       uniforms: {
         u_time: { value: offset },
         u_color: { value: color },
-        u_cameraPos: { value: new THREE.Vector3() },
         u_distort: {
           value: new THREE.Vector2(0.8 + Math.random() * 0.6, 0.8 + Math.random() * 0.6),
         },
@@ -438,22 +432,17 @@ export class Universe3D {
       },
       vertexShader: `
         varying vec2 vUv;
-        varying vec3 vWorldPos;
         void main() {
           vUv = uv;
-          vec4 worldPos = modelMatrix * vec4(position, 1.0);
-          vWorldPos = worldPos.xyz;
-          gl_Position = projectionMatrix * viewMatrix * worldPos;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: `
         precision mediump float;
 
         varying vec2 vUv;
-        varying vec3 vWorldPos;
         uniform float u_time;
         uniform vec3 u_color;
-        uniform vec3 u_cameraPos;
         uniform vec2 u_distort;
         uniform float u_seed;
 
@@ -510,17 +499,9 @@ export class Universe3D {
           float density = shape * n;
           density += shape * 0.25;
 
-          float dist = distance(vWorldPos, u_cameraPos);
-          float fogNear = 5.0;
-          float fogFar = 60.0;
-          float depthFactor = smoothstep(fogNear, fogFar, dist);
-          vec3 baseColor = u_color * density * 0.88;
-          vec3 fogColor = vec3(0.5, 0.6, 0.8);
-          vec3 color = mix(baseColor, fogColor * density, depthFactor * 0.6);
-          float gray = dot(color, vec3(0.299, 0.587, 0.114));
-          color = mix(color, vec3(gray), depthFactor * 0.4);
-          float alpha = density * 0.6 * mix(1.0, 0.7, depthFactor);
-          gl_FragColor = vec4(color, alpha);
+          vec3 color = u_color * density * 0.88;
+
+          gl_FragColor = vec4(color, density * 0.6);
         }
       `,
     });
@@ -1011,11 +992,8 @@ export class Universe3D {
     const dx = (e.clientX - this.lastPointerX) * 0.005;
     const dy = (e.clientY - this.lastPointerY) * 0.005;
 
-    this.camera.position.x -= dx;
-    this.camera.position.y += dy;
-
-    this.targetX = this.camera.position.x;
-    this.targetY = this.camera.position.y;
+    this.targetX -= dx;
+    this.targetY += dy;
 
     this.lastPointerX = e.clientX;
     this.lastPointerY = e.clientY;
@@ -1023,12 +1001,11 @@ export class Universe3D {
 
   private handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 1) {
-      this.velocityX = 0;
-      this.velocityY = 0;
       this.touchStartX = e.touches[0].clientX;
       this.touchStartY = e.touches[0].clientY;
       this.lastPointerX = e.touches[0].clientX;
       this.lastPointerY = e.touches[0].clientY;
+      this.lastMoveTime = performance.now();
       this.touchPanCommitted = false;
       this.touchHadPinch = false;
     }
@@ -1079,17 +1056,18 @@ export class Universe3D {
         return;
       }
 
-      const dx = (t.clientX - this.lastPointerX) * 0.005;
-      const dy = (t.clientY - this.lastPointerY) * 0.005;
+      const now = performance.now();
+      const dt = now - this.lastMoveTime || 16;
+      const rawDx = t.clientX - this.lastPointerX;
+      const rawDy = t.clientY - this.lastPointerY;
+      const speed = Math.sqrt(rawDx * rawDx + rawDy * rawDy) / dt;
+      const SPEED_BOOST = 1 + Math.min(speed * 0.5, 2);
+      const dx = rawDx * 0.005 * SPEED_BOOST;
+      const dy = rawDy * 0.005 * SPEED_BOOST;
+      this.lastMoveTime = now;
 
-      this.camera.position.x -= dx;
-      this.camera.position.y += dy;
-
-      this.targetX = this.camera.position.x;
-      this.targetY = this.camera.position.y;
-
-      this.velocityX = -dx;
-      this.velocityY = dy;
+      this.targetX -= dx;
+      this.targetY += dy;
 
       this.lastPointerX = t.clientX;
       this.lastPointerY = t.clientY;
@@ -1151,17 +1129,11 @@ export class Universe3D {
     }
 
     if (allFingersUp) {
-      if (this.touchHadPinch) {
-        this.velocityX = 0;
-        this.velocityY = 0;
-      }
       this.resetTouchGestureState();
     }
   };
 
   private handleTouchCancel = () => {
-    this.velocityX = 0;
-    this.velocityY = 0;
     this.resetTouchGestureState();
   };
 
@@ -1247,37 +1219,9 @@ export class Universe3D {
 
     // обновление шейдеров облака
     this.cloudGroups.forEach((cloud) => {
-      const base = cloud.userData.basePosition as THREE.Vector3;
-      if (!base) return;
-
-      const depthFactor = THREE.MathUtils.clamp((base.z + 40) / 80, 0, 1);
-      const strength = 0.35;
-      const parallax = 1.0 - depthFactor * strength;
-
-      const offsetX = (this.camera.position.x - this.targetX) * (1 - parallax);
-      const offsetY = (this.camera.position.y - this.targetY) * (1 - parallax);
-
-      cloud.position.set(base.x + offsetX, base.y + offsetY, base.z);
-
-      const worldPos = new THREE.Vector3();
-      cloud.getWorldPosition(worldPos);
-
-      const dist = this.camera.position.distanceTo(worldPos);
-      const near = 5;
-      const far = 60;
-
-      let depthT = (dist - near) / (far - near);
-      depthT = THREE.MathUtils.clamp(depthT, 0, 1);
-
-      const scale = THREE.MathUtils.lerp(1.0, 0.75, depthT);
-      cloud.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.08);
-
       cloud.children.forEach((layer: any, i) => {
         if (layer.material?.uniforms?.u_time) {
           layer.material.uniforms.u_time.value = t + i * 5;
-        }
-        if (layer.material?.uniforms?.u_cameraPos) {
-          layer.material.uniforms.u_cameraPos.value.copy(this.camera.position);
         }
       });
     });
@@ -1285,26 +1229,8 @@ export class Universe3D {
     // зум камеры
     this.camera.position.z += (this.targetZ - this.camera.position.z) * 0.05;
 
-    // инерция
-    const hasInertia =
-      Math.abs(this.velocityX) > this.minVelocity || Math.abs(this.velocityY) > this.minVelocity;
-
-    if (!this.touchPanCommitted && hasInertia) {
-      this.camera.position.x += this.velocityX;
-      this.camera.position.y += this.velocityY;
-
-      this.velocityX *= this.inertiaDamping;
-      this.velocityY *= this.inertiaDamping;
-    } else if (!this.touchPanCommitted) {
-      this.velocityX = 0;
-      this.velocityY = 0;
-    }
-
-    // движение к target
-    if (!this.touchPanCommitted && !hasInertia) {
-      this.camera.position.x += (this.targetX - this.camera.position.x) * 0.05;
-      this.camera.position.y += (this.targetY - this.camera.position.y) * 0.05;
-    }
+    this.camera.position.x += (this.targetX - this.camera.position.x) * 0.08;
+    this.camera.position.y += (this.targetY - this.camera.position.y) * 0.08;
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
