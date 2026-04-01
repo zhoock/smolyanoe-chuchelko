@@ -19,7 +19,7 @@ import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
 import '../../../components/view/Universe3D.style.scss';
 
-const USE_MOCKS = false;
+const USE_MOCKS = true;
 
 export function HomePage() {
   const dispatch = useAppDispatch();

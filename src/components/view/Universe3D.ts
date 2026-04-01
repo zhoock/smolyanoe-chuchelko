@@ -280,6 +280,14 @@ export class Universe3D {
     this.onNavigateToArtist = options?.onNavigateToArtist;
 
     const clusters = this.buildClusters(artists);
+    const focusSlug = sessionStorage.getItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
+    let biggestCluster: ClusterConfig | null = null;
+    for (const cluster of clusters) {
+      if (!biggestCluster || cluster.artists.length > biggestCluster.artists.length) {
+        biggestCluster = cluster;
+      }
+    }
+
     if (clusters.length > 0) {
       const zValues = clusters.map((c) => c.center.z);
       const minZ = Math.min(...zValues);
@@ -294,6 +302,21 @@ export class Universe3D {
     this.cloudGroups = clusters.map((cluster) =>
       this.createCloud(cluster.color, cluster.center, cluster.artists)
     );
+    if (focusSlug) {
+      requestAnimationFrame(() => {
+        this.focusOnArtist(focusSlug);
+        sessionStorage.removeItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
+      });
+    } else if (biggestCluster) {
+      const targetGroup = this.cloudGroups.find(
+        (group) => group.position.distanceTo(biggestCluster!.center) < 0.001
+      );
+      if (targetGroup) {
+        requestAnimationFrame(() => {
+          this.focusOnObject(targetGroup);
+        });
+      }
+    }
     this.cloudGroups.forEach((group) => this.scene.add(group));
 
     this.clusterLabels = clusters.map((cluster) => {
@@ -358,23 +381,19 @@ export class Universe3D {
     const genreCodes = Array.from(grouped.keys());
     const count = genreCodes.length || 1;
 
-    const maxArtistsInAnyCluster = Math.max(
-      1,
-      ...Array.from(grouped.values()).map((arr) => arr.length)
-    );
-    const effectiveArtistCount = maxArtistsInAnyCluster;
+    const clusterSizes = genreCodes.map((code) => {
+      const artistsCount = (grouped.get(code) ?? []).length;
+      return Math.sqrt(Math.max(4, artistsCount) / 4);
+    });
+    const maxClusterSize = Math.max(...clusterSizes);
+    const maxSpiralRadius = CLOUD_INNER_RADIUS_FACTOR * CLOUD_ARTIST_DISK_FR * maxClusterSize;
+    const minChordBetweenClusters = 2 * maxSpiralRadius + 2;
 
-    const clusterSize = Math.sqrt(Math.max(4, effectiveArtistCount) / 4);
-    /** Same as createCloud: max horizontal extent of random disk. */
-    const maxSpiralRadius = CLOUD_INNER_RADIUS_FACTOR * CLOUD_ARTIST_DISK_FR * clusterSize;
-    /** Neighbor center distance ≥ 2× cloud footprint + margin. */
-    const minChordBetweenClusters = Math.max(14, 2 * maxSpiralRadius + 6);
-
-    const radius =
-      count <= 1 ? 0 : Math.max(3, minChordBetweenClusters / (2 * Math.sin(Math.PI / count)));
+    const radius = count <= 1 ? 0 : minChordBetweenClusters / (2 * Math.sin(Math.PI / count));
     const palette = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5];
 
     return genreCodes.map((genreCode, index) => {
+      const artistsInCluster = grouped.get(genreCode) ?? [];
       const angle = (index / count) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius * 0.6;
@@ -392,7 +411,7 @@ export class Universe3D {
         genreCode,
         center: new THREE.Vector3(x, y, z),
         color: new THREE.Color(externalColor ?? palette[index % palette.length]),
-        artists: grouped.get(genreCode) ?? [],
+        artists: artistsInCluster,
       };
     });
   }
