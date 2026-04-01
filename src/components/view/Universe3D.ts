@@ -387,31 +387,56 @@ export class Universe3D {
     });
     const maxClusterSize = Math.max(...clusterSizes);
     const maxSpiralRadius = CLOUD_INNER_RADIUS_FACTOR * CLOUD_ARTIST_DISK_FR * maxClusterSize;
-    const minChordBetweenClusters = 2 * maxSpiralRadius + 2;
-
-    const radius = count <= 1 ? 0 : minChordBetweenClusters / (2 * Math.sin(Math.PI / count));
+    const minChordBetweenClusters = 2 * maxSpiralRadius + 6;
     const palette = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5];
+    const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
+    const depthRange = 40;
+    const getZ = () => (this.isHeroPreview ? 0 : (Math.random() - 0.5) * depthRange);
+
+    if (count === 1) {
+      return [
+        {
+          genreCode: genreCodes[0] ?? 'other',
+          center: new THREE.Vector3(0, 0, getZ()),
+          color: new THREE.Color(externalColor ?? palette[0]),
+          artists: grouped.get(genreCodes[0] ?? 'other') ?? [],
+        },
+      ];
+    }
+
+    if (count === 2) {
+      const spacing = maxSpiralRadius * 2.2;
+      return genreCodes.map((genreCode, index) => ({
+        genreCode,
+        center: new THREE.Vector3(index === 0 ? -spacing : spacing, 0, getZ()),
+        color: new THREE.Color(externalColor ?? palette[index % palette.length]),
+        artists: grouped.get(genreCode) ?? [],
+      }));
+    }
+
+    if (count === 3) {
+      const spacing = maxSpiralRadius * 2.2;
+      return genreCodes.map((genreCode, index) => ({
+        genreCode,
+        center: new THREE.Vector3(
+          (index - 1) * spacing,
+          index === 1 ? spacing * 0.5 : -spacing * 0.5,
+          getZ()
+        ),
+        color: new THREE.Color(externalColor ?? palette[index % palette.length]),
+        artists: grouped.get(genreCode) ?? [],
+      }));
+    }
+
+    const radius = minChordBetweenClusters / (2 * Math.sin(Math.PI / count));
 
     return genreCodes.map((genreCode, index) => {
-      const artistsInCluster = grouped.get(genreCode) ?? [];
       const angle = (index / count) * Math.PI * 2;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius * 0.6;
-      const depthRange = 40;
-      let z;
-      if (this.isHeroPreview) {
-        z = 0;
-      } else {
-        z = (Math.random() - 0.5) * depthRange;
-      }
-
-      const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
-
       return {
         genreCode,
-        center: new THREE.Vector3(x, y, z),
+        center: new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.6, getZ()),
         color: new THREE.Color(externalColor ?? palette[index % palette.length]),
-        artists: artistsInCluster,
+        artists: grouped.get(genreCode) ?? [],
       };
     });
   }
@@ -437,7 +462,7 @@ export class Universe3D {
       depthTest: false,
     });
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(2.4, 0.6, 1);
+    sprite.scale.set(4.5, 1.2, 1);
     return sprite;
   }
 
@@ -1335,6 +1360,12 @@ export class Universe3D {
         const material = sprite.material as THREE.SpriteMaterial;
         material.opacity = t;
         sprite.visible = t > 0.01;
+
+        const minScale = 2.5;
+        const maxScale = 6;
+        const scaleT = THREE.MathUtils.clamp((6 - distance) / 4, 0, 1);
+        const scale = minScale + (maxScale - minScale) * scaleT;
+        sprite.scale.set(scale, scale * 0.25, 1);
       });
     }
 
