@@ -193,6 +193,8 @@ export class Universe3D {
   private lastPinchDelta = 0;
   private lastPinchTime = 0;
   private isTouchActive = false;
+  private panVelocityX = 0;
+  private panVelocityY = 0;
 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
@@ -1104,12 +1106,17 @@ export class Universe3D {
 
     const rawDx = e.clientX - this.lastPointerX;
     const rawDy = e.clientY - this.lastPointerY;
+
     const viewportHeight = window.innerHeight;
-    const PAN_FACTOR = this.camera.position.z / viewportHeight;
+    const z = Math.max(0.5, Math.abs(this.camera.position.z));
+    const PAN_FACTOR = z / viewportHeight;
+
     const PAN_SENSITIVITY = 1.3;
+
     const dx = rawDx * PAN_FACTOR * PAN_SENSITIVITY;
     const dy = rawDy * PAN_FACTOR * PAN_SENSITIVITY;
 
+    // ОДИНАКОВАЯ ЛОГИКА С МОБИЛКОЙ
     this.targetX -= dx;
     this.targetY += dy;
 
@@ -1122,11 +1129,9 @@ export class Universe3D {
     // мгновенно останавливаем любую инерцию
     this.zoomVelocity = 0;
     this.pinchVelocity = 0;
+    this.panVelocityX = 0;
+    this.panVelocityY = 0;
     this.lastMoveTime = performance.now();
-    // критический фикс: синхронизация target с текущей позицией камеры
-    this.targetX = this.camera.position.x;
-    this.targetY = this.camera.position.y;
-    this.targetZ = this.camera.position.z;
 
     if (e.touches.length === 1) {
       this.touchStartX = e.touches[0].clientX;
@@ -1176,6 +1181,7 @@ export class Universe3D {
 
     if (e.touches.length === 1) {
       const t = e.touches[0];
+
       const dxFromStart = t.clientX - this.touchStartX;
       const dyFromStart = t.clientY - this.touchStartY;
 
@@ -1194,14 +1200,21 @@ export class Universe3D {
 
       const rawDx = t.clientX - this.lastPointerX;
       const rawDy = t.clientY - this.lastPointerY;
+
       const viewportHeight = window.innerHeight;
-      const PAN_FACTOR = this.camera.position.z / viewportHeight;
-      const PAN_SENSITIVITY = 1.2;
+      const z = Math.max(0.5, Math.abs(this.camera.position.z));
+      const PAN_FACTOR = z / viewportHeight;
+
+      const PAN_SENSITIVITY = 0.6;
+
       const dx = rawDx * PAN_FACTOR * PAN_SENSITIVITY;
       const dy = rawDy * PAN_FACTOR * PAN_SENSITIVITY;
 
       this.targetX -= dx;
       this.targetY += dy;
+
+      this.panVelocityX = dx;
+      this.panVelocityY = dy;
 
       this.lastPointerX = t.clientX;
       this.lastPointerY = t.clientY;
@@ -1229,8 +1242,8 @@ export class Universe3D {
       const moveY = centerY - this.lastPinchCenterY;
 
       const panSpeed = 0.0005;
-      this.targetX -= moveX * panSpeed;
-      this.targetY += moveY * panSpeed;
+      this.targetX += moveX * panSpeed;
+      this.targetY -= moveY * panSpeed;
 
       const rect = this.renderer.domElement.getBoundingClientRect();
 
@@ -1241,10 +1254,7 @@ export class Universe3D {
       const ray = this.raycaster.ray;
 
       const now = performance.now();
-      const dt = (now - this.lastMoveTime) / 1000; // секунды
-
-      // защита от деления на 0
-      if (dt <= 0) return;
+      const dt = THREE.MathUtils.clamp((now - this.lastMoveTime) / 1000, 1 / 120, 1 / 30);
 
       // scale-based zoom вместо delta
       const scale = dist / this.lastPinchDistance;
@@ -1418,12 +1428,16 @@ export class Universe3D {
       this.heroTime += 0.01;
     }
 
-    if (this.isTouchActive) {
-      // во время gesture НЕ должно быть инерции
-      // velocity просто применяется как текущая скорость
-    } else {
+    const DAMPING = 0.92;
+    if (!this.isTouchActive) {
       // после отпускания — затухание
-      this.zoomVelocity *= 0.85;
+      this.panVelocityX *= DAMPING;
+      this.panVelocityY *= DAMPING;
+      this.zoomVelocity *= DAMPING;
+
+      const VELOCITY_EPS = 0.00001;
+      if (Math.abs(this.panVelocityX) < VELOCITY_EPS) this.panVelocityX = 0;
+      if (Math.abs(this.panVelocityY) < VELOCITY_EPS) this.panVelocityY = 0;
     }
 
     // обновление шейдеров облака
@@ -1455,16 +1469,23 @@ export class Universe3D {
       this.zoomVelocity = 0;
     }
 
-    const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
-    if (this.isTouchActive) {
-      // как в Google Maps — камера следует строго за пальцем
-      this.camera.position.copy(targetPosition);
-    } else {
-      // плавность только вне касания
-      const dist = this.camera.position.distanceTo(targetPosition);
-      const speed = THREE.MathUtils.clamp(dist * 0.1, 0.04, 0.12);
-      this.camera.position.lerp(targetPosition, speed);
+    if (!this.isTouchActive) {
+      this.targetX -= this.panVelocityX;
+      this.targetY += this.panVelocityY;
+
+      const DAMPING = 0.92;
+
+      this.panVelocityX *= DAMPING;
+      this.panVelocityY *= DAMPING;
+
+      // убираем микродвижение
+      const EPS = 0.00001;
+      if (Math.abs(this.panVelocityX) < EPS) this.panVelocityX = 0;
+      if (Math.abs(this.panVelocityY) < EPS) this.panVelocityY = 0;
     }
+
+    const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
+    this.camera.position.copy(targetPosition);
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
