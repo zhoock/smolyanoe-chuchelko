@@ -1063,8 +1063,26 @@ export class Universe3D {
       e.preventDefault();
       return;
     }
-    this.targetZ += e.deltaY * 0.002;
+
+    e.preventDefault();
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+
+    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    const zoomPoint = this.tempVec3;
+    this.raycaster.ray.at(2, zoomPoint);
+
+    const zoomDelta = e.deltaY * 0.002;
+
+    this.targetZ += zoomDelta;
     this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
+
+    this.targetX += (zoomPoint.x - this.targetX) * -zoomDelta * 0.5;
+    this.targetY += (zoomPoint.y - this.targetY) * -zoomDelta * 0.5;
   };
 
   private handleMouseDown = (e: MouseEvent) => {
@@ -1326,11 +1344,10 @@ export class Universe3D {
       });
     });
 
-    // зум камеры
-    this.camera.position.z += (this.targetZ - this.camera.position.z) * 0.05;
-
-    this.camera.position.x += (this.targetX - this.camera.position.x) * 0.08;
-    this.camera.position.y += (this.targetY - this.camera.position.y) * 0.08;
+    const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
+    const dist = this.camera.position.distanceTo(targetPosition);
+    const speed = THREE.MathUtils.clamp(dist * 0.1, 0.04, 0.12);
+    this.camera.position.lerp(targetPosition, speed);
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
