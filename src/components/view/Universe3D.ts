@@ -189,8 +189,6 @@ export class Universe3D {
   private targetX = 0;
   private targetY = 0;
   private zoomVelocity = 0;
-  /** True while finger gesture (touchstart..touchend) is active. */
-  private isTouchActive = false;
 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
@@ -1116,12 +1114,6 @@ export class Universe3D {
   };
 
   private handleTouchStart = (e: TouchEvent) => {
-    this.isTouchActive = true;
-    // Сбрасываем кинетику при новом жесте (как в Maps).
-    this.zoomVelocity = 0;
-    // Убираем рассинхрон между camera и target перед новым жестом.
-    this.camera.position.set(this.targetX, this.targetY, this.targetZ);
-
     if (e.touches.length === 1) {
       this.touchStartX = e.touches[0].clientX;
       this.touchStartY = e.touches[0].clientY;
@@ -1245,10 +1237,6 @@ export class Universe3D {
 
       this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
 
-      // Инерция: применяем velocity только после отпускания.
-      // Важно: присваивание, а не накопление.
-      this.zoomVelocity = delta * 0.02;
-
       this.lastPinchCenterX = centerX;
       this.lastPinchCenterY = centerY;
       this.lastPinchDistance = dist;
@@ -1256,9 +1244,6 @@ export class Universe3D {
   };
 
   private handleTouchEnd = (e: TouchEvent) => {
-    if (e.touches.length === 0) {
-      this.isTouchActive = false;
-    }
     if (e.touches.length < 2) {
       this.lastPinchDistance = 0;
       this.lastPinchCenterX = 0;
@@ -1399,39 +1384,28 @@ export class Universe3D {
       });
     });
 
-    // Инерция zoom: применяется только после отпускания пальцев.
-    // Wheel-zoom остается в той же velocity-системе (isTouchActive=false).
-    const DAMPING = 0.9;
-    if (!this.isTouchActive && Math.abs(this.zoomVelocity) > 0.00001) {
+    // Сглаженный zoom по ray из центра экрана (Google Maps-like).
+    const DAMPING = 0.85;
+    if (Math.abs(this.zoomVelocity) > 0.00001) {
       this.mouse.set(0, 0);
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const ray = this.raycaster.ray;
 
       const speed = 2.0;
-
       this.targetX += ray.direction.x * this.zoomVelocity * speed;
       this.targetY += ray.direction.y * this.zoomVelocity * speed;
       this.targetZ += ray.direction.z * this.zoomVelocity * speed;
 
       this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
-
-      // затухание (damping)
       this.zoomVelocity *= DAMPING;
-    } else if (!this.isTouchActive) {
+    } else {
       this.zoomVelocity = 0;
     }
 
     const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
-
-    if (this.isTouchActive) {
-      // БЕЗ СГЛАЖИВАНИЯ — строго за пальцем
-      this.camera.position.copy(targetPosition);
-    } else {
-      // плавное движение + инерция
-      const dist = this.camera.position.distanceTo(targetPosition);
-      const speed = THREE.MathUtils.clamp(dist * 0.1, 0.04, 0.12);
-      this.camera.position.lerp(targetPosition, speed);
-    }
+    const dist = this.camera.position.distanceTo(targetPosition);
+    const speed = THREE.MathUtils.clamp(dist * 0.1, 0.04, 0.12);
+    this.camera.position.lerp(targetPosition, speed);
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
