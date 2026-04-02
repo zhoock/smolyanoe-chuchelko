@@ -195,6 +195,7 @@ export class Universe3D {
   private isTouchActive = false;
   private panVelocityX = 0;
   private panVelocityY = 0;
+  private isAutoMoving = false;
 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
@@ -944,6 +945,7 @@ export class Universe3D {
     // Корректируем глубину, чтобы камера мягко прилетала к объекту.
     const desiredZ = THREE.MathUtils.clamp(pos.z + 1.5, this.minCameraZ, this.maxCameraZ);
     this.targetZ = desiredZ;
+    this.isAutoMoving = true;
   }
 
   private showCard(obj: THREE.Object3D) {
@@ -1092,6 +1094,7 @@ export class Universe3D {
 
   private handleMouseDown = (e: MouseEvent) => {
     if (this.isInteractionLocked()) return;
+    this.isAutoMoving = false;
     this.isDragging = true;
     this.lastPointerX = e.clientX;
     this.lastPointerY = e.clientY;
@@ -1125,7 +1128,12 @@ export class Universe3D {
   };
 
   private handleTouchStart = (e: TouchEvent) => {
+    this.isAutoMoving = false;
     this.isTouchActive = true;
+    // УБИРАЕТ СКАЧОК: синхронизируем target с текущей позицией камеры.
+    this.targetX = this.camera.position.x;
+    this.targetY = this.camera.position.y;
+    this.targetZ = this.camera.position.z;
     // мгновенно останавливаем любую инерцию
     this.zoomVelocity = 0;
     this.pinchVelocity = 0;
@@ -1485,7 +1493,22 @@ export class Universe3D {
     }
 
     const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
-    this.camera.position.copy(targetPosition);
+    const distance = this.camera.position.distanceTo(targetPosition);
+
+    if (this.isTouchActive || this.isDragging) {
+      // пользователь управляет -> без сглаживания
+      this.camera.position.copy(targetPosition);
+    } else if (this.isAutoMoving) {
+      // авто-анимация (первый рендер / переход)
+      const speed = THREE.MathUtils.clamp(distance * 0.08, 0.05, 0.2);
+      this.camera.position.lerp(targetPosition, speed);
+      if (distance < 0.01) {
+        this.isAutoMoving = false;
+      }
+    } else {
+      // состояние покоя (очень легкое сглаживание)
+      this.camera.position.lerp(targetPosition, 0.08);
+    }
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
