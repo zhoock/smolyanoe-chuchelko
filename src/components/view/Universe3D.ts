@@ -208,6 +208,8 @@ export class Universe3D {
   private lastPointerX = 0;
   private lastPointerY = 0;
   private lastPinchDistance = 0;
+  private lastPinchCenterX = 0;
+  private lastPinchCenterY = 0;
   private lastMoveTime = 0;
 
   private touchStartX = 0;
@@ -1064,6 +1066,10 @@ export class Universe3D {
       return;
     }
 
+    if (e.ctrlKey) {
+      e.preventDefault();
+    }
+
     e.preventDefault();
 
     const rect = this.renderer.domElement.getBoundingClientRect();
@@ -1075,7 +1081,7 @@ export class Universe3D {
 
     const ray = this.raycaster.ray;
 
-    const zoomDelta = e.deltaY * 0.002;
+    const zoomDelta = e.ctrlKey ? -e.deltaY * 0.004 : -e.deltaY * 0.002;
     const speed = 2.0;
 
     this.targetX += ray.direction.x * zoomDelta * speed;
@@ -1127,6 +1133,12 @@ export class Universe3D {
     }
 
     if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+
+      this.lastPinchCenterX = (t1.clientX + t2.clientX) / 2;
+      this.lastPinchCenterY = (t1.clientY + t2.clientY) / 2;
+
       this.lastPinchDistance = 0;
       this.touchHadPinch = true;
       this.touchPanCommitted = false;
@@ -1152,6 +1164,8 @@ export class Universe3D {
 
     if (e.touches.length !== 2) {
       this.lastPinchDistance = 0;
+      this.lastPinchCenterX = 0;
+      this.lastPinchCenterY = 0;
     }
 
     if (e.touches.length === 1) {
@@ -1196,13 +1210,22 @@ export class Universe3D {
       const dy = touch1.clientY - touch2.clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+
       if (this.lastPinchDistance === 0) {
         this.lastPinchDistance = dist;
+        this.lastPinchCenterX = centerX;
+        this.lastPinchCenterY = centerY;
         return;
       }
 
-      const centerX = (touch1.clientX + touch2.clientX) / 2;
-      const centerY = (touch1.clientY + touch2.clientY) / 2;
+      const moveX = centerX - this.lastPinchCenterX;
+      const moveY = centerY - this.lastPinchCenterY;
+
+      const panSpeed = 0.002;
+      this.targetX -= moveX * panSpeed;
+      this.targetY += moveY * panSpeed;
 
       const rect = this.renderer.domElement.getBoundingClientRect();
 
@@ -1222,6 +1245,8 @@ export class Universe3D {
 
       this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
 
+      this.lastPinchCenterX = centerX;
+      this.lastPinchCenterY = centerY;
       this.lastPinchDistance = dist;
     }
   };
@@ -1229,6 +1254,8 @@ export class Universe3D {
   private handleTouchEnd = (e: TouchEvent) => {
     if (e.touches.length < 2) {
       this.lastPinchDistance = 0;
+      this.lastPinchCenterX = 0;
+      this.lastPinchCenterY = 0;
     }
     if (e.touches.length === 1) {
       const tr = e.touches[0];
@@ -1275,6 +1302,8 @@ export class Universe3D {
     this.touchPanCommitted = false;
     this.touchHadPinch = false;
     this.lastPinchDistance = 0;
+    this.lastPinchCenterX = 0;
+    this.lastPinchCenterY = 0;
   }
 
   /** Raycast tap on canvas (mobile); ignores if tap is on the artist card overlay. */
