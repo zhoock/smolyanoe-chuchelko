@@ -1073,16 +1073,16 @@ export class Universe3D {
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    const zoomPoint = this.tempVec3;
-    this.raycaster.ray.at(2, zoomPoint);
+    const ray = this.raycaster.ray;
 
     const zoomDelta = e.deltaY * 0.002;
+    const speed = 2.0;
 
-    this.targetZ += zoomDelta;
+    this.targetX += ray.direction.x * zoomDelta * speed;
+    this.targetY += ray.direction.y * zoomDelta * speed;
+    this.targetZ += ray.direction.z * zoomDelta * speed;
+
     this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
-
-    this.targetX += (zoomPoint.x - this.targetX) * -zoomDelta * 0.5;
-    this.targetY += (zoomPoint.y - this.targetY) * -zoomDelta * 0.5;
   };
 
   private handleMouseDown = (e: MouseEvent) => {
@@ -1190,8 +1190,10 @@ export class Universe3D {
 
     if (e.touches.length === 2) {
       this.touchHadPinch = true;
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dx = touch1.clientX - touch2.clientX;
+      const dy = touch1.clientY - touch2.clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (this.lastPinchDistance === 0) {
@@ -1199,8 +1201,25 @@ export class Universe3D {
         return;
       }
 
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+      const rect = this.renderer.domElement.getBoundingClientRect();
+
+      this.mouse.x = ((centerX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((centerY - rect.top) / rect.height) * 2 + 1;
+
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const ray = this.raycaster.ray;
+
       const delta = dist - this.lastPinchDistance;
-      this.targetZ -= delta * 0.01;
+
+      const speed = 0.02;
+
+      this.targetX += ray.direction.x * delta * speed;
+      this.targetY += ray.direction.y * delta * speed;
+      this.targetZ += ray.direction.z * delta * speed;
+
       this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
 
       this.lastPinchDistance = dist;
