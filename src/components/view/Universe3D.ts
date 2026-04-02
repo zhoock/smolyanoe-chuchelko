@@ -188,6 +188,9 @@ export class Universe3D {
   private maxCameraZ = 6;
   private targetX = 0;
   private targetY = 0;
+  private zoomVelocity = 0;
+  /** True while finger gesture (touchstart..touchend) is active. */
+  private isTouchActive = false;
 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
@@ -1072,23 +1075,14 @@ export class Universe3D {
 
     e.preventDefault();
 
-    const rect = this.renderer.domElement.getBoundingClientRect();
+    // Wheel (2-finger scroll) и trackpad pinch (ctrlKey) -> одна система velocity.
+    // Движение камеры применяем в animate(), а сюда кладем только импульс.
+    const VELOCITY_SCALE = 0.001;
+    const PINCH_MULTIPLIER = 2.5;
 
-    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-
-    const ray = this.raycaster.ray;
-
-    const zoomDelta = e.ctrlKey ? -e.deltaY * 0.004 : -e.deltaY * 0.002;
-    const speed = 2.0;
-
-    this.targetX += ray.direction.x * zoomDelta * speed;
-    this.targetY += ray.direction.y * zoomDelta * speed;
-    this.targetZ += ray.direction.z * zoomDelta * speed;
-
-    this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
+    const baseDelta = -e.deltaY;
+    const normalizedDelta = e.ctrlKey ? baseDelta * PINCH_MULTIPLIER : baseDelta;
+    this.zoomVelocity += normalizedDelta * VELOCITY_SCALE;
   };
 
   private handleMouseDown = (e: MouseEvent) => {
@@ -1122,6 +1116,12 @@ export class Universe3D {
   };
 
   private handleTouchStart = (e: TouchEvent) => {
+    this.isTouchActive = true;
+    // Сбрасываем кинетику при новом жесте (как в Maps).
+    this.zoomVelocity = 0;
+    // Убираем рассинхрон между camera и target перед новым жестом.
+    this.camera.position.set(this.targetX, this.targetY, this.targetZ);
+
     if (e.touches.length === 1) {
       this.touchStartX = e.touches[0].clientX;
       this.touchStartY = e.touches[0].clientY;
@@ -1245,6 +1245,10 @@ export class Universe3D {
 
       this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
 
+      // Инерция: применяем velocity только после отпускания.
+      // Важно: присваивание, а не накопление.
+      this.zoomVelocity = delta * 0.02;
+
       this.lastPinchCenterX = centerX;
       this.lastPinchCenterY = centerY;
       this.lastPinchDistance = dist;
@@ -1252,6 +1256,9 @@ export class Universe3D {
   };
 
   private handleTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length === 0) {
+      this.isTouchActive = false;
+    }
     if (e.touches.length < 2) {
       this.lastPinchDistance = 0;
       this.lastPinchCenterX = 0;
@@ -1392,10 +1399,39 @@ export class Universe3D {
       });
     });
 
+    // Инерция zoom: применяется только после отпускания пальцев.
+    // Wheel-zoom остается в той же velocity-системе (isTouchActive=false).
+    const DAMPING = 0.9;
+    if (!this.isTouchActive && Math.abs(this.zoomVelocity) > 0.00001) {
+      this.mouse.set(0, 0);
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const ray = this.raycaster.ray;
+
+      const speed = 2.0;
+
+      this.targetX += ray.direction.x * this.zoomVelocity * speed;
+      this.targetY += ray.direction.y * this.zoomVelocity * speed;
+      this.targetZ += ray.direction.z * this.zoomVelocity * speed;
+
+      this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
+
+      // затухание (damping)
+      this.zoomVelocity *= DAMPING;
+    } else if (!this.isTouchActive) {
+      this.zoomVelocity = 0;
+    }
+
     const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
-    const dist = this.camera.position.distanceTo(targetPosition);
-    const speed = THREE.MathUtils.clamp(dist * 0.1, 0.04, 0.12);
-    this.camera.position.lerp(targetPosition, speed);
+
+    if (this.isTouchActive) {
+      // БЕЗ СГЛАЖИВАНИЯ — строго за пальцем
+      this.camera.position.copy(targetPosition);
+    } else {
+      // плавное движение + инерция
+      const dist = this.camera.position.distanceTo(targetPosition);
+      const speed = THREE.MathUtils.clamp(dist * 0.1, 0.04, 0.12);
+      this.camera.position.lerp(targetPosition, speed);
+    }
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
