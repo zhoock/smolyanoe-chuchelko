@@ -934,18 +934,41 @@ export class Universe3D {
     return `/?artist=${encodeURIComponent(publicSlug)}`;
   }
 
+  private moveTo(x: number, y: number, z: number) {
+    if (this.isAutoMoving) return;
+    this.isAutoMoving = true;
+
+    const startX = this.targetX;
+    const startY = this.targetY;
+    const startZ = this.targetZ;
+
+    const duration = 0.6;
+    const startTime = performance.now();
+
+    const step = () => {
+      const t = Math.min((performance.now() - startTime) / (duration * 1000), 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+
+      this.targetX = startX + (x - startX) * ease;
+      this.targetY = startY + (y - startY) * ease;
+      this.targetZ = startZ + (z - startZ) * ease;
+
+      if (t < 1) requestAnimationFrame(step);
+      else this.isAutoMoving = false;
+    };
+
+    step();
+  }
+
   private focusOnObject(obj: THREE.Object3D) {
+    if (this.isAutoMoving) return;
     const pos = new THREE.Vector3();
     obj.getWorldPosition(pos);
 
     // Центрируемся по XY.
-    this.targetX = pos.x;
-    this.targetY = pos.y;
-
     // Корректируем глубину, чтобы камера мягко прилетала к объекту.
     const desiredZ = THREE.MathUtils.clamp(pos.z + 1.5, this.minCameraZ, this.maxCameraZ);
-    this.targetZ = desiredZ;
-    this.isAutoMoving = true;
+    this.moveTo(pos.x, pos.y, desiredZ);
   }
 
   private showCard(obj: THREE.Object3D) {
