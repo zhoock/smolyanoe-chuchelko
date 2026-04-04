@@ -941,12 +941,12 @@ export class Universe3D {
     const startY = this.targetY;
     const startZ = this.targetZ;
 
-    const duration = 0.6;
+    const duration = 1.2;
     const startTime = performance.now();
 
     const step = () => {
       const t = Math.min((performance.now() - startTime) / (duration * 1000), 1);
-      const ease = 1 - Math.pow(1 - t, 3);
+      const ease = t * t * (3 - 2 * t);
 
       this.targetX = startX + (x - startX) * ease;
       this.targetY = startY + (y - startY) * ease;
