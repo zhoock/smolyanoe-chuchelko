@@ -946,7 +946,7 @@ export class Universe3D {
 
     const step = () => {
       const t = Math.min((performance.now() - startTime) / (duration * 1000), 1);
-      const ease = t * t * (3 - 2 * t);
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
 
       this.targetX = startX + (x - startX) * ease;
       this.targetY = startY + (y - startY) * ease;
