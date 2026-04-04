@@ -935,7 +935,6 @@ export class Universe3D {
   }
 
   private moveTo(x: number, y: number, z: number) {
-    if (this.isAutoMoving) return;
     this.isAutoMoving = true;
 
     const startX = this.targetX;
@@ -961,7 +960,6 @@ export class Universe3D {
   }
 
   private focusOnObject(obj: THREE.Object3D) {
-    if (this.isAutoMoving) return;
     const pos = new THREE.Vector3();
     obj.getWorldPosition(pos);
 
@@ -1117,7 +1115,6 @@ export class Universe3D {
 
   private handleMouseDown = (e: MouseEvent) => {
     if (this.isInteractionLocked()) return;
-    this.isAutoMoving = false;
     this.isDragging = true;
     this.lastPointerX = e.clientX;
     this.lastPointerY = e.clientY;
@@ -1151,12 +1148,7 @@ export class Universe3D {
   };
 
   private handleTouchStart = (e: TouchEvent) => {
-    this.isAutoMoving = false;
     this.isTouchActive = true;
-    // УБИРАЕТ СКАЧОК: синхронизируем target с текущей позицией камеры.
-    this.targetX = this.camera.position.x;
-    this.targetY = this.camera.position.y;
-    this.targetZ = this.camera.position.z;
     // мгновенно останавливаем любую инерцию
     this.zoomVelocity = 0;
     this.pinchVelocity = 0;
@@ -1516,22 +1508,7 @@ export class Universe3D {
     }
 
     const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
-    const distance = this.camera.position.distanceTo(targetPosition);
-
-    if (this.isTouchActive || this.isDragging) {
-      // пользователь управляет -> без сглаживания
-      this.camera.position.copy(targetPosition);
-    } else if (this.isAutoMoving) {
-      // авто-анимация (первый рендер / переход)
-      const speed = THREE.MathUtils.clamp(distance * 0.08, 0.05, 0.2);
-      this.camera.position.lerp(targetPosition, speed);
-      if (distance < 0.01) {
-        this.isAutoMoving = false;
-      }
-    } else {
-      // состояние покоя (очень легкое сглаживание)
-      this.camera.position.lerp(targetPosition, 0.08);
-    }
+    this.camera.position.copy(targetPosition);
 
     const isMoving =
       Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
