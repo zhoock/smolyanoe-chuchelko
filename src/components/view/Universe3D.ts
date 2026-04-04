@@ -196,6 +196,9 @@ export class Universe3D {
   private panVelocityX = 0;
   private panVelocityY = 0;
   private isAutoMoving = false;
+  private deferInitialFocus = false;
+  private pendingFocusSlug: string | null = null;
+  private pendingFocusObject: THREE.Object3D | null = null;
 
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
@@ -312,19 +315,16 @@ export class Universe3D {
     this.cloudGroups = clusters.map((cluster) =>
       this.createCloud(cluster.color, cluster.center, cluster.artists)
     );
+    this.deferInitialFocus = true;
+
     if (focusSlug) {
-      requestAnimationFrame(() => {
-        this.focusOnArtist(focusSlug);
-        sessionStorage.removeItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
-      });
+      this.pendingFocusSlug = focusSlug;
     } else if (biggestCluster) {
       const targetGroup = this.cloudGroups.find(
         (group) => group.position.distanceTo(biggestCluster!.center) < 0.001
       );
       if (targetGroup) {
-        requestAnimationFrame(() => {
-          this.focusOnObject(targetGroup);
-        });
+        this.pendingFocusObject = targetGroup;
       }
     }
     this.cloudGroups.forEach((group) => this.scene.add(group));
@@ -963,9 +963,8 @@ export class Universe3D {
     const pos = new THREE.Vector3();
     obj.getWorldPosition(pos);
 
-    // Центрируемся по XY.
-    // Корректируем глубину, чтобы камера мягко прилетала к объекту.
     const desiredZ = THREE.MathUtils.clamp(pos.z + 1.5, this.minCameraZ, this.maxCameraZ);
+
     this.moveTo(pos.x, pos.y, desiredZ);
   }
 
@@ -1446,6 +1445,19 @@ export class Universe3D {
   }
 
   private animate = () => {
+    if (this.deferInitialFocus) {
+      this.deferInitialFocus = false;
+
+      if (this.pendingFocusSlug) {
+        this.focusOnArtist(this.pendingFocusSlug);
+        sessionStorage.removeItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
+        this.pendingFocusSlug = null;
+      } else if (this.pendingFocusObject) {
+        this.focusOnObject(this.pendingFocusObject);
+        this.pendingFocusObject = null;
+      }
+    }
+
     const t = this.clock.getElapsedTime();
     if (this.isHeroPreview) {
       this.heroTime += 0.01;
