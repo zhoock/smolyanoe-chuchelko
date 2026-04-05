@@ -232,6 +232,8 @@ export class Universe3D {
   private heroTime = 0;
 
   private tempVec3 = new THREE.Vector3();
+  /** Lerp(1.3, 0.5, smooth) from distance to nearest cloud; mouse/touch read between frames. */
+  private proximityPanFactor = 1.3;
   private labelTextureCache = new Map<string, THREE.CanvasTexture>();
   private lastLabelUpdateCameraX = Number.NaN;
   private lastLabelUpdateCameraY = Number.NaN;
@@ -1139,7 +1141,7 @@ export class Universe3D {
     const z = Math.max(0.5, Math.abs(this.camera.position.z));
     const PAN_FACTOR = z / viewportHeight;
 
-    const PAN_SENSITIVITY = 1.3;
+    const PAN_SENSITIVITY = this.proximityPanFactor;
 
     const dx = rawDx * PAN_FACTOR * PAN_SENSITIVITY;
     const dy = rawDy * PAN_FACTOR * PAN_SENSITIVITY;
@@ -1240,7 +1242,7 @@ export class Universe3D {
       const z = Math.max(0.5, Math.abs(this.camera.position.z));
       const PAN_FACTOR = z / viewportHeight;
 
-      const PAN_SENSITIVITY = 0.6;
+      const PAN_SENSITIVITY = this.proximityPanFactor * 0.5;
 
       const dx = rawDx * PAN_FACTOR * PAN_SENSITIVITY;
       const dy = rawDy * PAN_FACTOR * PAN_SENSITIVITY;
@@ -1497,12 +1499,38 @@ export class Universe3D {
       });
     });
 
+    let nearestCluster: THREE.Group | null = null;
+    let minDist = Infinity;
+
+    for (const group of this.cloudGroups) {
+      const d = this.camera.position.distanceTo(group.position);
+      if (d < minDist) {
+        minDist = d;
+        nearestCluster = group;
+      }
+    }
+
+    let proximity = 0;
+
+    if (nearestCluster) {
+      const NEAR = 2.5;
+      const FAR = 6;
+      const dist = minDist;
+
+      proximity = 1 - THREE.MathUtils.clamp((dist - NEAR) / (FAR - NEAR), 0, 1);
+    }
+
+    const smooth = proximity * proximity * proximity;
+    const zoomScale = THREE.MathUtils.lerp(0.06, 0.03, smooth);
+    const panFactor = THREE.MathUtils.lerp(1.3, 0.4, smooth);
+    this.proximityPanFactor = panFactor;
+
     // Сглаженный zoom по ray из центра экрана (Google Maps-like).
     if (Math.abs(this.zoomVelocity) > 0.00001) {
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const ray = this.raycaster.ray;
 
-      const ZOOM_SCALE = 0.08; // ключевой коэффициент
+      const ZOOM_SCALE = zoomScale;
 
       this.targetX += ray.direction.x * this.zoomVelocity * ZOOM_SCALE;
       this.targetY += ray.direction.y * this.zoomVelocity * ZOOM_SCALE;
