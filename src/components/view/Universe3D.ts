@@ -1077,6 +1077,7 @@ export class Universe3D {
     window.addEventListener('mousedown', this.handleMouseDown);
     window.addEventListener('mouseup', this.handleMouseUp);
     window.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('mousemove', this.handleMouseMoveForZoom);
 
     const canvas = this.renderer.domElement;
     canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
@@ -1094,6 +1095,11 @@ export class Universe3D {
       e.preventDefault();
       return;
     }
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+
+    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     if (e.ctrlKey) {
       e.preventDefault();
@@ -1144,6 +1150,13 @@ export class Universe3D {
 
     this.lastPointerX = e.clientX;
     this.lastPointerY = e.clientY;
+  };
+
+  private handleMouseMoveForZoom = (e: MouseEvent) => {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+
+    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   };
 
   private handleTouchStart = (e: TouchEvent) => {
@@ -1486,10 +1499,6 @@ export class Universe3D {
 
     // Сглаженный zoom по ray из центра экрана (Google Maps-like).
     if (Math.abs(this.zoomVelocity) > 0.00001) {
-      if (!this.isTouchActive) {
-        this.mouse.set(0, 0);
-      }
-
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const ray = this.raycaster.ray;
 
@@ -1644,6 +1653,7 @@ export class Universe3D {
     window.removeEventListener('mousedown', this.handleMouseDown);
     window.removeEventListener('mouseup', this.handleMouseUp);
     window.removeEventListener('mousemove', this.handleMouseMove);
+    window.removeEventListener('mousemove', this.handleMouseMoveForZoom);
 
     const canvas = this.renderer.domElement;
     canvas.removeEventListener('touchstart', this.handleTouchStart);
