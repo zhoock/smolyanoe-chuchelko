@@ -28,6 +28,7 @@ export function HomePage() {
   const [searchParams] = useSearchParams();
   const { lang } = useLang();
   const sceneRef = useRef<HTMLDivElement | null>(null);
+  const universeRef = useRef<Universe3D | null>(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [useMocks, setUseMocks] = useState(() => {
     try {
@@ -36,6 +37,7 @@ export function HomePage() {
       return false;
     }
   });
+  const [cloudDamping, setCloudDamping] = useState(true);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
 
@@ -151,6 +153,9 @@ export function HomePage() {
         },
       });
 
+      universeRef.current = universe;
+      universe.setCloudDamping(cloudDamping);
+
       const focusSlug = sessionStorage.getItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
       if (focusSlug) {
         setTimeout(() => {
@@ -164,6 +169,7 @@ export function HomePage() {
 
     return () => {
       cancelled = true;
+      universeRef.current = null;
       universe?.destroy();
       if (sceneRef.current) {
         sceneRef.current.innerHTML = '';
@@ -190,31 +196,60 @@ export function HomePage() {
       aria-label="Cloud scene"
       style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
     >
-      <button
-        type="button"
-        onClick={() => {
-          setUseMocks((prev) => {
-            const next = !prev;
-            sessionStorage.setItem(HOME_USE_MOCKS_STORAGE_KEY, next ? '1' : '0');
-            return next;
-          });
-        }}
+      <div
         style={{
           position: 'absolute',
           top: 12,
           right: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
           zIndex: 20,
-          padding: '6px 10px',
-          borderRadius: 8,
-          border: '1px solid rgba(255,255,255,0.35)',
-          background: 'rgba(12,12,14,0.72)',
-          color: '#fff',
-          fontSize: 12,
-          cursor: 'pointer',
         }}
       >
-        {useMocks ? 'Mocks: ON' : 'Mocks: OFF'}
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            setUseMocks((prev) => {
+              const next = !prev;
+              sessionStorage.setItem(HOME_USE_MOCKS_STORAGE_KEY, next ? '1' : '0');
+              return next;
+            });
+          }}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: '1px solid rgba(255,255,255,0.35)',
+            background: 'rgba(12,12,14,0.72)',
+            color: '#fff',
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          {useMocks ? 'Mocks: ON' : 'Mocks: OFF'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setCloudDamping((prev) => {
+              const next = !prev;
+              universeRef.current?.setCloudDamping(next);
+              return next;
+            });
+          }}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: '1px solid rgba(255,255,255,0.35)',
+            background: 'rgba(12,12,14,0.72)',
+            color: '#fff',
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          {cloudDamping ? 'Cloud: ON' : 'Cloud: OFF'}
+        </button>
+      </div>
       <div
         ref={sceneRef}
         style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}

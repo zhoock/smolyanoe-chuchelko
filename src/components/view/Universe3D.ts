@@ -195,6 +195,7 @@ export class Universe3D {
   private isTouchActive = false;
   private panVelocityX = 0;
   private panVelocityY = 0;
+  private isCloudDampingEnabled = true;
   private isAutoMoving = false;
   private deferInitialFocus = false;
   private pendingFocusSlug: string | null = null;
@@ -380,6 +381,10 @@ export class Universe3D {
     if (!target) return;
 
     this.focusOnObject(target);
+  }
+
+  public setCloudDamping(enabled: boolean) {
+    this.isCloudDampingEnabled = enabled;
   }
 
   private buildClusters(artists: SceneArtist[]): ClusterConfig[] {
@@ -1113,7 +1118,7 @@ export class Universe3D {
 
     // Wheel (2-finger scroll) и trackpad pinch (ctrlKey) -> одна система velocity.
     // Движение камеры применяем в animate(), а сюда кладем только импульс (замедление у облаков — zoomScale в animate).
-    const WHEEL_VELOCITY_SCALE = e.ctrlKey ? 0.025 : 0.012;
+    const WHEEL_VELOCITY_SCALE = e.ctrlKey ? 0.02 : 0.008;
 
     const baseDelta = -e.deltaY;
     const normalizedDelta = e.ctrlKey ? baseDelta * 2.5 : baseDelta;
@@ -1287,7 +1292,6 @@ export class Universe3D {
       const ray = this.raycaster.ray;
 
       const now = performance.now();
-      const dt = THREE.MathUtils.clamp((now - this.lastMoveTime) / 1000, 1 / 120, 1 / 30);
 
       // scale-based zoom вместо delta
       const scale = dist / this.lastPinchDistance;
@@ -1296,22 +1300,18 @@ export class Universe3D {
       if (!isFinite(scale) || scale <= 0) return;
 
       // логарифмический zoom (как в Google Maps)
-      const zoomFactor = Math.log(scale);
+      const zoomFactor = Math.log(scale) * 2.5;
 
       // стабильная скорость без взрывов
-      const VELOCITY_MULTIPLIER = 5.0;
+      const VELOCITY_MULTIPLIER = 18.0;
 
-      // ограничиваем dt (ключевой фикс)
-      const safeDt = Math.max(dt, 1 / 60);
+      const velocity = zoomFactor * VELOCITY_MULTIPLIER;
 
-      // считаем скорость
-      const velocity = zoomFactor / safeDt;
-
-      // НЕ НАКАПЛИВАЕМ
-      this.zoomVelocity = velocity * VELOCITY_MULTIPLIER;
+      // 🔥 как wheel — добавляем, а не заменяем
+      this.zoomVelocity += velocity;
 
       // clamp
-      const limit = this.isTouchActive ? 8 : 3;
+      const limit = this.isTouchActive ? 12 : 8;
 
       this.zoomVelocity = THREE.MathUtils.clamp(this.zoomVelocity, -limit, limit);
       this.lastMoveTime = now;
@@ -1508,18 +1508,6 @@ export class Universe3D {
       this.heroTime += 0.01;
     }
 
-    const DAMPING = 0.92;
-    if (!this.isTouchActive) {
-      // после отпускания — затухание
-      this.panVelocityX *= DAMPING;
-      this.panVelocityY *= DAMPING;
-      this.zoomVelocity *= DAMPING;
-
-      const VELOCITY_EPS = 0.00001;
-      if (Math.abs(this.panVelocityX) < VELOCITY_EPS) this.panVelocityX = 0;
-      if (Math.abs(this.panVelocityY) < VELOCITY_EPS) this.panVelocityY = 0;
-    }
-
     // обновление шейдеров облака
     this.cloudGroups.forEach((cloud) => {
       cloud.children.forEach((layer: any, i) => {
@@ -1555,6 +1543,41 @@ export class Universe3D {
     const panFactor = THREE.MathUtils.lerp(2.8, 0.5, Math.pow(smooth, 0.7));
     this.proximityPanFactor = panFactor;
 
+    const baseDamping = this.isTouchActive ? 0.92 : 0.97;
+
+    const speed = Math.abs(this.zoomVelocity);
+
+    // 👉 считаем "медленным" почти всё
+    const FAST_THRESHOLD = 4.0;
+
+    // 👉 сильная вязкость внутри облака
+    const INSIDE_DAMPING = 0.7;
+
+    let cloudDamping = baseDamping;
+
+    if (this.isCloudDampingEnabled) {
+      cloudDamping =
+        speed < FAST_THRESHOLD
+          ? THREE.MathUtils.lerp(baseDamping, INSIDE_DAMPING, smooth)
+          : baseDamping;
+    }
+
+    this.zoomVelocity *= cloudDamping;
+
+    if (this.isCloudDampingEnabled) {
+      // 🔥 ограничиваем скорость внутри облака
+      const insideSpeedLimit = THREE.MathUtils.lerp(8, 2.5, smooth);
+
+      this.zoomVelocity = THREE.MathUtils.clamp(
+        this.zoomVelocity,
+        -insideSpeedLimit,
+        insideSpeedLimit
+      );
+    }
+
+    this.panVelocityX *= cloudDamping;
+    this.panVelocityY *= cloudDamping;
+
     // Сглаженный zoom по ray из центра экрана (Google Maps-like).
     if (Math.abs(this.zoomVelocity) > 0.00001) {
       this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -1581,11 +1604,6 @@ export class Universe3D {
     if (!this.isTouchActive) {
       this.targetX -= this.panVelocityX;
       this.targetY += this.panVelocityY;
-
-      const DAMPING = 0.97;
-
-      this.panVelocityX *= DAMPING;
-      this.panVelocityY *= DAMPING;
 
       // убираем микродвижение
       const EPS = 0.00001;
