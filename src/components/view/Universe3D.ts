@@ -1112,12 +1112,11 @@ export class Universe3D {
     e.preventDefault();
 
     // Wheel (2-finger scroll) и trackpad pinch (ctrlKey) -> одна система velocity.
-    // Движение камеры применяем в animate(), а сюда кладем только импульс.
-    const WHEEL_VELOCITY_SCALE = e.ctrlKey ? 0.02 : 0.01;
-    const PINCH_MULTIPLIER = 2.5;
+    // Движение камеры применяем в animate(), а сюда кладем только импульс (замедление у облаков — zoomScale в animate).
+    const WHEEL_VELOCITY_SCALE = e.ctrlKey ? 0.025 : 0.012;
 
     const baseDelta = -e.deltaY;
-    const normalizedDelta = e.ctrlKey ? baseDelta * PINCH_MULTIPLIER : baseDelta;
+    const normalizedDelta = e.ctrlKey ? baseDelta * 2.5 : baseDelta;
     this.zoomVelocity += normalizedDelta * WHEEL_VELOCITY_SCALE;
     this.zoomVelocity = THREE.MathUtils.clamp(this.zoomVelocity, -3, 3);
   };
@@ -1139,16 +1138,14 @@ export class Universe3D {
     const rawDx = e.clientX - this.lastPointerX;
     const rawDy = e.clientY - this.lastPointerY;
 
-    const viewportHeight = window.innerHeight;
-    const z = Math.max(0.5, Math.abs(this.camera.position.z));
-    const PAN_FACTOR = z / viewportHeight;
+    const PAN_BASE = 0.002;
 
+    // используем ТОЛЬКО proximity (у тебя уже есть panFactor из animate)
     const PAN_SENSITIVITY = this.proximityPanFactor;
 
-    const dx = rawDx * PAN_FACTOR * PAN_SENSITIVITY;
-    const dy = rawDy * PAN_FACTOR * PAN_SENSITIVITY;
+    const dx = rawDx * PAN_BASE * PAN_SENSITIVITY;
+    const dy = rawDy * PAN_BASE * PAN_SENSITIVITY;
 
-    // ОДИНАКОВАЯ ЛОГИКА С МОБИЛКОЙ
     this.targetX -= dx;
     this.targetY += dy;
 
@@ -1240,14 +1237,11 @@ export class Universe3D {
       const rawDx = t.clientX - this.lastPointerX;
       const rawDy = t.clientY - this.lastPointerY;
 
-      const viewportHeight = window.innerHeight;
-      const z = Math.max(0.5, Math.abs(this.camera.position.z));
-      const PAN_FACTOR = z / viewportHeight;
+      const PAN_BASE = 0.002;
+      const PAN_SENSITIVITY = this.proximityPanFactor;
 
-      const PAN_SENSITIVITY = this.proximityPanFactor * 0.5;
-
-      const dx = rawDx * PAN_FACTOR * PAN_SENSITIVITY;
-      const dy = rawDy * PAN_FACTOR * PAN_SENSITIVITY;
+      const dx = rawDx * PAN_BASE * PAN_SENSITIVITY;
+      const dy = rawDy * PAN_BASE * PAN_SENSITIVITY;
 
       this.targetX -= dx;
       this.targetY += dy;
@@ -1556,7 +1550,7 @@ export class Universe3D {
 
     const smooth = proximity * proximity * proximity;
     const zoomScale = THREE.MathUtils.lerp(0.1, 0.035, smooth);
-    const panFactor = THREE.MathUtils.lerp(1.3, 0.4, smooth);
+    const panFactor = THREE.MathUtils.lerp(2.8, 0.5, Math.pow(smooth, 0.7));
     this.proximityPanFactor = panFactor;
 
     // Сглаженный zoom по ray из центра экрана (Google Maps-like).
