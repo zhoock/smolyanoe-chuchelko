@@ -1560,8 +1560,15 @@ export class Universe3D {
 
       const ZOOM_SCALE = zoomScale;
 
-      this.targetX += ray.direction.x * this.zoomVelocity * ZOOM_SCALE;
-      this.targetY += ray.direction.y * this.zoomVelocity * ZOOM_SCALE;
+      const isAtMinZ = this.targetZ <= this.minCameraZ + 0.001;
+      const isAtMaxZ = this.targetZ >= this.maxCameraZ - 0.001;
+      const isAtBoundary = isAtMinZ || isAtMaxZ;
+
+      if (!isAtBoundary) {
+        this.targetX += ray.direction.x * this.zoomVelocity * ZOOM_SCALE;
+        this.targetY += ray.direction.y * this.zoomVelocity * ZOOM_SCALE;
+      }
+
       this.targetZ += ray.direction.z * this.zoomVelocity * ZOOM_SCALE;
 
       this.targetZ = THREE.MathUtils.clamp(this.targetZ, this.minCameraZ, this.maxCameraZ);
