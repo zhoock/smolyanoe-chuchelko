@@ -1118,7 +1118,7 @@ export class Universe3D {
     const baseDelta = -e.deltaY;
     const normalizedDelta = e.ctrlKey ? baseDelta * 2.5 : baseDelta;
     this.zoomVelocity += normalizedDelta * WHEEL_VELOCITY_SCALE;
-    this.zoomVelocity = THREE.MathUtils.clamp(this.zoomVelocity, -3, 3);
+    this.zoomVelocity = THREE.MathUtils.clamp(this.zoomVelocity, -8, 8);
   };
 
   private handleMouseDown = (e: MouseEvent) => {
@@ -1299,7 +1299,7 @@ export class Universe3D {
       const zoomFactor = Math.log(scale);
 
       // стабильная скорость без взрывов
-      const VELOCITY_MULTIPLIER = 3.0;
+      const VELOCITY_MULTIPLIER = 5.0;
 
       // ограничиваем dt (ключевой фикс)
       const safeDt = Math.max(dt, 1 / 60);
@@ -1311,7 +1311,9 @@ export class Universe3D {
       this.zoomVelocity = velocity * VELOCITY_MULTIPLIER;
 
       // clamp
-      this.zoomVelocity = THREE.MathUtils.clamp(this.zoomVelocity, -3, 3);
+      const limit = this.isTouchActive ? 8 : 3;
+
+      this.zoomVelocity = THREE.MathUtils.clamp(this.zoomVelocity, -limit, limit);
       this.lastMoveTime = now;
 
       // считаем velocity, но НЕ применяем
@@ -1580,7 +1582,7 @@ export class Universe3D {
       this.targetX -= this.panVelocityX;
       this.targetY += this.panVelocityY;
 
-      const DAMPING = 0.92;
+      const DAMPING = 0.97;
 
       this.panVelocityX *= DAMPING;
       this.panVelocityY *= DAMPING;
