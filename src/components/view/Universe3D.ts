@@ -222,6 +222,8 @@ export class Universe3D {
   private lastPinchCenterX = 0;
   private lastPinchCenterY = 0;
   private lastMoveTime = 0;
+  private lastTapTime = 0;
+  private tapTimeout: number | null = null;
 
   private touchStartX = 0;
   private touchStartY = 0;
@@ -943,7 +945,7 @@ export class Universe3D {
     const startY = this.targetY;
     const startZ = this.targetZ;
 
-    const duration = 1.2;
+    const duration = 0.3;
     const startTime = performance.now();
 
     const step = () => {
@@ -1303,7 +1305,7 @@ export class Universe3D {
       const zoomFactor = Math.log(scale);
 
       // стабильная скорость без взрывов
-      const VELOCITY_MULTIPLIER = 2.5;
+      const VELOCITY_MULTIPLIER = 3.0;
 
       // ограничиваем dt (ключевой фикс)
       const safeDt = Math.max(dt, 1 / 60);
@@ -1388,13 +1390,15 @@ export class Universe3D {
     this.lastPinchCenterY = 0;
   }
 
-  /** Raycast tap on canvas (mobile); ignores if tap is on the artist card overlay. */
+  /** Raycast tap on canvas (mobile); single tap deferred, double tap focuses hit target. */
   private performCanvasTouchTap(clientX: number, clientY: number) {
-    const topEl = document.elementFromPoint(clientX, clientY);
-    if (this.activeCard && topEl && this.activeCard.contains(topEl)) {
-      return;
-    }
+    const now = performance.now();
+    const delta = now - this.lastTapTime;
+    const isDoubleTap = delta > 0 && delta < 400;
 
+    this.lastTapTime = now;
+
+    // обновляем ray (оставь это)
     const rect = this.renderer.domElement.getBoundingClientRect();
 
     this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
@@ -1402,18 +1406,48 @@ export class Universe3D {
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    const intersects = this.raycaster.intersectObjects(this.clickableNodes, true);
-
-    for (let i = 0; i < intersects.length; i++) {
-      const obj = intersects[i].object;
-
-      if (obj.userData?.name) {
-        this.showCard(obj);
-        return;
+    // 👉 DOUBLE TAP
+    if (isDoubleTap) {
+      if (this.tapTimeout) {
+        clearTimeout(this.tapTimeout);
+        this.tapTimeout = null;
       }
+
+      // 👉 берём направление камеры (тот же ray что и zoom)
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const ray = this.raycaster.ray;
+
+      const STEP = 1.5;
+
+      // считаем куда хотим прилететь
+      const nextX = this.targetX + ray.direction.x * STEP;
+      const nextY = this.targetY + ray.direction.y * STEP;
+      const nextZ = this.targetZ + ray.direction.z * STEP;
+
+      // ограничиваем Z
+      const clampedZ = THREE.MathUtils.clamp(nextZ, this.minCameraZ, this.maxCameraZ);
+
+      // 🔥 ПЛАВНЫЙ ПЕРЕЛЁТ
+      this.moveTo(nextX, nextY, clampedZ);
+
+      return;
     }
 
-    this.dismissCard();
+    // 👉 SINGLE TAP (с задержкой)
+    this.tapTimeout = window.setTimeout(() => {
+      const intersects = this.raycaster.intersectObjects(this.clickableNodes, true);
+
+      for (let i = 0; i < intersects.length; i++) {
+        const obj = intersects[i].object;
+
+        if (obj.userData?.name) {
+          this.showCard(obj);
+          return;
+        }
+      }
+
+      this.dismissCard();
+    }, 250);
   }
 
   private noise2D(x: number, y: number) {
@@ -1521,7 +1555,7 @@ export class Universe3D {
     }
 
     const smooth = proximity * proximity * proximity;
-    const zoomScale = THREE.MathUtils.lerp(0.06, 0.03, smooth);
+    const zoomScale = THREE.MathUtils.lerp(0.1, 0.035, smooth);
     const panFactor = THREE.MathUtils.lerp(1.3, 0.4, smooth);
     this.proximityPanFactor = panFactor;
 
