@@ -1138,7 +1138,7 @@ export class Universe3D {
     const rawDx = e.clientX - this.lastPointerX;
     const rawDy = e.clientY - this.lastPointerY;
 
-    const PAN_BASE = 0.002;
+    const PAN_BASE = 0.004;
 
     // используем ТОЛЬКО proximity (у тебя уже есть panFactor из animate)
     const PAN_SENSITIVITY = this.proximityPanFactor;
