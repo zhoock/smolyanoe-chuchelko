@@ -254,6 +254,7 @@ export class Universe3D {
       isHeroPreview?: boolean;
     }
   ) {
+    this.labelTextureCache.clear();
     this.containerEl = container;
     this.clusterColorOption = options?.clusterColor;
     this.useContainerSize = options?.embedInContainer === true;
@@ -336,8 +337,11 @@ export class Universe3D {
 
     this.clusterLabels = clusters.map((cluster) => {
       const labelText = this.getClusterLabelText(cluster);
-      const sprite = this.createClusterLabel(labelText);
-      sprite.position.set(cluster.center.x, cluster.center.y + 2.2, cluster.center.z);
+      const sprite = this.createClusterLabel(labelText, cluster.color);
+      const clusterSize = Math.sqrt(Math.max(4, cluster.artists.length) / 4);
+      const offsetY = clusterSize * 0.6;
+
+      sprite.position.set(cluster.center.x, cluster.center.y + offsetY, cluster.center.z);
       this.scene.add(sprite);
       return {
         sprite,
@@ -437,28 +441,50 @@ export class Universe3D {
     });
   }
 
-  private createClusterLabel(text: string): THREE.Sprite {
+  private createClusterLabel(text: string, color: THREE.Color): THREE.Sprite {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = 512 * dpr;
+    canvas.height = 128 * dpr;
+
+    canvas.style.width = '512px';
+    canvas.style.height = '128px';
 
     const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '700 36px Arial';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, 512, 128);
+
+    const r = Math.floor(color.r * 255);
+    const g = Math.floor(color.g * 255);
+    const b = Math.floor(color.b * 255);
+
+    ctx.font = '700 48px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.75)`;
+
+    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.6)`;
+    ctx.shadowBlur = 6;
+
+    ctx.fillText(text, 256, 64);
 
     const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+
     const material = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
       opacity: 0,
       depthTest: false,
     });
+
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(4.5, 1.2, 1);
+    sprite.scale.set(3.5, 1.0, 1);
+
     return sprite;
   }
 
@@ -617,13 +643,22 @@ export class Universe3D {
     let texture = this.labelTextureCache.get(name);
     if (!texture) {
       const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 64;
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = 256 * dpr;
+      canvas.height = 64 * dpr;
+
+      canvas.style.width = '256px';
+      canvas.style.height = '64px';
 
       const ctx = canvas.getContext('2d')!;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, 256, 64);
+
       ctx.fillStyle = 'white';
-      ctx.font = '20px Arial';
-      const maxWidth = canvas.width - 20;
+      ctx.font = '24px Arial';
+      const maxWidth = 256 - 20;
       const lines = this.splitTextToLines(ctx, name, maxWidth);
 
       let displayLines: string[];
@@ -642,13 +677,16 @@ export class Universe3D {
 
       displayLines = displayLines.map((line) => this.truncateText(ctx, line, maxWidth));
 
-      const lineHeight = 20;
-      const startY = 30;
+      const lineHeight = 24;
+      const startY = 28;
       displayLines.forEach((line, i) => {
         ctx.fillText(line, 10, startY + i * lineHeight);
       });
 
       texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
       this.labelTextureCache.set(name, texture);
     }
 
@@ -658,7 +696,7 @@ export class Universe3D {
       opacity: 0,
     });
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(0.6, 0.15, 1);
+    sprite.scale.set(0.5, 0.12, 1);
     sprite.userData.isLabel = true;
     return sprite;
   }
