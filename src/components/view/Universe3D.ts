@@ -430,7 +430,7 @@ export class Universe3D {
 
       return {
         genreCode,
-        center: new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.6, getZ()),
+        center: new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, getZ()),
         color: new THREE.Color(externalColor ?? palette[index % palette.length]),
         artists: grouped.get(genreCode) ?? [],
       };
