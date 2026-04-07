@@ -398,59 +398,33 @@ export class Universe3D {
     });
 
     const genreCodes = Array.from(grouped.keys());
+
     const count = genreCodes.length || 1;
 
     const clusterSizes = genreCodes.map((code) => {
       const artistsCount = (grouped.get(code) ?? []).length;
       return Math.sqrt(Math.max(4, artistsCount) / 4);
     });
+
     const maxClusterSize = Math.max(...clusterSizes);
+
     const maxSpiralRadius = CLOUD_INNER_RADIUS_FACTOR * CLOUD_ARTIST_DISK_FR * maxClusterSize;
-    const minChordBetweenClusters = 2 * maxSpiralRadius + 6;
+
+    const minDist = 2 * maxSpiralRadius + 6;
+
+    const densityFactor = THREE.MathUtils.clamp(count / 6, 0.4, 1);
+
+    const radius = count > 1 ? (minDist / (2 * Math.sin(Math.PI / count))) * densityFactor : 0;
+
     const palette = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5];
     const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
-    const depthRange = 40;
+
+    const depthRange = 40 * THREE.MathUtils.clamp(count / 6, 0.4, 1);
     const getZ = () => (this.isHeroPreview ? 0 : (Math.random() - 0.5) * depthRange);
-
-    if (count === 1) {
-      return [
-        {
-          genreCode: genreCodes[0] ?? 'other',
-          center: new THREE.Vector3(0, 0, getZ()),
-          color: new THREE.Color(externalColor ?? palette[0]),
-          artists: grouped.get(genreCodes[0] ?? 'other') ?? [],
-        },
-      ];
-    }
-
-    if (count === 2) {
-      const spacing = maxSpiralRadius * 2.2;
-      return genreCodes.map((genreCode, index) => ({
-        genreCode,
-        center: new THREE.Vector3(index === 0 ? -spacing : spacing, 0, getZ()),
-        color: new THREE.Color(externalColor ?? palette[index % palette.length]),
-        artists: grouped.get(genreCode) ?? [],
-      }));
-    }
-
-    if (count === 3) {
-      const spacing = maxSpiralRadius * 2.2;
-      return genreCodes.map((genreCode, index) => ({
-        genreCode,
-        center: new THREE.Vector3(
-          (index - 1) * spacing,
-          index === 1 ? spacing * 0.5 : -spacing * 0.5,
-          getZ()
-        ),
-        color: new THREE.Color(externalColor ?? palette[index % palette.length]),
-        artists: grouped.get(genreCode) ?? [],
-      }));
-    }
-
-    const radius = minChordBetweenClusters / (2 * Math.sin(Math.PI / count));
 
     return genreCodes.map((genreCode, index) => {
       const angle = (index / count) * Math.PI * 2;
+
       return {
         genreCode,
         center: new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.6, getZ()),
