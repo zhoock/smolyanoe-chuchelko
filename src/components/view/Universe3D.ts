@@ -227,6 +227,7 @@ export class Universe3D {
   private lastMoveTime = 0;
   private lastTapTime = 0;
   private tapTimeout: number | null = null;
+  private ignoreClickUntil = 0;
 
   private touchStartX = 0;
   private touchStartY = 0;
@@ -779,6 +780,10 @@ export class Universe3D {
   }
 
   private onClick = (event: MouseEvent) => {
+    if (Date.now() < this.ignoreClickUntil) {
+      return;
+    }
+
     if (this.activeCard && event.target instanceof Node && this.activeCard.contains(event.target)) {
       return;
     }
@@ -997,10 +1002,11 @@ export class Universe3D {
   }
 
   private showCard(obj: THREE.Object3D) {
-    this.focusOnObject(obj);
     if (this.activeCard) {
-      this.dismissCard();
+      return;
     }
+
+    this.focusOnObject(obj);
 
     this.cardAnchorObject = obj;
 
@@ -1419,6 +1425,8 @@ export class Universe3D {
 
   /** Raycast tap on canvas (mobile); single tap deferred, double tap focuses hit target. */
   private performCanvasTouchTap(clientX: number, clientY: number) {
+    this.ignoreClickUntil = Date.now() + 400;
+
     const now = performance.now();
     const delta = now - this.lastTapTime;
     const isDoubleTap = delta > 0 && delta < 400;
