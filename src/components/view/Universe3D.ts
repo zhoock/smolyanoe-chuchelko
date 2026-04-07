@@ -966,12 +966,15 @@ export class Universe3D {
     const startY = this.targetY;
     const startZ = this.targetZ;
 
-    const duration = 0.3;
+    const distance = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2 + (z - startZ) ** 2);
+
+    // чем дальше — тем дольше
+    const duration = THREE.MathUtils.clamp(distance * 0.25, 0.6, 1.4);
     const startTime = performance.now();
 
     const step = () => {
       const t = Math.min((performance.now() - startTime) / (duration * 1000), 1);
-      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+      const ease = 1 - Math.pow(1 - t, 4); // easeOutCubic
 
       this.targetX = startX + (x - startX) * ease;
       this.targetY = startY + (y - startY) * ease;
