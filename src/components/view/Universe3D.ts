@@ -204,6 +204,8 @@ export class Universe3D {
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
   private clickableNodes: THREE.Object3D[] = [];
+  private hoveredObject: THREE.Object3D | null = null;
+  private readonly hoverLerpWhite = new THREE.Color(0xffffff);
   private uiLayer!: HTMLElement;
   private activeCard: HTMLElement | null = null;
   /** Mesh the card is tied to; position is reprojected on resize and each frame. */
@@ -238,9 +240,6 @@ export class Universe3D {
   /** Lerp(1.3, 0.5, smooth) from distance to nearest cloud; mouse/touch read between frames. */
   private proximityPanFactor = 1.3;
   private labelTextureCache = new Map<string, THREE.CanvasTexture>();
-  private lastLabelUpdateCameraX = Number.NaN;
-  private lastLabelUpdateCameraY = Number.NaN;
-  private lastLabelUpdateCameraZ = Number.NaN;
 
   constructor(
     container: HTMLElement,
@@ -765,6 +764,8 @@ export class Universe3D {
 
       mesh.userData = user;
       mesh.userData.label = null;
+      mesh.userData.baseColor = color.clone();
+      mesh.userData.hoverProgress = 0;
       if (!user.publicSlug.startsWith('__preview__')) {
         this.clickableNodes.push(mesh);
       }
@@ -1101,9 +1102,9 @@ export class Universe3D {
     window.addEventListener('mousedown', this.handleMouseDown);
     window.addEventListener('mouseup', this.handleMouseUp);
     window.addEventListener('mousemove', this.handleMouseMove);
-    window.addEventListener('mousemove', this.handleMouseMoveForZoom);
 
     const canvas = this.renderer.domElement;
+    canvas.addEventListener('mousemove', this.handleMouseMoveForZoom);
     canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', this.handleTouchEnd);
@@ -1178,6 +1179,18 @@ export class Universe3D {
 
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    const intersects = this.raycaster.intersectObjects(this.clickableNodes, true);
+
+    if (intersects.length > 0) {
+      this.hoveredObject = intersects[0].object;
+      this.renderer.domElement.style.cursor = 'pointer';
+    } else {
+      this.hoveredObject = null;
+      this.renderer.domElement.style.cursor = 'default';
+    }
   };
 
   private handleTouchStart = (e: TouchEvent) => {
@@ -1479,31 +1492,6 @@ export class Universe3D {
     return value;
   }
 
-  private shouldUpdateLabelVisibility(): boolean {
-    const { x, y, z } = this.camera.position;
-    const thresholdXY = 0.01;
-    const thresholdZ = 0.01;
-
-    const dx = Math.abs(x - this.lastLabelUpdateCameraX);
-    const dy = Math.abs(y - this.lastLabelUpdateCameraY);
-    const dz = Math.abs(z - this.lastLabelUpdateCameraZ);
-
-    const hasMeaningfulChange =
-      Number.isNaN(this.lastLabelUpdateCameraX) ||
-      dx >= thresholdXY ||
-      dy >= thresholdXY ||
-      dz >= thresholdZ;
-
-    if (!hasMeaningfulChange) {
-      return false;
-    }
-
-    this.lastLabelUpdateCameraX = x;
-    this.lastLabelUpdateCameraY = y;
-    this.lastLabelUpdateCameraZ = z;
-    return true;
-  }
-
   private animate = () => {
     if (this.deferInitialFocus) {
       this.deferInitialFocus = false;
@@ -1629,72 +1617,89 @@ export class Universe3D {
     const targetPosition = this.tempVec3.set(this.targetX, this.targetY, this.targetZ);
     this.camera.position.copy(targetPosition);
 
-    const isMoving =
-      Math.abs(this.targetX - this.camera.position.x) > 0.001 ||
-      Math.abs(this.targetY - this.camera.position.y) > 0.001 ||
-      Math.abs(this.targetZ - this.camera.position.z) > 0.001;
+    // ЛОГИКА ВИДИМОСТИ (главное)
+    const temp = this.tempVec3;
 
-    if (this.shouldUpdateLabelVisibility() || isMoving) {
-      // ЛОГИКА ВИДИМОСТИ (главное)
-      const temp = this.tempVec3;
+    this.clickableNodes.forEach((obj) => {
+      const mesh = obj as THREE.Mesh;
+      mesh.getWorldPosition(temp);
+      const distance = this.camera.position.distanceTo(temp);
 
-      this.clickableNodes.forEach((mesh) => {
-        mesh.getWorldPosition(temp);
-        const distance = this.camera.position.distanceTo(temp);
+      const fadeStart = 4;
+      const fadeEnd = 1.2;
+      const createLabelDistance = 3;
 
-        const fadeStart = 4;
-        const fadeEnd = 1.2;
-        const createLabelDistance = 3;
+      const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
 
-        const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
-
-        let sprite = (mesh.userData?.label as THREE.Sprite | null) ?? null;
-        const FADE_SPEED = 0.04;
-        const REMOVE_THRESHOLD = 0.02;
-        if (distance < createLabelDistance) {
-          if (!sprite) {
-            const user = mesh.userData as SceneArtist;
-            sprite = this.createArtistLabelSprite(user.name);
-            this.scene.add(sprite);
-            mesh.userData.label = sprite;
-          }
-          sprite.position.set(temp.x, temp.y + 0.1, temp.z);
-          const material = sprite.material as THREE.SpriteMaterial;
-          material.opacity += (t - material.opacity) * FADE_SPEED;
-          sprite.visible = t > 0.01;
-        } else if (sprite) {
-          const material = sprite.material as THREE.SpriteMaterial;
-          material.opacity += (0 - material.opacity) * FADE_SPEED;
-          sprite.visible = material.opacity > 0.01;
-
-          if (material.opacity < REMOVE_THRESHOLD) {
-            this.disposeArtistLabelSprite(sprite);
-            mesh.userData.label = null;
-            sprite = null;
-          }
+      let sprite = (mesh.userData?.label as THREE.Sprite | null) ?? null;
+      const FADE_SPEED = 0.04;
+      const REMOVE_THRESHOLD = 0.02;
+      if (distance < createLabelDistance) {
+        if (!sprite) {
+          const user = mesh.userData as SceneArtist;
+          sprite = this.createArtistLabelSprite(user.name);
+          this.scene.add(sprite);
+          mesh.userData.label = sprite;
         }
-
-        // масштаб точки (приятный эффект)
-        const scale = 0.05 + t * 0.15;
-        mesh.scale.setScalar(scale);
-      });
-
-      this.clusterLabels.forEach(({ sprite, center }) => {
-        const distance = this.camera.position.distanceTo(center);
-        const fadeStart = 5;
-        const fadeEnd = 3;
-        const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
+        sprite.position.set(temp.x, temp.y + 0.1, temp.z);
         const material = sprite.material as THREE.SpriteMaterial;
-        material.opacity = t;
+        material.opacity += (t - material.opacity) * FADE_SPEED;
         sprite.visible = t > 0.01;
+      } else if (sprite) {
+        const material = sprite.material as THREE.SpriteMaterial;
+        material.opacity += (0 - material.opacity) * FADE_SPEED;
+        sprite.visible = material.opacity > 0.01;
 
-        const minScale = 2.5;
-        const maxScale = 6;
-        const scaleT = THREE.MathUtils.clamp((6 - distance) / 4, 0, 1);
-        const scale = minScale + (maxScale - minScale) * scaleT;
-        sprite.scale.set(scale, scale * 0.25, 1);
-      });
-    }
+        if (material.opacity < REMOVE_THRESHOLD) {
+          this.disposeArtistLabelSprite(sprite);
+          mesh.userData.label = null;
+          sprite = null;
+        }
+      }
+
+      const isHovered = mesh === this.hoveredObject;
+      const isCardActive = this.activeCard !== null;
+      const isCardTarget = mesh === this.cardAnchorObject;
+
+      const target = isHovered || (isCardActive && isCardTarget) ? 1 : 0;
+
+      const mat = mesh.material as THREE.MeshBasicMaterial;
+
+      let hp = (mesh.userData.hoverProgress as number) || 0;
+
+      hp += (target - hp) * 0.12;
+      mesh.userData.hoverProgress = hp;
+
+      let baseScale = 0.05 + t * 0.15;
+
+      const hoverScale = 1.8;
+      const finalScale = baseScale * (1 + hp * (hoverScale - 1));
+
+      const pulse = 1 + Math.sin(performance.now() * 0.005) * 0.05 * hp;
+
+      mesh.scale.setScalar(finalScale * pulse);
+
+      const baseCol = mesh.userData.baseColor as THREE.Color;
+      mat.color.copy(baseCol).lerp(this.hoverLerpWhite, hp * 0.4);
+
+      mat.opacity = 0.9 + hp * 0.1;
+    });
+
+    this.clusterLabels.forEach(({ sprite, center }) => {
+      const distance = this.camera.position.distanceTo(center);
+      const fadeStart = 5;
+      const fadeEnd = 3;
+      const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
+      const material = sprite.material as THREE.SpriteMaterial;
+      material.opacity = t;
+      sprite.visible = t > 0.01;
+
+      const minScale = 2.5;
+      const maxScale = 6;
+      const scaleT = THREE.MathUtils.clamp((6 - distance) / 4, 0, 1);
+      const scale = minScale + (maxScale - minScale) * scaleT;
+      sprite.scale.set(scale, scale * 0.25, 1);
+    });
 
     if (this.isHeroPreview) {
       this.scene.traverse((obj) => {
@@ -1751,9 +1756,9 @@ export class Universe3D {
     window.removeEventListener('mousedown', this.handleMouseDown);
     window.removeEventListener('mouseup', this.handleMouseUp);
     window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mousemove', this.handleMouseMoveForZoom);
 
     const canvas = this.renderer.domElement;
+    canvas.removeEventListener('mousemove', this.handleMouseMoveForZoom);
     canvas.removeEventListener('touchstart', this.handleTouchStart);
     canvas.removeEventListener('touchmove', this.handleTouchMove);
     canvas.removeEventListener('touchend', this.handleTouchEnd);
