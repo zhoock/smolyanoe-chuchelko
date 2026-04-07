@@ -414,7 +414,10 @@ export class Universe3D {
 
     const densityFactor = THREE.MathUtils.clamp(count / 6, 0.4, 1);
 
-    const radius = count > 1 ? (minDist / (2 * Math.sin(Math.PI / count))) * densityFactor : 0;
+    const baseRadius = maxSpiralRadius * 2.2;
+
+    // мягкий рост радиуса без взрывов при малом count
+    const radius = baseRadius * Math.pow(count, 0.5) * densityFactor;
 
     const palette = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5];
     const externalColor = artists[0]?.clusterColor ?? this.clusterColorOption;
