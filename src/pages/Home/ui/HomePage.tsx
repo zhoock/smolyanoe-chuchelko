@@ -74,7 +74,7 @@ export function HomePage() {
         console.warn('[HomePage] Failed to fetch /api/public-artists, using fallback data', error);
       }
 
-      const artists = prepareUniverseData(useMocks ? generateMockArtists(150) : apiArtists);
+      const artists = prepareUniverseData(useMocks ? generateMockArtists(50) : apiArtists);
 
       if (cancelled || !sceneRef.current) return;
       universe = new Universe3D(sceneRef.current, artists, {

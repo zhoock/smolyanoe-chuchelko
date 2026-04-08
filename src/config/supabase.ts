@@ -107,14 +107,18 @@ export const supabase = createSupabaseClient();
  * @returns Supabase клиент с service role key или null, если переменные не установлены
  */
 export function createSupabaseAdminClient(): SupabaseClient | null {
+  if (typeof window !== 'undefined') {
+    throw new Error('Service role key cannot be used in the browser');
+  }
+
   const env = getSafeEnv();
-  const supabaseUrl = getSupabaseUrl();
-  const serviceRoleKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL || '';
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
     if (env.NODE_ENV !== 'production') {
       console.warn(
-        '⚠️ Supabase service role key not found. Please set VITE_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY environment variable.'
+        '⚠️ Supabase service role key not found. Set SUPABASE_SERVICE_ROLE_KEY (and SUPABASE_URL) on the server only — never VITE_*.'
       );
     }
     return null;

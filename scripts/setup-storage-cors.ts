@@ -9,13 +9,12 @@ import * as dotenv from 'dotenv';
 // Загружаем переменные окружения
 dotenv.config();
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
-const SERVICE_ROLE_KEY =
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error('❌ Ошибка: не найдены переменные окружения');
-  console.error('Нужны: VITE_SUPABASE_URL и VITE_SUPABASE_SERVICE_ROLE_KEY');
+  console.error('Нужны: VITE_SUPABASE_URL (или SUPABASE_URL) и SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 
