@@ -38,8 +38,15 @@ export function HomePage() {
     }
   });
   const [cloudDamping, setCloudDamping] = useState(true);
+  const [universeRefreshToken, setUniverseRefreshToken] = useState(0);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
+
+  useEffect(() => {
+    const handler = () => setUniverseRefreshToken((n) => n + 1);
+    window.addEventListener('artist:updated', handler);
+    return () => window.removeEventListener('artist:updated', handler);
+  }, []);
 
   useEffect(() => {
     if (!hasArtistParam) return;
@@ -175,7 +182,16 @@ export function HomePage() {
         sceneRef.current.innerHTML = '';
       }
     };
-  }, [dispatch, hasArtistParam, lang, location.pathname, location.search, navigate, useMocks]);
+  }, [
+    dispatch,
+    hasArtistParam,
+    lang,
+    location.pathname,
+    location.search,
+    navigate,
+    useMocks,
+    universeRefreshToken,
+  ]);
 
   if (hasArtistParam) {
     return (

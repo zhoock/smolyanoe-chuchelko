@@ -6,7 +6,10 @@ import { StoreProvider } from '@app/providers/StoreProvider';
 import { LangProvider } from '@app/providers/lang';
 import { HelmetProvider } from 'react-helmet-async';
 import { CartProvider } from '@entities/service/model/CartContext';
+import { runGenresHealthCheck } from './dev/runGenresHealthCheck';
 import './main.scss';
+
+runGenresHealthCheck();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

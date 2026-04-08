@@ -1606,28 +1606,6 @@ export function EditAlbumModal({
         return;
       }
 
-      // Canonical genre source of truth for clustering/profile.
-      const selectedGenreCode = finalFormData.genreCodes[0] || 'other';
-      const profileUpdateResponse = await fetch('/api/user-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ genreCode: selectedGenreCode }),
-      });
-
-      if (!profileUpdateResponse.ok) {
-        const profileUpdateError = await profileUpdateResponse
-          .json()
-          .catch(() => ({ error: 'Failed to update genreCode in profile' }));
-        const errorMessage = String(profileUpdateError?.error || '');
-        // No-op for unchanged profile payload: do not block album save.
-        if (errorMessage !== 'No fields to update') {
-          throw new Error(errorMessage || 'Failed to update genreCode in profile');
-        }
-      }
-
       console.log('📤 [EditAlbumModal] Sending request:', {
         url: '/api/albums',
         method,

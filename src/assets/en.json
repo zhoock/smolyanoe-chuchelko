@@ -205,6 +205,7 @@
         },
         "fields": {
           "bandName": "Band Name",
+          "primaryGenre": "Primary genre",
           "email": "Email",
           "language": "Language",
           "aboutBand": "About the Band",
@@ -219,6 +220,7 @@
           "aboutBand": "Enter band description. Each line will be a separate paragraph."
         },
         "hints": {
+          "primaryGenreCatalog": "This genre is used to show your artist in the catalog",
           "aboutBand": "Each line will be a separate paragraph in the band description",
           "headerImages": "You can upload up to 10 images for the site header",
           "coverImage": "Recommended resolution: 2560 × 1522\nMinimum: 1920 × 1140\nFormat: JPG, PNG, WEBP, GIF, AVIF, HEIC/HEIF"

@@ -306,6 +306,7 @@ export interface IInterface {
       };
       fields: {
         bandName: string;
+        primaryGenre: string;
         email: string;
         language: string;
         aboutBand: string;
@@ -320,6 +321,7 @@ export interface IInterface {
         aboutBand: string;
       };
       hints: {
+        primaryGenreCatalog: string;
         aboutBand: string;
         headerImages: string;
         coverImage: string;

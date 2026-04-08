@@ -6,6 +6,7 @@
  */
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
+import { isCanonicalGenreCode } from '../../src/shared/constants/canonicalGenres';
 import { query } from './lib/db';
 import { getUserIdFromEvent, requireAuth } from './lib/api-helpers';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
@@ -18,6 +19,7 @@ interface UserProfileRow {
   header_images?: any; // JSONB
   password: string | null;
   site_name?: string | null;
+  genre_code?: string | null;
 }
 
 interface GetUserProfileResponse {
@@ -28,6 +30,8 @@ interface GetUserProfileResponse {
     theBand: string[];
     headerImages?: string[];
     siteName?: string | null;
+    /** Canonical genre for catalog / clustering (`users.genre_code`). */
+    genreCode?: string;
   };
   error?: string;
 }
@@ -98,7 +102,7 @@ export const handler: Handler = async (
 
       try {
         result = await query<UserProfileRow>(
-          `SELECT name, public_slug, the_band, header_images, password, site_name FROM users WHERE id = $1 AND is_active = true`,
+          `SELECT name, public_slug, the_band, header_images, password, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
           [targetUserId],
           0
         );
@@ -118,8 +122,9 @@ export const handler: Handler = async (
               the_band: any;
               header_images?: any;
               site_name?: string | null;
+              genre_code?: string | null;
             }>(
-              `SELECT name, public_slug, the_band, header_images, site_name FROM users WHERE id = $1 AND is_active = true`,
+              `SELECT name, public_slug, the_band, header_images, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
               [targetUserId],
               0
             );
@@ -130,8 +135,9 @@ export const handler: Handler = async (
               public_slug?: string | null;
               the_band: any;
               site_name?: string | null;
+              genre_code?: string | null;
             }>(
-              `SELECT name, public_slug, the_band, site_name FROM users WHERE id = $1 AND is_active = true`,
+              `SELECT name, public_slug, the_band, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
               [targetUserId],
               0
             );
@@ -180,13 +186,24 @@ export const handler: Handler = async (
       const profileName = (user as any).name || null;
       const siteName = (user as any).site_name || profileName || null;
       const publicSlug = (user as any).public_slug || null;
+      const rawGenre = (user as UserProfileRow).genre_code;
+      const genreCode =
+        typeof rawGenre === 'string' && rawGenre.trim() ? rawGenre.trim().toLowerCase() : 'other';
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          data: { name: profileName, publicSlug, theBand, password, headerImages, siteName },
+          data: {
+            name: profileName,
+            publicSlug,
+            theBand,
+            password,
+            headerImages,
+            siteName,
+            genreCode,
+          },
         } as GetUserProfileResponse),
       };
     }
@@ -270,13 +287,8 @@ export const handler: Handler = async (
       if (data.genreCode !== undefined) {
         const normalizedGenreCode = data.genreCode.trim().toLowerCase() || 'other';
 
-        const genreExistsResult = await query<{ code: string }>(
-          `SELECT code FROM genres WHERE code = $1 LIMIT 1`,
-          [normalizedGenreCode],
-          0
-        );
-
-        if (genreExistsResult.rows.length === 0) {
+        // Тот же набор, что GENRE_OPTIONS / таблица genres (см. canonicalGenres.ts и миграцию 030).
+        if (!isCanonicalGenreCode(normalizedGenreCode)) {
           return {
             statusCode: 400,
             headers,

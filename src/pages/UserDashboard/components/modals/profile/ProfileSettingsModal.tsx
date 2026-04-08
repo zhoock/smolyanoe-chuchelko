@@ -12,6 +12,7 @@ import {
   saveHeaderImagesToDatabase,
 } from '@entities/user/lib';
 import { HeaderImagesUpload } from '../../upload/HeaderImagesUpload';
+import { GENRE_OPTIONS } from '../album/EditAlbumModal.constants';
 import './ProfileSettingsModal.style.scss';
 
 interface ProfileSettingsModalProps {
@@ -38,6 +39,8 @@ export function ProfileSettingsModal({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [headerImages, setHeaderImages] = useState<string[]>([]);
   const [initialHeaderImages, setInitialHeaderImages] = useState<string[]>([]);
+  const [genreCode, setGenreCode] = useState<string>('other');
+  const [initialGenreCode, setInitialGenreCode] = useState<string>('other');
   const [isLoadingHeaderImages, setIsLoadingHeaderImages] = useState(false);
   const [aboutTextRu, setAboutTextRu] = useState<string>('');
   const [aboutTextEn, setAboutTextEn] = useState<string>('');
@@ -159,6 +162,7 @@ export function ProfileSettingsModal({
     (activeTab === 'profile' &&
       (name !== initialName ||
         publicSlug !== initialPublicSlug ||
+        genreCode !== initialGenreCode ||
         aboutText !== initialAboutText ||
         (headerImages || []).length !== (initialHeaderImages || []).length ||
         (headerImages || []).some((url, index) => url !== (initialHeaderImages || [])[index]))) ||
@@ -174,6 +178,7 @@ export function ProfileSettingsModal({
     } else if (activeTab === 'profile') {
       setName(initialName);
       setPublicSlug(initialPublicSlug);
+      setGenreCode(initialGenreCode);
       // Восстанавливаем текст для текущего выбранного языка
       setAboutText(selectedLang === 'ru' ? initialAboutTextRu : initialAboutTextEn);
       setHeaderImages([...(initialHeaderImages || [])]);
@@ -341,6 +346,7 @@ export function ProfileSettingsModal({
       // Сохранение site_name (название группы) и header images
       const needsSiteNameUpdate = name !== initialName;
       const needsPublicSlugUpdate = publicSlug !== initialPublicSlug;
+      const needsGenreUpdate = genreCode !== initialGenreCode;
       const safeHeaderImages = Array.isArray(headerImages) ? headerImages : [];
       const safeInitialHeaderImages = Array.isArray(initialHeaderImages) ? initialHeaderImages : [];
       const needsHeaderImagesUpdate =
@@ -350,6 +356,7 @@ export function ProfileSettingsModal({
       console.log('💾 [ProfileSettingsModal] Сохранение профиля:', {
         needsSiteNameUpdate,
         needsPublicSlugUpdate,
+        needsGenreUpdate,
         needsHeaderImagesUpdate,
         name,
         initialName,
@@ -357,7 +364,12 @@ export function ProfileSettingsModal({
         initialHeaderImagesLength: safeInitialHeaderImages.length,
       });
 
-      if (needsSiteNameUpdate || needsPublicSlugUpdate || needsHeaderImagesUpdate) {
+      if (
+        needsSiteNameUpdate ||
+        needsPublicSlugUpdate ||
+        needsHeaderImagesUpdate ||
+        needsGenreUpdate
+      ) {
         try {
           const token = getToken();
           if (!token) {
@@ -365,12 +377,15 @@ export function ProfileSettingsModal({
             return;
           }
 
-          const updateData: any = {};
+          const updateData: Record<string, unknown> = {};
           if (needsSiteNameUpdate) {
             updateData.siteName = name.trim() || null;
           }
           if (needsPublicSlugUpdate) {
             updateData.publicSlug = publicSlug.trim();
+          }
+          if (needsGenreUpdate) {
+            updateData.genreCode = genreCode;
           }
           if (needsHeaderImagesUpdate) {
             updateData.headerImages = safeHeaderImages;
@@ -429,6 +444,7 @@ export function ProfileSettingsModal({
 
       setInitialName(name);
       setInitialPublicSlug(publicSlug);
+      setInitialGenreCode(genreCode);
       setInitialHeaderImages([...(headerImages || [])]);
       setInitialAboutText(aboutText);
 
@@ -436,6 +452,8 @@ export function ProfileSettingsModal({
         initialName: name,
         initialHeaderImagesCount: (headerImages || []).length,
       });
+
+      window.dispatchEvent(new Event('artist:updated'));
 
       onClose();
     }
@@ -604,6 +622,8 @@ export function ProfileSettingsModal({
             const initialUserName = storedName || userName || '';
             setInitialName(initialUserName);
             setName(initialUserName);
+            setGenreCode('other');
+            setInitialGenreCode('other');
             return;
           }
 
@@ -620,6 +640,14 @@ export function ProfileSettingsModal({
               ? (result.data?.name ?? result.data?.siteName ?? null)
               : null;
             const loadedPublicSlug = result.success ? (result.data?.publicSlug ?? '') : '';
+            const allowedGenreCodes = new Set(GENRE_OPTIONS.map((g) => g.code));
+            const rawLoaded =
+              result.success && typeof result.data?.genreCode === 'string'
+                ? result.data.genreCode.trim().toLowerCase()
+                : '';
+            const loadedGenre = rawLoaded && allowedGenreCodes.has(rawLoaded) ? rawLoaded : 'other';
+            setGenreCode(loadedGenre);
+            setInitialGenreCode(loadedGenre);
             if (profileName) {
               setInitialName(profileName);
               setName(profileName);
@@ -643,6 +671,8 @@ export function ProfileSettingsModal({
             setName(initialUserName);
             setInitialPublicSlug('');
             setPublicSlug('');
+            setGenreCode('other');
+            setInitialGenreCode('other');
           }
         } catch (error) {
           console.warn('⚠️ Ошибка загрузки site_name из профиля:', error);
@@ -653,6 +683,8 @@ export function ProfileSettingsModal({
           setName(initialUserName);
           setInitialPublicSlug('');
           setPublicSlug('');
+          setGenreCode('other');
+          setInitialGenreCode('other');
         }
       };
 
@@ -834,6 +866,31 @@ export function ProfileSettingsModal({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
+                  </div>
+
+                  <div className="profile-settings-modal__field">
+                    <label
+                      htmlFor="profile-primary-genre"
+                      className="profile-settings-modal__label"
+                    >
+                      {ui?.dashboard?.profileSettingsModal?.fields?.primaryGenre ?? 'Основной жанр'}
+                    </label>
+                    <select
+                      id="profile-primary-genre"
+                      className="profile-settings-modal__input"
+                      value={genreCode}
+                      onChange={(e) => setGenreCode(e.target.value)}
+                    >
+                      {GENRE_OPTIONS.map((opt) => (
+                        <option key={opt.code} value={opt.code}>
+                          {opt.label[currentLang === 'en' ? 'en' : 'ru']}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="profile-settings-modal__field-hint">
+                      {ui?.dashboard?.profileSettingsModal?.hints?.primaryGenreCatalog ??
+                        'Этот жанр используется для отображения артиста в каталоге'}
+                    </div>
                   </div>
 
                   <div className="profile-settings-modal__field">

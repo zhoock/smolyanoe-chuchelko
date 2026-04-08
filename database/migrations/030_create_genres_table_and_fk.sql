@@ -1,5 +1,7 @@
 -- Migration: Create genres table and add FK for users.genre_code
 -- Date: 2026
+--
+-- Строки ниже должны совпадать с CANONICAL_GENRES в src/shared/constants/canonicalGenres.ts
 
 CREATE TABLE IF NOT EXISTS genres (
   code TEXT PRIMARY KEY,
@@ -9,9 +11,9 @@ CREATE TABLE IF NOT EXISTS genres (
 
 INSERT INTO genres (code, label_en, label_ru) VALUES
   ('grunge', 'Grunge', 'Гранж'),
+  ('alternative', 'Alternative', 'Альтернатива'),
   ('punk', 'Punk', 'Панк'),
   ('rock', 'Rock', 'Рок'),
-  ('alternative', 'Alternative', 'Альтернатива'),
   ('metal', 'Metal', 'Метал'),
   ('other', 'Other', 'Другое')
 ON CONFLICT (code) DO NOTHING;

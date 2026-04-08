@@ -74,6 +74,13 @@
   status = 200
   force = true
 
+# Health: canonical genres vs DB
+[[redirects]]
+  from = "/api/health/genres"
+  to = "/.netlify/functions/health-genres"
+  status = 200
+  force = true
+
 # User profile
 [[redirects]]
   from = "/api/user-profile*"
