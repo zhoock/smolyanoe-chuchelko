@@ -66,6 +66,7 @@ import {
   type TrackData,
 } from '@entities/album/lib/transformAlbumData';
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
+import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import './UserDashboard.style.scss';
 
 // Компонент для сортируемого трека
@@ -678,6 +679,7 @@ function UserDashboard() {
     trackId: string;
     trackTitle: string;
     trackSrc?: string;
+    trackDurationSeconds?: number;
     lyricsText?: string;
     authorship?: string;
   } | null>(null);
@@ -1727,12 +1729,14 @@ function UserDashboard() {
       const track = album?.tracks.find((t) => t.id === trackId);
       if (track) {
         const lyricsText = getTrackLyricsText(albumId, trackId);
+        const trackDurationSeconds = parseTrackDurationToSeconds(track.duration);
         setSyncLyricsModal({
           isOpen: true,
           albumId,
           trackId,
           trackTitle,
           trackSrc: track.src,
+          trackDurationSeconds,
           lyricsText,
           authorship: track.authorship,
         });
@@ -1916,6 +1920,7 @@ function UserDashboard() {
     const album = albumsData.find((a) => a.id === albumId);
     const track = album?.tracks.find((t) => t.id === trackId);
     if (track) {
+      const trackDurationSeconds = parseTrackDurationToSeconds(track.duration);
       // Используем переданный текст напрямую (он уже сохранён через handleSaveLyrics)
       setSyncLyricsModal({
         isOpen: true,
@@ -1923,6 +1928,7 @@ function UserDashboard() {
         trackId,
         trackTitle,
         trackSrc: track.src,
+        trackDurationSeconds,
         lyricsText: currentLyrics,
         authorship: currentAuthorship,
       });
@@ -2825,6 +2831,7 @@ function UserDashboard() {
           trackId={syncLyricsModal.trackId}
           trackTitle={syncLyricsModal.trackTitle}
           trackSrc={syncLyricsModal.trackSrc}
+          trackDurationSeconds={syncLyricsModal.trackDurationSeconds}
           authorship={syncLyricsModal.authorship}
           onClose={() => setSyncLyricsModal(null)}
           onSave={async () => {

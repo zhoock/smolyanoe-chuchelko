@@ -1,5 +1,13 @@
 // src/pages/UserDashboard/components/SyncLyricsModal.tsx
-import { useState, useEffect, useCallback, useRef, useLayoutEffect, type MouseEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+  useMemo,
+  type MouseEvent,
+} from 'react';
 import { Popup } from '@shared/ui/popup';
 import { AlertModal } from '@shared/ui/alertModal';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -13,6 +21,7 @@ import {
   clearSyncedLyricsCache,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
+import { getUserAudioUrl } from '@shared/api/albums';
 import './SyncLyricsModal.style.scss';
 
 interface SyncLyricsModalProps {
@@ -21,9 +30,38 @@ interface SyncLyricsModalProps {
   trackId: string;
   trackTitle: string;
   trackSrc?: string;
+  /** Длительность из метаданных трека (сек), если audio.duration ещё NaN */
+  trackDurationSeconds?: number;
   authorship?: string; // fallback
   onClose: () => void;
   onSave?: () => void;
+}
+
+const isUsableMediaDuration = (d: number): boolean => Number.isFinite(d) && d > 0 && d !== Infinity;
+
+function durationFromSeekable(media: HTMLMediaElement): number {
+  try {
+    const sb = media.seekable;
+    if (sb && sb.length > 0) {
+      const end = sb.end(sb.length - 1);
+      if (isUsableMediaDuration(end)) return end;
+    }
+  } catch {
+    /* ignore */
+  }
+  return 0;
+}
+
+function pickPlaybackDurationSeconds(
+  audioDuration: number,
+  trackFallback: number | undefined,
+  media: HTMLMediaElement
+): number {
+  if (isUsableMediaDuration(audioDuration)) return audioDuration;
+  const fromSeek = durationFromSeekable(media);
+  if (fromSeek > 0) return fromSeek;
+  if (trackFallback !== undefined && isUsableMediaDuration(trackFallback)) return trackFallback;
+  return 0;
 }
 
 const formatTime = (seconds: number): string => {
@@ -49,6 +87,7 @@ export function SyncLyricsModal({
   trackId,
   trackTitle,
   trackSrc,
+  trackDurationSeconds,
   authorship: propAuthorship,
   onClose,
   onSave,
@@ -74,6 +113,11 @@ export function SyncLyricsModal({
 
   // ключ текущего трека/языка
   const keyNow = `${albumId}::${trackId}::${lang}`;
+
+  const audioPlaybackUrl = useMemo(
+    () => (trackSrc?.trim() ? getUserAudioUrl(trackSrc) : ''),
+    [trackSrc]
+  );
 
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
@@ -125,13 +169,21 @@ export function SyncLyricsModal({
       audioRef.current = null;
     }
 
-    if (!trackSrc || !isOpen) return;
+    if (!audioPlaybackUrl || !isOpen) return;
 
-    const audio = new Audio(trackSrc);
+    const audio = new Audio(audioPlaybackUrl);
     audioRef.current = audio;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      setDuration((prev) => {
+        const next = pickPlaybackDurationSeconds(audio.duration, trackDurationSeconds, audio);
+        return next > 0 ? next : prev;
+      });
+    };
+    const applyDuration = () => {
+      setDuration(pickPlaybackDurationSeconds(audio.duration, trackDurationSeconds, audio));
+    };
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
@@ -139,17 +191,25 @@ export function SyncLyricsModal({
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('loadedmetadata', applyDuration);
+    audio.addEventListener('durationchange', applyDuration);
+    audio.addEventListener('loadeddata', applyDuration);
+    audio.addEventListener('progress', applyDuration);
     audio.addEventListener('ended', handleEnded);
+    audio.preload = 'auto';
+    applyDuration();
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('loadedmetadata', applyDuration);
+      audio.removeEventListener('durationchange', applyDuration);
+      audio.removeEventListener('loadeddata', applyDuration);
+      audio.removeEventListener('progress', applyDuration);
       audio.removeEventListener('ended', handleEnded);
       audio.pause();
       audio.src = '';
     };
-  }, [trackSrc, isOpen]);
+  }, [audioPlaybackUrl, isOpen, trackDurationSeconds]);
 
   // Data load on open / track change
   useEffect(() => {
@@ -534,7 +594,7 @@ export function SyncLyricsModal({
     [duration]
   );
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progress = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
 
   return (
     <>
@@ -561,7 +621,7 @@ export function SyncLyricsModal({
                 onClick={togglePlayPause}
                 className="sync-lyrics-modal__play-button"
                 aria-label={isPlaying ? 'Пауза' : 'Воспроизведение'}
-                disabled={!trackSrc}
+                disabled={!audioPlaybackUrl}
               >
                 {isPlaying ? (
                   <svg

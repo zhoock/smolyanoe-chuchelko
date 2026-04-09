@@ -1,10 +1,11 @@
 // src/pages/UserDashboard/components/PreviewLyricsModal.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
 import type { SyncedLyricsLine } from '@models';
+import { getUserAudioUrl } from '@shared/api/albums';
 import './PreviewLyricsModal.style.scss';
 
 interface PreviewLyricsModalProps {
@@ -33,6 +34,10 @@ export function PreviewLyricsModal({
 }: PreviewLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const audioPlaybackUrl = useMemo(
+    () => (trackSrc?.trim() ? getUserAudioUrl(trackSrc) : ''),
+    [trackSrc]
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -42,8 +47,8 @@ export function PreviewLyricsModal({
 
   // Инициализация аудио элемента
   useEffect(() => {
-    if (!trackSrc) return;
-    const audio = new Audio(trackSrc);
+    if (!audioPlaybackUrl) return;
+    const audio = new Audio(audioPlaybackUrl);
     audioRef.current = audio;
     audio.preload = 'auto';
 
@@ -79,7 +84,7 @@ export function PreviewLyricsModal({
       audio.src = '';
       audioRef.current = null;
     };
-  }, [trackSrc]);
+  }, [audioPlaybackUrl]);
 
   // Управление воспроизведением через useEffect больше не нужно - используем прямой вызов в togglePlay
 
@@ -262,6 +267,7 @@ export function PreviewLyricsModal({
               className="preview-lyrics-modal__play-button"
               onClick={togglePlay}
               aria-label={isPlaying ? 'Pause' : 'Play'}
+              disabled={!audioPlaybackUrl}
             >
               {isPlaying ? (
                 <svg
@@ -295,8 +301,8 @@ export function PreviewLyricsModal({
             <div className="preview-lyrics-modal__time">{formatTime(currentTime)}</div>
             <div
               className="preview-lyrics-modal__progress-bar"
-              onClick={trackSrc ? handleSeek : undefined}
-              style={{ cursor: trackSrc ? 'pointer' : 'default' }}
+              onClick={audioPlaybackUrl ? handleSeek : undefined}
+              style={{ cursor: audioPlaybackUrl ? 'pointer' : 'default' }}
             >
               <div
                 className="preview-lyrics-modal__progress-fill"
