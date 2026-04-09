@@ -81,6 +81,15 @@ const formatTimeCompact = (seconds: number): string => {
 
 const normalize = (s: string) => (s || '').trim();
 
+/** Только UI: последняя строка авторства, не входит в SyncedLyricsLine / БД */
+type VirtualAuthorshipLine = { text: string; __isAuthorship: true };
+
+type DisplayLine = SyncedLyricsLine | VirtualAuthorshipLine;
+
+function isVirtualAuthorshipLine(line: DisplayLine): line is VirtualAuthorshipLine {
+  return '__isAuthorship' in line && line.__isAuthorship === true;
+}
+
 export function SyncLyricsModal({
   isOpen,
   albumId,
@@ -272,21 +281,19 @@ export function SyncLyricsModal({
 
         if (!isRequestValid()) return;
 
-        // 3) Находим авторство в сохраненных данных (если есть)
-        // ✅ ВАЖНО: Авторство теперь сохраняется как часть syncedLyrics, ищем его там
-        const storedAuthLine = authorshipToUse
-          ? storedSync.find((l) => normalize(l.text || '') === normalize(authorshipToUse))
-          : null;
+        // 3) Убираем строки авторства из сохранённого sync (никогда не часть syncedLyrics)
+        const storedClean =
+          authorshipToUse.trim().length > 0
+            ? storedSync.filter((l) => normalize(l.text || '') !== normalize(authorshipToUse))
+            : [...storedSync];
 
-        // 4) build lyrics lines
-        // ✅ ВАЖНО: Используем умное сопоставление с учетом порядка и контекста
-        // чтобы дубликаты (припевы) получали правильные тайминги
+        // 4) build lyrics lines (только текст песни)
         let linesToDisplay: SyncedLyricsLine[] = [];
 
         if (contentLines.length === 0) {
           linesToDisplay = [];
-        } else if (storedSync.length > 0) {
-          const storedOnlyLyrics = storedSync.filter((l) =>
+        } else if (storedClean.length > 0) {
+          const storedOnlyLyrics = storedClean.filter((l) =>
             contentSet.has(normalize(l.text || ''))
           );
 
@@ -380,26 +387,6 @@ export function SyncLyricsModal({
           linesToDisplay = contentLines.map(createEmptyLine);
         }
 
-        // 5) add ONE authorship line at end (с сохранением startTime из сохраненных данных)
-        if (authorshipToUse) {
-          // Проверяем, не добавлено ли авторство уже в linesToDisplay
-          const hasAuthorshipInDisplay = linesToDisplay.some(
-            (l) => normalize(l.text || '') === normalize(authorshipToUse)
-          );
-
-          if (!hasAuthorshipInDisplay) {
-            // Используем тайминг из сохраненных данных, если есть
-            const preservedStart = storedAuthLine?.startTime ?? 0;
-            const preservedEnd = storedAuthLine?.endTime;
-
-            linesToDisplay.push({
-              text: authorshipToUse,
-              startTime: preservedStart, // Сохраняем тайминг из БД
-              endTime: preservedEnd, // Сохраняем endTime из БД
-            });
-          }
-        }
-
         if (!isRequestValid()) return;
 
         setTrackAuthorship(authorshipToUse);
@@ -422,17 +409,57 @@ export function SyncLyricsModal({
     // ❗ duration НЕ включаем в deps: иначе при загрузке метаданных будет повторная загрузка текста
   }, [isOpen, albumId, trackId, lang, propAuthorship]);
 
-  // When duration becomes known, force endTime for authorship to duration
-  useEffect(() => {
-    if (!duration || !trackAuthorship) return;
+  const displayLines = useMemo((): DisplayLine[] => {
+    const auth = trackAuthorship.trim();
+    if (!auth) return syncedLines;
+    return [...syncedLines, { text: trackAuthorship, __isAuthorship: true }];
+  }, [syncedLines, trackAuthorship]);
 
-    setSyncedLines((prev) =>
-      prev.map((line) => {
-        const isAuth = normalize(line.text || '') === normalize(trackAuthorship);
-        return isAuth ? { ...line, endTime: duration } : line;
-      })
-    );
-  }, [duration, trackAuthorship]);
+  const authorshipTiming = useMemo(() => {
+    if (!trackAuthorship.trim() || !syncedLines.length || !duration) return null;
+    const last = syncedLines[syncedLines.length - 1];
+    const lastEnd = last.endTime;
+    const start =
+      typeof lastEnd === 'number' && Number.isFinite(lastEnd) && lastEnd > 0 ? lastEnd : duration;
+    return {
+      start,
+      end: duration,
+    };
+  }, [syncedLines, duration, trackAuthorship]);
+
+  const activeLineIndex = useMemo((): number | 'authorship' | null => {
+    if (!Number.isFinite(currentTime) || currentTime < 0) return null;
+
+    const hasAuth = Boolean(trackAuthorship.trim());
+
+    for (let i = 0; i < syncedLines.length; i++) {
+      const l = syncedLines[i];
+      const start = l.startTime ?? 0;
+      const isLast = i === syncedLines.length - 1;
+      const rawEnd = l.endTime;
+      const finiteLyricEnd =
+        typeof rawEnd === 'number' && Number.isFinite(rawEnd) && rawEnd > 0 ? rawEnd : null;
+
+      if (isLast && hasAuth && authorshipTiming) {
+        const handoff = finiteLyricEnd ?? authorshipTiming.start;
+        if (currentTime >= start && currentTime < handoff) return i;
+        continue;
+      }
+
+      const end = finiteLyricEnd ?? Infinity;
+      if (currentTime >= start && currentTime <= end) return i;
+    }
+
+    if (
+      authorshipTiming &&
+      hasAuth &&
+      currentTime >= authorshipTiming.start &&
+      currentTime <= duration
+    ) {
+      return 'authorship';
+    }
+    return null;
+  }, [currentTime, syncedLines, authorshipTiming, trackAuthorship, duration]);
 
   const setLineTime = useCallback(
     (lineIndex: number, field: 'startTime' | 'endTime') => {
@@ -447,18 +474,9 @@ export function SyncLyricsModal({
           [field]: time,
         };
 
-        const isAuthorshipLine =
-          trackAuthorship && normalize(nextLine.text || '') === normalize(trackAuthorship);
-
-        // authorship: endTime всегда duration
-        if (isAuthorshipLine && field === 'startTime') {
-          nextLine.endTime = duration > 0 ? duration : nextLine.endTime;
-        }
-
         newLines[lineIndex] = nextLine;
 
-        // normal lines: startTime closes previous line
-        if (!isAuthorshipLine && field === 'startTime' && lineIndex > 0) {
+        if (field === 'startTime' && lineIndex > 0) {
           const prevLine = newLines[lineIndex - 1];
           newLines[lineIndex - 1] = { ...prevLine, endTime: time };
         }
@@ -468,7 +486,7 @@ export function SyncLyricsModal({
         return newLines;
       });
     },
-    [currentTime, duration, trackAuthorship]
+    [currentTime]
   );
 
   const clearEndTime = useCallback((lineIndex: number) => {
@@ -486,7 +504,19 @@ export function SyncLyricsModal({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (syncedLines.length === 0) {
+    const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(
+      () => null
+    );
+    const authorshipToSave = normalize(storedAuthorship || trackAuthorship || propAuthorship || '');
+
+    const cleanLines = syncedLines.filter((l) => {
+      const t = normalize(l.text || '');
+      if (!t.length) return false;
+      if (authorshipToSave && normalize(l.text || '') === authorshipToSave) return false;
+      return true;
+    });
+
+    if (cleanLines.length === 0 && !authorshipToSave) {
       setAlertModal({
         isOpen: true,
         title: 'Ошибка',
@@ -497,44 +527,17 @@ export function SyncLyricsModal({
     }
 
     setIsSaving(true);
-
     try {
-      const storedAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(
-        () => null
-      );
-      const authorshipToSave = normalize(
-        storedAuthorship || trackAuthorship || propAuthorship || ''
-      );
-
-      // ✅ ВАЖНО: Авторство ДОЛЖНО быть частью syncedLyrics, чтобы сохранить его тайминг
-      // Фильтруем только пустые строки, НЕ фильтруем авторство
-      const linesToSave = syncedLines
-        .filter((l) => {
-          const t = normalize(l.text || '');
-          // Удаляем только пустые строки
-          return t.length > 0;
-        })
-        .map((line) => {
-          // Для авторства устанавливаем endTime=duration, если не задан
-          const isAuth = authorshipToSave && normalize(line.text || '') === authorshipToSave;
-          if (isAuth && line.endTime === undefined && duration > 0) {
-            return { ...line, endTime: duration };
-          }
-          return line;
-        });
-
       const result = await saveSyncedLyrics({
         albumId,
         trackId,
         lang,
-        syncedLyrics: linesToSave,
+        syncedLyrics: cleanLines,
         authorship: authorshipToSave || undefined,
       });
 
       if (result.success) {
-        // ✅ ВАЖНО: Авторство уже в linesToSave с правильным таймингом
-        // Обновляем локальное состояние тем же массивом, что был сохранен
-        setSyncedLines(linesToSave);
+        setSyncedLines(cleanLines);
 
         setIsDirty(false);
         setIsSaved(true);
@@ -567,7 +570,7 @@ export function SyncLyricsModal({
     } finally {
       setIsSaving(false);
     }
-  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave, trackAuthorship, duration]);
+  }, [albumId, trackId, lang, syncedLines, propAuthorship, onSave, trackAuthorship]);
 
   const togglePlayPause = useCallback(() => {
     if (!audioRef.current) return;
@@ -669,7 +672,7 @@ export function SyncLyricsModal({
             <div className="sync-lyrics-modal__content">
               {isLoading ? (
                 <div className="sync-lyrics-modal__loading">Загрузка...</div>
-              ) : syncedLines.length === 0 ? (
+              ) : displayLines.length === 0 ? (
                 <div className="sync-lyrics-modal__empty">
                   {ui?.dashboard?.noLyrics ?? 'Нет текста для синхронизации'}
                 </div>
@@ -692,15 +695,22 @@ export function SyncLyricsModal({
                   </div>
 
                   <div className="sync-lyrics-modal__table-body">
-                    {syncedLines.map((line, index) => {
-                      const isAuthorshipLine =
-                        trackAuthorship &&
-                        normalize(line.text || '') === normalize(trackAuthorship);
+                    {displayLines.map((line, displayIndex) => {
+                      const isAuthorship = isVirtualAuthorshipLine(line);
+                      const lyricIndex = displayIndex;
+                      const isActive = isAuthorship
+                        ? activeLineIndex === 'authorship'
+                        : activeLineIndex === lyricIndex;
 
                       return (
-                        <div key={index} className="sync-lyrics-modal__table-row">
+                        <div
+                          key={isAuthorship ? 'authorship' : `lyric-${lyricIndex}-${line.text}`}
+                          className={`sync-lyrics-modal__table-row${
+                            isActive ? ' sync-lyrics-modal__table-row--active' : ''
+                          }`}
+                        >
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--number">
-                            {index + 1}
+                            {displayIndex + 1}
                           </div>
 
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--lyrics">
@@ -708,25 +718,31 @@ export function SyncLyricsModal({
                           </div>
 
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--start">
-                            <button
-                              type="button"
-                              onClick={() => setLineTime(index, 'startTime')}
-                              className="sync-lyrics-modal__time-btn"
-                              disabled={currentTime === 0 && !isPlaying}
-                            >
-                              {formatTime(line.startTime)}
-                            </button>
+                            {isAuthorship ? (
+                              <span className="sync-lyrics-modal__time-disabled">
+                                {formatTime(authorshipTiming?.start ?? 0)}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setLineTime(lyricIndex, 'startTime')}
+                                className="sync-lyrics-modal__time-btn"
+                                disabled={currentTime === 0 && !isPlaying}
+                              >
+                                {formatTime(line.startTime)}
+                              </button>
+                            )}
                           </div>
 
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--end">
-                            {isAuthorshipLine ? (
+                            {isAuthorship ? (
                               <span className="sync-lyrics-modal__time-disabled">
                                 {formatTime(duration)}
                               </span>
                             ) : line.endTime !== undefined && line.endTime > 0 ? (
                               <button
                                 type="button"
-                                onClick={() => setLineTime(index, 'endTime')}
+                                onClick={() => setLineTime(lyricIndex, 'endTime')}
                                 className="sync-lyrics-modal__time-btn"
                                 disabled={currentTime === 0 && !isPlaying}
                               >
@@ -735,7 +751,7 @@ export function SyncLyricsModal({
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => setLineTime(index, 'endTime')}
+                                onClick={() => setLineTime(lyricIndex, 'endTime')}
                                 className="sync-lyrics-modal__time-btn sync-lyrics-modal__time-btn--set"
                                 disabled={currentTime === 0 && !isPlaying}
                               >
@@ -745,18 +761,16 @@ export function SyncLyricsModal({
                           </div>
 
                           <div className="sync-lyrics-modal__table-col sync-lyrics-modal__table-col--clear">
-                            {!isAuthorshipLine &&
-                              line.endTime !== undefined &&
-                              line.endTime > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => clearEndTime(index)}
-                                  className="sync-lyrics-modal__clear-btn"
-                                  title="Сбросить конец строки"
-                                >
-                                  ×
-                                </button>
-                              )}
+                            {!isAuthorship && line.endTime !== undefined && line.endTime > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => clearEndTime(lyricIndex)}
+                                className="sync-lyrics-modal__clear-btn"
+                                title="Сбросить конец строки"
+                              >
+                                ×
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -766,7 +780,7 @@ export function SyncLyricsModal({
               )}
             </div>
 
-            {!isLoading && syncedLines.length > 0 && (
+            {!isLoading && displayLines.length > 0 && (
               <>
                 <div className="sync-lyrics-modal__divider"></div>
                 <div className="sync-lyrics-modal__actions">

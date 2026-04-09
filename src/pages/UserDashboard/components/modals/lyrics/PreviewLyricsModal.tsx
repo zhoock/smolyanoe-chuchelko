@@ -101,7 +101,7 @@ export function PreviewLyricsModal({
   }, [isOpen]);
 
   // Берём синхронизированный текст, если есть; иначе разбиваем lyrics по строкам
-  const lines =
+  const lines: SyncedLyricsLine[] =
     syncedLyrics && syncedLyrics.length > 0
       ? syncedLyrics
       : lyrics
@@ -109,10 +109,19 @@ export function PreviewLyricsModal({
           .filter((l) => l.trim().length > 0)
           .map((text) => ({ text, startTime: 0 }));
 
-  // Добавляем авторство как последнюю строку (без тайм-кода), если есть
+  // Добавляем авторство как последнюю строку; старт сразу после endTime последней строки (без «дыры» до duration)
   const linesWithAuthorship: SyncedLyricsLine[] =
     authorship && authorship.trim()
-      ? [...lines, { text: authorship.trim(), startTime: duration || 0 }]
+      ? (() => {
+          const auth = authorship.trim();
+          const last = lines[lines.length - 1];
+          const lastEnd = last?.endTime;
+          const authStart =
+            typeof lastEnd === 'number' && Number.isFinite(lastEnd) && lastEnd > 0
+              ? lastEnd
+              : duration || 0;
+          return [...lines, { text: auth, startTime: authStart }];
+        })()
       : lines;
 
   // Проверяем, действительно ли текст синхронизирован (есть ли строки с startTime > 0)

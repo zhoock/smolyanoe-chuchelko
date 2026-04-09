@@ -177,9 +177,16 @@ export function useLyricsContent({
         if (authorship) {
           const last = synced[synced.length - 1];
           if (!last || last.text !== authorship) {
+            const lastEnd = last?.endTime;
+            const authStart =
+              typeof lastEnd === 'number' && Number.isFinite(lastEnd) && lastEnd > 0
+                ? lastEnd
+                : Number.isFinite(duration) && duration > 0
+                  ? duration
+                  : 0;
             synced.push({
               text: authorship,
-              startTime: Number.isFinite(duration) && duration > 0 ? duration : 0,
+              startTime: authStart,
               endTime: undefined,
             });
           }
