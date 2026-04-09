@@ -1,3 +1,5 @@
+import { buildApiUrl } from '@shared/lib/artistQuery';
+
 export interface SaveTrackTextRequest {
   albumId: string;
   trackId: string | number;
@@ -109,27 +111,37 @@ export function loadAuthorshipFromStorage(
 /**
  * Загружает текст трека из базы данных через API.
  * Текст хранится в synced_lyrics как массив строк с startTime: 0.
+ *
+ * @returns Пустая строка — в БД явно сохранён пустой текст (очищено в админке).
+ *          `null` — записи нет или ответ не удалось разобрать (используйте fallback из JSON).
  */
 export async function loadTrackTextFromDatabase(
   albumId: string,
   trackId: string | number,
-  lang: string
+  lang: string,
+  artistSlugForPublicApi?: string | null
 ): Promise<string | null> {
   try {
-    const params = new URLSearchParams({
-      albumId,
-      trackId: String(trackId),
-      lang,
-    });
-
     // Импортируем динамически, чтобы избежать циклических зависимостей
     const { getAuthHeader } = await import('@shared/lib/auth');
     const authHeader = getAuthHeader();
 
-    const response = await fetch(`/api/synced-lyrics?${params.toString()}`, {
-      cache: 'no-cache',
+    const url = buildApiUrl(
+      '/api/synced-lyrics',
+      {
+        albumId,
+        trackId: String(trackId),
+        lang,
+        _ts: String(Date.now()),
+      },
+      { includeArtist: true, artistSlugOverride: artistSlugForPublicApi ?? null }
+    );
+
+    const response = await fetch(url, {
+      cache: 'no-store',
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+        Pragma: 'no-cache',
         ...authHeader,
       },
     });
@@ -151,6 +163,11 @@ export async function loadTrackTextFromDatabase(
     // Если есть синхронизированный текст
     if (result.success && result.data && result.data.syncedLyrics) {
       const syncedLyrics = result.data.syncedLyrics as Array<{ text: string; startTime: number }>;
+
+      // Пустой массив после очистки в админке — не смешивать с «нет данных» (null)
+      if (Array.isArray(syncedLyrics) && syncedLyrics.length === 0) {
+        return '';
+      }
 
       // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
       // Объединяем все строки в один текст

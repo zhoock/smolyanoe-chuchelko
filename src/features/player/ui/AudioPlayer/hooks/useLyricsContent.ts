@@ -224,7 +224,7 @@ export function useLyricsContent({
     setHasSyncedLyricsAvailable,
   ]);
 
-  // 3) Загрузка PLAIN lyrics (обычный текст)
+  // 3) PLAIN lyrics: сначала БД (после правок в админке), иначе JSON/сторадж — иначе устаревший content в JSON перекрывает очистку текста
   useEffect(() => {
     const key = getTrackKey();
     if (!currentTrack || !key) {
@@ -234,54 +234,52 @@ export function useLyricsContent({
 
     let cancelled = false;
 
-    // 3.1 сначала JSON
-    if (currentTrack.content?.trim()) {
-      if (!cancelled && isKeyActual(key)) {
-        setPlainLyricsContent(normalize(currentTrack.content));
-      }
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    // 3.2 затем localStorage (dev)
-    const storedContentKey = `karaoke-text:${albumId}:${currentTrack.id}:${lang}`;
-    try {
-      const stored =
-        typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
-      if (stored?.trim()) {
-        if (!cancelled && isKeyActual(key)) {
-          setPlainLyricsContent(normalize(stored));
-        }
-        return () => {
-          cancelled = true;
-        };
-      }
-    } catch (error) {
-      debugLog('Cannot read stored text content', { error });
-    }
-
-    // 3.3 затем БД
     (async () => {
       try {
-        const textFromDb = await loadTrackTextFromDatabase(albumId, currentTrack.id, lang);
+        const textFromDb = await loadTrackTextFromDatabase(
+          albumId,
+          currentTrack.id,
+          lang,
+          artistSlugForPublicApi ?? null
+        );
         if (cancelled || !isKeyActual(key)) return;
 
-        if (textFromDb?.trim()) {
-          setPlainLyricsContent(normalize(textFromDb));
-        } else {
+        if (textFromDb === '') {
           setPlainLyricsContent(null);
+          return;
+        }
+        if (textFromDb !== null) {
+          setPlainLyricsContent(normalize(textFromDb));
+          return;
         }
       } catch (error) {
         debugLog('useLyricsContent: failed to load plain lyrics', { error });
-        if (!cancelled && isKeyActual(key)) {
-          setPlainLyricsContent(null);
-        }
       }
+
+      if (cancelled || !isKeyActual(key)) return;
+
+      if (currentTrack.content?.trim()) {
+        setPlainLyricsContent(normalize(currentTrack.content));
+        return;
+      }
+
+      const storedContentKey = `karaoke-text:${albumId}:${currentTrack.id}:${lang}`;
+      try {
+        const stored =
+          typeof window !== 'undefined' ? window.localStorage.getItem(storedContentKey) : null;
+        if (stored?.trim()) {
+          setPlainLyricsContent(normalize(stored));
+          return;
+        }
+      } catch (error) {
+        debugLog('Cannot read stored text content', { error });
+      }
+
+      setPlainLyricsContent(null);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, albumId, lang, setPlainLyricsContent]);
+  }, [currentTrack, albumId, lang, artistSlugForPublicApi, setPlainLyricsContent]);
 }

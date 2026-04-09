@@ -70,8 +70,8 @@ export default function EditTrackText({
           loadAuthorshipFromStorage(albumId, track.id, lang),
         ]);
 
-        // Используем текст из БД или текст из JSON (fallback)
-        const initialText = storedTextFromDb || track.content || '';
+        // Пустая строка из БД — пустой редактор; null — fallback на JSON
+        const initialText = storedTextFromDb !== null ? storedTextFromDb : track.content || '';
         // Используем авторство из БД или из трека (fallback)
         const initialAuthorship = storedAuthorshipFromDb || track.authorship || '';
 

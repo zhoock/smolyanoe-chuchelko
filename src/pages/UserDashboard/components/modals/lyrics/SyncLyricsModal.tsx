@@ -232,10 +232,11 @@ export function SyncLyricsModal({
 
     const loadData = async () => {
       try {
-        const textToUse = await loadTrackTextFromDatabase(albumId, trackId, lang).catch((error) => {
+        const rawText = await loadTrackTextFromDatabase(albumId, trackId, lang).catch((error) => {
           console.error('[SyncLyricsModal] Failed to load text from DB:', error);
-          return '';
+          return null;
         });
+        const textToUse = rawText !== null ? rawText : '';
 
         if (!isRequestValid()) return;
 

@@ -314,7 +314,7 @@ export default function EditSyncLyrics({
 
       // Загружаем сохранённый текст из БД
       const storedText = await loadTrackTextFromDatabase(albumId, currentTrack.id, lang);
-      const textToUse = storedText || currentTrack.content || '';
+      const textToUse = storedText !== null ? storedText : currentTrack.content || '';
 
       // Вычисляем хэш текста
       const textHash = `${textToUse}-${trackAuthorship}`;
@@ -330,13 +330,9 @@ export default function EditSyncLyrics({
         });
       }
 
-      // Проверяем, изменился ли текст
-      // Текст считается изменившимся только если есть сохранённый текст И он отличается от текста в JSON
+      // Текст в БД (включая явную пустоту) vs JSON альбома
       const textChanged =
-        storedText !== null &&
-        storedText !== undefined &&
-        storedText !== '' &&
-        storedText.trim() !== (currentTrack.content || '').trim();
+        storedText !== null && storedText.trim() !== (currentTrack.content || '').trim();
 
       // Вычисляем хэш текущего текста для сравнения
       const currentTextHash = `${textToUse}-${trackAuthorship}`;

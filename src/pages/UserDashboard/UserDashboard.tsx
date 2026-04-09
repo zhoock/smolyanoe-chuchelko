@@ -1659,7 +1659,7 @@ function UserDashboard() {
         const fallbackAuthorship = track.authorship || cachedAuthorship;
         const fallbackText = track.lyricsText || '';
 
-        const finalText = storedText || fallbackText;
+        const finalText = storedText !== null ? storedText : fallbackText;
 
         if (process.env.NODE_ENV === 'development') {
           console.log('[UserDashboard] Opening edit lyrics modal:', {
@@ -1817,8 +1817,8 @@ function UserDashboard() {
           lang
         ).catch(() => null);
 
-        // Используем сохраненный текст из БД, если он есть, иначе используем переданный текст
-        const finalText = savedText || lyrics;
+        // Используем ответ БД, включая пустую строку после очистки текста
+        const finalText = savedText !== null ? savedText : lyrics;
 
         const normalizeLyricsFingerprint = (s: string | undefined) =>
           (s || '')
