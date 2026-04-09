@@ -130,24 +130,23 @@ export function useLyricsContent({
         // уточняем hasSyncedLyricsAvailable по факту storage (важно для мобилки)
         if (storedSync && storedSync.length > 0 && isActuallySynced(storedSync)) {
           setHasSyncedLyricsAvailable(true);
-        } else if (storedSync === null) {
-          // ✅ ВАЖНО: если storage явно сказал "нет синхры" (null) — не показываем скелетон
+        } else if (storedSync === null || (Array.isArray(storedSync) && storedSync.length === 0)) {
+          // null — нет ответа / нет данных; [] — БД вернула пустой synced_lyrics после очистки в админке
           setHasSyncedLyricsAvailable(false);
         } else {
-          // если storage пуст (undefined/ошибка), но в track есть синхра — оставим true
+          // только если API не ответил пустым массивом — можно подсказку из JSON (офлайн/старый кэш)
           const hint =
             currentTrack.syncedLyrics?.length && isActuallySynced(currentTrack.syncedLyrics);
           setHasSyncedLyricsAvailable(!!hint);
         }
 
-        // 2.2 выбираем базовую синхру: storage или fallback из currentTrack (только если реально synced)
+        // 2.2 базовая синхра из API; fallback на JSON только если API не дал записи (null), не если [] после удаления
         let base: SyncedLyricsLine[] | null = null;
 
         if (storedSync && storedSync.length > 0 && isActuallySynced(storedSync)) {
           base = storedSync;
         } else if (
-          // ✅ ВАЖНО: если storage явно сказал "нет синхры" (null) — не берём fallback из currentTrack
-          storedSync !== null &&
+          storedSync === null &&
           currentTrack.syncedLyrics?.length &&
           isActuallySynced(currentTrack.syncedLyrics)
         ) {
