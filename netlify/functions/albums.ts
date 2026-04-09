@@ -666,15 +666,11 @@ export const handler: Handler = async (
                   }),
                 }).catch(() => {});
                 // #endregion
-                // Авторство дублируется в tracks и synced_lyrics; save-track-text всегда обновляет tracks первым.
-                // Раньше synced_lyrics шёл первым в `||` и мог оставаться старым — перекрывая свежее tracks.authorship.
-                const mergedAuthorship = [track.authorship, syncedData.authorship].find(
-                  (v) => v != null && String(v).trim() !== ''
-                );
                 return {
                   ...track,
                   synced_lyrics: syncedData.synced_lyrics,
-                  authorship: mergedAuthorship ?? null,
+                  // Используем authorship из synced_lyrics, если он есть, иначе из tracks
+                  authorship: syncedData.authorship || track.authorship,
                 };
               }
               // #region agent log
