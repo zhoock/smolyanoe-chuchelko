@@ -15,6 +15,28 @@ import { playerActions } from '@features/player/model/slice/playerSlice';
 import type { RootState, AppDispatch } from '@shared/model/appStore/types';
 import { gaEvent } from '@shared/lib/analytics';
 
+const isUsableMediaDuration = (d: number): boolean => Number.isFinite(d) && d > 0 && d !== Infinity;
+
+/**
+ * HTMLAudioElement.duration иногда NaN/Infinity до полной декодировки потока.
+ * Используем длительность из метаданных плейлиста (API), когда элемент ещё не отдаёт валидное значение.
+ */
+const getEffectiveTrackDuration = (
+  el: HTMLAudioElement,
+  playlistTrackDurationSeconds?: number
+): number => {
+  if (isUsableMediaDuration(el.duration)) {
+    return el.duration;
+  }
+  if (
+    playlistTrackDurationSeconds !== undefined &&
+    isUsableMediaDuration(playlistTrackDurationSeconds)
+  ) {
+    return playlistTrackDurationSeconds;
+  }
+  return NaN;
+};
+
 // Создаём middleware для слушателей
 type PlayerListenerApi = ListenerEffectAPI<RootState, AppDispatch>;
 
@@ -259,6 +281,7 @@ playerListenerMiddleware.startListening({
 let endedHandler: (() => void) | null = null;
 let timeupdateHandler: (() => void) | null = null;
 let loadedmetadataHandler: (() => void) | null = null;
+let durationchangeHandler: (() => void) | null = null;
 let playingHandler: (() => void) | null = null;
 let pauseHandler: (() => void) | null = null;
 
@@ -287,6 +310,10 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
   if (loadedmetadataHandler) {
     el.removeEventListener('loadedmetadata', loadedmetadataHandler);
     loadedmetadataHandler = null;
+  }
+  if (durationchangeHandler) {
+    el.removeEventListener('durationchange', durationchangeHandler);
+    durationchangeHandler = null;
   }
   if (playingHandler) {
     el.removeEventListener('playing', playingHandler);
@@ -329,8 +356,11 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
     }
     lastUpdateTime = now;
 
-    const { duration, currentTime } = el;
-    if (!Number.isFinite(duration) || duration <= 0) return;
+    const { currentTime } = el;
+    const { playlist = [], currentTrackIndex } = state.player;
+    const metaDuration = playlist[currentTrackIndex]?.duration;
+    const duration = getEffectiveTrackDuration(el, metaDuration);
+    if (!isUsableMediaDuration(duration)) return;
 
     const progress = (currentTime / duration) * 100;
     dispatch(playerActions.setTime({ current: currentTime, duration }));
@@ -345,8 +375,10 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
   loadedmetadataHandler = () => {
     const state = getState().player;
     const persistedTime = state.time?.current ?? 0;
-    const duration = el.duration;
-    const hasDuration = Number.isFinite(duration) && duration > 0;
+    const { playlist = [], currentTrackIndex } = state;
+    const metaDuration = playlist[currentTrackIndex]?.duration;
+    const duration = getEffectiveTrackDuration(el, metaDuration);
+    const hasDuration = isUsableMediaDuration(duration);
     const shouldRestorePosition =
       Number.isFinite(persistedTime) && persistedTime > 0 && hasDuration;
     const restoredCurrent = shouldRestorePosition ? Math.min(persistedTime, duration) : 0;
@@ -377,6 +409,24 @@ export const attachAudioEvents = (dispatch: AppDispatch, getState: () => RootSta
     lastNextTrackCallId = null;
   };
   el.addEventListener('loadedmetadata', loadedmetadataHandler);
+
+  /**
+   * Когда браузер позже выставляет реальную длительность, пересчитываем прогресс без сброса позиции.
+   */
+  durationchangeHandler = () => {
+    const state = getState();
+    if (state.player.isSeeking) return;
+
+    const { playlist = [], currentTrackIndex } = state.player;
+    const metaDuration = playlist[currentTrackIndex]?.duration;
+    const duration = getEffectiveTrackDuration(el, metaDuration);
+    if (!isUsableMediaDuration(duration)) return;
+
+    const currentTime = el.currentTime;
+    dispatch(playerActions.setTime({ current: currentTime, duration }));
+    dispatch(playerActions.setProgress((currentTime / duration) * 100));
+  };
+  el.addEventListener('durationchange', durationchangeHandler);
 
   /**
    * Событие ended срабатывает когда трек доиграл до конца.

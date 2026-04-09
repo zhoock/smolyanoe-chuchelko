@@ -26,6 +26,24 @@ function formatDuration(duration?: number | string): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+/** Сравнение id треков из плейлиста и каталога (API/нормализация slice дают number vs string). */
+function isSameTrackId(
+  a: string | number | null | undefined,
+  b: string | number | null | undefined
+): boolean {
+  if (a == null || b == null) return false;
+  return String(a) === String(b);
+}
+
+/** Однозначная подпись набора треков: тот же альбом даже при расхождении player.albumId (главная vs страница альбома). */
+function buildPlaylistSignature(list: TracksProps[]): string {
+  if (!list.length) return '';
+  return `${list.length}:${list
+    .map((t) => String(t.id))
+    .sort()
+    .join('|')}`;
+}
+
 type TrackListProps = {
   tracks: TracksProps[];
   album: IAlbums;
@@ -42,6 +60,7 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
   const initialState = store.getState() as RootState;
   const [activeIndex, setActiveIndex] = React.useState(initialState.player.currentTrackIndex);
   const [isPlaying, setIsPlaying] = React.useState(initialState.player.isPlaying);
+  const [shuffle, setShuffle] = React.useState(initialState.player.shuffle);
   const [currentTrackId, setCurrentTrackId] = React.useState<string | number | null>(() => {
     const playerState = (store.getState() as RootState).player;
     return playerState.playlist[playerState.currentTrackIndex]?.id ?? null;
@@ -50,38 +69,56 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
     (store.getState() as RootState).player.albumId ?? null
   );
   const [progress, setProgress] = React.useState((store.getState() as RootState).player.progress);
+  const [playerPlaylistSignature, setPlayerPlaylistSignature] = React.useState(() =>
+    buildPlaylistSignature(initialState.player.playlist)
+  );
 
   const albumUniqueId = useMemo(
     () => album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-'),
     [album.albumId, album.artist, album.album]
   );
 
+  const pagePlaylistSignature = useMemo(() => buildPlaylistSignature(tracks), [tracks]);
+
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
       const playerState = (store.getState() as RootState).player;
       setActiveIndex(playerState.currentTrackIndex);
       setIsPlaying(playerState.isPlaying);
+      setShuffle(playerState.shuffle);
       setCurrentAlbumId(playerState.albumId ?? null);
       setCurrentTrackId(playerState.playlist[playerState.currentTrackIndex]?.id ?? null);
       setProgress(playerState.progress);
+      setPlayerPlaylistSignature(buildPlaylistSignature(playerState.playlist));
     });
     const currentState = store.getState() as RootState;
     setActiveIndex(currentState.player.currentTrackIndex);
     setIsPlaying(currentState.player.isPlaying);
+    setShuffle(currentState.player.shuffle);
     setCurrentAlbumId(currentState.player.albumId ?? null);
     setCurrentTrackId(
       currentState.player.playlist[currentState.player.currentTrackIndex]?.id ?? null
     );
     setProgress(currentState.player.progress);
+    setPlayerPlaylistSignature(buildPlaylistSignature(currentState.player.playlist));
     return unsubscribe;
   }, [store]);
 
   return (
     <div className="tracks">
       {tracks?.map((track, index) => {
-        const isCurrentAlbum = currentAlbumId === albumUniqueId;
-        const isActive = isCurrentAlbum && activeIndex === index;
-        const isPlayingNow = isCurrentAlbum && isPlaying && currentTrackId === track.id;
+        const isCurrentAlbumById = currentAlbumId === albumUniqueId;
+        const isCurrentAlbumByPlaylist =
+          pagePlaylistSignature.length > 0 &&
+          playerPlaylistSignature.length > 0 &&
+          pagePlaylistSignature === playerPlaylistSignature;
+        const isCurrentAlbum = isCurrentAlbumById || isCurrentAlbumByPlaylist;
+
+        const rowMatchesCurrentTrack =
+          currentTrackId != null && isSameTrackId(currentTrackId, track.id);
+        const isActive =
+          isCurrentAlbum && (shuffle ? rowMatchesCurrentTrack : activeIndex === index);
+        const isPlayingNow = isCurrentAlbum && isPlaying && rowMatchesCurrentTrack;
 
         // Логируем для отладки, если duration отсутствует
         if (track.duration == null && index === 0) {

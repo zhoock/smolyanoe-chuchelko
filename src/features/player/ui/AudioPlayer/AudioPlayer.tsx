@@ -862,6 +862,7 @@ export default function AudioPlayer({
     time,
     timeDisplayRef,
     formatTime,
+    trackMetadataDuration: currentTrack?.duration,
   });
 
   // Отслеживание активности пользователя (мышь, клавиатура, тач)

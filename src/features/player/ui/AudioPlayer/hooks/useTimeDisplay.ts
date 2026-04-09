@@ -1,18 +1,39 @@
 import { useCallback, useEffect } from 'react';
 import { audioController } from '@features/player/model/lib/audioController';
-import { formatTimerValue } from '../utils/formatTime';
 import type { PlayerTimeState } from '@features/player/model/types/playerSchema';
 
 interface UseTimeDisplayParams {
   time: PlayerTimeState;
   timeDisplayRef: React.RefObject<HTMLDivElement>;
   formatTime: (time: number) => string;
+  /** Длительность из метаданных трека, если audio.duration ещё невалидна */
+  trackMetadataDuration?: number;
 }
 
 /**
  * Хук для управления отображением времени трека
  */
-export function useTimeDisplay({ time, timeDisplayRef, formatTime }: UseTimeDisplayParams) {
+const pickDurationSeconds = (fromAudio: number, fromMetadata?: number): number => {
+  if (Number.isFinite(fromAudio) && fromAudio > 0 && fromAudio !== Infinity) {
+    return fromAudio;
+  }
+  if (
+    fromMetadata !== undefined &&
+    Number.isFinite(fromMetadata) &&
+    fromMetadata > 0 &&
+    fromMetadata !== Infinity
+  ) {
+    return fromMetadata;
+  }
+  return NaN;
+};
+
+export function useTimeDisplay({
+  time,
+  timeDisplayRef,
+  formatTime,
+  trackMetadataDuration,
+}: UseTimeDisplayParams) {
   /**
    * Рендерит отображение времени в DOM элемент
    */
@@ -66,7 +87,8 @@ export function useTimeDisplay({ time, timeDisplayRef, formatTime }: UseTimeDisp
       if (now - lastUpdate < UPDATE_INTERVAL) return;
       lastUpdate = now;
 
-      renderTimeDisplay(audioElement.currentTime, audioElement.duration);
+      const durationSeconds = pickDurationSeconds(audioElement.duration, trackMetadataDuration);
+      renderTimeDisplay(audioElement.currentTime, durationSeconds);
     };
 
     // Подписываемся на событие timeupdate напрямую
@@ -84,12 +106,13 @@ export function useTimeDisplay({ time, timeDisplayRef, formatTime }: UseTimeDisp
       audioElement.removeEventListener('loadedmetadata', updateDisplay);
       audioElement.removeEventListener('durationchange', updateDisplay);
     };
-  }, [renderTimeDisplay, timeDisplayRef]);
+  }, [renderTimeDisplay, timeDisplayRef, trackMetadataDuration]);
 
   // Обновляем отображение при изменении time из Redux
   useEffect(() => {
-    renderTimeDisplay(time.current, time.duration);
-  }, [time, renderTimeDisplay]);
+    const d = pickDurationSeconds(time.duration, trackMetadataDuration);
+    renderTimeDisplay(time.current, d);
+  }, [time, renderTimeDisplay, trackMetadataDuration]);
 
   return {
     renderTimeDisplay,
