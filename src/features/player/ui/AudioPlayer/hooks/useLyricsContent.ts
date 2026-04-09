@@ -133,8 +133,11 @@ export function useLyricsContent({
         } else if (storedSync === null || (Array.isArray(storedSync) && storedSync.length === 0)) {
           // null — нет ответа / нет данных; [] — БД вернула пустой synced_lyrics после очистки в админке
           setHasSyncedLyricsAvailable(false);
+        } else if (storedSync && storedSync.length > 0 && !isActuallySynced(storedSync)) {
+          // Только текст в БД (все startTime: 0) — показываем plain, не скелетон и не подсказку по JSON
+          setHasSyncedLyricsAvailable(false);
         } else {
-          // только если API не ответил пустым массивом — можно подсказку из JSON (офлайн/старый кэш)
+          // Нет осмысленного ответа API — редкий случай; подсказка только из JSON с реальными таймкодами
           const hint =
             currentTrack.syncedLyrics?.length && isActuallySynced(currentTrack.syncedLyrics);
           setHasSyncedLyricsAvailable(!!hint);
