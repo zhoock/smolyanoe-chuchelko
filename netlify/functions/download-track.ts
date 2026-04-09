@@ -5,7 +5,7 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
-import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import { createSupabaseClient, STORAGE_BUCKET_NAME } from '../../src/config/supabase';
 import { getUserIdFromEvent } from './lib/api-helpers';
 
 export const handler: Handler = async (
@@ -77,35 +77,13 @@ export const handler: Handler = async (
 
     const purchase = purchaseResult.rows[0];
 
-    // Определяем userId для Storage
-    // Используем UUID пользователя из токена (если есть) или определяем по альбому
-    let storageUserId = getUserIdFromEvent(event);
-
-    // Если userId не определен, пытаемся получить из альбома
-    if (!storageUserId && purchase.album_id) {
-      const albumResult = await query<{ user_id: string }>(
-        `SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1`,
-        [purchase.album_id]
-      );
-      if (albumResult.rows.length > 0 && albumResult.rows[0].user_id) {
-        storageUserId = albumResult.rows[0].user_id;
-      }
-    }
-
-    if (!storageUserId) {
-      // Fallback: используем старую папку 'zhoock' для обратной совместимости
-      // TODO: Убрать после полной миграции
-      console.warn('⚠️ [download-track] User ID not found, using fallback');
-      storageUserId = 'zhoock';
-    }
-
-    // Получаем информацию о треке
     const trackResult = await query<{
       src: string | null;
       title: string;
       album_id: string;
+      album_user_id: string | null;
     }>(
-      `SELECT t.src, t.title, a.album_id
+      `SELECT t.src, t.title, a.album_id, a.user_id AS album_user_id
        FROM tracks t
        INNER JOIN albums a ON t.album_id = a.id
        WHERE a.album_id = $1 AND t.track_id = $2
@@ -122,6 +100,9 @@ export const handler: Handler = async (
     }
 
     const track = trackResult.rows[0];
+
+    // Папка в Storage: JWT (если есть) или владелец альбома из БД
+    const storageUserId = getUserIdFromEvent(event) || track.album_user_id || null;
     let audioUrl = track.src;
 
     console.log('🔍 [download-track] Track info:', {
@@ -180,7 +161,18 @@ export const handler: Handler = async (
       normalizedPath = normalizedPath.slice(1); // Убираем ведущий "/"
     }
 
-    // storageUserId уже определен выше
+    if (!storageUserId && !normalizedPath.startsWith('users/')) {
+      console.error(
+        '❌ [download-track] Cannot resolve storage user (need JWT or album.user_id, or full users/... path)'
+      );
+      return {
+        statusCode: 404,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Track storage path cannot be resolved (album owner missing)',
+        }),
+      };
+    }
 
     // Пробуем несколько вариантов путей
     // 1. Используем оригинальный путь из БД (normalizedPath уже содержит правильную папку, например "23-Remastered/01-track.wav")
@@ -188,7 +180,7 @@ export const handler: Handler = async (
     const possiblePaths: string[] = [];
 
     // Вариант 1: Оригинальный путь из БД (приоритет, так как он содержит правильное имя папки)
-    if (normalizedPath) {
+    if (normalizedPath && storageUserId) {
       possiblePaths.push(`users/${storageUserId}/audio/${normalizedPath}`);
     }
 
@@ -209,11 +201,13 @@ export const handler: Handler = async (
     ];
 
     // Добавляем варианты с album_id
-    possiblePaths.push(
-      ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`)
-    );
+    if (storageUserId) {
+      possiblePaths.push(
+        ...albumIdVariants.map((albumId) => `users/${storageUserId}/audio/${albumId}/${fileName}`)
+      );
+    }
 
-    // Если normalizedPath уже содержит users/zhoock/audio, используем его как есть
+    // Уже полный путь внутри bucket (в т.ч. легаси-префиксы)
     if (normalizedPath.startsWith('users/')) {
       possiblePaths.push(normalizedPath);
     }

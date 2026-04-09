@@ -158,7 +158,7 @@ export const handler: Handler = async (
             `${coverBaseName}-1344.jpg`,
           ];
 
-          const coverPaths = coverVariants.map((variant) => `users/zhoock/albums/${variant}`);
+          const coverPaths = coverVariants.map((variant) => `users/${userId}/albums/${variant}`);
           allCoverPaths.push(...coverPaths);
         }
 

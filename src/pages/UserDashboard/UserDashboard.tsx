@@ -1266,8 +1266,30 @@ function UserDashboard() {
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
-      // Обновляем Redux store
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      // Сразу убираем трек в UI (не ждём повторной загрузки)
+      setAlbumsData((prev) =>
+        prev.map((a) => {
+          if (a.albumId !== albumId && a.id !== albumId) {
+            return a;
+          }
+          return {
+            ...a,
+            tracks: a.tracks.filter((t) => String(t.id) !== String(trackId) && t.id !== trackId),
+          };
+        })
+      );
+
+      try {
+        await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      } catch (refetchErr: unknown) {
+        const name =
+          refetchErr && typeof refetchErr === 'object' && 'name' in refetchErr
+            ? (refetchErr as { name?: string }).name
+            : undefined;
+        if (name !== 'ConditionError') {
+          console.warn('⚠️ [performDeleteTrack] fetchAlbums after delete:', refetchErr);
+        }
+      }
 
       console.log('✅ Track deleted successfully:', { albumId, trackId });
     } catch (error) {
@@ -1450,6 +1472,7 @@ function UserDashboard() {
 
       // Загружаем файлы и подготавливаем метаданные для каждого трека
       const tracksData: TrackUploadData[] = [];
+      const uploadErrors: string[] = [];
       const fileArray = Array.from(files);
 
       // Получаем текущее количество треков в альбоме для правильной нумерации
@@ -1478,6 +1501,9 @@ function UserDashboard() {
           setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressEnd }));
         } catch (error) {
           console.error(`❌ [handleTrackUpload] Error uploading track ${trackId}:`, error);
+          const msg =
+            error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown';
+          uploadErrors.push(`${file.name}: ${msg}`);
           // Продолжаем загрузку остальных треков, но не обновляем прогресс при ошибке
         }
       }
@@ -1486,7 +1512,8 @@ function UserDashboard() {
       setUploadProgress((prev) => ({ ...prev, [albumId]: 90 }));
 
       if (tracksData.length === 0) {
-        throw new Error('Failed to upload any tracks');
+        const detail = uploadErrors.length > 0 ? ` ${uploadErrors.join(' | ')}` : '';
+        throw new Error(`Failed to upload any tracks.${detail}`);
       }
 
       // Загружаем треки

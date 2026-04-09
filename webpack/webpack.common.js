@@ -2,6 +2,10 @@
 // Webpack конфигурация для сборки проекта на React с TypeScript и Sass
 
 const path = require('path'); /// для того чтобы превратить относительный путь в абсолютный, мы будем использовать пакет path
+
+// Подгружаем корневой .env в process.env до DefinePlugin (иначе VITE_* не попадают в бандл).
+const rootDir = path.resolve(__dirname, '..');
+require('dotenv').config({ path: path.join(rootDir, '.env') });
 const HtmlWebpackPlugin = require('html-webpack-plugin'); // Плагин для генерации HTML с правильными путями к скриптам
 const MiniCssExtractPlugin = require('mini-css-extract-plugin'); // извлекаем CSS из файлов .js при сборке
 const CopyWebpackPlugin = require('copy-webpack-plugin'); // Копируем файлы и папки в папку dist

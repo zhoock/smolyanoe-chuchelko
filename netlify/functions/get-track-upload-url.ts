@@ -23,7 +23,7 @@ import {
   createOptionsResponse,
   createErrorResponse,
   createSuccessResponse,
-  requireAuth,
+  getUserIdFromEvent,
   parseJsonBody,
 } from './lib/api-helpers';
 
@@ -81,10 +81,9 @@ export const handler: Handler = async (
   }
 
   try {
-    // Проверяем авторизацию
-    const userId = requireAuth(event);
+    const userId = getUserIdFromEvent(event);
     if (!userId) {
-      return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
+      return createErrorResponse(401, 'Unauthorized');
     }
 
     // Парсим JSON body
@@ -96,13 +95,7 @@ export const handler: Handler = async (
       return createErrorResponse(400, 'Missing required fields: albumId, fileName');
     }
 
-    // ВАЖНО: Используем 'zhoock' вместо userId (UUID) для единообразия с фронтендом
-    // Все файлы пользователя должны храниться в users/zhoock/
-    const storageUserId = 'zhoock';
-
-    // Формируем путь в Storage: users/zhoock/audio/{albumId}/{fileName}
-    // Используем albumId напрямую - он должен соответствовать имени папки в Storage
-    const storagePath = `users/${storageUserId}/audio/${albumId}/${fileName}`;
+    const storagePath = `users/${userId}/audio/${albumId}/${fileName}`;
 
     // Создаём Supabase клиент с service role key
     const supabase = createSupabaseAdminClient();
@@ -129,7 +122,7 @@ export const handler: Handler = async (
       {
         signedUrl: signedUrlData.signedUrl,
         storagePath,
-        authUserId: storageUserId,
+        authUserId: userId,
       },
       200
     );

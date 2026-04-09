@@ -243,13 +243,19 @@ export async function prepareAndUploadTrack(
     console.log('🔄 [prepareAndUploadTrack] Uploading to Supabase Storage via signed URL...');
     const uploadStartTime = Date.now();
 
-    // Загружаем файл через signed URL (PUT запрос)
+    // Supabase Storage signed upload ожидает тот же формат, что и
+    // storage-js uploadToSignedUrl: multipart FormData + x-upsert (не сырой PUT body).
+    const formData = new FormData();
+    formData.append('cacheControl', '3600');
+    formData.append('', file);
+
     const uploadResponse = await fetch(signedUrl, {
       method: 'PUT',
       headers: {
-        'Content-Type': file.type || 'audio/mpeg',
+        'x-upsert': 'true',
       },
-      body: file,
+      body: formData,
+      signal: controller.signal,
     });
 
     if (!uploadResponse.ok) {
@@ -273,25 +279,28 @@ export async function prepareAndUploadTrack(
       storagePath,
     });
 
-    // Формируем публичный URL напрямую (Supabase Storage публичный URL)
-    // Формат: https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
-    const { createSupabaseClient, STORAGE_BUCKET_NAME: BUCKET_NAME } = await import(
-      '@config/supabase'
-    );
-    const supabaseForUrl = createSupabaseClient();
-    if (!supabaseForUrl) {
-      throw new Error('Failed to create Supabase client for URL');
-    }
+    const { buildStoragePublicObjectUrl } = await import('@config/supabase');
+    const publicUrl = buildStoragePublicObjectUrl(storagePath);
 
-    const { data: urlData } = supabaseForUrl.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
+    if (!publicUrl) {
+      console.warn('⚠️ VITE_SUPABASE_URL is missing. Falling back to storagePath:', {
+        storagePath,
+      });
 
-    if (!urlData?.publicUrl) {
-      throw new Error('Failed to get public URL for uploaded track');
+      return {
+        fileName,
+        title: trackTitle,
+        duration: Math.round(duration * 100) / 100,
+        trackId,
+        orderIndex,
+        storagePath,
+        url: storagePath,
+      };
     }
 
     console.log('✅ [prepareAndUploadTrack] Got public URL:', {
       fileName,
-      url: urlData.publicUrl,
+      url: publicUrl,
     });
 
     return {
@@ -301,7 +310,7 @@ export async function prepareAndUploadTrack(
       trackId,
       orderIndex,
       storagePath,
-      url: urlData.publicUrl,
+      url: publicUrl,
     };
   } catch (uploadError) {
     clearTimeout(timeoutId);

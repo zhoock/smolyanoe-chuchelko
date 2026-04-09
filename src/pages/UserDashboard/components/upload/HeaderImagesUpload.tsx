@@ -36,10 +36,7 @@ const MAX_IMAGES = 10; // Максимальное количество изоб
  */
 function extractPreviewUrl(imageSetOrUrl: string): string {
   // Если это storagePath (начинается с "users/"), преобразуем в proxy URL
-  if (
-    imageSetOrUrl.startsWith('users/zhoock/hero/') ||
-    (imageSetOrUrl.startsWith('users/') && imageSetOrUrl.includes('/hero/'))
-  ) {
+  if (imageSetOrUrl.startsWith('users/') && imageSetOrUrl.includes('/hero/')) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const proxyUrl = `${origin}/.netlify/functions/proxy-image?path=${encodeURIComponent(imageSetOrUrl)}`;
     console.log('🔄 [extractPreviewUrl] Преобразован storagePath в proxy URL:', {
@@ -240,10 +237,7 @@ export function HeaderImagesUpload({
 
       // Убеждаемся, что URL это proxy URL, а не storagePath
       let finalUrl = url;
-      if (
-        url.startsWith('users/zhoock/hero/') ||
-        (url.startsWith('users/') && url.includes('/hero/'))
-      ) {
+      if (url.startsWith('users/') && url.includes('/hero/')) {
         // Если это storagePath, преобразуем в proxy URL
         // Используем правильное определение production URL
         let origin = '';

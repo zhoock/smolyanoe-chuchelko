@@ -100,7 +100,7 @@ export const handler: Handler = async (
     // Используем UUID пользователя из токена
     const storageUserId = userId;
 
-    // Формируем путь в Storage: users/zhoock/audio/{albumId}/{trackId}/{fileName}
+    // Формируем путь в Storage: users/{userId}/audio/{albumId}/{trackId}/{fileName}
     const storagePath = `users/${storageUserId}/audio/${albumId}/${trackId}/${fileName}`;
 
     console.log('🔐 [get-stem-upload-url] Generating signed URL:', {

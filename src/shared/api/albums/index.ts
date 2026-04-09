@@ -1,3 +1,4 @@
+import { buildStoragePublicObjectUrl } from '@config/supabase';
 import { CURRENT_USER_CONFIG, getUserUserId, type ImageCategory } from '@config/user';
 import { getStorageFileUrl } from '@shared/api/storage';
 
@@ -122,13 +123,37 @@ export function getUserImageUrl(
  * getUserAudioUrl('EP_Mixer/01_PPB_drums.mp3', true) // Supabase Storage URL
  */
 export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean): string {
+  if (audioPath == null || String(audioPath).trim() === '') {
+    return '';
+  }
+
+  const raw = String(audioPath).trim();
+
   // Если это уже полный URL (http:// или https://), возвращаем как есть
-  if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
-    return audioPath;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw;
+  }
+
+  // Путь внутри bucket, как в БД после upload-tracks (users/{uuid}/audio/...)
+  // Не зависит от VITE_USE_SUPABASE_STORAGE — иначе путь превращался бы в /audio/users/...
+  if (raw.startsWith('users/')) {
+    const publicUrl = buildStoragePublicObjectUrl(raw);
+    if (publicUrl) {
+      return publicUrl;
+    }
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      const isProduction =
+        !window.location.hostname.includes('localhost') &&
+        !window.location.hostname.includes('127.0.0.1');
+      const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+      return `${origin}${proxyPath}?path=${encodeURIComponent(raw)}`;
+    }
+    return raw;
   }
 
   // Убираем префикс /audio/ если он есть
-  const normalizedPath = audioPath.startsWith('/audio/') ? audioPath.slice(7) : audioPath;
+  const normalizedPath = raw.startsWith('/audio/') ? raw.slice(7) : raw;
 
   // Проверяем, нужно ли использовать Supabase Storage
   const shouldUseStorage =

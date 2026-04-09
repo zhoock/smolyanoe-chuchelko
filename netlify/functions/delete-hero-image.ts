@@ -70,8 +70,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
     }
 
-    // Парсим JSON body
-    const body = parseJsonBody<DeleteHeroImageRequest>(event.body, {});
+    // Парсим JSON body (default пустой: поля проверяем ниже)
+    const body = parseJsonBody<Partial<DeleteHeroImageRequest>>(event.body, {});
 
     if (!body.imageUrl) {
       return createErrorResponse(400, 'Missing required field: imageUrl');
@@ -87,7 +87,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // 1. Proxy URL: /.netlify/functions/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
     // 2. Полный URL: https://.../users/.../hero/hero-123-1920.jpg
     // 3. image-set() строка: image-set(url('.../hero-123-1920.jpg') ...)
-    // 4. Storage path: users/zhoock/hero/hero-123-1920.jpg
+    // 4. Storage path: users/{userId}/hero/hero-123-1920.jpg
     let fileName = '';
     let storagePath = '';
 

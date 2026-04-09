@@ -1353,7 +1353,7 @@ export const handler: Handler = async (
                 if (track.src.startsWith('http://') || track.src.startsWith('https://')) {
                   // Если это полный URL, извлекаем путь
                   // Формат Supabase Storage public URL:
-                  // https://{project}.supabase.co/storage/v1/object/public/user-media/users/zhoock/audio/...
+                  // https://{project}.supabase.co/storage/v1/object/public/user-media/users/{userId}/audio/...
                   const urlMatch = track.src.match(/\/user-media\/(.+)$/);
                   if (urlMatch) {
                     storagePath = urlMatch[1];
@@ -1361,7 +1361,7 @@ export const handler: Handler = async (
                     // Альтернативный формат: путь после /audio/
                     const audioMatch = track.src.match(/\/audio\/(.+)$/);
                     if (audioMatch) {
-                      storagePath = `users/zhoock/audio/${audioMatch[1]}`;
+                      storagePath = `users/${userId}/audio/${audioMatch[1]}`;
                     } else {
                       console.warn('⚠️ Could not extract storage path from src:', track.src);
                       storagePath = '';
@@ -1369,14 +1369,13 @@ export const handler: Handler = async (
                   }
                 } else {
                   // Если это относительный путь, добавляем префикс
-                  // Формат: /audio/albumId/fileName или users/zhoock/audio/albumId/fileName
+                  // Формат: /audio/albumId/fileName или users/{userId}/audio/albumId/fileName
                   if (track.src.startsWith('/audio/')) {
-                    storagePath = `users/zhoock${track.src}`;
+                    storagePath = `users/${userId}${track.src}`;
                   } else if (track.src.startsWith('users/')) {
                     storagePath = track.src;
                   } else {
-                    // Если путь начинается не с /, добавляем полный путь
-                    storagePath = `users/zhoock/audio/${track.src}`;
+                    storagePath = `users/${userId}/audio/${track.src}`;
                   }
                 }
 

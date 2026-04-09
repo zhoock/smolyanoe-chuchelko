@@ -124,7 +124,7 @@ export async function generateHeroImageVariants(
 
 /**
  * Получает базовое имя файла из полного пути или простого имени файла
- * @param pathOrFileName - полный путь в Storage (например "users/zhoock/albums/23-cover.webp") или простое имя файла (например "hero-123.jpg")
+ * @param pathOrFileName - полный путь в Storage (например "users/{userId}/albums/23-cover.webp") или простое имя файла (например "hero-123.jpg")
  * @returns базовое имя без расширения и суффиксов размеров, например "hero-123" или "23-cover"
  */
 export function extractBaseName(pathOrFileName: string): string {

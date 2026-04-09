@@ -10,6 +10,8 @@ type SafeEnv = Record<string, string | undefined>;
 
 function getSafeEnv(): SafeEnv {
   const g = globalThis as unknown as { process?: { env?: SafeEnv } };
+  // Только process.env: в бандле Webpack DefinePlugin подставляет VITE_* (см. webpack.common.js).
+  // import.meta здесь не использовать — в non-ESM чанках это даёт SyntaxError.
   return g.process?.env ?? {};
 }
 
@@ -18,7 +20,8 @@ function getSafeEnv(): SafeEnv {
 // Для серверной части (Netlify Functions) используем без префикса
 const getSupabaseUrl = (): string => {
   const env = getSafeEnv();
-  return env.VITE_SUPABASE_URL || '';
+  // Клиент: VITE_SUPABASE_URL (webpack). Netlify Functions: часто только SUPABASE_URL.
+  return env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
 };
 
 const getSupabaseAnonKey = (): string => {
@@ -137,3 +140,40 @@ export function createSupabaseAdminClient(): SupabaseClient | null {
  * Имя бакета для хранения медиа-файлов пользователей (изображения и аудио)
  */
 export const STORAGE_BUCKET_NAME = 'user-media';
+
+/**
+ * Публичный URL объекта в Storage без создания клиента (достаточно VITE_SUPABASE_URL).
+ * Путь — относительно bucket, например users/{uuid}/audio/album/file.mp3
+ */
+export function buildStoragePublicObjectUrl(storagePath: string): string | null {
+  const base = getSupabaseUrl().replace(/\/$/, '');
+  if (!base) {
+    console.error('❌ Missing Supabase URL (VITE_SUPABASE_URL or SUPABASE_URL)');
+    return null;
+  }
+  const cleanPath = storagePath.replace(/^\/+/, '');
+  const storageApiBase = `${base}/storage/v1`;
+  return encodeURI(`${storageApiBase}/object/public/${STORAGE_BUCKET_NAME}/${cleanPath}`);
+}
+
+let supabaseClientConfigLogged = false;
+
+function logSupabaseClientConfigOnce(): void {
+  if (typeof window === 'undefined' || supabaseClientConfigLogged) {
+    return;
+  }
+  supabaseClientConfigLogged = true;
+
+  const hasUrl = !!getSupabaseUrl();
+  const hasAnonKey = !!getSupabaseAnonKey();
+  console.log('🔧 Supabase config:', { hasUrl, hasAnonKey });
+
+  const env = getSafeEnv();
+  if (env.NODE_ENV !== 'production' && (!hasUrl || !hasAnonKey)) {
+    console.warn(
+      '⚠️ Задайте VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY в .env (шаблон: .env.example), затем перезапустите dev-сервер. Без URL публичные ссылки на треки подставятся как storagePath.'
+    );
+  }
+}
+
+logSupabaseClientConfigOnce();

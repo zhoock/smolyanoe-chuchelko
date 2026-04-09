@@ -6,7 +6,7 @@
  * Authorization: Bearer <token>
  * Content-Type: application/json
  * Body: {
- *   storagePath: string (путь к файлу, например "users/zhoock/audio/albumId/trackId/fileName.mp3")
+ *   storagePath: string (путь к файлу, например "users/{userId}/audio/albumId/trackId/fileName.mp3")
  * }
  */
 
@@ -69,8 +69,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
     }
 
-    // Парсим JSON body
-    const body = parseJsonBody<DeleteStemRequest>(event.body, {});
+    // Парсим JSON body (default пустой: поля проверяем ниже)
+    const body = parseJsonBody<Partial<DeleteStemRequest>>(event.body, {});
 
     if (!body.storagePath) {
       return createErrorResponse(400, 'Missing required field: storagePath');
