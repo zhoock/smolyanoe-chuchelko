@@ -11,6 +11,7 @@ import { useLang } from '@app/providers/lang';
 import { gaEvent } from '@shared/lib/analytics';
 import { TrackList } from '@entities/track/ui/TrackList';
 import { getUserAudioUrl } from '@shared/api/albums';
+import { fetchPublicProfileDisplayName } from '@shared/lib/profileDisplayName';
 import './style.scss';
 
 /**
@@ -63,74 +64,97 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   useEffect(() => {
     const shouldBeOpen = location.hash === '#player';
     const playlistLength = store.getState().player.playlist.length;
-    if (shouldBeOpen && playlistLength === 0 && album && album.tracks && album.tracks.length > 0) {
+    if (!(shouldBeOpen && playlistLength === 0 && album?.tracks && album.tracks.length > 0)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const displayArtist =
+        (await fetchPublicProfileDisplayName(lang, artistSlugFromUrl)).trim() || album.artist;
+      const fullNameMeta = album.fullName ?? `${displayArtist} — ${album.album}`;
+
+      if (cancelled) return;
+
       const savedState = loadPlayerState();
       const currentAlbumId =
         album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
       const currentState = store.getState().player;
 
-      if (currentState.playlist.length === 0) {
-        if (savedState && savedState.albumId === currentAlbumId) {
-          const validTrackIndex = Math.max(
-            0,
-            Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
-          );
+      if (currentState.playlist.length !== 0) return;
 
-          dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
-          dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
-          dispatch(
-            playerActions.setAlbumInfo({
-              albumId: savedState.albumId,
-              albumTitle: savedState.albumTitle ?? album.album,
-            })
-          );
-          dispatch(
-            playerActions.setAlbumMeta({
-              albumId: savedState.albumId,
-              userId: album.userId ?? null,
-              publicSlug: artistSlugFromUrl ?? undefined,
-              album: album.album,
-              artist: album.artist,
-              fullName: album.fullName ?? `${album.artist} — ${album.album}`,
-              cover: album.cover ?? null,
-            })
-          );
-          dispatch(
-            playerActions.setSourceLocation({
-              pathname: location.pathname,
-              search: location.search || undefined,
-            })
-          );
-          dispatch(playerActions.setVolume(savedState.volume));
-          dispatch(playerActions.pause());
-        } else {
-          dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
-          dispatch(playerActions.setCurrentTrackIndex(0));
-          dispatch(
-            playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album })
-          );
-          dispatch(
-            playerActions.setAlbumMeta({
-              albumId: currentAlbumId,
-              userId: album.userId ?? null,
-              publicSlug: artistSlugFromUrl ?? undefined,
-              album: album.album,
-              artist: album.artist,
-              fullName: album.fullName ?? `${album.artist} — ${album.album}`,
-              cover: album.cover ?? null,
-            })
-          );
-          dispatch(
-            playerActions.setSourceLocation({
-              pathname: location.pathname,
-              search: location.search || undefined,
-            })
-          );
-          dispatch(playerActions.requestPlay());
-        }
+      if (savedState && savedState.albumId === currentAlbumId) {
+        const validTrackIndex = Math.max(
+          0,
+          Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
+        );
+
+        dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+        dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
+        dispatch(
+          playerActions.setAlbumInfo({
+            albumId: savedState.albumId,
+            albumTitle: savedState.albumTitle ?? album.album,
+          })
+        );
+        dispatch(
+          playerActions.setAlbumMeta({
+            albumId: savedState.albumId,
+            userId: album.userId ?? null,
+            publicSlug: artistSlugFromUrl ?? undefined,
+            album: album.album,
+            artist: displayArtist,
+            fullName: fullNameMeta,
+            cover: album.cover ?? null,
+          })
+        );
+        dispatch(
+          playerActions.setSourceLocation({
+            pathname: location.pathname,
+            search: location.search || undefined,
+          })
+        );
+        dispatch(playerActions.setVolume(savedState.volume));
+        dispatch(playerActions.pause());
+      } else {
+        dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+        dispatch(playerActions.setCurrentTrackIndex(0));
+        dispatch(playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album }));
+        dispatch(
+          playerActions.setAlbumMeta({
+            albumId: currentAlbumId,
+            userId: album.userId ?? null,
+            publicSlug: artistSlugFromUrl ?? undefined,
+            album: album.album,
+            artist: displayArtist,
+            fullName: fullNameMeta,
+            cover: album.cover ?? null,
+          })
+        );
+        dispatch(
+          playerActions.setSourceLocation({
+            pathname: location.pathname,
+            search: location.search || undefined,
+          })
+        );
+        dispatch(playerActions.requestPlay());
       }
-    }
-  }, [location.hash, location.pathname, location.search, album, dispatch, store]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    location.hash,
+    location.pathname,
+    location.search,
+    album,
+    artistSlugFromUrl,
+    lang,
+    dispatch,
+    store,
+  ]);
 
   useEffect(() => {
     let lastSavedState = {
@@ -168,11 +192,15 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   }, [store]);
 
   const openPlayer = useCallback(
-    (trackIndex: number, options?: { openFullScreen?: boolean }) => {
+    async (trackIndex: number, options?: { openFullScreen?: boolean }) => {
       const albumId =
         album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
       const playlist = album.tracks || [];
       const selectedTrack = playlist[trackIndex];
+
+      const displayArtist =
+        (await fetchPublicProfileDisplayName(lang, artistSlugFromUrl)).trim() || album.artist;
+      const fullNameMeta = album.fullName ?? `${displayArtist} — ${album.album}`;
 
       dispatch(playerActions.setPlaylist(transformTracksForStorage(playlist)));
 
@@ -196,8 +224,8 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           userId: album.userId ?? null,
           publicSlug: artistSlugFromUrl ?? undefined,
           album: album.album,
-          artist: album.artist,
-          fullName: album.fullName ?? `${album.artist} — ${album.album}`,
+          artist: displayArtist,
+          fullName: fullNameMeta,
           cover: album.cover ?? null,
         })
       );
@@ -220,7 +248,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         );
       }
     },
-    [dispatch, album, location.pathname, location.search, navigate, store]
+    [dispatch, album, artistSlugFromUrl, lang, location.pathname, location.search, navigate, store]
   );
 
   const handleTrackSelect = useCallback(
@@ -252,7 +280,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         lang,
       });
 
-      openPlayer(index, { openFullScreen: false });
+      void openPlayer(index, { openFullScreen: false });
     },
     [album, lang, openPlayer, store]
   );
@@ -275,7 +303,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
                   album_title: album?.album,
                   lang,
                 });
-                openPlayer(0, { openFullScreen: false });
+                void openPlayer(0, { openFullScreen: false });
               }}
             >
               <span className="icon-controller-play"></span>

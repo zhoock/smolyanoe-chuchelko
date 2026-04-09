@@ -415,7 +415,11 @@ export function ProfileSettingsModal({
           if (needsSiteNameUpdate) {
             localStorage.setItem('profile-name', name);
             updateStoredUserName(name);
-            window.dispatchEvent(new CustomEvent('profile-name-updated', { detail: { name } }));
+            window.dispatchEvent(
+              new CustomEvent('profile-name-updated', {
+                detail: { name, publicSlug: publicSlug.trim() || undefined },
+              })
+            );
           }
 
           // Отправляем событие для обновления header images в Hero компоненте
@@ -637,7 +641,7 @@ export function ProfileSettingsModal({
           if (response.ok) {
             const result = await response.json();
             const profileName = result.success
-              ? (result.data?.name ?? result.data?.siteName ?? null)
+              ? (result.data?.siteName ?? result.data?.name ?? null)
               : null;
             const loadedPublicSlug = result.success ? (result.data?.publicSlug ?? '') : '';
             const allowedGenreCodes = new Set(GENRE_OPTIONS.map((g) => g.code));

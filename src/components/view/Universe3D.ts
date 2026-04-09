@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { ProfileNameUpdatedDetail } from '@shared/lib/profileDisplayName';
 
 /** Manhattan distance (px) before touch pan counts as drag, not tap. */
 const TOUCH_MOVE_THRESHOLD_PX = 5;
@@ -363,6 +364,7 @@ export class Universe3D {
       this.attachedWindowClick = true;
     }
 
+    window.addEventListener('profile-name-updated', this.onProfileDisplayNameUpdated);
     window.addEventListener('resize', this.onResize);
     window.visualViewport?.addEventListener('resize', this.onResize);
 
@@ -778,6 +780,36 @@ export class Universe3D {
 
     return group;
   }
+
+  private onProfileDisplayNameUpdated = (event: Event) => {
+    const e = event as CustomEvent<ProfileNameUpdatedDetail>;
+    const name = e.detail?.name?.trim();
+    if (!name) return;
+    const slug = e.detail?.publicSlug?.trim();
+    if (!slug) return;
+
+    for (const mesh of this.clickableNodes) {
+      const u = mesh.userData as SceneArtist;
+      if (u.publicSlug !== slug) continue;
+      u.name = name;
+      const sprite = mesh.userData.label as THREE.Sprite | null;
+      if (sprite) {
+        this.disposeArtistLabelSprite(sprite);
+        mesh.userData.label = null;
+      }
+    }
+
+    if (this.activeCard && this.cardAnchorObject) {
+      const anchorData = this.cardAnchorObject.userData as SceneArtist;
+      if (anchorData.publicSlug === slug) {
+        anchorData.name = name;
+        const titleEl = this.activeCard.querySelector('.universe3d-card__title');
+        if (titleEl) {
+          titleEl.textContent = name;
+        }
+      }
+    }
+  };
 
   private onClick = (event: MouseEvent) => {
     if (Date.now() < this.ignoreClickUntil) {
@@ -1763,6 +1795,7 @@ export class Universe3D {
     if (this.attachedWindowClick) {
       window.removeEventListener('click', this.onClick);
     }
+    window.removeEventListener('profile-name-updated', this.onProfileDisplayNameUpdated);
     window.removeEventListener('wheel', this.handleWheel);
     window.removeEventListener('mousedown', this.handleMouseDown);
     window.removeEventListener('mouseup', this.handleMouseUp);

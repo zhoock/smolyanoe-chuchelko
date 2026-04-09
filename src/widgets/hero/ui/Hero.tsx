@@ -5,6 +5,10 @@ import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import {
+  readStoredProfileDisplayName,
+  type ProfileNameUpdatedDetail,
+} from '@shared/lib/profileDisplayName';
+import {
   Universe3D,
   type SceneArtist,
   UNIVERSE_FOCUS_ARTIST_STORAGE_KEY,
@@ -53,7 +57,7 @@ function formatBackgroundImageUrl(imageUrl: string): string {
 export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [headerImages, setHeaderImages] = useState<string[]>([]);
-  const [profileName, setProfileName] = useState<string>('');
+  const [profileName, setProfileName] = useState<string>(() => readStoredProfileDisplayName());
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isImagesLoading, setIsImagesLoading] = useState(false);
   const location = useLocation();
@@ -64,6 +68,7 @@ export function Hero() {
   const imagesLoadedRef = useRef<boolean>(false);
   const imageSelectedForPathRef = useRef<string>('');
   const hasArtistParam = !!searchParams.get('artist');
+  const artistParamKey = searchParams.get('artist')?.trim() ?? '';
   const isDashboardRoute = location.pathname.startsWith('/dashboard');
 
   // Загружаем изображения из БД
@@ -125,7 +130,6 @@ export function Hero() {
   useEffect(() => {
     const loadProfileName = async () => {
       setIsProfileLoading(true);
-      setProfileName('');
 
       if (!isDashboardRoute) {
         try {
@@ -140,21 +144,23 @@ export function Hero() {
 
           if (response.ok) {
             const result = await response.json();
-            const profileName = result.success
-              ? (result.data?.siteName ?? result.data?.name ?? '')
+            const next = result.success
+              ? (result.data?.siteName ?? result.data?.name ?? '').trim()
               : '';
-            setProfileName(profileName);
+            setProfileName(next || readStoredProfileDisplayName());
           } else {
-            setProfileName('');
+            setProfileName(readStoredProfileDisplayName());
           }
         } catch (error) {
           console.warn('⚠️ Ошибка загрузки названия группы выбранного артиста:', error);
-          setProfileName('');
+          setProfileName(readStoredProfileDisplayName());
         } finally {
           setIsProfileLoading(false);
         }
         return;
       }
+
+      setProfileName('');
 
       try {
         const token = getToken();
@@ -176,7 +182,7 @@ export function Hero() {
         if (response.ok) {
           const result = await response.json();
           const profileName = result.success
-            ? (result.data?.name ?? result.data?.siteName ?? '')
+            ? (result.data?.siteName ?? result.data?.name ?? '')
             : '';
           setProfileName(profileName);
         } else {
@@ -194,10 +200,14 @@ export function Hero() {
 
     // Слушаем событие обновления названия группы
     const handleProfileNameUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ name: string }>;
-      if (customEvent.detail?.name) {
-        setProfileName(customEvent.detail.name);
+      const customEvent = event as CustomEvent<ProfileNameUpdatedDetail>;
+      const name = customEvent.detail?.name?.trim();
+      if (!name) return;
+      const slug = customEvent.detail?.publicSlug?.trim();
+      if (hasArtistParam && artistParamKey) {
+        if (slug && slug !== artistParamKey) return;
       }
+      setProfileName(name);
     };
 
     // Слушаем событие обновления header images
@@ -222,7 +232,7 @@ export function Hero() {
       window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
       window.removeEventListener('header-images-updated', handleHeaderImagesUpdate);
     };
-  }, [hasArtistParam, isDashboardRoute, location.pathname, location.search]);
+  }, [artistParamKey, hasArtistParam, isDashboardRoute, location.pathname, location.search]);
 
   // Выбираем случайное изображение при загрузке данных или изменении пути
   useEffect(() => {
@@ -341,8 +351,6 @@ export function Hero() {
       ? ''
       : profileName || ''
     : profileName || 'Смоляное чучелко';
-
-  const artistParamKey = searchParams.get('artist')?.trim() ?? '';
 
   /** Latest profile/header for canvas fallback without re-running Universe3D effect. */
   const profileNameForCanvasRef = useRef(profileName);

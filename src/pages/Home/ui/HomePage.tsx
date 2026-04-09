@@ -14,6 +14,7 @@ import { fetchAlbums } from '@entities/album';
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
 import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
+import { fetchPublicProfileForDisplay } from '@shared/lib/profileDisplayName';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
@@ -64,17 +65,38 @@ export function HomePage() {
     const init = async () => {
       let apiArtists: SceneArtist[] = [];
 
-      try {
-        const response = await fetch('/api/public-artists', { cache: 'no-store' });
-        const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
-        if (response.ok && payload.success && Array.isArray(payload.data)) {
-          apiArtists = payload.data;
-        }
-      } catch (error) {
-        console.warn('[HomePage] Failed to fetch /api/public-artists, using fallback data', error);
-      }
+      const [publicArtistsResult, profileRow] = await Promise.all([
+        (async () => {
+          try {
+            const response = await fetch('/api/public-artists', { cache: 'no-store' });
+            const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
+            if (response.ok && payload.success && Array.isArray(payload.data)) {
+              return payload.data;
+            }
+          } catch (error) {
+            console.warn(
+              '[HomePage] Failed to fetch /api/public-artists, using fallback data',
+              error
+            );
+          }
+          return [];
+        })(),
+        fetchPublicProfileForDisplay(lang),
+      ]);
 
-      const artists = prepareUniverseData(useMocks ? generateMockArtists(50) : apiArtists);
+      apiArtists = publicArtistsResult;
+
+      let artists = prepareUniverseData(useMocks ? generateMockArtists(50) : apiArtists);
+      if (
+        !useMocks &&
+        profileRow.publicSlug &&
+        profileRow.displayName.trim() &&
+        apiArtists.some((a) => a.publicSlug === profileRow.publicSlug)
+      ) {
+        artists = artists.map((a) =>
+          a.publicSlug === profileRow.publicSlug ? { ...a, name: profileRow.displayName } : a
+        );
+      }
 
       if (cancelled || !sceneRef.current) return;
       universe = new Universe3D(sceneRef.current, artists, {
@@ -126,14 +148,17 @@ export function HomePage() {
             })
           );
 
+          const displayArtist = (artist.name?.trim() || firstAlbum.artist) ?? '';
           dispatch(
             playerActions.setAlbumMeta({
               albumId,
               userId: firstAlbum.userId ?? null,
               publicSlug: artist.publicSlug,
               album: firstAlbum.album,
-              artist: firstAlbum.artist,
-              fullName: firstAlbum.fullName ?? `${firstAlbum.artist} — ${firstAlbum.album}`,
+              artist: displayArtist,
+              fullName:
+                firstAlbum.fullName ??
+                (displayArtist ? `${displayArtist} — ${firstAlbum.album}` : ''),
               cover: firstAlbum.cover ?? null,
             })
           );

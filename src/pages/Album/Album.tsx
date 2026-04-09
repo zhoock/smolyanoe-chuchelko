@@ -111,13 +111,6 @@ export default function Album() {
     window.scrollTo({ top: 0 });
   }, [albumId]);
 
-  useEffect(() => {
-    if (!album?.artist) return;
-    window.dispatchEvent(
-      new CustomEvent('profile-name-updated', { detail: { name: album.artist } })
-    );
-  }, [album?.artist]);
-
   // Данные загружаются через loader
 
   if (albumsStatus === 'loading' || albumsStatus === 'idle') {
