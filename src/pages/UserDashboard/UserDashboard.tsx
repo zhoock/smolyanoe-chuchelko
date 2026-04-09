@@ -45,7 +45,11 @@ import {
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
-import { loadAuthorshipFromStorage, loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
+import {
+  loadAuthorshipFromStorage,
+  loadSyncedLyricsFromStorage,
+  clearSyncedLyricsCache,
+} from '@features/syncedLyrics/lib';
 import { uploadTracks, prepareAndUploadTrack, type TrackUploadData } from '@shared/api/tracks';
 import { AddLyricsModal } from './components/modals/lyrics/AddLyricsModal';
 import { EditLyricsModal } from './components/modals/lyrics/EditLyricsModal';
@@ -1656,7 +1660,6 @@ function UserDashboard() {
         ]);
 
         const cachedAuthorship = getCachedAuthorship(albumId, trackId, lang);
-        const fallbackAuthorship = track.authorship || cachedAuthorship;
         const fallbackText = track.lyricsText || '';
 
         const finalText = storedText || fallbackText;
@@ -1691,7 +1694,8 @@ function UserDashboard() {
           trackStatus: track.lyricsStatus,
           hasSyncedLyrics,
           initialLyrics: finalText,
-          initialAuthorship: storedAuthorship || fallbackAuthorship || undefined,
+          // Локальный track (после сохранения в этой сессии) важнее ответа API: иначе stale storedAuthorship ломает отображение
+          initialAuthorship: track.authorship ?? storedAuthorship ?? cachedAuthorship ?? undefined,
         });
       }
     } else if (action === 'prev') {
@@ -1760,6 +1764,7 @@ function UserDashboard() {
 
       if (result.success) {
         setCachedAuthorship(addLyricsModal.albumId, addLyricsModal.trackId, lang, authorship);
+        clearSyncedLyricsCache(addLyricsModal.albumId, addLyricsModal.trackId, lang);
         setAlbumsData((prev) =>
           prev.map((a) => {
             if (a.id === addLyricsModal.albumId) {
@@ -1780,6 +1785,11 @@ function UserDashboard() {
             return a;
           })
         );
+        void dispatch(fetchAlbums({ lang, force: true })).catch((err: unknown) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[UserDashboard] fetchAlbums after add lyrics:', err);
+          }
+        });
       } else {
         setAlertModal({
           isOpen: true,
@@ -1809,6 +1819,7 @@ function UserDashboard() {
 
       if (result.success) {
         setCachedAuthorship(editLyricsModal.albumId, editLyricsModal.trackId, lang, authorship);
+        clearSyncedLyricsCache(editLyricsModal.albumId, editLyricsModal.trackId, lang);
 
         // Перезагружаем текст из БД, чтобы убедиться, что он сохранен корректно
         const savedText = await loadTrackTextFromDatabase(
@@ -1819,6 +1830,28 @@ function UserDashboard() {
 
         // Используем сохраненный текст из БД, если он есть, иначе используем переданный текст
         const finalText = savedText || lyrics;
+
+        const normalizeLyricsFingerprint = (s: string | undefined) =>
+          (s || '')
+            .replace(/\r\n/g, '\n')
+            .split('\n')
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0)
+            .join('\n');
+
+        const prevTrack = album.tracks.find((t) => t.id === editLyricsModal.trackId);
+        const lyricsChanged =
+          normalizeLyricsFingerprint(finalText) !==
+          normalizeLyricsFingerprint(prevTrack?.lyricsText);
+
+        let nextLyricsStatus: TrackData['lyricsStatus'];
+        if (!finalText.trim()) {
+          nextLyricsStatus = 'empty';
+        } else if (!lyricsChanged) {
+          nextLyricsStatus = prevTrack?.lyricsStatus ?? 'text-only';
+        } else {
+          nextLyricsStatus = 'text-only';
+        }
 
         // Обновляем albumsData с сохраненным текстом
         setAlbumsData((prev) =>
@@ -1832,7 +1865,8 @@ function UserDashboard() {
                         ...track,
                         lyricsText: finalText,
                         authorship,
-                        lyricsStatus: 'text-only' as const,
+                        lyricsStatus: nextLyricsStatus,
+                        syncedLyrics: lyricsChanged ? undefined : track.syncedLyrics,
                       }
                     : track
                 ),
@@ -1849,7 +1883,7 @@ function UserDashboard() {
             ? {
                 ...prev,
                 initialLyrics: finalText,
-                initialAuthorship: authorship || prev.initialAuthorship,
+                initialAuthorship: authorship ?? '',
               }
             : null
         );
@@ -1860,6 +1894,12 @@ function UserDashboard() {
           lyricsLength: finalText.length,
           loadedFromDb: !!savedText,
           finalText: finalText.substring(0, 50) + '...',
+        });
+
+        void dispatch(fetchAlbums({ lang, force: true })).catch((err: unknown) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[UserDashboard] fetchAlbums after save lyrics:', err);
+          }
         });
       } else {
         setAlertModal({
@@ -2803,8 +2843,9 @@ function UserDashboard() {
             getTrackLyricsText(editLyricsModal.albumId, editLyricsModal.trackId)
           }
           initialAuthorship={
-            editLyricsModal.initialAuthorship ||
-            getTrackAuthorship(editLyricsModal.albumId, editLyricsModal.trackId)
+            editLyricsModal.initialAuthorship ??
+            getTrackAuthorship(editLyricsModal.albumId, editLyricsModal.trackId) ??
+            ''
           }
           onClose={() => setEditLyricsModal(null)}
           onSave={handleSaveLyrics}

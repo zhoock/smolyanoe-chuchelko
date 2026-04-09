@@ -22,6 +22,25 @@ interface SaveTrackTextResponse {
   message?: string;
 }
 
+/** Сравнимый «отпечаток» текста песни (без пустых строк), чтобы не сбрасывать тайм-коды при смене только авторства */
+function lyricsFingerprintFromContent(content: string): string {
+  return content
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .join('\n');
+}
+
+function lyricsFingerprintFromSyncedLines(
+  lines: Array<{ text?: unknown; startTime?: unknown }>
+): string {
+  return lines
+    .map((l) => (typeof l.text === 'string' ? l.text.trim() : ''))
+    .filter((l) => l.length > 0)
+    .join('\n');
+}
+
 export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
@@ -185,38 +204,90 @@ export const handler: Handler = async (
 
       const savedRow = upsertResult.rows[0];
 
-      // Также обновляем synced_lyrics, чтобы текст был синхронизирован
-      // Разбиваем текст на строки с startTime: 0 (обычный текст, не синхронизированный)
-      const syncedLyrics = data.content
+      // synced_lyrics: при изменении текста песни — сбрасываем тайм-коды; при смене только авторства — сохраняем JSON.
+      const newFingerprint = lyricsFingerprintFromContent(data.content);
+
+      const plainLinesForInsert = data.content
         .split('\n')
         .map((line) => ({ text: line, startTime: 0 }))
         .filter((line) => line.text.trim().length > 0);
 
+      let preserveExistingSyncedJson = false;
+
       try {
-        await query(
-          `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
-           ON CONFLICT (user_id, album_id, track_id, lang)
-           DO UPDATE SET 
-             synced_lyrics = EXCLUDED.synced_lyrics,
-             authorship = EXCLUDED.authorship,
-             updated_at = NOW()`,
-          [
-            userId,
-            data.albumId,
-            String(data.trackId),
-            data.lang,
-            JSON.stringify(syncedLyrics),
-            data.authorship || null,
-          ],
-          0 // Без retry
+        const existingSync = await query<{ synced_lyrics: unknown }>(
+          `SELECT synced_lyrics FROM synced_lyrics
+           WHERE user_id = $1 AND album_id = $2 AND track_id = $3 AND lang = $4
+           LIMIT 1`,
+          [userId, data.albumId, String(data.trackId), data.lang],
+          0
         );
-        console.log('✅ Synced lyrics updated:', {
-          albumId: data.albumId,
-          trackId: data.trackId,
-          lang: data.lang,
-          linesCount: syncedLyrics.length,
-        });
+
+        if (existingSync.rows.length > 0) {
+          const raw = existingSync.rows[0].synced_lyrics;
+          let parsed: Array<{ text?: unknown; startTime?: unknown }> = [];
+          if (Array.isArray(raw)) {
+            parsed = raw;
+          } else if (typeof raw === 'string') {
+            try {
+              const v = JSON.parse(raw) as unknown;
+              parsed = Array.isArray(v) ? v : [];
+            } catch {
+              parsed = [];
+            }
+          }
+          if (parsed.length > 0) {
+            const oldFp = lyricsFingerprintFromSyncedLines(parsed);
+            if (oldFp === newFingerprint) {
+              preserveExistingSyncedJson = true;
+            }
+          }
+        }
+      } catch (readErr) {
+        console.warn('[save-track-text] Could not read existing synced_lyrics:', readErr);
+      }
+
+      try {
+        if (preserveExistingSyncedJson) {
+          await query(
+            `UPDATE synced_lyrics
+             SET authorship = $1, updated_at = NOW()
+             WHERE user_id = $2 AND album_id = $3 AND track_id = $4 AND lang = $5`,
+            [data.authorship || null, userId, data.albumId, String(data.trackId), data.lang],
+            0
+          );
+          console.log('✅ Synced lyrics preserved (authorship-only update):', {
+            albumId: data.albumId,
+            trackId: data.trackId,
+            lang: data.lang,
+          });
+        } else {
+          await query(
+            `INSERT INTO synced_lyrics (user_id, album_id, track_id, lang, synced_lyrics, authorship, updated_at)
+             VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+             ON CONFLICT (user_id, album_id, track_id, lang)
+             DO UPDATE SET 
+               synced_lyrics = EXCLUDED.synced_lyrics,
+               authorship = EXCLUDED.authorship,
+               updated_at = NOW()`,
+            [
+              userId,
+              data.albumId,
+              String(data.trackId),
+              data.lang,
+              JSON.stringify(plainLinesForInsert),
+              data.authorship || null,
+            ],
+            0
+          );
+          console.log('✅ Synced lyrics updated:', {
+            albumId: data.albumId,
+            trackId: data.trackId,
+            lang: data.lang,
+            linesCount: plainLinesForInsert.length,
+            resetTiming: true,
+          });
+        }
       } catch (syncError) {
         // Логируем ошибку, но не прерываем сохранение
         console.warn('⚠️ Failed to update synced_lyrics (non-critical):', syncError);
