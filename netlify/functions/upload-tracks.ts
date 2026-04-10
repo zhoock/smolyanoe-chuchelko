@@ -32,6 +32,7 @@ import {
   parseJsonBody,
 } from './lib/api-helpers';
 import { query } from './lib/db';
+import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 
 interface TrackUploadRequest {
   albumId: string; // album_id (строка, например "23" или "23-remastered"), не UUID
@@ -206,6 +207,8 @@ export const handler: Handler = async (
         }).catch(() => {});
         // #endregion
 
+        const srcForDb = resolveTrackSrcToSupabasePublicUrl(url, album.user_id) ?? url;
+
         const insertResult = await query(
           `INSERT INTO tracks (
         album_id, track_id, title, duration, src, order_index
@@ -218,7 +221,7 @@ export const handler: Handler = async (
         order_index = EXCLUDED.order_index,
         updated_at = CURRENT_TIMESTAMP
       RETURNING id, track_id, title`,
-          [album.id, trackId, title, duration, url, orderIndex]
+          [album.id, trackId, title, duration, srcForDb, orderIndex]
         );
 
         // #region agent log

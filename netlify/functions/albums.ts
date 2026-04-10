@@ -23,6 +23,7 @@ import {
 import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
+import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 
 interface AlbumRow {
   id: string;
@@ -243,7 +244,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
         title: track.title,
         // Убеждаемся, что duration всегда число (0, если отсутствует)
         duration: duration ?? 0,
-        src: track.src || undefined,
+        src: resolveTrackSrcToSupabasePublicUrl(track.src, album.user_id),
         content: track.content || undefined,
         authorship: track.authorship || undefined,
         syncedLyrics: syncedLyrics || undefined,
