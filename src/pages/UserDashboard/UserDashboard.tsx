@@ -47,6 +47,7 @@ import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
 import { loadAuthorshipFromStorage, loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import { uploadTracks, prepareAndUploadTrack, type TrackUploadData } from '@shared/api/tracks';
+import { TRACK_ORDER_INDEX_STEP } from '@shared/lib/tracks/trackOrderIndex';
 import { AddLyricsModal } from './components/modals/lyrics/AddLyricsModal';
 import { EditLyricsModal } from './components/modals/lyrics/EditLyricsModal';
 import { PreviewLyricsModal } from './components/modals/lyrics/PreviewLyricsModal';
@@ -1119,7 +1120,7 @@ function UserDashboard() {
         return;
       }
 
-      // Формируем массив с новыми order_index
+      // Порядок в массиве задаёт reorder; сервер пересчитывает order_index шагом 10 и игнорирует orderIndex.
       const trackOrders = newTracks.map((track, index) => ({
         trackId: track.id,
         orderIndex: index,
@@ -1478,12 +1479,6 @@ function UserDashboard() {
       const fileArray = Array.from(files);
 
       // Стабильный track_id (UUID): не зависит от порядка/дыр в нумерации; привязка lyrics/метаданных не «съезжает».
-      const uiAlbum = albumsData.find((a) => a.id === albumId || a.albumId === albumId);
-      const storeAlbum = albumsFromStore.find((a) => a.albumId === albumId);
-      const uiTracks = uiAlbum?.tracks ?? [];
-      const storeTracks = storeAlbum?.tracks ?? [];
-      const existingTracksCount = Math.max(uiTracks.length, storeTracks.length);
-
       const newStableTrackId = (): string => {
         if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
           return crypto.randomUUID();
@@ -1500,11 +1495,8 @@ function UserDashboard() {
         const fileProgressEnd = ((i + 1) / fileArray.length) * 80;
         setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressStart }));
 
-        // orderIndex должен быть равен индексу в массиве всех треков (существующие + новые)
-        const orderIndex = existingTracksCount + i;
-
         try {
-          const trackData = await prepareAndUploadTrack(file, albumId, trackId, orderIndex);
+          const trackData = await prepareAndUploadTrack(file, albumId, trackId);
           tracksData.push(trackData);
 
           // Обновляем прогресс после успешной загрузки файла
@@ -1539,11 +1531,12 @@ function UserDashboard() {
         setAlbumsData((prevAlbums) => {
           return prevAlbums.map((album) => {
             if (album.albumId === albumId || album.id === albumId) {
-              // Добавляем новые треки к существующим
-              const newTracks: TrackData[] = tracksData.map((trackData) => ({
+              const maxOrder = album.tracks.reduce((m, t) => Math.max(m, t.order_index ?? 0), 0);
+              // Оптимистично: тот же шаг, что на сервере (max + 10, +20, …)
+              const newTracks: TrackData[] = tracksData.map((trackData, i) => ({
                 id: trackData.trackId,
                 title: trackData.title,
-                order_index: trackData.orderIndex,
+                order_index: maxOrder + TRACK_ORDER_INDEX_STEP * (i + 1),
                 duration: `${Math.floor(trackData.duration / 60)}:${Math.floor(
                   trackData.duration % 60
                 )

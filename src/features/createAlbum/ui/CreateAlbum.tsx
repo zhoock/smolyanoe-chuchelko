@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import type { IAlbums, TracksProps } from '@models';
 import { getAudioDuration } from '@shared/lib/audio/getAudioDuration';
 import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
+import { rankToOrderIndex } from '@shared/lib/tracks/trackOrderIndex';
 import './CreateAlbum.style.scss';
 interface TrackDraft {
   id: string;
@@ -151,7 +152,7 @@ const draftToAlbum = (draft: AlbumDraft): IAlbums => {
       return {
         id,
         title: track.title.trim(),
-        order_index: index,
+        order_index: rankToOrderIndex(index),
         duration: parsedDuration ?? 0,
         src: track.src.trim() || '',
         content: track.content.trim() || '',

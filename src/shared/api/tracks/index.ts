@@ -11,7 +11,8 @@ export interface TrackUploadData {
   title: string;
   duration: number; // в секундах
   trackId: string; // Стабильный id (UUID с клиента или legacy-номер)
-  orderIndex: number;
+  /** Устарело: сервер назначает `order_index` шагом 10 после MAX под блокировкой альбома. */
+  orderIndex?: number;
   storagePath: string; // Путь к файлу в Storage (после загрузки)
   url: string; // URL файла в Storage (после загрузки)
 }
@@ -137,7 +138,6 @@ export async function prepareAndUploadTrack(
   file: File,
   albumId: string,
   trackId: string,
-  orderIndex: number,
   title?: string
 ): Promise<TrackUploadData> {
   const { createSupabaseClient, STORAGE_BUCKET_NAME } = await import('@config/supabase');
@@ -300,7 +300,6 @@ export async function prepareAndUploadTrack(
         title: trackTitle,
         duration: Math.round(duration * 100) / 100,
         trackId,
-        orderIndex,
         storagePath,
         url: storagePath,
       };
@@ -316,7 +315,6 @@ export async function prepareAndUploadTrack(
       title: trackTitle,
       duration: Math.round(duration * 100) / 100, // Округляем до 2 знаков после запятой
       trackId,
-      orderIndex,
       storagePath,
       url: publicUrl,
     };

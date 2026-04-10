@@ -8,7 +8,7 @@
  */
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
-import { query } from './lib/db';
+import { query, getClient } from './lib/db';
 import {
   createOptionsResponse,
   createErrorResponse,
@@ -25,6 +25,7 @@ import { updateAlbumsJson } from './lib/github-api';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { normalizeTrackIdString } from '../../src/shared/lib/tracks/normalizeTrackIdString';
+import { rankToOrderIndex } from '../../src/shared/lib/tracks/trackOrderIndex';
 
 interface AlbumRow {
   id: string;
@@ -1214,7 +1215,7 @@ export const handler: Handler = async (
         if (!data.albumId || !data.lang || !Array.isArray(data.trackOrders)) {
           return createErrorResponse(
             400,
-            'Missing required fields: albumId, lang, trackOrders (array of {trackId, orderIndex})'
+            'Missing required fields: albumId, lang, trackOrders (ordered array of { trackId }, optional orderIndex ignored)'
           );
         }
 
@@ -1240,23 +1241,52 @@ export const handler: Handler = async (
 
         const album = albumResult.rows[0];
 
-        // Обновляем order_index для каждого трека
-        const updatePromises = data.trackOrders.map(({ trackId, orderIndex }) =>
-          query(
-            `UPDATE tracks 
-             SET order_index = $1, updated_at = CURRENT_TIMESTAMP
-             WHERE album_id = $2 AND track_id = $3
-             RETURNING id`,
-            [orderIndex, album.id, String(trackId)]
-          )
+        const orderedIds = data.trackOrders.map(
+          (row) => normalizeTrackIdString(row.trackId) || String(row.trackId)
         );
+        if (new Set(orderedIds).size !== orderedIds.length) {
+          return createErrorResponse(400, 'Duplicate trackId in trackOrders.');
+        }
 
-        await Promise.all(updatePromises);
+        const dbTracks = await query<{ track_id: string }>(
+          `SELECT track_id FROM tracks WHERE album_id = $1`,
+          [album.id]
+        );
+        const dbSet = new Set(
+          dbTracks.rows.map((r) => normalizeTrackIdString(r.track_id) || String(r.track_id))
+        );
+        if (orderedIds.length !== dbSet.size || !orderedIds.every((id) => dbSet.has(id))) {
+          return createErrorResponse(
+            400,
+            'trackOrders must list every track in the album exactly once (order only; client orderIndex is ignored).'
+          );
+        }
+
+        const client = await getClient();
+        try {
+          await client.query('BEGIN');
+          await client.query(`SELECT id FROM albums WHERE id = $1 FOR UPDATE`, [album.id]);
+          for (let i = 0; i < orderedIds.length; i++) {
+            const orderIndex = rankToOrderIndex(i);
+            await client.query(
+              `UPDATE tracks 
+               SET order_index = $1, updated_at = CURRENT_TIMESTAMP
+               WHERE album_id = $2 AND track_id = $3`,
+              [orderIndex, album.id, orderedIds[i]]
+            );
+          }
+          await client.query('COMMIT');
+        } catch (txErr) {
+          await client.query('ROLLBACK');
+          throw txErr;
+        } finally {
+          client.release();
+        }
 
         console.log('✅ PATCH /api/albums - Tracks reordered:', {
           albumId: data.albumId,
           lang: data.lang,
-          tracksCount: data.trackOrders.length,
+          tracksCount: orderedIds.length,
         });
 
         return {

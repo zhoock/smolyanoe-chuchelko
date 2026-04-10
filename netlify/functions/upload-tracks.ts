@@ -16,7 +16,7 @@
  *     title: string,
  *     duration: number (в секундах),
  *     trackId: string (стабильный id: UUID для новых треков или legacy "1","2",…),
- *     orderIndex: number,
+ *     orderIndex?: number (игнорируется — сервер назначает шагом после MAX под блокировкой альбома),
  *     storagePath: string (путь к файлу в Storage),
  *     url: string (публичный URL файла)
  *   }>
@@ -31,8 +31,9 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
-import { query } from './lib/db';
+import { getClient } from './lib/db';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
+import { TRACK_ORDER_INDEX_STEP } from '../../src/shared/lib/tracks/trackOrderIndex';
 
 interface TrackUploadRequest {
   albumId: string; // album_id (строка, например "23" или "23-remastered"), не UUID
@@ -42,7 +43,7 @@ interface TrackUploadRequest {
     title: string;
     duration: number; // в секундах
     trackId: string; // Стабильный id трека (UUID или legacy-номер)
-    orderIndex: number;
+    orderIndex?: number;
     storagePath: string; // Путь к файлу в Storage
     url: string; // URL файла в Storage
   }>;
@@ -134,52 +135,50 @@ export const handler: Handler = async (
 
     const uploadedTracks: TrackUploadResponse['data'] = [];
 
-    // Обрабатываем каждый трек
-    // Файлы уже загружены в Supabase Storage с клиента, нам нужно только сохранить метаданные в БД
-    for (const track of tracks) {
-      const { fileName, title, duration, trackId, orderIndex, storagePath, url } = track;
-
-      console.log('💾 [upload-tracks] Processing track:', {
-        trackId,
-        title,
-        fileName,
-        duration,
-        orderIndex,
-        hasUrl: !!url,
-        hasStoragePath: !!storagePath,
-      });
-
-      if (!fileName || !title || !trackId || !storagePath || !url) {
+    const tracksToSave = tracks.filter((t) => {
+      const ok = !!(t.fileName && t.title && t.trackId && t.storagePath && t.url);
+      if (!ok) {
         console.warn('⚠️ [upload-tracks] Skipping track with missing required fields:', {
-          trackId,
-          title,
-          fileName,
-          hasTitle: !!title,
-          hasTrackId: !!trackId,
-          hasStoragePath: !!storagePath,
-          hasUrl: !!url,
+          trackId: t.trackId,
+          title: t.title,
+          fileName: t.fileName,
+          hasStoragePath: !!t.storagePath,
+          hasUrl: !!t.url,
         });
-        continue;
       }
+      return ok;
+    });
 
-      try {
-        // Сохраняем трек в БД
-        // Используем ON CONFLICT для обновления существующих треков
-        // album.id - это UUID из БД, который используется как внешний ключ
+    if (tracksToSave.length === 0) {
+      return createErrorResponse(
+        400,
+        'No valid tracks to save (each needs fileName, title, trackId, storagePath, url).'
+      );
+    }
 
-        // 🔍 DEBUG: Проверяем данные перед сохранением
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT id FROM albums WHERE id = $1 FOR UPDATE', [album.id]);
+
+      const maxRes = await client.query<{ max_idx: string }>(
+        'SELECT COALESCE(MAX(order_index), 0) AS max_idx FROM tracks WHERE album_id = $1',
+        [album.id]
+      );
+      let nextOrderIndex = Number(maxRes.rows[0]?.max_idx ?? 0) + TRACK_ORDER_INDEX_STEP;
+
+      for (const track of tracksToSave) {
+        const { fileName, title, duration, trackId, storagePath, url } = track;
+        const assignedOrderIndex = nextOrderIndex;
+        nextOrderIndex += TRACK_ORDER_INDEX_STEP;
+
         console.log('💾 [upload-tracks] Saving track to DB:', {
           albumId: album.id,
           trackId,
           title,
-          titleType: typeof title,
-          titleLength: title?.length || 0,
-          titleEmpty: title === '',
-          titleNull: title === null,
-          titleUndefined: title === undefined,
           duration,
           url,
-          orderIndex,
+          assignedOrderIndex,
         });
 
         // #region agent log
@@ -196,7 +195,7 @@ export const handler: Handler = async (
               title,
               duration,
               url,
-              orderIndex,
+              orderIndex: assignedOrderIndex,
               hasUrl: !!url,
             },
             timestamp: Date.now(),
@@ -209,7 +208,7 @@ export const handler: Handler = async (
 
         const srcForDb = resolveTrackSrcToSupabasePublicUrl(url, album.user_id) ?? url;
 
-        const insertResult = await query(
+        const insertResult = await client.query(
           `INSERT INTO tracks (
         album_id, track_id, title, duration, src, order_index
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -221,7 +220,7 @@ export const handler: Handler = async (
         order_index = EXCLUDED.order_index,
         updated_at = CURRENT_TIMESTAMP
       RETURNING id, track_id, title`,
-          [album.id, trackId, title, duration, srcForDb, orderIndex]
+          [album.id, trackId, title, duration, srcForDb, assignedOrderIndex]
         );
 
         // #region agent log
@@ -254,6 +253,7 @@ export const handler: Handler = async (
             trackId: savedTrack.track_id,
             title: savedTrack.title,
             dbId: savedTrack.id,
+            orderIndex: assignedOrderIndex,
           });
 
           uploadedTracks.push({
@@ -263,19 +263,20 @@ export const handler: Handler = async (
             storagePath,
           });
         } else {
-          console.error('❌ [upload-tracks] Track not saved - no rows returned:', {
-            trackId,
-            title,
-          });
+          throw new Error(`Track not saved — no rows returned for trackId ${trackId}`);
         }
-      } catch (trackError) {
-        console.error('Error processing track:', {
-          trackId,
-          title,
-          error: trackError instanceof Error ? trackError.message : String(trackError),
-        });
-        // Продолжаем обработку остальных треков
       }
+
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      console.error('❌ [upload-tracks] Transaction failed:', txErr);
+      return createErrorResponse(
+        500,
+        txErr instanceof Error ? txErr.message : 'Failed to save tracks transactionally.'
+      );
+    } finally {
+      client.release();
     }
 
     if (uploadedTracks.length === 0) {
