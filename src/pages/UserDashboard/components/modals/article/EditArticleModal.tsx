@@ -1221,7 +1221,25 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
   // Извлечение имени файла из URL
   const extractFileNameFromUrl = (url: string, fallback: string): string => {
     try {
+      if (url.includes('path=')) {
+        const pathParam = new URL(url, 'http://localhost').searchParams.get('path');
+        if (pathParam) {
+          const decoded = decodeURIComponent(pathParam);
+          const fromPath = decoded.split('/').pop()?.split('?')[0];
+          if (fromPath) return fromPath;
+        }
+      }
       if (url.startsWith('http://') || url.startsWith('https://')) {
+        const pathname = new URL(url).pathname;
+        const idx = pathname.indexOf('/users/');
+        if (idx !== -1) {
+          const fromUsers = pathname
+            .slice(idx + 1)
+            .split('/')
+            .pop()
+            ?.split('?')[0];
+          if (fromUsers) return fromUsers;
+        }
         const urlParts = url.split('/');
         const fileName = urlParts[urlParts.length - 1].split('?')[0];
         return fileName || fallback;

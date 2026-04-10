@@ -127,76 +127,165 @@ function parseDetailsArray(details: unknown): unknown[] {
   return Array.isArray(details) ? details : [];
 }
 
-/** Приводит значение из БД (ключ, имя файла или URL) к базовому имени без расширения и суффиксов размеров */
-function normalizeArticleImageStem(raw: unknown): string | null {
-  if (raw == null) return null;
-  let s = String(raw).trim();
-  if (!s) return null;
+const INVALID_ARTICLE_STEMS = new Set(['', 'proxy-image']);
+
+/**
+ * Достаёт путь вида users/.../... из полного URL, proxy (?path=) или уже готовой строки.
+ */
+function tryParseUsersStoragePath(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('users/')) {
+    return trimmed.split('?')[0];
+  }
   try {
-    if (s.startsWith('http://') || s.startsWith('https://')) {
-      const u = new URL(s);
-      s = decodeURIComponent(u.pathname);
+    const u =
+      trimmed.startsWith('http://') || trimmed.startsWith('https://')
+        ? new URL(trimmed)
+        : new URL(trimmed, 'https://article-delete.local');
+    const pathParam = u.searchParams.get('path');
+    if (pathParam) {
+      const dec = pathParam.trim();
+      if (dec.startsWith('users/')) return dec.split('?')[0];
+    }
+    const p = decodeURIComponent(u.pathname);
+    const idx = p.indexOf('/users/');
+    if (idx !== -1) {
+      return p.slice(idx + 1).split('?')[0];
     }
   } catch {
     /* не URL */
   }
-  const lastSegment = s.includes('/') ? (s.split('/').pop() ?? s) : s;
-  const base = extractBaseName(lastSegment);
-  return base || null;
+  return null;
 }
 
-function addImgValueToStems(stems: Set<string>, raw: unknown): void {
+function stemFromPlainFileRef(raw: string): string | null {
+  const s = raw.trim();
+  if (!s || INVALID_ARTICLE_STEMS.has(s)) return null;
+  const last = s.includes('/') ? (s.split('/').pop() ?? s) : s;
+  const base = extractBaseName(last);
+  if (!base || INVALID_ARTICLE_STEMS.has(base)) return null;
+  return base;
+}
+
+interface ArticleMediaDeletionTargets {
+  stems: string[];
+  storagePaths: string[];
+}
+
+function addRawToArticleMediaTargets(
+  stems: Set<string>,
+  storagePathsOut: Set<string>,
+  ownerUserId: string,
+  raw: unknown
+): void {
   if (raw == null) return;
   if (Array.isArray(raw)) {
-    for (const x of raw) addImgValueToStems(stems, x);
+    for (const x of raw) addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, x);
     return;
   }
-  const stem = normalizeArticleImageStem(raw);
-  if (stem) stems.add(stem);
+  const s = String(raw).trim();
+  if (!s) return;
+
+  const ownerArticlesPrefix = `users/${ownerUserId}/articles/`;
+  const parsedPath = tryParseUsersStoragePath(s);
+
+  if (parsedPath) {
+    if (parsedPath.startsWith(ownerArticlesPrefix)) {
+      storagePathsOut.add(parsedPath);
+      const file = parsedPath.split('/').pop() || '';
+      const st = extractBaseName(file);
+      if (st && !INVALID_ARTICLE_STEMS.has(st)) stems.add(st);
+      return;
+    }
+    if (parsedPath.startsWith('users/')) {
+      return;
+    }
+  }
+
+  const st = stemFromPlainFileRef(s);
+  if (st) stems.add(st);
 }
 
-/** Ключи изображений статьи (обложка + блоки в details) для сопоставления с файлами в Storage */
-function collectArticleImageStems(img: string | null | undefined, details: unknown): string[] {
+function collectArticleMediaDeletionTargets(
+  img: string | null | undefined,
+  details: unknown,
+  ownerUserId: string
+): ArticleMediaDeletionTargets {
   const stems = new Set<string>();
-  addImgValueToStems(stems, img);
+  const storagePathsOut = new Set<string>();
+  addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, img);
   for (const item of parseDetailsArray(details)) {
     if (!item || typeof item !== 'object') continue;
     const d = item as Record<string, unknown>;
     if (d.type === 'image') {
-      addImgValueToStems(stems, d.img);
+      addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, d.img);
     } else if (d.type === 'carousel') {
-      if (Array.isArray(d.images)) addImgValueToStems(stems, d.images);
-      addImgValueToStems(stems, d.img);
+      if (Array.isArray(d.images))
+        addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, d.images);
+      addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, d.img);
     }
-    if (typeof d.imageKey === 'string') addImgValueToStems(stems, d.imageKey);
-    if (Array.isArray(d.imageKeys)) addImgValueToStems(stems, d.imageKeys);
+    if (typeof d.imageKey === 'string') {
+      addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, d.imageKey);
+    }
+    if (Array.isArray(d.imageKeys)) {
+      addRawToArticleMediaTargets(stems, storagePathsOut, ownerUserId, d.imageKeys);
+    }
   }
-  return [...stems];
+  return { stems: [...stems], storagePaths: [...storagePathsOut] };
 }
 
-async function removeArticleStorageFilesForStems(
+async function listAllArticleFolderFiles(
+  supabase: SupabaseClient,
+  folder: string
+): Promise<{ name: string; id: string | null }[]> {
+  const pageSize = 1000;
+  const all: { name: string; id: string | null }[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET_NAME).list(folder, {
+      limit: pageSize,
+      offset,
+      sortBy: { column: 'name', order: 'asc' },
+    });
+    if (error) {
+      console.error('[articles-api DELETE] Storage list failed:', error.message);
+      throw error;
+    }
+    if (!data?.length) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
+async function removeArticleStorageFiles(
   supabase: SupabaseClient,
   userId: string,
-  stems: string[]
+  targets: ArticleMediaDeletionTargets
 ): Promise<void> {
-  if (stems.length === 0) return;
+  const { stems, storagePaths } = targets;
+  if (stems.length === 0 && storagePaths.length === 0) return;
+
+  const pathSet = new Set<string>(storagePaths);
   const stemSet = new Set(stems);
   const folder = `users/${userId}/articles`;
+  const ownerPrefix = `users/${userId}/articles/`;
 
-  const { data: existingFiles, error: listError } = await supabase.storage
-    .from(STORAGE_BUCKET_NAME)
-    .list(folder, { limit: 1000 });
-
-  if (listError) {
-    console.error('[articles-api DELETE] Storage list failed:', listError.message);
-    return;
+  if (stemSet.size > 0) {
+    try {
+      const existingFiles = await listAllArticleFolderFiles(supabase, folder);
+      for (const f of existingFiles) {
+        if (!f.name || f.id == null) continue;
+        if (stemSet.has(extractBaseName(f.name))) {
+          pathSet.add(`${folder}/${f.name}`);
+        }
+      }
+    } catch {
+      /* ошибка уже залогирована */
+    }
   }
-  if (!existingFiles?.length) return;
 
-  const paths = existingFiles
-    .filter((f) => f.name && stemSet.has(extractBaseName(f.name)))
-    .map((f) => `${folder}/${f.name}`);
-
+  const paths = [...pathSet].filter((p) => p.startsWith(ownerPrefix));
   if (paths.length === 0) return;
 
   const chunkSize = 100;
@@ -604,11 +693,11 @@ export const handler: Handler = async (
       }
 
       const { img, details } = articleBeforeDelete.rows[0];
-      const imageStems = collectArticleImageStems(img ?? '', details);
-      if (imageStems.length > 0) {
+      const mediaTargets = collectArticleMediaDeletionTargets(img ?? '', details, userId);
+      if (mediaTargets.stems.length > 0 || mediaTargets.storagePaths.length > 0) {
         const supabase = createSupabaseAdminClient();
         if (supabase) {
-          await removeArticleStorageFilesForStems(supabase, userId, imageStems);
+          await removeArticleStorageFiles(supabase, userId, mediaTargets);
         } else {
           console.warn(
             '[articles-api DELETE] Supabase admin client missing; skipped storage cleanup'
