@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
 import { ArticlePreview } from '@entities/article';
@@ -7,6 +7,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import './ArticlesSection.scss';
 
 // Адаптивное количество статей для отображения на главной
@@ -19,6 +20,8 @@ const getInitialCount = () => {
 
 export function ArticlesSection() {
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
+  const allArticlesPath = withPublicArtistQuery('/articles', searchParams.get('artist'));
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -67,7 +70,7 @@ export function ArticlesSection() {
 
             {hasMore && (
               <div className="articles__more">
-                <Link to="/articles" className="articles__more-button">
+                <Link to={allArticlesPath} className="articles__more-button">
                   {ui?.buttons?.viewAllArticles?.replace('{count}', String(allArticles.length)) ??
                     `Все статьи (${allArticles.length})`}
                 </Link>

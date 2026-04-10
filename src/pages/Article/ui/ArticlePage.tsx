@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { getImageUrl } from '@shared/api/albums';
@@ -17,6 +17,7 @@ import {
   type RequestStatus,
 } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
@@ -27,6 +28,10 @@ export function ArticlePage() {
   const { lang } = useLang();
   const locale = useMemo(() => lang as LocaleKey, [lang]);
   const { articleId = '' } = useParams<{ articleId: string }>();
+  const [searchParams] = useSearchParams();
+  const artistSlug = searchParams.get('artist');
+  const homePath = withPublicArtistQuery('/', artistSlug);
+  const articlesListPath = withPublicArtistQuery('/articles', artistSlug);
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const article = useAppSelector((state) => selectArticleById(state, lang, articleId));
@@ -138,13 +143,13 @@ export function ArticlePage() {
           <ul>
             {ui?.links?.home && (
               <li>
-                <Link to="/">{ui.links.home}</Link>
+                <Link to={homePath}>{ui.links.home}</Link>
               </li>
             )}
             {/* Показываем "Все статьи" только если пришли со страницы списка */}
             {cameFromArticlesPage && ui?.titles?.articles && (
               <li>
-                <Link to="/articles">{ui.titles.articles}</Link>
+                <Link to={articlesListPath}>{ui.titles.articles}</Link>
               </li>
             )}
           </ul>

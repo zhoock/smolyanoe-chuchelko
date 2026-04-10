@@ -22,6 +22,9 @@ import {
 } from './lib/api-helpers';
 import type { ApiResponse, SupportedLang } from './lib/types';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { extractBaseName } from './lib/image-processor';
+import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
 
 interface ArticleRow {
   id: string;
@@ -109,6 +112,101 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
   });
 
   return result;
+}
+
+function parseDetailsArray(details: unknown): unknown[] {
+  if (details == null) return [];
+  if (typeof details === 'string') {
+    try {
+      const parsed = JSON.parse(details);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(details) ? details : [];
+}
+
+/** Приводит значение из БД (ключ, имя файла или URL) к базовому имени без расширения и суффиксов размеров */
+function normalizeArticleImageStem(raw: unknown): string | null {
+  if (raw == null) return null;
+  let s = String(raw).trim();
+  if (!s) return null;
+  try {
+    if (s.startsWith('http://') || s.startsWith('https://')) {
+      const u = new URL(s);
+      s = decodeURIComponent(u.pathname);
+    }
+  } catch {
+    /* не URL */
+  }
+  const lastSegment = s.includes('/') ? (s.split('/').pop() ?? s) : s;
+  const base = extractBaseName(lastSegment);
+  return base || null;
+}
+
+function addImgValueToStems(stems: Set<string>, raw: unknown): void {
+  if (raw == null) return;
+  if (Array.isArray(raw)) {
+    for (const x of raw) addImgValueToStems(stems, x);
+    return;
+  }
+  const stem = normalizeArticleImageStem(raw);
+  if (stem) stems.add(stem);
+}
+
+/** Ключи изображений статьи (обложка + блоки в details) для сопоставления с файлами в Storage */
+function collectArticleImageStems(img: string | null | undefined, details: unknown): string[] {
+  const stems = new Set<string>();
+  addImgValueToStems(stems, img);
+  for (const item of parseDetailsArray(details)) {
+    if (!item || typeof item !== 'object') continue;
+    const d = item as Record<string, unknown>;
+    if (d.type === 'image') {
+      addImgValueToStems(stems, d.img);
+    } else if (d.type === 'carousel') {
+      if (Array.isArray(d.images)) addImgValueToStems(stems, d.images);
+      addImgValueToStems(stems, d.img);
+    }
+    if (typeof d.imageKey === 'string') addImgValueToStems(stems, d.imageKey);
+    if (Array.isArray(d.imageKeys)) addImgValueToStems(stems, d.imageKeys);
+  }
+  return [...stems];
+}
+
+async function removeArticleStorageFilesForStems(
+  supabase: SupabaseClient,
+  userId: string,
+  stems: string[]
+): Promise<void> {
+  if (stems.length === 0) return;
+  const stemSet = new Set(stems);
+  const folder = `users/${userId}/articles`;
+
+  const { data: existingFiles, error: listError } = await supabase.storage
+    .from(STORAGE_BUCKET_NAME)
+    .list(folder, { limit: 1000 });
+
+  if (listError) {
+    console.error('[articles-api DELETE] Storage list failed:', listError.message);
+    return;
+  }
+  if (!existingFiles?.length) return;
+
+  const paths = existingFiles
+    .filter((f) => f.name && stemSet.has(extractBaseName(f.name)))
+    .map((f) => `${folder}/${f.name}`);
+
+  if (paths.length === 0) return;
+
+  const chunkSize = 100;
+  for (let i = 0; i < paths.length; i += chunkSize) {
+    const batch = paths.slice(i, i + chunkSize);
+    const { error: deleteError } = await supabase.storage.from(STORAGE_BUCKET_NAME).remove(batch);
+    if (deleteError) {
+      console.error('[articles-api DELETE] Storage remove failed:', deleteError.message, batch);
+    }
+  }
 }
 
 export const handler: Handler = async (
@@ -496,14 +594,26 @@ export const handler: Handler = async (
         return createErrorResponse(400, `Invalid id. Expected UUID, got "${id}"`);
       }
 
-      // Проверяем, что статья принадлежит пользователю
-      const checkResult = await query<ArticleRow>(
-        `SELECT id FROM articles WHERE id = $1 AND user_id = $2`,
+      const articleBeforeDelete = await query<{ img: string | null; details: unknown }>(
+        `SELECT img, details FROM articles WHERE id = $1 AND user_id = $2`,
         [id, userId]
       );
 
-      if (checkResult.rows.length === 0) {
+      if (articleBeforeDelete.rows.length === 0) {
         return createErrorResponse(404, 'Article not found or access denied');
+      }
+
+      const { img, details } = articleBeforeDelete.rows[0];
+      const imageStems = collectArticleImageStems(img ?? '', details);
+      if (imageStems.length > 0) {
+        const supabase = createSupabaseAdminClient();
+        if (supabase) {
+          await removeArticleStorageFilesForStems(supabase, userId, imageStems);
+        } else {
+          console.warn(
+            '[articles-api DELETE] Supabase admin client missing; skipped storage cleanup'
+          );
+        }
       }
 
       await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [id, userId]);

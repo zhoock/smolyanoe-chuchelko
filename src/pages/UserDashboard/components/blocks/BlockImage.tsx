@@ -2,7 +2,6 @@
 import React, { useRef, useState } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadFile } from '@shared/api/storage';
-import { CURRENT_USER_CONFIG } from '@config/user';
 
 interface BlockImageProps {
   imageKey?: string;
@@ -46,7 +45,6 @@ export function BlockImage({
       const imageKey = `article_${timestamp}_${baseFileName}`;
 
       const url = await uploadFile({
-        userId: CURRENT_USER_CONFIG.userId,
         file,
         category: 'articles',
         fileName,

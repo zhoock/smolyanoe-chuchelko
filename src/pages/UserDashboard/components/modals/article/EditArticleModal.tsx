@@ -10,7 +10,6 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectArticleById } from '@entities/article';
 import { getToken } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
-import { CURRENT_USER_CONFIG } from '@config/user';
 import { uploadFile } from '@shared/api/storage';
 import { fetchArticles } from '@entities/article';
 import type { IArticles } from '@models';
@@ -39,7 +38,8 @@ function agentLog(payload: {
   runId?: string;
   hypothesisId?: string;
 }) {
-  if (!DEV_LOG) return;}
+  if (!DEV_LOG) return;
+}
 
 // Утилиты для сохранения и восстановления позиции каретки
 function getCaretOffset(root: HTMLElement): number | null {
@@ -1244,17 +1244,11 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     }
 
     try {
-      const userId = CURRENT_USER_CONFIG.userId;
-      if (!userId) {
-        throw new Error('User ID is not available');
-      }
-
       const timestamp = Date.now();
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const fileName = `article-${timestamp}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`;
 
       const imageUrl = await uploadFile({
-        userId,
         file,
         fileName,
         category: 'articles',
@@ -1760,12 +1754,6 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     }
 
     try {
-      const userId = CURRENT_USER_CONFIG.userId;
-      if (!userId) {
-        showAlert(texts.notAuthorized);
-        return;
-      }
-
       setUploadingImageIndex(-1); // Используем -1 для индикации загрузки из панели
 
       const timestamp = Date.now();
@@ -1773,7 +1761,6 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       const fileName = `article-${timestamp}-${Math.random().toString(36).substring(2, 15)}.${fileExtension}`;
 
       const imageUrl = await uploadFile({
-        userId,
         file,
         fileName,
         category: 'articles',

@@ -864,9 +864,6 @@ function UserDashboard() {
         },
       }));
 
-      // Загружаем файл
-      const { CURRENT_USER_CONFIG } = await import('@config/user');
-
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const baseFileName = file.name.replace(/\.[^/.]+$/, '');
       const timestamp = Date.now();
@@ -887,7 +884,6 @@ function UserDashboard() {
       }));
 
       const url = await uploadFile({
-        userId: CURRENT_USER_CONFIG.userId,
         file,
         category: 'articles',
         fileName,
@@ -908,48 +904,104 @@ function UserDashboard() {
       }));
 
       if (url) {
-        // Извлекаем imageKey из URL
-        const urlParts = url.split('/');
-        const fileNameFromUrl = urlParts[urlParts.length - 1]?.split('?')[0] || '';
-        const finalImageKey = fileNameFromUrl.replace(/\.(webp|jpg|jpeg|png)$/i, '');
+        // Ключ в БД / storage: имя файла без расширения (надёжнее, чем парсить signed URL).
+        const finalImageKey = fileName.replace(/\.[^/.]+$/, '');
 
-        // Обновляем статью через API
         const token = getToken();
-        if (token) {
-          const article = articlesFromStore.find((a) => a.articleId === articleId);
-          if (article && article.id) {
-            const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                articleId: article.articleId,
-                nameArticle: article.nameArticle,
-                description: article.description,
-                img: finalImageKey,
-                date: article.date,
-                details: article.details,
-                lang: lang,
-                isDraft: article.isDraft ?? true,
-              }),
-            });
-
-            if (response.ok) {
-              // Обновляем список статей
-              dispatch(fetchArticles({ lang, force: true }));
-            }
+        if (!token) {
+          if (articleCoverLocalPreviewRefs.current[articleId]) {
+            URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+            articleCoverLocalPreviewRefs.current[articleId] = null;
           }
+          setArticleCoverUpload((prev) => ({
+            ...prev,
+            [articleId]: {
+              ...(prev[articleId] || {
+                preview: null,
+                status: 'idle',
+                progress: 0,
+                error: null,
+                dragActive: false,
+              }),
+              status: 'error',
+              error: ui?.dashboard?.failedToUploadCover ?? 'Failed to upload cover image',
+            },
+          }));
+          return;
         }
 
-        // Освобождаем objectURL
+        const article = articlesFromStore.find((a) => a.articleId === articleId);
+        if (!article) {
+          if (articleCoverLocalPreviewRefs.current[articleId]) {
+            URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+            articleCoverLocalPreviewRefs.current[articleId] = null;
+          }
+          setArticleCoverUpload((prev) => ({
+            ...prev,
+            [articleId]: {
+              ...(prev[articleId] || {
+                preview: null,
+                status: 'idle',
+                progress: 0,
+                error: null,
+                dragActive: false,
+              }),
+              status: 'error',
+              error: 'Article not found',
+            },
+          }));
+          return;
+        }
+
+        // API поддерживает id=UUID и id=article_id (без UUID в Redux — всё равно сохраняем обложку).
+        const idParam = article.id ?? article.articleId;
+        const response = await fetch(`/api/articles-api?id=${encodeURIComponent(idParam)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            articleId: article.articleId,
+            nameArticle: article.nameArticle,
+            description: article.description ?? '',
+            img: finalImageKey,
+            date: article.date,
+            details: Array.isArray(article.details) ? article.details : [],
+            lang: lang,
+            isDraft: article.isDraft ?? true,
+          }),
+        });
+
+        if (!response.ok) {
+          if (articleCoverLocalPreviewRefs.current[articleId]) {
+            URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
+            articleCoverLocalPreviewRefs.current[articleId] = null;
+          }
+          setArticleCoverUpload((prev) => ({
+            ...prev,
+            [articleId]: {
+              ...(prev[articleId] || {
+                preview: null,
+                status: 'idle',
+                progress: 0,
+                error: null,
+                dragActive: false,
+              }),
+              status: 'error',
+              error: ui?.dashboard?.failedToUploadCover ?? 'Failed to save cover',
+            },
+          }));
+          return;
+        }
+
+        await dispatch(fetchArticles({ lang, force: true }));
+
         if (articleCoverLocalPreviewRefs.current[articleId]) {
           URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
           articleCoverLocalPreviewRefs.current[articleId] = null;
         }
 
-        // Устанавливаем финальный URL
         setArticleCoverUpload((prev) => ({
           ...prev,
           [articleId]: {

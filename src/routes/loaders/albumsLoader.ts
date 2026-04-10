@@ -4,7 +4,12 @@ import type { IAlbums, IArticles, IInterface } from '@models';
 import { getJSON } from '@shared/api/http';
 import { getStore } from '@shared/model/appStore';
 import { selectCurrentLang } from '@shared/model/lang';
-import { fetchArticles, selectArticlesStatus, selectArticlesData } from '@entities/article';
+import {
+  fetchArticles,
+  selectArticlesEntry,
+  selectArticlesStatus,
+  selectArticlesData,
+} from '@entities/article';
 import { fetchAlbums, selectAlbumsStatus, selectAlbumsData } from '@entities/album';
 import {
   fetchHelpArticles,
@@ -120,16 +125,23 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Статьи нужны на "/" (главная) и "/articles*"
   if (pathname === '/' || pathname.startsWith('/articles')) {
+    const requestUrl = new URL(url);
+    const publicArtistSlug = requestUrl.searchParams.get('artist')?.trim() ?? '';
     const status = selectArticlesStatus(state, lang);
-    if (status === 'succeeded') {
+    const articlesEntry = selectArticlesEntry(state, lang);
+    const cacheOk =
+      status === 'succeeded' && (articlesEntry.lastPublicArtistSlug ?? '') === publicArtistSlug;
+
+    if (cacheOk) {
       templateB = Promise.resolve(selectArticlesData(state, lang));
-    } else if (status === 'loading') {
-      // Данные уже загружаются - возвращаем текущие данные или пустой массив
-      // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
-      const currentData = selectArticlesData(state, lang);
-      templateB = Promise.resolve(currentData || []);
     } else {
-      const fetchThunkPromise = store.dispatch(fetchArticles({ lang }));
+      const fetchThunkPromise = store.dispatch(
+        fetchArticles({
+          lang,
+          force: status === 'loading',
+          publicArtistSlug,
+        })
+      );
 
       const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
 

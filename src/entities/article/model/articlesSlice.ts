@@ -3,16 +3,36 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
-import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
+import { createInitialLangEntry } from '@shared/lib/redux/createLangSlice';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 
-import type { ArticlesState } from './types';
+import type { ArticlesState, ArticlesEntry } from './types';
 
-const initialState: ArticlesState = createInitialLangState<IArticles[]>([]);
+const initialState: ArticlesState = {
+  en: { ...createInitialLangEntry<IArticles[]>([]), lastPublicArtistSlug: null },
+  ru: { ...createInitialLangEntry<IArticles[]>([]), lastPublicArtistSlug: null },
+};
+
+export type FetchArticlesArg = {
+  lang: SupportedLang;
+  force?: boolean;
+  /** Явный slug из loader URL; на дашборде не задаётся */
+  publicArtistSlug?: string | null;
+};
+
+function resolvePublicArtistSlugForFetch(arg: FetchArticlesArg): string {
+  if (arg.publicArtistSlug !== undefined && arg.publicArtistSlug !== null) {
+    return String(arg.publicArtistSlug).trim();
+  }
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/dashboard')) {
+    return new URLSearchParams(window.location.search).get('artist')?.trim() ?? '';
+  }
+  return '';
+}
 
 export const fetchArticles = createAsyncThunk<
   IArticles[],
-  { lang: SupportedLang; force?: boolean },
+  FetchArticlesArg,
   { rejectValue: string; state: RootState }
 >(
   'articles/fetchByLang',
@@ -49,6 +69,8 @@ export const fetchArticles = createAsyncThunk<
       const isDashboardRoute =
         typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
 
+      let apiFailure: unknown = null;
+
       try {
         const response = await fetch(
           buildApiUrl(
@@ -69,7 +91,7 @@ export const fetchArticles = createAsyncThunk<
           }
         );
 
-        if (response.ok) {
+        if (response && response.ok) {
           const payload = await response.json();
 
           // Диагностика: логируем структуру ответа
@@ -112,24 +134,31 @@ export const fetchArticles = createAsyncThunk<
 
           return normalized;
         } else {
-          // Если ответ не OK, выбрасываем ошибку
-          throw new Error(`Failed to fetch articles. Status: ${response.status}`);
+          apiFailure = new Error(
+            response
+              ? `Failed to fetch articles. Status: ${response.status}`
+              : 'No response from API'
+          );
         }
       } catch (apiError) {
-        // Если API недоступен, пробуем fallback на статику (как в albumsSlice)
+        apiFailure = apiError;
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
         console.warn('[fetchArticles] API request failed, trying static fallback:', errorMessage);
       }
 
       const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
-      if (fallback.ok) {
+      if (fallback && fallback.ok) {
         const data = await fallback.json();
         if (Array.isArray(data)) {
           return normalize(data);
         }
       }
 
-      throw new Error('Failed to fetch articles from both API and static JSON');
+      if (apiFailure instanceof Error) {
+        throw apiFailure;
+      }
+      // null / string / etc. — внешний catch отдаёт Unknown error для не-Error
+      throw apiFailure;
     } catch (error) {
       // Если API недоступен – отдаём ошибку
       if (error instanceof Error) {
@@ -139,15 +168,32 @@ export const fetchArticles = createAsyncThunk<
     }
   },
   {
-    condition: ({ lang, force }, { getState }) => {
-      // Если force === true, всегда разрешаем выполнение
+    condition: (arg, { getState }) => {
+      const { lang, force } = arg;
       if (force) {
         return true;
       }
       const state = getState();
-      const entry = state.articles[lang];
-      // Не запускаем, если уже загружается или уже загружено
-      if (entry.status === 'loading' || entry.status === 'succeeded') {
+      const entry = state.articles[lang] as ArticlesEntry;
+      if (entry.status === 'loading') {
+        return false;
+      }
+
+      const isDashboard =
+        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+      if (isDashboard) {
+        if (entry.status === 'succeeded') {
+          return false;
+        }
+        return true;
+      }
+
+      const slug = resolvePublicArtistSlugForFetch(arg);
+      if (entry.status === 'succeeded') {
+        const prev = entry.lastPublicArtistSlug ?? '';
+        if (prev !== slug) {
+          return true;
+        }
         return false;
       }
       return true;
@@ -159,7 +205,50 @@ const articlesSlice = createSlice({
   name: 'articles',
   initialState,
   reducers: {},
-  extraReducers: createLangExtraReducers(fetchArticles, 'Failed to fetch articles'),
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchArticles.pending, (state, action) => {
+        const { lang } = action.meta.arg;
+        const entry = state[lang];
+        entry.status = 'loading';
+        entry.error = null;
+      })
+      .addCase(fetchArticles.fulfilled, (state, action) => {
+        const { lang } = action.meta.arg;
+        const newData = Array.isArray(action.payload) ? [...action.payload] : action.payload;
+        const isDashboard =
+          typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+        const slug = isDashboard ? null : resolvePublicArtistSlugForFetch(action.meta.arg);
+        state[lang] = {
+          ...state[lang],
+          data: newData as IArticles[],
+          status: 'succeeded',
+          error: null,
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: slug,
+        };
+      })
+      .addCase(fetchArticles.rejected, (state, action) => {
+        const { lang } = action.meta.arg;
+        const entry = state[lang];
+        entry.status = 'failed';
+        let errorText = 'Failed to fetch articles';
+        if (action.payload) {
+          errorText = action.payload;
+        } else if (action.error) {
+          if (typeof action.error === 'string') {
+            errorText = action.error;
+          } else if (
+            action.error &&
+            typeof action.error === 'object' &&
+            'message' in action.error
+          ) {
+            errorText = (action.error as { message?: string }).message || errorText;
+          }
+        }
+        entry.error = errorText;
+      });
+  },
 });
 
 export const articlesReducer = articlesSlice.reducer;

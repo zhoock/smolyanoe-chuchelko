@@ -1,7 +1,7 @@
 // src/pages/AllArticles/ui/AllArticlesPage.tsx
 
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArticlePreview } from '@entities/article';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -10,6 +10,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectArticlesStatus, selectArticlesData } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import '@entities/article/ui/style.scss';
 import './style.scss';
 
@@ -18,6 +19,8 @@ const BATCH_SIZE = 16;
 
 export function AllArticlesPage() {
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
+  const homePath = withPublicArtistQuery('/', searchParams.get('artist'));
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -82,7 +85,7 @@ export function AllArticlesPage() {
       <div className="wrapper">
         <nav className="breadcrumb item-type-a" aria-label="Breadcrumb">
           <ul>
-            <li>{ui?.links?.home ? <Link to="/">{ui.links.home}</Link> : null}</li>
+            <li>{ui?.links?.home ? <Link to={homePath}>{ui.links.home}</Link> : null}</li>
           </ul>
         </nav>
 

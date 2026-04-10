@@ -1507,7 +1507,6 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       // Если есть изображения, создаем Image-блоки для каждого
       if (files.length > 0) {
         const { uploadFile } = await import('@shared/api/storage');
-        const { CURRENT_USER_CONFIG } = await import('@config/user');
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
@@ -1518,7 +1517,6 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           const imageKey = `article_${timestamp}_${baseFileName}`;
 
           const url = await uploadFile({
-            userId: CURRENT_USER_CONFIG.userId,
             file,
             category: 'articles',
             fileName,

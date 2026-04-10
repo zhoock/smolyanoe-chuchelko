@@ -8,6 +8,8 @@ export interface ArticlesEntry {
   error: string | null;
   data: IArticles[];
   lastUpdated: number | null;
+  /** Публичный контекст последней успешной загрузки: '' = дефолтный сайт, иначе public_slug */
+  lastPublicArtistSlug?: string | null;
 }
 
 export type ArticlesState = Record<SupportedLang, ArticlesEntry>;

@@ -59,12 +59,14 @@ describe('articlesSlice', () => {
           error: null,
           data: [],
           lastUpdated: null,
+          lastPublicArtistSlug: null,
         },
         ru: {
           status: 'idle',
           error: null,
           data: [],
           lastUpdated: null,
+          lastPublicArtistSlug: null,
         },
       });
     });

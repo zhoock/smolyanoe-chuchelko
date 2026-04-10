@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadFile } from '@shared/api/storage';
-import { CURRENT_USER_CONFIG } from '@config/user';
 import { Popup } from '@shared/ui/popup';
 
 interface CarouselEditModalProps {
@@ -41,7 +40,6 @@ export function CarouselEditModal({
         const imageKey = `article_${timestamp}_${baseFileName}`;
 
         const url = await uploadFile({
-          userId: CURRENT_USER_CONFIG.userId,
           file,
           category: 'articles',
           fileName,
