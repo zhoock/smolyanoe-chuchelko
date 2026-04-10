@@ -1477,15 +1477,23 @@ function UserDashboard() {
       const uploadErrors: string[] = [];
       const fileArray = Array.from(files);
 
-      // Получаем текущее количество треков в альбоме для правильной нумерации
-      const currentAlbum = albumsData.find((a) => a.id === albumId);
-      const existingTracksCount = currentAlbum?.tracks?.length || 0;
-      const startTrackNumber = existingTracksCount + 1;
+      // Стабильный track_id (UUID): не зависит от порядка/дыр в нумерации; привязка lyrics/метаданных не «съезжает».
+      const uiAlbum = albumsData.find((a) => a.id === albumId || a.albumId === albumId);
+      const storeAlbum = albumsFromStore.find((a) => a.albumId === albumId);
+      const uiTracks = uiAlbum?.tracks ?? [];
+      const storeTracks = storeAlbum?.tracks ?? [];
+      const existingTracksCount = Math.max(uiTracks.length, storeTracks.length);
+
+      const newStableTrackId = (): string => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+          return crypto.randomUUID();
+        }
+        return `tr-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      };
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
-        // Генерируем trackId начиная с существующего количества + 1
-        const trackId = String(startTrackNumber + i);
+        const trackId = newStableTrackId();
 
         // Обновляем прогресс: загрузка файла (0-80% для всех файлов)
         const fileProgressStart = (i / fileArray.length) * 80;
@@ -1535,6 +1543,7 @@ function UserDashboard() {
               const newTracks: TrackData[] = tracksData.map((trackData) => ({
                 id: trackData.trackId,
                 title: trackData.title,
+                order_index: trackData.orderIndex,
                 duration: `${Math.floor(trackData.duration / 60)}:${Math.floor(
                   trackData.duration % 60
                 )

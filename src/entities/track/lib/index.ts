@@ -1,5 +1,7 @@
 import { buildApiUrl } from '@shared/lib/artistQuery';
 
+export { getTrackById } from './getTrackById';
+
 export interface SaveTrackTextRequest {
   albumId: string;
   trackId: string | number;

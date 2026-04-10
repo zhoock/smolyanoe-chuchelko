@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
 import type { SupportedLang } from '@shared/model/lang';
 import type { IAlbums } from '@models';
+import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
 import type { RootState } from '@shared/model/appStore/types';
 import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 import { getToken } from '@shared/lib/auth';
@@ -75,12 +76,20 @@ export const fetchAlbums = createAsyncThunk<
 
       return data.filter(isValidAlbum).map((album) => {
         const tracks = Array.isArray(album.tracks)
-          ? album.tracks.filter(isValidTrack).map((track) => {
+          ? album.tracks.filter(isValidTrack).flatMap((track, idx) => {
+              const id = normalizeTrackIdString(track.id);
+              if (!id) return [];
+
+              const rawOrder = (track as { order_index?: unknown }).order_index;
+              const order_index =
+                typeof rawOrder === 'number' && !Number.isNaN(rawOrder) ? rawOrder : idx;
+
               const normalizedTrack = {
-                id: typeof track.id === 'number' ? track.id : parseInt(String(track.id), 10) || 0,
+                id,
                 title: track.title,
+                order_index,
                 duration: track.duration,
-                src: track.src,
+                src: track.src ?? '',
                 content: track.content,
                 authorship: track.authorship,
                 syncedLyrics: track.syncedLyrics,
@@ -105,14 +114,13 @@ export const fetchAlbums = createAsyncThunk<
                 });
               }
 
-              // Логируем треки без duration
               if (normalizedTrack.duration == null) {
                 console.warn(
                   `[albumsSlice] ⚠️ Track ${normalizedTrack.id} (${normalizedTrack.title}) in album ${album.albumId} has no duration`
                 );
               }
 
-              return normalizedTrack;
+              return [normalizedTrack];
             })
           : [];
 

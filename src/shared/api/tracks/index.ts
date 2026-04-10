@@ -3,12 +3,14 @@
  */
 
 import { getToken } from '@shared/lib/auth';
+import { buildStorageAudioFileName } from '@shared/lib/tracks/buildStorageAudioFileName';
 
 export interface TrackUploadData {
+  /** Имя объекта в bucket (например `uuid__norwegian-wood.mp3`) */
   fileName: string;
   title: string;
   duration: number; // в секундах
-  trackId: string; // ID трека в альбоме (например, "1", "2")
+  trackId: string; // Стабильный id (UUID с клиента или legacy-номер)
   orderIndex: number;
   storagePath: string; // Путь к файлу в Storage (после загрузки)
   url: string; // URL файла в Storage (после загрузки)
@@ -148,9 +150,7 @@ export async function prepareAndUploadTrack(
 
   const duration = await getAudioDuration(file);
 
-  // Генерируем имя файла: {trackId}.{extension}
-  const extension = file.name.split('.').pop() || 'mp3';
-  const fileName = `${trackId}.${extension}`;
+  const fileName = buildStorageAudioFileName(trackId, file.name);
 
   // Извлекаем название трека из имени файла
   // Убираем расширение и префиксы типа "01-", "03-" и т.д.
@@ -177,6 +177,14 @@ export async function prepareAndUploadTrack(
     });
   } else {
     console.log('📝 [prepareAndUploadTrack] Using provided title:', trackTitle);
+  }
+
+  if (!title) {
+    const rawBase = file.name.replace(/\.[^/.]+$/, '').trim();
+    if (/^\d+(\.[a-z0-9]+)?$/i.test(trackTitle)) {
+      const cleaned = rawBase.replace(/^\d{1,2}[-.\s]+/i, '').trim() || rawBase;
+      trackTitle = /^\d+$/i.test(cleaned) || !cleaned ? `Track ${trackId}` : cleaned;
+    }
   }
 
   // Получаем signed URL для загрузки через Netlify Function

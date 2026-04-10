@@ -8,6 +8,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { IAlbums, TracksProps } from '@models';
 import { getAudioDuration } from '@shared/lib/audio/getAudioDuration';
+import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
 import './CreateAlbum.style.scss';
 interface TrackDraft {
   id: string;
@@ -144,12 +145,13 @@ const draftToAlbum = (draft: AlbumDraft): IAlbums => {
   const tracks = draft.tracks
     .filter((track) => track.title.trim())
     .map<TracksProps>((track, index) => {
-      const parsedId = Number(track.id);
       const parsedDuration = formatDuration(track.duration);
+      const id = normalizeTrackIdString(track.id) || String(index + 1);
 
       return {
-        id: Number.isFinite(parsedId) && parsedId > 0 ? parsedId : index + 1,
+        id,
         title: track.title.trim(),
+        order_index: index,
         duration: parsedDuration ?? 0,
         src: track.src.trim() || '',
         content: track.content.trim() || '',

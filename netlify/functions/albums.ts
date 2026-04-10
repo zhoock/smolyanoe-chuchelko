@@ -24,6 +24,7 @@ import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
+import { normalizeTrackIdString } from '../../src/shared/lib/tracks/normalizeTrackIdString';
 
 interface AlbumRow {
   id: string;
@@ -73,6 +74,7 @@ interface AlbumData {
 interface TrackData {
   id: string;
   title: string;
+  order_index: number;
   duration?: number;
   src?: string;
   content?: string;
@@ -240,8 +242,12 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
       // #endregion
 
       return {
-        id: track.track_id,
+        id: normalizeTrackIdString(track.track_id) || String(track.track_id),
         title: track.title,
+        order_index:
+          typeof track.order_index === 'number' && !Number.isNaN(track.order_index)
+            ? track.order_index
+            : 0,
         // Убеждаемся, что duration всегда число (0, если отсутствует)
         duration: duration ?? 0,
         src: resolveTrackSrcToSupabasePublicUrl(track.src, album.user_id),
@@ -1154,17 +1160,10 @@ export const handler: Handler = async (
             buttons: album.buttons,
             details: album.details,
             tracks: album.tracks.map((track) => {
-              // track.id из API - это track_id (строка), нужно преобразовать в число для JSON
-              const trackIdNumber =
-                typeof track.id === 'string'
-                  ? parseInt(track.id, 10) || 0
-                  : typeof track.id === 'number'
-                    ? track.id
-                    : 0;
-
               return {
-                id: trackIdNumber,
+                id: normalizeTrackIdString(track.id),
                 title: track.title,
+                order_index: track.order_index ?? 0,
                 duration: track.duration,
                 src: track.src || '',
                 content: track.content || '',

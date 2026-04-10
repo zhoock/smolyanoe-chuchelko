@@ -309,9 +309,9 @@ describe('playerSlice', () => {
 
   describe('setPlaylist action', () => {
     const mockTracks: TracksProps[] = [
-      { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-      { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-      { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+      { id: '1', title: 'Track 1', order_index: 0, content: '', duration: 180, src: 'track1.mp3' },
+      { id: '2', title: 'Track 2', order_index: 1, content: '', duration: 200, src: 'track2.mp3' },
+      { id: '3', title: 'Track 3', order_index: 2, content: '', duration: 220, src: 'track3.mp3' },
     ];
 
     test('должен установить новый плейлист', () => {
@@ -326,7 +326,7 @@ describe('playerSlice', () => {
       const state = store.getState() as RootState;
       const playlist = selectPlaylist(state);
       expect(playlist).toHaveLength(3);
-      expect(playlist[0].id).toBe(1);
+      expect(playlist[0].id).toBe('1');
     });
 
     test('должен сохранить оригинальный порядок в originalPlaylist', () => {
@@ -340,9 +340,9 @@ describe('playerSlice', () => {
 
       const state = store.getState();
       expect(state.player.originalPlaylist).toHaveLength(3);
-      expect(state.player.originalPlaylist[0].id).toBe(1);
-      expect(state.player.originalPlaylist[1].id).toBe(2);
-      expect(state.player.originalPlaylist[2].id).toBe(3);
+      expect(state.player.originalPlaylist[0].id).toBe('1');
+      expect(state.player.originalPlaylist[1].id).toBe('2');
+      expect(state.player.originalPlaylist[2].id).toBe('3');
     });
 
     test('должен перемешать плейлист если shuffle включен', () => {
@@ -366,9 +366,9 @@ describe('playerSlice', () => {
       // В большинстве случаев порядок будет другим
       expect(playlist).toHaveLength(3);
       // Оригинальный порядок должен сохраниться
-      expect(state.player.originalPlaylist[0].id).toBe(1);
-      expect(state.player.originalPlaylist[1].id).toBe(2);
-      expect(state.player.originalPlaylist[2].id).toBe(3);
+      expect(state.player.originalPlaylist[0].id).toBe('1');
+      expect(state.player.originalPlaylist[1].id).toBe('2');
+      expect(state.player.originalPlaylist[2].id).toBe('3');
     });
 
     test('должен сбросить currentTrackIndex если он выходит за пределы нового плейлиста', () => {
@@ -431,9 +431,30 @@ describe('playerSlice', () => {
           player: {
             ...initialPlayerState,
             playlist: [
-              { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-              { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-              { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+              {
+                id: '2',
+                title: 'Track 2',
+                order_index: 1,
+                content: '',
+                duration: 200,
+                src: 'track2.mp3',
+              },
+              {
+                id: '3',
+                title: 'Track 3',
+                order_index: 2,
+                content: '',
+                duration: 220,
+                src: 'track3.mp3',
+              },
             ],
           },
         },
@@ -470,9 +491,30 @@ describe('playerSlice', () => {
             ...initialPlayerState,
             currentTrackIndex: 0,
             playlist: [
-              { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-              { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-              { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+              {
+                id: '2',
+                title: 'Track 2',
+                order_index: 1,
+                content: '',
+                duration: 200,
+                src: 'track2.mp3',
+              },
+              {
+                id: '3',
+                title: 'Track 3',
+                order_index: 2,
+                content: '',
+                duration: 220,
+                src: 'track3.mp3',
+              },
             ],
           },
         },
@@ -494,9 +536,30 @@ describe('playerSlice', () => {
             ...initialPlayerState,
             currentTrackIndex: 2,
             playlist: [
-              { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-              { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-              { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+              {
+                id: '2',
+                title: 'Track 2',
+                order_index: 1,
+                content: '',
+                duration: 200,
+                src: 'track2.mp3',
+              },
+              {
+                id: '3',
+                title: 'Track 3',
+                order_index: 2,
+                content: '',
+                duration: 220,
+                src: 'track3.mp3',
+              },
             ],
           },
         },
@@ -517,7 +580,16 @@ describe('playerSlice', () => {
           player: {
             ...initialPlayerState,
             currentTrackIndex: 0,
-            playlist: [{ id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' }],
+            playlist: [
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+            ],
           },
         },
       });
@@ -553,9 +625,30 @@ describe('playerSlice', () => {
             ...initialPlayerState,
             currentTrackIndex: 2,
             playlist: [
-              { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-              { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-              { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+              {
+                id: '2',
+                title: 'Track 2',
+                order_index: 1,
+                content: '',
+                duration: 200,
+                src: 'track2.mp3',
+              },
+              {
+                id: '3',
+                title: 'Track 3',
+                order_index: 2,
+                content: '',
+                duration: 220,
+                src: 'track3.mp3',
+              },
             ],
           },
         },
@@ -577,9 +670,30 @@ describe('playerSlice', () => {
             ...initialPlayerState,
             currentTrackIndex: 0,
             playlist: [
-              { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-              { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-              { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+              {
+                id: '2',
+                title: 'Track 2',
+                order_index: 1,
+                content: '',
+                duration: 200,
+                src: 'track2.mp3',
+              },
+              {
+                id: '3',
+                title: 'Track 3',
+                order_index: 2,
+                content: '',
+                duration: 220,
+                src: 'track3.mp3',
+              },
             ],
           },
         },
@@ -843,9 +957,9 @@ describe('playerSlice', () => {
 
   describe('toggleShuffle action', () => {
     const mockTracks: TracksProps[] = [
-      { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-      { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-      { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+      { id: '1', title: 'Track 1', order_index: 0, content: '', duration: 180, src: 'track1.mp3' },
+      { id: '2', title: 'Track 2', order_index: 1, content: '', duration: 200, src: 'track2.mp3' },
+      { id: '3', title: 'Track 3', order_index: 2, content: '', duration: 220, src: 'track3.mp3' },
     ];
 
     test('должен включить shuffle и перемешать плейлист', () => {
@@ -871,7 +985,7 @@ describe('playerSlice', () => {
       expect(state.player.playlist).toHaveLength(3);
       // Текущий трек должен остаться в перемешанном плейлисте
       const currentTrack = state.player.playlist[state.player.currentTrackIndex];
-      expect(currentTrack.id).toBe(2); // Текущий трек должен остаться
+      expect(currentTrack.id).toBe('2'); // Текущий трек должен остаться
     });
 
     test('должен выключить shuffle и восстановить оригинальный порядок', () => {
@@ -884,9 +998,30 @@ describe('playerSlice', () => {
             ...initialPlayerState,
             shuffle: true,
             playlist: [
-              { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
-              { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-              { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
+              {
+                id: '3',
+                title: 'Track 3',
+                order_index: 2,
+                content: '',
+                duration: 220,
+                src: 'track3.mp3',
+              },
+              {
+                id: '1',
+                title: 'Track 1',
+                order_index: 0,
+                content: '',
+                duration: 180,
+                src: 'track1.mp3',
+              },
+              {
+                id: '2',
+                title: 'Track 2',
+                order_index: 1,
+                content: '',
+                duration: 200,
+                src: 'track2.mp3',
+              },
             ],
             originalPlaylist: [...mockTracks],
             currentTrackIndex: 0, // Текущий трек - это Track 3
@@ -899,9 +1034,9 @@ describe('playerSlice', () => {
       const state = store.getState() as RootState;
       expect(selectShuffle(state)).toBe(false);
       // Проверяем, что восстановлен оригинальный порядок
-      expect(state.player.playlist[0].id).toBe(1);
-      expect(state.player.playlist[1].id).toBe(2);
-      expect(state.player.playlist[2].id).toBe(3);
+      expect(state.player.playlist[0].id).toBe('1');
+      expect(state.player.playlist[1].id).toBe('2');
+      expect(state.player.playlist[2].id).toBe('3');
       // Текущий трек должен остаться (Track 3 теперь на индексе 2)
       expect(state.player.currentTrackIndex).toBe(2);
     });
@@ -1053,9 +1188,9 @@ describe('playerSlice', () => {
 
   describe('hydrateFromPersistedState action', () => {
     const mockTracks: TracksProps[] = [
-      { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-      { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-      { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+      { id: '1', title: 'Track 1', order_index: 0, content: '', duration: 180, src: 'track1.mp3' },
+      { id: '2', title: 'Track 2', order_index: 1, content: '', duration: 200, src: 'track2.mp3' },
+      { id: '3', title: 'Track 3', order_index: 2, content: '', duration: 220, src: 'track3.mp3' },
     ];
 
     test('должен восстановить полное состояние из persisted state', () => {
@@ -1120,9 +1255,30 @@ describe('playerSlice', () => {
       });
 
       const shuffledTracks: TracksProps[] = [
-        { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
-        { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-        { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
+        {
+          id: '3',
+          title: 'Track 3',
+          order_index: 2,
+          content: '',
+          duration: 220,
+          src: 'track3.mp3',
+        },
+        {
+          id: '1',
+          title: 'Track 1',
+          order_index: 0,
+          content: '',
+          duration: 180,
+          src: 'track1.mp3',
+        },
+        {
+          id: '2',
+          title: 'Track 2',
+          order_index: 1,
+          content: '',
+          duration: 200,
+          src: 'track2.mp3',
+        },
       ];
 
       store.dispatch(
@@ -1145,7 +1301,7 @@ describe('playerSlice', () => {
       expect(state.player.shuffle).toBe(true);
       expect(state.player.playlist).toHaveLength(3);
       // Проверяем, что плейлист сохранил перемешанный порядок
-      expect(state.player.playlist[0].id).toBe(3);
+      expect(state.player.playlist[0].id).toBe('3');
     });
 
     test('должен использовать playlist как originalPlaylist если originalPlaylist не предоставлен', () => {
@@ -1170,7 +1326,7 @@ describe('playerSlice', () => {
 
       const state = store.getState();
       expect(state.player.originalPlaylist).toHaveLength(3);
-      expect(state.player.originalPlaylist[0].id).toBe(1);
+      expect(state.player.originalPlaylist[0].id).toBe('1');
     });
 
     test('должен обработать пустой плейлист', () => {
@@ -1230,9 +1386,30 @@ describe('playerSlice', () => {
       });
 
       const shuffledTracks: TracksProps[] = [
-        { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
-        { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-        { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
+        {
+          id: '3',
+          title: 'Track 3',
+          order_index: 2,
+          content: '',
+          duration: 220,
+          src: 'track3.mp3',
+        },
+        {
+          id: '1',
+          title: 'Track 1',
+          order_index: 0,
+          content: '',
+          duration: 180,
+          src: 'track1.mp3',
+        },
+        {
+          id: '2',
+          title: 'Track 2',
+          order_index: 1,
+          content: '',
+          duration: 200,
+          src: 'track2.mp3',
+        },
       ];
 
       // currentTrackIndex относится к перемешанному плейлисту (playlist)
@@ -1255,7 +1432,7 @@ describe('playerSlice', () => {
 
       const state = store.getState();
       // Должен найти Track 1 (id: 1) в финальном плейлисте
-      expect(state.player.playlist[state.player.currentTrackIndex].id).toBe(1);
+      expect(state.player.playlist[state.player.currentTrackIndex].id).toBe('1');
       // Track 1 находится на индексе 1 в перемешанном плейлисте
       expect(state.player.currentTrackIndex).toBe(1);
     });

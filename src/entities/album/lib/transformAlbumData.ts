@@ -20,6 +20,8 @@ export interface AlbumData {
 export interface TrackData {
   id: string;
   title: string;
+  /** Порядок в альбоме из БД; отображение списка сортируется по этому полю. */
+  order_index: number;
   duration: string;
   lyricsStatus: 'synced' | 'text-only' | 'empty';
   lyricsText?: string;
@@ -43,8 +45,12 @@ export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
     }
   }
 
+  const sourceTracks = [...(album.tracks || [])].sort(
+    (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
+  );
+
   // Создаем треки с определением статуса на основе данных из альбома
-  const tracks: TrackData[] = (album.tracks || []).map((track) => {
+  const tracks: TrackData[] = sourceTracks.map((track, displayIndex) => {
     // Определяем статус на основе данных из альбома
     let lyricsStatus: TrackData['lyricsStatus'] = 'empty';
     if (track.syncedLyrics && track.syncedLyrics.length > 0) {
@@ -83,9 +89,14 @@ export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
       }
     }
 
+    const orderRaw = track.order_index;
+    const order_index =
+      typeof orderRaw === 'number' && !Number.isNaN(orderRaw) ? orderRaw : displayIndex;
+
     return {
       id: String(track.id),
       title: track.title,
+      order_index,
       duration: durationStr,
       lyricsStatus,
       lyricsText: track.content, // Используем текст из альбома, если есть

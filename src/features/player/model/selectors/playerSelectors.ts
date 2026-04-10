@@ -36,6 +36,12 @@ export const selectCurrentTrack = createSelector(
   (playlist, index) => playlist[index]
 );
 
+/** Стабильный идентификатор текущего трека в плейлисте (предпочтительнее индекса). */
+export const selectCurrentTrackId = createSelector(
+  [selectCurrentTrack],
+  (track) => track?.id ?? null
+);
+
 // Селектор для режима перемешивания
 export const selectShuffle = createSelector([selectPlayer], (player) => player.shuffle);
 

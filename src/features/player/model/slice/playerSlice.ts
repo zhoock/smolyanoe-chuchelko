@@ -11,6 +11,7 @@ import {
   PlayerSourceLocation,
 } from '@features/player/model/types/playerSchema';
 import type { TracksProps } from '@models';
+import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
 
 /**
  * Перемешивает массив треков используя алгоритм Fisher-Yates.
@@ -29,8 +30,9 @@ const shufflePlaylist = <T>(array: T[]): T[] => {
  * Находит индекс трека в новом плейлисте по его ID.
  * Используется для обновления currentTrackIndex при перемешивании.
  */
-const findTrackIndexById = (playlist: TracksProps[], trackId: string | number): number => {
-  return playlist.findIndex((track) => track.id === trackId);
+const findTrackIndexById = (playlist: TracksProps[], trackId: string): number => {
+  const needle = normalizeTrackIdString(trackId);
+  return playlist.findIndex((track) => track.id === needle);
 };
 
 const playerSlice = createSlice({
@@ -95,7 +97,11 @@ const playerSlice = createSlice({
      * Если текущий индекс выходит за пределы нового плейлиста, сбрасываем его на 0.
      */
     setPlaylist(state, action: PayloadAction<TracksProps[]>) {
-      const newPlaylist = action.payload ?? [];
+      const raw = action.payload ?? [];
+      const newPlaylist = raw.map((t) => ({
+        ...t,
+        id: normalizeTrackIdString(t.id),
+      }));
 
       // Сохраняем оригинальный порядок
       state.originalPlaylist = [...newPlaylist];
@@ -302,8 +308,8 @@ const playerSlice = createSlice({
       }>
     ) {
       const {
-        playlist,
-        originalPlaylist,
+        playlist: incomingPlaylist,
+        originalPlaylist: incomingOriginal,
         currentTrackIndex,
         albumId,
         albumTitle,
@@ -318,10 +324,16 @@ const playerSlice = createSlice({
         controlsVisible,
       } = action.payload;
 
+      const mapIds = (list: TracksProps[]) =>
+        list.map((t) => ({ ...t, id: normalizeTrackIdString(t.id) }));
+
+      const playlist = mapIds(incomingPlaylist ?? []);
+      const originalPlaylistNorm = mapIds(incomingOriginal ?? []);
+
       const resolvedOriginal =
-        originalPlaylist && originalPlaylist.length > 0
-          ? [...originalPlaylist]
-          : playlist && playlist.length > 0
+        originalPlaylistNorm.length > 0
+          ? [...originalPlaylistNorm]
+          : playlist.length > 0
             ? [...playlist]
             : [];
       state.originalPlaylist = resolvedOriginal;
@@ -335,9 +347,11 @@ const playerSlice = createSlice({
 
       const maxIndex = state.playlist.length > 0 ? state.playlist.length - 1 : 0;
       let normalizedIndex = Math.max(0, Math.min(currentTrackIndex ?? 0, maxIndex));
-      const targetTrack = playlist?.[currentTrackIndex ?? 0];
+      const targetTrack = playlist[currentTrackIndex ?? 0];
       if (targetTrack) {
-        const actualIndex = state.playlist.findIndex((track) => track.id === targetTrack.id);
+        const actualIndex = state.playlist.findIndex(
+          (track) => track.id === normalizeTrackIdString(targetTrack.id)
+        );
         if (actualIndex >= 0) {
           normalizedIndex = actualIndex;
         }

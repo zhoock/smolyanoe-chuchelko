@@ -17,15 +17,17 @@ describe('Album integration tests', () => {
     cover: 'cover',
     tracks: [
       {
-        id: 1,
+        id: '1',
         title: 'Track 1',
+        order_index: 0,
         content: '',
         duration: 180,
         src: 'track1.mp3',
       },
       {
-        id: 2,
+        id: '2',
         title: 'Track 2',
+        order_index: 1,
         content: '',
         duration: 200,
         src: 'track2.mp3',

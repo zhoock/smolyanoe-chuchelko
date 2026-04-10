@@ -47,9 +47,9 @@ const mockGaEvent = gaEvent as jest.MockedFunction<typeof gaEvent>;
 
 describe('playerListeners middleware', () => {
   const mockTracks: TracksProps[] = [
-    { id: 1, title: 'Track 1', content: '', duration: 180, src: 'track1.mp3' },
-    { id: 2, title: 'Track 2', content: '', duration: 200, src: 'track2.mp3' },
-    { id: 3, title: 'Track 3', content: '', duration: 220, src: 'track3.mp3' },
+    { id: '1', title: 'Track 1', order_index: 0, content: '', duration: 180, src: 'track1.mp3' },
+    { id: '2', title: 'Track 2', order_index: 1, content: '', duration: 200, src: 'track2.mp3' },
+    { id: '3', title: 'Track 3', order_index: 2, content: '', duration: 220, src: 'track3.mp3' },
   ];
 
   beforeEach(() => {

@@ -1,6 +1,8 @@
 // Using interfaces with extends can often be more performant for the compiler
 // than type aliases with intersections
 
+import type { Track } from '@entities/track/model/types';
+
 export interface NavigationProps {
   /**  Открывает/закрывает Popup */
   onToggle?: (e: React.MouseEvent<HTMLElement>) => void;
@@ -83,21 +85,16 @@ export interface SyncedLyricsLine {
   endTime?: number;
 }
 
-export interface TracksProps {
-  /** Идентификатор песни */
-  id: number;
-  /** Название песни */
-  title: string;
+/** Трек в составе альбома: базовые поля сущности `Track` плюс тексты и метаданные воспроизведения. */
+export interface TracksProps extends Track {
   /** Текст песни (обычный формат, для обратной совместимости) */
   content: string;
   /** Синхронизированный текст с тайм-кодами (для karaoke-style отображения) */
   syncedLyrics?: SyncedLyricsLine[];
   /** Текст авторства (автоматически добавляется в конец синхронизированных текстов) */
   authorship?: string;
-  /** Общая продолжительность всех треков в альбоме */
+  /** Длительность трека в секундах */
   duration: number;
-  /** Путь к треку */
-  src: string;
 }
 
 export interface CoverProps {

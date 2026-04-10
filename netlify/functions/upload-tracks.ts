@@ -15,7 +15,7 @@
  *     fileName: string,
  *     title: string,
  *     duration: number (в секундах),
- *     trackId: string (ID трека в альбоме, например "1", "2"),
+ *     trackId: string (стабильный id: UUID для новых треков или legacy "1","2",…),
  *     orderIndex: number,
  *     storagePath: string (путь к файлу в Storage),
  *     url: string (публичный URL файла)
@@ -41,7 +41,7 @@ interface TrackUploadRequest {
     fileName: string;
     title: string;
     duration: number; // в секундах
-    trackId: string; // ID трека в альбоме (например, "1", "2")
+    trackId: string; // Стабильный id трека (UUID или legacy-номер)
     orderIndex: number;
     storagePath: string; // Путь к файлу в Storage
     url: string; // URL файла в Storage

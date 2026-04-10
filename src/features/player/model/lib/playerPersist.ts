@@ -5,6 +5,7 @@
 
 import type { PlayerState } from '@features/player/model/types/playerSchema';
 import type { TracksProps } from '@models';
+import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
 
 const STORAGE_KEY = 'playerState';
 
@@ -86,8 +87,15 @@ export function loadPlayerState(): PersistedPlayerState | null {
       return null;
     }
 
-    const playlist = Array.isArray(parsed.playlist) ? parsed.playlist : [];
-    const originalPlaylist = Array.isArray(parsed.originalPlaylist) ? parsed.originalPlaylist : [];
+    const mapTrackIds = (list: TracksProps[]) =>
+      list.map((t) => ({ ...t, id: normalizeTrackIdString(t.id) }));
+
+    const playlist = Array.isArray(parsed.playlist)
+      ? mapTrackIds(parsed.playlist as TracksProps[])
+      : [];
+    const originalPlaylist = Array.isArray(parsed.originalPlaylist)
+      ? mapTrackIds(parsed.originalPlaylist as TracksProps[])
+      : [];
 
     return {
       ...parsed,

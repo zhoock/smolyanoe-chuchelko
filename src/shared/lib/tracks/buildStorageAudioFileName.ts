@@ -1,0 +1,29 @@
+/**
+ * Имя файла аудио в Storage: `{trackId}__{slug-оригинала}.{ext}`
+ * — стабильный UUID в начале + человекочитаемый хвост для отладки и бэкапов.
+ */
+
+const ALLOWED_AUDIO_EXT = /^(mp3|wav|flac|m4a|aac|ogg|opus|webm|wma|aif|aiff|mp4|oga|mp2|mp1)$/i;
+
+export function safeAudioExtension(originalFileName: string): string {
+  const raw = (originalFileName.split('.').pop() || 'mp3').toLowerCase();
+  const cleaned = raw.replace(/[^a-z0-9]/g, '').slice(0, 12);
+  return ALLOWED_AUDIO_EXT.test(cleaned) ? cleaned.toLowerCase() : 'mp3';
+}
+
+/** Базовое имя файла (без расширения) → безопасный фрагмент для ключа в Storage. */
+export function slugifyOriginalFileBaseForStorage(rawFileName: string, maxLen = 96): string {
+  const withoutExt = rawFileName.replace(/\.[^/.]+$/, '').trim();
+  const base = withoutExt || 'track';
+  let s = base
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxLen);
+  return s || 'track';
+}
+
+export function buildStorageAudioFileName(trackId: string, originalFileName: string): string {
+  const ext = safeAudioExtension(originalFileName);
+  const slug = slugifyOriginalFileBaseForStorage(originalFileName, 96);
+  return `${trackId}__${slug}.${ext}`;
+}
