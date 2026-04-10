@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { getToken } from '@shared/lib/auth';
 import {
@@ -33,11 +33,32 @@ export function useSiteArtistDisplayName(
   const artistSlug = options?.artistSlug?.trim() ?? '';
   const hasArtistParam = variant === 'public' && artistSlug.length > 0;
 
-  const [displayName, setDisplayName] = useState(() => readStoredProfileDisplayName());
+  const [displayName, setDisplayName] = useState(() => {
+    const v = options?.variant ?? 'public';
+    const slug = options?.artistSlug?.trim() ?? '';
+    if (v === 'public' && slug.length > 0) return '';
+    return readStoredProfileDisplayName();
+  });
   const [isLoading, setIsLoading] = useState(false);
+
+  /** Публичный профиль: смена «цели» (?artist= / главная) — не показывать имя предыдущего артиста до ответа API. */
+  const publicFetchKey = variant === 'public' ? `${hasArtistParam ? '1' : '0'}:${artistSlug}` : '';
+  const publicFetchKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+
+    if (variant === 'public') {
+      const prev = publicFetchKeyRef.current;
+      publicFetchKeyRef.current = publicFetchKey;
+      const isFirstPublicMount = prev === null;
+      const targetChanged = !isFirstPublicMount && prev !== publicFetchKey;
+      if (targetChanged || (isFirstPublicMount && hasArtistParam)) {
+        setDisplayName('');
+      }
+    } else {
+      publicFetchKeyRef.current = null;
+    }
 
     (async () => {
       setIsLoading(true);
@@ -91,7 +112,7 @@ export function useSiteArtistDisplayName(
     return () => {
       cancelled = true;
     };
-  }, [lang, variant, hasArtistParam, artistSlug]);
+  }, [lang, variant, hasArtistParam, artistSlug, publicFetchKey]);
 
   useEffect(() => {
     const handleProfileNameUpdate = (event: Event) => {
@@ -109,7 +130,12 @@ export function useSiteArtistDisplayName(
     return () => window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
   }, [variant, hasArtistParam, artistSlug]);
 
-  const displayLabel = useMemo(() => siteArtistUiLabel(displayName), [displayName]);
+  const displayLabel = useMemo(() => {
+    if (variant === 'public' && isLoading && !displayName.trim()) {
+      return '';
+    }
+    return siteArtistUiLabel(displayName);
+  }, [displayName, isLoading, variant]);
 
   return { displayName, displayLabel, isLoading };
 }
