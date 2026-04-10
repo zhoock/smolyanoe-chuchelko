@@ -13,8 +13,8 @@ interface SaveTrackTextRequest {
   albumId: string;
   trackId: string | number;
   lang: string;
-  content: string;
-  authorship?: string;
+  /** Переводимые поля только внутри translations[lang] (не дублировать content в корне). */
+  translations: Partial<Record<'en' | 'ru', { content: string; authorship?: string }>>;
 }
 
 interface SaveTrackTextResponse {
@@ -67,21 +67,35 @@ export const handler: Handler = async (
     if (event.httpMethod === 'POST') {
       const data: SaveTrackTextRequest = JSON.parse(event.body || '{}');
 
-      // Валидация данных
-      // content может быть пустой строкой (пользователь может удалить весь текст)
+      const raw = data as unknown as Record<string, unknown>;
+      if (Object.prototype.hasOwnProperty.call(raw, 'content') && raw['content'] !== undefined) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message: 'Use translations[lang].content only, not root "content"',
+          } as SaveTrackTextResponse),
+        };
+      }
+
+      const locale = data.translations?.[data.lang as 'en' | 'ru'];
+      const content = locale?.content;
+
       if (
         !data.albumId ||
         !data.trackId ||
         !data.lang ||
-        data.content === undefined ||
-        data.content === null
+        content === undefined ||
+        content === null
       ) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({
             success: false,
-            message: 'Invalid request data. Required: albumId, trackId, lang, content',
+            message:
+              'Invalid request data. Required: albumId, trackId, lang, translations[lang].content',
           } as SaveTrackTextResponse),
         };
       }
@@ -144,7 +158,7 @@ export const handler: Handler = async (
         trackId: data.trackId,
         lang: data.lang,
         albumDbId,
-        contentLength: data.content.length,
+        contentLength: content.length,
       });
 
       // Сначала получаем информацию о треке, чтобы сохранить существующие данные
@@ -179,8 +193,8 @@ export const handler: Handler = async (
           existingTrack?.title || null,
           existingTrack?.duration || null,
           existingTrack?.src || null,
-          data.content, // content теперь хранит полный текст напрямую
-          data.authorship || null,
+          content,
+          locale?.authorship || null,
           existingTrack?.order_index || 0,
         ]
       );
@@ -205,9 +219,9 @@ export const handler: Handler = async (
       const savedRow = upsertResult.rows[0];
 
       // synced_lyrics: при изменении текста песни — сбрасываем тайм-коды; при смене только авторства — сохраняем JSON.
-      const newFingerprint = lyricsFingerprintFromContent(data.content);
+      const newFingerprint = lyricsFingerprintFromContent(content);
 
-      const plainLinesForInsert = data.content
+      const plainLinesForInsert = content
         .split('\n')
         .map((line) => ({ text: line, startTime: 0 }))
         .filter((line) => line.text.trim().length > 0);
@@ -253,7 +267,7 @@ export const handler: Handler = async (
             `UPDATE synced_lyrics
              SET authorship = $1, updated_at = NOW()
              WHERE user_id = $2 AND album_id = $3 AND track_id = $4 AND lang = $5`,
-            [data.authorship || null, userId, data.albumId, String(data.trackId), data.lang],
+            [locale?.authorship || null, userId, data.albumId, String(data.trackId), data.lang],
             0
           );
           console.log('✅ Synced lyrics preserved (authorship-only update):', {
@@ -276,7 +290,7 @@ export const handler: Handler = async (
               String(data.trackId),
               data.lang,
               JSON.stringify(plainLinesForInsert),
-              data.authorship || null,
+              locale?.authorship || null,
             ],
             0
           );
@@ -297,9 +311,9 @@ export const handler: Handler = async (
         albumId: data.albumId,
         trackId: data.trackId,
         lang: data.lang,
-        contentLength: data.content.length,
+        contentLength: content.length,
         savedContentLength: savedRow.content?.length || 0,
-        hasAuthorship: data.authorship !== undefined,
+        hasAuthorship: locale?.authorship !== undefined,
         albumDbId,
         trackDbId: savedRow.id,
       });

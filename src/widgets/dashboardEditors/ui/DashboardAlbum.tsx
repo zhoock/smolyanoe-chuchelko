@@ -15,7 +15,7 @@ import {
   fetchAlbums,
   selectAlbumsStatus,
   selectAlbumsError,
-  selectAlbumById,
+  selectAlbumByIdResolved,
 } from '@entities/album';
 import type { TracksProps } from '@models';
 import { getTrackStatus, type TrackStatus } from '@widgets/dashboard/lib/trackStatus';
@@ -47,9 +47,9 @@ export default function DashboardAlbum({
       variant: 'authenticated',
     }
   );
-  const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const error = useAppSelector((state) => selectAlbumsError(state, lang));
-  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const status = useAppSelector(selectAlbumsStatus);
+  const error = useAppSelector(selectAlbumsError);
+  const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const [trackStatuses, setTrackStatuses] = useState<Map<string | number, TrackStatus>>(new Map());
 
   // Создаем стабильный ключ для треков, чтобы избежать бесконечного цикла
@@ -64,7 +64,7 @@ export default function DashboardAlbum({
     }
 
     if (status === 'idle' || status === 'failed') {
-      const promise = dispatch(fetchAlbums({ lang }));
+      const promise = dispatch(fetchAlbums({}));
       return () => {
         promise.abort();
       };

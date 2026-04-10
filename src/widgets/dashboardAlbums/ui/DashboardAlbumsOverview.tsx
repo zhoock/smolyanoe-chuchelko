@@ -15,7 +15,7 @@ import {
   fetchAlbums,
   selectAlbumsStatus,
   selectAlbumsError,
-  selectAlbumsData,
+  selectAlbumsDataResolved,
 } from '@entities/album';
 import type { IAlbums } from '@models';
 import {
@@ -103,9 +103,9 @@ export default function DashboardAlbumsOverview({
       variant: 'authenticated',
     }
   );
-  const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const error = useAppSelector((state) => selectAlbumsError(state, lang));
-  const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const status = useAppSelector(selectAlbumsStatus);
+  const error = useAppSelector(selectAlbumsError);
+  const albums = useAppSelector(selectAlbumsDataResolved);
   const [albumsStats, setAlbumsStats] = useState<Map<string, AlbumStats>>(new Map());
 
   // Создаем стабильный ключ для массива альбомов, чтобы избежать бесконечного цикла
@@ -113,7 +113,7 @@ export default function DashboardAlbumsOverview({
 
   useEffect(() => {
     if (status === 'idle' || status === 'failed') {
-      const promise = dispatch(fetchAlbums({ lang }));
+      const promise = dispatch(fetchAlbums({}));
       return () => {
         promise.abort();
       };

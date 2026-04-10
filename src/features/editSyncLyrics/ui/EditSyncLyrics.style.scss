@@ -16,6 +16,16 @@
     }
   }
 
+  &__locale-fallback {
+    margin-block: var(--ms-1) 0;
+    padding: var(--ms-0);
+    color: var(--time-color, #9b9b9a);
+    font-size: var(--ms-0);
+    line-height: 1.4;
+    background: rgb(255 255 255 / 6%);
+    border-radius: var(--ms-01);
+  }
+
   &__description {
     margin-block-start: var(--ms-1);
     color: var(--time-color, #9b9b9a);

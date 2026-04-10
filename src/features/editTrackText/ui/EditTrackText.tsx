@@ -8,6 +8,11 @@ import { useParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
+import {
+  buildTranslatedContentEditFallbackNotice,
+  collectAlbumEditFallbackSources,
+  resolveTrackFieldForEdit,
+} from '@entities/album/lib/resolveAlbumDisplay';
 import { Loader } from '@shared/ui/loader';
 import { ErrorMessage } from '@shared/ui/error-message';
 import {
@@ -38,14 +43,15 @@ export default function EditTrackText({
   }>();
   const albumId = propAlbumId || paramAlbumId; // Используем prop или param
   const trackId = propTrackId || paramTrackId; // Используем prop или param
-  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
-  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albumsError = useAppSelector(selectAlbumsError);
+  const album = useAppSelector((state) => selectAlbumById(state, albumId));
 
   const [text, setText] = useState<string>('');
   const [authorship, setAuthorship] = useState<string>('');
   const [isDirty, setIsDirty] = useState(false);
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
+  const [localeFallbackNotice, setLocaleFallbackNotice] = useState<string | null>(null);
 
   // Форматированный текст для предпросмотра
   const formattedText = useMemo(() => formatTrackText(text), [text]);
@@ -70,10 +76,22 @@ export default function EditTrackText({
           loadAuthorshipFromStorage(albumId, track.id, lang),
         ]);
 
-        // Пустая строка из БД — пустой редактор; null — fallback на JSON
-        const initialText = storedTextFromDb !== null ? storedTextFromDb : track.content || '';
-        // Используем авторство из БД или из трека (fallback)
-        const initialAuthorship = storedAuthorshipFromDb || track.authorship || '';
+        const contentResolved = resolveTrackFieldForEdit(track, 'content', lang);
+        const authorshipResolved = resolveTrackFieldForEdit(track, 'authorship', lang);
+
+        // Пустая строка из БД — пустой редактор; null — тот же fallback по локалям, что на сайте
+        const initialText = storedTextFromDb !== null ? storedTextFromDb : contentResolved.value;
+        const initialAuthorship = storedAuthorshipFromDb?.trim()
+          ? storedAuthorshipFromDb
+          : authorshipResolved.value;
+
+        const fallbackParts = collectAlbumEditFallbackSources([
+          ...(storedTextFromDb === null && contentResolved.isFallback ? [contentResolved] : []),
+          ...(!storedAuthorshipFromDb?.trim() && authorshipResolved.isFallback
+            ? [authorshipResolved]
+            : []),
+        ]);
+        setLocaleFallbackNotice(buildTranslatedContentEditFallbackNotice(fallbackParts, lang));
 
         setText(initialText);
         setAuthorship(initialAuthorship);
@@ -113,8 +131,12 @@ export default function EditTrackText({
       albumId,
       trackId,
       lang,
-      content: formattedText,
-      authorship: trimmedAuthorship || undefined,
+      translations: {
+        [lang]: {
+          content: formattedText,
+          authorship: trimmedAuthorship || undefined,
+        },
+      },
     });
 
     if (result.success) {
@@ -178,9 +200,15 @@ export default function EditTrackText({
       <div className="wrapper">
         <div className="admin-text__header">
           <h1>Редактирование текста</h1>
-          <h4>{track.title}</h4>
+          <h4>{resolveTrackFieldForEdit(track, 'title', lang).value}</h4>
           <h4>Альбом: {album.album}</h4>
         </div>
+
+        {localeFallbackNotice ? (
+          <p className="admin-text__locale-fallback" role="status">
+            {localeFallbackNotice}
+          </p>
+        ) : null}
 
         {/* Поле ввода авторства */}
         <div className="admin-text__authorship">

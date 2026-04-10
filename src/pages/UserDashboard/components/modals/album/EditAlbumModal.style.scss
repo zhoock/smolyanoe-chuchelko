@@ -28,6 +28,16 @@ dialog {
       justify-content: space-between;
     }
 
+    &__locale-fallback {
+      margin: 0 0 var(--ms-0);
+      padding: var(--ms-0);
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-0);
+      line-height: 1.4;
+      background: var(--dashboard-hover-bg);
+      border-radius: var(--ms-02);
+    }
+
     &__title {
       margin: 0;
       padding: 0;

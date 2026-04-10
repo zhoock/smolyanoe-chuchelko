@@ -51,18 +51,10 @@ describe('HomePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockAlbums,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockAlbums,
+          lastUpdated: Date.now(),
         },
         articles: {
           en: {
@@ -108,18 +100,10 @@ describe('HomePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockAlbums,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockAlbums,
+          lastUpdated: Date.now(),
         },
         articles: {
           en: {
@@ -174,18 +158,10 @@ describe('HomePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockAlbums,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockAlbums,
+          lastUpdated: Date.now(),
         },
         articles: {
           en: {
@@ -252,18 +228,10 @@ describe('HomePage integration tests', () => {
       preloadedState: {
         lang: { current: 'ru' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockAlbums,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'succeeded',
-            error: null,
-            data: mockAlbums,
-            lastUpdated: Date.now(),
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockAlbums,
+          lastUpdated: Date.now(),
         },
         articles: {
           en: {

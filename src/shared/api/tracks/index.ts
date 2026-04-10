@@ -4,17 +4,16 @@
 
 import { getToken } from '@shared/lib/auth';
 import { buildStorageAudioFileName } from '@shared/lib/tracks/buildStorageAudioFileName';
+import type { SupportedLang } from '@shared/model/lang';
 
 export interface TrackUploadData {
-  /** Имя объекта в bucket (например `uuid__norwegian-wood.mp3`) */
   fileName: string;
-  title: string;
-  duration: number; // в секундах
-  trackId: string; // Стабильный id (UUID с клиента или legacy-номер)
-  /** Устарело: сервер назначает `order_index` шагом 10 после MAX под блокировкой альбома. */
+  duration: number;
+  trackId: string;
   orderIndex?: number;
-  storagePath: string; // Путь к файлу в Storage (после загрузки)
-  url: string; // URL файла в Storage (после загрузки)
+  storagePath: string;
+  url: string;
+  translations: Partial<Record<SupportedLang, { title: string }>>;
 }
 
 export interface TrackUploadRequest {
@@ -138,8 +137,10 @@ export async function prepareAndUploadTrack(
   file: File,
   albumId: string,
   trackId: string,
-  title?: string
+  options?: { title?: string; lang: SupportedLang }
 ): Promise<TrackUploadData> {
+  const lang = options?.lang ?? 'ru';
+  const titleOpt = options?.title;
   const { createSupabaseClient, STORAGE_BUCKET_NAME } = await import('@config/supabase');
   const { getToken } = await import('@shared/lib/auth');
 
@@ -154,7 +155,7 @@ export async function prepareAndUploadTrack(
 
   // Извлекаем название трека из имени файла
   // Убираем расширение и префиксы типа "01-", "03-" и т.д.
-  let trackTitle = title;
+  let trackTitle = titleOpt;
   if (!trackTitle) {
     const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
     console.log('📝 [prepareAndUploadTrack] Extracting title from filename:', {
@@ -179,7 +180,7 @@ export async function prepareAndUploadTrack(
     console.log('📝 [prepareAndUploadTrack] Using provided title:', trackTitle);
   }
 
-  if (!title) {
+  if (!titleOpt) {
     const rawBase = file.name.replace(/\.[^/.]+$/, '').trim();
     if (/^\d+(\.[a-z0-9]+)?$/i.test(trackTitle)) {
       const cleaned = rawBase.replace(/^\d{1,2}[-.\s]+/i, '').trim() || rawBase;
@@ -297,11 +298,11 @@ export async function prepareAndUploadTrack(
 
       return {
         fileName,
-        title: trackTitle,
         duration: Math.round(duration * 100) / 100,
         trackId,
         storagePath,
         url: storagePath,
+        translations: { [lang]: { title: trackTitle } },
       };
     }
 
@@ -312,11 +313,11 @@ export async function prepareAndUploadTrack(
 
     return {
       fileName,
-      title: trackTitle,
-      duration: Math.round(duration * 100) / 100, // Округляем до 2 знаков после запятой
+      duration: Math.round(duration * 100) / 100,
       trackId,
       storagePath,
       url: publicUrl,
+      translations: { [lang]: { title: trackTitle } },
     };
   } catch (uploadError) {
     clearTimeout(timeoutId);

@@ -1,25 +1,137 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
 import type { SupportedLang } from '@shared/model/lang';
-import type { IAlbums } from '@models';
+import type {
+  IAlbums,
+  IAlbumTranslations,
+  IAlbumTrackTranslations,
+  SyncedLyricsLine,
+} from '@models';
 import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
 import type { RootState } from '@shared/model/appStore/types';
-import { createInitialLangState, createLangExtraReducers } from '@shared/lib/redux/createLangSlice';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 
 import type { AlbumsState } from './types';
 
-const initialState: AlbumsState = createInitialLangState<IAlbums[]>([]);
+const initialState: AlbumsState = {
+  status: 'idle',
+  error: null,
+  data: [],
+  lastUpdated: null,
+};
+
+function albumHasDisplayableTitle(album: {
+  album?: unknown;
+  translations?: IAlbumTranslations;
+}): boolean {
+  const root = typeof album.album === 'string' ? album.album.trim() : '';
+  if (root) return true;
+  const en = album.translations?.en?.album?.trim() ?? '';
+  const ru = album.translations?.ru?.album?.trim() ?? '';
+  return Boolean(en || ru);
+}
+
+function wrapLegacyAlbumsWithTranslations(albums: unknown[], locale: SupportedLang): unknown[] {
+  return albums.map((raw) => {
+    if (typeof raw !== 'object' || raw === null) return raw;
+    const a = raw as Record<string, unknown>;
+    if (a.translations && typeof a.translations === 'object') return raw;
+    return {
+      ...a,
+      translations: {
+        [locale]: {
+          album: String(a.album ?? ''),
+          fullName: String(a.fullName ?? ''),
+          description: String(a.description ?? ''),
+          details: Array.isArray(a.details) ? a.details : [],
+        },
+      },
+    };
+  });
+}
+
+function mergeLegacyStaticAlbumsById(enAlbums: unknown[], ruAlbums: unknown[]): unknown[] {
+  const ruById = new Map<string, Record<string, unknown>>();
+  for (const r of ruAlbums) {
+    if (typeof r === 'object' && r !== null && 'albumId' in r) {
+      ruById.set(String((r as { albumId: string }).albumId), r as Record<string, unknown>);
+    }
+  }
+
+  return enAlbums.map((enRaw) => {
+    const wrappedEn = wrapLegacyAlbumsWithTranslations([enRaw], 'en')[0] as Record<string, unknown>;
+    const id = String(wrappedEn.albumId ?? '');
+    const ruRec = ruById.get(id);
+    if (!ruRec) return wrappedEn;
+
+    const wrappedRu = wrapLegacyAlbumsWithTranslations([ruRec], 'ru')[0] as Record<string, unknown>;
+    const enTr = (wrappedEn.translations as Record<string, unknown>)?.en as Record<string, unknown>;
+    const ruTr = (wrappedRu.translations as Record<string, unknown>)?.ru as Record<string, unknown>;
+
+    const enTracks = (wrappedEn.tracks as unknown[]) || [];
+    const ruTracks = (wrappedRu.tracks as unknown[]) || [];
+    const ruTrackById = new Map<string, Record<string, unknown>>();
+    for (const t of ruTracks) {
+      if (typeof t === 'object' && t !== null && 'id' in t) {
+        ruTrackById.set(String((t as { id: string | number }).id), t as Record<string, unknown>);
+      }
+    }
+
+    const mergedTracks = enTracks.map((tr) => {
+      if (typeof tr !== 'object' || tr === null) return tr;
+      const row = tr as Record<string, unknown>;
+      const tid = String(row.id ?? '');
+      const ruT = ruTrackById.get(tid);
+      const translations: IAlbumTrackTranslations = {
+        en: {
+          title: String(row.title ?? ''),
+          content: typeof row.content === 'string' ? row.content : undefined,
+          authorship: typeof row.authorship === 'string' ? row.authorship : undefined,
+          syncedLyrics: row.syncedLyrics as SyncedLyricsLine[] | undefined,
+        },
+      };
+      if (ruT) {
+        translations.ru = {
+          title: String(ruT.title ?? ''),
+          content: typeof ruT.content === 'string' ? ruT.content : undefined,
+          authorship: typeof ruT.authorship === 'string' ? ruT.authorship : undefined,
+          syncedLyrics: ruT.syncedLyrics as SyncedLyricsLine[] | undefined,
+        };
+      }
+      return { ...row, translations };
+    });
+
+    return {
+      ...wrappedEn,
+      translations: { en: enTr, ru: ruTr },
+      tracks: mergedTracks,
+    };
+  });
+}
+
+async function loadStaticAlbumsFallback(signal: AbortSignal): Promise<unknown[]> {
+  const loadArr = async (url: string): Promise<unknown[] | null> => {
+    const r = await fetch(url, { signal });
+    if (!r?.ok) return null;
+    const j: unknown = await r.json();
+    return Array.isArray(j) ? j : null;
+  };
+  const en = await loadArr('/assets/albums-en.json');
+  const ru = await loadArr('/assets/albums-ru.json');
+  if (en && ru) return mergeLegacyStaticAlbumsById(en, ru);
+  if (en) return wrapLegacyAlbumsWithTranslations(en, 'en');
+  if (ru) return wrapLegacyAlbumsWithTranslations(ru, 'ru');
+  return [];
+}
 
 export const fetchAlbums = createAsyncThunk<
   IAlbums[],
-  { lang: SupportedLang; force?: boolean },
+  { force?: boolean },
   { rejectValue: string; state: RootState }
 >(
-  'albums/fetchByLang',
-  async ({ lang }, { signal, rejectWithValue }) => {
-    // Type guard для проверки структуры альбома
+  'albums/fetchMerged',
+  async (_arg, { signal, rejectWithValue }) => {
     const isValidAlbum = (
       album: unknown
     ): album is {
@@ -34,20 +146,17 @@ export const fetchAlbums = createAsyncThunk<
       buttons?: unknown;
       details?: unknown[];
       tracks?: unknown[];
+      translations?: IAlbumTranslations;
     } => {
-      return (
-        typeof album === 'object' &&
-        album !== null &&
-        'albumId' in album &&
-        'artist' in album &&
-        'album' in album &&
-        typeof (album as { albumId: unknown }).albumId === 'string' &&
-        typeof (album as { artist: unknown }).artist === 'string' &&
-        typeof (album as { album: unknown }).album === 'string'
+      if (typeof album !== 'object' || album === null) return false;
+      if (!('albumId' in album) || !('artist' in album)) return false;
+      if (typeof (album as { albumId: unknown }).albumId !== 'string') return false;
+      if (typeof (album as { artist: unknown }).artist !== 'string') return false;
+      return albumHasDisplayableTitle(
+        album as { album?: unknown; translations?: IAlbumTranslations }
       );
     };
 
-    // Type guard для проверки структуры трека
     const isValidTrack = (
       track: unknown
     ): track is {
@@ -58,6 +167,7 @@ export const fetchAlbums = createAsyncThunk<
       content?: string;
       authorship?: string;
       syncedLyrics?: unknown;
+      translations?: IAlbumTrackTranslations;
     } => {
       return (
         typeof track === 'object' &&
@@ -90,29 +200,11 @@ export const fetchAlbums = createAsyncThunk<
                 order_index,
                 duration: track.duration,
                 src: track.src ?? '',
-                content: track.content,
+                content: track.content ?? '',
                 authorship: track.authorship,
                 syncedLyrics: track.syncedLyrics,
+                translations: track.translations,
               };
-
-              // 🔍 DEBUG: Логируем первый трек первого альбома для диагностики
-              if (
-                album === data[0] &&
-                album.tracks &&
-                album.tracks.length > 0 &&
-                track === album.tracks[0]
-              ) {
-                console.log('[albumsSlice] normalize: первый трек после нормализации:', {
-                  albumId: album.albumId,
-                  track: {
-                    id: normalizedTrack.id,
-                    title: normalizedTrack.title,
-                    hasDuration: 'duration' in normalizedTrack,
-                    duration: normalizedTrack.duration,
-                    durationType: typeof normalizedTrack.duration,
-                  },
-                });
-              }
 
               if (normalizedTrack.duration == null) {
                 console.warn(
@@ -135,19 +227,17 @@ export const fetchAlbums = createAsyncThunk<
           release: album.release || {},
           buttons: album.buttons || {},
           details: Array.isArray(album.details) ? album.details : [],
+          translations: album.translations,
           tracks,
         } as IAlbums;
       });
     };
 
     try {
-      // 1) Сначала пытаемся загрузить из БД через API (приоритет)
-      // Добавляем таймаут 8 секунд для запроса к API
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 секунд таймаут
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        // Привязываем внешний signal к controller
         if (signal) {
           if (signal.aborted) {
             controller.abort();
@@ -162,30 +252,24 @@ export const fetchAlbums = createAsyncThunk<
         const headers: Record<string, string> = {
           'Cache-Control': 'no-cache',
         };
-        // В админке используем JWT, в публичном режиме (/ и /?artist=...) не передаем токен.
         if (isDashboardRoute && token) {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await fetch(
-          buildApiUrl('/api/albums', { lang }, { includeArtist: true }),
-          {
-            signal: controller.signal,
-            cache: 'no-store',
-            headers,
-          }
-        );
+        const response = await fetch(buildApiUrl('/api/albums', {}, { includeArtist: true }), {
+          signal: controller.signal,
+          cache: 'no-store',
+          headers,
+        });
 
         clearTimeout(timeoutId);
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data && Array.isArray(result.data)) {
-            // Если данных нет, возвращаем пустой массив
             if (result.data.length === 0) {
               return [];
             }
 
-            // 🔍 DEBUG: Проверяем наличие duration в данных из API
             const firstAlbum = result.data[0];
             const firstTrack = firstAlbum?.tracks?.[0];
             console.log('[albumsSlice] ✅ Данные из API:', {
@@ -203,18 +287,12 @@ export const fetchAlbums = createAsyncThunk<
                 : null,
             });
 
-            // Преобразуем данные из API в формат IAlbums
             return normalize(result.data);
-          } else {
-            // Если ответ не успешен или данные некорректны, выбрасываем ошибку
-            throw new Error('Failed to fetch albums. Invalid response format.');
           }
-        } else {
-          // Если ответ не OK, выбрасываем ошибку
-          throw new Error(`Failed to fetch albums. Status: ${response.status}`);
+          throw new Error('Failed to fetch albums. Invalid response format.');
         }
+        throw new Error(`Failed to fetch albums. Status: ${response.status}`);
       } catch (apiError) {
-        // Если API недоступен или таймаут, пробуем fallback на статику
         if (apiError instanceof Error && apiError.name === 'AbortError') {
           console.warn('⚠️ API request timeout (8s), trying fallback to static JSON');
         } else {
@@ -222,38 +300,16 @@ export const fetchAlbums = createAsyncThunk<
         }
       }
 
-      // 2) Фолбэк на статический JSON (если БД недоступна)
       try {
-        const fallback = await fetch(`/assets/albums-${lang}.json`, { signal });
-        if (fallback.ok) {
-          const data = await fallback.json();
-          if (Array.isArray(data)) {
-            // 🔍 DEBUG: Проверяем наличие duration в статическом JSON
-            const firstAlbum = data[0];
-            const firstTrack = firstAlbum?.tracks?.[0];
-            console.warn('[albumsSlice] ⚠️ Используется статический JSON (fallback):', {
-              source: 'STATIC_JSON',
-              albumsCount: data.length,
-              firstAlbumId: firstAlbum?.albumId,
-              firstTrack: firstTrack
-                ? {
-                    id: firstTrack.id,
-                    title: firstTrack.title,
-                    hasDuration: 'duration' in firstTrack,
-                    duration: firstTrack.duration,
-                    durationType: typeof firstTrack.duration,
-                  }
-                : null,
-            });
-
-            return normalize(data);
-          }
+        const data = await loadStaticAlbumsFallback(signal);
+        if (Array.isArray(data) && data.length > 0) {
+          console.warn('[albumsSlice] ⚠️ Используется статический JSON (fallback)');
+          return normalize(data);
         }
       } catch (fallbackError) {
         console.warn('⚠️ Static JSON fallback also unavailable:', fallbackError);
       }
 
-      // Если оба источника недоступны
       throw new Error('Failed to fetch albums from both API and static JSON');
     } catch (error) {
       if (error instanceof Error) {
@@ -263,14 +319,12 @@ export const fetchAlbums = createAsyncThunk<
     }
   },
   {
-    condition: ({ lang, force }, { getState }) => {
-      const entry = getState().albums[lang];
+    condition: ({ force }, { getState }) => {
+      const { status } = getState().albums;
 
-      // Всегда блокируем параллельные запросы
-      if (entry.status === 'loading') return false;
+      if (status === 'loading') return false;
 
-      // Блокируем повторный запуск только если НЕ force
-      if (entry.status === 'succeeded' && !force) return false;
+      if (status === 'succeeded' && !force) return false;
 
       return true;
     },
@@ -281,7 +335,29 @@ const albumsSlice = createSlice({
   name: 'albums',
   initialState,
   reducers: {},
-  extraReducers: createLangExtraReducers(fetchAlbums, 'Failed to fetch albums'),
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchAlbums.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(fetchAlbums.fulfilled, (state, action) => {
+        state.data = Array.isArray(action.payload) ? [...action.payload] : action.payload;
+        state.status = 'succeeded';
+        state.error = null;
+        state.lastUpdated = Date.now();
+      })
+      .addCase(fetchAlbums.rejected, (state, action) => {
+        let errorText = 'Failed to fetch albums';
+        if (action.payload) {
+          errorText = action.payload;
+        } else if (action.error && typeof action.error === 'object' && 'message' in action.error) {
+          errorText = String((action.error as { message?: string }).message || errorText);
+        }
+        state.status = 'failed';
+        state.error = errorText;
+      });
+  },
 });
 
 export const albumsReducer = albumsSlice.reducer;

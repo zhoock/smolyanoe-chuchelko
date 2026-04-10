@@ -26,6 +26,8 @@ import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/publ
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { normalizeTrackIdString } from '../../src/shared/lib/tracks/normalizeTrackIdString';
 import { rankToOrderIndex } from '../../src/shared/lib/tracks/trackOrderIndex';
+import { hydrateMissingRuTranslationsOnAlbum } from '../../src/entities/album/lib/hydrateMissingRuTranslations';
+import type { IAlbums } from '../../src/models';
 
 interface AlbumRow {
   id: string;
@@ -57,6 +59,13 @@ interface TrackRow {
   order_index: number;
 }
 
+interface AlbumLocalePayload {
+  album: string;
+  fullName: string;
+  description: string;
+  details: unknown[];
+}
+
 interface AlbumData {
   userId?: string;
   albumId: string;
@@ -68,8 +77,17 @@ interface AlbumData {
   release: Record<string, unknown>;
   buttons: Record<string, unknown>;
   details: unknown[];
-  lang: string;
+  /** Присутствует у одноязычного ответа (POST и т.д.); у сливного GET отсутствует. */
+  lang?: string;
+  translations?: Partial<Record<SupportedLang, AlbumLocalePayload>>;
   tracks: TrackData[];
+}
+
+interface TrackLocalePayload {
+  title: string;
+  content?: string;
+  authorship?: string;
+  syncedLyrics?: unknown;
 }
 
 interface TrackData {
@@ -81,36 +99,44 @@ interface TrackData {
   content?: string;
   authorship?: string;
   syncedLyrics?: unknown;
+  translations?: Partial<Record<SupportedLang, TrackLocalePayload>>;
 }
 
 interface AlbumOwnerSlugRow {
   public_slug: string;
 }
 
+/** Переводимые поля альбома — только внутри translations[lang] (не дублировать в корне запроса). */
 interface CreateAlbumRequest {
   albumId: string;
-  album: string;
-  fullName?: string;
-  description?: string;
-  cover?: string; // Changed from Record<string, unknown> to string
+  translations: Partial<Record<SupportedLang, AlbumLocalePayload>>;
+  cover?: string;
   release?: Record<string, unknown>;
   buttons?: Record<string, unknown>;
-  details?: unknown[];
   lang: SupportedLang;
   isPublic?: boolean;
 }
 
 interface UpdateAlbumRequest {
   albumId: string;
-  album?: string;
-  fullName?: string;
-  description?: string;
-  cover?: string; // Changed from Record<string, unknown> to string
+  /** Частичное или полное обновление переводимых полей для lang. */
+  translations?: Partial<Record<SupportedLang, Partial<AlbumLocalePayload>>>;
+  cover?: string;
   release?: Record<string, unknown>;
   buttons?: Record<string, unknown>;
-  details?: unknown[];
   lang: SupportedLang;
   isPublic?: boolean;
+}
+
+const LEGACY_ALBUM_TRANSLATABLE_ROOT = ['album', 'fullName', 'description', 'details'] as const;
+
+function albumRequestHasForbiddenRootFields(body: Record<string, unknown>): string | null {
+  for (const key of LEGACY_ALBUM_TRANSLATABLE_ROOT) {
+    if (Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined) {
+      return `"${key}" must be sent only inside translations[lang], not at request root`;
+    }
+  }
+  return null;
 }
 
 type AlbumsResponse = ApiResponse<AlbumData[]>;
@@ -258,6 +284,212 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
   };
 }
 
+function sortAlbumRowsForMerge(rows: AlbumRow[]): AlbumRow[] {
+  const rank = (l: string) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
+  return [...rows].sort(
+    (a, b) =>
+      rank(a.lang) - rank(b.lang) ||
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  );
+}
+
+function mergeTrackPayloads(payloads: AlbumData[]): TrackData[] {
+  const sorted = [...payloads].sort((a, b) => {
+    const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
+    return rank(a.lang) - rank(b.lang);
+  });
+  const canonical = sorted[0];
+  return canonical.tracks.map((ct) => {
+    const translations: Partial<Record<SupportedLang, TrackLocalePayload>> = {};
+    for (const p of sorted) {
+      if (!p.lang || !validateLang(p.lang)) continue;
+      const match = p.tracks.find((t) => t.id === ct.id);
+      if (match) {
+        translations[p.lang] = {
+          title: match.title,
+          content: match.content,
+          authorship: match.authorship,
+          syncedLyrics: match.syncedLyrics,
+        };
+      }
+    }
+    return {
+      ...ct,
+      translations,
+    };
+  });
+}
+
+function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
+  if (payloads.length === 0) {
+    throw new Error('mergeAlbumDataPayloads: empty payloads');
+  }
+  const sorted = [...payloads].sort((a, b) => {
+    const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
+    return rank(a.lang) - rank(b.lang);
+  });
+  const canonical = sorted[0];
+  const translations: Partial<Record<SupportedLang, AlbumLocalePayload>> = {};
+  for (const p of sorted) {
+    if (p.lang && validateLang(p.lang)) {
+      translations[p.lang] = {
+        album: p.album,
+        fullName: p.fullName,
+        description: p.description,
+        details: p.details,
+      };
+    }
+  }
+  const tracks = mergeTrackPayloads(sorted);
+  return {
+    userId: canonical.userId,
+    albumId: canonical.albumId,
+    artist: canonical.artist,
+    album: canonical.album,
+    fullName: canonical.fullName,
+    description: canonical.description,
+    cover: canonical.cover,
+    release: canonical.release,
+    buttons: canonical.buttons,
+    details: canonical.details,
+    tracks,
+    translations,
+  };
+}
+
+/** Загрузка одной языковой версии альбома (как раньше один ряд albums + треки). */
+async function loadAlbumDataFromRow(album: AlbumRow): Promise<AlbumData> {
+  const rowLang = album.lang;
+
+  const tracksResult = await query<TrackRow>(
+    `SELECT 
+                t.track_id,
+                t.title,
+                t.duration,
+                t.src,
+                t.content,
+                t.authorship,
+                t.synced_lyrics,
+                t.order_index
+              FROM tracks t
+              WHERE t.album_id = $1
+              ORDER BY t.order_index ASC`,
+    [album.id]
+  );
+
+  if (album.album_id === '23-remastered') {
+    console.log(`[albums.ts GET] 🔍 DEBUG tracks query for 23-remastered:`, {
+      albumId: album.album_id,
+      albumUUID: album.id,
+      lang: album.lang,
+      tracksCount: tracksResult.rows.length,
+      tracks: tracksResult.rows.map((t) => ({
+        trackId: t.track_id,
+        title: t.title,
+        orderIndex: t.order_index,
+      })),
+    });
+
+    if (tracksResult.rows.length > 3) {
+      console.log(
+        `[albums.ts GET] ⚠️ ПРОБЛЕМА: Найдено ${tracksResult.rows.length} треков вместо 3!`
+      );
+      const allTracksCheck = await query<{
+        track_id: string;
+        title: string;
+        album_uuid: string;
+        album_created_at: Date;
+      }>(
+        `SELECT t.track_id, t.title, a.id as album_uuid, a.created_at as album_created_at
+                   FROM tracks t
+                   INNER JOIN albums a ON t.album_id = a.id
+                   WHERE a.album_id = $1 AND a.lang = $2
+                   ORDER BY a.created_at DESC, t.order_index ASC`,
+        [album.album_id, album.lang]
+      );
+
+      console.log(`[albums.ts GET] Все треки для album_id='23-remastered' (${album.lang}):`, {
+        totalTracksInDB: allTracksCheck.rows.length,
+        uniqueAlbumUUIDs: Array.from(new Set(allTracksCheck.rows.map((r) => r.album_uuid))),
+        currentAlbumUUID: album.id,
+        tracksForCurrentAlbum: tracksResult.rows.length,
+      });
+    }
+  }
+
+  console.log(`[albums.ts GET] Tracks loaded for album ${album.album_id} (${album.lang}):`, {
+    tracksCount: tracksResult.rows.length,
+    tracksWithDuration: tracksResult.rows.filter((t) => t.duration != null).length,
+    tracksWithoutDuration: tracksResult.rows.filter((t) => t.duration == null).length,
+    sampleTrack: tracksResult.rows[0]
+      ? {
+          trackId: tracksResult.rows[0].track_id,
+          title: tracksResult.rows[0].title,
+          duration: tracksResult.rows[0].duration,
+          durationType: typeof tracksResult.rows[0].duration,
+        }
+      : null,
+  });
+
+  const trackIds = tracksResult.rows.map((t) => t.track_id);
+  let syncedLyricsMap = new Map<string, { synced_lyrics: unknown; authorship: string | null }>();
+
+  if (trackIds.length > 0) {
+    try {
+      const syncedLyricsResult = await query<{
+        track_id: string;
+        synced_lyrics: unknown;
+        authorship: string | null;
+      }>(
+        `SELECT DISTINCT ON (track_id)
+                     track_id, synced_lyrics, authorship
+                   FROM synced_lyrics 
+                   WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
+                   ORDER BY track_id, updated_at DESC NULLS LAST`,
+        [album.album_id, trackIds, rowLang]
+      );
+
+      syncedLyricsResult.rows.forEach((r) => {
+        syncedLyricsMap.set(r.track_id, {
+          synced_lyrics: r.synced_lyrics,
+          authorship: r.authorship,
+        });
+      });
+    } catch (syncedError) {
+      console.error('❌ [albums.ts GET] Error loading synced lyrics:', syncedError);
+    }
+  }
+
+  const tracksWithSyncedLyrics = tracksResult.rows.map((track) => {
+    const syncedData = syncedLyricsMap.get(track.track_id);
+    if (syncedData) {
+      return {
+        ...track,
+        synced_lyrics: syncedData.synced_lyrics,
+        authorship: syncedData.authorship || track.authorship,
+      };
+    }
+    return track;
+  });
+
+  const mapped = mapAlbumToApiFormat(album, tracksWithSyncedLyrics);
+  console.log(`[albums.ts GET] Album ${album.album_id} mapped tracks:`, {
+    tracksCount: mapped.tracks.length,
+    tracksWithDuration: mapped.tracks.filter((t) => t.duration != null).length,
+    tracksWithoutDuration: mapped.tracks.filter((t) => t.duration == null).length,
+    sampleTrack: mapped.tracks[0]
+      ? {
+          id: mapped.tracks[0].id,
+          title: mapped.tracks[0].title,
+          duration: mapped.tracks[0].duration,
+          durationType: typeof mapped.tracks[0].duration,
+        }
+      : null,
+  });
+
+  return mapped;
+}
+
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
@@ -280,13 +512,9 @@ export const handler: Handler = async (
   }
 
   try {
-    // GET: загрузка альбомов
+    // GET: загрузка альбомов (все языковые версии сливаются в одну сущность с translations)
     if (event.httpMethod === 'GET') {
-      const { lang, artist, resolveOwnerByAlbumId, albumId } = event.queryStringParameters || {};
-
-      if (!validateLang(lang)) {
-        return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
-      }
+      const { artist, resolveOwnerByAlbumId, albumId } = event.queryStringParameters || {};
 
       // Resolve helper: find artist slug by albumId (used for smart redirect from /albums/:id).
       if (resolveOwnerByAlbumId === 'true') {
@@ -299,12 +527,11 @@ export const handler: Handler = async (
            FROM albums a
            INNER JOIN users u ON u.id = a.user_id
            WHERE a.album_id = $1
-             AND a.lang = $2
              AND u.is_active = true
              AND u.public_slug IS NOT NULL
            ORDER BY a.updated_at DESC NULLS LAST, a.created_at DESC
            LIMIT 1`,
-          [albumId, lang]
+          [albumId]
         );
 
         if (ownerResult.rows.length === 0) {
@@ -340,7 +567,7 @@ export const handler: Handler = async (
         }
       }
 
-      // Возвращаем альбомы только выбранного артиста (owner user_id)
+      // Возвращаем альбомы только выбранного артиста (owner user_id), все lang → merge
       const albumsResult = await query<AlbumRow>(
         `SELECT
              a.id,
@@ -359,401 +586,32 @@ export const handler: Handler = async (
              a.created_at,
              a.updated_at
          FROM albums a
-         WHERE a.lang = $1
-           AND a.user_id = $2
-         ORDER BY a.album_id, a.created_at DESC`,
-        [lang, targetUserId]
+         WHERE a.user_id = $1
+         ORDER BY a.album_id,
+           CASE a.lang WHEN 'ru' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+           a.updated_at DESC NULLS LAST,
+           a.created_at DESC`,
+        [targetUserId]
       );
 
-      // 🔍 DEBUG: Логируем для 23-remastered
-      if (lang === 'ru') {
-        const remasteredAlbums = albumsResult.rows.filter((a) => a.album_id === '23-remastered');
-        console.log(`[albums.ts GET] 🔍 DEBUG: Альбомы 23-remastered (${lang}):`, {
-          count: remasteredAlbums.length,
-          albums: remasteredAlbums.map((a) => ({
-            id: a.id,
-            album_id: a.album_id,
-            lang: a.lang,
-            created_at: a.created_at,
-          })),
-        });
+      const byAlbumId = new Map<string, AlbumRow[]>();
+      const albumIdsOrdered: string[] = [];
+      for (const row of albumsResult.rows) {
+        if (!byAlbumId.has(row.album_id)) {
+          albumIdsOrdered.push(row.album_id);
+          byAlbumId.set(row.album_id, []);
+        }
+        byAlbumId.get(row.album_id)!.push(row);
       }
 
-      // Загружаем треки для каждого альбома
-      const albumsWithTracks = await Promise.all(
-        albumsResult.rows.map(async (album) => {
-          try {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                location: 'albums.ts:243',
-                message: 'Loading tracks for album - start',
-                data: {
-                  albumId: album.album_id,
-                  albumDbId: album.id,
-                  lang: album.lang,
-                  userId: album.user_id,
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'A',
-              }),
-            }).catch(() => {});
-            // #endregion
-
-            // Загружаем треки по конкретному UUID альбома
-            // Важно: фильтруем напрямую по album_id (UUID) в таблице tracks,
-            // чтобы гарантированно получить треки только из этого альбома
-            const tracksResult = await query<TrackRow>(
-              `SELECT 
-                t.track_id,
-                t.title,
-                t.duration,
-                t.src,
-                t.content,
-                t.authorship,
-                t.synced_lyrics,
-                t.order_index
-              FROM tracks t
-              WHERE t.album_id = $1
-              ORDER BY t.order_index ASC`,
-              [album.id]
-            );
-
-            // 🔍 DEBUG: Логируем для 23-remastered
-            if (album.album_id === '23-remastered') {
-              console.log(`[albums.ts GET] 🔍 DEBUG tracks query for 23-remastered:`, {
-                albumId: album.album_id,
-                albumUUID: album.id,
-                lang: album.lang,
-                tracksCount: tracksResult.rows.length,
-                tracks: tracksResult.rows.map((t) => ({
-                  trackId: t.track_id,
-                  title: t.title,
-                  orderIndex: t.order_index,
-                })),
-              });
-
-              // Если найдено больше 3 треков, проверяем, нет ли дубликатов
-              if (tracksResult.rows.length > 3) {
-                console.log(
-                  `[albums.ts GET] ⚠️ ПРОБЛЕМА: Найдено ${tracksResult.rows.length} треков вместо 3!`
-                );
-                console.log(
-                  `[albums.ts GET] Проверяем все треки для album_id='23-remastered' в базе...`
-                );
-
-                // Проверяем все треки, связанные с любым альбомом с album_id='23-remastered'
-                const allTracksCheck = await query<{
-                  track_id: string;
-                  title: string;
-                  album_uuid: string;
-                  album_created_at: Date;
-                }>(
-                  `SELECT t.track_id, t.title, a.id as album_uuid, a.created_at as album_created_at
-                   FROM tracks t
-                   INNER JOIN albums a ON t.album_id = a.id
-                   WHERE a.album_id = $1 AND a.lang = $2
-                   ORDER BY a.created_at DESC, t.order_index ASC`,
-                  [album.album_id, album.lang]
-                );
-
-                console.log(
-                  `[albums.ts GET] Все треки для album_id='23-remastered' (${album.lang}):`,
-                  {
-                    totalTracksInDB: allTracksCheck.rows.length,
-                    uniqueAlbumUUIDs: Array.from(
-                      new Set(allTracksCheck.rows.map((r) => r.album_uuid))
-                    ),
-                    tracksByAlbum: allTracksCheck.rows.reduce(
-                      (acc, row) => {
-                        if (!acc[row.album_uuid]) {
-                          acc[row.album_uuid] = {
-                            albumUUID: row.album_uuid,
-                            created_at: row.album_created_at,
-                            tracks: [],
-                          };
-                        }
-                        acc[row.album_uuid].tracks.push({
-                          track_id: row.track_id,
-                          title: row.title,
-                        });
-                        return acc;
-                      },
-                      {} as Record<
-                        string,
-                        {
-                          albumUUID: string;
-                          created_at: Date;
-                          tracks: Array<{ track_id: string; title: string }>;
-                        }
-                      >
-                    ),
-                    currentAlbumUUID: album.id,
-                    tracksForCurrentAlbum: tracksResult.rows.length,
-                  }
-                );
-              }
-            }
-
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                location: 'albums.ts:281',
-                message: 'Tracks loaded from DB',
-                data: {
-                  albumId: album.album_id,
-                  albumDbId: album.id,
-                  lang: album.lang,
-                  tracksCount: tracksResult.rows.length,
-                  tracks: tracksResult.rows.map((t) => ({
-                    trackId: t.track_id,
-                    title: t.title,
-                    src: t.src,
-                    duration: t.duration,
-                    durationType: typeof t.duration,
-                    orderIndex: t.order_index,
-                    hasTitle: !!t.title,
-                    hasSrc: !!t.src,
-                    hasDuration: t.duration != null,
-                  })),
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'B',
-              }),
-            }).catch(() => {});
-            // #endregion
-
-            // Логируем duration для отладки
-            console.log(
-              `[albums.ts GET] Tracks loaded for album ${album.album_id} (${album.lang}):`,
-              {
-                tracksCount: tracksResult.rows.length,
-                tracksWithDuration: tracksResult.rows.filter((t) => t.duration != null).length,
-                tracksWithoutDuration: tracksResult.rows.filter((t) => t.duration == null).length,
-                sampleTrack: tracksResult.rows[0]
-                  ? {
-                      trackId: tracksResult.rows[0].track_id,
-                      title: tracksResult.rows[0].title,
-                      duration: tracksResult.rows[0].duration,
-                      durationType: typeof tracksResult.rows[0].duration,
-                    }
-                  : null,
-              }
-            );
-
-            // 🔍 DEBUG: Логируем треки из БД
-            if (album.album_id === '23-remastered') {
-              console.log(`[albums.ts GET] 🔍 DEBUG for 23-remastered (${lang}):`, {
-                albumId: album.album_id,
-                albumDbId: album.id,
-                lang,
-                tracksCount: tracksResult.rows.length,
-                tracks: tracksResult.rows.map((t) => ({
-                  trackId: t.track_id,
-                  title: t.title,
-                  src: t.src,
-                  orderIndex: t.order_index,
-                  hasTitle: !!t.title,
-                  hasSrc: !!t.src,
-                })),
-                sqlQuery: 'SELECT tracks WHERE album_id = $1 (UUID)',
-                albumUUID: album.id,
-              });
-
-              // Проверяем, нет ли треков из других альбомов
-              console.log(`[albums.ts GET] 🔍 Проверка дубликатов для 23-remastered:`);
-              const duplicateCheck = await query<{
-                album_id: string;
-                track_id: string;
-                title: string;
-              }>(
-                `SELECT a.album_id, t.track_id, t.title
-                 FROM tracks t
-                 INNER JOIN albums a ON t.album_id = a.id
-                 WHERE t.track_id IN (${tracksResult.rows.map((_, i) => `$${i + 1}`).join(', ')})
-                   AND a.album_id != $${tracksResult.rows.length + 1}
-                   AND a.lang = $${tracksResult.rows.length + 2}`,
-                [...tracksResult.rows.map((t) => t.track_id), album.album_id, lang]
-              );
-              if (duplicateCheck.rows.length > 0) {
-                console.log(
-                  `[albums.ts GET] ⚠️ Найдены треки с такими же track_id в других альбомах:`,
-                  duplicateCheck.rows
-                );
-              }
-            }
-
-            // Загружаем синхронизации из таблицы synced_lyrics для всех треков одним запросом
-            // Используем DISTINCT ON для получения одной записи на трек
-            const trackIds = tracksResult.rows.map((t) => t.track_id);
-            let syncedLyricsMap = new Map<
-              string,
-              { synced_lyrics: unknown; authorship: string | null }
-            >();
-
-            if (trackIds.length > 0) {
-              try {
-                console.log(
-                  `[albums.ts GET] Loading synced lyrics for album ${album.album_id}, tracks: ${trackIds.length}`,
-                  {
-                    albumId: album.album_id,
-                    trackIds: trackIds.slice(0, 5), // Логируем только первые 5
-                    lang,
-                  }
-                );
-                // Загружаем все синхронизации для всех треков альбома одним запросом
-                // Используем DISTINCT ON для получения одной записи на трек
-                const syncedLyricsResult = await query<{
-                  track_id: string;
-                  synced_lyrics: unknown;
-                  authorship: string | null;
-                }>(
-                  `SELECT DISTINCT ON (track_id)
-                     track_id, synced_lyrics, authorship
-                   FROM synced_lyrics 
-                   WHERE album_id = $1 AND track_id = ANY($2::text[]) AND lang = $3
-                   ORDER BY track_id, updated_at DESC NULLS LAST`,
-                  [album.album_id, trackIds, lang]
-                );
-
-                // Создаём Map для быстрого поиска
-                syncedLyricsResult.rows.forEach((row) => {
-                  syncedLyricsMap.set(row.track_id, {
-                    synced_lyrics: row.synced_lyrics,
-                    authorship: row.authorship,
-                  });
-                });
-                console.log(
-                  `[albums.ts GET] ✅ Loaded ${syncedLyricsResult.rows.length} synced lyrics from synced_lyrics table for album ${album.album_id}`
-                );
-              } catch (syncedError) {
-                // Если ошибка при загрузке синхронизаций, используем данные из tracks
-                console.error('❌ [albums.ts GET] Error loading synced lyrics:', syncedError);
-              }
-            }
-
-            // Объединяем данные треков с синхронизациями
-            const tracksWithSyncedLyrics = tracksResult.rows.map((track) => {
-              const syncedData = syncedLyricsMap.get(track.track_id);
-              if (syncedData) {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    location: 'albums.ts:401',
-                    message: 'Merging synced lyrics with track',
-                    data: {
-                      albumId: album.album_id,
-                      trackId: track.track_id,
-                      hasSyncedData: !!syncedData,
-                      syncedLyricsType: Array.isArray(syncedData.synced_lyrics)
-                        ? 'array'
-                        : typeof syncedData.synced_lyrics,
-                      syncedLyricsLength: Array.isArray(syncedData.synced_lyrics)
-                        ? syncedData.synced_lyrics.length
-                        : 0,
-                      hasStartTimeGreaterThanZero: Array.isArray(syncedData.synced_lyrics)
-                        ? syncedData.synced_lyrics.some((line: any) => line.startTime > 0)
-                        : false,
-                    },
-                    timestamp: Date.now(),
-                    sessionId: 'debug-session',
-                    runId: 'run1',
-                    hypothesisId: 'C',
-                  }),
-                }).catch(() => {});
-                // #endregion
-                return {
-                  ...track,
-                  synced_lyrics: syncedData.synced_lyrics,
-                  // Используем authorship из synced_lyrics, если он есть, иначе из tracks
-                  authorship: syncedData.authorship || track.authorship,
-                };
-              }
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  location: 'albums.ts:410',
-                  message: 'Track has no synced lyrics data',
-                  data: {
-                    albumId: album.album_id,
-                    trackId: track.track_id,
-                    syncedLyricsMapSize: syncedLyricsMap.size,
-                  },
-                  timestamp: Date.now(),
-                  sessionId: 'debug-session',
-                  runId: 'run1',
-                  hypothesisId: 'D',
-                }),
-              }).catch(() => {});
-              // #endregion
-              return track;
-            });
-
-            const mapped = mapAlbumToApiFormat(album, tracksWithSyncedLyrics);
-
-            // Логируем duration после маппинга
-            console.log(`[albums.ts GET] Album ${album.album_id} mapped tracks:`, {
-              tracksCount: mapped.tracks.length,
-              tracksWithDuration: mapped.tracks.filter((t) => t.duration != null).length,
-              tracksWithoutDuration: mapped.tracks.filter((t) => t.duration == null).length,
-              sampleTrack: mapped.tracks[0]
-                ? {
-                    id: mapped.tracks[0].id,
-                    title: mapped.tracks[0].title,
-                    duration: mapped.tracks[0].duration,
-                    durationType: typeof mapped.tracks[0].duration,
-                  }
-                : null,
-            });
-
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/0d98fd1d-24ff-4297-901e-115ee9f70125', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                location: 'albums.ts:363',
-                message: 'Album mapped to API format',
-                data: {
-                  albumId: mapped.albumId,
-                  lang: mapped.lang,
-                  tracksCount: mapped.tracks.length,
-                  tracks: mapped.tracks.map((t) => ({
-                    id: t.id,
-                    title: t.title,
-                    src: t.src,
-                    duration: t.duration,
-                    durationType: typeof t.duration,
-                    hasTitle: !!t.title,
-                    hasSrc: !!t.src,
-                    hasDuration: t.duration != null,
-                  })),
-                },
-                timestamp: Date.now(),
-                sessionId: 'debug-session',
-                runId: 'run1',
-                hypothesisId: 'C',
-              }),
-            }).catch(() => {});
-            // #endregion
-
-            return mapped;
-          } catch (trackError) {
-            throw trackError;
-          }
-        })
-      );
+      const albumsWithTracks: AlbumData[] = [];
+      for (const albumKey of albumIdsOrdered) {
+        const group = byAlbumId.get(albumKey)!;
+        const sorted = sortAlbumRowsForMerge(group);
+        const payloads = await Promise.all(sorted.map((r) => loadAlbumDataFromRow(r)));
+        const merged = mergeAlbumDataPayloads(payloads) as IAlbums;
+        albumsWithTracks.push(hydrateMissingRuTranslationsOnAlbum(merged));
+      }
 
       return createSuccessResponse(albumsWithTracks);
     }
@@ -776,35 +634,46 @@ export const handler: Handler = async (
         );
       }
 
-      // Логируем в console.log для Netlify
+      const forbidden = albumRequestHasForbiddenRootFields(
+        data as unknown as Record<string, unknown>
+      );
+      if (forbidden) {
+        return createErrorResponse(400, forbidden);
+      }
+
+      const locale = data.translations?.[data.lang];
+      const albumTitle = locale?.album?.trim() ?? '';
+
       console.log('📝 POST /api/albums - Request data:', {
         albumId: data.albumId,
-        album: data.album,
         lang: data.lang,
-        hasAlbum: data.album !== undefined,
+        hasTranslations: !!data.translations,
         bodyKeys: Object.keys(data),
       });
 
-      // Валидация данных (artist в БД не обновляем из API — колонка остаётся как есть)
-      if (!data.albumId || !data.album || !data.lang || !validateLang(data.lang)) {
+      if (!data.albumId || !data.lang || !validateLang(data.lang)) {
         console.error('❌ POST /api/albums - Validation failed:', {
           missingFields: {
             albumId: !data.albumId,
-            album: !data.album,
             lang: !data.lang || !validateLang(data.lang),
           },
           receivedData: data,
         });
         return createErrorResponse(
           400,
-          'Missing required fields: albumId, album, lang (must be "en" or "ru")'
+          'Missing required fields: albumId, lang (must be "en" or "ru")'
         );
       }
 
-      // Все альбомы принадлежат пользователю
+      if (!albumTitle) {
+        return createErrorResponse(
+          400,
+          'Missing translations[lang].album — localized title is required'
+        );
+      }
+
       const albumUserId = userId;
 
-      // Создаём альбом пользователя
       const albumResult = await query<AlbumRow>(
         `INSERT INTO albums (
           user_id, album_id, artist, album, full_name, description,
@@ -825,15 +694,15 @@ export const handler: Handler = async (
           albumUserId,
           data.albumId,
           '',
-          data.album,
-          data.fullName || null,
-          data.description || null,
-          data.cover || null, // cover теперь строка, не jsonb!
+          albumTitle,
+          locale?.fullName ?? null,
+          locale?.description ?? null,
+          data.cover || null,
           JSON.stringify(data.release || {}),
           JSON.stringify(data.buttons || {}),
-          JSON.stringify(data.details || []),
+          JSON.stringify(locale?.details ?? []),
           data.lang,
-          false, // is_public всегда false, так как все альбомы принадлежат пользователю
+          false,
         ]
       );
 
@@ -869,19 +738,21 @@ export const handler: Handler = async (
           );
         }
 
-        // Логируем в console.log для Netlify
+        const forbiddenPut = albumRequestHasForbiddenRootFields(
+          data as unknown as Record<string, unknown>
+        );
+        if (forbiddenPut) {
+          return createErrorResponse(400, forbiddenPut);
+        }
 
         console.log('📝 PUT /api/albums - Request data:', {
           albumId: data.albumId,
           lang: data.lang,
-          hasAlbum: data.album !== undefined,
-          hasDescription: data.description !== undefined,
+          hasTranslations: data.translations !== undefined,
           hasRelease: data.release !== undefined,
           hasButtons: data.buttons !== undefined,
-          hasDetails: data.details !== undefined,
         });
 
-        // Валидация данных
         if (!data.albumId || !data.lang || !validateLang(data.lang)) {
           return createErrorResponse(
             400,
@@ -942,26 +813,31 @@ export const handler: Handler = async (
           allDataKeys: Object.keys(data),
         });
 
-        // Подготавливаем данные для обновления
+        const localePatch = data.translations?.[data.lang];
+
         const updateFields: string[] = [];
         const updateValues: unknown[] = [];
         let paramIndex = 1;
 
-        if (data.album !== undefined) {
+        if (localePatch?.album !== undefined) {
           updateFields.push(`album = $${paramIndex++}`);
-          updateValues.push(data.album);
+          updateValues.push(localePatch.album);
         }
-        if (data.fullName !== undefined) {
+        if (localePatch?.fullName !== undefined) {
           updateFields.push(`full_name = $${paramIndex++}`);
-          updateValues.push(data.fullName);
+          updateValues.push(localePatch.fullName);
         }
-        if (data.description !== undefined) {
+        if (localePatch?.description !== undefined) {
           updateFields.push(`description = $${paramIndex++}`);
-          updateValues.push(data.description);
+          updateValues.push(localePatch.description);
+        }
+        if (localePatch?.details !== undefined) {
+          updateFields.push(`details = $${paramIndex++}::jsonb`);
+          updateValues.push(JSON.stringify(localePatch.details));
         }
         if (data.cover !== undefined && data.cover !== null && data.cover !== '') {
           updateFields.push(`cover = $${paramIndex++}::text`);
-          updateValues.push(data.cover); // cover теперь строка, не jsonb!
+          updateValues.push(data.cover);
           console.log('[albums.ts PUT] ✅ Cover will be updated to:', data.cover);
         } else {
           console.log('[albums.ts PUT] ⚠️ Cover NOT updated:', {
@@ -979,17 +855,11 @@ export const handler: Handler = async (
           updateFields.push(`buttons = $${paramIndex++}::jsonb`);
           updateValues.push(JSON.stringify(data.buttons));
         }
-        if (data.details !== undefined) {
-          updateFields.push(`details = $${paramIndex++}::jsonb`);
-          updateValues.push(JSON.stringify(data.details));
-        }
-        // is_public больше не используется, все альбомы принадлежат пользователю
 
         if (updateFields.length === 0) {
           return createErrorResponse(400, 'No fields to update.');
         }
 
-        // Добавляем updated_at
         updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
         // 🔍 DEBUG: Проверяем, что будет отправлено в БД

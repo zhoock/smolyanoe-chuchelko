@@ -5,6 +5,9 @@
 
 import type { IAlbums } from '@models';
 import { siteArtistUiLabel } from '@shared/lib/profileDisplayName';
+import type { SupportedLang } from '@shared/model/lang';
+
+import { resolveAlbumForDisplay } from './resolveAlbumDisplay';
 
 export interface AlbumData {
   id: string;
@@ -35,19 +38,24 @@ export interface TrackData {
  * Преобразует альбом из формата IAlbums в формат AlbumData для UI
  * @param siteDisplayName Имя из профиля (site_name); поле album.artist в UI не используется
  */
-export function transformAlbumToAlbumData(album: IAlbums, siteDisplayName?: string): AlbumData {
-  const albumId = album.albumId || '';
+export function transformAlbumToAlbumData(
+  album: IAlbums,
+  siteDisplayName?: string,
+  lang?: SupportedLang
+): AlbumData {
+  const source = lang ? resolveAlbumForDisplay(album, lang) : album;
+  const albumId = source.albumId || '';
 
   // Обрабатываем release (объект с полем date)
   let releaseDate: Date | null = null;
-  if (album.release && typeof album.release === 'object' && 'date' in album.release) {
-    const dateStr = album.release.date;
+  if (source.release && typeof source.release === 'object' && 'date' in source.release) {
+    const dateStr = source.release.date;
     if (dateStr) {
       releaseDate = new Date(dateStr);
     }
   }
 
-  const sourceTracks = [...(album.tracks || [])].sort(
+  const sourceTracks = [...(source.tracks || [])].sort(
     (a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)
   );
 
@@ -112,11 +120,11 @@ export function transformAlbumToAlbumData(album: IAlbums, siteDisplayName?: stri
 
   return {
     id: albumId,
-    albumId: album.albumId || albumId, // Сохраняем строковый ID альбома
-    title: album.album,
+    albumId: source.albumId || albumId, // Сохраняем строковый ID альбома
+    title: source.album,
     artist: artistLabel,
     year: releaseDate ? releaseDate.getFullYear().toString() : '',
-    cover: album.cover,
+    cover: source.cover,
     coverUpdatedAt: Date.now(), // Добавляем timestamp для принудительной перезагрузки изображения
     releaseDate: releaseDate
       ? releaseDate.toLocaleDateString('en-US', {
@@ -134,7 +142,8 @@ export function transformAlbumToAlbumData(album: IAlbums, siteDisplayName?: stri
  */
 export function transformAlbumsToAlbumData(
   albums: IAlbums[],
-  siteDisplayName?: string
+  siteDisplayName?: string,
+  lang?: SupportedLang
 ): AlbumData[] {
-  return albums.map((a) => transformAlbumToAlbumData(a, siteDisplayName));
+  return albums.map((a) => transformAlbumToAlbumData(a, siteDisplayName, lang));
 }

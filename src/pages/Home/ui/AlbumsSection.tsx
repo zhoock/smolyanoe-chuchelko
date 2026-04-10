@@ -5,7 +5,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumsData } from '@entities/album';
+import { selectAlbumsStatus, selectAlbumsError, selectAlbumsDataResolved } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './AlbumsSection.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
@@ -24,9 +24,9 @@ export function AlbumsSection() {
   const [searchParams] = useSearchParams();
   const artistSlug = searchParams.get('artist');
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
-  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
-  const allAlbums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albumsError = useAppSelector(selectAlbumsError);
+  const allAlbums = useAppSelector(selectAlbumsDataResolved);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const [initialCount, setInitialCount] = useState(getInitialCount);

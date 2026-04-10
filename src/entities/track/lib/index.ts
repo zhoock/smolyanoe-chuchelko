@@ -6,8 +6,7 @@ export interface SaveTrackTextRequest {
   albumId: string;
   trackId: string | number;
   lang: string;
-  content: string;
-  authorship?: string;
+  translations: Partial<Record<'en' | 'ru', { content: string; authorship?: string }>>;
 }
 
 export interface SaveTrackTextResponse {
@@ -61,12 +60,13 @@ export async function saveTrackText(data: SaveTrackTextRequest): Promise<SaveTra
     const result: SaveTrackTextResponse = await response.json();
 
     if (process.env.NODE_ENV === 'development') {
+      const loc = data.translations?.[data.lang as 'en' | 'ru'];
       console.log('✅ Текст трека сохранён в БД:', {
         albumId: data.albumId,
         trackId: data.trackId,
         lang: data.lang,
-        contentLength: data.content.length,
-        hasAuthorship: data.authorship !== undefined,
+        contentLength: loc?.content?.length ?? 0,
+        hasAuthorship: loc?.authorship !== undefined,
       });
     }
 

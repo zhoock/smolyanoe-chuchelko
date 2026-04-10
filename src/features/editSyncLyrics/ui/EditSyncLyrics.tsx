@@ -16,6 +16,13 @@ import type { SyncedLyricsLine } from '@/models';
 import { AlbumCover } from '@entities/album';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
 import {
+  buildTranslatedContentEditFallbackNotice,
+  collectAlbumEditFallbackSources,
+  getTrackSyncedLyricsForEdit,
+  resolveTrackFieldForEdit,
+  resolveTrackForDisplay,
+} from '@entities/album/lib/resolveAlbumDisplay';
+import {
   saveSyncedLyrics,
   loadSyncedLyricsFromStorage,
   loadAuthorshipFromStorage,
@@ -46,9 +53,9 @@ export default function EditSyncLyrics({
   const location = useLocation();
   const albumId = propAlbumId || paramAlbumId; // Используем prop или param
   const trackId = propTrackId || paramTrackId; // Используем prop или param
-  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
-  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albumsError = useAppSelector(selectAlbumsError);
+  const album = useAppSelector((state) => selectAlbumById(state, albumId));
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
     variant: 'authenticated',
   });
@@ -75,6 +82,8 @@ export default function EditSyncLyrics({
   const albumIdRef = useRef<string>(''); // ref для стабильного хранения albumId
   const loadingRef = useRef<boolean>(false); // ref для предотвращения параллельных загрузок
   const lastRequestKeyRef = useRef<string>(''); // ref для отслеживания последнего запроса
+
+  const [editLocaleFallbackNotice, setEditLocaleFallbackNotice] = useState<string | null>(null);
 
   // Обновляем albumIdRef при изменении albumId
   useEffect(() => {
@@ -112,7 +121,7 @@ export default function EditSyncLyrics({
     const currentTrack = album.tracks.find((t) => String(t.id) === trackId);
     if (currentTrack) {
       setIsInteractionLocked(false);
-      dispatch(playerActions.setPlaylist([currentTrack]));
+      dispatch(playerActions.setPlaylist([resolveTrackForDisplay(currentTrack, lang)]));
       dispatch(playerActions.setCurrentTrackIndex(0)); // Всегда индекс 0, так как в плейлисте только один трек
       dispatch(
         playerActions.setAlbumInfo({
@@ -149,7 +158,7 @@ export default function EditSyncLyrics({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [albumsStatus, albumId, trackId, dispatch, location, siteArtistName]); // album из замыкания
+  }, [albumsStatus, albumId, trackId, lang, dispatch, location, siteArtistName]); // album из замыкания
 
   // Отслеживаем изменения текста в localStorage (для обновления при сохранении в другой вкладке)
   useEffect(() => {
@@ -313,6 +322,10 @@ export default function EditSyncLyrics({
 
       const currentTrackIdStr = String(currentTrack.id);
 
+      const contentResolved = resolveTrackFieldForEdit(currentTrack, 'content', lang);
+      const authorshipResolved = resolveTrackFieldForEdit(currentTrack, 'authorship', lang);
+      const jsonSyncedResolved = getTrackSyncedLyricsForEdit(currentTrack, lang);
+
       // Загружаем авторство и синхронизации параллельно
       const [storedAuthorship, storedSync] = await Promise.all([
         loadAuthorshipFromStorage(albumId, currentTrack.id, lang),
@@ -325,11 +338,13 @@ export default function EditSyncLyrics({
         return;
       }
 
-      const trackAuthorship = currentTrack.authorship || storedAuthorship || '';
+      const trackAuthorship = storedAuthorship?.trim()
+        ? storedAuthorship
+        : authorshipResolved.value;
 
       // Загружаем сохранённый текст из БД
       const storedText = await loadTrackTextFromDatabase(albumId, currentTrack.id, lang);
-      const textToUse = storedText !== null ? storedText : currentTrack.content || '';
+      const textToUse = storedText !== null ? storedText : contentResolved.value;
 
       // Вычисляем хэш текста
       const textHash = `${textToUse}-${trackAuthorship}`;
@@ -345,9 +360,8 @@ export default function EditSyncLyrics({
         });
       }
 
-      // Текст в БД (включая явную пустоту) vs JSON альбома
-      const textChanged =
-        storedText !== null && storedText.trim() !== (currentTrack.content || '').trim();
+      // Текст в БД (включая явную пустоту) vs канон JSON с тем же fallback локалей, что на сайте
+      const textChanged = storedText !== null && storedText.trim() !== contentResolved.value.trim();
 
       // Вычисляем хэш текущего текста для сравнения
       const currentTextHash = `${textToUse}-${trackAuthorship}`;
@@ -370,6 +384,7 @@ export default function EditSyncLyrics({
       }
 
       let linesToDisplay: SyncedLyricsLine[] = [];
+      let usedJsonSyncFallback = false;
 
       // ПРИОРИТЕТ: Если текст изменился после сохранения - игнорируем сохранённые синхронизации
       // Иначе используем сохранённые синхронизации, если они есть
@@ -407,12 +422,13 @@ export default function EditSyncLyrics({
           startTime: 0,
           endTime: undefined,
         }));
-      } else if (currentTrack.syncedLyrics && currentTrack.syncedLyrics.length > 0) {
-        // Используем синхронизации из JSON файла (текст не изменился)
+      } else if (Array.isArray(jsonSyncedResolved.lines) && jsonSyncedResolved.lines.length > 0) {
+        // Синхронизации из данных альбома — с тем же fallback по локалям, что на сайте
         if (process.env.NODE_ENV === 'development') {
-          console.log('📄 Используем синхронизации из JSON файла');
+          console.log('📄 Используем синхронизации из JSON альбома (с fallback локалей)');
         }
-        linesToDisplay = currentTrack.syncedLyrics || [];
+        usedJsonSyncFallback = jsonSyncedResolved.isFallback;
+        linesToDisplay = jsonSyncedResolved.lines;
       } else {
         // Разбиваем обычный текст на строки
         console.log('📝 Создаём строки из обычного текста');
@@ -454,6 +470,17 @@ export default function EditSyncLyrics({
 
       // Устанавливаем данные только если запрос не был отменён
       if (!cancelled) {
+        const noticeSources = collectAlbumEditFallbackSources([
+          ...(storedText === null && contentResolved.isFallback ? [contentResolved] : []),
+          ...(!storedAuthorship?.trim() && authorshipResolved.isFallback
+            ? [authorshipResolved]
+            : []),
+          ...(usedJsonSyncFallback
+            ? [{ isFallback: true as const, source: jsonSyncedResolved.source }]
+            : []),
+        ]);
+        setEditLocaleFallbackNotice(buildTranslatedContentEditFallbackNotice(noticeSources, lang));
+
         setSyncedLines(linesToDisplay);
         setLastTextHash(textHash);
         setCurrentTrackId(currentTrackIdStr);
@@ -558,7 +585,12 @@ export default function EditSyncLyrics({
     let trackAuthorship = '';
     if (album) {
       const track = album.tracks.find((t) => String(t.id) === trackId);
-      trackAuthorship = track?.authorship || storedAuthorship || '';
+      if (track) {
+        const fromStore = storedAuthorship?.trim() ? storedAuthorship : '';
+        trackAuthorship = fromStore || resolveTrackFieldForEdit(track, 'authorship', lang).value;
+      } else {
+        trackAuthorship = storedAuthorship || '';
+      }
     } else {
       trackAuthorship = storedAuthorship || '';
     }
@@ -839,6 +871,11 @@ export default function EditSyncLyrics({
       <div className="wrapper">
         <div className="admin-sync__header">
           <h1>Синхронизация текста</h1>
+          {editLocaleFallbackNotice ? (
+            <p className="admin-sync__locale-fallback" role="status">
+              {editLocaleFallbackNotice}
+            </p>
+          ) : null}
           <p className="admin-sync__description">
             Запустите трек и нажимайте кнопки с временем рядом со строками, когда они начинают
             звучать. Конец строки устанавливается автоматически при установке начала следующей. Если
@@ -862,7 +899,9 @@ export default function EditSyncLyrics({
               />
             </div>
             <div className="admin-sync__player-info">
-              <div className="admin-sync__player-title">{track.title}</div>
+              <div className="admin-sync__player-title">
+                {resolveTrackFieldForEdit(track, 'title', lang).value}
+              </div>
               <div className="admin-sync__player-artist">{siteArtistUiLabel(siteArtistName)}</div>
             </div>
             <div className="admin-sync__player-controls">

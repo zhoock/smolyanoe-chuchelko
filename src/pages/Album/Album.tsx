@@ -12,7 +12,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
+import { selectAlbumsStatus, selectAlbumsError, selectAlbumByIdResolved } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
@@ -29,9 +29,9 @@ export default function Album() {
   });
   const navigate = useNavigate();
   const { albumId = '' } = useParams<{ albumId: string }>();
-  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
-  const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albumsError = useAppSelector(selectAlbumsError);
+  const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   // 🔍 DEBUG: Логируем данные альбома для диагностики
@@ -90,7 +90,7 @@ export default function Album() {
     const resolveOwnerAndRedirect = async () => {
       try {
         const response = await fetch(
-          `/api/albums?resolveOwnerByAlbumId=true&albumId=${encodeURIComponent(albumId)}&lang=${encodeURIComponent(lang)}`
+          `/api/albums?resolveOwnerByAlbumId=true&albumId=${encodeURIComponent(albumId)}`
         );
         if (!response.ok) return;
 

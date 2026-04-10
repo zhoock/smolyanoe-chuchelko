@@ -617,9 +617,9 @@ function UserDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
-  const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albumsError = useAppSelector(selectAlbumsError);
+  const albumsFromStore = useAppSelector(selectAlbumsData);
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
   const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
   const articlesFromStore = useAppSelector((state) => selectArticlesData(state, lang));
@@ -1057,7 +1057,7 @@ function UserDashboard() {
   // Загрузка альбомов: всегда force при смене аккаунта/языка,
   // чтобы не показывать данные предыдущего пользователя из Redux-кэша.
   useEffect(() => {
-    dispatch(fetchAlbums({ lang, force: true })).catch((error: any) => {
+    dispatch(fetchAlbums({ force: true })).catch((error: any) => {
       // ConditionError - это нормально, condition отменил запрос
       if (error?.name === 'ConditionError') {
         return;
@@ -1095,7 +1095,8 @@ function UserDashboard() {
         // Преобразуем альбомы из Redux store в формат для UI
         const transformedAlbums = transformAlbumsToAlbumData(
           albumsFromStore,
-          siteArtistDisplayName
+          siteArtistDisplayName,
+          lang
         );
 
         // Добавляем authorship из кеша для каждого трека
@@ -1209,7 +1210,7 @@ function UserDashboard() {
       }
 
       // Обновляем данные из БД для синхронизации
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true })).unwrap();
       console.log('✅ Tracks reordered successfully');
     } catch (error) {
       console.error('❌ Error reordering tracks:', error);
@@ -1266,8 +1267,8 @@ function UserDashboard() {
         body: JSON.stringify({
           albumId,
           trackId,
-          title: newTitle,
           lang,
+          translations: { [lang]: { title: newTitle } },
         }),
       });
 
@@ -1298,7 +1299,7 @@ function UserDashboard() {
         variant: 'error',
       });
       // Откатываем изменения в локальном состоянии
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true })).unwrap();
     }
   };
 
@@ -1347,7 +1348,7 @@ function UserDashboard() {
       );
 
       try {
-        await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+        await dispatch(fetchAlbums({ force: true })).unwrap();
       } catch (refetchErr: unknown) {
         const name =
           refetchErr && typeof refetchErr === 'object' && 'name' in refetchErr
@@ -1499,7 +1500,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true })).unwrap();
 
       // Удаляем альбом из локального состояния
       setAlbumsData((prev) => prev.filter((a) => a.id !== albumId));
@@ -1560,7 +1561,7 @@ function UserDashboard() {
         setUploadProgress((prev) => ({ ...prev, [albumId]: fileProgressStart }));
 
         try {
-          const trackData = await prepareAndUploadTrack(file, albumId, trackId);
+          const trackData = await prepareAndUploadTrack(file, albumId, trackId, { lang });
           tracksData.push(trackData);
 
           // Обновляем прогресс после успешной загрузки файла
@@ -1599,7 +1600,7 @@ function UserDashboard() {
               // Оптимистично: тот же шаг, что на сервере (max + 10, +20, …)
               const newTracks: TrackData[] = tracksData.map((trackData, i) => ({
                 id: trackData.trackId,
-                title: trackData.title,
+                title: trackData.translations[lang]?.title ?? '',
                 order_index: maxOrder + TRACK_ORDER_INDEX_STEP * (i + 1),
                 duration: `${Math.floor(trackData.duration / 60)}:${Math.floor(
                   trackData.duration % 60
@@ -1623,7 +1624,7 @@ function UserDashboard() {
         try {
           // Небольшая задержка для гарантии обновления БД
           await new Promise((resolve) => setTimeout(resolve, 300));
-          await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+          await dispatch(fetchAlbums({ force: true })).unwrap();
           console.log('✅ [handleTrackUpload] Albums refreshed from database');
         } catch (fetchError: any) {
           // ConditionError - это нормально, condition отменил запрос
@@ -1820,8 +1821,7 @@ function UserDashboard() {
         albumId: addLyricsModal.albumId,
         trackId: addLyricsModal.trackId,
         lang,
-        content: lyrics,
-        authorship,
+        translations: { [lang]: { content: lyrics, authorship } },
       });
 
       if (result.success) {
@@ -1869,8 +1869,7 @@ function UserDashboard() {
         albumId: editLyricsModal.albumId,
         trackId: editLyricsModal.trackId,
         lang,
-        content: lyrics,
-        authorship,
+        translations: { [lang]: { content: lyrics, authorship } },
       });
 
       if (result.success) {
@@ -2927,7 +2926,7 @@ function UserDashboard() {
           onSave={async () => {
             // Перезагружаем альбомы из БД, чтобы получить актуальные синхронизированные тексты
             try {
-              await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+              await dispatch(fetchAlbums({ force: true })).unwrap();
             } catch (error) {
               console.error('❌ Error reloading albums after sync save:', error);
             }
@@ -3020,7 +3019,7 @@ function UserDashboard() {
                 updatedAlbumId: updatedAlbum?.albumId,
                 isNewAlbum: !editAlbumModal.albumId,
               });
-              const result = await dispatch(fetchAlbums({ lang, force: true })).unwrap();
+              const result = await dispatch(fetchAlbums({ force: true })).unwrap();
               console.log('✅ [UserDashboard] Albums fetched:', {
                 count: result?.length || 0,
                 albumIds: result?.map((a: IAlbums) => a.albumId) || [],
@@ -3059,7 +3058,11 @@ function UserDashboard() {
               if (result && result.length > 0) {
                 console.log('🔄 [UserDashboard] Updating albumsData from fetchAlbums result...');
 
-                const transformedAlbums = transformAlbumsToAlbumData(result, siteArtistDisplayName);
+                const transformedAlbums = transformAlbumsToAlbumData(
+                  result,
+                  siteArtistDisplayName,
+                  lang
+                );
                 // Добавляем authorship из кеша
                 transformedAlbums.forEach((album) => {
                   album.tracks.forEach((track) => {

@@ -43,18 +43,10 @@ describe('Album integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'loading',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'loading',
+          error: null,
+          data: [],
+          lastUpdated: null,
         },
         uiDictionary: {
           en: {
@@ -83,18 +75,10 @@ describe('Album integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'failed',
-            error: 'Failed to load album',
-            data: [],
-            lastUpdated: null,
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'failed',
+          error: 'Failed to load album',
+          data: [],
+          lastUpdated: null,
         },
         uiDictionary: {
           en: {
@@ -122,18 +106,10 @@ describe('Album integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [],
+          lastUpdated: Date.now(),
         },
         uiDictionary: {
           en: {
@@ -161,18 +137,10 @@ describe('Album integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [mockAlbum],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [mockAlbum],
+          lastUpdated: Date.now(),
         },
         uiDictionary: {
           en: {
@@ -214,18 +182,10 @@ describe('Album integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [mockAlbum],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [mockAlbum],
+          lastUpdated: Date.now(),
         },
         uiDictionary: {
           en: {
@@ -262,18 +222,10 @@ describe('Album integration tests', () => {
       preloadedState: {
         lang: { current: 'ru' },
         albums: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [mockAlbum],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'succeeded',
-            error: null,
-            data: [ruAlbum],
-            lastUpdated: Date.now(),
-          },
+          status: 'succeeded',
+          error: null,
+          data: [ruAlbum],
+          lastUpdated: Date.now(),
         },
         uiDictionary: {
           en: {

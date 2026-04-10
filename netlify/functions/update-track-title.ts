@@ -13,7 +13,7 @@ interface UpdateTrackTitleRequest {
   albumId: string;
   trackId: string | number;
   lang: string;
-  title: string;
+  translations: Partial<Record<'en' | 'ru', { title: string }>>;
 }
 
 interface UpdateTrackTitleResponse {
@@ -47,14 +47,28 @@ export const handler: Handler = async (
     if (event.httpMethod === 'POST') {
       const data: UpdateTrackTitleRequest = JSON.parse(event.body || '{}');
 
-      // Валидация данных
-      if (!data.albumId || !data.trackId || !data.lang || !data.title) {
+      const raw = data as unknown as Record<string, unknown>;
+      if (Object.prototype.hasOwnProperty.call(raw, 'title') && raw['title'] !== undefined) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({
             success: false,
-            message: 'Invalid request data. Required: albumId, trackId, lang, title',
+            message: 'Use translations[lang].title only, not root "title"',
+          } as UpdateTrackTitleResponse),
+        };
+      }
+
+      const title = data.translations?.[data.lang as 'en' | 'ru']?.title?.trim() ?? '';
+
+      if (!data.albumId || !data.trackId || !data.lang || !title) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message:
+              'Invalid request data. Required: albumId, trackId, lang, translations[lang].title',
           } as UpdateTrackTitleResponse),
         };
       }
@@ -106,7 +120,7 @@ export const handler: Handler = async (
          SET title = $1, updated_at = NOW()
          WHERE album_id = $2 AND track_id = $3
          RETURNING id, title`,
-        [data.title.trim(), albumDbId, String(data.trackId)]
+        [title, albumDbId, String(data.trackId)]
       );
 
       if (updateResult.rows.length === 0) {
@@ -127,7 +141,7 @@ export const handler: Handler = async (
       console.log('[update-track-title.ts] ✅ Track title updated:', {
         albumId: data.albumId,
         trackId: data.trackId,
-        newTitle: data.title,
+        newTitle: title,
       });
 
       return {

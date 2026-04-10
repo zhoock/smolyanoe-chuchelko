@@ -2,6 +2,7 @@
 // than type aliases with intersections
 
 import type { Track } from '@entities/track/model/types';
+import type { SupportedLang } from '@shared/model/lang';
 
 export interface NavigationProps {
   /**  Открывает/закрывает Popup */
@@ -27,6 +28,16 @@ export interface PopupProps extends HamburgerProps {
  * Albums
  */
 
+/** Переводимые поля альбома (`translations.ru` / `translations.en`). */
+export interface IAlbumTranslationsLocale {
+  album: string;
+  fullName: string;
+  description: string;
+  details: detailsProps[];
+}
+
+export type IAlbumTranslations = Partial<Record<SupportedLang, IAlbumTranslationsLocale>>;
+
 export interface IAlbums {
   userId?: string;
   /** Идентификатор альбома */
@@ -36,11 +47,14 @@ export interface IAlbums {
    * Поле может приходить из БД для старых записей.
    */
   artist: string;
-  /** Название альбома */
+  /**
+   * Название альбома (кэш/legacy для чтения и fallback в UI).
+   * Запись переводимого названия — только в `translations[lang].album`.
+   */
   album: string;
-  /** Название группы и название альбома */
+  /** Полное имя для отображения; запись — в `translations[lang].fullName`. */
   fullName: string;
-  /** Описание альбома */
+  /** Описание; запись — в `translations[lang].description`. */
   description: string;
   /** Обложка альбома (имя файла без расширения и суффикса размера) */
   cover?: string;
@@ -53,8 +67,13 @@ export interface IAlbums {
   buttons: {
     [key: string]: string;
   };
-  /** Дополнительная информация */
+  /** Дополнительная информация; каноническая запись блоков — в `translations[lang].details`. */
   details: detailsProps[];
+  /**
+   * Переводы альбома. Создание/обновление через API — только в `translations[lang]`.
+   * Плоские поля на корне — ответ БД и временный fallback для старых данных.
+   */
+  translations?: IAlbumTranslations;
   /** Треки */
   tracks: TracksProps[];
 }
@@ -88,9 +107,19 @@ export interface SyncedLyricsLine {
   endTime?: number;
 }
 
+/** Переводимые поля трека внутри альбома. */
+export interface IAlbumTrackTranslationsLocale {
+  title: string;
+  content?: string;
+  authorship?: string;
+  syncedLyrics?: SyncedLyricsLine[];
+}
+
+export type IAlbumTrackTranslations = Partial<Record<SupportedLang, IAlbumTrackTranslationsLocale>>;
+
 /** Трек в составе альбома: базовые поля сущности `Track` плюс тексты и метаданные воспроизведения. */
 export interface TracksProps extends Track {
-  /** Текст песни (обычный формат, для обратной совместимости) */
+  /** Текст песни (кэш для чтения); запись — `translations[lang].content` / строка трека для данной локали в БД. */
   content: string;
   /** Синхронизированный текст с тайм-кодами (для karaoke-style отображения) */
   syncedLyrics?: SyncedLyricsLine[];
@@ -98,6 +127,8 @@ export interface TracksProps extends Track {
   authorship?: string;
   /** Длительность трека в секундах */
   duration: number;
+  /** Переводы названия и текстов трека (`translations.ru` / `translations.en`). */
+  translations?: IAlbumTrackTranslations;
 }
 
 export interface CoverProps {

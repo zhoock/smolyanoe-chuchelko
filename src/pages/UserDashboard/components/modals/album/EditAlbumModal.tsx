@@ -11,6 +11,12 @@ import { getToken, getUser } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums } from '@models';
+import {
+  buildTranslatedContentEditFallbackNotice,
+  collectAlbumEditFallbackSources,
+  getAlbumDetailsForEdit,
+  resolveAlbumFieldForEdit,
+} from '@entities/album/lib/resolveAlbumDisplay';
 import type {
   EditAlbumModalProps,
   AlbumFormData,
@@ -63,7 +69,7 @@ export function EditAlbumModal({
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   // Получаем альбомы для текущего языка сайта
-  const albumsFromStore = useAppSelector((state) => selectAlbumsData(state, lang));
+  const albumsFromStore = useAppSelector(selectAlbumsData);
 
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);
@@ -122,6 +128,9 @@ export function EditAlbumModal({
     variant?: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
 
+  /** Сообщение, если форма заполнена из другой локали / корня (как на display). */
+  const [editLocaleFallbackNotice, setEditLocaleFallbackNotice] = useState<string | null>(null);
+
   const getProfileArtistName = (): string => {
     const authName = getUser()?.name?.trim();
     if (authName) return authName;
@@ -178,12 +187,23 @@ export function EditAlbumModal({
     // Устанавливаем флаг инициализации
     didInitRef.current = true;
 
+    const titleResolved = resolveAlbumFieldForEdit(album, 'album', lang);
+    const descriptionResolved = resolveAlbumFieldForEdit(album, 'description', lang);
+    const detailsResolved = getAlbumDetailsForEdit(album, lang);
+
+    const fallbackSources = collectAlbumEditFallbackSources([
+      titleResolved,
+      descriptionResolved,
+      detailsResolved,
+    ]);
+    setEditLocaleFallbackNotice(buildTranslatedContentEditFallbackNotice(fallbackSources, lang));
+
     // Парсим details, если это строка (JSONB из базы может приходить как строка)
     // ДОЛЖНО БЫТЬ ПЕРЕД ВСЕМИ ПАРСИНГАМИ!
-    let parsedDetails = album.details;
-    if (typeof album.details === 'string') {
+    let parsedDetails: unknown = detailsResolved.details;
+    if (typeof parsedDetails === 'string') {
       try {
-        parsedDetails = JSON.parse(album.details);
+        parsedDetails = JSON.parse(parsedDetails);
       } catch (e) {
         console.error('[EditAlbumModal] Error parsing details:', e);
         parsedDetails = [];
@@ -569,10 +589,10 @@ export function EditAlbumModal({
 
       return {
         ...prevForm,
-        title: album.album || prevForm.title,
+        title: titleResolved.value || prevForm.title,
         releaseDate: releaseDate || prevForm.releaseDate,
         upcEan: upc || prevForm.upcEan,
-        description: album.description || prevForm.description,
+        description: descriptionResolved.value || prevForm.description,
         genreCodes: genreCodes.length > 0 ? genreCodes : prevForm.genreCodes || [],
         allowDownloadSale:
           ((release as any).allowDownloadSale as 'no' | 'yes' | 'preorder') ||
@@ -660,6 +680,7 @@ export function EditAlbumModal({
     setEditingStreamingLink(null);
     setStreamingLinkService('');
     setStreamingLinkUrl('');
+    setEditLocaleFallbackNotice(null);
 
     if (localPreviewUrlRef.current) {
       URL.revokeObjectURL(localPreviewUrlRef.current);
@@ -1547,33 +1568,33 @@ export function EditAlbumModal({
 
     const updateData: Record<string, unknown> = {
       albumId: finalAlbumId,
-      album: albumTitle,
-      fullName,
-      description:
-        finalFormData.description !== undefined
-          ? finalFormData.description
-          : originalAlbum?.description || '',
-      // Для release делаем полную замену, а не merge, чтобы пустые URL поля корректно удалялись
+      translations: {
+        [normalizedLang]: {
+          album: albumTitle,
+          fullName,
+          description:
+            finalFormData.description !== undefined
+              ? finalFormData.description
+              : originalAlbum?.description || '',
+          details: mergedDetails.length > 0 ? mergedDetails : [],
+        },
+      },
       release: release,
       buttons:
         exists && originalAlbum?.buttons
           ? { ...(originalAlbum.buttons as any), ...buttons }
           : buttons,
-      details: mergedDetails.length > 0 ? mergedDetails : [],
       lang: normalizedLang,
-      // Для новых альбомов устанавливаем isPublic: true, чтобы они отображались в списке
       isPublic: !exists ? true : undefined,
       ...(newCover ? { cover: newCover } : {}),
     };
 
     console.log('📦 [EditAlbumModal] Update data prepared:', {
       albumId: updateData.albumId,
-      album: updateData.album,
-      fullName: updateData.fullName,
-      description: updateData.description,
+      lang: updateData.lang,
+      hasTranslations: !!updateData.translations,
       hasRelease: !!updateData.release,
       hasButtons: !!updateData.buttons,
-      detailsCount: Array.isArray(updateData.details) ? updateData.details.length : 0,
     });
 
     try {
@@ -1601,8 +1622,6 @@ export function EditAlbumModal({
         method,
         lang: normalizedLang,
         albumId: updateData.albumId,
-        album: updateData.album,
-        hasDescription: !!updateData.description,
         hasCover: !!updateData.cover,
         hasToken: !!token,
         tokenLength: token?.length || 0,
@@ -1656,7 +1675,7 @@ export function EditAlbumModal({
       // ВАЖНО: Форсим обновление Redux store для языка контента ПЕРЕД вызовом onNext
       console.log('🔄 [EditAlbumModal] Forcing fetchAlbums for lang:', lang);
       try {
-        await dispatch(fetchAlbums({ lang: lang, force: true })).unwrap();
+        await dispatch(fetchAlbums({ force: true })).unwrap();
         console.log('✅ [EditAlbumModal] Redux store updated for', lang);
       } catch (fetchError) {
         console.error('❌ [EditAlbumModal] Failed to update Redux store:', fetchError);
@@ -2222,6 +2241,12 @@ export function EditAlbumModal({
                 ×
               </button>
             </div>
+
+            {editLocaleFallbackNotice ? (
+              <p className="edit-album-modal__locale-fallback" role="status">
+                {editLocaleFallbackNotice}
+              </p>
+            ) : null}
 
             <div className="edit-album-modal__form">
               {renderStepContent()}

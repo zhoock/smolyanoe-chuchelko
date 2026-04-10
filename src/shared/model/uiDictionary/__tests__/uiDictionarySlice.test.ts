@@ -34,8 +34,10 @@ const createTestStore = () => {
         ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
       }),
       albums: () => ({
-        en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-        ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+        status: 'idle' as const,
+        error: null,
+        data: [],
+        lastUpdated: null,
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -405,8 +407,10 @@ describe('uiDictionarySlice', () => {
         ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
       },
       albums: {
-        en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-        ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+        status: 'idle' as const,
+        error: null,
+        data: [],
+        lastUpdated: null,
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

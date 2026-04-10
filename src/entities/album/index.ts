@@ -5,10 +5,11 @@ export { default as AlbumDetails } from './ui/AlbumDetails/AlbumDetails';
 export { albumsReducer, fetchAlbums } from './model/albumsSlice';
 export {
   selectAlbumsState,
-  selectAlbumsEntry,
   selectAlbumsStatus,
   selectAlbumsError,
   selectAlbumsData,
   selectAlbumById,
+  selectAlbumsDataResolved,
+  selectAlbumByIdResolved,
 } from './model/selectors';
-export type { AlbumsState, AlbumsEntry, RequestStatus } from './model/types';
+export type { AlbumsState, RequestStatus } from './model/types';

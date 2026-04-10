@@ -11,6 +11,7 @@ import { playerActions } from '@features/player';
 import { getUserAudioUrl } from '@shared/api/albums';
 import type { IAlbums, TracksProps } from '@models';
 import { fetchAlbums } from '@entities/album';
+import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay';
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
 import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
@@ -57,7 +58,7 @@ export function HomePage() {
 
   useEffect(() => {
     if (!hasArtistParam) return;
-    void dispatch(fetchAlbums({ lang, force: true }));
+    void dispatch(fetchAlbums({ force: true }));
     void dispatch(fetchArticles({ lang, force: true }));
   }, [dispatch, hasArtistParam, lang, artistSlug]);
 
@@ -117,7 +118,7 @@ export function HomePage() {
         onPlayArtist: async (artist) => {
           if (!artist?.publicSlug) return false;
 
-          const url = `/api/albums?lang=${encodeURIComponent(lang)}&artist=${encodeURIComponent(artist.publicSlug)}`;
+          const url = `/api/albums?artist=${encodeURIComponent(artist.publicSlug)}`;
           const response = await fetch(url);
           const payload = (await response.json()) as { success?: boolean; data?: IAlbums[] };
 
@@ -135,7 +136,9 @@ export function HomePage() {
           );
           if (!firstAlbum) return false;
 
-          const playlist: TracksProps[] = firstAlbum.tracks.map((track) => ({
+          const resolvedAlbum = resolveAlbumForDisplay(firstAlbum as IAlbums, lang);
+
+          const playlist: TracksProps[] = resolvedAlbum.tracks.map((track) => ({
             ...track,
             src: getUserAudioUrl(track.src),
           }));
@@ -143,12 +146,12 @@ export function HomePage() {
           dispatch(playerActions.setPlaylist(playlist));
           dispatch(playerActions.setCurrentTrackIndex(0));
 
-          const albumId = fallbackAlbumClientId(firstAlbum);
+          const albumId = fallbackAlbumClientId(resolvedAlbum);
 
           dispatch(
             playerActions.setAlbumInfo({
               albumId,
-              albumTitle: firstAlbum.album,
+              albumTitle: resolvedAlbum.album,
             })
           );
 
@@ -159,13 +162,14 @@ export function HomePage() {
           dispatch(
             playerActions.setAlbumMeta({
               albumId,
-              userId: firstAlbum.userId ?? null,
+              userId: resolvedAlbum.userId ?? null,
               publicSlug: artist.publicSlug,
-              album: firstAlbum.album,
+              album: resolvedAlbum.album,
               artist: displayArtist,
               fullName:
-                formatAlbumDisplayFullName(resolvedForTitle, firstAlbum.album) || firstAlbum.album,
-              cover: firstAlbum.cover ?? null,
+                formatAlbumDisplayFullName(resolvedForTitle, resolvedAlbum.album) ||
+                resolvedAlbum.album,
+              cover: resolvedAlbum.cover ?? null,
             })
           );
 

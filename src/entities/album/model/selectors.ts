@@ -4,41 +4,32 @@
  */
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@shared/model/appStore/types';
-import type { SupportedLang } from '@shared/model/lang';
 import type { IAlbums } from '@models';
 
-import type { AlbumsEntry } from './types';
+import { selectCurrentLang } from '@shared/model/lang/selectors';
+import { resolveAlbumForDisplay } from '../lib/resolveAlbumDisplay';
+import type { AlbumsState } from './types';
 
-// Базовый селектор - получает весь стейт альбомов
-export const selectAlbumsState = (state: RootState): Record<SupportedLang, AlbumsEntry> =>
-  state.albums;
+export const selectAlbumsState = (state: RootState): AlbumsState => state.albums;
 
-// Мемоизированный селектор для получения записи по языку
-export const selectAlbumsEntry = createSelector(
-  [selectAlbumsState, (_state: RootState, lang: SupportedLang) => lang],
-  (albums, lang): AlbumsEntry => albums[lang]
-);
+export const selectAlbumsStatus = createSelector([selectAlbumsState], (s) => s.status);
 
-// Мемоизированный селектор для статуса загрузки
-export const selectAlbumsStatus = createSelector(
-  [selectAlbumsEntry, (_state: RootState, lang: SupportedLang) => lang],
-  (entry) => entry.status
-);
+export const selectAlbumsError = createSelector([selectAlbumsState], (s) => s.error);
 
-// Мемоизированный селектор для ошибки
-export const selectAlbumsError = createSelector(
-  [selectAlbumsEntry, (_state: RootState, lang: SupportedLang) => lang],
-  (entry) => entry.error
-);
+export const selectAlbumsData = createSelector([selectAlbumsState], (s): IAlbums[] => s.data);
 
-// Мемоизированный селектор для данных
-export const selectAlbumsData = createSelector(
-  [selectAlbumsEntry, (_state: RootState, lang: SupportedLang) => lang],
-  (entry): IAlbums[] => entry.data
-);
-
-// Мемоизированный селектор для поиска альбома по ID
 export const selectAlbumById = createSelector(
-  [selectAlbumsData, (_state: RootState, _lang: SupportedLang, albumId: string) => albumId],
+  [selectAlbumsData, (_state: RootState, albumId: string) => albumId],
+  (albums, albumId) => albums.find((album) => album.albumId === albumId)
+);
+
+/** Для отображения: строки с fallback по `state.lang.current`. */
+export const selectAlbumsDataResolved = createSelector(
+  [selectAlbumsData, selectCurrentLang],
+  (albums, lang): IAlbums[] => albums.map((a) => resolveAlbumForDisplay(a, lang))
+);
+
+export const selectAlbumByIdResolved = createSelector(
+  [selectAlbumsDataResolved, (_state: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.albumId === albumId)
 );

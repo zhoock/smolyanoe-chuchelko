@@ -14,7 +14,7 @@ import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { fetchAlbums } from '@entities/album/model/albumsSlice';
-import { selectAlbumsData, selectAlbumsStatus } from '@entities/album/model/selectors';
+import { selectAlbumsDataResolved, selectAlbumsStatus } from '@entities/album/model/selectors';
 import { listStorageByPrefix, getStorageFileUrl } from '@shared/api/storage';
 import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
 import { getUserUserId, CURRENT_USER_CONFIG } from '@config/user';
@@ -145,8 +145,8 @@ const STATIC_SONGS: Song[] = [
 export default function StemsPlayground() {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
-  const albums = useAppSelector((state) => selectAlbumsData(state, lang));
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albums = useAppSelector(selectAlbumsDataResolved);
 
   // Состояние для динамически загруженных песен
   const [dynamicSongs, setDynamicSongs] = useState<Song[]>([]);
@@ -205,7 +205,7 @@ export default function StemsPlayground() {
   // Загружаем альбомы
   useEffect(() => {
     if (albumsStatus === 'idle' || albumsStatus === 'failed') {
-      dispatch(fetchAlbums({ lang }));
+      dispatch(fetchAlbums({}));
     }
   }, [dispatch, lang, albumsStatus]);
 
@@ -225,7 +225,7 @@ export default function StemsPlayground() {
 
       // Перезагружаем альбомы с force: true для принудительной перезагрузки данных
       // Это вызовет useEffect, который перезагрузит стемы и портреты
-      dispatch(fetchAlbums({ lang, force: true }));
+      dispatch(fetchAlbums({ force: true }));
     };
 
     window.addEventListener('stem-cover-updated', handleStemCoverUpdate);

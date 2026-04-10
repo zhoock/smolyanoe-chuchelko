@@ -36,16 +36,17 @@ import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { TRACK_ORDER_INDEX_STEP } from '../../src/shared/lib/tracks/trackOrderIndex';
 
 interface TrackUploadRequest {
-  albumId: string; // album_id (строка, например "23" или "23-remastered"), не UUID
-  lang: string; // 'ru' или 'en'
+  albumId: string;
+  lang: string;
   tracks: Array<{
     fileName: string;
-    title: string;
-    duration: number; // в секундах
-    trackId: string; // Стабильный id трека (UUID или legacy-номер)
+    duration: number;
+    trackId: string;
     orderIndex?: number;
-    storagePath: string; // Путь к файлу в Storage
-    url: string; // URL файла в Storage
+    storagePath: string;
+    url: string;
+    /** Название для текущей локали — только translations[lang].title */
+    translations: Partial<Record<'en' | 'ru', { title: string }>>;
   }>;
 }
 
@@ -136,11 +137,12 @@ export const handler: Handler = async (
     const uploadedTracks: TrackUploadResponse['data'] = [];
 
     const tracksToSave = tracks.filter((t) => {
-      const ok = !!(t.fileName && t.title && t.trackId && t.storagePath && t.url);
+      const titleForLang = t.translations?.[lang as 'en' | 'ru']?.title?.trim() ?? '';
+      const ok = !!(t.fileName && titleForLang && t.trackId && t.storagePath && t.url);
       if (!ok) {
         console.warn('⚠️ [upload-tracks] Skipping track with missing required fields:', {
           trackId: t.trackId,
-          title: t.title,
+          titleForLang,
           fileName: t.fileName,
           hasStoragePath: !!t.storagePath,
           hasUrl: !!t.url,
@@ -152,7 +154,7 @@ export const handler: Handler = async (
     if (tracksToSave.length === 0) {
       return createErrorResponse(
         400,
-        'No valid tracks to save (each needs fileName, title, trackId, storagePath, url).'
+        'No valid tracks to save (each needs fileName, translations[lang].title, trackId, storagePath, url).'
       );
     }
 
@@ -168,7 +170,8 @@ export const handler: Handler = async (
       let nextOrderIndex = Number(maxRes.rows[0]?.max_idx ?? 0) + TRACK_ORDER_INDEX_STEP;
 
       for (const track of tracksToSave) {
-        const { fileName, title, duration, trackId, storagePath, url } = track;
+        const { fileName, duration, trackId, storagePath, url } = track;
+        const title = track.translations?.[lang as 'en' | 'ru']?.title?.trim() ?? '';
         const assignedOrderIndex = nextOrderIndex;
         nextOrderIndex += TRACK_ORDER_INDEX_STEP;
 

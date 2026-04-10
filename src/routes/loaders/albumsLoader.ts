@@ -84,16 +84,16 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Альбомы нужны на "/", "/albums*" и "/dashboard/*" (дашборд)
   if (pathname === '/' || pathname.startsWith('/albums') || pathname.startsWith('/dashboard')) {
-    const status = selectAlbumsStatus(state, lang);
+    const status = selectAlbumsStatus(state);
     if (status === 'succeeded') {
-      templateA = Promise.resolve(selectAlbumsData(state, lang));
+      templateA = Promise.resolve(selectAlbumsData(state));
     } else if (status === 'loading') {
       // Данные уже загружаются - возвращаем текущие данные или пустой массив
       // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
-      const currentData = selectAlbumsData(state, lang);
+      const currentData = selectAlbumsData(state);
       templateA = Promise.resolve(currentData || []);
     } else {
-      const fetchThunkPromise = store.dispatch(fetchAlbums({ lang }));
+      const fetchThunkPromise = store.dispatch(fetchAlbums({}));
 
       const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
 
