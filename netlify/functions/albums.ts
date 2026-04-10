@@ -60,7 +60,6 @@ interface TrackRow {
 }
 
 interface AlbumLocalePayload {
-  album: string;
   fullName: string;
   description: string;
   details: unknown[];
@@ -77,6 +76,9 @@ interface AlbumData {
   release: Record<string, unknown>;
   buttons: Record<string, unknown>;
   details: unknown[];
+  isPublic?: boolean;
+  /** Внутренняя метка для merge по свежести строки (не язык). */
+  updatedAt?: string;
   /** Присутствует у одноязычного ответа (POST и т.д.); у сливного GET отсутствует. */
   lang?: string;
   translations?: Partial<Record<SupportedLang, AlbumLocalePayload>>;
@@ -109,6 +111,8 @@ interface AlbumOwnerSlugRow {
 /** Переводимые поля альбома — только внутри translations[lang] (не дублировать в корне запроса). */
 interface CreateAlbumRequest {
   albumId: string;
+  /** Единое название альбома (все языки). Допускается legacy: translations[lang].album. */
+  album?: string;
   translations: Partial<Record<SupportedLang, AlbumLocalePayload>>;
   cover?: string;
   release?: Record<string, unknown>;
@@ -119,6 +123,8 @@ interface CreateAlbumRequest {
 
 interface UpdateAlbumRequest {
   albumId: string;
+  /** Единое название альбома (все языки). */
+  album?: string;
   /** Частичное или полное обновление переводимых полей для lang. */
   translations?: Partial<Record<SupportedLang, Partial<AlbumLocalePayload>>>;
   cover?: string;
@@ -128,7 +134,7 @@ interface UpdateAlbumRequest {
   isPublic?: boolean;
 }
 
-const LEGACY_ALBUM_TRANSLATABLE_ROOT = ['album', 'fullName', 'description', 'details'] as const;
+const LEGACY_ALBUM_TRANSLATABLE_ROOT = ['fullName', 'description', 'details'] as const;
 
 function albumRequestHasForbiddenRootFields(body: Record<string, unknown>): string | null {
   for (const key of LEGACY_ALBUM_TRANSLATABLE_ROOT) {
@@ -281,7 +287,40 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
         syncedLyrics: syncedLyrics || undefined,
       };
     }),
+    isPublic: album.is_public,
+    updatedAt:
+      album.updated_at != null ? new Date(album.updated_at as Date).toISOString() : undefined,
   };
+}
+
+/** Синхронизация общих полей альбома по всем строкам локалей (один user_id + album_id). */
+async function syncSharedAlbumMetadataAcrossLocales(
+  userId: string,
+  albumId: string,
+  patch: { album?: string; releaseJson?: string; isPublic?: boolean }
+): Promise<void> {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+  if (patch.album !== undefined) {
+    sets.push(`album = $${i++}`);
+    values.push(patch.album);
+  }
+  if (patch.releaseJson !== undefined) {
+    sets.push(`release = $${i++}::jsonb`);
+    values.push(patch.releaseJson);
+  }
+  if (patch.isPublic !== undefined) {
+    sets.push(`is_public = $${i++}`);
+    values.push(patch.isPublic);
+  }
+  if (sets.length === 0) return;
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(userId, albumId);
+  await query(
+    `UPDATE albums SET ${sets.join(', ')} WHERE user_id = $${i++} AND album_id = $${i++}`,
+    values
+  );
 }
 
 function sortAlbumRowsForMerge(rows: AlbumRow[]): AlbumRow[] {
@@ -324,34 +363,42 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
   if (payloads.length === 0) {
     throw new Error('mergeAlbumDataPayloads: empty payloads');
   }
-  const sorted = [...payloads].sort((a, b) => {
+  /** Общие поля (album, release, cover, buttons, is_public) — с самой свежей строки по `updatedAt`, не по языку. */
+  const sortedForShared = [...payloads].sort((a, b) => {
+    const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return tb - ta;
+  });
+  const shared = sortedForShared[0];
+  const sortedForTracks = [...payloads].sort((a, b) => {
     const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
     return rank(a.lang) - rank(b.lang);
   });
-  const canonical = sorted[0];
+  /** Корневые fullName/description/details — дубликат для legacy; истина в `translations`. Берём ru при наличии, иначе первую локаль. */
+  const textRoot = sortedForTracks[0] ?? shared;
   const translations: Partial<Record<SupportedLang, AlbumLocalePayload>> = {};
-  for (const p of sorted) {
+  for (const p of sortedForTracks) {
     if (p.lang && validateLang(p.lang)) {
       translations[p.lang] = {
-        album: p.album,
         fullName: p.fullName,
         description: p.description,
         details: p.details,
       };
     }
   }
-  const tracks = mergeTrackPayloads(sorted);
+  const tracks = mergeTrackPayloads(sortedForTracks);
   return {
-    userId: canonical.userId,
-    albumId: canonical.albumId,
-    artist: canonical.artist,
-    album: canonical.album,
-    fullName: canonical.fullName,
-    description: canonical.description,
-    cover: canonical.cover,
-    release: canonical.release,
-    buttons: canonical.buttons,
-    details: canonical.details,
+    userId: shared.userId,
+    albumId: shared.albumId,
+    artist: shared.artist,
+    album: shared.album,
+    fullName: textRoot.fullName,
+    description: textRoot.description,
+    cover: shared.cover,
+    release: shared.release,
+    buttons: shared.buttons,
+    details: textRoot.details,
+    isPublic: shared.isPublic,
     tracks,
     translations,
   };
@@ -642,7 +689,8 @@ export const handler: Handler = async (
       }
 
       const locale = data.translations?.[data.lang];
-      const albumTitle = locale?.album?.trim() ?? '';
+      const legacyTitle = (locale as { album?: string } | undefined)?.album?.trim?.() ?? '';
+      const albumTitle = (typeof data.album === 'string' && data.album.trim()) || legacyTitle || '';
 
       console.log('📝 POST /api/albums - Request data:', {
         albumId: data.albumId,
@@ -668,7 +716,7 @@ export const handler: Handler = async (
       if (!albumTitle) {
         return createErrorResponse(
           400,
-          'Missing translations[lang].album — localized title is required'
+          'Missing album title: set `album` at request root (or legacy translations[lang].album)'
         );
       }
 
@@ -688,6 +736,7 @@ export const handler: Handler = async (
           release = EXCLUDED.release,
           buttons = EXCLUDED.buttons,
           details = EXCLUDED.details,
+          is_public = EXCLUDED.is_public,
           updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
@@ -702,7 +751,7 @@ export const handler: Handler = async (
           JSON.stringify(data.buttons || {}),
           JSON.stringify(locale?.details ?? []),
           data.lang,
-          false,
+          data.isPublic !== undefined ? data.isPublic : false,
         ]
       );
 
@@ -799,7 +848,15 @@ export const handler: Handler = async (
             [data.albumId, userId, data.lang]
           );
           const sibling = siblingResult.rows[0];
-          if (sibling && localePatch?.album?.trim()) {
+          const legacyPatchAlbum =
+            localePatch && typeof localePatch === 'object' && 'album' in localePatch
+              ? String((localePatch as { album?: string }).album ?? '').trim()
+              : '';
+          const sharedAlbumTitle =
+            (typeof data.album === 'string' && data.album.trim()) ||
+            legacyPatchAlbum ||
+            (sibling.album || '').trim();
+          if (sibling && sharedAlbumTitle) {
             const client = await getClient();
             try {
               await client.query('BEGIN');
@@ -819,6 +876,7 @@ export const handler: Handler = async (
                 localePatch.description !== undefined
                   ? localePatch.description
                   : sibling.description;
+              const isPublicVal = data.isPublic !== undefined ? data.isPublic : sibling.is_public;
 
               const insertRes = await client.query<AlbumRow>(
                 `INSERT INTO albums (
@@ -830,7 +888,7 @@ export const handler: Handler = async (
                   userId,
                   data.albumId,
                   sibling.artist || '',
-                  localePatch.album.trim(),
+                  sharedAlbumTitle,
                   fullNameVal,
                   descVal,
                   coverVal,
@@ -842,7 +900,7 @@ export const handler: Handler = async (
                   ),
                   JSON.stringify(Array.isArray(detailsPayload) ? detailsPayload : []),
                   data.lang,
-                  sibling.is_public,
+                  isPublicVal,
                 ]
               );
               const newAlbumPk = insertRes.rows[0].id;
@@ -905,9 +963,9 @@ export const handler: Handler = async (
         const updateValues: unknown[] = [];
         let paramIndex = 1;
 
-        if (localePatch?.album !== undefined) {
+        if (data.album !== undefined) {
           updateFields.push(`album = $${paramIndex++}`);
-          updateValues.push(localePatch.album);
+          updateValues.push(data.album);
         }
         if (localePatch?.fullName !== undefined) {
           updateFields.push(`full_name = $${paramIndex++}`);
@@ -940,6 +998,10 @@ export const handler: Handler = async (
         if (data.buttons !== undefined) {
           updateFields.push(`buttons = $${paramIndex++}::jsonb`);
           updateValues.push(JSON.stringify(data.buttons));
+        }
+        if (data.isPublic !== undefined) {
+          updateFields.push(`is_public = $${paramIndex++}`);
+          updateValues.push(data.isPublic);
         }
 
         if (updateFields.length === 0) {
@@ -1000,6 +1062,17 @@ export const handler: Handler = async (
         }
 
         const updatedAlbum = updateResult.rows[0];
+
+        const syncAlbum = data.album !== undefined ? String(data.album) : undefined;
+        const syncRelease = data.release !== undefined ? JSON.stringify(data.release) : undefined;
+        const syncPub = data.isPublic !== undefined ? data.isPublic : undefined;
+        if (syncAlbum !== undefined || syncRelease !== undefined || syncPub !== undefined) {
+          await syncSharedAlbumMetadataAcrossLocales(userId, data.albumId, {
+            album: syncAlbum,
+            releaseJson: syncRelease,
+            isPublic: syncPub,
+          });
+        }
 
         // 🔍 DEBUG: Проверяем, что пришло из БД
         console.log('[albums.ts PUT] Raw cover from DB:', {

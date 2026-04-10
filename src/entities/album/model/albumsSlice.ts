@@ -41,7 +41,6 @@ function wrapLegacyAlbumsWithTranslations(albums: unknown[], locale: SupportedLa
       ...a,
       translations: {
         [locale]: {
-          album: String(a.album ?? ''),
           fullName: String(a.fullName ?? ''),
           description: String(a.description ?? ''),
           details: Array.isArray(a.details) ? a.details : [],
@@ -227,6 +226,7 @@ export const fetchAlbums = createAsyncThunk<
           release: album.release || {},
           buttons: album.buttons || {},
           details: Array.isArray(album.details) ? album.details : [],
+          isPublic: (album as { isPublic?: boolean }).isPublic,
           translations: album.translations,
           tracks,
         } as IAlbums;

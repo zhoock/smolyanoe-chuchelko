@@ -522,6 +522,18 @@ export const transformFormDataToAlbumFormat = (
     }
   });
 
+  /** Единые на альбом: жанры и теги в `release`, не в `details`. */
+  if (formData.genreCodes?.length) {
+    (release as Record<string, unknown>).genreCodes = formData.genreCodes
+      .map((c) => String(c).trim())
+      .filter(Boolean);
+  }
+  if (formData.tags?.length) {
+    (release as Record<string, unknown>).tags = formData.tags
+      .map((t) => String(t).trim())
+      .filter(Boolean);
+  }
+
   const buttons: Record<string, string> = {};
 
   formData.purchaseLinks.forEach((link) => {
@@ -551,49 +563,7 @@ export const transformFormDataToAlbumFormat = (
 
   const details: unknown[] = [];
 
-  // Genre должен быть первым элементом с id: 1
-  if (formData.genreCodes && formData.genreCodes.length > 0) {
-    // Форматируем жанры: все в нижнем регистре, кроме первой буквы первого слова первого жанра
-    // Затем объединяем через запятую и добавляем точку в конце
-    // Например: "Grunge, alternative rock." или "Grunge."
-    const formatGenres = (genres: string[]): string => {
-      if (genres.length === 0) return '';
-
-      // Все жанры в нижнем регистре
-      const lowerGenres = genres
-        .map((genre) => genre.trim().toLowerCase())
-        .filter((g) => g.length > 0);
-
-      if (lowerGenres.length === 0) return '';
-
-      // Первую букву первого жанра делаем заглавной
-      const firstGenre = lowerGenres[0];
-      const capitalizedFirstGenre = firstGenre.charAt(0).toUpperCase() + firstGenre.slice(1);
-
-      // Остальные жанры остаются в нижнем регистре
-      const otherGenres = lowerGenres.slice(1);
-
-      // Объединяем через запятую и пробел, добавляем точку в конце
-      const allGenres =
-        otherGenres.length > 0
-          ? [capitalizedFirstGenre, ...otherGenres].join(', ')
-          : capitalizedFirstGenre;
-
-      return `${allGenres}.`;
-    };
-
-    const genreText = formatGenres(formData.genreCodes);
-    if (genreText) {
-      details.push({
-        id: 1,
-        title: ui?.dashboard?.genre ?? 'Genre',
-        content: [genreText],
-      });
-    }
-  }
-
-  // Начинаем id с 2, так как Genre имеет id: 1
-  let nextId = details.length > 0 ? 2 : 1;
+  let nextId = 1;
 
   if (formData.bandMembers.length > 0) {
     details.push({

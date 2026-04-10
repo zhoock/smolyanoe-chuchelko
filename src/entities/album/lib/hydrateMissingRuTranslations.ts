@@ -45,7 +45,6 @@ export function hydrateMissingRuTranslationsOnAlbum<T extends IAlbums>(album: T)
   }
 
   const ru: IAlbumTranslationsLocale = {
-    album: album.album ?? '',
     fullName: album.fullName ?? '',
     description: album.description ?? '',
     details: cloneDetails(album.details ?? []),

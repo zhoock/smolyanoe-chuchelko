@@ -63,7 +63,12 @@ export function AlbumsSection() {
           <>
             <div className="albums__list">
               {displayedAlbums.map((album) => (
-                <WrapperAlbumCover key={album.albumId} {...album} date={album.release.date}>
+                <WrapperAlbumCover
+                  key={album.albumId}
+                  albumId={album.albumId}
+                  album={album.album}
+                  date={typeof album.release?.date === 'string' ? album.release.date : ''}
+                >
                   <AlbumCover
                     img={album.cover || ''}
                     userId={album.userId}

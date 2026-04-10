@@ -4,6 +4,7 @@
 
 import type { SupportedLang } from '@shared/model/lang';
 import type { IAlbums, TracksProps, detailsProps } from '@models';
+import { CANONICAL_GENRES } from '@shared/constants/canonicalGenres';
 import {
   buildTranslationFallbackLocales,
   DEFAULT_CONTENT_LOCALE,
@@ -12,13 +13,61 @@ import {
   TRANSLATION_LOCALE_ORDER,
 } from '@shared/lib/i18n/resolveTranslationFallback';
 
+const GENRE_DETAIL_TITLES = new Set(['Genre', 'Genres', 'Жанр', 'Жанры']);
+
 function hasSyncedLyricsData(lines: TracksProps['syncedLyrics']): boolean {
   return Array.isArray(lines) && lines.length > 0;
 }
 
+export function stripGenreDetailBlocks(details: detailsProps[]): detailsProps[] {
+  return details.filter(
+    (d) =>
+      d &&
+      typeof d === 'object' &&
+      !GENRE_DETAIL_TITLES.has(String((d as { title?: string }).title ?? ''))
+  );
+}
+
+function readGenreCodesFromRelease(release: IAlbums['release'] | undefined): string[] {
+  if (!release || typeof release !== 'object') return [];
+  const raw = (release as Record<string, unknown>).genreCodes;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
+}
+
+function formatGenreDetailLine(codes: string[], lang: SupportedLang): string {
+  if (codes.length === 0) return '';
+  const words = codes
+    .map((code) => {
+      const opt = CANONICAL_GENRES.find((g) => g.code === code.trim().toLowerCase());
+      const raw = opt ? (lang === 'ru' ? opt.label.ru : opt.label.en) : code.trim();
+      return raw.toLowerCase();
+    })
+    .filter((w) => w.length > 0);
+  if (words.length === 0) return '';
+  const first = words[0].charAt(0).toUpperCase() + words[0].slice(1);
+  const rest = words.slice(1);
+  const body = rest.length > 0 ? [first, ...rest].join(', ') : first;
+  return `${body}.`;
+}
+
+function injectGenreDetailIfNeeded(
+  details: detailsProps[],
+  album: IAlbums,
+  lang: SupportedLang
+): detailsProps[] {
+  const codes = readGenreCodesFromRelease(album.release);
+  if (codes.length === 0) return details;
+  const line = formatGenreDetailLine(codes, lang);
+  if (!line) return details;
+  const base = stripGenreDetailBlocks(details);
+  const title = lang === 'ru' ? 'Жанр' : 'Genre';
+  return [{ id: 1, title, content: [line] } as detailsProps, ...base];
+}
+
 function albumTranslationStrings(
   album: IAlbums,
-  field: 'album' | 'fullName' | 'description'
+  field: 'fullName' | 'description'
 ): Partial<Record<SupportedLang, string | null | undefined>> {
   return {
     en: album.translations?.en?.[field],
@@ -50,6 +99,25 @@ export function resolveAlbumFieldForEdit(
   field: 'album' | 'fullName' | 'description',
   lang: SupportedLang
 ): ResolvedAlbumEditField {
+  if (field === 'album') {
+    const root = (album.album ?? '').trim();
+    if (root) return { value: root, isFallback: false, source: 'root' };
+    const legacy = resolveTranslationString(
+      {
+        en: album.translations?.en?.album,
+        ru: album.translations?.ru?.album,
+      },
+      lang
+    );
+    if (legacy)
+      return {
+        value: legacy,
+        isFallback: true,
+        source: lang,
+      };
+    return { value: '', isFallback: false, source: 'root' };
+  }
+
   const chain = buildTranslationFallbackLocales(
     lang,
     DEFAULT_CONTENT_LOCALE,
@@ -62,8 +130,7 @@ export function resolveAlbumFieldForEdit(
     }
   }
   let root = '';
-  if (field === 'album') root = (album.album ?? '').trim();
-  else if (field === 'fullName') root = (album.fullName ?? '').trim();
+  if (field === 'fullName') root = (album.fullName ?? '').trim();
   else root = (album.description ?? '').trim();
   return {
     value: root,
@@ -76,6 +143,8 @@ export function getAlbumDetailsForEdit(
   album: IAlbums,
   lang: SupportedLang
 ): ResolvedAlbumEditDetails {
+  const stripGenres = readGenreCodesFromRelease(album.release).length > 0;
+
   const chain = buildTranslationFallbackLocales(
     lang,
     DEFAULT_CONTENT_LOCALE,
@@ -84,13 +153,17 @@ export function getAlbumDetailsForEdit(
   for (const loc of chain) {
     const d = album.translations?.[loc]?.details;
     if (Array.isArray(d) && d.length > 0) {
-      return { details: d, isFallback: loc !== lang, source: loc };
+      const details = stripGenres
+        ? stripGenreDetailBlocks(d as detailsProps[])
+        : (d as detailsProps[]);
+      return { details, isFallback: loc !== lang, source: loc };
     }
   }
   const root = Array.isArray(album.details) ? album.details : [];
+  const details = stripGenres ? stripGenreDetailBlocks(root) : root;
   return {
-    details: root,
-    isFallback: root.length > 0,
+    details,
+    isFallback: details.length > 0,
     source: 'root',
   };
 }
@@ -187,9 +260,21 @@ export function resolveAlbumStringField(
   field: 'album' | 'fullName' | 'description',
   lang: SupportedLang
 ): string {
+  if (field === 'album') {
+    const root = (album.album ?? '').trim();
+    if (root) return root;
+    return (
+      resolveTranslationString(
+        {
+          en: album.translations?.en?.album,
+          ru: album.translations?.ru?.album,
+        },
+        lang
+      ) || ''
+    );
+  }
   const fromTranslations = resolveTranslationString(albumTranslationStrings(album, field), lang);
   if (fromTranslations) return fromTranslations;
-  if (field === 'album') return album.album ?? '';
   if (field === 'fullName') return album.fullName ?? '';
   return album.description ?? '';
 }
@@ -273,12 +358,15 @@ export function resolveAlbumForDisplay(album: IAlbums, lang: SupportedLang): IAl
 
   const tracks = (album.tracks ?? []).map((t) => resolveTrackForDisplay(t, lang));
 
+  const rawDetails = resolveAlbumDetailsForDisplay(album, lang);
+  const details = injectGenreDetailIfNeeded(rawDetails, album, lang);
+
   return {
     ...album,
     album: albumTitle,
     fullName,
     description: resolveAlbumStringField(album, 'description', lang),
-    details: resolveAlbumDetailsForDisplay(album, lang),
+    details,
     tracks,
   };
 }

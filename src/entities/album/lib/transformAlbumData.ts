@@ -49,7 +49,8 @@ export function transformAlbumToAlbumData(
   // Обрабатываем release (объект с полем date)
   let releaseDate: Date | null = null;
   if (source.release && typeof source.release === 'object' && 'date' in source.release) {
-    const dateStr = source.release.date;
+    const raw = source.release.date;
+    const dateStr = typeof raw === 'string' ? raw : typeof raw === 'number' ? String(raw) : '';
     if (dateStr) {
       releaseDate = new Date(dateStr);
     }

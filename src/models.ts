@@ -28,9 +28,10 @@ export interface PopupProps extends HamburgerProps {
  * Albums
  */
 
-/** Переводимые поля альбома (`translations.ru` / `translations.en`). */
+/** Переводимые поля альбома (`translations.ru` / `translations.en`). Название альбома — только на корне `IAlbums.album`. */
 export interface IAlbumTranslationsLocale {
-  album: string;
+  /** @deprecated Старые ответы API; не записывать. */
+  album?: string;
   fullName: string;
   description: string;
   details: detailsProps[];
@@ -48,8 +49,7 @@ export interface IAlbums {
    */
   artist: string;
   /**
-   * Название альбома (кэш/legacy для чтения и fallback в UI).
-   * Запись переводимого названия — только в `translations[lang].album`.
+   * Название альбома — одно на альбом (все языки). Запись на корне API/БД, не в translations.
    */
   album: string;
   /** Полное имя для отображения; запись — в `translations[lang].fullName`. */
@@ -59,10 +59,11 @@ export interface IAlbums {
   /** Обложка альбома (имя файла без расширения и суффикса размера) */
   cover?: string;
 
-  /** Релиз альбома */
-  release: {
-    [key: string]: string;
-  };
+  /** Видимость страницы альбома (одно значение на альбом; синхронизируется по всем lang в БД). */
+  isPublic?: boolean;
+
+  /** Релиз альбома (единый JSON на альбом: дата, UPC, продажи, `genreCodes`, `tags` и т.д.) */
+  release: Record<string, unknown>;
   /** URL музыкальных агрегаторов */
   buttons: {
     [key: string]: string;

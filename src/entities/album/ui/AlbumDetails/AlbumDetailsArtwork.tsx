@@ -12,7 +12,11 @@ export default function AlbumDetailsArtwork({ album }: { album: IAlbums }) {
 
   // UI словарь загружается через loader
 
-  const { photographer, photographerURL, designer, designerURL } = album?.release || {};
+  const rel = album?.release || {};
+  const photographer = typeof rel.photographer === 'string' ? rel.photographer : '';
+  const photographerURL = typeof rel.photographerURL === 'string' ? rel.photographerURL : '';
+  const designer = typeof rel.designer === 'string' ? rel.designer : '';
+  const designerURL = typeof rel.designerURL === 'string' ? rel.designerURL : '';
   const titles = ui?.titles ?? {};
 
   return (

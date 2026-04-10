@@ -297,8 +297,20 @@ export function EditAlbumModal({
       }
     }
 
-    // --- парсинг Genre из details ---
+    // --- Genre: `release.genreCodes` (канон); иначе legacy-блок в details ---
     const genreCodes: string[] = [];
+    const releaseForGenre =
+      album.release && typeof album.release === 'object'
+        ? (album.release as Record<string, unknown>)
+        : {};
+    const codesFromRelease = releaseForGenre.genreCodes;
+    if (Array.isArray(codesFromRelease)) {
+      for (const c of codesFromRelease) {
+        if (typeof c === 'string' && c.trim() && !genreCodes.includes(c.trim())) {
+          genreCodes.push(c.trim());
+        }
+      }
+    }
 
     const genreDetail = Array.isArray(parsedDetails)
       ? parsedDetails.find(
@@ -311,7 +323,7 @@ export function EditAlbumModal({
         )
       : null;
 
-    if (genreDetail && (genreDetail as any).content) {
+    if (genreCodes.length === 0 && genreDetail && (genreDetail as any).content) {
       // Обрабатываем content - новый формат: массив строк в нижнем регистре ["grunge", "alternative rock"]
       // Поддерживаем обратную совместимость со старым форматом (строка с запятыми)
       const content = (genreDetail as any).content;
@@ -544,6 +556,12 @@ export function EditAlbumModal({
       const releaseDate = releaseDateISO ? formatDateFromISO(releaseDateISO) : '';
       const upc = (release as any).UPC || '';
 
+      const tagsFromRelease = Array.isArray((release as any).tags)
+        ? ((release as any).tags as unknown[])
+            .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+            .map((t) => t.trim())
+        : [];
+
       const purchaseLinks: StreamingLink[] = (() => {
         const links: StreamingLink[] = [];
         if (album.buttons && typeof album.buttons === 'object') {
@@ -625,6 +643,11 @@ export function EditAlbumModal({
         showAddMasteringInputs: false,
         purchaseLinks: purchaseLinks.length ? purchaseLinks : prevForm.purchaseLinks,
         streamingLinks: streamingLinks.length ? streamingLinks : prevForm.streamingLinks,
+        tags: tagsFromRelease.length > 0 ? tagsFromRelease : prevForm.tags || [],
+        visibleOnAlbumPage:
+          typeof album.isPublic === 'boolean'
+            ? album.isPublic
+            : (prevForm.visibleOnAlbumPage ?? true),
       };
     });
 
@@ -1566,9 +1589,9 @@ export function EditAlbumModal({
 
     const updateData: Record<string, unknown> = {
       albumId: finalAlbumId,
+      album: albumTitle,
       translations: {
         [normalizedLang]: {
-          album: albumTitle,
           fullName,
           description:
             finalFormData.description !== undefined
@@ -1583,7 +1606,7 @@ export function EditAlbumModal({
           ? { ...(originalAlbum.buttons as any), ...buttons }
           : buttons,
       lang: normalizedLang,
-      isPublic: !exists ? true : undefined,
+      isPublic: finalFormData.visibleOnAlbumPage,
       ...(newCover ? { cover: newCover } : {}),
     };
 
