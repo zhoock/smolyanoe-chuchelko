@@ -1156,9 +1156,28 @@ export class Universe3D {
     return this.activeCard !== null;
   }
 
+  /**
+   * showModal()‑плеер рендерится в dialog.popup; глобальный wheel с preventDefault
+   * отменяет нативную прокрутку синхронизированного текста — пропускаем событие.
+   */
+  private isWheelOverFullscreenPlayer(e: WheelEvent): boolean {
+    const t = e.target;
+    if (!t || !(t instanceof Element)) return false;
+    const dialog = t.closest('dialog');
+    return (
+      dialog != null &&
+      dialog.classList.contains('popup') &&
+      dialog.querySelector('.player') != null
+    );
+  }
+
   private handleWheel = (e: WheelEvent) => {
     if (this.isInteractionLocked()) {
       e.preventDefault();
+      return;
+    }
+
+    if (this.isWheelOverFullscreenPlayer(e)) {
       return;
     }
 
