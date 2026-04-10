@@ -904,8 +904,8 @@ function UserDashboard() {
       }));
 
       if (url) {
-        // Ключ в БД / storage: имя файла без расширения (надёжнее, чем парсить signed URL).
-        const finalImageKey = fileName.replace(/\.[^/.]+$/, '');
+        // Ключ в БД совпадает с именем объекта в Storage (с расширением), чтобы URL не подставлял .jpg по умолчанию.
+        const finalImageKey = fileName;
 
         const token = getToken();
         if (!token) {

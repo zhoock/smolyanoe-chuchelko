@@ -37,12 +37,11 @@ export function BlockImage({
 
     setIsUploading(true);
     try {
-      // Генерируем имя файла без расширения для использования как imageKey
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const baseFileName = file.name.replace(/\.[^/.]+$/, '');
       const timestamp = Date.now();
       const fileName = `article_${timestamp}_${baseFileName}.${fileExtension}`;
-      const imageKey = `article_${timestamp}_${baseFileName}`;
+      const imageKey = fileName;
 
       const url = await uploadFile({
         file,

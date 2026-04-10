@@ -1514,7 +1514,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           const baseFileName = file.name.replace(/\.[^/.]+$/, '');
           const timestamp = Date.now() + i;
           const fileName = `article_${timestamp}_${baseFileName}.${fileExtension}`;
-          const imageKey = `article_${timestamp}_${baseFileName}`;
+          const imageKey = fileName;
 
           const url = await uploadFile({
             file,
