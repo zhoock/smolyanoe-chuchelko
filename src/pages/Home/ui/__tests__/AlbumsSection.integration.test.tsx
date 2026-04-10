@@ -249,7 +249,7 @@ describe('AlbumsSection integration tests', () => {
     expect(screen.getByText('…')).toBeInTheDocument();
   });
 
-  test('должен обработать пустой список альбомов', () => {
+  test('не рендерит секцию при успешной загрузке и пустом списке альбомов', () => {
     renderWithProviders(<AlbumsSection />, {
       preloadedState: {
         lang: { current: 'en' },
@@ -292,11 +292,7 @@ describe('AlbumsSection integration tests', () => {
       },
     });
 
-    expect(screen.getByText('Albums')).toBeInTheDocument();
-    const albumsList = screen
-      .getByRole('region', { name: /albums/i })
-      .querySelector('.albums__list');
-    expect(albumsList).toBeInTheDocument();
-    expect(albumsList?.children.length).toBe(0);
+    expect(screen.queryByRole('region', { name: /albums/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Albums')).not.toBeInTheDocument();
   });
 });

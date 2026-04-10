@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
@@ -8,6 +8,8 @@ import { useLang } from '@app/providers/lang';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumsData } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './AlbumsSection.scss';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 
 // Адаптивное количество альбомов для отображения на главной
 const getInitialCount = () => {
@@ -19,6 +21,9 @@ const getInitialCount = () => {
 
 export function AlbumsSection() {
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
+  const artistSlug = searchParams.get('artist');
+  const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const allAlbums = useAppSelector((state) => selectAlbumsData(state, lang));
@@ -41,6 +46,10 @@ export function AlbumsSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
+  if (albumsStatus === 'succeeded' && allAlbums.length === 0) {
+    return null;
+  }
+
   return (
     <section id="albums" className="albums main-background" aria-labelledby="home-albums-heading">
       <div className="wrapper">
@@ -58,7 +67,7 @@ export function AlbumsSection() {
                   <AlbumCover
                     img={album.cover || ''}
                     userId={album.userId}
-                    fullName={album.fullName}
+                    fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
                   />
                 </WrapperAlbumCover>
               ))}

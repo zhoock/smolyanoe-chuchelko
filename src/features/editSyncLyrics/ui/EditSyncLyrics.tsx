@@ -21,6 +21,12 @@ import {
   loadAuthorshipFromStorage,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import {
+  formatAlbumDisplayFullName,
+  readStoredProfileDisplayName,
+  siteArtistUiLabel,
+} from '@shared/lib/profileDisplayName';
 import './EditSyncLyrics.style.scss';
 
 interface EditSyncLyricsProps {
@@ -43,6 +49,9 @@ export default function EditSyncLyrics({
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const albumsError = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
+  const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
+    variant: 'authenticated',
+  });
 
   const dispatch = useAppDispatch();
 
@@ -111,12 +120,18 @@ export default function EditSyncLyrics({
           albumTitle: album.album,
         })
       );
+      const displayArtist = siteArtistUiLabel(siteArtistName);
       dispatch(
         playerActions.setAlbumMeta({
           albumId: album.albumId || albumId,
+          userId: album.userId ?? null,
           album: album.album,
-          artist: album.artist,
-          fullName: album.fullName,
+          artist: displayArtist,
+          fullName:
+            formatAlbumDisplayFullName(
+              siteArtistName.trim() || readStoredProfileDisplayName().trim(),
+              album.album
+            ) || album.album,
           cover: album.cover ?? null,
         })
       );
@@ -134,7 +149,7 @@ export default function EditSyncLyrics({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [albumsStatus, albumId, trackId, dispatch, location]); // album используется из замыкания
+  }, [albumsStatus, albumId, trackId, dispatch, location, siteArtistName]); // album из замыкания
 
   // Отслеживаем изменения текста в localStorage (для обновления при сохранении в другой вкладке)
   useEffect(() => {
@@ -842,13 +857,13 @@ export default function EditSyncLyrics({
             <div className="admin-sync__player-cover">
               <AlbumCover
                 img={album.cover || ''}
-                fullName={`${album.artist} - ${album.album}`}
+                fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
                 size={448}
               />
             </div>
             <div className="admin-sync__player-info">
               <div className="admin-sync__player-title">{track.title}</div>
-              <div className="admin-sync__player-artist">{album.artist}</div>
+              <div className="admin-sync__player-artist">{siteArtistUiLabel(siteArtistName)}</div>
             </div>
             <div className="admin-sync__player-controls">
               <button

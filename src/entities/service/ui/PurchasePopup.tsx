@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
 import type { IAlbums } from '@models';
 import AlbumCover from '@entities/album/ui/AlbumCover';
@@ -10,6 +10,8 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { getUser } from '@shared/lib/auth';
 import { useCart } from '../model/CartContext';
 import './PurchasePopup.style.scss';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 
 type Step = 'cart' | 'checkout';
 
@@ -92,12 +94,14 @@ function CartStep({
   onContinueShopping,
   onCheckout,
   t,
+  siteDisplayName,
 }: {
   albums: IAlbums[];
   onRemove: (albumId: string) => void;
   onContinueShopping: () => void;
   onCheckout: () => void;
   t: any;
+  siteDisplayName: string;
 }) {
   // Вычисляем общую стоимость
   const totalPrice = albums.reduce((sum, album) => {
@@ -140,7 +144,7 @@ function CartStep({
                 {album?.cover ? (
                   <AlbumCover
                     img={album.cover}
-                    fullName={album.fullName}
+                    fullName={formatAlbumDisplayFullName(siteDisplayName, album.album)}
                     size={64}
                     densities={[1, 2]}
                     sizes="80px"
@@ -218,12 +222,16 @@ function CheckoutStep({
   formData,
   onFormDataChange,
   t,
+  siteDisplayName,
+  siteArtistLabel,
 }: {
   album: IAlbums;
   onBackToCart: () => void;
   formData: CheckoutFormData;
   onFormDataChange: (data: CheckoutFormData) => void;
   t: any;
+  siteDisplayName: string;
+  siteArtistLabel: string;
 }) {
   const { clearCart } = useCart();
   const [email, setEmail] = useState(formData.email);
@@ -292,7 +300,7 @@ function CheckoutStep({
       const currency = albumCurrency || 'RUB';
 
       // Формируем описание товара
-      const description = `${album.album} - ${album.artist} (download)`;
+      const description = `${album.album} - ${siteArtistLabel} (download)`;
 
       // Сохраняем исходную страницу для возврата после оплаты
       // Используем только pathname, чтобы избежать проблем с query параметрами при редиректе
@@ -364,7 +372,7 @@ function CheckoutStep({
   return (
     <div className="purchase-popup__checkout">
       <h2 className="purchase-popup__title">
-        {album.artist} - {t?.checkout?.checkout?.title || 'Checkout'}
+        {siteArtistLabel} - {t?.checkout?.checkout?.title || 'Checkout'}
       </h2>
 
       <div className="purchase-popup__checkout-content">
@@ -591,7 +599,7 @@ function CheckoutStep({
                       {album?.cover ? (
                         <AlbumCover
                           img={album.cover}
-                          fullName={album.fullName}
+                          fullName={formatAlbumDisplayFullName(siteDisplayName, album.album)}
                           size={64}
                           densities={[1, 2]}
                           sizes="64px"
@@ -653,6 +661,12 @@ export function PurchasePopup({
   onRegister,
 }: PurchasePopupProps) {
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
+  const artistSlug = searchParams.get('artist');
+  const { displayName: siteArtistName, displayLabel: siteArtistLabel } = useSiteArtistDisplayName(
+    lang,
+    { artistSlug }
+  );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const t = ui || null;
 
@@ -760,6 +774,7 @@ export function PurchasePopup({
               onContinueShopping={onContinueShopping}
               onCheckout={handleCheckout}
               t={t}
+              siteDisplayName={siteArtistName}
             />
           ) : (
             <CheckoutStep
@@ -768,6 +783,8 @@ export function PurchasePopup({
               formData={checkoutFormData}
               onFormDataChange={setCheckoutFormData}
               t={t}
+              siteDisplayName={siteArtistName}
+              siteArtistLabel={siteArtistLabel}
             />
           )}
         </div>

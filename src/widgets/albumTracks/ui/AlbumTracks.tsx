@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from 'react-redux';
 import type { RootState } from '@shared/model/appStore/types';
@@ -11,7 +11,12 @@ import { useLang } from '@app/providers/lang';
 import { gaEvent } from '@shared/lib/analytics';
 import { TrackList } from '@entities/track/ui/TrackList';
 import { getUserAudioUrl } from '@shared/api/albums';
-import { fetchPublicProfileDisplayName } from '@shared/lib/profileDisplayName';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
+import {
+  formatAlbumDisplayFullName,
+  readStoredProfileDisplayName,
+} from '@shared/lib/profileDisplayName';
 import './style.scss';
 
 /**
@@ -46,6 +51,27 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
     return t || null;
   }, [location.search]);
 
+  const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
+    artistSlug: artistSlugFromUrl,
+  });
+
+  const resolvedSiteArtist = useMemo(
+    () => siteArtistName.trim() || readStoredProfileDisplayName().trim(),
+    [siteArtistName]
+  );
+  const displayArtistLabel = resolvedSiteArtist ? resolvedSiteArtist : '—';
+  const fullNameMeta = useMemo(
+    () => formatAlbumDisplayFullName(resolvedSiteArtist, album.album),
+    [resolvedSiteArtist, album.album]
+  );
+
+  const displayArtistLabelRef = useRef(displayArtistLabel);
+  const fullNameMetaRef = useRef(fullNameMeta);
+  useLayoutEffect(() => {
+    displayArtistLabelRef.current = displayArtistLabel;
+    fullNameMetaRef.current = fullNameMeta;
+  }, [displayArtistLabel, fullNameMeta]);
+
   // UI словарь загружается через loader
 
   useEffect(() => {
@@ -68,90 +94,77 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       return;
     }
 
-    let cancelled = false;
+    const savedState = loadPlayerState();
+    const currentAlbumId = fallbackAlbumClientId(album);
+    const currentState = store.getState().player;
 
-    void (async () => {
-      const displayArtist =
-        (await fetchPublicProfileDisplayName(lang, artistSlugFromUrl)).trim() || album.artist;
-      const fullNameMeta = album.fullName ?? `${displayArtist} — ${album.album}`;
+    if (currentState.playlist.length !== 0) return;
 
-      if (cancelled) return;
+    const artistForMeta = displayArtistLabelRef.current;
+    const coverFullName = fullNameMetaRef.current;
 
-      const savedState = loadPlayerState();
-      const currentAlbumId =
-        album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
-      const currentState = store.getState().player;
+    if (savedState && savedState.albumId === currentAlbumId) {
+      const validTrackIndex = Math.max(
+        0,
+        Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
+      );
 
-      if (currentState.playlist.length !== 0) return;
-
-      if (savedState && savedState.albumId === currentAlbumId) {
-        const validTrackIndex = Math.max(
-          0,
-          Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
-        );
-
-        dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
-        dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
-        dispatch(
-          playerActions.setAlbumInfo({
-            albumId: savedState.albumId,
-            albumTitle: savedState.albumTitle ?? album.album,
-          })
-        );
-        dispatch(
-          playerActions.setAlbumMeta({
-            albumId: savedState.albumId,
-            userId: album.userId ?? null,
-            publicSlug: artistSlugFromUrl ?? undefined,
-            album: album.album,
-            artist: displayArtist,
-            fullName: fullNameMeta,
-            cover: album.cover ?? null,
-          })
-        );
-        dispatch(
-          playerActions.setSourceLocation({
-            pathname: location.pathname,
-            search: location.search || undefined,
-          })
-        );
-        dispatch(playerActions.setVolume(savedState.volume));
-        dispatch(playerActions.pause());
-      } else {
-        dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
-        dispatch(playerActions.setCurrentTrackIndex(0));
-        dispatch(playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album }));
-        dispatch(
-          playerActions.setAlbumMeta({
-            albumId: currentAlbumId,
-            userId: album.userId ?? null,
-            publicSlug: artistSlugFromUrl ?? undefined,
-            album: album.album,
-            artist: displayArtist,
-            fullName: fullNameMeta,
-            cover: album.cover ?? null,
-          })
-        );
-        dispatch(
-          playerActions.setSourceLocation({
-            pathname: location.pathname,
-            search: location.search || undefined,
-          })
-        );
-        dispatch(playerActions.requestPlay());
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+      dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+      dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
+      dispatch(
+        playerActions.setAlbumInfo({
+          albumId: savedState.albumId,
+          albumTitle: savedState.albumTitle ?? album.album,
+        })
+      );
+      dispatch(
+        playerActions.setAlbumMeta({
+          albumId: savedState.albumId,
+          userId: album.userId ?? null,
+          publicSlug: artistSlugFromUrl ?? undefined,
+          album: album.album,
+          artist: artistForMeta,
+          fullName: coverFullName,
+          cover: album.cover ?? null,
+        })
+      );
+      dispatch(
+        playerActions.setSourceLocation({
+          pathname: location.pathname,
+          search: location.search || undefined,
+        })
+      );
+      dispatch(playerActions.setVolume(savedState.volume));
+      dispatch(playerActions.pause());
+    } else {
+      dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+      dispatch(playerActions.setCurrentTrackIndex(0));
+      dispatch(playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album }));
+      dispatch(
+        playerActions.setAlbumMeta({
+          albumId: currentAlbumId,
+          userId: album.userId ?? null,
+          publicSlug: artistSlugFromUrl ?? undefined,
+          album: album.album,
+          artist: artistForMeta,
+          fullName: coverFullName,
+          cover: album.cover ?? null,
+        })
+      );
+      dispatch(
+        playerActions.setSourceLocation({
+          pathname: location.pathname,
+          search: location.search || undefined,
+        })
+      );
+      dispatch(playerActions.requestPlay());
+    }
   }, [
     location.hash,
     location.pathname,
     location.search,
     album,
     artistSlugFromUrl,
-    lang,
     dispatch,
     store,
   ]);
@@ -192,15 +205,10 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   }, [store]);
 
   const openPlayer = useCallback(
-    async (trackIndex: number, options?: { openFullScreen?: boolean }) => {
-      const albumId =
-        album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
+    (trackIndex: number, options?: { openFullScreen?: boolean }) => {
+      const albumId = fallbackAlbumClientId(album);
       const playlist = album.tracks || [];
       const selectedTrack = playlist[trackIndex];
-
-      const displayArtist =
-        (await fetchPublicProfileDisplayName(lang, artistSlugFromUrl)).trim() || album.artist;
-      const fullNameMeta = album.fullName ?? `${displayArtist} — ${album.album}`;
 
       dispatch(playerActions.setPlaylist(transformTracksForStorage(playlist)));
 
@@ -224,7 +232,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
           userId: album.userId ?? null,
           publicSlug: artistSlugFromUrl ?? undefined,
           album: album.album,
-          artist: displayArtist,
+          artist: displayArtistLabel,
           fullName: fullNameMeta,
           cover: album.cover ?? null,
         })
@@ -248,7 +256,16 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         );
       }
     },
-    [dispatch, album, artistSlugFromUrl, lang, location.pathname, location.search, navigate, store]
+    [
+      dispatch,
+      album,
+      location.pathname,
+      location.search,
+      navigate,
+      store,
+      displayArtistLabel,
+      fullNameMeta,
+    ]
   );
 
   const handleTrackSelect = useCallback(

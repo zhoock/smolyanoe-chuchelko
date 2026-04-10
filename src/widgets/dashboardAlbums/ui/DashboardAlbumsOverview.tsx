@@ -24,6 +24,8 @@ import {
   type TrackStatus,
 } from '@widgets/dashboard/lib/trackStatus';
 import './DashboardAlbumsOverview.style.scss';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 
 interface AlbumStats {
   total: number;
@@ -95,6 +97,12 @@ export default function DashboardAlbumsOverview({
 }: DashboardAlbumsOverviewProps) {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
+  const { displayName: siteArtistName, displayLabel: siteArtistLabel } = useSiteArtistDisplayName(
+    lang,
+    {
+      variant: 'authenticated',
+    }
+  );
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const albums = useAppSelector((state) => selectAlbumsData(state, lang));
@@ -230,12 +238,15 @@ export default function DashboardAlbumsOverview({
                 >
                   <div className="admin__album-cover">
                     {album.cover && (
-                      <AlbumCover img={album.cover} fullName={`${album.artist} - ${album.album}`} />
+                      <AlbumCover
+                        img={album.cover}
+                        fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
+                      />
                     )}
                   </div>
                   <div className="admin__album-info">
                     <h2 className="admin__album-title">{album.album}</h2>
-                    <p className="admin__album-artist">{album.artist}</p>
+                    <p className="admin__album-artist">{siteArtistLabel}</p>
                     <div className="admin__album-stats">
                       <div className="admin__album-progress">
                         <div className="admin__album-progress-bar">

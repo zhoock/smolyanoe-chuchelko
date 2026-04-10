@@ -14,7 +14,13 @@ import { fetchAlbums } from '@entities/album';
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
 import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
-import { fetchPublicProfileForDisplay } from '@shared/lib/profileDisplayName';
+import {
+  fetchPublicProfileForDisplay,
+  formatAlbumDisplayFullName,
+  readStoredProfileDisplayName,
+  siteArtistUiLabel,
+} from '@shared/lib/profileDisplayName';
+import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
@@ -137,9 +143,7 @@ export function HomePage() {
           dispatch(playerActions.setPlaylist(playlist));
           dispatch(playerActions.setCurrentTrackIndex(0));
 
-          const albumId =
-            firstAlbum.albumId ??
-            `${firstAlbum.artist}-${firstAlbum.album}`.toLowerCase().replace(/\s+/g, '-');
+          const albumId = fallbackAlbumClientId(firstAlbum);
 
           dispatch(
             playerActions.setAlbumInfo({
@@ -148,7 +152,10 @@ export function HomePage() {
             })
           );
 
-          const displayArtist = (artist.name?.trim() || firstAlbum.artist) ?? '';
+          const profileRow = await fetchPublicProfileForDisplay(lang, artist.publicSlug ?? null);
+          const resolvedForTitle =
+            profileRow.displayName.trim() || readStoredProfileDisplayName().trim();
+          const displayArtist = siteArtistUiLabel(profileRow.displayName);
           dispatch(
             playerActions.setAlbumMeta({
               albumId,
@@ -157,8 +164,7 @@ export function HomePage() {
               album: firstAlbum.album,
               artist: displayArtist,
               fullName:
-                firstAlbum.fullName ??
-                (displayArtist ? `${displayArtist} — ${firstAlbum.album}` : ''),
+                formatAlbumDisplayFullName(resolvedForTitle, firstAlbum.album) || firstAlbum.album,
               cover: firstAlbum.cover ?? null,
             })
           );

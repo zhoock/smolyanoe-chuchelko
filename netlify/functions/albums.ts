@@ -89,7 +89,6 @@ interface AlbumOwnerSlugRow {
 
 interface CreateAlbumRequest {
   albumId: string;
-  artist: string;
   album: string;
   fullName?: string;
   description?: string;
@@ -103,7 +102,6 @@ interface CreateAlbumRequest {
 
 interface UpdateAlbumRequest {
   albumId: string;
-  artist?: string;
   album?: string;
   fullName?: string;
   description?: string;
@@ -781,20 +779,17 @@ export const handler: Handler = async (
       // Логируем в console.log для Netlify
       console.log('📝 POST /api/albums - Request data:', {
         albumId: data.albumId,
-        artist: data.artist,
         album: data.album,
         lang: data.lang,
-        hasArtist: data.artist !== undefined,
         hasAlbum: data.album !== undefined,
         bodyKeys: Object.keys(data),
       });
 
-      // Валидация данных
-      if (!data.albumId || !data.artist || !data.album || !data.lang || !validateLang(data.lang)) {
+      // Валидация данных (artist в БД не обновляем из API — колонка остаётся как есть)
+      if (!data.albumId || !data.album || !data.lang || !validateLang(data.lang)) {
         console.error('❌ POST /api/albums - Validation failed:', {
           missingFields: {
             albumId: !data.albumId,
-            artist: !data.artist,
             album: !data.album,
             lang: !data.lang || !validateLang(data.lang),
           },
@@ -802,7 +797,7 @@ export const handler: Handler = async (
         });
         return createErrorResponse(
           400,
-          'Missing required fields: albumId, artist, album, lang (must be "en" or "ru")'
+          'Missing required fields: albumId, album, lang (must be "en" or "ru")'
         );
       }
 
@@ -817,7 +812,6 @@ export const handler: Handler = async (
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (user_id, album_id, lang)
         DO UPDATE SET
-          artist = EXCLUDED.artist,
           album = EXCLUDED.album,
           full_name = EXCLUDED.full_name,
           description = EXCLUDED.description,
@@ -830,7 +824,7 @@ export const handler: Handler = async (
         [
           albumUserId,
           data.albumId,
-          data.artist,
+          '',
           data.album,
           data.fullName || null,
           data.description || null,
@@ -880,7 +874,6 @@ export const handler: Handler = async (
         console.log('📝 PUT /api/albums - Request data:', {
           albumId: data.albumId,
           lang: data.lang,
-          hasArtist: data.artist !== undefined,
           hasAlbum: data.album !== undefined,
           hasDescription: data.description !== undefined,
           hasRelease: data.release !== undefined,
@@ -954,10 +947,6 @@ export const handler: Handler = async (
         const updateValues: unknown[] = [];
         let paramIndex = 1;
 
-        if (data.artist !== undefined) {
-          updateFields.push(`artist = $${paramIndex++}`);
-          updateValues.push(data.artist);
-        }
         if (data.album !== undefined) {
           updateFields.push(`album = $${paramIndex++}`);
           updateValues.push(data.album);
@@ -1152,7 +1141,6 @@ export const handler: Handler = async (
           // Преобразуем в формат IAlbums для JSON
           const albumsForJson = allAlbumsWithTracks.map((album) => ({
             albumId: album.albumId,
-            artist: album.artist,
             album: album.album,
             fullName: album.fullName,
             description: album.description,

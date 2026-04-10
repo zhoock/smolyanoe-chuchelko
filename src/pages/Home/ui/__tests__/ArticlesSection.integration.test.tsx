@@ -237,7 +237,7 @@ describe('ArticlesSection integration tests', () => {
     expect(screen.getByText('…')).toBeInTheDocument();
   });
 
-  test('должен обработать пустой список статей', () => {
+  test('не рендерит секцию при успешной загрузке и пустом списке статей', () => {
     renderWithProviders(<ArticlesSection />, {
       preloadedState: {
         lang: { current: 'en' },
@@ -280,11 +280,7 @@ describe('ArticlesSection integration tests', () => {
       },
     });
 
-    expect(screen.getByText('Articles')).toBeInTheDocument();
-    const articlesList = screen
-      .getByRole('region', { name: /articles/i })
-      .querySelector('.articles__list');
-    expect(articlesList).toBeInTheDocument();
-    expect(articlesList?.children.length).toBe(0);
+    expect(screen.queryByRole('region', { name: /articles/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Articles')).not.toBeInTheDocument();
   });
 });

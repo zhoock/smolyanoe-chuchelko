@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import type { TracksProps, IAlbums } from '@models';
 import type { AppStore, RootState } from '@shared/model/appStore/types';
+import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 
 function formatDuration(duration?: number | string): string {
   // Если duration не задан или не является валидным числом
@@ -73,10 +74,7 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
     buildPlaylistSignature(initialState.player.playlist)
   );
 
-  const albumUniqueId = useMemo(
-    () => album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-'),
-    [album.albumId, album.artist, album.album]
-  );
+  const albumUniqueId = useMemo(() => fallbackAlbumClientId(album), [album]);
 
   const pagePlaylistSignature = useMemo(() => buildPlaylistSignature(tracks), [tracks]);
 

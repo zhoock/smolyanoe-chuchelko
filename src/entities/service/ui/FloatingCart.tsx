@@ -3,6 +3,9 @@ import { useCart } from '../model/CartContext';
 import { PurchasePopup } from './PurchasePopup';
 import AlbumCover from '@entities/album/ui/AlbumCover';
 import { useLang } from '@app/providers/lang';
+import { useSearchParams } from 'react-router-dom';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './FloatingCart.style.scss';
@@ -11,6 +14,9 @@ export function FloatingCart() {
   const { cartAlbums, removeFromCart, isCartEmpty, cartItemsCount } = useCart();
   const [isPurchasePopupOpen, setIsPurchasePopupOpen] = useState(false);
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
+  const artistSlug = searchParams.get('artist');
+  const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const t = ui || null;
 
@@ -70,7 +76,7 @@ export function FloatingCart() {
               >
                 <AlbumCover
                   img={album.cover!}
-                  fullName={album.fullName}
+                  fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
                   size={56}
                   densities={[1, 2]}
                   sizes="56px"
@@ -92,7 +98,7 @@ export function FloatingCart() {
           <div className="floating-cart__thumbnail">
             <AlbumCover
               img={cartAlbums[0].cover!}
-              fullName={cartAlbums[0].fullName}
+              fullName={formatAlbumDisplayFullName(siteArtistName, cartAlbums[0].album)}
               size={56}
               densities={[1, 2]}
               sizes="56px"

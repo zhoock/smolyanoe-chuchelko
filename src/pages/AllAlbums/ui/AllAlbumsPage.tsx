@@ -1,7 +1,7 @@
 // src/pages/AllAlbums/ui/AllAlbumsPage.tsx
 
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -12,12 +12,17 @@ import { selectAlbumsStatus, selectAlbumsData } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/album/ui/style.scss';
 import './style.scss';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 
 // Количество альбомов для подгрузки за раз
 const BATCH_SIZE = 16;
 
 export function AllAlbumsPage() {
   const { lang } = useLang();
+  const [searchParams] = useSearchParams();
+  const artistSlug = searchParams.get('artist');
+  const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const allAlbums = useAppSelector((state) => selectAlbumsData(state, lang));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -100,7 +105,7 @@ export function AllAlbumsPage() {
                   <AlbumCover
                     img={album.cover || ''}
                     userId={album.userId}
-                    fullName={album.fullName}
+                    fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
                   />
                 </WrapperAlbumCover>
               ))}

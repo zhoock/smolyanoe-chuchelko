@@ -10,6 +10,7 @@ import { playerSelectors } from '@features/player';
 import { loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import type { SyncedLyricsLine, IAlbums } from '@models';
 import { useLang } from '@app/providers/lang';
+import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 import './style.scss';
 
 interface SyncedLyricsDisplayProps {
@@ -48,9 +49,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     let cancelled = false;
     setIsLoading(true);
 
-    // Вычисляем albumId
-    const albumId =
-      album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
+    const albumId = albumMeta?.albumId ?? fallbackAlbumClientId(album);
 
     // Загружаем синхронизации асинхронно
     (async () => {
@@ -114,7 +113,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, album, lang, albumMeta?.publicSlug]);
+  }, [currentTrack, album, lang, albumMeta?.publicSlug, albumMeta?.albumId]);
 
   // Определяем текущую строку на основе времени воспроизведения
   useEffect(() => {

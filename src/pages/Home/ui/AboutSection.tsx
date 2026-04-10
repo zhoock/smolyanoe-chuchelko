@@ -6,7 +6,7 @@ import { Hamburger } from '@shared/ui/hamburger';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { selectAlbumsData } from '@entities/album';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { loadTheBandFromDatabase, loadTheBandFromProfileJson } from '@entities/user/lib';
 import aboutStyles from './AboutSection.module.scss';
 
@@ -21,8 +21,12 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const albums = useAppSelector((state) => selectAlbumsData(state, lang));
   const hasArtistParam = !!searchParams.get('artist');
+  const artistParamKey = searchParams.get('artist')?.trim() ?? '';
+
+  const { displayLabel: bandDisplayLabel } = useSiteArtistDisplayName(lang, {
+    artistSlug: hasArtistParam ? artistParamKey || null : null,
+  });
 
   // Состояние для theBand из БД
   const [theBandFromDb, setTheBandFromDb] = useState<string[] | null>(null);
@@ -31,7 +35,6 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
   const [theBandFromProfileJson, setTheBandFromProfileJson] = useState<string[] | null>(null);
 
   const title = ui?.titles?.theBand ?? '';
-  const artistName = albums[0]?.artist ?? '';
 
   // Загружаем theBand из БД (если пользователь авторизован)
   useEffect(() => {
@@ -109,7 +112,7 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     >
       <div className="wrapper">
         <h2 id="home-about-heading">
-          {title} {artistName}
+          {title} {bandDisplayLabel}
         </h2>
 
         {previewParagraph && (
@@ -133,7 +136,7 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
           <div className={aboutStyles.aboutPopup}>
             <div className={aboutStyles.aboutPopupHeader}>
               <h3 id="about-popup-title">
-                {title} {artistName}
+                {title} {bandDisplayLabel}
               </h3>
               <Hamburger
                 isActive={isAboutModalOpen}

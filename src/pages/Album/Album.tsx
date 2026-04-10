@@ -14,10 +14,19 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 
 export default function Album() {
   const { lang } = useLang();
   const location = useLocation();
+  const artistParam = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('artist');
+  }, [location.search]);
+  const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
+    artistSlug: artistParam,
+  });
   const navigate = useNavigate();
   const { albumId = '' } = useParams<{ albumId: string }>();
   const albumsStatus = useAppSelector((state) => selectAlbumsStatus(state, lang));
@@ -66,11 +75,6 @@ export default function Album() {
       return false;
     }
   }, []);
-
-  const artistParam = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('artist');
-  }, [location.search]);
 
   const albumsListLink = artistParam
     ? `/albums?artist=${encodeURIComponent(artistParam)}`
@@ -137,8 +141,8 @@ export default function Album() {
     );
   }
 
-  // SEO (RU/EN) для конкретного альбома
-  const seoTitle = album.fullName;
+  // SEO (RU/EN) для конкретного альбома — имя из профиля, не albums.artist / album.fullName
+  const seoTitle = formatAlbumDisplayFullName(siteArtistName, album.album);
   const seoDesc = album.description;
 
   const canonical =
@@ -176,7 +180,11 @@ export default function Album() {
         </nav>
 
         <div className="item">
-          <AlbumCover img={album.cover || ''} userId={album.userId} fullName={album.fullName} />
+          <AlbumCover
+            img={album.cover || ''}
+            userId={album.userId}
+            fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
+          />
           <Share />
         </div>
 

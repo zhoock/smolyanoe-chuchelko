@@ -10,6 +10,23 @@ export function readStoredProfileDisplayName(): string {
   }
 }
 
+/** Подпись в UI: актуальное имя, затем кэш профиля, затем placeholder (например «—»). */
+export function siteArtistUiLabel(displayName: string, emptyFallback = '—'): string {
+  const a = displayName.trim();
+  if (a) return a;
+  const b = readStoredProfileDisplayName().trim();
+  if (b) return b;
+  return emptyFallback;
+}
+
+/** Подписи и alt для обложек: единое имя из профиля + название альбома (не albums.artist). */
+export function formatAlbumDisplayFullName(siteDisplayName: string, albumTitle: string): string {
+  const s = siteDisplayName.trim();
+  const t = (albumTitle ?? '').trim();
+  if (s && t) return `${s} — ${t}`;
+  return t || s || '';
+}
+
 export type PublicProfileForDisplay = {
   displayName: string;
   publicSlug: string | null;

@@ -34,6 +34,8 @@ import { useTimeDisplay } from './hooks/useTimeDisplay';
 import { useTrackNavigation } from './hooks/useTrackNavigation';
 import { usePlayerToggles } from './hooks/usePlayerToggles';
 import { UNIVERSE_FOCUS_ARTIST_STORAGE_KEY } from '@/components/view/Universe3D';
+import { siteArtistUiLabel } from '@shared/lib/profileDisplayName';
+import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 
 export default function AudioPlayer({
   album,
@@ -175,10 +177,7 @@ export default function AudioPlayer({
    * Вычисляем уникальный ID альбома для аналитики и ключей.
    * Мемоизируем чтобы не пересчитывать при каждом рендере.
    */
-  const albumId = useMemo(
-    () => album.albumId ?? `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-'),
-    [album.albumId, album.artist, album.album]
-  );
+  const albumId = useMemo(() => fallbackAlbumClientId(album), [album]);
 
   // Refs для работы с DOM элементами и хранения промежуточных значений
   const audioContainerRef = useRef<HTMLDivElement | null>(null); // контейнер для прикрепления audio элемента к DOM
@@ -1088,7 +1087,7 @@ export default function AudioPlayer({
                 : undefined
             }
           >
-            {album.artist || 'Unknown Artist'}
+            {siteArtistUiLabel(albumMeta?.artist ?? '', 'Unknown Artist')}
           </h3>
         </div>
       </div>

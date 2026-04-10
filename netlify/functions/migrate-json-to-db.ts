@@ -20,7 +20,8 @@ interface MigrationResult {
 
 interface AlbumData {
   albumId?: string;
-  artist: string;
+  /** Не записывается в БД при миграции (колонка заполняется пустой строкой). */
+  artist?: string;
   album: string;
   fullName: string;
   description: string;
@@ -65,9 +66,14 @@ async function migrateAlbumsToDb(
 
   for (const album of albums) {
     try {
-      // Генерируем album_id, если его нет
       const albumId =
-        album.albumId || `${album.artist}-${album.album}`.toLowerCase().replace(/\s+/g, '-');
+        album.albumId ||
+        String(album.album || 'album')
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '') ||
+        `album-${Date.now()}`;
 
       // Обрабатываем cover: если это строка, используем её напрямую, если объект - извлекаем img
       let coverValue: string | null = null;
@@ -89,7 +95,6 @@ async function migrateAlbumsToDb(
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (user_id, album_id, lang) 
         DO UPDATE SET
-          artist = EXCLUDED.artist,
           album = EXCLUDED.album,
           full_name = EXCLUDED.full_name,
           description = EXCLUDED.description,
@@ -102,7 +107,7 @@ async function migrateAlbumsToDb(
         [
           userId,
           albumId,
-          album.artist,
+          '',
           album.album,
           album.fullName,
           album.description,

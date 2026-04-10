@@ -67,6 +67,7 @@ import {
   type TrackData,
 } from '@entities/album/lib/transformAlbumData';
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import './UserDashboard.style.scss';
 
@@ -608,6 +609,9 @@ function SortableTrackItem({
 
 function UserDashboard() {
   const { lang, setLang } = useLang();
+  const { displayName: siteArtistDisplayName } = useSiteArtistDisplayName(lang, {
+    variant: 'authenticated',
+  });
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
@@ -1037,7 +1041,10 @@ function UserDashboard() {
     (async () => {
       try {
         // Преобразуем альбомы из Redux store в формат для UI
-        const transformedAlbums = transformAlbumsToAlbumData(albumsFromStore);
+        const transformedAlbums = transformAlbumsToAlbumData(
+          albumsFromStore,
+          siteArtistDisplayName
+        );
 
         // Добавляем authorship из кеша для каждого трека
         transformedAlbums.forEach((album) => {
@@ -1067,7 +1074,7 @@ function UserDashboard() {
     return () => {
       abortController.abort();
     };
-  }, [albumsFromStore, lang]);
+  }, [albumsFromStore, lang, siteArtistDisplayName]);
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
@@ -3000,7 +3007,7 @@ function UserDashboard() {
               if (result && result.length > 0) {
                 console.log('🔄 [UserDashboard] Updating albumsData from fetchAlbums result...');
 
-                const transformedAlbums = transformAlbumsToAlbumData(result);
+                const transformedAlbums = transformAlbumsToAlbumData(result, siteArtistDisplayName);
                 // Добавляем authorship из кеша
                 transformedAlbums.forEach((album) => {
                   album.tracks.forEach((track) => {

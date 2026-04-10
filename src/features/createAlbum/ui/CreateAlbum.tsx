@@ -37,7 +37,6 @@ interface DetailDraft {
 
 interface AlbumDraft {
   albumId: string;
-  artist: string;
   album: string;
   description: string;
   coverImg: string;
@@ -110,7 +109,6 @@ const DEFAULT_SERVICES: ServiceDraft[] = [
 
 const emptyAlbum: AlbumDraft = {
   albumId: '',
-  artist: '',
   album: '',
   description: '',
   coverImg: '',
@@ -181,11 +179,12 @@ const draftToAlbum = (draft: AlbumDraft): IAlbums => {
     };
   });
 
+  const title = draft.album.trim();
   return {
     albumId: draft.albumId.trim() || undefined,
-    artist: draft.artist.trim(),
-    album: draft.album.trim(),
-    fullName: `${draft.artist.trim()} — ${draft.album.trim()}`.trim(),
+    artist: '',
+    album: title,
+    fullName: title,
     description: draft.description.trim(),
     cover,
     release,
@@ -252,7 +251,6 @@ const albumToDraft = (album: IAlbums): AlbumDraft => {
 
   return {
     albumId: album.albumId || '',
-    artist: album.artist || '',
     album: album.album || '',
     description: album.description || '',
     coverImg: album.cover || '',
@@ -271,9 +269,6 @@ const validateDraft = (draft: AlbumDraft): string[] => {
   }
   if (!draft.album.trim()) {
     issues.push('Укажите название альбома.');
-  }
-  if (!draft.artist.trim()) {
-    issues.push('Укажите исполнителя.');
   }
   if (!draft.tracks.length || draft.tracks.every((track) => !track.title.trim())) {
     issues.push('Добавьте хотя бы один трек.');
@@ -496,15 +491,6 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
                 value={draft.albumId}
                 onChange={(event) => handleAlbumChange('albumId', event.target.value)}
                 placeholder="например, 23-remastered"
-              />
-            </div>
-            <div className="album-builder__field">
-              <label htmlFor="album-artist">Исполнитель</label>
-              <input
-                id="album-artist"
-                value={draft.artist}
-                onChange={(event) => handleAlbumChange('artist', event.target.value)}
-                placeholder="Смоляное Чучелко"
               />
             </div>
             <div className="album-builder__field">

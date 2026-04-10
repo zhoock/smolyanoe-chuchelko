@@ -718,9 +718,8 @@ export function EditAlbumModal({
         ? albumsFromStore.find((a: IAlbums) => a.albumId === albumId)
         : null;
 
-      // Подготавливаем параметры для uploadCoverDraft
-      const uploadArtist =
-        getProfileArtistName() || albumData?.artist || originalAlbum?.artist || '';
+      // Подготавливаем параметры для uploadCoverDraft (имя — только из профиля, не albums.artist)
+      const uploadArtist = getProfileArtistName().trim();
       const uploadAlbum = formData.title || albumData?.album || originalAlbum?.album || '';
       const uploadAlbumId = albumId || undefined;
 
@@ -1177,9 +1176,8 @@ export function EditAlbumModal({
         return;
       }
 
-      // Генерируем albumId из названия артиста и альбома
-      // Преобразуем в lowercase, транслитерируем кириллицу, заменяем пробелы на дефисы
-      const generateAlbumId = (artist: string, title: string): string => {
+      // Генерируем albumId из названия альбома (site_name задаётся в профиле, не в альбоме)
+      const generateAlbumIdFromTitle = (title: string): string => {
         // Таблица транслитерации кириллицы в латиницу
         const transliterationMap: Record<string, string> = {
           а: 'a',
@@ -1247,21 +1245,17 @@ export function EditAlbumModal({
             .replace(/^-|-$/g, ''); // Убираем дефисы в начале и конце
         };
 
-        const artistSlug = normalize(artist);
         const titleSlug = normalize(title);
 
-        // Если оба пустые, генерируем на основе timestamp
-        if (!artistSlug && !titleSlug) {
+        if (!titleSlug) {
           return `album-${Date.now()}`;
         }
 
-        // Если titleSlug пустой, используем только artistSlug
-        return titleSlug ? `${artistSlug}-${titleSlug}` : artistSlug;
+        return titleSlug;
       };
 
-      finalAlbumId = generateAlbumId(effectiveArtistName, formData.title);
+      finalAlbumId = generateAlbumIdFromTitle(formData.title);
       console.log('🆕 [EditAlbumModal] Generated albumId for new album:', {
-        artist: effectiveArtistName,
         title: formData.title,
         generatedAlbumId: finalAlbumId,
       });
@@ -1295,11 +1289,11 @@ export function EditAlbumModal({
 
     // Если версия существует, проверяем обязательные поля
     if (exists) {
-      if (!effectiveArtistName && !originalAlbum.artist) {
+      if (!effectiveArtistName) {
         setAlertModal({
           isOpen: true,
           title: 'Ошибка',
-          message: 'Ошибка: не найдено название группы в профиле исполнителя.',
+          message: 'Ошибка: не найдено название группы в профиле исполнителя (site_name).',
           variant: 'error',
         });
         setIsSaving(false);
@@ -1439,7 +1433,7 @@ export function EditAlbumModal({
     if (currentCoverDraftKey) {
       try {
         const commitResult = await commitCover(currentCoverDraftKey, finalAlbumId, {
-          artist: effectiveArtistName || originalAlbum?.artist || '',
+          artist: effectiveArtistName,
           album: formData.title || originalAlbum?.album || '',
           lang: normalizedLang,
         });
@@ -1500,10 +1494,9 @@ export function EditAlbumModal({
       details: newDetails,
     } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined);
 
-    // Формируем fullName из artist и album
-    const artistName = effectiveArtistName || originalAlbum?.artist || '';
     const albumTitle = formData.title || originalAlbum?.album || '';
-    const fullName = `${artistName} — ${albumTitle}`;
+    const fullName =
+      effectiveArtistName && albumTitle ? `${effectiveArtistName} — ${albumTitle}` : albumTitle;
 
     console.log('📝 [EditAlbumModal] Form data before save:', {
       method,
@@ -1511,7 +1504,6 @@ export function EditAlbumModal({
       formDataTitle: formData.title,
       formDataArtist: effectiveArtistName,
       originalAlbumTitle: originalAlbum?.album,
-      originalAlbumArtist: originalAlbum?.artist,
     });
 
     // Объединяем details: берем оригинальные и заменяем только те, что редактируются
@@ -1555,7 +1547,6 @@ export function EditAlbumModal({
 
     const updateData: Record<string, unknown> = {
       albumId: finalAlbumId,
-      artist: artistName,
       album: albumTitle,
       fullName,
       description:
@@ -1578,7 +1569,6 @@ export function EditAlbumModal({
     console.log('📦 [EditAlbumModal] Update data prepared:', {
       albumId: updateData.albumId,
       album: updateData.album,
-      artist: updateData.artist,
       fullName: updateData.fullName,
       description: updateData.description,
       hasRelease: !!updateData.release,
@@ -1612,7 +1602,6 @@ export function EditAlbumModal({
         lang: normalizedLang,
         albumId: updateData.albumId,
         album: updateData.album,
-        artist: updateData.artist,
         hasDescription: !!updateData.description,
         hasCover: !!updateData.cover,
         hasToken: !!token,

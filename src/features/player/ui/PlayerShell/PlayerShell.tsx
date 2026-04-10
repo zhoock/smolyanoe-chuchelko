@@ -1,11 +1,17 @@
 // src/features/player/ui/PlayerShell/PlayerShell.tsx
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from 'react-redux';
 import type { IAlbums } from '@models';
 
+import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import {
+  formatAlbumDisplayFullName,
+  readStoredProfileDisplayName,
+} from '@shared/lib/profileDisplayName';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { playerActions } from '@features/player/model/slice/playerSlice';
@@ -29,6 +35,8 @@ export const PlayerShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const store = useStore<RootState>();
+  const { lang } = useLang();
+  const [searchParams] = useSearchParams();
 
   const albumMeta = useAppSelector(playerSelectors.selectAlbumMeta);
   const playlist = useAppSelector(playerSelectors.selectPlaylist);
@@ -38,6 +46,49 @@ export const PlayerShell: React.FC = () => {
   const isSeeking = useAppSelector(playerSelectors.selectIsSeeking);
   const hasPlaylist = useAppSelector(playerSelectors.selectHasPlaylist);
   const sourceLocation = useAppSelector(playerSelectors.selectSourceLocation);
+
+  const isDashboardRoute = location.pathname.startsWith('/dashboard');
+  const artistSlugForProfile = useMemo(() => {
+    if (isDashboardRoute) return null;
+    const u = searchParams.get('artist')?.trim() ?? '';
+    const m = albumMeta?.publicSlug?.trim() ?? '';
+    return u || m || null;
+  }, [isDashboardRoute, searchParams, albumMeta?.publicSlug]);
+
+  const { displayName: siteArtistDisplayName } = useSiteArtistDisplayName(lang, {
+    variant: isDashboardRoute ? 'authenticated' : 'public',
+    artistSlug: artistSlugForProfile,
+  });
+
+  /** После hydrate / reload подменяем artist и fullName в albumMeta на актуальный site_name (не данные из localStorage). */
+  useEffect(() => {
+    const meta = albumMeta;
+    if (!meta?.albumId || meta.album == null) return;
+
+    const resolved = siteArtistDisplayName.trim() || readStoredProfileDisplayName().trim();
+    const artistLabel = resolved ? resolved : '—';
+    const fullName = formatAlbumDisplayFullName(resolved, meta.album) || meta.album;
+
+    if (meta.artist === artistLabel && meta.fullName === fullName) return;
+
+    dispatch(
+      playerActions.setAlbumMeta({
+        ...meta,
+        artist: artistLabel,
+        fullName,
+      })
+    );
+  }, [
+    dispatch,
+    siteArtistDisplayName,
+    albumMeta?.albumId,
+    albumMeta?.album,
+    albumMeta?.artist,
+    albumMeta?.fullName,
+    albumMeta?.publicSlug,
+    albumMeta?.userId,
+    albumMeta?.cover,
+  ]);
 
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BG);
 

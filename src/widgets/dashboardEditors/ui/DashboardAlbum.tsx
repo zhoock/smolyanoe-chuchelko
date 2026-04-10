@@ -25,6 +25,8 @@ import {
   formatDuration,
 } from '@widgets/dashboard/lib/trackStatusUtils';
 import './DashboardAlbum.style.scss';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 
 interface DashboardAlbumProps {
   albumId?: string; // Опциональный prop для использования без роутинга
@@ -39,6 +41,12 @@ export default function DashboardAlbum({
   const { lang } = useLang();
   const { albumId: paramAlbumId = '' } = useParams<{ albumId: string }>();
   const albumId = propAlbumId || paramAlbumId; // Используем prop или param
+  const { displayName: siteArtistName, displayLabel: siteArtistLabel } = useSiteArtistDisplayName(
+    lang,
+    {
+      variant: 'authenticated',
+    }
+  );
   const status = useAppSelector((state) => selectAlbumsStatus(state, lang));
   const error = useAppSelector((state) => selectAlbumsError(state, lang));
   const album = useAppSelector((state) => selectAlbumById(state, lang, albumId));
@@ -147,12 +155,15 @@ export default function DashboardAlbum({
           <div className="admin-album__info">
             <div className="admin-album__cover">
               {album.cover && (
-                <AlbumCover img={album.cover} fullName={`${album.artist} - ${album.album}`} />
+                <AlbumCover
+                  img={album.cover}
+                  fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
+                />
               )}
             </div>
             <div className="admin-album__details">
               <h1 className="admin-album__title">{album.album}</h1>
-              <p className="admin-album__artist">{album.artist}</p>
+              <p className="admin-album__artist">{siteArtistLabel}</p>
             </div>
           </div>
         </div>

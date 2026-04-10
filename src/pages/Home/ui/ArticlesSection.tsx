@@ -40,6 +40,10 @@ export function ArticlesSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
+  if (articlesStatus === 'succeeded' && allArticles.length === 0) {
+    return null;
+  }
+
   return (
     <section
       id="articles"

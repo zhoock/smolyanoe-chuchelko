@@ -4,6 +4,7 @@
  */
 
 import type { IAlbums } from '@models';
+import { siteArtistUiLabel } from '@shared/lib/profileDisplayName';
 
 export interface AlbumData {
   id: string;
@@ -32,8 +33,9 @@ export interface TrackData {
 
 /**
  * Преобразует альбом из формата IAlbums в формат AlbumData для UI
+ * @param siteDisplayName Имя из профиля (site_name); поле album.artist в UI не используется
  */
-export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
+export function transformAlbumToAlbumData(album: IAlbums, siteDisplayName?: string): AlbumData {
   const albumId = album.albumId || '';
 
   // Обрабатываем release (объект с полем date)
@@ -106,11 +108,13 @@ export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
     };
   });
 
+  const artistLabel = siteArtistUiLabel(siteDisplayName ?? '');
+
   return {
     id: albumId,
     albumId: album.albumId || albumId, // Сохраняем строковый ID альбома
     title: album.album,
-    artist: album.artist || '',
+    artist: artistLabel,
     year: releaseDate ? releaseDate.getFullYear().toString() : '',
     cover: album.cover,
     coverUpdatedAt: Date.now(), // Добавляем timestamp для принудительной перезагрузки изображения
@@ -128,6 +132,9 @@ export function transformAlbumToAlbumData(album: IAlbums): AlbumData {
 /**
  * Преобразует массив альбомов из формата IAlbums[] в формат AlbumData[]
  */
-export function transformAlbumsToAlbumData(albums: IAlbums[]): AlbumData[] {
-  return albums.map(transformAlbumToAlbumData);
+export function transformAlbumsToAlbumData(
+  albums: IAlbums[],
+  siteDisplayName?: string
+): AlbumData[] {
+  return albums.map((a) => transformAlbumToAlbumData(a, siteDisplayName));
 }
