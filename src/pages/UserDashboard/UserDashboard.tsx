@@ -73,6 +73,8 @@ import './UserDashboard.style.scss';
 // Компонент для сортируемого трека
 interface SortableTrackItemProps {
   track: TrackData;
+  /** Порядковый номер для UI (1-based), не путать с track.id (UUID) */
+  displayIndex: number;
   albumId: string;
   onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
   onEdit?: (albumId: string, trackId: string, trackTitle: string) => void;
@@ -173,6 +175,7 @@ function getArticlePreviewText(article: IArticles): string {
 
 function SortableTrackItem({
   track,
+  displayIndex,
   albumId,
   onDelete,
   onEdit,
@@ -424,7 +427,9 @@ function SortableTrackItem({
           >
             <span className="user-dashboard__track-drag-icon">⋮⋮</span>
           </div>
-          <div className="user-dashboard__track-number">{track.id.padStart(2, '0')}</div>
+          <div className="user-dashboard__track-number" aria-hidden>
+            {displayIndex}.
+          </div>
           {isEditing ? (
             <input
               key={`edit-${track.id}-${isEditing}`}
@@ -2249,10 +2254,11 @@ function UserDashboard() {
                                           strategy={verticalListSortingStrategy}
                                         >
                                           <div className="user-dashboard__tracks-list">
-                                            {album.tracks.map((track) => (
+                                            {album.tracks.map((track, trackIndex) => (
                                               <SortableTrackItem
                                                 key={track.id}
                                                 track={track}
+                                                displayIndex={trackIndex + 1}
                                                 albumId={album.albumId}
                                                 onDelete={handleDeleteTrack}
                                                 onTitleChange={handleTrackTitleChange}
