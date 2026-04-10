@@ -5,6 +5,33 @@ import type { SupportedLang } from '@shared/model/lang';
 import type { IInterface } from '@models';
 
 /**
+ * Заголовки блоков `details`, которые форма редактирования полностью перезаписывает при сохранении.
+ * Должны совпадать с вариантами в `EditAlbumModal` (парсинг) и `AlbumDetailsMusic` (отображение),
+ * иначе при сохранении с EN-интерфейсом русские заголовки не удаляются и дублируются с английскими.
+ */
+export const EDITABLE_ALBUM_DETAIL_BLOCK_TITLES = new Set<string>([
+  'Genre',
+  'Genres',
+  'Жанр',
+  'Жанры',
+  'Band members',
+  'Участники группы',
+  'Исполнители',
+  'Session musicians',
+  'Сессионные музыканты',
+  'Session Musicians',
+  'Producing',
+  'Продюсирование',
+  'Продюсер',
+  'Mastered By',
+  'Мастеринг',
+  'Recorded At',
+  'Запись',
+  'Mixed At',
+  'Сведение',
+]);
+
+/**
  * Форматирует дату из формата YYYY-MM-DD в формат "MON. DD, YYYY" (английский)
  */
 export function formatDateToDisplayEN(dateStr: string | undefined): string {

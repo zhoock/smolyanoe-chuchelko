@@ -760,7 +760,8 @@ export const handler: Handler = async (
           );
         }
 
-        // Проверяем, существует ли альбом
+        const localePatch = data.translations?.[data.lang];
+
         console.log('[albums.ts PUT] Searching for existing album:', {
           albumId: data.albumId,
           lang: data.lang,
@@ -786,7 +787,96 @@ export const handler: Handler = async (
           throw searchError;
         }
 
-        if (existingAlbumResult.rows.length === 0) {
+        let existingAlbum: AlbumRow | undefined = existingAlbumResult.rows[0];
+
+        // Нет строки для этой локали (например, есть только ru, а сохраняют в en): создаём строку и копируем треки с другой локали.
+        if (!existingAlbum) {
+          const siblingResult = await query<AlbumRow>(
+            `SELECT * FROM albums 
+             WHERE album_id = $1 AND user_id = $2 AND lang <> $3 
+             ORDER BY updated_at DESC NULLS LAST, created_at DESC 
+             LIMIT 1`,
+            [data.albumId, userId, data.lang]
+          );
+          const sibling = siblingResult.rows[0];
+          if (sibling && localePatch?.album?.trim()) {
+            const client = await getClient();
+            try {
+              await client.query('BEGIN');
+              const releasePayload =
+                data.release !== undefined ? data.release : (sibling.release ?? {});
+              const buttonsPayload =
+                data.buttons !== undefined ? data.buttons : (sibling.buttons ?? {});
+              const coverVal =
+                data.cover !== undefined && data.cover !== null && data.cover !== ''
+                  ? data.cover
+                  : sibling.cover;
+              const detailsPayload =
+                localePatch.details !== undefined ? localePatch.details : (sibling.details ?? []);
+              const fullNameVal =
+                localePatch.fullName !== undefined ? localePatch.fullName : sibling.full_name;
+              const descVal =
+                localePatch.description !== undefined
+                  ? localePatch.description
+                  : sibling.description;
+
+              const insertRes = await client.query<AlbumRow>(
+                `INSERT INTO albums (
+                  user_id, album_id, artist, album, full_name, description,
+                  cover, release, buttons, details, lang, is_public
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12)
+                RETURNING *`,
+                [
+                  userId,
+                  data.albumId,
+                  sibling.artist || '',
+                  localePatch.album.trim(),
+                  fullNameVal,
+                  descVal,
+                  coverVal,
+                  JSON.stringify(
+                    releasePayload && typeof releasePayload === 'object' ? releasePayload : {}
+                  ),
+                  JSON.stringify(
+                    buttonsPayload && typeof buttonsPayload === 'object' ? buttonsPayload : {}
+                  ),
+                  JSON.stringify(Array.isArray(detailsPayload) ? detailsPayload : []),
+                  data.lang,
+                  sibling.is_public,
+                ]
+              );
+              const newAlbumPk = insertRes.rows[0].id;
+              await client.query(
+                `INSERT INTO tracks (
+                  album_id, track_id, title, duration, src, content, authorship, synced_lyrics, order_index, updated_at
+                )
+                SELECT $1::uuid, track_id, title, duration, src, content, authorship, synced_lyrics, order_index, NOW()
+                FROM tracks WHERE album_id = $2::uuid`,
+                [newAlbumPk, sibling.id]
+              );
+              await client.query('COMMIT');
+              existingAlbum = insertRes.rows[0];
+              console.log('[albums.ts PUT] Created missing locale row and copied tracks', {
+                albumId: data.albumId,
+                lang: data.lang,
+                siblingLang: sibling.lang,
+                newAlbumPk,
+              });
+            } catch (createErr) {
+              try {
+                await client.query('ROLLBACK');
+              } catch {
+                // ignore rollback errors
+              }
+              console.error('[albums.ts PUT] Failed to create locale row:', createErr);
+              throw createErr;
+            } finally {
+              client.release();
+            }
+          }
+        }
+
+        if (!existingAlbum) {
           console.warn('[albums.ts PUT] Album not found, returning 404:', {
             albumId: data.albumId,
             lang: data.lang,
@@ -794,8 +884,6 @@ export const handler: Handler = async (
           });
           return createErrorResponse(404, 'Album not found or access denied.');
         }
-
-        const existingAlbum = existingAlbumResult.rows[0];
         console.log('[albums.ts PUT] Found existing album:', {
           id: existingAlbum.id,
           albumId: existingAlbum.album_id,
@@ -812,8 +900,6 @@ export const handler: Handler = async (
           coverEmpty: data.cover === '',
           allDataKeys: Object.keys(data),
         });
-
-        const localePatch = data.translations?.[data.lang];
 
         const updateFields: string[] = [];
         const updateValues: unknown[] = [];

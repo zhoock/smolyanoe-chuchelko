@@ -42,6 +42,7 @@ import {
   formatDateInput,
   parseRecordingText,
   buildRecordingText,
+  EDITABLE_ALBUM_DETAIL_BLOCK_TITLES,
 } from './EditAlbumModal.utils';
 import { EditAlbumModalStep1 } from '../../steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from '../../steps/EditAlbumModalStep2';
@@ -1527,37 +1528,34 @@ export function EditAlbumModal({
       originalAlbumTitle: originalAlbum?.album,
     });
 
-    // Объединяем details: берем оригинальные и заменяем только те, что редактируются
-    const originalDetails = (originalAlbum?.details as Array<{ id: number; title: string }>) || [];
-    const mergedDetails = [...originalDetails];
+    // База для merge: details выбранной локали (en/ru), а не только корень merged-альбома (часто ru).
+    // При POST исходного альбома нет — берём только блоки из формы.
+    const baselineDetails =
+      exists && originalAlbum ? getAlbumDetailsForEdit(originalAlbum, normalizedLang).details : [];
+    const originalDetails = (baselineDetails as Array<{ id: number; title: string }>) || [];
 
-    // Заменяем редактируемые блоки (Genre, Band members, Session musicians, Producing, Recorded At, Mixed At)
-    const editableTitles = [
-      // Genre
-      ui?.dashboard?.genre ?? 'Genre',
-      // Band members (только два варианта: Исполнители и Band members)
-      ui?.dashboard?.bandMembers ?? 'Band members',
-      // Session musicians
-      ui?.dashboard?.sessionMusicians ?? 'Session musicians',
-      // Producing
-      ui?.dashboard?.producing ?? 'Producing',
-      // Mastering
-      ui?.dashboard?.masteredBy ?? 'Mastered By',
-      // Recorded At
-      ui?.dashboard?.recordedAt ?? 'Recorded At',
-      // Mixed At
-      ui?.dashboard?.mixedAt ?? 'Mixed At',
-    ];
+    const uiDetailLabels = [
+      ui?.dashboard?.genre,
+      ui?.dashboard?.bandMembers,
+      ui?.dashboard?.sessionMusicians,
+      ui?.dashboard?.producing,
+      ui?.dashboard?.masteredBy,
+      ui?.dashboard?.recordedAt,
+      ui?.dashboard?.mixedAt,
+    ].filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
 
-    // Удаляем старые редактируемые блоки
-    editableTitles.forEach((title) => {
-      const index = mergedDetails.findIndex((d) => d && d.title === title);
-      if (index >= 0) {
-        mergedDetails.splice(index, 1);
-      }
-    });
+    const titlesToStrip = new Set<string>([
+      ...EDITABLE_ALBUM_DETAIL_BLOCK_TITLES,
+      ...uiDetailLabels,
+    ]);
 
-    // Добавляем новые редактируемые блоки из формы
+    const mergedDetails = originalDetails.filter(
+      (d) =>
+        d &&
+        typeof d === 'object' &&
+        !titlesToStrip.has(String((d as { title?: string }).title ?? ''))
+    );
+
     newDetails.forEach((newDetail) => {
       const detail = newDetail as { id: number; title: string };
       mergedDetails.push(detail);
