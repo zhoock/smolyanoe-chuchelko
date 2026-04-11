@@ -453,6 +453,13 @@ export const handler: Handler = async (
         return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
       }
 
+      if (!includeDrafts) {
+        const artistSlug = event.queryStringParameters?.artist?.trim();
+        if (!artistSlug) {
+          return createErrorResponse(400, 'Missing required query parameter: artist');
+        }
+      }
+
       const ARTICLE_ROW_SELECT = `
               id,
               user_id,

@@ -4,6 +4,7 @@ import {
   createBrowserRouter,
   RouterProvider,
   useLocation,
+  useSearchParams,
   Routes,
   Route,
   useRevalidator,
@@ -13,6 +14,7 @@ import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '@routes/loaders/albumsLoader';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
@@ -65,6 +67,19 @@ export default function App() {
       />
     </ErrorBoundary>
   );
+}
+
+/** Синхронизирует `?artist=` из URL в Redux (F5 и клиентская навигация). */
+function CurrentArtistSync() {
+  const [searchParams] = useSearchParams();
+  const dispatch = useAppDispatch();
+  const artist = searchParams.get('artist')?.trim() ?? '';
+
+  useEffect(() => {
+    dispatch(setPublicArtistSlug(artist || null));
+  }, [artist, dispatch]);
+
+  return null;
 }
 
 function Layout() {
@@ -350,6 +365,7 @@ function Layout() {
 
   return (
     <>
+      <CurrentArtistSync />
       {/* БАЗОВЫЙ Helmet для всех страниц без собственного */}
       <Helmet>
         {/* динамический заголовок и описание */}

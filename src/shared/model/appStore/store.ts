@@ -11,6 +11,7 @@ import { articlesReducer } from '@entities/article';
 import { albumsReducer } from '@entities/album';
 import { helpArticlesReducer } from '@entities/helpArticle';
 import { uiDictionaryReducer } from '@shared/model/uiDictionary';
+import { currentArtistReducer } from '@shared/model/currentArtist';
 
 import type { AppDispatch, AppStore as AppStoreType, RootState } from './types';
 
@@ -18,6 +19,7 @@ const rootReducer = {
   popup: popupReducer,
   player: playerReducer,
   lang: langReducer,
+  currentArtist: currentArtistReducer,
   articles: articlesReducer,
   albums: albumsReducer,
   helpArticles: helpArticlesReducer,

@@ -26,6 +26,7 @@ const createTestStore = () => {
   return configureStore({
     reducer: {
       uiDictionary: uiDictionaryReducer,
+      currentArtist: () => ({ publicSlug: null as string | null }),
       lang: () => ({ current: 'en' as SupportedLang }),
       popup: () => ({ isOpen: false }),
       player: () => initialPlayerState,
@@ -375,6 +376,7 @@ describe('uiDictionarySlice', () => {
 
   describe('selectors', () => {
     const mockState = {
+      currentArtist: { publicSlug: null as string | null },
       uiDictionary: {
         en: {
           status: 'succeeded' as const,

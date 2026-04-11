@@ -73,11 +73,10 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'GET') {
       let targetUserId = userId;
-      const artistSlug = event.queryStringParameters?.artist;
+      const artistSlug = event.queryStringParameters?.artist?.trim();
 
-      // Публичный режим: если artist передан ИЛИ пользователь не авторизован
-      // В этом режиме не опираемся на JWT для выбора артиста.
-      if (artistSlug || !targetUserId) {
+      // Публичный режим: нужен artist. Если artist нет, но есть JWT — профиль текущего пользователя (админка).
+      if (artistSlug) {
         try {
           targetUserId = await resolvePublicArtistUserId(artistSlug);
         } catch (error) {
@@ -93,6 +92,15 @@ export const handler: Handler = async (
           }
           throw error;
         }
+      } else if (!targetUserId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Missing required query parameter: artist',
+          } as GetUserProfileResponse),
+        };
       }
 
       // Пытаемся получить данные, включая password (если поле существует)

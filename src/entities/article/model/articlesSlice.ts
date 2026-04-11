@@ -3,6 +3,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import { hydrateMissingRuTranslationsOnArticle } from '../lib/hydrateMissingRuTranslations';
 
@@ -18,27 +19,29 @@ const initialState: ArticlesState = {
 
 export type FetchArticlesArg = {
   force?: boolean;
-  /** Явный slug из loader URL; на дашборде не задаётся */
+  /** Явный slug из loader URL; иначе берётся из `currentArtist` в store */
   publicArtistSlug?: string | null;
 };
 
-function resolvePublicArtistSlugForFetch(arg: FetchArticlesArg): string {
+export type FetchArticlesResult = {
+  articles: IArticles[];
+  lastPublicArtistSlug: string | null;
+};
+
+function resolvePublicArtistSlugForFetch(arg: FetchArticlesArg, getState: () => RootState): string {
   if (arg.publicArtistSlug !== undefined && arg.publicArtistSlug !== null) {
     return String(arg.publicArtistSlug).trim();
   }
-  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/dashboard')) {
-    return new URLSearchParams(window.location.search).get('artist')?.trim() ?? '';
-  }
-  return '';
+  return selectPublicArtistSlug(getState())?.trim() ?? '';
 }
 
 export const fetchArticles = createAsyncThunk<
-  IArticles[],
+  FetchArticlesResult,
   FetchArticlesArg,
   { rejectValue: string; state: RootState }
 >(
   'articles/fetchMerged',
-  async (_arg, { signal, rejectWithValue }) => {
+  async (_arg, { signal, rejectWithValue, getState }) => {
     const normalize = (data: unknown[]): IArticles[] =>
       data.map((article: unknown) => {
         const a = article as Record<string, unknown>;
@@ -68,6 +71,33 @@ export const fetchArticles = createAsyncThunk<
       const isDashboardRoute =
         typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
 
+      const resolvedSlug = !isDashboardRoute ? resolvePublicArtistSlugForFetch(_arg, getState) : '';
+
+      const fallbackLang: 'en' | 'ru' = getState().lang.current === 'ru' ? 'ru' : 'en';
+
+      const slugMeta = (rows: IArticles[]): FetchArticlesResult => ({
+        articles: rows,
+        lastPublicArtistSlug: isDashboardRoute ? null : resolvedSlug,
+      });
+
+      // Публичный каталог: без artist не дергаем API (инвариант), только статический fallback.
+      if (!isDashboardRoute && !resolvedSlug) {
+        try {
+          const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
+          if (fallback && fallback.ok) {
+            const data = await fallback.json();
+            if (Array.isArray(data)) {
+              return slugMeta(normalize(data));
+            }
+          }
+        } catch (e) {
+          const errorMessage = e instanceof Error ? e.message : String(e);
+          console.warn('[fetchArticles] Static fallback failed:', errorMessage);
+          return rejectWithValue(errorMessage);
+        }
+        return { articles: [], lastPublicArtistSlug: '' };
+      }
+
       let apiFailure: unknown = null;
 
       try {
@@ -77,7 +107,10 @@ export const fetchArticles = createAsyncThunk<
             {
               includeDrafts: isDashboardRoute ? true : undefined,
             },
-            { includeArtist: !isDashboardRoute }
+            {
+              includeArtist: !isDashboardRoute,
+              artistSlugOverride: isDashboardRoute ? null : resolvedSlug,
+            }
           ),
           {
             signal,
@@ -98,10 +131,10 @@ export const fetchArticles = createAsyncThunk<
           }
 
           if (list.length === 0) {
-            return [];
+            return slugMeta([]);
           }
 
-          return normalize(list);
+          return slugMeta(normalize(list));
         } else {
           apiFailure = new Error(
             response
@@ -115,18 +148,11 @@ export const fetchArticles = createAsyncThunk<
         console.warn('[fetchArticles] API request failed, trying static fallback:', errorMessage);
       }
 
-      let fallbackLang: 'en' | 'ru' = 'en';
-      try {
-        const { getStore } = await import('@shared/model/appStore');
-        fallbackLang = getStore().getState().lang.current === 'ru' ? 'ru' : 'en';
-      } catch {
-        fallbackLang = 'en';
-      }
       const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
       if (fallback && fallback.ok) {
         const data = await fallback.json();
         if (Array.isArray(data)) {
-          return normalize(data);
+          return slugMeta(normalize(data));
         }
       }
 
@@ -160,7 +186,7 @@ export const fetchArticles = createAsyncThunk<
         return true;
       }
 
-      const slug = resolvePublicArtistSlugForFetch(arg);
+      const slug = resolvePublicArtistSlugForFetch(arg, getState);
       if (state.articles.status === 'succeeded') {
         const prev = state.articles.lastPublicArtistSlug ?? '';
         if (prev !== slug) {
@@ -184,15 +210,12 @@ const articlesSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
-        const newData = Array.isArray(action.payload) ? [...action.payload] : action.payload;
-        const isDashboard =
-          typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
-        const slug = isDashboard ? null : resolvePublicArtistSlugForFetch(action.meta.arg);
-        state.data = newData as IArticles[];
+        const { articles, lastPublicArtistSlug } = action.payload;
+        state.data = Array.isArray(articles) ? [...articles] : [];
         state.status = 'succeeded';
         state.error = null;
         state.lastUpdated = Date.now();
-        state.lastPublicArtistSlug = slug;
+        state.lastPublicArtistSlug = lastPublicArtistSlug;
       })
       .addCase(fetchArticles.rejected, (state, action) => {
         state.status = 'failed';

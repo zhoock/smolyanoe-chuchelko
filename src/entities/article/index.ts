@@ -5,7 +5,7 @@ export { resolveArticleForDisplay } from './lib/resolveArticleDisplay';
 
 export { articlesReducer, fetchArticles } from './model/articlesSlice';
 export type { ArticlesState, RequestStatus } from './model/types';
-export type { FetchArticlesArg } from './model/articlesSlice';
+export type { FetchArticlesArg, FetchArticlesResult } from './model/articlesSlice';
 export {
   selectArticlesState,
   selectArticlesStatus,

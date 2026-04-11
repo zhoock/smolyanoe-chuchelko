@@ -3,6 +3,7 @@ import type { LoaderFunctionArgs } from 'react-router';
 import type { IAlbums, IArticles, IInterface } from '@models';
 import { getJSON } from '@shared/api/http';
 import { getStore } from '@shared/model/appStore';
+import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { selectCurrentLang } from '@shared/model/lang';
 import {
   fetchArticles,
@@ -32,8 +33,11 @@ export type AlbumsDeferred = {
 
 export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<AlbumsDeferred> {
   const { signal, url } = request;
-  const { pathname } = new URL(url);
+  const requestUrl = new URL(url);
+  const { pathname } = requestUrl;
   const store = getStore();
+  const publicArtistFromUrl = requestUrl.searchParams.get('artist')?.trim() ?? '';
+  store.dispatch(setPublicArtistSlug(publicArtistFromUrl || null));
   const state = store.getState();
   const lang = selectCurrentLang(state);
 
@@ -125,8 +129,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Статьи нужны на "/" (главная) и "/articles*"
   if (pathname === '/' || pathname.startsWith('/articles')) {
-    const requestUrl = new URL(url);
-    const publicArtistSlug = requestUrl.searchParams.get('artist')?.trim() ?? '';
+    const publicArtistSlug = publicArtistFromUrl;
     const articlesState = selectArticlesState(state);
     const status = articlesState.status;
     const cacheOk =
@@ -153,19 +156,22 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
         };
         signal.addEventListener('abort', abortHandler, { once: true });
 
-        templateB = fetchThunkPromise.unwrap().catch((error) => {
-          if (
-            error === 'AbortError' ||
-            error === 'Aborted' ||
-            (typeof error === 'object' &&
-              error !== null &&
-              'name' in error &&
-              (error as { name?: string }).name === 'AbortError')
-          ) {
-            return createNeverResolvingPromise();
-          }
-          throw error;
-        });
+        templateB = fetchThunkPromise
+          .unwrap()
+          .then((r) => r.articles)
+          .catch((error) => {
+            if (
+              error === 'AbortError' ||
+              error === 'Aborted' ||
+              (typeof error === 'object' &&
+                error !== null &&
+                'name' in error &&
+                (error as { name?: string }).name === 'AbortError')
+            ) {
+              return createNeverResolvingPromise();
+            }
+            throw error;
+          });
       }
     }
   }

@@ -4,6 +4,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import {
   readStoredProfileDisplayName,
   type ProfileNameUpdatedDetail,
@@ -63,6 +65,7 @@ export function Hero() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const publicArtistSlug = useAppSelector(selectPublicArtistSlug);
   const heroCanvasRef = useRef<HTMLDivElement | null>(null);
   const lastPathRef = useRef<string>('');
   const imagesLoadedRef = useRef<boolean>(false);
@@ -81,7 +84,9 @@ export function Hero() {
 
       try {
         // Для публичных страниц не передаем useAuth=true, API вернет данные админа
-        const images = await loadHeaderImagesFromDatabase(false);
+        const images = await loadHeaderImagesFromDatabase(false, {
+          artistSlugOverride: publicArtistSlug,
+        });
         console.log('📸 [Hero] Загружены header images из БД:', images);
 
         // Фильтруем только изображения из папки hero, удаляем старые из articles
@@ -122,7 +127,7 @@ export function Hero() {
       }
     };
     loadImages();
-  }, [location.search]);
+  }, [location.search, publicArtistSlug]);
 
   // Загружаем название группы:
   // - public (/ и /?artist=...): всегда из API public профиля, без JWT
@@ -132,9 +137,21 @@ export function Hero() {
       setIsProfileLoading(true);
 
       if (!isDashboardRoute) {
+        if (!publicArtistSlug?.trim()) {
+          setProfileName(readStoredProfileDisplayName());
+          setIsProfileLoading(false);
+          return;
+        }
         try {
           const response = await fetch(
-            buildApiUrl('/api/user-profile', {}, { includeArtist: true }),
+            buildApiUrl(
+              '/api/user-profile',
+              {},
+              {
+                includeArtist: true,
+                artistSlugOverride: publicArtistSlug,
+              }
+            ),
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -232,7 +249,14 @@ export function Hero() {
       window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
       window.removeEventListener('header-images-updated', handleHeaderImagesUpdate);
     };
-  }, [artistParamKey, hasArtistParam, isDashboardRoute, location.pathname, location.search]);
+  }, [
+    artistParamKey,
+    hasArtistParam,
+    isDashboardRoute,
+    location.pathname,
+    location.search,
+    publicArtistSlug,
+  ]);
 
   // Выбираем случайное изображение при загрузке данных или изменении пути
   useEffect(() => {

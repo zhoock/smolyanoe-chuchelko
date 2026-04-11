@@ -11,6 +11,7 @@ import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IAlbums } from '@models';
 import type { SupportedLang } from '@shared/model/lang';
 import type { AppDispatch } from '@shared/model/appStore/types';
+import { currentArtistReducer, setPublicArtistSlug } from '@shared/model/currentArtist';
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 const mockSuccessResponse = (data: unknown) =>
@@ -21,9 +22,10 @@ const mockSuccessResponse = (data: unknown) =>
 
 // Вспомогательная функция для создания тестового store
 const createTestStore = () => {
-  return configureStore({
+  const store = configureStore({
     reducer: {
       albums: albumsReducer,
+      currentArtist: currentArtistReducer,
       lang: () => ({ current: 'en' as SupportedLang }),
       popup: () => ({ isOpen: false }),
       player: () => initialPlayerState,
@@ -44,6 +46,8 @@ const createTestStore = () => {
       }),
     },
   });
+  store.dispatch(setPublicArtistSlug('test-artist'));
+  return store;
 };
 
 describe('albumsSlice', () => {
@@ -372,6 +376,7 @@ describe('albumsSlice', () => {
         lastUpdated: 1234567890,
       },
       lang: { current: 'en' as SupportedLang },
+      currentArtist: { publicSlug: null as string | null },
       popup: { isOpen: false },
       player: initialPlayerState,
       articles: {

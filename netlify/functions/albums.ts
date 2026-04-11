@@ -618,14 +618,10 @@ export const handler: Handler = async (
         // Приватный режим для админки: если есть JWT и artist не указан, берем владельца токена.
         targetUserId = authUserId;
       } else {
-        try {
-          targetUserId = await resolvePublicArtistUserId(undefined);
-        } catch (error) {
-          if (error instanceof PublicArtistResolverError) {
-            return createErrorResponse(error.statusCode, error.message);
-          }
-          throw error;
-        }
+        return createErrorResponse(
+          400,
+          'Missing required query parameter: artist (public requests must specify an artist)'
+        );
       }
 
       // Возвращаем альбомы только выбранного артиста (owner user_id), все lang → merge

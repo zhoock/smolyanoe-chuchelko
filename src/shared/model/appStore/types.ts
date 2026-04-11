@@ -7,6 +7,7 @@ import type { ArticlesState } from '@entities/article/model/types';
 import type { AlbumsState } from '@entities/album/model/types';
 import type { HelpArticlesState } from '@entities/helpArticle/model/types';
 import type { UiDictionaryState } from '@shared/model/uiDictionary/types';
+import type { CurrentArtistState } from '@shared/model/currentArtist';
 
 type PopupState = ReturnType<typeof popupReducer>;
 type PlayerState = ReturnType<typeof playerReducer>;
@@ -15,6 +16,7 @@ export interface RootState {
   popup: PopupState;
   player: PlayerState;
   lang: LangState;
+  currentArtist: CurrentArtistState;
   articles: ArticlesState;
   albums: AlbumsState;
   helpArticles: HelpArticlesState;

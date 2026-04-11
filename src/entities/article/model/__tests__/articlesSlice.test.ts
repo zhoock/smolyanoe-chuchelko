@@ -1,6 +1,6 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { configureStore } from '@reduxjs/toolkit';
-import { fetchArticles, articlesReducer } from '../articlesSlice';
+import { fetchArticles, articlesReducer, type FetchArticlesResult } from '../articlesSlice';
 import {
   selectArticlesStatus,
   selectArticlesError,
@@ -11,6 +11,7 @@ import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IArticles } from '@models';
 import type { SupportedLang } from '@shared/model/lang';
 import type { AppDispatch } from '@shared/model/appStore/types';
+import { currentArtistReducer, setPublicArtistSlug } from '@shared/model/currentArtist';
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 const mockSuccessResponse = (data: unknown) =>
@@ -20,9 +21,10 @@ const mockSuccessResponse = (data: unknown) =>
   }) as Response;
 
 const createTestStore = () => {
-  return configureStore({
+  const store = configureStore({
     reducer: {
       articles: articlesReducer,
+      currentArtist: currentArtistReducer,
       lang: () => ({ current: 'en' as SupportedLang }),
       popup: () => ({ isOpen: false }),
       player: () => initialPlayerState,
@@ -42,6 +44,8 @@ const createTestStore = () => {
       }),
     },
   });
+  store.dispatch(setPublicArtistSlug('test-artist'));
+  return store;
 };
 
 describe('articlesSlice', () => {
@@ -83,7 +87,7 @@ describe('articlesSlice', () => {
       const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       expect(result.type).toBe('articles/fetchMerged/fulfilled');
-      expect(result.payload).toMatchObject(mockArticles);
+      expect((result.payload as FetchArticlesResult).articles).toMatchObject(mockArticles);
 
       const state = store.getState();
       expect(selectArticlesStatus(state)).toBe('succeeded');
@@ -171,7 +175,7 @@ describe('articlesSlice', () => {
       const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       expect(result.type).toBe('articles/fetchMerged/fulfilled');
-      expect(result.payload).toEqual([]);
+      expect((result.payload as FetchArticlesResult).articles).toEqual([]);
 
       const state = store.getState();
       expect(selectArticlesStatus(state)).toBe('succeeded');
@@ -328,6 +332,7 @@ describe('articlesSlice', () => {
         lastUpdated: 1234567890,
         lastPublicArtistSlug: null,
       },
+      currentArtist: { publicSlug: null as string | null },
       lang: { current: 'en' as SupportedLang },
       popup: { isOpen: false },
       player: initialPlayerState,

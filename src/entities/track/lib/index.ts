@@ -126,7 +126,14 @@ export async function loadTrackTextFromDatabase(
   try {
     // Импортируем динамически, чтобы избежать циклических зависимостей
     const { getAuthHeader } = await import('@shared/lib/auth');
+    const { resolvePublicArtistSlugForApi, shouldSkipUnauthenticatedPublicArtistApi } =
+      await import('@shared/lib/publicArtistContext');
     const authHeader = getAuthHeader();
+
+    const resolvedSlug = await resolvePublicArtistSlugForApi(artistSlugForPublicApi);
+    if (await shouldSkipUnauthenticatedPublicArtistApi(resolvedSlug)) {
+      return null;
+    }
 
     const url = buildApiUrl(
       '/api/synced-lyrics',
@@ -136,7 +143,7 @@ export async function loadTrackTextFromDatabase(
         lang,
         _ts: String(Date.now()),
       },
-      { includeArtist: true, artistSlugOverride: artistSlugForPublicApi ?? null }
+      { includeArtist: true, artistSlugOverride: resolvedSlug }
     );
 
     const response = await fetch(url, {

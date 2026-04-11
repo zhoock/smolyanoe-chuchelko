@@ -116,21 +116,14 @@ export const handler: Handler = async (
       } else if (authUserId) {
         targetUserId = authUserId;
       } else {
-        try {
-          targetUserId = await resolvePublicArtistUserId(undefined);
-        } catch (error) {
-          if (error instanceof PublicArtistResolverError) {
-            return {
-              statusCode: error.statusCode,
-              headers,
-              body: JSON.stringify({
-                success: false,
-                error: error.message,
-              } as SyncedLyricsResponse),
-            };
-          }
-          throw error;
-        }
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Missing required query parameter: artist',
+          } as SyncedLyricsResponse),
+        };
       }
 
       console.log('[synced-lyrics.ts GET] Loading synced lyrics:', {

@@ -1,5 +1,9 @@
 import type { SyncedLyricsLine } from '@models';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import {
+  resolvePublicArtistSlugForApi,
+  shouldSkipUnauthenticatedPublicArtistApi,
+} from '@shared/lib/publicArtistContext';
 
 // Простой in-memory кэш для синхронизаций с настраиваемым TTL
 interface CacheEntry {
@@ -265,10 +269,21 @@ export async function loadSyncedLyricsFromStorage(
         const { getAuthHeader } = await import('@shared/lib/auth');
         const authHeader = getAuthHeader();
 
+        const resolvedSlug = await resolvePublicArtistSlugForApi(artistSlugForPublicApi);
+        if (await shouldSkipUnauthenticatedPublicArtistApi(resolvedSlug)) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(
+              '[loadSyncedLyricsFromStorage] Skip: public route without artist (unauthenticated)'
+            );
+          }
+          setCachedData(cacheKey, null, 5 * 1000);
+          return null;
+        }
+
         const response = await fetch(
           buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
             includeArtist: true,
-            artistSlugOverride: artistSlugForPublicApi ?? null,
+            artistSlugOverride: resolvedSlug,
           }),
           {
             cache: 'no-store',
@@ -389,10 +404,15 @@ export async function loadAuthorshipFromStorage(
         const { getAuthHeader } = await import('@shared/lib/auth');
         const authHeader = getAuthHeader();
 
+        const resolvedSlug = await resolvePublicArtistSlugForApi(artistSlugForPublicApi);
+        if (await shouldSkipUnauthenticatedPublicArtistApi(resolvedSlug)) {
+          return null;
+        }
+
         const response = await fetch(
           buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
             includeArtist: true,
-            artistSlugOverride: artistSlugForPublicApi ?? null,
+            artistSlugOverride: resolvedSlug,
           }),
           {
             cache: 'no-store',

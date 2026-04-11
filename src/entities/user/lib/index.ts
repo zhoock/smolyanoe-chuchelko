@@ -20,6 +20,25 @@ export interface UserProfileResponse {
 interface UserProfileLoadOptions {
   includeArtist?: boolean;
   useAuth?: boolean;
+  /** Публичный slug; если не задан, берётся из Redux `currentArtist` на клиенте. */
+  artistSlugOverride?: string | null;
+}
+
+async function resolvePublicArtistSlugForProfile(
+  options: UserProfileLoadOptions
+): Promise<string | null> {
+  const direct = options.artistSlugOverride?.trim();
+  if (direct) return direct;
+  const includeArtist = options.includeArtist ?? true;
+  const useAuth = options.useAuth ?? false;
+  if (!includeArtist || useAuth) return null;
+  try {
+    const { getStore } = await import('@shared/model/appStore');
+    const { selectPublicArtistSlug } = await import('@shared/model/currentArtist');
+    return selectPublicArtistSlug(getStore().getState());
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -32,19 +51,27 @@ export async function loadTheBandFromDatabase(
   try {
     const includeArtist = options.includeArtist ?? true;
     const useAuth = options.useAuth ?? false;
+    const slug = await resolvePublicArtistSlugForProfile(options);
+    if (includeArtist && !useAuth && !slug?.trim()) {
+      return null;
+    }
+
     let authHeader = {};
     if (useAuth) {
       const { getAuthHeader } = await import('@shared/lib/auth');
       authHeader = getAuthHeader();
     }
 
-    const response = await fetch(buildApiUrl('/api/user-profile', { lang }, { includeArtist }), {
-      cache: 'no-cache',
-      headers: {
-        'Cache-Control': 'no-cache',
-        ...authHeader,
-      },
-    });
+    const response = await fetch(
+      buildApiUrl('/api/user-profile', { lang }, { includeArtist, artistSlugOverride: slug }),
+      {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...authHeader,
+        },
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -103,6 +130,11 @@ export async function loadHeaderImagesFromDatabase(
 ): Promise<string[]> {
   try {
     const includeArtist = options.includeArtist ?? true;
+    const slug = await resolvePublicArtistSlugForProfile(options);
+    if (includeArtist && !useAuth && !slug?.trim()) {
+      return [];
+    }
+
     // Для публичных страниц не передаем Authorization header
     // API вернет данные админа для публичного доступа
     let authHeader = {};
@@ -116,15 +148,18 @@ export async function loadHeaderImagesFromDatabase(
       hasAuth: useAuth && 'Authorization' in authHeader && !!authHeader.Authorization,
     });
 
-    const response = await fetch(buildApiUrl('/api/user-profile', {}, { includeArtist }), {
-      cache: 'no-cache',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        Pragma: 'no-cache',
-        Expires: '0',
-        ...authHeader,
-      },
-    });
+    const response = await fetch(
+      buildApiUrl('/api/user-profile', {}, { includeArtist, artistSlugOverride: slug }),
+      {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+          ...authHeader,
+        },
+      }
+    );
 
     console.log('📡 [loadHeaderImagesFromDatabase] Ответ получен:', {
       status: response.status,

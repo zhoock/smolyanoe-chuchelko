@@ -11,6 +11,7 @@ import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdStrin
 import type { RootState } from '@shared/model/appStore/types';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import type { AlbumsState } from './types';
 
@@ -130,7 +131,7 @@ export const fetchAlbums = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >(
   'albums/fetchMerged',
-  async (_arg, { signal, rejectWithValue }) => {
+  async (_arg, { signal, rejectWithValue, getState }) => {
     const isValidAlbum = (
       album: unknown
     ): album is {
@@ -248,6 +249,23 @@ export const fetchAlbums = createAsyncThunk<
 
         const isDashboardRoute =
           typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+        const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
+
+        // Публичный каталог: без artist не дергаем API (инвариант), только статический fallback.
+        if (!isDashboardRoute && !publicSlug) {
+          try {
+            const data = await loadStaticAlbumsFallback(signal);
+            if (Array.isArray(data) && data.length > 0) {
+              console.warn('[albumsSlice] ⚠️ Используется статический JSON (нет artist в store)');
+              return normalize(data);
+            }
+            return [];
+          } catch (fallbackError) {
+            console.warn('⚠️ Static JSON fallback unavailable:', fallbackError);
+            return [];
+          }
+        }
+
         const token = getToken();
         const headers: Record<string, string> = {
           'Cache-Control': 'no-cache',
@@ -256,11 +274,21 @@ export const fetchAlbums = createAsyncThunk<
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await fetch(buildApiUrl('/api/albums', {}, { includeArtist: true }), {
-          signal: controller.signal,
-          cache: 'no-store',
-          headers,
-        });
+        const response = await fetch(
+          buildApiUrl(
+            '/api/albums',
+            {},
+            {
+              includeArtist: true,
+              artistSlugOverride: isDashboardRoute ? null : publicSlug,
+            }
+          ),
+          {
+            signal: controller.signal,
+            cache: 'no-store',
+            headers,
+          }
+        );
 
         clearTimeout(timeoutId);
         if (response.ok) {

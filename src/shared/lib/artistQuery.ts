@@ -1,22 +1,10 @@
 interface BuildApiUrlOptions {
   includeArtist?: boolean;
   /**
-   * When the URL has no `?artist=` (e.g. home `/`), use this public slug so API resolves
-   * the playing artist. Needed so logged-in admins still load the correct user's synced
-   * lyrics (backend would otherwise use JWT user id).
+   * Public artist slug for `artist` query param. Callers should pass Redux `currentArtist.publicSlug`
+   * (or an explicit slug); URL is not used as a fallback.
    */
   artistSlugOverride?: string | null;
-}
-
-function getArtistFromSearch(search: string): string | null {
-  const params = new URLSearchParams(search);
-  const artist = params.get('artist');
-  if (!artist) {
-    return null;
-  }
-
-  const normalized = artist.trim();
-  return normalized.length > 0 ? normalized : null;
 }
 
 function shouldIncludeArtistOnCurrentPage(): boolean {
@@ -43,13 +31,13 @@ export function buildApiUrl(
   }
 
   if (includeArtist && shouldIncludeArtistOnCurrentPage() && typeof window !== 'undefined') {
-    const fromUrl = getArtistFromSearch(window.location.search);
-    const slug =
-      (fromUrl && fromUrl.trim()) ||
-      (options.artistSlugOverride && String(options.artistSlugOverride).trim()) ||
-      null;
+    const slug = options.artistSlugOverride ? String(options.artistSlugOverride).trim() : '';
     if (slug) {
       query.set('artist', slug);
+    } else if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[buildApiUrl] includeArtist is true but artist slug is empty — public API calls must include artist from the store.'
+      );
     }
   }
 
