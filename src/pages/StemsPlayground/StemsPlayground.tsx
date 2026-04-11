@@ -4,8 +4,6 @@ import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
 import { useLang } from '@app/providers/lang';
 import { getUserImageUrl, getUserAudioUrl } from '@shared/api/albums';
-import { Loader } from '@shared/ui/loader';
-import { ErrorI18n } from '@shared/ui/error-message';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -14,7 +12,7 @@ import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { fetchAlbums } from '@entities/album/model/albumsSlice';
-import { selectAlbumsDataResolved } from '@entities/album/model/selectors';
+import { selectAlbumsDataResolved, selectAlbumsStatus } from '@entities/album/model/selectors';
 import { listStorageByPrefix } from '@shared/api/storage';
 import {
   buildStoragePublicObjectUrl,
@@ -164,21 +162,26 @@ export default function StemsPlayground() {
   const { lang } = useLang();
   const publicArtistSlug = useAppSelector(selectPublicArtistSlug);
   const albums = useAppSelector(selectAlbumsDataResolved);
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const albumsLastUpdated = useAppSelector((s) => s.albums.lastUpdated);
+
+  /** Метка момента смены артиста/языка: не строим список из кэша альбомов до свежего fetchAlbums.fulfilled. */
+  const stemsSyncEpochRef = useRef(0);
 
   // Состояние для динамически загруженных песен
   const [dynamicSongs, setDynamicSongs] = useState<Song[]>([]);
   const [loadingSongs, setLoadingSongs] = useState(true);
 
-  // Используем только динамические песни (треки с загруженными стемами из базы)
-  // Статические песни оставляем только как fallback для currentSong, если нет динамических
+  // Пока грузим альбомы или сканируем Storage — не показываем fallback STATIC (иначе мигание чужих/демо названий)
   const SONGS = useMemo(() => {
-    // Если есть динамические песни, используем только их
+    if (albumsStatus === 'loading' || loadingSongs) {
+      return [];
+    }
     if (dynamicSongs.length > 0) {
       return dynamicSongs;
     }
-    // Fallback на статические, если динамических нет
     return STATIC_SONGS;
-  }, [dynamicSongs]);
+  }, [dynamicSongs, albumsStatus, loadingSongs]);
 
   // Инициализируем selectedId - используем первую динамическую или статическую песню
   const [selectedId, setSelectedId] = useState<string>('');
@@ -219,8 +222,12 @@ export default function StemsPlayground() {
     };
   }, []); // Пустой массив зависимостей - портреты не зависят от состояния
 
-  // Каталог альбомов для выбранного артиста (?artist= / Redux): при смене slug перезагружаем
+  // Смена артиста/языка: сразу очищаем каталог стемов, чтобы не мигали треки другого артиста
   useEffect(() => {
+    stemsSyncEpochRef.current = Date.now();
+    setDynamicSongs([]);
+    setSelectedId('');
+    setLoadingSongs(true);
     dispatch(fetchAlbums({ force: true }));
   }, [dispatch, lang, publicArtistSlug]);
 
@@ -250,12 +257,37 @@ export default function StemsPlayground() {
     };
   }, [dispatch, lang]);
 
-  // Загружаем стемы для треков из базы
+  // Загружаем стемы для треков из базы (только после актуального fetch альбомов для текущего артиста)
   useEffect(() => {
+    if (albumsStatus === 'loading') {
+      return;
+    }
+
+    if (albumsStatus === 'failed') {
+      setLoadingSongs(false);
+      setDynamicSongs([]);
+      return;
+    }
+
+    if (albumsStatus === 'idle') {
+      return;
+    }
+
+    if (albumsStatus !== 'succeeded') {
+      setLoadingSongs(false);
+      return;
+    }
+
+    if (albumsLastUpdated != null && albumsLastUpdated < stemsSyncEpochRef.current) {
+      return;
+    }
+
     if (!albums || albums.length === 0) {
       setLoadingSongs(false);
       return;
     }
+
+    const syncAtLoadStart = stemsSyncEpochRef.current;
 
     const loadStemsForTracks = async () => {
       setLoadingSongs(true);
@@ -373,6 +405,10 @@ export default function StemsPlayground() {
         }
       }
 
+      if (syncAtLoadStart !== stemsSyncEpochRef.current) {
+        return;
+      }
+
       setDynamicSongs(songsWithStems);
       setLoadingSongs(false);
 
@@ -380,30 +416,28 @@ export default function StemsPlayground() {
       // Если нет динамических, используем первую статическую как fallback
       if (songsWithStems.length > 0) {
         setSelectedId(songsWithStems[0].id);
-      } else if (STATIC_SONGS.length > 0 && !selectedId) {
-        // Fallback на статические песни только если нет динамических и selectedId еще не установлен
+      } else if (STATIC_SONGS.length > 0) {
         setSelectedId(STATIC_SONGS[0].id);
       }
     };
 
     loadStemsForTracks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [albums]);
+  }, [albums, albumsStatus, albumsLastUpdated, publicArtistSlug]);
 
-  // Обновляем selectedId если динамические песни изменились
+  // Обновляем selectedId при смене списка (не трогаем во время загрузки — иначе мигание демо-треков)
   useEffect(() => {
-    // Если выбрана статическая песня, но появились динамические - переключаемся на первую динамическую
+    if (loadingSongs || albumsStatus === 'loading') {
+      return;
+    }
     if (dynamicSongs.length > 0) {
       const isStaticSelected = STATIC_SONGS.some((s) => s.id === selectedId);
       if (isStaticSelected || !dynamicSongs.find((s) => s.id === selectedId)) {
         setSelectedId(dynamicSongs[0].id);
       }
-    }
-    // Если динамических нет, но selectedId не установлен, используем первую статическую
-    else if (dynamicSongs.length === 0 && !selectedId && STATIC_SONGS.length > 0) {
+    } else if (dynamicSongs.length === 0 && !selectedId && STATIC_SONGS.length > 0) {
       setSelectedId(STATIC_SONGS[0].id);
     }
-  }, [dynamicSongs, selectedId]);
+  }, [dynamicSongs, selectedId, loadingSongs, albumsStatus]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -544,7 +578,7 @@ export default function StemsPlayground() {
     if (wasPlayingRef.current && !isPlaying) return;
   };
 
-  const selectDisabled = isPlaying || loading;
+  const selectDisabled = isPlaying || loading || albumsStatus === 'loading' || loadingSongs;
 
   const b = ui?.buttons ?? {};
   const pageTitle = (ui?.stems?.pageTitle as string) ?? '';
@@ -593,17 +627,22 @@ export default function StemsPlayground() {
           >
             <select
               id="song-select"
-              value={selectedId}
+              value={SONGS.some((s) => s.id === selectedId) ? selectedId : ''}
               onChange={(e) => setSelectedId(e.target.value)}
               aria-label="Выбор песни"
               disabled={selectDisabled}
             >
-              {/* Динамические треки со стемами в Storage; fallback — статический демо-список */}
-              {SONGS.map((s) => (
-                <option key={s.id} value={s.id} title={s.title}>
-                  {s.title}
+              {SONGS.length === 0 && (albumsStatus === 'loading' || loadingSongs) ? (
+                <option value="" disabled>
+                  {lang === 'en' ? 'Loading…' : 'Загрузка…'}
                 </option>
-              ))}
+              ) : (
+                SONGS.map((s) => (
+                  <option key={s.id} value={s.id} title={s.title}>
+                    {s.title}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
