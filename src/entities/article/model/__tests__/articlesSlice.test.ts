@@ -19,7 +19,6 @@ const mockSuccessResponse = (data: unknown) =>
     json: async () => ({ success: true, data }),
   }) as Response;
 
-// Вспомогательная функция для создания тестового store
 const createTestStore = () => {
   return configureStore({
     reducer: {
@@ -56,20 +55,11 @@ describe('articlesSlice', () => {
     test('должен возвращать начальное состояние', () => {
       const state = articlesReducer(undefined, { type: 'unknown' });
       expect(state).toEqual({
-        en: {
-          status: 'idle',
-          error: null,
-          data: [],
-          lastUpdated: null,
-          lastPublicArtistSlug: null,
-        },
-        ru: {
-          status: 'idle',
-          error: null,
-          data: [],
-          lastUpdated: null,
-          lastPublicArtistSlug: null,
-        },
+        status: 'idle',
+        error: null,
+        data: [],
+        lastUpdated: null,
+        lastPublicArtistSlug: null,
       });
     });
   });
@@ -90,16 +80,16 @@ describe('articlesSlice', () => {
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockArticles));
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      expect(result.type).toBe('articles/fetchByLang/fulfilled');
+      expect(result.type).toBe('articles/fetchMerged/fulfilled');
       expect(result.payload).toMatchObject(mockArticles);
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('succeeded');
-      expect(selectArticlesError(state, 'en')).toBeNull();
-      expect(selectArticlesData(state, 'en')).toMatchObject(mockArticles);
-      expect(selectArticlesData(state, 'en')[0].articleId).toBe('article-1');
+      expect(selectArticlesStatus(state)).toBe('succeeded');
+      expect(selectArticlesError(state)).toBeNull();
+      expect(selectArticlesData(state)).toMatchObject(mockArticles);
+      expect(selectArticlesData(state)[0].articleId).toBe('article-1');
     });
 
     test('должен обработать ошибку загрузки', async () => {
@@ -107,44 +97,38 @@ describe('articlesSlice', () => {
       mockFetch.mockRejectedValueOnce(new Error(errorMessage));
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      expect(result.type).toBe('articles/fetchByLang/rejected');
+      expect(result.type).toBe('articles/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
-      expect(selectArticlesError(state, 'en')).toBe(errorMessage);
-      expect(selectArticlesData(state, 'en')).toEqual([]);
+      expect(selectArticlesStatus(state)).toBe('failed');
+      expect(selectArticlesError(state)).toBe(errorMessage);
+      expect(selectArticlesData(state)).toEqual([]);
     });
 
     test('должен установить статус loading при начале загрузки', async () => {
-      mockFetch.mockImplementation(() => new Promise(() => {})); // Никогда не разрешается
+      mockFetch.mockImplementation(() => new Promise(() => {}));
 
       const store = createTestStore();
-      const promise = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const promise = (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      // Проверяем состояние во время загрузки
       const loadingState = store.getState();
-      expect(selectArticlesStatus(loadingState, 'en')).toBe('loading');
-      expect(selectArticlesError(loadingState, 'en')).toBeNull();
+      expect(selectArticlesStatus(loadingState)).toBe('loading');
+      expect(selectArticlesError(loadingState)).toBeNull();
 
-      // Отменяем промис, чтобы тест завершился
       promise.abort();
     });
 
     test('не должен запускать загрузку, если данные уже загружаются', async () => {
-      mockFetch.mockImplementation(() => new Promise(() => {})); // Никогда не разрешается
+      mockFetch.mockImplementation(() => new Promise(() => {}));
 
       const store = createTestStore();
 
-      // Первая загрузка
-      const promise1 = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const promise1 = (store.dispatch as AppDispatch)(fetchArticles({}));
+      const promise2 = (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      // Вторая загрузка (должна быть отменена condition)
-      const promise2 = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
-
-      // Проверяем, что getJSON был вызван только один раз
-      expect(selectArticlesStatus(store.getState(), 'en')).toBe('loading');
+      expect(selectArticlesStatus(store.getState())).toBe('loading');
 
       promise1.abort();
       promise2.abort();
@@ -155,109 +139,83 @@ describe('articlesSlice', () => {
 
       const store = createTestStore();
 
-      // Первая загрузка
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      // Очищаем мок
       jest.clearAllMocks();
 
-      // Вторая загрузка (должна быть отменена condition)
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      // Проверяем, что getJSON не был вызван повторно
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    test('должен работать независимо для разных языков', async () => {
-      const enArticles: IArticles[] = [
-        {
-          articleId: 'article-en',
-          nameArticle: 'English Article',
-          description: 'English Description',
-          date: '2024-01-01',
-          img: 'article-en.jpg',
-          details: [],
-        },
-      ];
-
-      const ruArticles: IArticles[] = [
-        {
-          articleId: 'article-ru',
-          nameArticle: 'Русская статья',
-          description: 'Русское описание',
-          date: '2024-01-01',
-          img: 'article-ru.jpg',
-          details: [],
-        },
-      ];
+    test('повторная загрузка с force обновляет данные', async () => {
+      const batch1: IArticles[] = [{ ...mockArticles[0], articleId: 'a1' }];
+      const batch2: IArticles[] = [{ ...mockArticles[0], articleId: 'a2' }];
 
       mockFetch
-        .mockResolvedValueOnce(mockSuccessResponse(enArticles))
-        .mockResolvedValueOnce(mockSuccessResponse(ruArticles));
+        .mockResolvedValueOnce(mockSuccessResponse(batch1))
+        .mockResolvedValueOnce(mockSuccessResponse(batch2));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'ru' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
+      await (store.dispatch as AppDispatch)(fetchArticles({ force: true }));
 
       const state = store.getState();
-      expect(selectArticlesData(state, 'en')).toMatchObject(enArticles);
-      expect(selectArticlesData(state, 'ru')).toMatchObject(ruArticles);
-      expect(selectArticlesData(state, 'en')[0].articleId).toBe('article-en');
-      expect(selectArticlesData(state, 'ru')[0].articleId).toBe('article-ru');
+      expect(selectArticlesData(state)[0].articleId).toBe('a2');
     });
 
     test('должен обработать пустой массив данных', async () => {
       mockFetch.mockResolvedValueOnce(mockSuccessResponse([]));
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      expect(result.type).toBe('articles/fetchByLang/fulfilled');
+      expect(result.type).toBe('articles/fetchMerged/fulfilled');
       expect(result.payload).toEqual([]);
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('succeeded');
-      expect(selectArticlesData(state, 'en')).toEqual([]);
-      expect(selectArticleById(state, 'en', 'any-id')).toBeUndefined();
+      expect(selectArticlesStatus(state)).toBe('succeeded');
+      expect(selectArticlesData(state)).toEqual([]);
+      expect(selectArticleById(state, 'any-id')).toBeUndefined();
     });
 
     test('должен обработать ошибку без Error объекта (null)', async () => {
       mockFetch.mockRejectedValueOnce(null);
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      expect(result.type).toBe('articles/fetchByLang/rejected');
+      expect(result.type).toBe('articles/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
-      expect(selectArticlesError(state, 'en')).toBe('Unknown error');
+      expect(selectArticlesStatus(state)).toBe('failed');
+      expect(selectArticlesError(state)).toBe('Unknown error');
     });
 
     test('должен обработать ошибку без Error объекта (строка)', async () => {
       mockFetch.mockRejectedValueOnce('String error');
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      expect(result.type).toBe('articles/fetchByLang/rejected');
+      expect(result.type).toBe('articles/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
-      expect(selectArticlesError(state, 'en')).toBe('Unknown error');
+      expect(selectArticlesStatus(state)).toBe('failed');
+      expect(selectArticlesError(state)).toBe('Unknown error');
     });
 
     test('должен обработать ошибку без Error объекта (undefined)', async () => {
       mockFetch.mockRejectedValueOnce(undefined);
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      expect(result.type).toBe('articles/fetchByLang/rejected');
+      expect(result.type).toBe('articles/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
-      expect(selectArticlesError(state, 'en')).toBe('Unknown error');
+      expect(selectArticlesStatus(state)).toBe('failed');
+      expect(selectArticlesError(state)).toBe('Unknown error');
     });
 
     test('должен обработать отмену запроса (abort signal)', async () => {
@@ -268,34 +226,32 @@ describe('articlesSlice', () => {
       });
 
       const store = createTestStore();
-      const promise = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const promise = (store.dispatch as AppDispatch)(fetchArticles({}));
 
       abortController.abort();
       await promise.catch(() => {});
 
       const state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
+      expect(selectArticlesStatus(state)).toBe('failed');
     });
 
     test('должен позволить повторную загрузку после ошибки', async () => {
-      // Первая попытка - ошибка
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       let state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
-      expect(selectArticlesError(state, 'en')).toBe('Network error');
+      expect(selectArticlesStatus(state)).toBe('failed');
+      expect(selectArticlesError(state)).toBe('Network error');
 
-      // Вторая попытка - успех
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockArticles));
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('succeeded');
-      expect(selectArticlesError(state, 'en')).toBeNull();
-      expect(selectArticlesData(state, 'en')).toMatchObject(mockArticles);
+      expect(selectArticlesStatus(state)).toBe('succeeded');
+      expect(selectArticlesError(state)).toBeNull();
+      expect(selectArticlesData(state)).toMatchObject(mockArticles);
     });
 
     test('должен обновлять lastUpdated при успешной загрузке', async () => {
@@ -304,11 +260,10 @@ describe('articlesSlice', () => {
       const store = createTestStore();
       const beforeTime = Date.now();
 
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       const afterTime = Date.now();
-      const state = store.getState();
-      const entry = state.articles.en;
+      const entry = store.getState().articles;
 
       expect(entry.lastUpdated).not.toBeNull();
       expect(entry.lastUpdated).toBeGreaterThanOrEqual(beforeTime);
@@ -316,45 +271,38 @@ describe('articlesSlice', () => {
     });
 
     test('должен очищать ошибку при новой загрузке после ошибки', async () => {
-      // Первая попытка - ошибка
       mockFetch.mockRejectedValueOnce(new Error('First error'));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       let state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
-      expect(selectArticlesError(state, 'en')).toBe('First error');
+      expect(selectArticlesStatus(state)).toBe('failed');
+      expect(selectArticlesError(state)).toBe('First error');
 
-      // Начинаем новую загрузку - ошибка должна быть очищена
       mockFetch.mockImplementation(() => new Promise(() => {}));
-      const promise = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const promise = (store.dispatch as AppDispatch)(fetchArticles({}));
 
       state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('loading');
-      expect(selectArticlesError(state, 'en')).toBeNull();
+      expect(selectArticlesStatus(state)).toBe('loading');
+      expect(selectArticlesError(state)).toBeNull();
 
       promise.abort();
     });
 
     test('не должен запускать загрузку если статус failed, но уже выполняется другая', async () => {
-      // Сначала создаем ошибку
       mockFetch.mockRejectedValueOnce(new Error('Error'));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      await (store.dispatch as AppDispatch)(fetchArticles({}));
 
       let state = store.getState();
-      expect(selectArticlesStatus(state, 'en')).toBe('failed');
+      expect(selectArticlesStatus(state)).toBe('failed');
 
-      // Запускаем новую загрузку
       mockFetch.mockImplementation(() => new Promise(() => {}));
-      const promise1 = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
+      const promise1 = (store.dispatch as AppDispatch)(fetchArticles({}));
+      const promise2 = (store.dispatch as AppDispatch)(fetchArticles({}));
 
-      // Пытаемся запустить еще одну параллельную загрузку
-      const promise2 = (store.dispatch as AppDispatch)(fetchArticles({ lang: 'en' }));
-
-      // Проверяем, что getJSON был вызван только один раз
       expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(1);
 
       promise1.abort();
@@ -365,27 +313,20 @@ describe('articlesSlice', () => {
   describe('selectors', () => {
     const mockState = {
       articles: {
-        en: {
-          status: 'succeeded' as const,
-          error: null,
-          data: [
-            {
-              articleId: 'article-1',
-              nameArticle: 'Test Article',
-              description: 'Test Description',
-              date: '2024-01-01',
-              img: 'test-article.jpg',
-              details: [],
-            },
-          ],
-          lastUpdated: 1234567890,
-        },
-        ru: {
-          status: 'idle' as const,
-          error: null,
-          data: [],
-          lastUpdated: null,
-        },
+        status: 'succeeded' as const,
+        error: null,
+        data: [
+          {
+            articleId: 'article-1',
+            nameArticle: 'Test Article',
+            description: 'Test Description',
+            date: '2024-01-01',
+            img: 'test-article.jpg',
+            details: [],
+          },
+        ],
+        lastUpdated: 1234567890,
+        lastPublicArtistSlug: null,
       },
       lang: { current: 'en' as SupportedLang },
       popup: { isOpen: false },
@@ -407,39 +348,29 @@ describe('articlesSlice', () => {
     };
 
     test('selectArticlesStatus должен возвращать статус', () => {
-      expect(selectArticlesStatus(mockState as any, 'en')).toBe('succeeded');
-      expect(selectArticlesStatus(mockState as any, 'ru')).toBe('idle');
+      expect(selectArticlesStatus(mockState as any)).toBe('succeeded');
     });
 
     test('selectArticlesError должен возвращать ошибку', () => {
-      expect(selectArticlesError(mockState as any, 'en')).toBeNull();
-      expect(selectArticlesError(mockState as any, 'ru')).toBeNull();
+      expect(selectArticlesError(mockState as any)).toBeNull();
     });
 
     test('selectArticlesData должен возвращать данные', () => {
-      const enData = selectArticlesData(mockState as any, 'en');
-      expect(enData).toHaveLength(1);
-      expect(enData[0].articleId).toBe('article-1');
-
-      const ruData = selectArticlesData(mockState as any, 'ru');
-      expect(ruData).toEqual([]);
+      const data = selectArticlesData(mockState as any);
+      expect(data).toHaveLength(1);
+      expect(data[0].articleId).toBe('article-1');
     });
 
     test('selectArticleById должен находить статью по ID', () => {
-      const article = selectArticleById(mockState as any, 'en', 'article-1');
+      const article = selectArticleById(mockState as any, 'article-1');
       expect(article).toBeDefined();
       expect(article?.articleId).toBe('article-1');
       expect(article?.nameArticle).toBe('Test Article');
     });
 
     test('selectArticleById должен возвращать undefined для несуществующей статьи', () => {
-      const article = selectArticleById(mockState as any, 'en', 'non-existent');
+      const article = selectArticleById(mockState as any, 'non-existent');
       expect(article).toBeUndefined();
-    });
-
-    test('selectArticlesStatus должен обработать несуществующий язык', () => {
-      // @ts-expect-error - тестируем edge case с невалидным языком
-      expect(() => selectArticlesStatus(mockState as any, 'fr')).toThrow();
     });
 
     test('selectArticlesError должен обработать состояние с ошибкой', () => {
@@ -447,15 +378,12 @@ describe('articlesSlice', () => {
         ...mockState,
         articles: {
           ...mockState.articles,
-          en: {
-            ...mockState.articles.en,
-            status: 'failed' as const,
-            error: 'Test error message',
-          },
+          status: 'failed' as const,
+          error: 'Test error message',
         },
       };
 
-      expect(selectArticlesError(errorState as any, 'en')).toBe('Test error message');
+      expect(selectArticlesError(errorState as any)).toBe('Test error message');
     });
 
     test('selectArticlesData должен обработать очень большой массив данных', () => {
@@ -472,14 +400,11 @@ describe('articlesSlice', () => {
         ...mockState,
         articles: {
           ...mockState.articles,
-          en: {
-            ...mockState.articles.en,
-            data: largeData,
-          },
+          data: largeData,
         },
       };
 
-      const data = selectArticlesData(largeState as any, 'en');
+      const data = selectArticlesData(largeState as any);
       expect(data).toHaveLength(1000);
       expect(data[0].articleId).toBe('article-0');
       expect(data[999].articleId).toBe('article-999');
@@ -499,21 +424,18 @@ describe('articlesSlice', () => {
         ...mockState,
         articles: {
           ...mockState.articles,
-          en: {
-            ...mockState.articles.en,
-            data: largeData,
-          },
+          data: largeData,
         },
       };
 
-      const article = selectArticleById(largeState as any, 'en', 'article-500');
+      const article = selectArticleById(largeState as any, 'article-500');
       expect(article).toBeDefined();
       expect(article?.articleId).toBe('article-500');
       expect(article?.nameArticle).toBe('Article 500');
     });
 
     test('selectArticleById должен обработать поиск с пустым ID', () => {
-      const article = selectArticleById(mockState as any, 'en', '');
+      const article = selectArticleById(mockState as any, '');
       expect(article).toBeUndefined();
     });
 
@@ -522,20 +444,12 @@ describe('articlesSlice', () => {
         ...mockState,
         articles: {
           ...mockState.articles,
-          ru: {
-            ...mockState.articles.ru,
-            data: [],
-          },
+          data: [],
         },
       };
 
-      const article = selectArticleById(emptyState as any, 'ru', 'any-id');
+      const article = selectArticleById(emptyState as any, 'any-id');
       expect(article).toBeUndefined();
-    });
-
-    test('selectArticleById должен обработать несуществующий язык', () => {
-      // @ts-expect-error - тестируем edge case с невалидным языком
-      expect(() => selectArticleById(mockState as any, 'fr', 'article-1')).toThrow();
     });
   });
 });

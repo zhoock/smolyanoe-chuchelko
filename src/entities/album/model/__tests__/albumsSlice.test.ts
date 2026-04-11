@@ -28,8 +28,11 @@ const createTestStore = () => {
       popup: () => ({ isOpen: false }),
       player: () => initialPlayerState,
       articles: () => ({
-        en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-        ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+        status: 'idle' as const,
+        error: null,
+        data: [],
+        lastUpdated: null,
+        lastPublicArtistSlug: null,
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -372,8 +375,11 @@ describe('albumsSlice', () => {
       popup: { isOpen: false },
       player: initialPlayerState,
       articles: {
-        en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-        ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+        status: 'idle' as const,
+        error: null,
+        data: [],
+        lastUpdated: null,
+        lastPublicArtistSlug: null,
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

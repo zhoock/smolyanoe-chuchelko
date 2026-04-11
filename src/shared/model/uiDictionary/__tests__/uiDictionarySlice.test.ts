@@ -30,8 +30,11 @@ const createTestStore = () => {
       popup: () => ({ isOpen: false }),
       player: () => initialPlayerState,
       articles: () => ({
-        en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-        ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+        status: 'idle' as const,
+        error: null,
+        data: [],
+        lastUpdated: null,
+        lastPublicArtistSlug: null,
       }),
       albums: () => ({
         status: 'idle' as const,
@@ -403,8 +406,11 @@ describe('uiDictionarySlice', () => {
       popup: { isOpen: false },
       player: initialPlayerState,
       articles: {
-        en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-        ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+        status: 'idle' as const,
+        error: null,
+        data: [],
+        lastUpdated: null,
+        lastPublicArtistSlug: null,
       },
       albums: {
         status: 'idle' as const,

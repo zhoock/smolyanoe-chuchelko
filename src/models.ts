@@ -145,16 +145,35 @@ export interface String {
   [key: string]: string;
 }
 
+/** Переводимые поля статьи (`translations.ru` / `translations.en`). */
+export interface IArticleTranslationsLocale {
+  nameArticle: string;
+  description: string;
+  details: ArticledetailsProps[];
+}
+
+export type IArticleTranslations = Partial<Record<SupportedLang, IArticleTranslationsLocale>>;
+
 export type IArticles = {
   id?: string; // UUID из БД (опционально для обратной совместимости)
   userId?: string;
   articleId: string; // строковый идентификатор (article_id)
+  /** Заголовок для UI; каноническая запись — в `translations[lang].nameArticle`. */
   nameArticle: string;
   img: string;
   date: string;
   details: ArticledetailsProps[];
   description: string;
   isDraft?: boolean; // Статус черновика (опционально для обратной совместимости)
+  /**
+   * Переводы статьи. Создание/обновление через API — только в `translations[lang]`.
+   * Плоские поля на корне — ответ БД и временный fallback для старых данных.
+   */
+  translations?: IArticleTranslations;
+  /** Внутренняя метка для merge по свежести строки (ответ API). */
+  updatedAt?: string;
+  /** Язык строки в одноязычном ответе (POST и т.д.). */
+  lang?: string;
 };
 
 export interface ArticledetailsProps {

@@ -57,18 +57,11 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
         },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockArticles,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockArticles,
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -106,18 +99,11 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
         },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockArticles,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockArticles,
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -164,18 +150,11 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
         },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockArticles,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockArticles,
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -234,18 +213,11 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
         },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: mockArticles,
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'succeeded',
-            error: null,
-            data: mockArticles,
-            lastUpdated: Date.now(),
-          },
+          status: 'succeeded',
+          error: null,
+          data: mockArticles,
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {

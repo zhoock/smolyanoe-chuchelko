@@ -11,7 +11,7 @@ import { selectArticleById } from '@entities/article';
 import { getToken } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadFile } from '@shared/api/storage';
-import { fetchArticles } from '@entities/article';
+import { fetchArticles, resolveArticleForDisplay } from '@entities/article';
 import type { IArticles } from '@models';
 import type { SimplifiedBlock } from './EditArticleModal.utils';
 import {
@@ -266,7 +266,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
   // Получаем актуальную статью из Redux store после сохранения
   const updatedArticle = useAppSelector((state) =>
-    article?.articleId ? selectArticleById(state, lang, article.articleId) : undefined
+    article?.articleId ? selectArticleById(state, article.articleId) : undefined
   );
   const currentArticle = updatedArticle || article;
 
@@ -364,7 +364,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       }
 
       // Получаем статью со статусом (включая черновики)
-      const fetchUrl = `/api/articles-api?lang=${lang}&includeDrafts=true`;
+      const fetchUrl = '/api/articles-api?includeDrafts=true';
       agentLog({
         location: 'EditArticleModal.tsx:200',
         message: 'fetchArticleForEditing: before fetch',
@@ -469,10 +469,11 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
     // Загружаем статью со статусом для редактирования
     fetchArticleForEditing().then((articleWithStatus) => {
       const articleToInit = articleWithStatus || articleToUse;
-      const simplified = normalizeDetailsToSimplified(articleToInit.details || []);
+      const display = resolveArticleForDisplay(articleToInit, lang);
+      const simplified = normalizeDetailsToSimplified(display.details || []);
       setEditingData({
-        nameArticle: articleToInit.nameArticle,
-        description: articleToInit.description || '',
+        nameArticle: display.nameArticle,
+        description: display.description || '',
       });
       setBlocks(simplified);
       // Преобразуем блоки в HTML для единого contentEditable
@@ -2019,12 +2020,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
       const requestBody = {
         articleId: currentArticle?.articleId || article.articleId,
-        nameArticle: editingData.nameArticle,
-        description: editingData.description,
+        lang,
+        translations: {
+          [lang]: {
+            nameArticle: editingData.nameArticle,
+            description: editingData.description,
+            details,
+          },
+        },
         img: currentArticle?.img || article.img,
         date: currentArticle?.date || article.date,
-        details: details,
-        lang: lang,
         isDraft: shouldBeDraft,
       };
       agentLog({
@@ -2071,7 +2076,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
         setLastSaved(new Date());
         // Обновляем Redux store (только опубликованные статьи) с принудительным обновлением
         try {
-          await dispatch(fetchArticles({ lang, force: true })).unwrap();
+          await dispatch(fetchArticles({ force: true })).unwrap();
           agentLog({
             location: 'EditArticleModal.tsx:431',
             message: 'Redux store updated',
@@ -2640,12 +2645,16 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       // Публикуем статью (isDraft = false)
       const publishRequestBody = {
         articleId: currentArticle?.articleId || article.articleId,
-        nameArticle: editingData.nameArticle,
-        description: editingData.description,
+        lang,
+        translations: {
+          [lang]: {
+            nameArticle: editingData.nameArticle,
+            description: editingData.description,
+            details,
+          },
+        },
         img: currentArticle?.img || article.img,
         date: currentArticle?.date || article.date,
-        details: details,
-        lang: lang,
         isDraft: false, // Публикуем статью
       };
       agentLog({
@@ -2709,7 +2718,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
 
       // Обновляем Redux store через thunk с принудительным обновлением
       try {
-        await dispatch(fetchArticles({ lang, force: true })).unwrap();
+        await dispatch(fetchArticles({ force: true })).unwrap();
       } catch (error: any) {
         console.warn(
           '⚠️ Не удалось обновить статьи из Redux, но публикация прошла успешно:',

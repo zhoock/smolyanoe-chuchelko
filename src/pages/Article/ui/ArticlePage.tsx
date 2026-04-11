@@ -11,7 +11,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { formatDateInWords, type LocaleKey } from '@entities/article/lib/formatDate';
 import {
-  selectArticleById,
+  selectArticleByIdResolved,
   selectArticlesError,
   selectArticlesStatus,
   type RequestStatus,
@@ -32,9 +32,9 @@ export function ArticlePage() {
   const artistSlug = searchParams.get('artist');
   const homePath = withPublicArtistQuery('/', artistSlug);
   const articlesListPath = withPublicArtistQuery('/articles', artistSlug);
-  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
-  const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
-  const article = useAppSelector((state) => selectArticleById(state, lang, articleId));
+  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
+  const articlesError = useAppSelector((state) => selectArticlesError(state));
+  const article = useAppSelector((state) => selectArticleByIdResolved(state, articleId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { formatDate } = formatDateInWords[locale];
 
@@ -171,7 +171,7 @@ export function ArticlePage() {
 type ArticleContentProps = {
   status: RequestStatus;
   error: string | null;
-  article: ReturnType<typeof selectArticleById>;
+  article: ReturnType<typeof selectArticleByIdResolved>;
   formatDate: (value: string) => string;
   lang: LocaleKey;
   renderBlock: (details: ArticledetailsProps) => JSX.Element;

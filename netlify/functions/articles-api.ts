@@ -25,6 +25,7 @@ import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/publ
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractBaseName } from './lib/image-processor';
 import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
+import { hydrateMissingRuTranslationsOnArticle } from '../../src/entities/article/lib/hydrateMissingRuTranslations';
 
 interface ArticleRow {
   id: string;
@@ -41,8 +42,14 @@ interface ArticleRow {
   updated_at: Date;
 }
 
+interface ArticleLocalePayload {
+  nameArticle: string;
+  description: string;
+  details: unknown[];
+}
+
 interface ArticleData {
-  id: string; // UUID из БД
+  id: string; // UUID из БД (самая свежая строка по updated_at среди локалей)
   userId?: string;
   articleId: string; // строковый идентификатор (article_id)
   nameArticle: string;
@@ -50,30 +57,136 @@ interface ArticleData {
   date: string;
   details: unknown[];
   description: string;
-  isDraft?: boolean; // Статус черновика (опционально для обратной совместимости)
+  isDraft?: boolean;
+  /** Внутренняя метка для merge по свежести строки (не язык). */
+  updatedAt?: string;
+  /** Присутствует у одноязычного ответа (POST и т.д.). */
+  lang?: string;
+  translations?: Partial<Record<SupportedLang, ArticleLocalePayload>>;
 }
 
+/** Переводимые поля — только внутри translations[lang]. */
 interface CreateArticleRequest {
   articleId: string;
-  nameArticle: string;
-  description?: string;
+  translations: Partial<Record<SupportedLang, ArticleLocalePayload>>;
   img?: string;
   date: string;
-  details: unknown[];
   lang: SupportedLang;
   isDraft?: boolean;
 }
 
 interface UpdateArticleRequest {
-  nameArticle?: string;
-  description?: string;
+  articleId: string;
+  lang: SupportedLang;
+  translations?: Partial<Record<SupportedLang, Partial<ArticleLocalePayload>>>;
   img?: string;
   date?: string;
-  details?: unknown[];
   isDraft?: boolean;
 }
 
+const LEGACY_ARTICLE_TRANSLATABLE_ROOT = ['nameArticle', 'description', 'details'] as const;
+
+function articleRequestHasForbiddenRootFields(body: Record<string, unknown>): string | null {
+  for (const key of LEGACY_ARTICLE_TRANSLATABLE_ROOT) {
+    if (Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined) {
+      return `"${key}" must be sent only inside translations[lang], not at request root`;
+    }
+  }
+  return null;
+}
+
 type ArticlesResponse = ApiResponse<ArticleData[]>;
+
+function sortArticleRowsForMerge(rows: ArticleRow[]): ArticleRow[] {
+  const rank = (l: string) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
+  return [...rows].sort(
+    (a, b) =>
+      rank(a.lang) - rank(b.lang) ||
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  );
+}
+
+function mergeArticleDataPayloads(payloads: ArticleData[]): ArticleData {
+  if (payloads.length === 0) {
+    throw new Error('mergeArticleDataPayloads: empty payloads');
+  }
+  const sortedForShared = [...payloads].sort((a, b) => {
+    const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return tb - ta;
+  });
+  const shared = sortedForShared[0];
+  const sortedForText = [...payloads].sort((a, b) => {
+    const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
+    return rank(a.lang) - rank(b.lang);
+  });
+  const textRoot = sortedForText[0] ?? shared;
+  const translations: Partial<Record<SupportedLang, ArticleLocalePayload>> = {};
+  for (const p of sortedForText) {
+    if (p.lang && validateLang(p.lang)) {
+      translations[p.lang] = {
+        nameArticle: p.nameArticle,
+        description: p.description,
+        details: p.details,
+      };
+    }
+  }
+  return {
+    userId: shared.userId,
+    articleId: shared.articleId,
+    id: shared.id,
+    nameArticle: textRoot.nameArticle,
+    description: textRoot.description,
+    img: shared.img,
+    date: shared.date,
+    details: textRoot.details,
+    isDraft: shared.isDraft,
+    translations,
+    updatedAt: shared.updatedAt,
+  };
+}
+
+async function syncSharedArticleMetadataAcrossLocales(
+  userId: string,
+  articleId: string,
+  patch: {
+    img?: string | null;
+    date?: string;
+    isDraft?: boolean;
+  }
+): Promise<void> {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+  if (patch.img !== undefined) {
+    sets.push(`img = $${i++}`);
+    values.push(patch.img);
+  }
+  if (patch.date !== undefined) {
+    sets.push(`date = $${i++}::date`);
+    values.push(patch.date);
+  }
+  if (patch.isDraft !== undefined) {
+    sets.push(`is_draft = $${i++}`);
+    values.push(patch.isDraft);
+  }
+  if (sets.length === 0) return;
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(userId, articleId);
+  await query(
+    `UPDATE articles SET ${sets.join(', ')} WHERE user_id = $${i++}::uuid AND article_id = $${i++}`,
+    values
+  );
+}
+
+function mergeArticleRowsToApiData(rows: ArticleRow[]): ArticleData {
+  const sorted = sortArticleRowsForMerge(rows);
+  const payloads = sorted.map(mapArticleToApiFormat);
+  const merged = mergeArticleDataPayloads(payloads);
+  return hydrateMissingRuTranslationsOnArticle(
+    merged as import('../../src/models').IArticles
+  ) as ArticleData;
+}
 
 /**
  * Преобразует данные статьи из БД в формат API
@@ -90,7 +203,7 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
     }
   }
 
-  const result = {
+  const result: ArticleData = {
     id: article.id, // UUID из БД
     userId: article.user_id || undefined,
     articleId: article.article_id, // строковый идентификатор
@@ -100,6 +213,9 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
     details: (details as unknown[]) || [],
     description: article.description || '',
     isDraft: article.is_draft ?? false, // Статус черновика
+    lang: article.lang,
+    updatedAt:
+      article.updated_at != null ? new Date(article.updated_at as Date).toISOString() : undefined,
   };
 
   console.log('[mapArticleToApiFormat] Mapped article:', {
@@ -319,14 +435,12 @@ export const handler: Handler = async (
         : getUserIdFromEvent(event);
 
     if (event.httpMethod === 'GET') {
-      const { lang, id } = event.queryStringParameters || {};
-
-      if (!validateLang(lang)) {
+      const { lang: langQuery, id } = event.queryStringParameters || {};
+      // `lang` в query больше не фильтрует ответ; оставлен для обратной совместимости клиентов.
+      if (langQuery && !validateLang(langQuery)) {
         return createErrorResponse(400, 'Invalid lang parameter. Must be "en" or "ru".');
       }
 
-      // Проверяем, нужно ли включать черновики (для редактирования в админке, требует авторизации)
-      // #region agent log
       if (includeDrafts) {
         console.log('[articles-api] GET with includeDrafts:', {
           includeDrafts,
@@ -335,19 +449,11 @@ export const handler: Handler = async (
           hasAuthHeader: !!(event.headers?.authorization || event.headers?.Authorization),
         });
       }
-      // #endregion
       if (includeDrafts && !userId) {
         return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
       }
 
-      // GET по id (UUID или legacy article_id): возвращаем только статью текущего контекста владельца.
-      if (id) {
-        let articleResult;
-
-        if (includeDrafts) {
-          // Админ-режим: всегда только текущий пользователь из JWT.
-          articleResult = await query<ArticleRow>(
-            `SELECT
+      const ARTICLE_ROW_SELECT = `
               id,
               user_id,
               article_id,
@@ -357,19 +463,23 @@ export const handler: Handler = async (
               date,
               details,
               lang,
-              is_draft
-            FROM articles
-            WHERE (id = $1 OR article_id = $1)
-              AND user_id = $2
-              AND lang = $3
-            ORDER BY updated_at DESC
-            LIMIT 1`,
-            [id, userId, lang]
-          );
+              is_draft,
+              created_at,
+              updated_at`;
+
+      // GET по id (UUID или article_id): слив всех локалей в одну сущность.
+      if (id) {
+        let targetUserId: string;
+        if (includeDrafts) {
+          if (!userId) {
+            return createErrorResponse(
+              401,
+              'Unauthorized. Authentication required to view drafts.'
+            );
+          }
+          targetUserId = userId;
         } else {
-          // Публичный режим: только контекст выбранного артиста.
           const artistSlug = event.queryStringParameters?.artist;
-          let targetUserId: string;
           try {
             targetUserId = await resolvePublicArtistUserId(artistSlug);
           } catch (error) {
@@ -378,63 +488,46 @@ export const handler: Handler = async (
             }
             throw error;
           }
-
-          articleResult = await query<ArticleRow>(
-            `SELECT
-              id,
-              user_id,
-              article_id,
-              name_article,
-              description,
-              img,
-              date,
-              details,
-              lang,
-              is_draft
-            FROM articles
-            WHERE (id = $1 OR article_id = $1)
-              AND user_id = $2
-              AND lang = $3
-              AND (is_draft = false OR is_draft IS NULL)
-            ORDER BY updated_at DESC
-            LIMIT 1`,
-            [id, targetUserId, lang]
-          );
         }
+
+        const locate = await query<{ article_id: string }>(
+          `SELECT article_id FROM articles
+           WHERE user_id = $1::uuid AND (id::text = $2 OR article_id = $2)
+           LIMIT 1`,
+          [targetUserId, id]
+        );
+
+        if (locate.rows.length === 0) {
+          return createSuccessResponse([]);
+        }
+
+        const articleId = locate.rows[0].article_id;
+        const draftClause = includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)';
+
+        const articleResult = await query<ArticleRow>(
+          `SELECT ${ARTICLE_ROW_SELECT}
+            FROM articles
+            WHERE user_id = $1::uuid AND article_id = $2 ${draftClause}
+            ORDER BY CASE lang WHEN 'ru' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+              updated_at DESC`,
+          [targetUserId, articleId]
+        );
 
         if (articleResult.rows.length === 0) {
           return createSuccessResponse([]);
         }
 
-        return createSuccessResponse([mapArticleToApiFormat(articleResult.rows[0])]);
+        return createSuccessResponse([mergeArticleRowsToApiData(articleResult.rows)]);
       }
 
-      let articlesResult;
-
+      let targetUserId: string;
       if (includeDrafts) {
-        // Админ-режим: показываем статьи текущего пользователя, включая черновики.
-        articlesResult = await query<ArticleRow>(
-          `SELECT
-            id,
-            user_id,
-            article_id,
-            name_article,
-            description,
-            img,
-            date,
-            details,
-            lang,
-            is_draft
-          FROM articles
-          WHERE lang = $1
-            AND user_id = $2
-          ORDER BY updated_at DESC, article_id ASC`,
-          [lang, userId]
-        );
+        if (!userId) {
+          return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
+        }
+        targetUserId = userId;
       } else {
-        // Публичный режим: не зависит от JWT, работает в контексте выбранного артиста.
         const artistSlug = event.queryStringParameters?.artist;
-        let targetUserId: string;
         try {
           targetUserId = await resolvePublicArtistUserId(artistSlug);
         } catch (error) {
@@ -443,31 +536,35 @@ export const handler: Handler = async (
           }
           throw error;
         }
-
-        articlesResult = await query<ArticleRow>(
-          `SELECT
-            id,
-            user_id,
-            article_id,
-            name_article,
-            description,
-            img,
-            date,
-            details,
-            lang,
-            is_draft
-          FROM articles
-          WHERE lang = $1
-            AND user_id = $2
-            AND (is_draft = false OR is_draft IS NULL)
-          ORDER BY updated_at DESC, article_id ASC`,
-          [lang, targetUserId]
-        );
       }
 
-      const articles = articlesResult.rows.map(mapArticleToApiFormat);
+      const draftClause = includeDrafts ? '' : 'AND (is_draft = false OR is_draft IS NULL)';
 
-      return createSuccessResponse(articles);
+      const articlesResult = await query<ArticleRow>(
+        `SELECT ${ARTICLE_ROW_SELECT}
+          FROM articles
+          WHERE user_id = $1::uuid ${draftClause}
+          ORDER BY article_id,
+            CASE lang WHEN 'ru' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+            updated_at DESC`,
+        [targetUserId]
+      );
+
+      const byArticleId = new Map<string, ArticleRow[]>();
+      const articleIdsOrdered: string[] = [];
+      for (const row of articlesResult.rows) {
+        if (!byArticleId.has(row.article_id)) {
+          articleIdsOrdered.push(row.article_id);
+          byArticleId.set(row.article_id, []);
+        }
+        byArticleId.get(row.article_id)!.push(row);
+      }
+
+      const merged = articleIdsOrdered.map((aid) =>
+        mergeArticleRowsToApiData(byArticleId.get(aid)!)
+      );
+
+      return createSuccessResponse(merged);
     }
 
     if (event.httpMethod === 'POST') {
@@ -475,44 +572,73 @@ export const handler: Handler = async (
         return createErrorResponse(401, 'Unauthorized');
       }
 
-      const data = parseJsonBody<CreateArticleRequest>(event.body, {} as CreateArticleRequest);
-
-      if (
-        !data.articleId ||
-        !data.nameArticle ||
-        !data.date ||
-        !data.lang ||
-        !data.details ||
-        !validateLang(data.lang)
-      ) {
+      let data: CreateArticleRequest;
+      try {
+        data = parseJsonBody<CreateArticleRequest>(event.body, {} as CreateArticleRequest);
+      } catch (error) {
         return createErrorResponse(
           400,
-          'Invalid request data. Required: articleId, nameArticle, date, lang (must be "en" or "ru"), details'
+          error instanceof Error ? error.message : 'Invalid JSON body'
         );
       }
 
-      // Используем RETURNING чтобы получить UUID созданной статьи
-      // По умолчанию создаем как черновик (is_draft = true), если не указано иное
+      const forbidden = articleRequestHasForbiddenRootFields(
+        data as unknown as Record<string, unknown>
+      );
+      if (forbidden) {
+        return createErrorResponse(400, forbidden);
+      }
+
+      const locale = data.translations?.[data.lang];
+      if (
+        !data.articleId ||
+        !data.date ||
+        !data.lang ||
+        !validateLang(data.lang) ||
+        !locale ||
+        !locale.nameArticle ||
+        !Array.isArray(locale.details)
+      ) {
+        return createErrorResponse(
+          400,
+          'Invalid request data. Required: articleId, date, lang, translations[lang] with nameArticle and details'
+        );
+      }
+
       const isDraft = data.isDraft !== undefined ? data.isDraft : true;
 
       const result = await query<ArticleRow>(
         `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, NOW(), NOW())
-         RETURNING id, user_id, article_id, name_article, description, img, date, details, lang, is_draft`,
+         ON CONFLICT (user_id, article_id, lang)
+         DO UPDATE SET
+           name_article = EXCLUDED.name_article,
+           description = EXCLUDED.description,
+           img = EXCLUDED.img,
+           date = EXCLUDED.date,
+           details = EXCLUDED.details,
+           is_draft = EXCLUDED.is_draft,
+           updated_at = CURRENT_TIMESTAMP
+         RETURNING id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at`,
         [
           userId,
           data.articleId,
-          data.nameArticle,
-          data.description || null,
+          locale.nameArticle,
+          locale.description ?? null,
           data.img || null,
           data.date,
-          JSON.stringify(data.details),
+          JSON.stringify(locale.details),
           data.lang,
-          isDraft, // Используем переданное значение или true по умолчанию
+          isDraft,
         ]
       );
 
-      // Возвращаем созданную статью с UUID
+      await syncSharedArticleMetadataAcrossLocales(userId, data.articleId, {
+        img: data.img !== undefined ? data.img : undefined,
+        date: data.date,
+        isDraft,
+      });
+
       if (result.rows.length > 0) {
         return createSuccessResponse([mapArticleToApiFormat(result.rows[0])]);
       }
@@ -539,128 +665,127 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Article ID is required (query parameter: id)');
       }
 
-      const data = parseJsonBody<UpdateArticleRequest>(event.body, {} as UpdateArticleRequest);
-
-      // Валидация UUID
-      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const isUUID = UUID_RE.test(id);
-
-      console.log('[articles-api PUT] Checking article', {
-        id,
-        isUUID,
-        userId: userId?.substring(0, 10) + '...',
-      });
-
-      // Проверяем, что статья принадлежит пользователю
-      // Поддерживаем как UUID id, так и article_id для обратной совместимости
-      let checkResult: Awaited<ReturnType<typeof query<ArticleRow>>>;
-
-      if (isUUID) {
-        // Используем UUID id для поиска
-        console.log('[articles-api PUT] Searching by UUID id', { id, userId });
-        // Проверяем, что статья существует И (принадлежит пользователю ИЛИ является публичной)
-        // Публичные статьи имеют user_id = NULL
-        checkResult = await query<ArticleRow>(
-          `SELECT id FROM articles WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)`,
-          [id, userId]
-        );
-      } else {
-        // Fallback: используем article_id для старых данных без UUID
-        console.log('[articles-api PUT] Searching by article_id', { id, userId });
-        // Проверяем, что статья существует И (принадлежит пользователю ИЛИ является публичной)
-        // Публичные статьи имеют user_id = NULL
-        checkResult = await query<ArticleRow>(
-          `SELECT id FROM articles WHERE article_id = $1 AND (user_id = $2 OR user_id IS NULL)`,
-          [id, userId]
+      let data: UpdateArticleRequest;
+      try {
+        data = parseJsonBody<UpdateArticleRequest>(event.body, {} as UpdateArticleRequest);
+      } catch (error) {
+        return createErrorResponse(
+          400,
+          error instanceof Error ? error.message : 'Invalid JSON body'
         );
       }
 
-      console.log('[articles-api PUT] Check result', {
-        rowsFound: checkResult.rows.length,
-        foundId: checkResult.rows.length > 0 ? checkResult.rows[0].id : null,
-      });
+      const forbidden = articleRequestHasForbiddenRootFields(
+        data as unknown as Record<string, unknown>
+      );
+      if (forbidden) {
+        return createErrorResponse(400, forbidden);
+      }
+
+      if (!data.articleId || !data.lang || !validateLang(data.lang)) {
+        return createErrorResponse(
+          400,
+          'Invalid request data. Required: articleId, lang (must be "en" or "ru")'
+        );
+      }
+
+      const checkResult = await query<{ article_id: string }>(
+        `SELECT article_id FROM articles
+         WHERE (id::text = $1 OR article_id = $1) AND user_id = $2::uuid`,
+        [id, userId]
+      );
 
       if (checkResult.rows.length === 0) {
-        console.log('[articles-api PUT] Article not found or access denied', {
-          id,
-          isUUID,
-          userId: userId?.substring(0, 10) + '...',
-        });
         return createErrorResponse(404, 'Article not found or access denied');
       }
 
-      // Получаем реальный UUID для обновления
-      const realId = checkResult.rows[0].id;
-
-      // Формируем динамический UPDATE запрос
-      const updates: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
-
-      if (data.nameArticle !== undefined) {
-        updates.push(`name_article = $${paramIndex++}`);
-        values.push(data.nameArticle);
-      }
-      if (data.description !== undefined) {
-        updates.push(`description = $${paramIndex++}`);
-        values.push(data.description);
-      }
-      if (data.img !== undefined) {
-        updates.push(`img = $${paramIndex++}`);
-        values.push(data.img);
-      }
-      if (data.date !== undefined) {
-        updates.push(`date = $${paramIndex++}`);
-        values.push(data.date);
-      }
-      if (data.details !== undefined) {
-        updates.push(`details = $${paramIndex++}::jsonb`);
-        const detailsJson = JSON.stringify(data.details);
-        values.push(detailsJson);
-
-        console.log('[articles-api PUT] Обновление details:', {
-          detailsLength: Array.isArray(data.details) ? data.details.length : 'not array',
-          firstDetail:
-            Array.isArray(data.details) && data.details.length > 0 ? data.details[0] : null,
-          detailsJsonLength: detailsJson.length,
-        });
-      }
-      if (data.isDraft !== undefined) {
-        updates.push(`is_draft = $${paramIndex++}`);
-        values.push(data.isDraft);
+      const resolvedArticleId = checkResult.rows[0].article_id;
+      if (resolvedArticleId !== data.articleId) {
+        return createErrorResponse(400, 'articleId in body does not match article');
       }
 
-      if (updates.length === 0) {
+      const patch = data.translations?.[data.lang];
+      const existingLocale = await query<ArticleRow>(
+        `SELECT id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at
+         FROM articles
+         WHERE user_id = $1::uuid AND article_id = $2 AND lang = $3`,
+        [userId, resolvedArticleId, data.lang]
+      );
+
+      const hasLocalePatch =
+        patch &&
+        (patch.nameArticle !== undefined ||
+          patch.description !== undefined ||
+          patch.details !== undefined);
+
+      const hasSharedPatch =
+        data.img !== undefined || data.date !== undefined || data.isDraft !== undefined;
+
+      if (!hasLocalePatch && !hasSharedPatch) {
         return createErrorResponse(400, 'No fields to update');
       }
 
-      updates.push(`updated_at = NOW()`);
-      values.push(realId, userId);
+      if (hasLocalePatch) {
+        const cur = existingLocale.rows[0];
+        const nameArticle = patch!.nameArticle ?? cur?.name_article ?? '';
+        const description = patch!.description ?? cur?.description ?? '';
+        const detailsArr = patch!.details ?? parseDetailsArray(cur?.details);
+        const imgVal = data.img !== undefined ? data.img : (cur?.img ?? null);
+        let dateVal: string;
+        if (data.date !== undefined) {
+          dateVal = data.date;
+        } else if (cur?.date) {
+          const d = cur.date as Date;
+          dateVal = d.toISOString().split('T')[0];
+        } else {
+          dateVal = new Date().toISOString().split('T')[0];
+        }
+        const isDraftVal = data.isDraft !== undefined ? data.isDraft : (cur?.is_draft ?? true);
 
-      console.log('[articles-api PUT] SQL UPDATE:', {
-        updates: updates.join(', '),
-        valuesCount: values.length,
-        realId,
-        userId,
-      });
+        if (!nameArticle || !Array.isArray(detailsArr)) {
+          return createErrorResponse(
+            400,
+            'translations[lang] must include nameArticle and details when updating locale fields'
+          );
+        }
 
-      // Используем реальный UUID id для обновления
-      // Обновляем статью, если она принадлежит пользователю ИЛИ является публичной (user_id IS NULL)
-      const updateResult = await query(
-        `UPDATE articles 
-         SET ${updates.join(', ')}
-         WHERE id = $${paramIndex++} AND (user_id = $${paramIndex++} OR user_id IS NULL)
-         RETURNING id, article_id, name_article, details`,
-        values
-      );
+        await query<ArticleRow>(
+          `INSERT INTO articles (user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at)
+           VALUES ($1::uuid, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, NOW(), NOW())
+           ON CONFLICT (user_id, article_id, lang)
+           DO UPDATE SET
+             name_article = EXCLUDED.name_article,
+             description = EXCLUDED.description,
+             img = EXCLUDED.img,
+             date = EXCLUDED.date,
+             details = EXCLUDED.details,
+             is_draft = EXCLUDED.is_draft,
+             updated_at = CURRENT_TIMESTAMP
+           RETURNING id`,
+          [
+            userId,
+            resolvedArticleId,
+            nameArticle,
+            description || null,
+            imgVal,
+            dateVal,
+            JSON.stringify(detailsArr),
+            data.lang,
+            isDraftVal,
+          ]
+        );
 
-      console.log('[articles-api PUT] Результат обновления:', {
-        rowsAffected: updateResult.rowCount,
-        updatedArticle: updateResult.rows[0] || null,
-      });
-
-      if (updateResult.rowCount === 0) {
-        return createErrorResponse(404, 'Article not found or update failed');
+        await syncSharedArticleMetadataAcrossLocales(userId, resolvedArticleId, {
+          img: imgVal ?? undefined,
+          date: dateVal,
+          isDraft: isDraftVal,
+        });
+      } else if (hasSharedPatch) {
+        await syncSharedArticleMetadataAcrossLocales(userId, resolvedArticleId, {
+          img: data.img !== undefined ? data.img : undefined,
+          date: data.date !== undefined ? data.date : undefined,
+          isDraft: data.isDraft !== undefined ? data.isDraft : undefined,
+        });
       }
 
       return createSuccessMessageResponse('Article updated successfully');
@@ -683,17 +808,34 @@ export const handler: Handler = async (
         return createErrorResponse(400, `Invalid id. Expected UUID, got "${id}"`);
       }
 
-      const articleBeforeDelete = await query<{ img: string | null; details: unknown }>(
-        `SELECT img, details FROM articles WHERE id = $1 AND user_id = $2`,
+      const locateDelete = await query<{ article_id: string }>(
+        `SELECT article_id FROM articles WHERE id = $1 AND user_id = $2::uuid`,
         [id, userId]
       );
 
-      if (articleBeforeDelete.rows.length === 0) {
+      if (locateDelete.rows.length === 0) {
         return createErrorResponse(404, 'Article not found or access denied');
       }
 
-      const { img, details } = articleBeforeDelete.rows[0];
-      const mediaTargets = collectArticleMediaDeletionTargets(img ?? '', details, userId);
+      const articleIdToDelete = locateDelete.rows[0].article_id;
+
+      const rowsForMedia = await query<{ img: string | null; details: unknown }>(
+        `SELECT img, details FROM articles WHERE user_id = $1::uuid AND article_id = $2`,
+        [userId, articleIdToDelete]
+      );
+
+      const stems = new Set<string>();
+      const storagePaths = new Set<string>();
+      for (const r of rowsForMedia.rows) {
+        const t = collectArticleMediaDeletionTargets(r.img ?? '', r.details, userId);
+        for (const s of t.stems) stems.add(s);
+        for (const p of t.storagePaths) storagePaths.add(p);
+      }
+      const mediaTargets: ArticleMediaDeletionTargets = {
+        stems: [...stems],
+        storagePaths: [...storagePaths],
+      };
+
       if (mediaTargets.stems.length > 0 || mediaTargets.storagePaths.length > 0) {
         const supabase = createSupabaseAdminClient();
         if (supabase) {
@@ -705,7 +847,10 @@ export const handler: Handler = async (
         }
       }
 
-      await query(`DELETE FROM articles WHERE id = $1 AND user_id = $2`, [id, userId]);
+      await query(`DELETE FROM articles WHERE user_id = $1::uuid AND article_id = $2`, [
+        userId,
+        articleIdToDelete,
+      ]);
 
       return createSuccessMessageResponse('Article deleted successfully');
     }

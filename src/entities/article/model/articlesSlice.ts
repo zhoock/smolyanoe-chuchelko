@@ -1,20 +1,22 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import type { SupportedLang } from '@shared/model/lang';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
-import { createInitialLangEntry } from '@shared/lib/redux/createLangSlice';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 
-import type { ArticlesState, ArticlesEntry } from './types';
+import { hydrateMissingRuTranslationsOnArticle } from '../lib/hydrateMissingRuTranslations';
+
+import type { ArticlesState } from './types';
 
 const initialState: ArticlesState = {
-  en: { ...createInitialLangEntry<IArticles[]>([]), lastPublicArtistSlug: null },
-  ru: { ...createInitialLangEntry<IArticles[]>([]), lastPublicArtistSlug: null },
+  status: 'idle',
+  error: null,
+  data: [],
+  lastUpdated: null,
+  lastPublicArtistSlug: null,
 };
 
 export type FetchArticlesArg = {
-  lang: SupportedLang;
   force?: boolean;
   /** Явный slug из loader URL; на дашборде не задаётся */
   publicArtistSlug?: string | null;
@@ -35,35 +37,32 @@ export const fetchArticles = createAsyncThunk<
   FetchArticlesArg,
   { rejectValue: string; state: RootState }
 >(
-  'articles/fetchByLang',
-  async ({ lang }, { signal, rejectWithValue }) => {
-    const normalize = (data: any[]): IArticles[] =>
-      data.map((article: any) => {
-        // ВАЖНО: гарантируем, что id (UUID) всегда присутствует
-        // Если id отсутствует, логируем предупреждение, но не падаем
-        if (!article.id && process.env.NODE_ENV === 'development') {
-          console.warn('[fetchArticles] Article without UUID id:', {
-            articleId: article.articleId,
-            nameArticle: article.nameArticle,
-          });
+  'articles/fetchMerged',
+  async (_arg, { signal, rejectWithValue }) => {
+    const normalize = (data: unknown[]): IArticles[] =>
+      data.map((article: unknown) => {
+        const a = article as Record<string, unknown>;
+        if (!a || typeof a !== 'object') {
+          return article as IArticles;
         }
-
-        return {
-          id: article.id, // UUID из БД (может быть undefined для старых данных)
-          userId: article.userId,
-          articleId: article.articleId,
-          nameArticle: article.nameArticle,
-          img: article.img ?? '',
-          date: article.date,
-          details: article.details || [],
-          description: article.description ?? '',
-          isDraft: article.isDraft ?? false, // Статус черновика
+        const base = {
+          id: a.id as string | undefined,
+          userId: a.userId as string | undefined,
+          articleId: String(a.articleId ?? ''),
+          nameArticle: String(a.nameArticle ?? ''),
+          img: String(a.img ?? ''),
+          date: String(a.date ?? ''),
+          details: Array.isArray(a.details) ? (a.details as IArticles['details']) : [],
+          description: String(a.description ?? ''),
+          isDraft: (a.isDraft as boolean | undefined) ?? false,
+          translations: a.translations as IArticles['translations'],
+          updatedAt: a.updatedAt as string | undefined,
+          lang: a.lang as IArticles['lang'],
         } as IArticles;
+        return hydrateMissingRuTranslationsOnArticle(base);
       });
 
     try {
-      // Загружаем из БД через API (приоритет над статикой)
-      // Импортируем динамически, чтобы избежать циклических зависимостей
       const { getAuthHeader } = await import('@shared/lib/auth');
       const authHeader = getAuthHeader();
       const isDashboardRoute =
@@ -76,7 +75,6 @@ export const fetchArticles = createAsyncThunk<
           buildApiUrl(
             '/api/articles-api',
             {
-              lang,
               includeDrafts: isDashboardRoute ? true : undefined,
             },
             { includeArtist: !isDashboardRoute }
@@ -93,46 +91,17 @@ export const fetchArticles = createAsyncThunk<
 
         if (response && response.ok) {
           const payload = await response.json();
-
-          // Диагностика: логируем структуру ответа
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[fetchArticles] API response payload:', payload);
-            if (payload.data && Array.isArray(payload.data) && payload.data.length > 0) {
-              console.log('[fetchArticles] First article from API:', payload.data[0]);
-              console.log('[fetchArticles] First article has id?', !!payload.data[0]?.id);
-            }
-          } // ✅ Универсальный разбор: вытаскиваем список откуда бы он ни пришёл
           const list = Array.isArray(payload) ? payload : (payload.data ?? payload.articles ?? []);
 
           if (!Array.isArray(list)) {
             throw new Error('Invalid response from API: expected array');
           }
 
-          // Если данных нет, возвращаем пустой массив
           if (list.length === 0) {
             return [];
           }
 
-          // Преобразуем данные из API в формат IArticles
-          // ВАЖНО: гарантируем, что id (UUID) всегда присутствует
-          const normalized = normalize(list);
-
-          // Диагностика: проверяем, что id сохранился
-          if (process.env.NODE_ENV === 'development') {
-            const articlesWithId = normalized.filter((a) => a.id);
-            const articlesWithoutId = normalized.filter((a) => !a.id);
-            console.log('[fetchArticles] Normalized articles:', {
-              total: normalized.length,
-              withId: articlesWithId.length,
-              withoutId: articlesWithoutId.length,
-              withoutIdExamples: articlesWithoutId.map((a) => ({
-                articleId: a.articleId,
-                nameArticle: a.nameArticle,
-              })),
-            });
-          }
-
-          return normalized;
+          return normalize(list);
         } else {
           apiFailure = new Error(
             response
@@ -146,7 +115,14 @@ export const fetchArticles = createAsyncThunk<
         console.warn('[fetchArticles] API request failed, trying static fallback:', errorMessage);
       }
 
-      const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
+      let fallbackLang: 'en' | 'ru' = 'en';
+      try {
+        const { getStore } = await import('@shared/model/appStore');
+        fallbackLang = getStore().getState().lang.current === 'ru' ? 'ru' : 'en';
+      } catch {
+        fallbackLang = 'en';
+      }
+      const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
       if (fallback && fallback.ok) {
         const data = await fallback.json();
         if (Array.isArray(data)) {
@@ -157,10 +133,8 @@ export const fetchArticles = createAsyncThunk<
       if (apiFailure instanceof Error) {
         throw apiFailure;
       }
-      // null / string / etc. — внешний catch отдаёт Unknown error для не-Error
       throw apiFailure;
     } catch (error) {
-      // Если API недоступен – отдаём ошибку
       if (error instanceof Error) {
         return rejectWithValue(error.message);
       }
@@ -169,28 +143,26 @@ export const fetchArticles = createAsyncThunk<
   },
   {
     condition: (arg, { getState }) => {
-      const { lang, force } = arg;
-      if (force) {
+      if (arg.force) {
         return true;
       }
       const state = getState();
-      const entry = state.articles[lang] as ArticlesEntry;
-      if (entry.status === 'loading') {
+      if (state.articles.status === 'loading') {
         return false;
       }
 
       const isDashboard =
         typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
       if (isDashboard) {
-        if (entry.status === 'succeeded') {
+        if (state.articles.status === 'succeeded') {
           return false;
         }
         return true;
       }
 
       const slug = resolvePublicArtistSlugForFetch(arg);
-      if (entry.status === 'succeeded') {
-        const prev = entry.lastPublicArtistSlug ?? '';
+      if (state.articles.status === 'succeeded') {
+        const prev = state.articles.lastPublicArtistSlug ?? '';
         if (prev !== slug) {
           return true;
         }
@@ -207,31 +179,23 @@ const articlesSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchArticles.pending, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'loading';
-        entry.error = null;
+      .addCase(fetchArticles.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
-        const { lang } = action.meta.arg;
         const newData = Array.isArray(action.payload) ? [...action.payload] : action.payload;
         const isDashboard =
           typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
         const slug = isDashboard ? null : resolvePublicArtistSlugForFetch(action.meta.arg);
-        state[lang] = {
-          ...state[lang],
-          data: newData as IArticles[],
-          status: 'succeeded',
-          error: null,
-          lastUpdated: Date.now(),
-          lastPublicArtistSlug: slug,
-        };
+        state.data = newData as IArticles[];
+        state.status = 'succeeded';
+        state.error = null;
+        state.lastUpdated = Date.now();
+        state.lastPublicArtistSlug = slug;
       })
       .addCase(fetchArticles.rejected, (state, action) => {
-        const { lang } = action.meta.arg;
-        const entry = state[lang];
-        entry.status = 'failed';
+        state.status = 'failed';
         let errorText = 'Failed to fetch articles';
         if (action.payload) {
           errorText = action.payload;
@@ -246,7 +210,7 @@ const articlesSlice = createSlice({
             errorText = (action.error as { message?: string }).message || errorText;
           }
         }
-        entry.error = errorText;
+        state.error = errorText;
       });
   },
 });

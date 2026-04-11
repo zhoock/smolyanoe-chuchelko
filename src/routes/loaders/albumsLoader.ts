@@ -6,7 +6,7 @@ import { getStore } from '@shared/model/appStore';
 import { selectCurrentLang } from '@shared/model/lang';
 import {
   fetchArticles,
-  selectArticlesEntry,
+  selectArticlesState,
   selectArticlesStatus,
   selectArticlesData,
 } from '@entities/article';
@@ -127,17 +127,16 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   if (pathname === '/' || pathname.startsWith('/articles')) {
     const requestUrl = new URL(url);
     const publicArtistSlug = requestUrl.searchParams.get('artist')?.trim() ?? '';
-    const status = selectArticlesStatus(state, lang);
-    const articlesEntry = selectArticlesEntry(state, lang);
+    const articlesState = selectArticlesState(state);
+    const status = articlesState.status;
     const cacheOk =
-      status === 'succeeded' && (articlesEntry.lastPublicArtistSlug ?? '') === publicArtistSlug;
+      status === 'succeeded' && (articlesState.lastPublicArtistSlug ?? '') === publicArtistSlug;
 
     if (cacheOk) {
-      templateB = Promise.resolve(selectArticlesData(state, lang));
+      templateB = Promise.resolve(selectArticlesData(state));
     } else {
       const fetchThunkPromise = store.dispatch(
         fetchArticles({
-          lang,
           force: status === 'loading',
           publicArtistSlug,
         })

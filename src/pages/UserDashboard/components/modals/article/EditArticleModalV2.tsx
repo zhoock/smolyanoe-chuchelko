@@ -19,7 +19,7 @@ import { Popup } from '@shared/ui/popup';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useLang } from '@app/providers/lang';
 import { getToken } from '@shared/lib/auth';
-import { fetchArticles } from '@entities/article';
+import { fetchArticles, resolveArticleForDisplay } from '@entities/article';
 import type { IArticles } from '@models';
 import type { Block, ArticleMeta, BlockType } from './EditArticleModalV2.utils';
 import {
@@ -203,7 +203,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         const token = getToken();
         if (!token) return;
 
-        const fetchUrl = `/api/articles-api?lang=${lang}&includeDrafts=true`;
+        const fetchUrl = '/api/articles-api?includeDrafts=true';
         const response = await fetch(fetchUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -234,12 +234,13 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
               parsedDetails = [];
             }
             // Инициализируем блоки и мета
-            const loadedBlocks = normalizeDetailsToBlocks(parsedDetails);
+            const resolved = resolveArticleForDisplay(articleForEdit, lang);
+            const loadedBlocks = normalizeDetailsToBlocks(resolved.details || parsedDetails);
             setBlocks(loadedBlocks);
             setInitialBlocks(JSON.parse(JSON.stringify(loadedBlocks))); // Deep copy
             const loadedMeta = {
-              title: articleForEdit.nameArticle || '',
-              description: articleForEdit.description || '',
+              title: resolved.nameArticle || '',
+              description: resolved.description || '',
             };
             setMeta(loadedMeta);
             setInitialMeta({ ...loadedMeta });
@@ -301,12 +302,16 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
       const requestBody = {
         articleId: currentArticle.articleId,
-        nameArticle: meta.title,
-        description: meta.description,
+        lang,
+        translations: {
+          [lang]: {
+            nameArticle: meta.title,
+            description: meta.description,
+            details,
+          },
+        },
         img: currentArticle.img || article.img || '',
         date: currentArticle.date || article.date,
-        details: details,
-        lang: lang,
         isDraft: shouldBeDraft,
       };
 
@@ -328,7 +333,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setLastSaved(new Date());
         // Обновляем Redux store
         try {
-          await dispatch(fetchArticles({ lang, force: true })).unwrap();
+          await dispatch(fetchArticles({ force: true })).unwrap();
         } catch (error) {
           console.warn('Failed to update Redux store:', error);
         }
@@ -472,12 +477,16 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
       const requestBody = {
         articleId: articleId,
-        nameArticle: meta.title || 'Untitled',
-        description: meta.description || '',
+        lang,
+        translations: {
+          [lang]: {
+            nameArticle: meta.title || 'Untitled',
+            description: meta.description || '',
+            details,
+          },
+        },
         img: currentArticle.img || article.img || '',
         date: currentArticle.date || article.date || new Date().toISOString().split('T')[0],
-        details: details,
-        lang: lang,
         isDraft: false, // Публикуем
       };
 
@@ -503,7 +512,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setInitialBlocks(JSON.parse(JSON.stringify(blocks))); // Deep copy
         setInitialMeta({ ...meta });
         // Обновляем Redux store
-        await dispatch(fetchArticles({ lang, force: true })).unwrap();
+        await dispatch(fetchArticles({ force: true })).unwrap();
         onClose();
       } else {
         setSaveStatus('error');

@@ -85,8 +85,11 @@ describe('playerListeners middleware', () => {
         lang: () => ({ current: 'en' as SupportedLang }),
         popup: () => ({ isOpen: false }),
         articles: () => ({
-          en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
-          ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          lastPublicArtistSlug: null,
         }),
         albums: () => ({
           en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

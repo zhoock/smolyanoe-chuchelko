@@ -59,7 +59,7 @@ export function HomePage() {
   useEffect(() => {
     if (!hasArtistParam) return;
     void dispatch(fetchAlbums({ force: true }));
-    void dispatch(fetchArticles({ lang, force: true }));
+    void dispatch(fetchArticles({ force: true, publicArtistSlug: artistSlug }));
   }, [dispatch, hasArtistParam, lang, artistSlug]);
 
   useEffect(() => {

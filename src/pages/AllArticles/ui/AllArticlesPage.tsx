@@ -8,7 +8,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectArticlesStatus, selectArticlesData } from '@entities/article';
+import { selectArticlesStatus, selectArticlesDataResolved } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import '@entities/article/ui/style.scss';
@@ -21,8 +21,8 @@ export function AllArticlesPage() {
   const { lang } = useLang();
   const [searchParams] = useSearchParams();
   const homePath = withPublicArtistQuery('/', searchParams.get('artist'));
-  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
-  const allArticles = useAppSelector((state) => selectArticlesData(state, lang));
+  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
+  const allArticles = useAppSelector((state) => selectArticlesDataResolved(state));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const [displayedCount, setDisplayedCount] = useState(BATCH_SIZE);

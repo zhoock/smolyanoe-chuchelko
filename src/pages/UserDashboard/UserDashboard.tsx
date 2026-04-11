@@ -40,7 +40,7 @@ import {
 import {
   fetchArticles,
   selectArticlesStatus,
-  selectArticlesData,
+  selectArticlesDataResolved,
   selectArticlesError,
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
@@ -620,9 +620,9 @@ function UserDashboard() {
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsError = useAppSelector(selectAlbumsError);
   const albumsFromStore = useAppSelector(selectAlbumsData);
-  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state, lang));
-  const articlesError = useAppSelector((state) => selectArticlesError(state, lang));
-  const articlesFromStore = useAppSelector((state) => selectArticlesData(state, lang));
+  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
+  const articlesError = useAppSelector((state) => selectArticlesError(state));
+  const articlesFromStore = useAppSelector((state) => selectArticlesDataResolved(state));
   const user = getUser();
   const userId = user?.id ?? null;
 
@@ -963,12 +963,16 @@ function UserDashboard() {
           },
           body: JSON.stringify({
             articleId: article.articleId,
-            nameArticle: article.nameArticle,
-            description: article.description ?? '',
+            lang,
+            translations: {
+              [lang]: {
+                nameArticle: article.nameArticle,
+                description: article.description ?? '',
+                details: Array.isArray(article.details) ? article.details : [],
+              },
+            },
             img: finalImageKey,
             date: article.date,
-            details: Array.isArray(article.details) ? article.details : [],
-            lang: lang,
             isDraft: article.isDraft ?? true,
           }),
         });
@@ -995,7 +999,7 @@ function UserDashboard() {
           return;
         }
 
-        await dispatch(fetchArticles({ lang, force: true }));
+        await dispatch(fetchArticles({ force: true }));
 
         if (articleCoverLocalPreviewRefs.current[articleId]) {
           URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
@@ -1071,7 +1075,7 @@ function UserDashboard() {
   useEffect(() => {
     if (activeTab !== 'posts') return;
 
-    dispatch(fetchArticles({ lang, force: true })).catch((error: any) => {
+    dispatch(fetchArticles({ force: true })).catch((error: any) => {
       if (error?.name === 'ConditionError') {
         return;
       }
@@ -1448,7 +1452,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchArticles({ lang, force: true })).unwrap();
+      await dispatch(fetchArticles({ force: true })).unwrap();
 
       // Закрываем расширенный вид, если удаленная статья была открыта
       if (expandedArticleId === article.articleId) {

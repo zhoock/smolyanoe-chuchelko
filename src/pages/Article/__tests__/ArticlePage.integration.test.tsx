@@ -30,18 +30,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'loading',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'loading',
+          error: null,
+          data: [],
+          lastUpdated: null,
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -69,18 +62,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'failed',
-            error: 'Failed to load article',
-            data: [],
-            lastUpdated: null,
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'failed',
+          error: 'Failed to load article',
+          data: [],
+          lastUpdated: null,
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -108,18 +94,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [],
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -147,18 +126,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [mockArticle],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [mockArticle],
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -207,18 +179,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [mockArticle],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [mockArticle],
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -256,18 +221,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [mockArticle],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [mockArticle],
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {
@@ -314,18 +272,11 @@ describe('ArticlePage integration tests', () => {
       preloadedState: {
         lang: { current: 'en' },
         articles: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [articleWithList],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+          status: 'succeeded',
+          error: null,
+          data: [articleWithList],
+          lastUpdated: Date.now(),
+          lastPublicArtistSlug: null,
         },
         uiDictionary: {
           en: {

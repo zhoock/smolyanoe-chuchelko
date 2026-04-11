@@ -1,9 +1,12 @@
 import type { IArticles } from '@models';
-import type { SupportedLang } from '@shared/model/lang';
 
 export type RequestStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 
-export interface ArticlesEntry {
+/**
+ * Один источник правды для списка статей.
+ * Язык интерфейса — `state.lang.current`, не дублируем данные по en/ru.
+ */
+export interface ArticlesState {
   status: RequestStatus;
   error: string | null;
   data: IArticles[];
@@ -11,5 +14,3 @@ export interface ArticlesEntry {
   /** Публичный контекст последней успешной загрузки: '' = дефолтный сайт, иначе public_slug */
   lastPublicArtistSlug?: string | null;
 }
-
-export type ArticlesState = Record<SupportedLang, ArticlesEntry>;
