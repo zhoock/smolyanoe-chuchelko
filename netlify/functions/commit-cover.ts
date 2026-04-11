@@ -30,9 +30,71 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
+import { query } from './lib/db';
 import { extractBaseName } from './lib/image-processor';
 
 const STORAGE_BUCKET_NAME = 'user-media';
+
+/** Суффиксы деривативов обложки в Storage (см. upload/commit pipeline). */
+const COVER_SIZE_SUFFIXES = ['-64', '-128', '-448', '-896', '-1344'] as const;
+
+/**
+ * Из значения колонки `albums.cover` получает каноническое базовое имя файла (без размера и расширения).
+ */
+function normalizeCoverBaseName(raw: string): string {
+  let s = raw.trim();
+  if (!s) return '';
+  s = s.replace(/\.(webp|jpg|jpeg)$/i, '');
+  for (const suf of COVER_SIZE_SUFFIXES) {
+    if (s.endsWith(suf)) {
+      s = s.slice(0, -suf.length);
+      break;
+    }
+  }
+  return s.trim();
+}
+
+/**
+ * Все ожидаемые пути объектов в bucket для одного базового имени обложки.
+ */
+function buildCoverVariantStoragePaths(userId: string, base: string): string[] {
+  if (!base) return [];
+  const prefix = `users/${userId}/albums`;
+  const out: string[] = [];
+  for (const sz of COVER_SIZE_SUFFIXES) {
+    out.push(`${prefix}/${base}${sz}.webp`, `${prefix}/${base}${sz}.jpg`);
+  }
+  out.push(`${prefix}/${base}.webp`);
+  return out;
+}
+
+/** Старый шаблон `albumId-cover.ext` из ранних версий. */
+function buildLegacyAlbumIdCoverPaths(userId: string, albumId: string): string[] {
+  const prefix = `users/${userId}/albums`;
+  return [`${prefix}/${albumId}-cover.jpg`, `${prefix}/${albumId}-cover.webp`];
+}
+
+async function fetchDistinctCoverBasesFromDb(userId: string, albumId: string): Promise<string[]> {
+  try {
+    const result = await query<{ cover: string | null }>(
+      `SELECT DISTINCT cover FROM albums 
+       WHERE user_id = $1 AND album_id = $2 
+         AND cover IS NOT NULL AND trim(cover) <> ''`,
+      [userId, albumId]
+    );
+    const bases = new Set<string>();
+    for (const row of result.rows) {
+      if (row.cover) {
+        const b = normalizeCoverBaseName(row.cover);
+        if (b) bases.add(b);
+      }
+    }
+    return [...bases];
+  } catch (e) {
+    console.error('[commit-cover] Failed to read existing album.cover from DB:', e);
+    return [];
+  }
+}
 
 function createSupabaseAdminClient() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
@@ -210,46 +272,30 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       albumId,
     });
 
-    // Удаляем старые обложки альбома (если есть)
-    // Используем UUID пользователя из токена
-    const { data: existingFiles } = await supabase.storage
-      .from(STORAGE_BUCKET_NAME)
-      .list(`users/${userId}/albums`, {
-        limit: 100,
-      });
-
-    // Ищем старые файлы по точному совпадению базового имени
-    // ВАЖНО: используем точное совпадение, чтобы не удалить файлы других альбомов
-    // Например, для albumId="23" не должны удаляться файлы "Cover-23-remastered"
-    const oldCoverFiles =
-      existingFiles
-        ?.filter((f) => {
-          // Проверяем точное совпадение базового имени (без суффиксов размера)
-          // Убираем суффиксы размера и расширение для сравнения
-          const nameWithoutSuffix = f.name.replace(
-            /(?:-64|-128|-448|-896|-1344)(\.(jpg|webp))$/,
-            ''
-          );
-          const nameWithoutExt = nameWithoutSuffix.replace(/\.(jpg|webp)$/, '');
-
-          // Точное совпадение базового имени
-          if (nameWithoutExt === finalBaseName) {
-            return true;
-          }
-
-          // Также проверяем по albumId-cover для обратной совместимости
-          // Но только если это не remastered версия
-          if (f.name.startsWith(`${albumId}-cover`) && !f.name.includes('remastered')) {
-            return true;
-          }
-
-          return false;
-        })
-        .map((f) => `users/${userId}/albums/${f.name}`) || [];
-
-    if (oldCoverFiles.length > 0) {
-      console.log(`Removing ${oldCoverFiles.length} old cover files`);
-      await supabase.storage.from(STORAGE_BUCKET_NAME).remove(oldCoverFiles);
+    // Удаляем предыдущие файлы обложки в Storage по фактическому `albums.cover` в БД
+    // (имя базы из нового черновика может отличаться — иначе старые объекты не находились).
+    const oldBasesFromDb = await fetchDistinctCoverBasesFromDb(userId, albumId);
+    const pathsToRemove = new Set<string>();
+    for (const base of oldBasesFromDb) {
+      for (const p of buildCoverVariantStoragePaths(userId, base)) {
+        pathsToRemove.add(p);
+      }
+    }
+    for (const p of buildLegacyAlbumIdCoverPaths(userId, albumId)) {
+      pathsToRemove.add(p);
+    }
+    if (pathsToRemove.size > 0) {
+      const list = [...pathsToRemove];
+      console.log(
+        `[commit-cover] Removing ${list.length} previous cover object paths from storage`
+      );
+      const { error: removeError } = await supabase.storage.from(STORAGE_BUCKET_NAME).remove(list);
+      if (removeError) {
+        console.warn(
+          '[commit-cover] Some previous cover files could not be removed:',
+          removeError.message
+        );
+      }
     }
 
     // Коммитим все варианты

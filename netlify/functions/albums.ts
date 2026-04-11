@@ -297,7 +297,13 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
 async function syncSharedAlbumMetadataAcrossLocales(
   userId: string,
   albumId: string,
-  patch: { album?: string; releaseJson?: string; isPublic?: boolean }
+  patch: {
+    album?: string;
+    releaseJson?: string;
+    isPublic?: boolean;
+    cover?: string;
+    buttonsJson?: string;
+  }
 ): Promise<void> {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -313,6 +319,14 @@ async function syncSharedAlbumMetadataAcrossLocales(
   if (patch.isPublic !== undefined) {
     sets.push(`is_public = $${i++}`);
     values.push(patch.isPublic);
+  }
+  if (patch.cover !== undefined) {
+    sets.push(`cover = $${i++}::text`);
+    values.push(patch.cover);
+  }
+  if (patch.buttonsJson !== undefined) {
+    sets.push(`buttons = $${i++}::jsonb`);
+    values.push(patch.buttonsJson);
   }
   if (sets.length === 0) return;
   sets.push('updated_at = CURRENT_TIMESTAMP');
@@ -1066,11 +1080,24 @@ export const handler: Handler = async (
         const syncAlbum = data.album !== undefined ? String(data.album) : undefined;
         const syncRelease = data.release !== undefined ? JSON.stringify(data.release) : undefined;
         const syncPub = data.isPublic !== undefined ? data.isPublic : undefined;
-        if (syncAlbum !== undefined || syncRelease !== undefined || syncPub !== undefined) {
+        const syncCover =
+          data.cover !== undefined && data.cover !== null && data.cover !== ''
+            ? String(data.cover)
+            : undefined;
+        const syncButtons = data.buttons !== undefined ? JSON.stringify(data.buttons) : undefined;
+        if (
+          syncAlbum !== undefined ||
+          syncRelease !== undefined ||
+          syncPub !== undefined ||
+          syncCover !== undefined ||
+          syncButtons !== undefined
+        ) {
           await syncSharedAlbumMetadataAcrossLocales(userId, data.albumId, {
             album: syncAlbum,
             releaseJson: syncRelease,
             isPublic: syncPub,
+            cover: syncCover,
+            buttonsJson: syncButtons,
           });
         }
 
