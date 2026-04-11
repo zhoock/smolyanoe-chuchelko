@@ -4,7 +4,11 @@ import type { IInterface } from '@models';
 import type { AlbumData, TrackData } from '@entities/album/lib/transformAlbumData';
 import { uploadFile, listStorageByPrefix, getStorageFileUrl } from '@shared/api/storage';
 import { getUserImageUrl } from '@shared/api/albums';
-import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import {
+  buildStoragePublicObjectUrl,
+  createSupabaseClient,
+  STORAGE_BUCKET_NAME,
+} from '@config/supabase';
 import { getUserUserId, CURRENT_USER_CONFIG } from '@config/user';
 import { Waveform } from '@shared/ui/waveform';
 
@@ -106,7 +110,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
               if (matchingFile) {
                 // Формируем полный путь для аудио файла
                 const storagePath = `${stemFolderPath}/${matchingFile}`;
-                // Для аудио используем прямой публичный URL из Supabase
+                // Публичный URL: достаточно VITE_SUPABASE_URL; anon key нужен только для клиента
                 const supabase = createSupabaseClient();
                 let url = '';
                 if (supabase) {
@@ -114,6 +118,8 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                     .from(STORAGE_BUCKET_NAME)
                     .getPublicUrl(storagePath);
                   url = data.publicUrl;
+                } else {
+                  url = buildStoragePublicObjectUrl(storagePath) ?? '';
                 }
 
                 // Проверяем, что файл действительно существует, делая HEAD запрос
@@ -401,46 +407,48 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
           storagePath,
         });
 
-        // Получаем публичный URL
-        const { createSupabaseClient, STORAGE_BUCKET_NAME } = await import('@config/supabase');
+        // Публичный URL: достаточно VITE_SUPABASE_URL (anon key не обязателен для ссылки)
+        let url =
+          buildStoragePublicObjectUrl(storagePath) ??
+          (() => {
+            const client = createSupabaseClient();
+            if (!client) return null;
+            const { data } = client.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+            return data?.publicUrl ?? null;
+          })();
+
+        if (!url) {
+          throw new Error(
+            'Не задан VITE_SUPABASE_URL: нельзя собрать публичный URL для файла. Добавьте URL в .env и перезапустите dev-сервер.'
+          );
+        }
+
         const supabase = createSupabaseClient();
-        if (!supabase) {
-          throw new Error('Не удалось создать Supabase клиент');
-        }
+        if (supabase) {
+          try {
+            const folderPath = `users/${userId}/audio/${albumId}/${trackId}`;
+            const fileNameOnly = storagePath.split('/').pop() || '';
+            const { data: fileInfo, error: fileError } = await supabase.storage
+              .from(STORAGE_BUCKET_NAME)
+              .list(folderPath, {
+                limit: 100,
+              });
 
-        const { data: urlData } = supabase.storage
-          .from(STORAGE_BUCKET_NAME)
-          .getPublicUrl(storagePath);
-        if (!urlData?.publicUrl) {
-          throw new Error('Не удалось получить публичный URL');
-        }
-
-        const url = urlData.publicUrl;
-
-        // Проверяем, что файл действительно существует в Storage
-        try {
-          const folderPath = `users/${userId}/audio/${albumId}/${trackId}`;
-          const fileNameOnly = storagePath.split('/').pop() || '';
-          const { data: fileInfo, error: fileError } = await supabase.storage
-            .from(STORAGE_BUCKET_NAME)
-            .list(folderPath, {
-              limit: 100,
-            });
-
-          if (fileError) {
-            console.warn('⚠️ [MixerAdmin] Could not verify file in Storage:', fileError);
-          } else {
-            const fileExists = !!fileInfo?.find((f) => f.name === fileNameOnly);
-            console.log('✅ [MixerAdmin] File verified in Storage:', {
-              fileExists,
-              fileNameOnly,
-              folderPath,
-              filesInFolder: fileInfo?.length || 0,
-              allFiles: fileInfo?.map((f) => f.name) || [],
-            });
+            if (fileError) {
+              console.warn('⚠️ [MixerAdmin] Could not verify file in Storage:', fileError);
+            } else {
+              const fileExists = !!fileInfo?.find((f) => f.name === fileNameOnly);
+              console.log('✅ [MixerAdmin] File verified in Storage:', {
+                fileExists,
+                fileNameOnly,
+                folderPath,
+                filesInFolder: fileInfo?.length || 0,
+                allFiles: fileInfo?.map((f) => f.name) || [],
+              });
+            }
+          } catch (verifyError) {
+            console.warn('⚠️ [MixerAdmin] Error verifying file:', verifyError);
           }
-        } catch (verifyError) {
-          console.warn('⚠️ [MixerAdmin] Error verifying file:', verifyError);
         }
 
         console.log('✅ [MixerAdmin] Stem успешно загружен:', {

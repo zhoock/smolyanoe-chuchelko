@@ -6,11 +6,14 @@ import { NavigationProps } from '@models';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import './style.scss';
 
 const NavigationComponent = ({ onToggle }: NavigationProps) => {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const publicArtistSlug = useAppSelector(selectPublicArtistSlug);
 
   // UI словарь загружается через loader
 
@@ -26,20 +29,22 @@ const NavigationComponent = ({ onToggle }: NavigationProps) => {
   return (
     <nav className="header__menu">
       <ul className="header__links-list">
-        {[{ to: '/stems', label: labels.stems }].map(({ to, label }) => (
-          <li key={to}>
-            <NavLink
-              to={to}
-              title={label ?? undefined}
-              onClick={onToggle}
-              className={({ isActive, isPending }) =>
-                clsx('header__link', { active: isActive, pending: isPending })
-              }
-            >
-              {label}
-            </NavLink>
-          </li>
-        ))}
+        {[{ to: withPublicArtistQuery('/stems', publicArtistSlug), label: labels.stems }].map(
+          ({ to, label }) => (
+            <li key="stems">
+              <NavLink
+                to={to}
+                title={label ?? undefined}
+                onClick={onToggle}
+                className={({ isActive, isPending }) =>
+                  clsx('header__link', { active: isActive, pending: isPending })
+                }
+              >
+                {label}
+              </NavLink>
+            </li>
+          )
+        )}
       </ul>
     </nav>
   );

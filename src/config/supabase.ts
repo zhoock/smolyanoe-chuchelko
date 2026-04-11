@@ -18,15 +18,21 @@ function getSafeEnv(): SafeEnv {
 // Получаем URL и ключ из переменных окружения
 // Для клиентской части (React) используем VITE_ префикс
 // Для серверной части (Netlify Functions) используем без префикса
+//
+// ВАЖНО: Webpack DefinePlugin заменяет каждое `process.env.VITE_*` на строковый литерал при сборке.
+// Нельзя делать `if (!process) return` до чтения VITE_*: в браузере без node polyfill `process`
+// отсутствует, и функция всегда возвращала бы пустую строку.
 const getSupabaseUrl = (): string => {
-  const env = getSafeEnv();
-  // Клиент: VITE_SUPABASE_URL (webpack). Netlify Functions: часто только SUPABASE_URL.
-  return env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
+  const viteUrl = process.env.VITE_SUPABASE_URL || '';
+  if (viteUrl) return viteUrl;
+  if (typeof process !== 'undefined' && process.env?.SUPABASE_URL) {
+    return process.env.SUPABASE_URL;
+  }
+  return '';
 };
 
 const getSupabaseAnonKey = (): string => {
-  const env = getSafeEnv();
-  return env.VITE_SUPABASE_ANON_KEY || '';
+  return process.env.VITE_SUPABASE_ANON_KEY || '';
 };
 
 // Кеш для клиентов Supabase (singleton pattern)

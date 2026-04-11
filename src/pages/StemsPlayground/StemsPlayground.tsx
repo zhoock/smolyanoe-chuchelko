@@ -14,10 +14,15 @@ import { Text } from '@shared/ui/text';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { fetchAlbums } from '@entities/album/model/albumsSlice';
-import { selectAlbumsDataResolved, selectAlbumsStatus } from '@entities/album/model/selectors';
-import { listStorageByPrefix, getStorageFileUrl } from '@shared/api/storage';
-import { createSupabaseClient, STORAGE_BUCKET_NAME } from '@config/supabase';
+import { selectAlbumsDataResolved } from '@entities/album/model/selectors';
+import { listStorageByPrefix } from '@shared/api/storage';
+import {
+  buildStoragePublicObjectUrl,
+  createSupabaseClient,
+  STORAGE_BUCKET_NAME,
+} from '@config/supabase';
 import { getUserUserId, CURRENT_USER_CONFIG } from '@config/user';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import './style.scss';
 
 type Song = {
@@ -35,6 +40,18 @@ const STEM_KEY_MAP: Record<string, StemKind> = {
   guitars: 'guitar', // В админке 'guitars', в StemKind 'guitar'
   vocals: 'vocal', // В админке 'vocals', в StemKind 'vocal'
 };
+
+/** Публичный URL объекта в bucket: достаточно VITE_SUPABASE_URL (как в MixerAdmin). */
+function resolveStoragePublicUrl(storagePath: string): string | null {
+  const built = buildStoragePublicObjectUrl(storagePath);
+  if (built) return built;
+  const supabase = createSupabaseClient();
+  if (supabase) {
+    const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
+    return data?.publicUrl ?? null;
+  }
+  return null;
+}
 
 // Функция для получения дефолтной обложки стема из папки Mixer
 function getDefaultStemPortrait(stemKind: StemKind): string {
@@ -145,7 +162,7 @@ const STATIC_SONGS: Song[] = [
 export default function StemsPlayground() {
   const dispatch = useAppDispatch();
   const { lang } = useLang();
-  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const publicArtistSlug = useAppSelector(selectPublicArtistSlug);
   const albums = useAppSelector(selectAlbumsDataResolved);
 
   // Состояние для динамически загруженных песен
@@ -202,12 +219,10 @@ export default function StemsPlayground() {
     };
   }, []); // Пустой массив зависимостей - портреты не зависят от состояния
 
-  // Загружаем альбомы
+  // Каталог альбомов для выбранного артиста (?artist= / Redux): при смене slug перезагружаем
   useEffect(() => {
-    if (albumsStatus === 'idle' || albumsStatus === 'failed') {
-      dispatch(fetchAlbums({}));
-    }
-  }, [dispatch, lang, albumsStatus]);
+    dispatch(fetchAlbums({ force: true }));
+  }, [dispatch, lang, publicArtistSlug]);
 
   // Обработчик события обновления обложек стемов
   useEffect(() => {
@@ -246,10 +261,6 @@ export default function StemsPlayground() {
       setLoadingSongs(true);
       const songsWithStems: Song[] = [];
 
-      // Получаем UUID пользователя динамически или используем fallback
-      // После миграции на UUID используем getUserUserId() или CURRENT_USER_CONFIG.userId
-      const storageUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
-
       console.log('🎵 [StemsPlayground] Загрузка стемов для треков из альбомов:', {
         albumsCount: albums.length,
         albums: albums.map((a) => ({ albumId: a.albumId, tracksCount: a.tracks?.length || 0 })),
@@ -261,6 +272,11 @@ export default function StemsPlayground() {
         for (const track of album.tracks) {
           const trackId = String(track.id);
           const albumId = album.albumId;
+
+          const storageUserId =
+            (album.userId && String(album.userId).trim()) ||
+            getUserUserId() ||
+            CURRENT_USER_CONFIG.userId;
 
           // Проверяем наличие стемов в Storage
           const audioFolderPath = `users/${storageUserId}/audio/${albumId}/${trackId}`;
@@ -298,14 +314,9 @@ export default function StemsPlayground() {
             const matchingFile = stemsFiles.find((fileName) => fileName.startsWith(`${adminKey}-`));
             if (matchingFile) {
               const storagePath = `${audioFolderPath}/${matchingFile}`;
-              const supabase = createSupabaseClient();
-              if (supabase) {
-                const { data: urlData } = supabase.storage
-                  .from(STORAGE_BUCKET_NAME)
-                  .getPublicUrl(storagePath);
-                if (urlData?.publicUrl) {
-                  stems[stemKind] = urlData.publicUrl;
-                }
+              const url = resolveStoragePublicUrl(storagePath);
+              if (url) {
+                stems[stemKind] = url;
               }
             }
           }
@@ -332,17 +343,8 @@ export default function StemsPlayground() {
                     fileName === adminKey
                 );
                 if (matchingFile) {
-                  // Формируем путь для портрета (полный путь в Storage)
                   const portraitStoragePath = `users/${storageUserId}/stems/${albumId}/${trackId}/${matchingFile}`;
-                  const supabasePortrait = createSupabaseClient();
-                  if (supabasePortrait) {
-                    const { data: portraitUrlData } = supabasePortrait.storage
-                      .from(STORAGE_BUCKET_NAME)
-                      .getPublicUrl(portraitStoragePath);
-                    if (portraitUrlData?.publicUrl) {
-                      portraitUrl = portraitUrlData.publicUrl;
-                    }
-                  }
+                  portraitUrl = resolveStoragePublicUrl(portraitStoragePath) ?? undefined;
                 }
               }
 
@@ -596,8 +598,8 @@ export default function StemsPlayground() {
               aria-label="Выбор песни"
               disabled={selectDisabled}
             >
-              {/* Показываем только динамические песни (треки с загруженными стемами) */}
-              {dynamicSongs.map((s) => (
+              {/* Динамические треки со стемами в Storage; fallback — статический демо-список */}
+              {SONGS.map((s) => (
                 <option key={s.id} value={s.id} title={s.title}>
                   {s.title}
                 </option>
