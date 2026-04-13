@@ -110,3 +110,65 @@
     $border-radius: var(--ms-01)
   );
 }
+
+// Подтверждение «Discard changes?» поверх модалки редактирования альбома
+.edit-album-modal__inline-discard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ms-0);
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(4px);
+}
+
+.edit-album-modal__inline-discard-panel {
+  width: min(100%, 22rem);
+  padding: var(--ms-0);
+  color: var(--white);
+  background: var(--deep-black);
+  border: 1px solid var(--iron-slate);
+  border-radius: var(--ms-01);
+  box-shadow: 0 var(--ms-01) var(--ms-1) rgb(0 0 0 / 35%);
+}
+
+.edit-album-modal__inline-discard-message {
+  margin: 0 0 var(--ms-0);
+  font-size: var(--ms-0);
+  line-height: 1.4;
+}
+
+.edit-album-modal__inline-discard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ms-01);
+  justify-content: flex-end;
+}
+
+.edit-album-modal__inline-discard-stay {
+  @include button-variant(
+    $color: var(--white),
+    $background: var(--iron-slate),
+    $hover-color: var(--white),
+    $hover-background: var(--graphite-green),
+    $margin: 0,
+    $padding: var(--ms-01) var(--ms-0),
+    $border: 1px solid var(--iron-slate),
+    $border-radius: var(--ms-01)
+  );
+}
+
+.edit-album-modal__inline-discard-discard {
+  @include button-variant(
+    $color: var(--white),
+    $background: transparent,
+    $hover-color: var(--white),
+    $hover-background: var(--graphite-green),
+    $margin: 0,
+    $padding: var(--ms-01) var(--ms-0),
+    $border: 1px solid var(--iron-slate),
+    $border-radius: var(--ms-01)
+  );
+}

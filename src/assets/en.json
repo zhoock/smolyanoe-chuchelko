@@ -346,6 +346,11 @@
           "url": "URL",
           "save": "Save",
           "cancel": "Cancel"
+        },
+        "discardInlineEdit": {
+          "message": "Discard changes?",
+          "stay": "Stay",
+          "discard": "Discard"
         }
       }
     },

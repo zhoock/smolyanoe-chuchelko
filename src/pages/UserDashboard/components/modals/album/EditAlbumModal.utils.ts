@@ -1,5 +1,11 @@
 // src/pages/UserDashboard/components/EditAlbumModal.utils.ts
-import type { AlbumFormData, ProducingCredits } from './EditAlbumModal.types';
+import type {
+  AlbumFormData,
+  ProducingCredits,
+  BandMember,
+  RecordingFormDraft,
+} from './EditAlbumModal.types';
+import { recordingEntryEditHasChanges } from './recordingEntryEditHasChanges';
 import { DEFAULT_PRODUCING_CREDIT_TYPES } from './EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
 import type { IInterface, detailsProps } from '@models';
@@ -8,6 +14,48 @@ import {
   classifyAlbumDetailSemanticKind,
   dedupeMergedAlbumDetailsForDisplay,
 } from '@entities/album/lib/albumDetailSemanticKind';
+
+export const EMPTY_BAND_MEMBER: BandMember = { name: '', role: '', url: undefined };
+
+export function bandMemberEditHasChanges(
+  saved: BandMember,
+  name: string,
+  role: string,
+  url: string
+): boolean {
+  const normUrl = (u: string | undefined) => (u?.trim() ? u.trim() : undefined);
+  return (
+    saved.name.trim() !== name.trim() ||
+    saved.role.trim() !== role.trim() ||
+    normUrl(saved.url) !== normUrl(url)
+  );
+}
+
+export function emptyRecordingFormDraft(): RecordingFormDraft {
+  return {
+    dateFrom: '',
+    dateTo: '',
+    studioText: '',
+    city: '',
+    url: '',
+  };
+}
+
+export function recordingFormDraftIsDirty(draft: RecordingFormDraft): boolean {
+  return recordingEntryEditHasChanges(
+    { text: '' },
+    {},
+    draft.dateFrom,
+    draft.dateTo,
+    draft.studioText,
+    draft.city,
+    draft.url
+  );
+}
+
+export function recordingFormDraftCanSave(draft: RecordingFormDraft): boolean {
+  return Boolean(draft.studioText?.trim() || draft.city?.trim() || draft.dateFrom || draft.dateTo);
+}
 
 /**
  * Заголовки блоков `details`, которые форма редактирования полностью перезаписывает при сохранении.
@@ -257,6 +305,8 @@ export function parseRecordingText(text: string): {
     studioText: text.trim(),
   };
 }
+
+export { recordingEntryEditHasChanges } from './recordingEntryEditHasChanges';
 
 /**
  * Строит текст записи из дат и текста студии для указанного языка

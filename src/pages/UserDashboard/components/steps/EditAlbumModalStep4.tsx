@@ -3,24 +3,37 @@ import React from 'react';
 import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
 import { MAX_BAND_MEMBERS } from '../modals/album/EditAlbumModal.constants';
+import { bandMemberEditHasChanges, EMPTY_BAND_MEMBER } from '../modals/album/EditAlbumModal.utils';
 import { EditableCardField } from '../shared/EditableCardField';
 import '../shared/EditableCardField.style.scss';
 
 interface EditAlbumModalStep4Props {
   formData: AlbumFormData;
+  addBandMemberName: string;
+  addBandMemberRole: string;
+  addBandMemberURL: string;
   bandMemberName: string;
   bandMemberRole: string;
   bandMemberURL: string;
   editingBandMemberIndex: number | null;
+  addSessionMusicianName: string;
+  addSessionMusicianRole: string;
+  addSessionMusicianURL: string;
   sessionMusicianName: string;
   sessionMusicianRole: string;
   sessionMusicianURL: string;
   editingSessionMusicianIndex: number | null;
+  addProducerName: string;
+  addProducerRole: string;
+  addProducerURL: string;
   producerName: string;
   producerRole: string;
   producerURL: string;
   editingProducerIndex: number | null;
   onFormDataChange: (field: keyof AlbumFormData, value: any) => void;
+  onAddBandMemberNameChange: (value: string) => void;
+  onAddBandMemberRoleChange: (value: string) => void;
+  onAddBandMemberURLChange: (value: string) => void;
   onBandMemberNameChange: (value: string) => void;
   onBandMemberRoleChange: (value: string) => void;
   onBandMemberURLChange: (value: string) => void;
@@ -28,6 +41,9 @@ interface EditAlbumModalStep4Props {
   onEditBandMember: (index: number) => void;
   onRemoveBandMember: (index: number) => void;
   onCancelEditBandMember: () => void;
+  onAddSessionMusicianNameChange: (value: string) => void;
+  onAddSessionMusicianRoleChange: (value: string) => void;
+  onAddSessionMusicianURLChange: (value: string) => void;
   onSessionMusicianNameChange: (value: string) => void;
   onSessionMusicianRoleChange: (value: string) => void;
   onSessionMusicianURLChange: (value: string) => void;
@@ -35,6 +51,9 @@ interface EditAlbumModalStep4Props {
   onEditSessionMusician: (index: number) => void;
   onRemoveSessionMusician: (index: number) => void;
   onCancelEditSessionMusician: () => void;
+  onAddProducerNameChange: (value: string) => void;
+  onAddProducerRoleChange: (value: string) => void;
+  onAddProducerURLChange: (value: string) => void;
   onProducerNameChange: (value: string) => void;
   onProducerRoleChange: (value: string) => void;
   onProducerURLChange: (value: string) => void;
@@ -47,19 +66,31 @@ interface EditAlbumModalStep4Props {
 
 export function EditAlbumModalStep4({
   formData,
+  addBandMemberName,
+  addBandMemberRole,
+  addBandMemberURL,
   bandMemberName,
   bandMemberRole,
   bandMemberURL,
   editingBandMemberIndex,
+  addSessionMusicianName,
+  addSessionMusicianRole,
+  addSessionMusicianURL,
   sessionMusicianName,
   sessionMusicianRole,
   sessionMusicianURL,
   editingSessionMusicianIndex,
+  addProducerName,
+  addProducerRole,
+  addProducerURL,
   producerName,
   producerRole,
   producerURL,
   editingProducerIndex,
   onFormDataChange,
+  onAddBandMemberNameChange,
+  onAddBandMemberRoleChange,
+  onAddBandMemberURLChange,
   onBandMemberNameChange,
   onBandMemberRoleChange,
   onBandMemberURLChange,
@@ -67,6 +98,9 @@ export function EditAlbumModalStep4({
   onEditBandMember,
   onRemoveBandMember,
   onCancelEditBandMember,
+  onAddSessionMusicianNameChange,
+  onAddSessionMusicianRoleChange,
+  onAddSessionMusicianURLChange,
   onSessionMusicianNameChange,
   onSessionMusicianRoleChange,
   onSessionMusicianURLChange,
@@ -74,6 +108,9 @@ export function EditAlbumModalStep4({
   onEditSessionMusician,
   onRemoveSessionMusician,
   onCancelEditSessionMusician,
+  onAddProducerNameChange,
+  onAddProducerRoleChange,
+  onAddProducerURLChange,
   onProducerNameChange,
   onProducerRoleChange,
   onProducerURLChange,
@@ -172,6 +209,10 @@ export function EditAlbumModalStep4({
                 titlePlaceholder="Name"
                 descriptionPlaceholder="Role"
                 urlPlaceholder="URL (optional)"
+                hasUnsavedChanges={
+                  editingBandMemberIndex === index &&
+                  bandMemberEditHasChanges(member, bandMemberName, bandMemberRole, bandMemberURL)
+                }
                 ui={ui}
               />
             ))}
@@ -185,89 +226,48 @@ export function EditAlbumModalStep4({
         )}
 
         {(formData.bandMembers.length === 0 || formData.showAddBandMemberInputs === true) &&
-          formData.bandMembers.length < MAX_BAND_MEMBERS &&
-          !editingBandMemberIndex && (
-            <>
-              <div className="edit-album-modal__two-column-inputs">
-                <input
-                  name="band-member-name"
-                  type="text"
-                  autoComplete="name"
-                  className="edit-album-modal__input"
-                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
-                  value={bandMemberName}
-                  onChange={(e) => onBandMemberNameChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
-                      e.preventDefault();
-                      onAddBandMember();
-                    }
-                    if (e.key === 'Escape') {
-                      onCancelEditBandMember();
-                    }
-                  }}
-                />
-                <input
-                  name="band-member-role"
-                  type="text"
-                  autoComplete="organization-title"
-                  className="edit-album-modal__input"
-                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
-                  value={bandMemberRole}
-                  onChange={(e) => onBandMemberRoleChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
-                      e.preventDefault();
-                      onAddBandMember();
-                    }
-                    if (e.key === 'Escape') {
-                      onCancelEditBandMember();
-                    }
-                  }}
-                />
-              </div>
-              <input
-                name="band-member-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__input"
-                placeholder="URL (optional)"
-                value={bandMemberURL}
-                onChange={(e) => onBandMemberURLChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && bandMemberName.trim() && bandMemberRole.trim()) {
-                    e.preventDefault();
-                    onAddBandMember();
-                  }
-                  if (e.key === 'Escape') {
-                    onCancelEditBandMember();
-                  }
-                }}
+          formData.bandMembers.length < MAX_BAND_MEMBERS && (
+            <div className="edit-album-modal__list">
+              <EditableCardField
+                data={{ title: '', description: '', url: '' }}
+                isEditing={true}
+                editTitle={addBandMemberName}
+                editDescription={addBandMemberRole}
+                editUrl={addBandMemberURL}
+                onTitleChange={onAddBandMemberNameChange}
+                onDescriptionChange={onAddBandMemberRoleChange}
+                onUrlChange={onAddBandMemberURLChange}
+                onEdit={() => {}}
+                onSave={onAddBandMember}
+                onCancel={onCancelEditBandMember}
+                onRemove={() => {}}
+                titlePlaceholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
+                descriptionPlaceholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
+                urlPlaceholder={
+                  ui?.dashboard?.editAlbumModal?.step4?.urlOptional ?? 'URL (optional)'
+                }
+                hasUnsavedChanges={bandMemberEditHasChanges(
+                  EMPTY_BAND_MEMBER,
+                  addBandMemberName,
+                  addBandMemberRole,
+                  addBandMemberURL
+                )}
+                canSave={Boolean(addBandMemberName.trim() && addBandMemberRole.trim())}
+                ui={ui}
               />
-              {bandMemberName.trim() && bandMemberRole.trim() && (
-                <button
-                  type="button"
-                  className="edit-album-modal__add-button"
-                  onClick={onAddBandMember}
-                >
-                  {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
-                </button>
-              )}
-            </>
+            </div>
           )}
 
-        {formData.bandMembers.length > 0 &&
-          formData.showAddBandMemberInputs !== true &&
-          formData.bandMembers.length < MAX_BAND_MEMBERS &&
-          !editingBandMemberIndex && (
-            <button
-              type="button"
-              className="edit-album-modal__add-button"
-              onClick={() => onFormDataChange('showAddBandMemberInputs', true)}
-            >
-              {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
-            </button>
-          )}
+        {formData.bandMembers.length > 0 && formData.bandMembers.length < MAX_BAND_MEMBERS && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            disabled={editingBandMemberIndex !== null || formData.showAddBandMemberInputs === true}
+            onClick={() => onFormDataChange('showAddBandMemberInputs', true)}
+          >
+            {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
+          </button>
+        )}
       </div>
 
       <div className="edit-album-modal__field">
@@ -299,6 +299,15 @@ export function EditAlbumModalStep4({
                 titlePlaceholder="Name"
                 descriptionPlaceholder="Role"
                 urlPlaceholder="URL (optional)"
+                hasUnsavedChanges={
+                  editingSessionMusicianIndex === index &&
+                  bandMemberEditHasChanges(
+                    musician,
+                    sessionMusicianName,
+                    sessionMusicianRole,
+                    sessionMusicianURL
+                  )
+                }
                 ui={ui}
               />
             ))}
@@ -313,96 +322,47 @@ export function EditAlbumModalStep4({
 
         {(formData.sessionMusicians.length === 0 ||
           formData.showAddSessionMusicianInputs === true) &&
-          formData.sessionMusicians.length < MAX_BAND_MEMBERS &&
-          !editingSessionMusicianIndex && (
-            <>
-              <div className="edit-album-modal__two-column-inputs">
-                <input
-                  name="session-musician-name"
-                  type="text"
-                  autoComplete="name"
-                  className="edit-album-modal__input"
-                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
-                  value={sessionMusicianName}
-                  onChange={(e) => onSessionMusicianNameChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === 'Enter' &&
-                      sessionMusicianName.trim() &&
-                      sessionMusicianRole.trim()
-                    ) {
-                      e.preventDefault();
-                      onAddSessionMusician();
-                    }
-                    if (e.key === 'Escape') {
-                      onCancelEditSessionMusician();
-                    }
-                  }}
-                />
-                <input
-                  name="session-musician-role"
-                  type="text"
-                  autoComplete="organization-title"
-                  className="edit-album-modal__input"
-                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
-                  value={sessionMusicianRole}
-                  onChange={(e) => onSessionMusicianRoleChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === 'Enter' &&
-                      sessionMusicianName.trim() &&
-                      sessionMusicianRole.trim()
-                    ) {
-                      e.preventDefault();
-                      onAddSessionMusician();
-                    }
-                    if (e.key === 'Escape') {
-                      onCancelEditSessionMusician();
-                    }
-                  }}
-                />
-              </div>
-              <input
-                name="session-musician-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__input"
-                placeholder="URL (optional)"
-                value={sessionMusicianURL}
-                onChange={(e) => onSessionMusicianURLChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    sessionMusicianName.trim() &&
-                    sessionMusicianRole.trim()
-                  ) {
-                    e.preventDefault();
-                    onAddSessionMusician();
-                  }
-                  if (e.key === 'Escape') {
-                    onCancelEditSessionMusician();
-                  }
-                }}
+          formData.sessionMusicians.length < MAX_BAND_MEMBERS && (
+            <div className="edit-album-modal__list">
+              <EditableCardField
+                data={{ title: '', description: '', url: '' }}
+                isEditing={true}
+                editTitle={addSessionMusicianName}
+                editDescription={addSessionMusicianRole}
+                editUrl={addSessionMusicianURL}
+                onTitleChange={onAddSessionMusicianNameChange}
+                onDescriptionChange={onAddSessionMusicianRoleChange}
+                onUrlChange={onAddSessionMusicianURLChange}
+                onEdit={() => {}}
+                onSave={onAddSessionMusician}
+                onCancel={onCancelEditSessionMusician}
+                onRemove={() => {}}
+                titlePlaceholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
+                descriptionPlaceholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
+                urlPlaceholder={
+                  ui?.dashboard?.editAlbumModal?.step4?.urlOptional ?? 'URL (optional)'
+                }
+                hasUnsavedChanges={bandMemberEditHasChanges(
+                  EMPTY_BAND_MEMBER,
+                  addSessionMusicianName,
+                  addSessionMusicianRole,
+                  addSessionMusicianURL
+                )}
+                canSave={Boolean(addSessionMusicianName.trim() && addSessionMusicianRole.trim())}
+                ui={ui}
               />
-              {sessionMusicianName.trim() && sessionMusicianRole.trim() && (
-                <button
-                  type="button"
-                  className="edit-album-modal__add-button"
-                  onClick={onAddSessionMusician}
-                >
-                  {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
-                </button>
-              )}
-            </>
+            </div>
           )}
 
         {formData.sessionMusicians.length > 0 &&
-          formData.showAddSessionMusicianInputs !== true &&
-          formData.sessionMusicians.length < MAX_BAND_MEMBERS &&
-          !editingSessionMusicianIndex && (
+          formData.sessionMusicians.length < MAX_BAND_MEMBERS && (
             <button
               type="button"
               className="edit-album-modal__add-button"
+              disabled={
+                editingSessionMusicianIndex !== null ||
+                formData.showAddSessionMusicianInputs === true
+              }
               onClick={() => onFormDataChange('showAddSessionMusicianInputs', true)}
             >
               {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
@@ -439,6 +399,10 @@ export function EditAlbumModalStep4({
                 titlePlaceholder="Name"
                 descriptionPlaceholder="Role"
                 urlPlaceholder="URL (optional)"
+                hasUnsavedChanges={
+                  editingProducerIndex === index &&
+                  bandMemberEditHasChanges(member, producerName, producerRole, producerURL)
+                }
                 ui={ui}
               />
             ))}
@@ -452,89 +416,48 @@ export function EditAlbumModalStep4({
         )}
 
         {(formData.producer.length === 0 || formData.showAddProducerInputs === true) &&
-          formData.producer.length < MAX_BAND_MEMBERS &&
-          !editingProducerIndex && (
-            <>
-              <div className="edit-album-modal__two-column-inputs">
-                <input
-                  name="producer-name"
-                  type="text"
-                  autoComplete="name"
-                  className="edit-album-modal__input"
-                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
-                  value={producerName}
-                  onChange={(e) => onProducerNameChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && producerName.trim() && producerRole.trim()) {
-                      e.preventDefault();
-                      onAddProducer();
-                    }
-                    if (e.key === 'Escape') {
-                      onCancelEditProducer();
-                    }
-                  }}
-                />
-                <input
-                  name="producer-role"
-                  type="text"
-                  autoComplete="organization-title"
-                  className="edit-album-modal__input"
-                  placeholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
-                  value={producerRole}
-                  onChange={(e) => onProducerRoleChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && producerName.trim() && producerRole.trim()) {
-                      e.preventDefault();
-                      onAddProducer();
-                    }
-                    if (e.key === 'Escape') {
-                      onCancelEditProducer();
-                    }
-                  }}
-                />
-              </div>
-              <input
-                name="producer-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__input"
-                placeholder="URL (optional)"
-                value={producerURL}
-                onChange={(e) => onProducerURLChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && producerName.trim() && producerRole.trim()) {
-                    e.preventDefault();
-                    onAddProducer();
-                  }
-                  if (e.key === 'Escape') {
-                    onCancelEditProducer();
-                  }
-                }}
+          formData.producer.length < MAX_BAND_MEMBERS && (
+            <div className="edit-album-modal__list">
+              <EditableCardField
+                data={{ title: '', description: '', url: '' }}
+                isEditing={true}
+                editTitle={addProducerName}
+                editDescription={addProducerRole}
+                editUrl={addProducerURL}
+                onTitleChange={onAddProducerNameChange}
+                onDescriptionChange={onAddProducerRoleChange}
+                onUrlChange={onAddProducerURLChange}
+                onEdit={() => {}}
+                onSave={onAddProducer}
+                onCancel={onCancelEditProducer}
+                onRemove={() => {}}
+                titlePlaceholder={ui?.dashboard?.editAlbumModal?.step4?.name ?? 'Name'}
+                descriptionPlaceholder={ui?.dashboard?.editAlbumModal?.step4?.role ?? 'Role'}
+                urlPlaceholder={
+                  ui?.dashboard?.editAlbumModal?.step4?.urlOptional ?? 'URL (optional)'
+                }
+                hasUnsavedChanges={bandMemberEditHasChanges(
+                  EMPTY_BAND_MEMBER,
+                  addProducerName,
+                  addProducerRole,
+                  addProducerURL
+                )}
+                canSave={Boolean(addProducerName.trim() && addProducerRole.trim())}
+                ui={ui}
               />
-              {producerName.trim() && producerRole.trim() && (
-                <button
-                  type="button"
-                  className="edit-album-modal__add-button"
-                  onClick={onAddProducer}
-                >
-                  {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
-                </button>
-              )}
-            </>
+            </div>
           )}
 
-        {formData.producer.length > 0 &&
-          formData.showAddProducerInputs !== true &&
-          formData.producer.length < MAX_BAND_MEMBERS &&
-          !editingProducerIndex && (
-            <button
-              type="button"
-              className="edit-album-modal__add-button"
-              onClick={() => onFormDataChange('showAddProducerInputs', true)}
-            >
-              {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
-            </button>
-          )}
+        {formData.producer.length > 0 && formData.producer.length < MAX_BAND_MEMBERS && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            disabled={editingProducerIndex !== null || formData.showAddProducerInputs === true}
+            onClick={() => onFormDataChange('showAddProducerInputs', true)}
+          >
+            {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
+          </button>
+        )}
       </div>
     </>
   );

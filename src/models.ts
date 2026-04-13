@@ -504,6 +504,18 @@ export interface IInterface {
         save: string;
         cancel: string;
       };
+      /** Подтверждение выхода из режима редактирования строки списка без сохранения */
+      discardInlineEdit?: {
+        message?: string;
+        stay?: string;
+        discard?: string;
+      };
+      /** Переход к редактированию другой строки при несохранённом черновике */
+      switchEditConfirm?: {
+        message?: string;
+        stay?: string;
+        discard?: string;
+      };
     };
   };
 }

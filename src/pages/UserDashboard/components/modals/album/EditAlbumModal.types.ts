@@ -14,6 +14,15 @@ export interface BandMember {
   url?: string;
 }
 
+/** Черновик строки Recorded / Mixed / Mastered (отдельно от полей редактирования существующей строки в formData). */
+export interface RecordingFormDraft {
+  dateFrom: string;
+  dateTo: string;
+  studioText: string;
+  city: string;
+  url: string;
+}
+
 export interface RecordingEntry {
   text: string; // Полный текст записи (например, "SEP. 28, 2021: Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.")
   url?: string;

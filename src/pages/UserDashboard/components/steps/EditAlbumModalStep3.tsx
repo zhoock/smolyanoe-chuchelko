@@ -1,14 +1,42 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep3.tsx
-import React from 'react';
-import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
+import React, { useState } from 'react';
+import type {
+  AlbumFormData,
+  RecordingEntry,
+  RecordingFormDraft,
+} from '../modals/album/EditAlbumModal.types';
 import type { IInterface } from '@models';
+import type { SupportedLang } from '@shared/model/lang';
 import '../shared/EditableCardField.style.scss';
 
-import { parseRecordingText, buildRecordingText } from '../modals/album/EditAlbumModal.utils';
+import {
+  parseRecordingText,
+  buildRecordingText,
+  recordingFormDraftIsDirty,
+  recordingFormDraftCanSave,
+} from '../modals/album/EditAlbumModal.utils';
+import { recordingEntryEditHasChanges } from '../modals/album/recordingEntryEditHasChanges';
+import { InlineEditDiscardDialog, getInlineEditDiscardLabels } from '../shared/EditableCardField';
 
 interface EditAlbumModalStep3Props {
   formData: AlbumFormData;
   onFormDataChange: (field: keyof AlbumFormData, value: any) => void;
+  addRecordedAtDraft: RecordingFormDraft;
+  addMixedAtDraft: RecordingFormDraft;
+  addMasteringDraft: RecordingFormDraft;
+  onPatchAddRecordedAtDraft: (patch: Partial<RecordingFormDraft>) => void;
+  onPatchAddMixedAtDraft: (patch: Partial<RecordingFormDraft>) => void;
+  onPatchAddMasteringDraft: (patch: Partial<RecordingFormDraft>) => void;
+  onRequestEditRecordedAt: (index: number) => void;
+  onRequestEditMixedAt: (index: number) => void;
+  onRequestEditMastering: (index: number) => void;
+  onSaveRecordedAtAdd: () => void;
+  onSaveMixedAtAdd: () => void;
+  onSaveMasteringAdd: () => void;
+  onCancelRecordedAtAdd: () => void;
+  onCancelMixedAtAdd: () => void;
+  onCancelMasteringAdd: () => void;
+  lang: SupportedLang;
   ui?: IInterface;
 }
 
@@ -32,6 +60,8 @@ interface RecordingEntryEditorProps {
   onSave: () => void;
   onCancel: () => void;
   onRemove: () => void;
+  hasUnsavedChanges?: boolean;
+  canSave?: boolean;
   ui?: IInterface;
 }
 
@@ -52,109 +82,127 @@ function RecordingEntryEditor({
   onSave,
   onCancel,
   onRemove,
+  hasUnsavedChanges,
+  canSave,
   ui,
 }: RecordingEntryEditorProps) {
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const discardLabels = getInlineEditDiscardLabels(ui);
+
+  const saveDisabled =
+    hasUnsavedChanges === undefined
+      ? false
+      : canSave !== undefined
+        ? !hasUnsavedChanges || !canSave
+        : !hasUnsavedChanges;
+  const shouldConfirmDiscard = hasUnsavedChanges === true;
+
+  const requestCancel = () => {
+    if (!shouldConfirmDiscard) {
+      onCancel();
+      return;
+    }
+    setShowDiscardConfirm(true);
+  };
+
+  const handleStay = () => setShowDiscardConfirm(false);
+  const handleDiscard = () => {
+    setShowDiscardConfirm(false);
+    onCancel();
+  };
+
+  const trySave = () => {
+    if (!saveDisabled) onSave();
+  };
+
+  const keyHandlers = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      trySave();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (showDiscardConfirm) {
+        handleStay();
+        return;
+      }
+      requestCancel();
+    }
+  };
+
   if (isEditing) {
     return (
-      <div className="edit-album-modal__list-item edit-album-modal__list-item--editing">
-        <div className="edit-album-modal__list-item-edit-wrapper">
-          <div className="edit-album-modal__two-column-inputs">
+      <>
+        <div className="edit-album-modal__list-item edit-album-modal__list-item--editing">
+          <div className="edit-album-modal__list-item-edit-wrapper">
+            <div className="edit-album-modal__two-column-inputs">
+              <input
+                type="date"
+                className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
+                placeholder="From"
+                value={dateFrom}
+                onChange={(e) => onDateFromChange(e.target.value)}
+                onKeyDown={keyHandlers}
+              />
+              <input
+                type="date"
+                className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
+                placeholder="To"
+                value={dateTo}
+                onChange={(e) => onDateToChange(e.target.value)}
+                onKeyDown={keyHandlers}
+              />
+            </div>
             <input
-              type="date"
-              className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
-              placeholder="From"
-              value={dateFrom}
-              onChange={(e) => onDateFromChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  onSave();
-                }
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  onCancel();
-                }
-              }}
+              type="text"
+              className="edit-album-modal__list-item-input edit-album-modal__list-item-input--description"
+              placeholder="Studio info"
+              value={studioText}
+              onChange={(e) => onStudioTextChange(e.target.value)}
+              onKeyDown={keyHandlers}
             />
             <input
-              type="date"
-              className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
-              placeholder="To"
-              value={dateTo}
-              onChange={(e) => onDateToChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  onSave();
-                }
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  onCancel();
-                }
-              }}
+              type="text"
+              className="edit-album-modal__list-item-input edit-album-modal__list-item-input--description"
+              placeholder="City"
+              value={city}
+              onChange={(e) => onCityChange(e.target.value)}
+              onKeyDown={keyHandlers}
             />
-          </div>
-          <input
-            type="text"
-            className="edit-album-modal__list-item-input edit-album-modal__list-item-input--description"
-            placeholder="Studio info"
-            value={studioText}
-            onChange={(e) => onStudioTextChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSave();
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                onCancel();
-              }
-            }}
-          />
-          <input
-            type="text"
-            className="edit-album-modal__list-item-input edit-album-modal__list-item-input--description"
-            placeholder="City"
-            value={city}
-            onChange={(e) => onCityChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSave();
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                onCancel();
-              }
-            }}
-          />
-          <input
-            type="url"
-            className="edit-album-modal__list-item-input edit-album-modal__list-item-input--url"
-            placeholder="URL (optional)"
-            value={url}
-            onChange={(e) => onUrlChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSave();
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                onCancel();
-              }
-            }}
-          />
-          <div className="edit-album-modal__list-item-actions">
-            <button type="button" className="edit-album-modal__list-item-save" onClick={onSave}>
-              {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Save'}
-            </button>
-            <button type="button" className="edit-album-modal__list-item-cancel" onClick={onCancel}>
-              {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
-            </button>
+            <input
+              type="url"
+              className="edit-album-modal__list-item-input edit-album-modal__list-item-input--url"
+              placeholder="URL (optional)"
+              value={url}
+              onChange={(e) => onUrlChange(e.target.value)}
+              onKeyDown={keyHandlers}
+            />
+            <div className="edit-album-modal__list-item-actions">
+              <button
+                type="button"
+                className="edit-album-modal__list-item-save"
+                onClick={trySave}
+                disabled={saveDisabled}
+              >
+                {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Save'}
+              </button>
+              <button
+                type="button"
+                className="edit-album-modal__list-item-cancel"
+                onClick={requestCancel}
+              >
+                {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+        <InlineEditDiscardDialog
+          open={showDiscardConfirm}
+          labels={discardLabels}
+          onStay={handleStay}
+          onDiscard={handleDiscard}
+        />
+      </>
     );
   }
 
@@ -186,7 +234,27 @@ function RecordingEntryEditor({
   );
 }
 
-export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbumModalStep3Props) {
+export function EditAlbumModalStep3({
+  formData,
+  onFormDataChange,
+  addRecordedAtDraft,
+  addMixedAtDraft,
+  addMasteringDraft,
+  onPatchAddRecordedAtDraft,
+  onPatchAddMixedAtDraft,
+  onPatchAddMasteringDraft,
+  onRequestEditRecordedAt,
+  onRequestEditMixedAt,
+  onRequestEditMastering,
+  onSaveRecordedAtAdd,
+  onSaveMixedAtAdd,
+  onSaveMasteringAdd,
+  onCancelRecordedAtAdd,
+  onCancelMixedAtAdd,
+  onCancelMasteringAdd,
+  lang,
+  ui,
+}: EditAlbumModalStep3Props) {
   return (
     <>
       <div className="edit-album-modal__divider" />
@@ -203,6 +271,17 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
               const isEditing = formData.editingRecordedAtIndex === index;
               // Парсим только если нет прямых полей (для обратной совместимости)
               const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+              const recordedAtHasUnsavedChanges =
+                isEditing &&
+                recordingEntryEditHasChanges(
+                  entry,
+                  parsed,
+                  formData.recordedAtDateFrom ?? '',
+                  formData.recordedAtDateTo ?? '',
+                  formData.recordedAtText ?? '',
+                  formData.recordedAtCity ?? '',
+                  formData.recordedAtURL ?? ''
+                );
 
               return (
                 <RecordingEntryEditor
@@ -244,21 +323,15 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   onStudioTextChange={(value: string) => onFormDataChange('recordedAtText', value)}
                   onCityChange={(value: string) => onFormDataChange('recordedAtCity', value)}
                   onUrlChange={(value: string) => onFormDataChange('recordedAtURL', value)}
-                  onEdit={() => {
-                    onFormDataChange('editingRecordedAtIndex', index);
-                    onFormDataChange('recordedAtDateFrom', entry.dateFrom || parsed.dateFrom || '');
-                    onFormDataChange('recordedAtDateTo', entry.dateTo || parsed.dateTo || '');
-                    onFormDataChange('recordedAtText', entry.studioText || parsed.studioText || '');
-                    onFormDataChange('recordedAtCity', entry.city || '');
-                    onFormDataChange('recordedAtURL', entry.url || '');
-                  }}
+                  onEdit={() => onRequestEditRecordedAt(index)}
                   onSave={() => {
                     const updated = [...formData.recordedAt];
                     const text = buildRecordingText(
                       formData.recordedAtDateFrom,
                       formData.recordedAtDateTo,
                       formData.recordedAtText?.trim(),
-                      formData.recordedAtCity?.trim()
+                      formData.recordedAtCity?.trim(),
+                      lang
                     );
                     updated[index] = {
                       text,
@@ -283,13 +356,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('recordedAtCity', '');
                     onFormDataChange('recordedAtURL', '');
                     onFormDataChange('editingRecordedAtIndex', null);
-                    onFormDataChange('showAddRecordedAtInputs', false);
                   }}
                   onRemove={() => {
                     const updated = [...formData.recordedAt];
                     updated.splice(index, 1);
                     onFormDataChange('recordedAt', updated);
                   }}
+                  hasUnsavedChanges={recordedAtHasUnsavedChanges}
                   ui={ui}
                 />
               );
@@ -297,221 +370,46 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
           </div>
         )}
 
-        {(formData.recordedAt.length === 0 || formData.showAddRecordedAtInputs === true) &&
-          !formData.editingRecordedAtIndex && (
-            <>
-              <div className="edit-album-modal__two-column-inputs">
-                <input
-                  name="recorded-at-date-from"
-                  type="date"
-                  className="edit-album-modal__input"
-                  placeholder="From"
-                  value={formData.recordedAtDateFrom || ''}
-                  onChange={(e) => onFormDataChange('recordedAtDateFrom', e.target.value)}
-                />
-                <input
-                  name="recorded-at-date-to"
-                  type="date"
-                  className="edit-album-modal__input"
-                  placeholder="To"
-                  value={formData.recordedAtDateTo || ''}
-                  onChange={(e) => onFormDataChange('recordedAtDateTo', e.target.value)}
-                />
-              </div>
-              <input
-                name="recorded-at-text"
-                type="text"
-                className="edit-album-modal__input"
-                placeholder="Studio info (e.g., Igor Matvienko's recording studio M.A.M.A, Big studio)"
-                value={formData.recordedAtText || ''}
-                onChange={(e) => onFormDataChange('recordedAtText', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.recordedAtText?.trim() ||
-                      formData.recordedAtCity?.trim() ||
-                      formData.recordedAtDateFrom ||
-                      formData.recordedAtDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.recordedAtDateFrom,
-                      formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim(),
-                      formData.recordedAtCity?.trim()
-                    );
-                    const url = formData.recordedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.recordedAtDateFrom,
-                      dateTo: formData.recordedAtDateTo,
-                      studioText: formData.recordedAtText?.trim(),
-                      city: formData.recordedAtCity?.trim(),
-                    };
-                    onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtCity', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtCity', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }
-                }}
-              />
-              <input
-                name="recorded-at-city"
-                type="text"
-                className="edit-album-modal__input"
-                placeholder="City (e.g., Moscow)"
-                value={formData.recordedAtCity || ''}
-                onChange={(e) => onFormDataChange('recordedAtCity', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.recordedAtText?.trim() ||
-                      formData.recordedAtCity?.trim() ||
-                      formData.recordedAtDateFrom ||
-                      formData.recordedAtDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.recordedAtDateFrom,
-                      formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim(),
-                      formData.recordedAtCity?.trim()
-                    );
-                    const url = formData.recordedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.recordedAtDateFrom,
-                      dateTo: formData.recordedAtDateTo,
-                      studioText: formData.recordedAtText?.trim(),
-                      city: formData.recordedAtCity?.trim(),
-                    };
-                    onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtCity', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtCity', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }
-                }}
-              />
-              <input
-                name="recorded-at-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__input"
-                placeholder="URL (optional)"
-                value={formData.recordedAtURL || ''}
-                onChange={(e) => onFormDataChange('recordedAtURL', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.recordedAtText?.trim() ||
-                      formData.recordedAtDateFrom ||
-                      formData.recordedAtDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.recordedAtDateFrom,
-                      formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim(),
-                      formData.recordedAtCity?.trim()
-                    );
-                    const url = formData.recordedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.recordedAtDateFrom,
-                      dateTo: formData.recordedAtDateTo,
-                      studioText: formData.recordedAtText?.trim(),
-                    };
-                    onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }
-                }}
-              />
-              {(formData.recordedAtText?.trim() ||
-                formData.recordedAtCity?.trim() ||
-                formData.recordedAtDateFrom ||
-                formData.recordedAtDateTo) && (
-                <button
-                  type="button"
-                  className="edit-album-modal__add-button"
-                  onClick={() => {
-                    const text = buildRecordingText(
-                      formData.recordedAtDateFrom,
-                      formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim(),
-                      formData.recordedAtCity?.trim()
-                    );
-                    const url = formData.recordedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.recordedAtDateFrom,
-                      dateTo: formData.recordedAtDateTo,
-                      studioText: formData.recordedAtText?.trim(),
-                      city: formData.recordedAtCity?.trim(),
-                    };
-                    onFormDataChange('recordedAt', [...formData.recordedAt, newEntry]);
-                    onFormDataChange('recordedAtDateFrom', '');
-                    onFormDataChange('recordedAtDateTo', '');
-                    onFormDataChange('recordedAtText', '');
-                    onFormDataChange('recordedAtCity', '');
-                    onFormDataChange('recordedAtURL', '');
-                    onFormDataChange('showAddRecordedAtInputs', false);
-                  }}
-                >
-                  {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
-                </button>
-              )}
-            </>
-          )}
+        {(formData.recordedAt.length === 0 || formData.showAddRecordedAtInputs === true) && (
+          <div className="edit-album-modal__list">
+            <RecordingEntryEditor
+              data={{ text: '', url: undefined }}
+              isEditing={true}
+              dateFrom={addRecordedAtDraft.dateFrom || ''}
+              dateTo={addRecordedAtDraft.dateTo || ''}
+              studioText={addRecordedAtDraft.studioText || ''}
+              city={addRecordedAtDraft.city || ''}
+              url={addRecordedAtDraft.url || ''}
+              onDateFromChange={(value: string) => onPatchAddRecordedAtDraft({ dateFrom: value })}
+              onDateToChange={(value: string) => onPatchAddRecordedAtDraft({ dateTo: value })}
+              onStudioTextChange={(value: string) =>
+                onPatchAddRecordedAtDraft({ studioText: value })
+              }
+              onCityChange={(value: string) => onPatchAddRecordedAtDraft({ city: value })}
+              onUrlChange={(value: string) => onPatchAddRecordedAtDraft({ url: value })}
+              onEdit={() => {}}
+              onSave={onSaveRecordedAtAdd}
+              onCancel={onCancelRecordedAtAdd}
+              onRemove={() => {}}
+              hasUnsavedChanges={recordingFormDraftIsDirty(addRecordedAtDraft)}
+              canSave={recordingFormDraftCanSave(addRecordedAtDraft)}
+              ui={ui}
+            />
+          </div>
+        )}
 
-        {formData.recordedAt &&
-          formData.recordedAt.length > 0 &&
-          formData.showAddRecordedAtInputs !== true &&
-          !formData.editingRecordedAtIndex && (
-            <button
-              type="button"
-              className="edit-album-modal__add-button"
-              onClick={() => onFormDataChange('showAddRecordedAtInputs', true)}
-            >
-              {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
-            </button>
-          )}
+        {formData.recordedAt && formData.recordedAt.length > 0 && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            disabled={
+              formData.editingRecordedAtIndex != null || formData.showAddRecordedAtInputs === true
+            }
+            onClick={() => onFormDataChange('showAddRecordedAtInputs', true)}
+          >
+            {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
+          </button>
+        )}
       </div>
 
       {/* Mixed At */}
@@ -526,6 +424,17 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
               const isEditing = formData.editingMixedAtIndex === index;
               // Парсим только если нет прямых полей (для обратной совместимости)
               const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+              const mixedAtHasUnsavedChanges =
+                isEditing &&
+                recordingEntryEditHasChanges(
+                  entry,
+                  parsed,
+                  formData.mixedAtDateFrom ?? '',
+                  formData.mixedAtDateTo ?? '',
+                  formData.mixedAtText ?? '',
+                  formData.mixedAtCity ?? '',
+                  formData.mixedAtURL ?? ''
+                );
 
               return (
                 <RecordingEntryEditor
@@ -563,21 +472,15 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   onStudioTextChange={(value: string) => onFormDataChange('mixedAtText', value)}
                   onCityChange={(value: string) => onFormDataChange('mixedAtCity', value)}
                   onUrlChange={(value: string) => onFormDataChange('mixedAtURL', value)}
-                  onEdit={() => {
-                    onFormDataChange('editingMixedAtIndex', index);
-                    onFormDataChange('mixedAtDateFrom', entry.dateFrom || parsed.dateFrom || '');
-                    onFormDataChange('mixedAtDateTo', entry.dateTo || parsed.dateTo || '');
-                    onFormDataChange('mixedAtText', entry.studioText || parsed.studioText || '');
-                    onFormDataChange('mixedAtCity', entry.city || '');
-                    onFormDataChange('mixedAtURL', entry.url || '');
-                  }}
+                  onEdit={() => onRequestEditMixedAt(index)}
                   onSave={() => {
                     const updated = [...formData.mixedAt];
                     const text = buildRecordingText(
                       formData.mixedAtDateFrom,
                       formData.mixedAtDateTo,
                       formData.mixedAtText?.trim(),
-                      formData.mixedAtCity?.trim()
+                      formData.mixedAtCity?.trim(),
+                      lang
                     );
                     updated[index] = {
                       text,
@@ -602,13 +505,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('mixedAtCity', '');
                     onFormDataChange('mixedAtURL', '');
                     onFormDataChange('editingMixedAtIndex', null);
-                    onFormDataChange('showAddMixedAtInputs', false);
                   }}
                   onRemove={() => {
                     const updated = [...formData.mixedAt];
                     updated.splice(index, 1);
                     onFormDataChange('mixedAt', updated);
                   }}
+                  hasUnsavedChanges={mixedAtHasUnsavedChanges}
                   ui={ui}
                 />
               );
@@ -616,225 +519,44 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
           </div>
         )}
 
-        {(formData.mixedAt.length === 0 || formData.showAddMixedAtInputs === true) &&
-          !formData.editingMixedAtIndex && (
-            <>
-              <div className="edit-album-modal__two-column-inputs">
-                <input
-                  name="mixed-at-date-from"
-                  type="date"
-                  className="edit-album-modal__input"
-                  placeholder="From"
-                  value={formData.mixedAtDateFrom || ''}
-                  onChange={(e) => onFormDataChange('mixedAtDateFrom', e.target.value)}
-                />
-                <input
-                  name="mixed-at-date-to"
-                  type="date"
-                  className="edit-album-modal__input"
-                  placeholder="To"
-                  value={formData.mixedAtDateTo || ''}
-                  onChange={(e) => onFormDataChange('mixedAtDateTo', e.target.value)}
-                />
-              </div>
-              <input
-                name="mixed-at-text"
-                type="text"
-                className="edit-album-modal__input"
-                placeholder="Studio info (e.g., DTH Studios, Studio A)"
-                value={formData.mixedAtText || ''}
-                onChange={(e) => onFormDataChange('mixedAtText', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.mixedAtText?.trim() ||
-                      formData.mixedAtCity?.trim() ||
-                      formData.mixedAtDateFrom ||
-                      formData.mixedAtDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.mixedAtDateFrom,
-                      formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim(),
-                      formData.mixedAtCity?.trim()
-                    );
-                    const url = formData.mixedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.mixedAtDateFrom,
-                      dateTo: formData.mixedAtDateTo,
-                      studioText: formData.mixedAtText?.trim(),
-                      city: formData.mixedAtCity?.trim(),
-                    };
-                    onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }
-                }}
-              />
-              <input
-                name="mixed-at-city"
-                type="text"
-                className="edit-album-modal__input"
-                placeholder="City (e.g., Moscow)"
-                value={formData.mixedAtCity || ''}
-                onChange={(e) => onFormDataChange('mixedAtCity', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.mixedAtText?.trim() ||
-                      formData.mixedAtCity?.trim() ||
-                      formData.mixedAtDateFrom ||
-                      formData.mixedAtDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.mixedAtDateFrom,
-                      formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim(),
-                      formData.mixedAtCity?.trim()
-                    );
-                    const url = formData.mixedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.mixedAtDateFrom,
-                      dateTo: formData.mixedAtDateTo,
-                      studioText: formData.mixedAtText?.trim(),
-                      city: formData.mixedAtCity?.trim(),
-                    };
-                    onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }
-                }}
-              />
-              <input
-                name="mixed-at-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__input"
-                placeholder="URL (optional)"
-                value={formData.mixedAtURL || ''}
-                onChange={(e) => onFormDataChange('mixedAtURL', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.mixedAtText?.trim() ||
-                      formData.mixedAtCity?.trim() ||
-                      formData.mixedAtDateFrom ||
-                      formData.mixedAtDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.mixedAtDateFrom,
-                      formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim(),
-                      formData.mixedAtCity?.trim()
-                    );
-                    const url = formData.mixedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.mixedAtDateFrom,
-                      dateTo: formData.mixedAtDateTo,
-                      studioText: formData.mixedAtText?.trim(),
-                      city: formData.mixedAtCity?.trim(),
-                    };
-                    onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }
-                }}
-              />
-              {(formData.mixedAtText?.trim() ||
-                formData.mixedAtCity?.trim() ||
-                formData.mixedAtDateFrom ||
-                formData.mixedAtDateTo) && (
-                <button
-                  type="button"
-                  className="edit-album-modal__add-button"
-                  onClick={() => {
-                    const text = buildRecordingText(
-                      formData.mixedAtDateFrom,
-                      formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim(),
-                      formData.mixedAtCity?.trim()
-                    );
-                    const url = formData.mixedAtURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.mixedAtDateFrom,
-                      dateTo: formData.mixedAtDateTo,
-                      studioText: formData.mixedAtText?.trim(),
-                      city: formData.mixedAtCity?.trim(),
-                    };
-                    onFormDataChange('mixedAt', [...formData.mixedAt, newEntry]);
-                    onFormDataChange('mixedAtDateFrom', '');
-                    onFormDataChange('mixedAtDateTo', '');
-                    onFormDataChange('mixedAtText', '');
-                    onFormDataChange('mixedAtCity', '');
-                    onFormDataChange('mixedAtURL', '');
-                    onFormDataChange('showAddMixedAtInputs', false);
-                  }}
-                >
-                  {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
-                </button>
-              )}
-            </>
-          )}
+        {(formData.mixedAt.length === 0 || formData.showAddMixedAtInputs === true) && (
+          <div className="edit-album-modal__list">
+            <RecordingEntryEditor
+              data={{ text: '', url: undefined }}
+              isEditing={true}
+              dateFrom={addMixedAtDraft.dateFrom || ''}
+              dateTo={addMixedAtDraft.dateTo || ''}
+              studioText={addMixedAtDraft.studioText || ''}
+              city={addMixedAtDraft.city || ''}
+              url={addMixedAtDraft.url || ''}
+              onDateFromChange={(value: string) => onPatchAddMixedAtDraft({ dateFrom: value })}
+              onDateToChange={(value: string) => onPatchAddMixedAtDraft({ dateTo: value })}
+              onStudioTextChange={(value: string) => onPatchAddMixedAtDraft({ studioText: value })}
+              onCityChange={(value: string) => onPatchAddMixedAtDraft({ city: value })}
+              onUrlChange={(value: string) => onPatchAddMixedAtDraft({ url: value })}
+              onEdit={() => {}}
+              onSave={onSaveMixedAtAdd}
+              onCancel={onCancelMixedAtAdd}
+              onRemove={() => {}}
+              hasUnsavedChanges={recordingFormDraftIsDirty(addMixedAtDraft)}
+              canSave={recordingFormDraftCanSave(addMixedAtDraft)}
+              ui={ui}
+            />
+          </div>
+        )}
 
-        {formData.mixedAt &&
-          formData.mixedAt.length > 0 &&
-          formData.showAddMixedAtInputs !== true &&
-          !formData.editingMixedAtIndex && (
-            <button
-              type="button"
-              className="edit-album-modal__add-button"
-              onClick={() => onFormDataChange('showAddMixedAtInputs', true)}
-            >
-              {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
-            </button>
-          )}
+        {formData.mixedAt && formData.mixedAt.length > 0 && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            disabled={
+              formData.editingMixedAtIndex != null || formData.showAddMixedAtInputs === true
+            }
+            onClick={() => onFormDataChange('showAddMixedAtInputs', true)}
+          >
+            {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
+          </button>
+        )}
       </div>
 
       {/* Mastered By */}
@@ -849,6 +571,17 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
               const isEditing = formData.editingMasteringIndex === index;
               // Парсим только если нет прямых полей (для обратной совместимости)
               const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+              const masteringHasUnsavedChanges =
+                isEditing &&
+                recordingEntryEditHasChanges(
+                  entry,
+                  parsed,
+                  formData.masteringDateFrom ?? '',
+                  formData.masteringDateTo ?? '',
+                  formData.masteringText ?? '',
+                  formData.masteringCity ?? '',
+                  formData.masteringURL ?? ''
+                );
 
               return (
                 <RecordingEntryEditor
@@ -888,21 +621,15 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                   onStudioTextChange={(value: string) => onFormDataChange('masteringText', value)}
                   onCityChange={(value: string) => onFormDataChange('masteringCity', value)}
                   onUrlChange={(value: string) => onFormDataChange('masteringURL', value)}
-                  onEdit={() => {
-                    onFormDataChange('editingMasteringIndex', index);
-                    onFormDataChange('masteringDateFrom', entry.dateFrom || parsed.dateFrom || '');
-                    onFormDataChange('masteringDateTo', entry.dateTo || parsed.dateTo || '');
-                    onFormDataChange('masteringText', entry.studioText || parsed.studioText || '');
-                    onFormDataChange('masteringCity', entry.city || '');
-                    onFormDataChange('masteringURL', entry.url || '');
-                  }}
+                  onEdit={() => onRequestEditMastering(index)}
                   onSave={() => {
                     const updated = [...formData.mastering];
                     const text = buildRecordingText(
                       formData.masteringDateFrom,
                       formData.masteringDateTo,
                       formData.masteringText?.trim(),
-                      formData.masteringCity?.trim()
+                      formData.masteringCity?.trim(),
+                      lang
                     );
                     updated[index] = {
                       text,
@@ -927,13 +654,13 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
                     onFormDataChange('masteringCity', '');
                     onFormDataChange('masteringURL', '');
                     onFormDataChange('editingMasteringIndex', null);
-                    onFormDataChange('showAddMasteringInputs', false);
                   }}
                   onRemove={() => {
                     const updated = [...formData.mastering];
                     updated.splice(index, 1);
                     onFormDataChange('mastering', updated);
                   }}
+                  hasUnsavedChanges={masteringHasUnsavedChanges}
                   ui={ui}
                 />
               );
@@ -941,225 +668,46 @@ export function EditAlbumModalStep3({ formData, onFormDataChange, ui }: EditAlbu
           </div>
         )}
 
-        {(formData.mastering.length === 0 || formData.showAddMasteringInputs === true) &&
-          !formData.editingMasteringIndex && (
-            <>
-              <div className="edit-album-modal__two-column-inputs">
-                <input
-                  name="mastering-date-from"
-                  type="date"
-                  className="edit-album-modal__input"
-                  placeholder="From"
-                  value={formData.masteringDateFrom || ''}
-                  onChange={(e) => onFormDataChange('masteringDateFrom', e.target.value)}
-                />
-                <input
-                  name="mastering-date-to"
-                  type="date"
-                  className="edit-album-modal__input"
-                  placeholder="To"
-                  value={formData.masteringDateTo || ''}
-                  onChange={(e) => onFormDataChange('masteringDateTo', e.target.value)}
-                />
-              </div>
-              <input
-                name="mastering-text"
-                type="text"
-                className="edit-album-modal__input"
-                placeholder="Studio info (e.g., Chicago Mastering Service)"
-                value={formData.masteringText || ''}
-                onChange={(e) => onFormDataChange('masteringText', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.masteringText?.trim() ||
-                      formData.masteringCity?.trim() ||
-                      formData.masteringDateFrom ||
-                      formData.masteringDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.masteringDateFrom,
-                      formData.masteringDateTo,
-                      formData.masteringText?.trim(),
-                      formData.masteringCity?.trim()
-                    );
-                    const url = formData.masteringURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.masteringDateFrom,
-                      dateTo: formData.masteringDateTo,
-                      studioText: formData.masteringText?.trim(),
-                      city: formData.masteringCity?.trim(),
-                    };
-                    onFormDataChange('mastering', [...formData.mastering, newEntry]);
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }
-                }}
-              />
-              <input
-                name="mastering-city"
-                type="text"
-                className="edit-album-modal__input"
-                placeholder="City (e.g., Chicago, USA)"
-                value={formData.masteringCity || ''}
-                onChange={(e) => onFormDataChange('masteringCity', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.masteringText?.trim() ||
-                      formData.masteringCity?.trim() ||
-                      formData.masteringDateFrom ||
-                      formData.masteringDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.masteringDateFrom,
-                      formData.masteringDateTo,
-                      formData.masteringText?.trim(),
-                      formData.masteringCity?.trim()
-                    );
-                    const url = formData.masteringURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.masteringDateFrom,
-                      dateTo: formData.masteringDateTo,
-                      studioText: formData.masteringText?.trim(),
-                      city: formData.masteringCity?.trim(),
-                    };
-                    onFormDataChange('mastering', [...formData.mastering, newEntry]);
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }
-                }}
-              />
-              <input
-                name="mastering-url"
-                type="url"
-                autoComplete="url"
-                className="edit-album-modal__input"
-                placeholder="URL (optional)"
-                value={formData.masteringURL || ''}
-                onChange={(e) => onFormDataChange('masteringURL', e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === 'Enter' &&
-                    (formData.masteringText?.trim() ||
-                      formData.masteringCity?.trim() ||
-                      formData.masteringDateFrom ||
-                      formData.masteringDateTo)
-                  ) {
-                    e.preventDefault();
-                    const text = buildRecordingText(
-                      formData.masteringDateFrom,
-                      formData.masteringDateTo,
-                      formData.masteringText?.trim(),
-                      formData.masteringCity?.trim()
-                    );
-                    const url = formData.masteringURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.masteringDateFrom,
-                      dateTo: formData.masteringDateTo,
-                      studioText: formData.masteringText?.trim(),
-                      city: formData.masteringCity?.trim(),
-                    };
-                    onFormDataChange('mastering', [...formData.mastering, newEntry]);
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }
-                  if (e.key === 'Escape') {
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }
-                }}
-              />
-              {(formData.masteringText?.trim() ||
-                formData.masteringCity?.trim() ||
-                formData.masteringDateFrom ||
-                formData.masteringDateTo) && (
-                <button
-                  type="button"
-                  className="edit-album-modal__add-button"
-                  onClick={() => {
-                    const text = buildRecordingText(
-                      formData.masteringDateFrom,
-                      formData.masteringDateTo,
-                      formData.masteringText?.trim(),
-                      formData.masteringCity?.trim()
-                    );
-                    const url = formData.masteringURL?.trim() || undefined;
-                    const newEntry = {
-                      text,
-                      url,
-                      dateFrom: formData.masteringDateFrom,
-                      dateTo: formData.masteringDateTo,
-                      studioText: formData.masteringText?.trim(),
-                      city: formData.masteringCity?.trim(),
-                    };
-                    onFormDataChange('mastering', [...formData.mastering, newEntry]);
-                    onFormDataChange('masteringDateFrom', '');
-                    onFormDataChange('masteringDateTo', '');
-                    onFormDataChange('masteringText', '');
-                    onFormDataChange('masteringCity', '');
-                    onFormDataChange('masteringURL', '');
-                    onFormDataChange('showAddMasteringInputs', false);
-                  }}
-                >
-                  {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
-                </button>
-              )}
-            </>
-          )}
+        {(formData.mastering.length === 0 || formData.showAddMasteringInputs === true) && (
+          <div className="edit-album-modal__list">
+            <RecordingEntryEditor
+              data={{ text: '', url: undefined }}
+              isEditing={true}
+              dateFrom={addMasteringDraft.dateFrom || ''}
+              dateTo={addMasteringDraft.dateTo || ''}
+              studioText={addMasteringDraft.studioText || ''}
+              city={addMasteringDraft.city || ''}
+              url={addMasteringDraft.url || ''}
+              onDateFromChange={(value: string) => onPatchAddMasteringDraft({ dateFrom: value })}
+              onDateToChange={(value: string) => onPatchAddMasteringDraft({ dateTo: value })}
+              onStudioTextChange={(value: string) =>
+                onPatchAddMasteringDraft({ studioText: value })
+              }
+              onCityChange={(value: string) => onPatchAddMasteringDraft({ city: value })}
+              onUrlChange={(value: string) => onPatchAddMasteringDraft({ url: value })}
+              onEdit={() => {}}
+              onSave={onSaveMasteringAdd}
+              onCancel={onCancelMasteringAdd}
+              onRemove={() => {}}
+              hasUnsavedChanges={recordingFormDraftIsDirty(addMasteringDraft)}
+              canSave={recordingFormDraftCanSave(addMasteringDraft)}
+              ui={ui}
+            />
+          </div>
+        )}
 
-        {formData.mastering &&
-          formData.mastering.length > 0 &&
-          formData.showAddMasteringInputs !== true &&
-          !formData.editingMasteringIndex && (
-            <button
-              type="button"
-              className="edit-album-modal__add-button"
-              onClick={() => onFormDataChange('showAddMasteringInputs', true)}
-            >
-              {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
-            </button>
-          )}
+        {formData.mastering && formData.mastering.length > 0 && (
+          <button
+            type="button"
+            className="edit-album-modal__add-button"
+            disabled={
+              formData.editingMasteringIndex != null || formData.showAddMasteringInputs === true
+            }
+            onClick={() => onFormDataChange('showAddMasteringInputs', true)}
+          >
+            {ui?.dashboard?.editAlbumModal?.step3?.addButton ?? '+ Add'}
+          </button>
+        )}
       </div>
     </>
   );

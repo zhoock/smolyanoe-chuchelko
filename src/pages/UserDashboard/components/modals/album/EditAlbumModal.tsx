@@ -25,6 +25,7 @@ import type {
   AlbumFormData,
   BandMember,
   RecordingEntry,
+  RecordingFormDraft,
   StreamingLink,
 } from './EditAlbumModal.types';
 import {
@@ -46,7 +47,17 @@ import {
   formatDateInput,
   parseRecordingText,
   buildRecordingText,
+  bandMemberEditHasChanges,
+  EMPTY_BAND_MEMBER,
+  emptyRecordingFormDraft,
+  recordingFormDraftIsDirty,
+  recordingFormDraftCanSave,
 } from './EditAlbumModal.utils';
+import { recordingEntryEditHasChanges } from './recordingEntryEditHasChanges';
+import {
+  InlineEditDiscardDialog,
+  getSwitchEditConfirmLabels,
+} from '../../shared/EditableCardField';
 import { EditAlbumModalStep1 } from '../../steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from '../../steps/EditAlbumModalStep2';
 import { EditAlbumModalStep3 } from '../../steps/EditAlbumModalStep3';
@@ -96,6 +107,9 @@ export function EditAlbumModal({
   const [bandMemberRole, setBandMemberRole] = useState('');
   const [bandMemberURL, setBandMemberURL] = useState('');
   const [editingBandMemberIndex, setEditingBandMemberIndex] = useState<number | null>(null);
+  const [addBandMemberName, setAddBandMemberName] = useState('');
+  const [addBandMemberRole, setAddBandMemberRole] = useState('');
+  const [addBandMemberURL, setAddBandMemberURL] = useState('');
 
   const [sessionMusicianName, setSessionMusicianName] = useState('');
   const [sessionMusicianRole, setSessionMusicianRole] = useState('');
@@ -103,11 +117,31 @@ export function EditAlbumModal({
   const [editingSessionMusicianIndex, setEditingSessionMusicianIndex] = useState<number | null>(
     null
   );
+  const [addSessionMusicianName, setAddSessionMusicianName] = useState('');
+  const [addSessionMusicianRole, setAddSessionMusicianRole] = useState('');
+  const [addSessionMusicianURL, setAddSessionMusicianURL] = useState('');
 
   const [producerName, setProducerName] = useState('');
   const [producerRole, setProducerRole] = useState('');
   const [producerURL, setProducerURL] = useState('');
   const [editingProducerIndex, setEditingProducerIndex] = useState<number | null>(null);
+  const [addProducerName, setAddProducerName] = useState('');
+  const [addProducerRole, setAddProducerRole] = useState('');
+  const [addProducerURL, setAddProducerURL] = useState('');
+
+  const [addRecordedAtDraft, setAddRecordedAtDraft] = useState<RecordingFormDraft>(() =>
+    emptyRecordingFormDraft()
+  );
+  const [addMixedAtDraft, setAddMixedAtDraft] = useState<RecordingFormDraft>(() =>
+    emptyRecordingFormDraft()
+  );
+  const [addMasteringDraft, setAddMasteringDraft] = useState<RecordingFormDraft>(() =>
+    emptyRecordingFormDraft()
+  );
+  /** Диалог «Есть несохранённые изменения. Перейти?» при смене режима редактирования. */
+  const [blockSwitchDialog, setBlockSwitchDialog] = useState<{ onDiscard: () => void } | null>(
+    null
+  );
 
   const [editingPurchaseLink, setEditingPurchaseLink] = useState<number | null>(null);
   const [purchaseLinkService, setPurchaseLinkService] = useState('');
@@ -712,10 +746,29 @@ export function EditAlbumModal({
     setTagError('');
     setBandMemberName('');
     setBandMemberRole('');
+    setBandMemberURL('');
     setEditingBandMemberIndex(null);
+    setAddBandMemberName('');
+    setAddBandMemberRole('');
+    setAddBandMemberURL('');
     setSessionMusicianName('');
     setSessionMusicianRole('');
+    setSessionMusicianURL('');
     setEditingSessionMusicianIndex(null);
+    setAddSessionMusicianName('');
+    setAddSessionMusicianRole('');
+    setAddSessionMusicianURL('');
+    setProducerName('');
+    setProducerRole('');
+    setProducerURL('');
+    setEditingProducerIndex(null);
+    setAddProducerName('');
+    setAddProducerRole('');
+    setAddProducerURL('');
+    setAddRecordedAtDraft(emptyRecordingFormDraft());
+    setAddMixedAtDraft(emptyRecordingFormDraft());
+    setAddMasteringDraft(emptyRecordingFormDraft());
+    setBlockSwitchDialog(null);
     setEditingPurchaseLink(null);
     setPurchaseLinkService('');
     setPurchaseLinkUrl('');
@@ -910,45 +963,14 @@ export function EditAlbumModal({
     setFormData((prev) => ({ ...prev, tags: (prev.tags || []).filter((t) => t !== tag) }));
   };
 
-  const handleAddBandMember = () => {
-    if (!bandMemberName.trim() || !bandMemberRole.trim()) return;
-
-    // Если URL пустой или только пробелы, устанавливаем undefined (не пустую строку)
-    const url =
-      bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
-
-    if (editingBandMemberIndex !== null) {
-      // Редактирование существующего элемента - закрываем поля после сохранения
-      setFormData((prev) => {
-        const updated = [...(prev.bandMembers || [])];
-        updated[editingBandMemberIndex] = {
-          name: bandMemberName.trim(),
-          role: bandMemberRole.trim(),
-          url, // undefined если пустой
-        };
-        return { ...prev, bandMembers: updated, showAddBandMemberInputs: false };
-      });
-      setEditingBandMemberIndex(null);
-      setBandMemberName('');
-      setBandMemberRole('');
-      setBandMemberURL('');
-    } else {
-      // Добавление нового элемента - закрываем поля после добавления
-      setFormData((prev) => ({
-        ...prev,
-        bandMembers: [
-          ...(prev.bandMembers || []),
-          { name: bandMemberName.trim(), role: bandMemberRole.trim(), url }, // undefined если пустой
-        ],
-        showAddBandMemberInputs: false,
-      }));
-      setBandMemberName('');
-      setBandMemberRole('');
-      setBandMemberURL('');
-    }
-  };
-
-  const handleEditBandMember = (index: number) => {
+  /**
+   * Переключение редактирования (шаги 3–4: списки строк).
+   * У текущего поля проверяем dirty: нет изменений → переключаемся сразу; есть → `blockSwitchDialog`.
+   * Кнопки ✎ на строках не отключаем — переход не запрещаем, а согласовываем с потерей данных.
+   * Диалог переключения (`blockSwitchDialog`) должен рендериться внутри `<Popup>`/`<dialog>`, иначе оверлей окажется под top layer и не будет виден.
+   * Отдельно: «+ Add» в Step3/Step4 может быть `disabled`, пока открыто другое добавление/редактирование.
+   */
+  const executeEditBandMember = (index: number) => {
     const member = formData.bandMembers[index];
     setBandMemberName(member.name);
     setBandMemberRole(member.role);
@@ -956,11 +978,100 @@ export function EditAlbumModal({
     setEditingBandMemberIndex(index);
   };
 
+  const handleEditBandMember = (index: number) => {
+    if (editingBandMemberIndex === index) return;
+
+    if (formData.showAddBandMemberInputs) {
+      const addDirty = bandMemberEditHasChanges(
+        EMPTY_BAND_MEMBER,
+        addBandMemberName,
+        addBandMemberRole,
+        addBandMemberURL
+      );
+      if (addDirty) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setAddBandMemberName('');
+            setAddBandMemberRole('');
+            setAddBandMemberURL('');
+            handleInputChange('showAddBandMemberInputs', false);
+            executeEditBandMember(index);
+          },
+        });
+        return;
+      }
+      setAddBandMemberName('');
+      setAddBandMemberRole('');
+      setAddBandMemberURL('');
+      handleInputChange('showAddBandMemberInputs', false);
+      executeEditBandMember(index);
+      return;
+    }
+
+    if (editingBandMemberIndex !== null && editingBandMemberIndex !== index) {
+      const member = formData.bandMembers[editingBandMemberIndex];
+      if (bandMemberEditHasChanges(member, bandMemberName, bandMemberRole, bandMemberURL)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditBandMember(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditBandMember(index);
+  };
+
+  const handleAddBandMember = () => {
+    if (editingBandMemberIndex !== null) {
+      if (!bandMemberName.trim() || !bandMemberRole.trim()) return;
+      const url =
+        bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
+      setFormData((prev) => {
+        const updated = [...(prev.bandMembers || [])];
+        updated[editingBandMemberIndex] = {
+          name: bandMemberName.trim(),
+          role: bandMemberRole.trim(),
+          url,
+        };
+        return { ...prev, bandMembers: updated };
+      });
+      setEditingBandMemberIndex(null);
+      setBandMemberName('');
+      setBandMemberRole('');
+      setBandMemberURL('');
+      return;
+    }
+    if (!addBandMemberName.trim() || !addBandMemberRole.trim()) return;
+    const url =
+      addBandMemberURL?.trim() && addBandMemberURL.trim().length > 0
+        ? addBandMemberURL.trim()
+        : undefined;
+    setFormData((prev) => ({
+      ...prev,
+      bandMembers: [
+        ...(prev.bandMembers || []),
+        { name: addBandMemberName.trim(), role: addBandMemberRole.trim(), url },
+      ],
+      showAddBandMemberInputs: false,
+    }));
+    setAddBandMemberName('');
+    setAddBandMemberRole('');
+    setAddBandMemberURL('');
+  };
+
   const handleCancelEditBandMember = () => {
-    setBandMemberName('');
-    setBandMemberRole('');
-    setBandMemberURL('');
-    setEditingBandMemberIndex(null);
+    if (editingBandMemberIndex !== null) {
+      setBandMemberName('');
+      setBandMemberRole('');
+      setBandMemberURL('');
+      setEditingBandMemberIndex(null);
+      return;
+    }
+    setAddBandMemberName('');
+    setAddBandMemberRole('');
+    setAddBandMemberURL('');
     handleInputChange('showAddBandMemberInputs', false);
   };
 
@@ -972,45 +1083,7 @@ export function EditAlbumModal({
     if (editingBandMemberIndex === index) handleCancelEditBandMember();
   };
 
-  const handleAddProducer = () => {
-    if (!producerName.trim() || !producerRole.trim()) return;
-
-    // Если URL пустой или только пробелы, устанавливаем undefined (не пустую строку)
-    const url =
-      producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
-
-    if (editingProducerIndex !== null) {
-      // Редактирование существующего элемента - закрываем поля после сохранения
-      setFormData((prev) => {
-        const updated = [...(prev.producer || [])];
-        updated[editingProducerIndex] = {
-          name: producerName.trim(),
-          role: producerRole.trim(),
-          url, // undefined если пустой
-        };
-        return { ...prev, producer: updated, showAddProducerInputs: false };
-      });
-      setEditingProducerIndex(null);
-      setProducerName('');
-      setProducerRole('');
-      setProducerURL('');
-    } else {
-      // Добавление нового элемента - закрываем поля после добавления
-      setFormData((prev) => ({
-        ...prev,
-        producer: [
-          ...(prev.producer || []),
-          { name: producerName.trim(), role: producerRole.trim(), url },
-        ],
-        showAddProducerInputs: false,
-      }));
-      setProducerName('');
-      setProducerRole('');
-      setProducerURL('');
-    }
-  };
-
-  const handleEditProducer = (index: number) => {
+  const executeEditProducer = (index: number) => {
     const member = formData.producer[index];
     setProducerName(member.name);
     setProducerRole(member.role);
@@ -1018,11 +1091,100 @@ export function EditAlbumModal({
     setEditingProducerIndex(index);
   };
 
+  const handleEditProducer = (index: number) => {
+    if (editingProducerIndex === index) return;
+
+    if (formData.showAddProducerInputs) {
+      const addDirty = bandMemberEditHasChanges(
+        EMPTY_BAND_MEMBER,
+        addProducerName,
+        addProducerRole,
+        addProducerURL
+      );
+      if (addDirty) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setAddProducerName('');
+            setAddProducerRole('');
+            setAddProducerURL('');
+            handleInputChange('showAddProducerInputs', false);
+            executeEditProducer(index);
+          },
+        });
+        return;
+      }
+      setAddProducerName('');
+      setAddProducerRole('');
+      setAddProducerURL('');
+      handleInputChange('showAddProducerInputs', false);
+      executeEditProducer(index);
+      return;
+    }
+
+    if (editingProducerIndex !== null && editingProducerIndex !== index) {
+      const member = formData.producer[editingProducerIndex];
+      if (bandMemberEditHasChanges(member, producerName, producerRole, producerURL)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditProducer(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditProducer(index);
+  };
+
+  const handleAddProducer = () => {
+    if (editingProducerIndex !== null) {
+      if (!producerName.trim() || !producerRole.trim()) return;
+      const url =
+        producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
+      setFormData((prev) => {
+        const updated = [...(prev.producer || [])];
+        updated[editingProducerIndex] = {
+          name: producerName.trim(),
+          role: producerRole.trim(),
+          url,
+        };
+        return { ...prev, producer: updated };
+      });
+      setEditingProducerIndex(null);
+      setProducerName('');
+      setProducerRole('');
+      setProducerURL('');
+      return;
+    }
+    if (!addProducerName.trim() || !addProducerRole.trim()) return;
+    const url =
+      addProducerURL?.trim() && addProducerURL.trim().length > 0
+        ? addProducerURL.trim()
+        : undefined;
+    setFormData((prev) => ({
+      ...prev,
+      producer: [
+        ...(prev.producer || []),
+        { name: addProducerName.trim(), role: addProducerRole.trim(), url },
+      ],
+      showAddProducerInputs: false,
+    }));
+    setAddProducerName('');
+    setAddProducerRole('');
+    setAddProducerURL('');
+  };
+
   const handleCancelEditProducer = () => {
-    setProducerName('');
-    setProducerRole('');
-    setProducerURL('');
-    setEditingProducerIndex(null);
+    if (editingProducerIndex !== null) {
+      setProducerName('');
+      setProducerRole('');
+      setProducerURL('');
+      setEditingProducerIndex(null);
+      return;
+    }
+    setAddProducerName('');
+    setAddProducerRole('');
+    setAddProducerURL('');
     handleInputChange('showAddProducerInputs', false);
   };
 
@@ -1034,47 +1196,7 @@ export function EditAlbumModal({
     if (editingProducerIndex === index) handleCancelEditProducer();
   };
 
-  const handleAddSessionMusician = () => {
-    if (!sessionMusicianName.trim() || !sessionMusicianRole.trim()) return;
-
-    // Если URL пустой или только пробелы, устанавливаем undefined (не пустую строку)
-    const url =
-      sessionMusicianURL?.trim() && sessionMusicianURL.trim().length > 0
-        ? sessionMusicianURL.trim()
-        : undefined;
-
-    if (editingSessionMusicianIndex !== null) {
-      // Редактирование существующего элемента - закрываем поля после сохранения
-      setFormData((prev) => {
-        const updated = [...(prev.sessionMusicians || [])];
-        updated[editingSessionMusicianIndex] = {
-          name: sessionMusicianName.trim(),
-          role: sessionMusicianRole.trim(),
-          url,
-        };
-        return { ...prev, sessionMusicians: updated, showAddSessionMusicianInputs: false };
-      });
-      setEditingSessionMusicianIndex(null);
-      setSessionMusicianName('');
-      setSessionMusicianRole('');
-      setSessionMusicianURL('');
-    } else {
-      // Добавление нового элемента - закрываем поля после добавления
-      setFormData((prev) => ({
-        ...prev,
-        sessionMusicians: [
-          ...(prev.sessionMusicians || []),
-          { name: sessionMusicianName.trim(), role: sessionMusicianRole.trim(), url },
-        ],
-        showAddSessionMusicianInputs: false,
-      }));
-      setSessionMusicianName('');
-      setSessionMusicianRole('');
-      setSessionMusicianURL('');
-    }
-  };
-
-  const handleEditSessionMusician = (index: number) => {
+  const executeEditSessionMusician = (index: number) => {
     const musician = formData.sessionMusicians[index];
     setSessionMusicianName(musician.name);
     setSessionMusicianRole(musician.role);
@@ -1082,11 +1204,109 @@ export function EditAlbumModal({
     setEditingSessionMusicianIndex(index);
   };
 
+  const handleEditSessionMusician = (index: number) => {
+    if (editingSessionMusicianIndex === index) return;
+
+    if (formData.showAddSessionMusicianInputs) {
+      const addDirty = bandMemberEditHasChanges(
+        EMPTY_BAND_MEMBER,
+        addSessionMusicianName,
+        addSessionMusicianRole,
+        addSessionMusicianURL
+      );
+      if (addDirty) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setAddSessionMusicianName('');
+            setAddSessionMusicianRole('');
+            setAddSessionMusicianURL('');
+            handleInputChange('showAddSessionMusicianInputs', false);
+            executeEditSessionMusician(index);
+          },
+        });
+        return;
+      }
+      setAddSessionMusicianName('');
+      setAddSessionMusicianRole('');
+      setAddSessionMusicianURL('');
+      handleInputChange('showAddSessionMusicianInputs', false);
+      executeEditSessionMusician(index);
+      return;
+    }
+
+    if (editingSessionMusicianIndex !== null && editingSessionMusicianIndex !== index) {
+      const member = formData.sessionMusicians[editingSessionMusicianIndex];
+      if (
+        bandMemberEditHasChanges(
+          member,
+          sessionMusicianName,
+          sessionMusicianRole,
+          sessionMusicianURL
+        )
+      ) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditSessionMusician(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditSessionMusician(index);
+  };
+
+  const handleAddSessionMusician = () => {
+    if (editingSessionMusicianIndex !== null) {
+      if (!sessionMusicianName.trim() || !sessionMusicianRole.trim()) return;
+      const url =
+        sessionMusicianURL?.trim() && sessionMusicianURL.trim().length > 0
+          ? sessionMusicianURL.trim()
+          : undefined;
+      setFormData((prev) => {
+        const updated = [...(prev.sessionMusicians || [])];
+        updated[editingSessionMusicianIndex] = {
+          name: sessionMusicianName.trim(),
+          role: sessionMusicianRole.trim(),
+          url,
+        };
+        return { ...prev, sessionMusicians: updated };
+      });
+      setEditingSessionMusicianIndex(null);
+      setSessionMusicianName('');
+      setSessionMusicianRole('');
+      setSessionMusicianURL('');
+      return;
+    }
+    if (!addSessionMusicianName.trim() || !addSessionMusicianRole.trim()) return;
+    const url =
+      addSessionMusicianURL?.trim() && addSessionMusicianURL.trim().length > 0
+        ? addSessionMusicianURL.trim()
+        : undefined;
+    setFormData((prev) => ({
+      ...prev,
+      sessionMusicians: [
+        ...(prev.sessionMusicians || []),
+        { name: addSessionMusicianName.trim(), role: addSessionMusicianRole.trim(), url },
+      ],
+      showAddSessionMusicianInputs: false,
+    }));
+    setAddSessionMusicianName('');
+    setAddSessionMusicianRole('');
+    setAddSessionMusicianURL('');
+  };
+
   const handleCancelEditSessionMusician = () => {
-    setSessionMusicianName('');
-    setSessionMusicianRole('');
-    setSessionMusicianURL('');
-    setEditingSessionMusicianIndex(null);
+    if (editingSessionMusicianIndex !== null) {
+      setSessionMusicianName('');
+      setSessionMusicianRole('');
+      setSessionMusicianURL('');
+      setEditingSessionMusicianIndex(null);
+      return;
+    }
+    setAddSessionMusicianName('');
+    setAddSessionMusicianRole('');
+    setAddSessionMusicianURL('');
     handleInputChange('showAddSessionMusicianInputs', false);
   };
 
@@ -1096,6 +1316,297 @@ export function EditAlbumModal({
       sessionMusicians: (prev.sessionMusicians || []).filter((_, i) => i !== index),
     }));
     if (editingSessionMusicianIndex === index) handleCancelEditSessionMusician();
+  };
+
+  const executeEditRecordedAt = (index: number) => {
+    setFormData((prev) => {
+      const entry = prev.recordedAt[index];
+      const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+      return {
+        ...prev,
+        editingRecordedAtIndex: index,
+        recordedAtDateFrom: entry.dateFrom || parsed.dateFrom || '',
+        recordedAtDateTo: entry.dateTo || parsed.dateTo || '',
+        recordedAtText: entry.studioText || parsed.studioText || '',
+        recordedAtCity: entry.city || '',
+        recordedAtURL: entry.url || '',
+      };
+    });
+  };
+
+  const handleRequestEditRecordedAt = (index: number) => {
+    if (formData.editingRecordedAtIndex === index) return;
+
+    if (formData.showAddRecordedAtInputs) {
+      if (recordingFormDraftIsDirty(addRecordedAtDraft)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setAddRecordedAtDraft(emptyRecordingFormDraft());
+            handleInputChange('showAddRecordedAtInputs', false);
+            executeEditRecordedAt(index);
+          },
+        });
+        return;
+      }
+      setAddRecordedAtDraft(emptyRecordingFormDraft());
+      handleInputChange('showAddRecordedAtInputs', false);
+      executeEditRecordedAt(index);
+      return;
+    }
+
+    const curRecorded = formData.editingRecordedAtIndex;
+    if (curRecorded != null && curRecorded !== index) {
+      const entry = formData.recordedAt[curRecorded];
+      const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+      if (
+        recordingEntryEditHasChanges(
+          entry,
+          parsed,
+          formData.recordedAtDateFrom ?? '',
+          formData.recordedAtDateTo ?? '',
+          formData.recordedAtText ?? '',
+          formData.recordedAtCity ?? '',
+          formData.recordedAtURL ?? ''
+        )
+      ) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditRecordedAt(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditRecordedAt(index);
+  };
+
+  const handleSaveRecordedAtAdd = () => {
+    if (!recordingFormDraftCanSave(addRecordedAtDraft)) return;
+    const text = buildRecordingText(
+      addRecordedAtDraft.dateFrom,
+      addRecordedAtDraft.dateTo,
+      addRecordedAtDraft.studioText?.trim(),
+      addRecordedAtDraft.city?.trim(),
+      lang
+    );
+    const newEntry = {
+      text,
+      url: addRecordedAtDraft.url?.trim() || undefined,
+      dateFrom: addRecordedAtDraft.dateFrom,
+      dateTo: addRecordedAtDraft.dateTo,
+      studioText: addRecordedAtDraft.studioText?.trim(),
+      city: addRecordedAtDraft.city?.trim(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      recordedAt: [...prev.recordedAt, newEntry],
+      showAddRecordedAtInputs: false,
+    }));
+    setAddRecordedAtDraft(emptyRecordingFormDraft());
+  };
+
+  const handleCancelRecordedAtAdd = () => {
+    setAddRecordedAtDraft(emptyRecordingFormDraft());
+    handleInputChange('showAddRecordedAtInputs', false);
+  };
+
+  const patchAddRecordedAtDraft = (patch: Partial<RecordingFormDraft>) => {
+    setAddRecordedAtDraft((prev) => ({ ...prev, ...patch }));
+  };
+
+  const executeEditMixedAt = (index: number) => {
+    setFormData((prev) => {
+      const entry = prev.mixedAt[index];
+      const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+      return {
+        ...prev,
+        editingMixedAtIndex: index,
+        mixedAtDateFrom: entry.dateFrom || parsed.dateFrom || '',
+        mixedAtDateTo: entry.dateTo || parsed.dateTo || '',
+        mixedAtText: entry.studioText || parsed.studioText || '',
+        mixedAtCity: entry.city || '',
+        mixedAtURL: entry.url || '',
+      };
+    });
+  };
+
+  const handleRequestEditMixedAt = (index: number) => {
+    if (formData.editingMixedAtIndex === index) return;
+
+    if (formData.showAddMixedAtInputs) {
+      if (recordingFormDraftIsDirty(addMixedAtDraft)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setAddMixedAtDraft(emptyRecordingFormDraft());
+            handleInputChange('showAddMixedAtInputs', false);
+            executeEditMixedAt(index);
+          },
+        });
+        return;
+      }
+      setAddMixedAtDraft(emptyRecordingFormDraft());
+      handleInputChange('showAddMixedAtInputs', false);
+      executeEditMixedAt(index);
+      return;
+    }
+
+    const curMixed = formData.editingMixedAtIndex;
+    if (curMixed != null && curMixed !== index) {
+      const entry = formData.mixedAt[curMixed];
+      const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+      if (
+        recordingEntryEditHasChanges(
+          entry,
+          parsed,
+          formData.mixedAtDateFrom ?? '',
+          formData.mixedAtDateTo ?? '',
+          formData.mixedAtText ?? '',
+          formData.mixedAtCity ?? '',
+          formData.mixedAtURL ?? ''
+        )
+      ) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditMixedAt(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditMixedAt(index);
+  };
+
+  const handleSaveMixedAtAdd = () => {
+    if (!recordingFormDraftCanSave(addMixedAtDraft)) return;
+    const text = buildRecordingText(
+      addMixedAtDraft.dateFrom,
+      addMixedAtDraft.dateTo,
+      addMixedAtDraft.studioText?.trim(),
+      addMixedAtDraft.city?.trim(),
+      lang
+    );
+    const newEntry = {
+      text,
+      url: addMixedAtDraft.url?.trim() || undefined,
+      dateFrom: addMixedAtDraft.dateFrom,
+      dateTo: addMixedAtDraft.dateTo,
+      studioText: addMixedAtDraft.studioText?.trim(),
+      city: addMixedAtDraft.city?.trim(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      mixedAt: [...prev.mixedAt, newEntry],
+      showAddMixedAtInputs: false,
+    }));
+    setAddMixedAtDraft(emptyRecordingFormDraft());
+  };
+
+  const handleCancelMixedAtAdd = () => {
+    setAddMixedAtDraft(emptyRecordingFormDraft());
+    handleInputChange('showAddMixedAtInputs', false);
+  };
+
+  const patchAddMixedAtDraft = (patch: Partial<RecordingFormDraft>) => {
+    setAddMixedAtDraft((prev) => ({ ...prev, ...patch }));
+  };
+
+  const executeEditMastering = (index: number) => {
+    setFormData((prev) => {
+      const entry = prev.mastering[index];
+      const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+      return {
+        ...prev,
+        editingMasteringIndex: index,
+        masteringDateFrom: entry.dateFrom || parsed.dateFrom || '',
+        masteringDateTo: entry.dateTo || parsed.dateTo || '',
+        masteringText: entry.studioText || parsed.studioText || '',
+        masteringCity: entry.city || '',
+        masteringURL: entry.url || '',
+      };
+    });
+  };
+
+  const handleRequestEditMastering = (index: number) => {
+    if (formData.editingMasteringIndex === index) return;
+
+    if (formData.showAddMasteringInputs) {
+      if (recordingFormDraftIsDirty(addMasteringDraft)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setAddMasteringDraft(emptyRecordingFormDraft());
+            handleInputChange('showAddMasteringInputs', false);
+            executeEditMastering(index);
+          },
+        });
+        return;
+      }
+      setAddMasteringDraft(emptyRecordingFormDraft());
+      handleInputChange('showAddMasteringInputs', false);
+      executeEditMastering(index);
+      return;
+    }
+
+    const curMastering = formData.editingMasteringIndex;
+    if (curMastering != null && curMastering !== index) {
+      const entry = formData.mastering[curMastering];
+      const parsed = entry.dateFrom ? {} : parseRecordingText(entry.text);
+      if (
+        recordingEntryEditHasChanges(
+          entry,
+          parsed,
+          formData.masteringDateFrom ?? '',
+          formData.masteringDateTo ?? '',
+          formData.masteringText ?? '',
+          formData.masteringCity ?? '',
+          formData.masteringURL ?? ''
+        )
+      ) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditMastering(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditMastering(index);
+  };
+
+  const handleSaveMasteringAdd = () => {
+    if (!recordingFormDraftCanSave(addMasteringDraft)) return;
+    const text = buildRecordingText(
+      addMasteringDraft.dateFrom,
+      addMasteringDraft.dateTo,
+      addMasteringDraft.studioText?.trim(),
+      addMasteringDraft.city?.trim(),
+      lang
+    );
+    const newEntry = {
+      text,
+      url: addMasteringDraft.url?.trim() || undefined,
+      dateFrom: addMasteringDraft.dateFrom,
+      dateTo: addMasteringDraft.dateTo,
+      studioText: addMasteringDraft.studioText?.trim(),
+      city: addMasteringDraft.city?.trim(),
+    };
+    setFormData((prev) => ({
+      ...prev,
+      mastering: [...prev.mastering, newEntry],
+      showAddMasteringInputs: false,
+    }));
+    setAddMasteringDraft(emptyRecordingFormDraft());
+  };
+
+  const handleCancelMasteringAdd = () => {
+    setAddMasteringDraft(emptyRecordingFormDraft());
+    handleInputChange('showAddMasteringInputs', false);
+  };
+
+  const patchAddMasteringDraft = (patch: Partial<RecordingFormDraft>) => {
+    setAddMasteringDraft((prev) => ({ ...prev, ...patch }));
   };
 
   const handleAddPurchaseLink = () => {
@@ -1381,111 +1892,326 @@ export function EditAlbumModal({
     // Если есть незавершенные изменения band member (редактирование или добавление),
     // применяем их к formData перед сохранением
     let finalFormData = formData;
-    if (bandMemberName.trim() && bandMemberRole.trim()) {
+
+    if (editingBandMemberIndex !== null && bandMemberName.trim() && bandMemberRole.trim()) {
       const url =
         bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
-
-      if (editingBandMemberIndex !== null) {
-        // Редактируем существующего band member
-        const updated = [...(formData.bandMembers || [])];
-        updated[editingBandMemberIndex] = {
-          name: bandMemberName.trim(),
-          role: bandMemberRole.trim(),
-          url,
-        };
-        finalFormData = { ...formData, bandMembers: updated };
-      } else {
-        // Добавляем нового band member
-        finalFormData = {
-          ...formData,
-          bandMembers: [
-            ...(formData.bandMembers || []),
-            { name: bandMemberName.trim(), role: bandMemberRole.trim(), url },
-          ],
-        };
-      }
-
-      // Обновляем formData для UI
+      const updated = [...(finalFormData.bandMembers || [])];
+      updated[editingBandMemberIndex] = {
+        name: bandMemberName.trim(),
+        role: bandMemberRole.trim(),
+        url,
+      };
+      finalFormData = { ...finalFormData, bandMembers: updated };
       setFormData(finalFormData);
-
-      // Сбрасываем состояние
       setEditingBandMemberIndex(null);
       setBandMemberName('');
       setBandMemberRole('');
       setBandMemberURL('');
+    } else if (
+      formData.showAddBandMemberInputs &&
+      addBandMemberName.trim() &&
+      addBandMemberRole.trim()
+    ) {
+      const url =
+        addBandMemberURL?.trim() && addBandMemberURL.trim().length > 0
+          ? addBandMemberURL.trim()
+          : undefined;
+      finalFormData = {
+        ...finalFormData,
+        bandMembers: [
+          ...(finalFormData.bandMembers || []),
+          { name: addBandMemberName.trim(), role: addBandMemberRole.trim(), url },
+        ],
+      };
+      setFormData(finalFormData);
+      setAddBandMemberName('');
+      setAddBandMemberRole('');
+      setAddBandMemberURL('');
     }
 
-    // Применяем незавершенные изменения session musician
-    if (sessionMusicianName.trim() && sessionMusicianRole.trim()) {
+    if (
+      editingSessionMusicianIndex !== null &&
+      sessionMusicianName.trim() &&
+      sessionMusicianRole.trim()
+    ) {
       const url =
         sessionMusicianURL?.trim() && sessionMusicianURL.trim().length > 0
           ? sessionMusicianURL.trim()
           : undefined;
-
-      if (editingSessionMusicianIndex !== null) {
-        // Редактируем существующего session musician
-        const updated = [...(finalFormData.sessionMusicians || [])];
-        updated[editingSessionMusicianIndex] = {
-          name: sessionMusicianName.trim(),
-          role: sessionMusicianRole.trim(),
-          url,
-        };
-        finalFormData = { ...finalFormData, sessionMusicians: updated };
-      } else {
-        // Добавляем нового session musician
-        finalFormData = {
-          ...finalFormData,
-          sessionMusicians: [
-            ...(finalFormData.sessionMusicians || []),
-            { name: sessionMusicianName.trim(), role: sessionMusicianRole.trim(), url },
-          ],
-        };
-      }
-
-      // Обновляем formData для UI
+      const updated = [...(finalFormData.sessionMusicians || [])];
+      updated[editingSessionMusicianIndex] = {
+        name: sessionMusicianName.trim(),
+        role: sessionMusicianRole.trim(),
+        url,
+      };
+      finalFormData = { ...finalFormData, sessionMusicians: updated };
       setFormData(finalFormData);
-
-      // Сбрасываем состояние
       setEditingSessionMusicianIndex(null);
       setSessionMusicianName('');
       setSessionMusicianRole('');
       setSessionMusicianURL('');
+    } else if (
+      formData.showAddSessionMusicianInputs &&
+      addSessionMusicianName.trim() &&
+      addSessionMusicianRole.trim()
+    ) {
+      const url =
+        addSessionMusicianURL?.trim() && addSessionMusicianURL.trim().length > 0
+          ? addSessionMusicianURL.trim()
+          : undefined;
+      finalFormData = {
+        ...finalFormData,
+        sessionMusicians: [
+          ...(finalFormData.sessionMusicians || []),
+          { name: addSessionMusicianName.trim(), role: addSessionMusicianRole.trim(), url },
+        ],
+      };
+      setFormData(finalFormData);
+      setAddSessionMusicianName('');
+      setAddSessionMusicianRole('');
+      setAddSessionMusicianURL('');
     }
 
-    // Применяем незавершенные изменения producer
-    if (producerName.trim() && producerRole.trim()) {
+    if (editingProducerIndex !== null && producerName.trim() && producerRole.trim()) {
       const url =
         producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
-
-      if (editingProducerIndex !== null) {
-        // Редактируем существующего producer
-        const updated = [...(finalFormData.producer || [])];
-        updated[editingProducerIndex] = {
-          name: producerName.trim(),
-          role: producerRole.trim(),
-          url,
-        };
-        finalFormData = { ...finalFormData, producer: updated };
-      } else {
-        // Добавляем нового producer
-        finalFormData = {
-          ...finalFormData,
-          producer: [
-            ...(finalFormData.producer || []),
-            { name: producerName.trim(), role: producerRole.trim(), url },
-          ],
-        };
-      }
-
-      // Обновляем formData для UI
+      const updated = [...(finalFormData.producer || [])];
+      updated[editingProducerIndex] = {
+        name: producerName.trim(),
+        role: producerRole.trim(),
+        url,
+      };
+      finalFormData = { ...finalFormData, producer: updated };
       setFormData(finalFormData);
-
-      // Сбрасываем состояние
       setEditingProducerIndex(null);
       setProducerName('');
       setProducerRole('');
       setProducerURL('');
+    } else if (formData.showAddProducerInputs && addProducerName.trim() && addProducerRole.trim()) {
+      const url =
+        addProducerURL?.trim() && addProducerURL.trim().length > 0
+          ? addProducerURL.trim()
+          : undefined;
+      finalFormData = {
+        ...finalFormData,
+        producer: [
+          ...(finalFormData.producer || []),
+          { name: addProducerName.trim(), role: addProducerRole.trim(), url },
+        ],
+      };
+      setFormData(finalFormData);
+      setAddProducerName('');
+      setAddProducerRole('');
+      setAddProducerURL('');
     }
+
+    // Незавершённые Recorded / Mixed / Mastered (редактирование или новая строка)
+    const flushRecordedAtEdit = () => {
+      if (finalFormData.editingRecordedAtIndex == null) return finalFormData;
+      const canSave = Boolean(
+        finalFormData.recordedAtText?.trim() ||
+          finalFormData.recordedAtCity?.trim() ||
+          finalFormData.recordedAtDateFrom ||
+          finalFormData.recordedAtDateTo
+      );
+      if (!canSave) return finalFormData;
+      const recIdx = finalFormData.editingRecordedAtIndex;
+      const text = buildRecordingText(
+        finalFormData.recordedAtDateFrom,
+        finalFormData.recordedAtDateTo,
+        finalFormData.recordedAtText?.trim(),
+        finalFormData.recordedAtCity?.trim(),
+        lang
+      );
+      const updated = [...finalFormData.recordedAt];
+      updated[recIdx] = {
+        text,
+        url: finalFormData.recordedAtURL?.trim() || undefined,
+        dateFrom: finalFormData.recordedAtDateFrom,
+        dateTo: finalFormData.recordedAtDateTo,
+        studioText: finalFormData.recordedAtText?.trim(),
+        city: finalFormData.recordedAtCity?.trim(),
+      };
+      return {
+        ...finalFormData,
+        recordedAt: updated,
+        recordedAtDateFrom: '',
+        recordedAtDateTo: '',
+        recordedAtText: '',
+        recordedAtCity: '',
+        recordedAtURL: '',
+        editingRecordedAtIndex: null,
+      };
+    };
+
+    const flushRecordedAtAdd = () => {
+      if (
+        !finalFormData.showAddRecordedAtInputs ||
+        !recordingFormDraftCanSave(addRecordedAtDraft)
+      ) {
+        return finalFormData;
+      }
+      const text = buildRecordingText(
+        addRecordedAtDraft.dateFrom,
+        addRecordedAtDraft.dateTo,
+        addRecordedAtDraft.studioText?.trim(),
+        addRecordedAtDraft.city?.trim(),
+        lang
+      );
+      const newEntry = {
+        text,
+        url: addRecordedAtDraft.url?.trim() || undefined,
+        dateFrom: addRecordedAtDraft.dateFrom,
+        dateTo: addRecordedAtDraft.dateTo,
+        studioText: addRecordedAtDraft.studioText?.trim(),
+        city: addRecordedAtDraft.city?.trim(),
+      };
+      return {
+        ...finalFormData,
+        recordedAt: [...finalFormData.recordedAt, newEntry],
+        showAddRecordedAtInputs: false,
+      };
+    };
+
+    const flushMixedAtEdit = () => {
+      if (finalFormData.editingMixedAtIndex == null) return finalFormData;
+      const canSave = Boolean(
+        finalFormData.mixedAtText?.trim() ||
+          finalFormData.mixedAtCity?.trim() ||
+          finalFormData.mixedAtDateFrom ||
+          finalFormData.mixedAtDateTo
+      );
+      if (!canSave) return finalFormData;
+      const mixIdx = finalFormData.editingMixedAtIndex;
+      const text = buildRecordingText(
+        finalFormData.mixedAtDateFrom,
+        finalFormData.mixedAtDateTo,
+        finalFormData.mixedAtText?.trim(),
+        finalFormData.mixedAtCity?.trim(),
+        lang
+      );
+      const updated = [...finalFormData.mixedAt];
+      updated[mixIdx] = {
+        text,
+        url: finalFormData.mixedAtURL?.trim() || undefined,
+        dateFrom: finalFormData.mixedAtDateFrom,
+        dateTo: finalFormData.mixedAtDateTo,
+        studioText: finalFormData.mixedAtText?.trim(),
+        city: finalFormData.mixedAtCity?.trim(),
+      };
+      return {
+        ...finalFormData,
+        mixedAt: updated,
+        mixedAtDateFrom: '',
+        mixedAtDateTo: '',
+        mixedAtText: '',
+        mixedAtCity: '',
+        mixedAtURL: '',
+        editingMixedAtIndex: null,
+      };
+    };
+
+    const flushMixedAtAdd = () => {
+      if (!finalFormData.showAddMixedAtInputs || !recordingFormDraftCanSave(addMixedAtDraft)) {
+        return finalFormData;
+      }
+      const text = buildRecordingText(
+        addMixedAtDraft.dateFrom,
+        addMixedAtDraft.dateTo,
+        addMixedAtDraft.studioText?.trim(),
+        addMixedAtDraft.city?.trim(),
+        lang
+      );
+      const newEntry = {
+        text,
+        url: addMixedAtDraft.url?.trim() || undefined,
+        dateFrom: addMixedAtDraft.dateFrom,
+        dateTo: addMixedAtDraft.dateTo,
+        studioText: addMixedAtDraft.studioText?.trim(),
+        city: addMixedAtDraft.city?.trim(),
+      };
+      return {
+        ...finalFormData,
+        mixedAt: [...finalFormData.mixedAt, newEntry],
+        showAddMixedAtInputs: false,
+      };
+    };
+
+    const flushMasteringEdit = () => {
+      if (finalFormData.editingMasteringIndex == null) return finalFormData;
+      const canSave = Boolean(
+        finalFormData.masteringText?.trim() ||
+          finalFormData.masteringCity?.trim() ||
+          finalFormData.masteringDateFrom ||
+          finalFormData.masteringDateTo
+      );
+      if (!canSave) return finalFormData;
+      const mastIdx = finalFormData.editingMasteringIndex;
+      const text = buildRecordingText(
+        finalFormData.masteringDateFrom,
+        finalFormData.masteringDateTo,
+        finalFormData.masteringText?.trim(),
+        finalFormData.masteringCity?.trim(),
+        lang
+      );
+      const updated = [...finalFormData.mastering];
+      updated[mastIdx] = {
+        text,
+        url: finalFormData.masteringURL?.trim() || undefined,
+        dateFrom: finalFormData.masteringDateFrom,
+        dateTo: finalFormData.masteringDateTo,
+        studioText: finalFormData.masteringText?.trim(),
+        city: finalFormData.masteringCity?.trim(),
+      };
+      return {
+        ...finalFormData,
+        mastering: updated,
+        masteringDateFrom: '',
+        masteringDateTo: '',
+        masteringText: '',
+        masteringCity: '',
+        masteringURL: '',
+        editingMasteringIndex: null,
+      };
+    };
+
+    const flushMasteringAdd = () => {
+      if (!finalFormData.showAddMasteringInputs || !recordingFormDraftCanSave(addMasteringDraft)) {
+        return finalFormData;
+      }
+      const text = buildRecordingText(
+        addMasteringDraft.dateFrom,
+        addMasteringDraft.dateTo,
+        addMasteringDraft.studioText?.trim(),
+        addMasteringDraft.city?.trim(),
+        lang
+      );
+      const newEntry = {
+        text,
+        url: addMasteringDraft.url?.trim() || undefined,
+        dateFrom: addMasteringDraft.dateFrom,
+        dateTo: addMasteringDraft.dateTo,
+        studioText: addMasteringDraft.studioText?.trim(),
+        city: addMasteringDraft.city?.trim(),
+      };
+      return {
+        ...finalFormData,
+        mastering: [...finalFormData.mastering, newEntry],
+        showAddMasteringInputs: false,
+      };
+    };
+
+    finalFormData = flushRecordedAtEdit();
+    finalFormData = flushRecordedAtAdd();
+    finalFormData = flushMixedAtEdit();
+    finalFormData = flushMixedAtAdd();
+    finalFormData = flushMasteringEdit();
+    finalFormData = flushMasteringAdd();
+    setFormData(finalFormData);
+    setAddRecordedAtDraft(emptyRecordingFormDraft());
+    setAddMixedAtDraft(emptyRecordingFormDraft());
+    setAddMasteringDraft(emptyRecordingFormDraft());
 
     // Используем lang для сохранения
     const normalizedLang = lang;
@@ -2190,6 +2916,22 @@ export function EditAlbumModal({
         <EditAlbumModalStep3
           formData={formData}
           onFormDataChange={handleInputChange}
+          addRecordedAtDraft={addRecordedAtDraft}
+          addMixedAtDraft={addMixedAtDraft}
+          addMasteringDraft={addMasteringDraft}
+          onPatchAddRecordedAtDraft={patchAddRecordedAtDraft}
+          onPatchAddMixedAtDraft={patchAddMixedAtDraft}
+          onPatchAddMasteringDraft={patchAddMasteringDraft}
+          onRequestEditRecordedAt={handleRequestEditRecordedAt}
+          onRequestEditMixedAt={handleRequestEditMixedAt}
+          onRequestEditMastering={handleRequestEditMastering}
+          onSaveRecordedAtAdd={handleSaveRecordedAtAdd}
+          onSaveMixedAtAdd={handleSaveMixedAtAdd}
+          onSaveMasteringAdd={handleSaveMasteringAdd}
+          onCancelRecordedAtAdd={handleCancelRecordedAtAdd}
+          onCancelMixedAtAdd={handleCancelMixedAtAdd}
+          onCancelMasteringAdd={handleCancelMasteringAdd}
+          lang={lang}
           ui={ui ?? undefined}
         />
       );
@@ -2199,15 +2941,24 @@ export function EditAlbumModal({
       return (
         <EditAlbumModalStep4
           formData={formData}
+          addBandMemberName={addBandMemberName}
+          addBandMemberRole={addBandMemberRole}
+          addBandMemberURL={addBandMemberURL}
           bandMemberName={bandMemberName}
           bandMemberRole={bandMemberRole}
           bandMemberURL={bandMemberURL}
           editingBandMemberIndex={editingBandMemberIndex}
+          addSessionMusicianName={addSessionMusicianName}
+          addSessionMusicianRole={addSessionMusicianRole}
+          addSessionMusicianURL={addSessionMusicianURL}
           sessionMusicianName={sessionMusicianName}
           sessionMusicianRole={sessionMusicianRole}
           sessionMusicianURL={sessionMusicianURL}
           editingSessionMusicianIndex={editingSessionMusicianIndex}
           onFormDataChange={handleInputChange}
+          onAddBandMemberNameChange={setAddBandMemberName}
+          onAddBandMemberRoleChange={setAddBandMemberRole}
+          onAddBandMemberURLChange={setAddBandMemberURL}
           onBandMemberNameChange={setBandMemberName}
           onBandMemberRoleChange={setBandMemberRole}
           onBandMemberURLChange={setBandMemberURL}
@@ -2215,6 +2966,9 @@ export function EditAlbumModal({
           onEditBandMember={handleEditBandMember}
           onRemoveBandMember={handleRemoveBandMember}
           onCancelEditBandMember={handleCancelEditBandMember}
+          onAddSessionMusicianNameChange={setAddSessionMusicianName}
+          onAddSessionMusicianRoleChange={setAddSessionMusicianRole}
+          onAddSessionMusicianURLChange={setAddSessionMusicianURL}
           onSessionMusicianNameChange={setSessionMusicianName}
           onSessionMusicianRoleChange={setSessionMusicianRole}
           onSessionMusicianURLChange={setSessionMusicianURL}
@@ -2222,10 +2976,16 @@ export function EditAlbumModal({
           onEditSessionMusician={handleEditSessionMusician}
           onRemoveSessionMusician={handleRemoveSessionMusician}
           onCancelEditSessionMusician={handleCancelEditSessionMusician}
+          addProducerName={addProducerName}
+          addProducerRole={addProducerRole}
+          addProducerURL={addProducerURL}
           producerName={producerName}
           producerRole={producerRole}
           producerURL={producerURL}
           editingProducerIndex={editingProducerIndex}
+          onAddProducerNameChange={setAddProducerName}
+          onAddProducerRoleChange={setAddProducerRole}
+          onAddProducerURLChange={setAddProducerURL}
           onProducerNameChange={setProducerName}
           onProducerRoleChange={setProducerRole}
           onProducerURLChange={setProducerURL}
@@ -2357,6 +3117,20 @@ export function EditAlbumModal({
               </div>
             </div>
           </div>
+
+          {/* Внутри dialog (top layer): иначе оверлей рендерится под showModal и не виден — кажется, что ✎ «заблокирована». */}
+          {blockSwitchDialog && (
+            <InlineEditDiscardDialog
+              open
+              labels={getSwitchEditConfirmLabels(ui ?? undefined)}
+              onStay={() => setBlockSwitchDialog(null)}
+              onDiscard={() => {
+                const fn = blockSwitchDialog.onDiscard;
+                setBlockSwitchDialog(null);
+                fn();
+              }}
+            />
+          )}
         </div>
       </Popup>
 
