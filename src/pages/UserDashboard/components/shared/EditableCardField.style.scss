@@ -47,7 +47,6 @@
   width: 100%;
   padding: var(--ms-01) var(--ms-0);
   color: var(--white) !important;
-  font-size: var(--ms-0) !important;
   font-family: inherit;
   background: var(--deep-black) !important;
   border: 1px solid var(--iron-slate) !important;
@@ -65,18 +64,17 @@
   }
 
   &--title {
-    font-weight: 500;
-    font-size: var(--ms-0);
+    font-size: var(--dashboard-font-size);
   }
 
   &--description {
     color: var(--warm-concrete) !important;
-    font-size: var(--ms-01);
+    font-size: var(--dashboard-font-size);
   }
 
   &--url {
     color: var(--warm-concrete) !important;
-    font-size: var(--ms-01);
+    font-size: var(--dashboard-font-size);
   }
 }
 

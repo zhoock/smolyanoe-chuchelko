@@ -889,14 +889,16 @@ dialog {
       align-items: center;
       justify-content: space-between;
       gap: var(--ms-0);
-      padding: var(--ms-01) var(--ms-0);
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
 
       @include breakpoint(phones) {
         flex-wrap: wrap;
-        padding: var(--ms-02) var(--ms-01);
+      }
+
+      &--editing {
+        padding: var(--ms-01) var(--ms-0);
+        background: var(--dashboard-card-bg);
+        border: 1px solid var(--dashboard-card-border);
+        border-radius: var(--ms-01);
       }
     }
 
