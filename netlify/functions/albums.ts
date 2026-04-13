@@ -45,6 +45,11 @@ interface AlbumRow {
   is_public: boolean;
   created_at: Date;
   updated_at: Date;
+  /** Кредиты обложки — на строку локали (миграция 029). */
+  photographer?: string | null;
+  photographer_url?: string | null;
+  designer?: string | null;
+  designer_url?: string | null;
 }
 
 interface TrackRow {
@@ -63,6 +68,10 @@ interface AlbumLocalePayload {
   fullName: string;
   description: string;
   details: unknown[];
+  photographer?: string;
+  photographerURL?: string;
+  designer?: string;
+  designerURL?: string;
 }
 
 interface AlbumData {
@@ -76,6 +85,11 @@ interface AlbumData {
   release: Record<string, unknown>;
   buttons: Record<string, unknown>;
   details: unknown[];
+  /** Снимок кредитов обложки для этой строки (до merge в `translations`). */
+  photographer?: string;
+  photographerURL?: string;
+  designer?: string;
+  designerURL?: string;
   isPublic?: boolean;
   /** Внутренняя метка для merge по свежести строки (не язык). */
   updatedAt?: string;
@@ -147,6 +161,57 @@ function albumRequestHasForbiddenRootFields(body: Record<string, unknown>): stri
 
 type AlbumsResponse = ApiResponse<AlbumData[]>;
 
+const RELEASE_COVER_FIELD_KEYS = [
+  'photographer',
+  'photographerURL',
+  'designer',
+  'designerURL',
+] as const;
+
+/** Общий `release` не должен содержать кредиты обложки (они на строке локали / translations). */
+function stripReleaseCoverCredits(release: unknown): Record<string, unknown> {
+  if (!release || typeof release !== 'object' || Array.isArray(release)) return {};
+  const o = { ...(release as Record<string, unknown>) };
+  for (const k of RELEASE_COVER_FIELD_KEYS) {
+    delete o[k];
+  }
+  return o;
+}
+
+function readCoverCreditsFromRow(
+  album: AlbumRow,
+  release: Record<string, unknown>
+): {
+  photographer: string;
+  photographerURL: string;
+  designer: string;
+  designerURL: string;
+} {
+  const row = album as Record<string, unknown>;
+  /** После миграции 029 колонки есть в SELECT * — всегда читаем их (даже NULL), иначе пустые значения ошибочно брались из очищенного `release`. */
+  const hasMigratedColumns =
+    'photographer' in row ||
+    'photographer_url' in row ||
+    'designer' in row ||
+    'designer_url' in row;
+
+  if (hasMigratedColumns) {
+    return {
+      photographer: String(row.photographer ?? '').trim(),
+      photographerURL: String(row.photographer_url ?? '').trim(),
+      designer: String(row.designer ?? '').trim(),
+      designerURL: String(row.designer_url ?? '').trim(),
+    };
+  }
+
+  return {
+    photographer: typeof release.photographer === 'string' ? release.photographer : '',
+    photographerURL: typeof release.photographerURL === 'string' ? release.photographerURL : '',
+    designer: typeof release.designer === 'string' ? release.designer : '',
+    designerURL: typeof release.designerURL === 'string' ? release.designerURL : '',
+  };
+}
+
 /**
  * Преобразует данные альбома из БД в формат API
  */
@@ -184,6 +249,9 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
     }
   }
 
+  const coverCredits = readCoverCreditsFromRow(album, release);
+  const releaseStripped = stripReleaseCoverCredits(release);
+
   // Парсим buttons, если это строка
   let buttons: Record<string, unknown> = {};
   if (album.buttons) {
@@ -207,7 +275,11 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
     fullName: album.full_name,
     description: album.description,
     cover: album.cover, // Changed: now it's a string, no cast needed
-    release,
+    release: releaseStripped,
+    photographer: coverCredits.photographer,
+    photographerURL: coverCredits.photographerURL,
+    designer: coverCredits.designer,
+    designerURL: coverCredits.designerURL,
     buttons,
     details,
     lang: album.lang,
@@ -314,7 +386,12 @@ async function syncSharedAlbumMetadataAcrossLocales(
   }
   if (patch.releaseJson !== undefined) {
     sets.push(`release = $${i++}::jsonb`);
-    values.push(patch.releaseJson);
+    try {
+      const parsed = JSON.parse(patch.releaseJson) as unknown;
+      values.push(JSON.stringify(stripReleaseCoverCredits(parsed)));
+    } catch {
+      values.push(patch.releaseJson);
+    }
   }
   if (patch.isPublic !== undefined) {
     sets.push(`is_public = $${i++}`);
@@ -397,6 +474,10 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
         fullName: p.fullName,
         description: p.description,
         details: p.details,
+        photographer: p.photographer ?? '',
+        photographerURL: p.photographerURL ?? '',
+        designer: p.designer ?? '',
+        designerURL: p.designerURL ?? '',
       };
     }
   }
@@ -641,7 +722,11 @@ export const handler: Handler = async (
              a.lang,
              a.is_public,
              a.created_at,
-             a.updated_at
+             a.updated_at,
+             a.photographer,
+             a.photographer_url,
+             a.designer,
+             a.designer_url
          FROM albums a
          WHERE a.user_id = $1
          ORDER BY a.album_id,
@@ -666,8 +751,10 @@ export const handler: Handler = async (
         const group = byAlbumId.get(albumKey)!;
         const sorted = sortAlbumRowsForMerge(group);
         const payloads = await Promise.all(sorted.map((r) => loadAlbumDataFromRow(r)));
-        const merged = mergeAlbumDataPayloads(payloads) as IAlbums;
-        albumsWithTracks.push(hydrateMissingRuTranslationsOnAlbum(merged));
+        const merged = mergeAlbumDataPayloads(payloads);
+        albumsWithTracks.push(
+          hydrateMissingRuTranslationsOnAlbum(merged as IAlbums) as unknown as AlbumData
+        );
       }
 
       return createSuccessResponse(albumsWithTracks);
@@ -732,11 +819,14 @@ export const handler: Handler = async (
 
       const albumUserId = userId;
 
+      const releaseForDb = stripReleaseCoverCredits(data.release || {});
+
       const albumResult = await query<AlbumRow>(
         `INSERT INTO albums (
           user_id, album_id, artist, album, full_name, description,
-          cover, release, buttons, details, lang, is_public
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          cover, release, buttons, details, lang, is_public,
+          photographer, photographer_url, designer, designer_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         ON CONFLICT (user_id, album_id, lang)
         DO UPDATE SET
           album = EXCLUDED.album,
@@ -747,6 +837,10 @@ export const handler: Handler = async (
           buttons = EXCLUDED.buttons,
           details = EXCLUDED.details,
           is_public = EXCLUDED.is_public,
+          photographer = EXCLUDED.photographer,
+          photographer_url = EXCLUDED.photographer_url,
+          designer = EXCLUDED.designer,
+          designer_url = EXCLUDED.designer_url,
           updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
@@ -757,11 +851,15 @@ export const handler: Handler = async (
           locale?.fullName ?? null,
           locale?.description ?? null,
           data.cover || null,
-          JSON.stringify(data.release || {}),
+          JSON.stringify(releaseForDb),
           JSON.stringify(data.buttons || {}),
           JSON.stringify(locale?.details ?? []),
           data.lang,
           data.isPublic !== undefined ? data.isPublic : false,
+          locale?.photographer ?? null,
+          locale?.photographerURL ?? null,
+          locale?.designer ?? null,
+          locale?.designerURL ?? null,
         ]
       );
 
@@ -870,8 +968,9 @@ export const handler: Handler = async (
             const client = await getClient();
             try {
               await client.query('BEGIN');
-              const releasePayload =
+              const releasePayloadRaw =
                 data.release !== undefined ? data.release : (sibling.release ?? {});
+              const releasePayload = stripReleaseCoverCredits(releasePayloadRaw);
               const buttonsPayload =
                 data.buttons !== undefined ? data.buttons : (sibling.buttons ?? {});
               const coverVal =
@@ -879,20 +978,36 @@ export const handler: Handler = async (
                   ? data.cover
                   : sibling.cover;
               const detailsPayload =
-                localePatch.details !== undefined ? localePatch.details : (sibling.details ?? []);
+                localePatch?.details !== undefined ? localePatch.details : (sibling.details ?? []);
               const fullNameVal =
-                localePatch.fullName !== undefined ? localePatch.fullName : sibling.full_name;
+                localePatch?.fullName !== undefined ? localePatch.fullName : sibling.full_name;
               const descVal =
-                localePatch.description !== undefined
+                localePatch?.description !== undefined
                   ? localePatch.description
                   : sibling.description;
               const isPublicVal = data.isPublic !== undefined ? data.isPublic : sibling.is_public;
 
+              const photoVal =
+                localePatch?.photographer !== undefined
+                  ? localePatch.photographer
+                  : sibling.photographer;
+              const photoUrlVal =
+                localePatch?.photographerURL !== undefined
+                  ? localePatch.photographerURL
+                  : sibling.photographer_url;
+              const designVal =
+                localePatch?.designer !== undefined ? localePatch.designer : sibling.designer;
+              const designUrlVal =
+                localePatch?.designerURL !== undefined
+                  ? localePatch.designerURL
+                  : sibling.designer_url;
+
               const insertRes = await client.query<AlbumRow>(
                 `INSERT INTO albums (
                   user_id, album_id, artist, album, full_name, description,
-                  cover, release, buttons, details, lang, is_public
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12)
+                  cover, release, buttons, details, lang, is_public,
+                  photographer, photographer_url, designer, designer_url
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16)
                 RETURNING *`,
                 [
                   userId,
@@ -911,6 +1026,10 @@ export const handler: Handler = async (
                   JSON.stringify(Array.isArray(detailsPayload) ? detailsPayload : []),
                   data.lang,
                   isPublicVal,
+                  photoVal ?? null,
+                  photoUrlVal ?? null,
+                  designVal ?? null,
+                  designUrlVal ?? null,
                 ]
               );
               const newAlbumPk = insertRes.rows[0].id;
@@ -989,6 +1108,25 @@ export const handler: Handler = async (
           updateFields.push(`details = $${paramIndex++}::jsonb`);
           updateValues.push(JSON.stringify(localePatch.details));
         }
+        if (localePatch && typeof localePatch === 'object') {
+          const lp = localePatch as Record<string, unknown>;
+          if ('photographer' in lp) {
+            updateFields.push(`photographer = $${paramIndex++}`);
+            updateValues.push(lp.photographer == null ? '' : String(lp.photographer));
+          }
+          if ('photographerURL' in lp) {
+            updateFields.push(`photographer_url = $${paramIndex++}`);
+            updateValues.push(lp.photographerURL == null ? '' : String(lp.photographerURL));
+          }
+          if ('designer' in lp) {
+            updateFields.push(`designer = $${paramIndex++}`);
+            updateValues.push(lp.designer == null ? '' : String(lp.designer));
+          }
+          if ('designerURL' in lp) {
+            updateFields.push(`designer_url = $${paramIndex++}`);
+            updateValues.push(lp.designerURL == null ? '' : String(lp.designerURL));
+          }
+        }
         if (data.cover !== undefined && data.cover !== null && data.cover !== '') {
           updateFields.push(`cover = $${paramIndex++}::text`);
           updateValues.push(data.cover);
@@ -1003,7 +1141,7 @@ export const handler: Handler = async (
         }
         if (data.release !== undefined) {
           updateFields.push(`release = $${paramIndex++}::jsonb`);
-          updateValues.push(JSON.stringify(data.release));
+          updateValues.push(JSON.stringify(stripReleaseCoverCredits(data.release)));
         }
         if (data.buttons !== undefined) {
           updateFields.push(`buttons = $${paramIndex++}::jsonb`);
@@ -1074,7 +1212,10 @@ export const handler: Handler = async (
         const updatedAlbum = updateResult.rows[0];
 
         const syncAlbum = data.album !== undefined ? String(data.album) : undefined;
-        const syncRelease = data.release !== undefined ? JSON.stringify(data.release) : undefined;
+        const syncRelease =
+          data.release !== undefined
+            ? JSON.stringify(stripReleaseCoverCredits(data.release))
+            : undefined;
         const syncPub = data.isPublic !== undefined ? data.isPublic : undefined;
         const syncCover =
           data.cover !== undefined && data.cover !== null && data.cover !== ''

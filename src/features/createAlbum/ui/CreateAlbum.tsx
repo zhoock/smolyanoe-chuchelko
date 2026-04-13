@@ -234,12 +234,21 @@ const albumToDraft = (album: IAlbums): AlbumDraft => {
         return { text: item, link: '' };
       }
 
-      const lines = Array.isArray(item.text) ? item.text.map((line) => line ?? '').join('\n') : '';
+      if (item && typeof item === 'object' && 'text' in item) {
+        const t = item.text;
+        const lines = Array.isArray(t)
+          ? t.map((line: string) => line ?? '').join('\n')
+          : typeof t === 'string'
+            ? t
+            : '';
 
-      return {
-        text: lines,
-        link: '',
-      };
+        return {
+          text: lines,
+          link: '',
+        };
+      }
+
+      return { text: '', link: '' };
     }) ?? [{ text: '', link: '' }];
 
     return {

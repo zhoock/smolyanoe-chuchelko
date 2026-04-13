@@ -35,6 +35,11 @@ export interface IAlbumTranslationsLocale {
   fullName: string;
   description: string;
   details: detailsProps[];
+  /** Кредиты обложки — только для этой локали (не в общем `release`). */
+  photographer?: string;
+  photographerURL?: string;
+  designer?: string;
+  designerURL?: string;
 }
 
 export type IAlbumTranslations = Partial<Record<SupportedLang, IAlbumTranslationsLocale>>;

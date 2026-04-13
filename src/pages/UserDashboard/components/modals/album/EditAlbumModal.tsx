@@ -18,6 +18,7 @@ import {
   collectAlbumEditFallbackSources,
   getAlbumDetailsForEdit,
   resolveAlbumFieldForEdit,
+  resolveAlbumCoverCreditFieldForEdit,
 } from '@entities/album/lib/resolveAlbumDisplay';
 import type {
   EditAlbumModalProps,
@@ -192,11 +193,23 @@ export function EditAlbumModal({
 
     const titleResolved = resolveAlbumFieldForEdit(album, 'album', lang);
     const descriptionResolved = resolveAlbumFieldForEdit(album, 'description', lang);
+    const photographerResolved = resolveAlbumCoverCreditFieldForEdit(album, 'photographer', lang);
+    const photographerURLResolved = resolveAlbumCoverCreditFieldForEdit(
+      album,
+      'photographerURL',
+      lang
+    );
+    const designerResolved = resolveAlbumCoverCreditFieldForEdit(album, 'designer', lang);
+    const designerURLResolved = resolveAlbumCoverCreditFieldForEdit(album, 'designerURL', lang);
     const detailsResolved = getAlbumDetailsForEdit(album, lang);
 
     const fallbackSources = collectAlbumEditFallbackSources([
       titleResolved,
       descriptionResolved,
+      photographerResolved,
+      photographerURLResolved,
+      designerResolved,
+      designerURLResolved,
       ...detailsResolved.blocksMeta.map((meta) => ({
         isFallback: meta.isFallback,
         source: meta.source,
@@ -627,11 +640,11 @@ export function EditAlbumModal({
         preorderReleaseDate: (release as any).preorderReleaseDate
           ? formatDateFromISO((release as any).preorderReleaseDate)
           : prevForm.preorderReleaseDate || '',
-        albumCoverPhotographer: (release as any).photographer || prevForm.albumCoverPhotographer,
+        albumCoverPhotographer: photographerResolved.value || prevForm.albumCoverPhotographer,
         albumCoverPhotographerURL:
-          (release as any).photographerURL || prevForm.albumCoverPhotographerURL,
-        albumCoverDesigner: (release as any).designer || prevForm.albumCoverDesigner,
-        albumCoverDesignerURL: (release as any).designerURL || prevForm.albumCoverDesignerURL,
+          photographerURLResolved.value || prevForm.albumCoverPhotographerURL,
+        albumCoverDesigner: designerResolved.value || prevForm.albumCoverDesigner,
+        albumCoverDesignerURL: designerURLResolved.value || prevForm.albumCoverDesignerURL,
         bandMembers: bandMembers.length > 0 ? bandMembers : prevForm.bandMembers,
         sessionMusicians:
           sessionMusicians.length > 0 ? sessionMusicians : prevForm.sessionMusicians,
@@ -1593,6 +1606,10 @@ export function EditAlbumModal({
               : originalAlbum?.description || '',
           details:
             detailsByLocale[normalizedLang].length > 0 ? detailsByLocale[normalizedLang] : [],
+          photographer: (finalFormData.albumCoverPhotographer ?? '').trim(),
+          photographerURL: (finalFormData.albumCoverPhotographerURL ?? '').trim(),
+          designer: (finalFormData.albumCoverDesigner ?? '').trim(),
+          designerURL: (finalFormData.albumCoverDesignerURL ?? '').trim(),
         },
       },
       release: release,

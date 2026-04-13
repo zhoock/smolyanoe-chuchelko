@@ -714,6 +714,14 @@ BEGIN
 END $$;
 `;
 
+const MIGRATION_029 = `
+-- Per-locale cover credits (photographer / designer)
+ALTER TABLE albums ADD COLUMN IF NOT EXISTS photographer TEXT;
+ALTER TABLE albums ADD COLUMN IF NOT EXISTS photographer_url TEXT;
+ALTER TABLE albums ADD COLUMN IF NOT EXISTS designer TEXT;
+ALTER TABLE albums ADD COLUMN IF NOT EXISTS designer_url TEXT;
+`;
+
 const MIGRATIONS: Record<string, string> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
@@ -735,6 +743,7 @@ const MIGRATIONS: Record<string, string> = {
   '026_make_the_band_bilingual.sql': MIGRATION_026,
   '027_add_public_slug_and_default_flag.sql': MIGRATION_027,
   '028_backfill_public_slug_and_default_user.sql': MIGRATION_028,
+  '029_album_locale_cover_credits.sql': MIGRATION_029,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -882,6 +891,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '026_make_the_band_bilingual.sql',
       '027_add_public_slug_and_default_flag.sql',
       '028_backfill_public_slug_and_default_user.sql',
+      '029_album_locale_cover_credits.sql',
     ];
 
     const results: MigrationResult[] = [];

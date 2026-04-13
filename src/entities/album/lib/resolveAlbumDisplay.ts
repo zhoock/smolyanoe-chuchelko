@@ -106,6 +106,75 @@ function albumTranslationStrings(
   };
 }
 
+/** Поля кредитов обложки хранятся в `translations[lang]`, не в общем `release`. */
+export type AlbumCoverCreditField = 'photographer' | 'photographerURL' | 'designer' | 'designerURL';
+
+/**
+ * Значение для формы: current → default → en/ru, затем legacy из `release` (старые данные).
+ */
+export function resolveAlbumCoverCreditFieldForEdit(
+  album: IAlbums,
+  field: AlbumCoverCreditField,
+  lang: SupportedLang
+): ResolvedAlbumEditField {
+  const chain = buildTranslationFallbackLocales(
+    lang,
+    DEFAULT_CONTENT_LOCALE,
+    TRANSLATION_LOCALE_ORDER
+  );
+  for (const loc of chain) {
+    const raw = album.translations?.[loc]?.[field];
+    if (typeof raw === 'string' && raw.trim()) {
+      return { value: raw.trim(), isFallback: loc !== lang, source: loc };
+    }
+  }
+  const rel =
+    album.release && typeof album.release === 'object'
+      ? (album.release as Record<string, unknown>)
+      : undefined;
+  const legacy = rel?.[field];
+  if (typeof legacy === 'string' && legacy.trim()) {
+    return { value: legacy.trim(), isFallback: true, source: 'root' };
+  }
+  return { value: '', isFallback: false, source: 'root' };
+}
+
+/**
+ * Для публичной страницы: те же fallback, что у строк переводов; затем legacy `release`.
+ */
+export function resolveAlbumCoverReleaseFieldsForDisplay(
+  album: IAlbums,
+  lang: SupportedLang
+): Record<AlbumCoverCreditField, string> {
+  const fields: AlbumCoverCreditField[] = [
+    'photographer',
+    'photographerURL',
+    'designer',
+    'designerURL',
+  ];
+  const out = {} as Record<AlbumCoverCreditField, string>;
+  for (const f of fields) {
+    const fromTranslations = resolveTranslationString(
+      {
+        en: album.translations?.en?.[f],
+        ru: album.translations?.ru?.[f],
+      },
+      lang
+    );
+    if (fromTranslations) {
+      out[f] = fromTranslations;
+      continue;
+    }
+    const rel =
+      album.release && typeof album.release === 'object'
+        ? (album.release as Record<string, unknown>)
+        : undefined;
+    const legacy = rel?.[f];
+    out[f] = typeof legacy === 'string' ? legacy.trim() : '';
+  }
+  return out;
+}
+
 /**
  * Нормализация массива блоков details (иногда JSONB приходит строкой).
  */
@@ -642,6 +711,12 @@ export function resolveAlbumForDisplay(album: IAlbums, lang: SupportedLang): IAl
   const rawDetails = resolveAlbumDetailsForDisplay(album, lang);
   const details = injectGenreDetailIfNeeded(rawDetails, album, lang);
 
+  const coverResolved = resolveAlbumCoverReleaseFieldsForDisplay(album, lang);
+  const relBase =
+    album.release && typeof album.release === 'object'
+      ? { ...(album.release as Record<string, unknown>) }
+      : {};
+
   return {
     ...album,
     album: albumTitle,
@@ -649,5 +724,12 @@ export function resolveAlbumForDisplay(album: IAlbums, lang: SupportedLang): IAl
     description: resolveAlbumStringField(album, 'description', lang),
     details,
     tracks,
+    release: {
+      ...relBase,
+      photographer: coverResolved.photographer,
+      photographerURL: coverResolved.photographerURL,
+      designer: coverResolved.designer,
+      designerURL: coverResolved.designerURL,
+    },
   };
 }
