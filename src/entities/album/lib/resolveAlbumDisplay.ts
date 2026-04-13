@@ -12,8 +12,39 @@ import {
   resolveTranslationString,
   TRANSLATION_LOCALE_ORDER,
 } from '@shared/lib/i18n/resolveTranslationFallback';
+import {
+  ALBUM_DETAIL_SEMANTIC_KIND_ORDER,
+  classifyAlbumDetailSemanticKind,
+  canonicalAlbumDetailTitleForKind,
+  dedupeMergedAlbumDetailsForDisplay,
+  mergeAlbumDetailBlocksForKind,
+  type AlbumDetailSemanticKind,
+} from './albumDetailSemanticKind';
 
 const GENRE_DETAIL_TITLES = new Set(['Genre', 'Genres', 'Жанр', 'Жанры']);
+
+/** Откуда взято значение в форме редактирования (для подписи fallback). */
+export type AlbumEditFieldSource = SupportedLang | 'root';
+
+export type ResolvedAlbumEditDetailBlockMeta = {
+  isFallback: boolean;
+  source: AlbumEditFieldSource;
+};
+
+export type ResolvedAlbumEditField = {
+  value: string;
+  /** true, если значение не из `translations[lang]` (другая локаль или корень). */
+  isFallback: boolean;
+  source: AlbumEditFieldSource;
+};
+
+export type ResolvedAlbumEditDetails = {
+  details: detailsProps[];
+  /** Совпадает по индексу с `details` после merge (та же модель, что и display). */
+  blocksMeta: ResolvedAlbumEditDetailBlockMeta[];
+  /** true, если хотя бы один блок с данными из другой локали или корня. */
+  isFallback: boolean;
+};
 
 function hasSyncedLyricsData(lines: TracksProps['syncedLyrics']): boolean {
   return Array.isArray(lines) && lines.length > 0;
@@ -75,21 +106,287 @@ function albumTranslationStrings(
   };
 }
 
-/** Откуда взято значение в форме редактирования (для подписи fallback). */
-export type AlbumEditFieldSource = SupportedLang | 'root';
+/**
+ * Нормализация массива блоков details (иногда JSONB приходит строкой).
+ */
+function parseDetailsBlocks(raw: unknown): detailsProps[] {
+  if (typeof raw === 'string') {
+    try {
+      return parseDetailsBlocks(JSON.parse(raw));
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(raw)) return [];
+  const out: detailsProps[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const id = (item as detailsProps).id;
+    if (typeof id !== 'number' || !Number.isFinite(id)) continue;
+    const title = (item as detailsProps).title;
+    if (typeof title !== 'string') continue;
+    const content = (item as detailsProps).content;
+    out.push({
+      id,
+      title,
+      content: Array.isArray(content) ? content : [],
+    });
+  }
+  return out;
+}
 
-export type ResolvedAlbumEditField = {
-  value: string;
-  /** true, если значение не из `translations[lang]` (другая локаль или корень). */
-  isFallback: boolean;
-  source: AlbumEditFieldSource;
+/** Пустой / отсутствующий title → идём по цепочке fallback локалей. */
+function isDetailTitleEmptyForFallback(title: unknown): boolean {
+  if (typeof title !== 'string') return true;
+  return title.trim().length === 0;
+}
+
+/** Пустой / отсутствующий массив content → fallback на другую локаль. */
+function isDetailContentEmptyForFallback(content: unknown): boolean {
+  if (!Array.isArray(content)) return true;
+  return content.length === 0;
+}
+
+function detailsBlocksById(raw: unknown): Map<number, detailsProps> {
+  const m = new Map<number, detailsProps>();
+  for (const b of parseDetailsBlocks(raw)) {
+    const prev = m.get(b.id);
+    if (!prev) {
+      m.set(b.id, b);
+      continue;
+    }
+    const prevEmpty = isDetailContentEmptyForFallback(prev.content);
+    const curEmpty = isDetailContentEmptyForFallback(b.content);
+    if (prevEmpty && !curEmpty) m.set(b.id, b);
+    else if (!prevEmpty && curEmpty) continue;
+    else m.set(b.id, b);
+  }
+  return m;
+}
+
+type DetailLocaleMaps = {
+  en: Map<number, detailsProps>;
+  ru: Map<number, detailsProps>;
+  root: Map<number, detailsProps>;
 };
 
-export type ResolvedAlbumEditDetails = {
-  details: detailsProps[];
-  isFallback: boolean;
-  source: AlbumEditFieldSource;
-};
+function buildAlbumDetailLocaleMaps(album: IAlbums): DetailLocaleMaps {
+  return {
+    en: detailsBlocksById(album.translations?.en?.details),
+    ru: detailsBlocksById(album.translations?.ru?.details),
+    root: detailsBlocksById(album.details),
+  };
+}
+
+/**
+ * Union всех числовых `id` из `translations.en.details`, `translations.ru.details` и корневого `details` (legacy).
+ * Один id — один смысловой блок; отображение собирается в `buildMergedAlbumDetails` по цепочке fallback локалей.
+ */
+function collectAllDetailBlockIds(album: IAlbums): Set<number> {
+  const ids = new Set<number>();
+  for (const b of parseDetailsBlocks(album.translations?.en?.details)) ids.add(b.id);
+  for (const b of parseDetailsBlocks(album.translations?.ru?.details)) ids.add(b.id);
+  for (const b of parseDetailsBlocks(album.details)) ids.add(b.id);
+  return ids;
+}
+
+function resolveDetailBlockTitleWithSource(
+  blockId: number,
+  chain: SupportedLang[],
+  maps: DetailLocaleMaps
+): { value: string; source: AlbumEditFieldSource } {
+  for (const loc of chain) {
+    const b = maps[loc].get(blockId);
+    if (!b) continue;
+    if (isDetailTitleEmptyForFallback(b.title)) continue;
+    return { value: (b.title as string).trim(), source: loc };
+  }
+  const rootBlock = maps.root.get(blockId);
+  if (rootBlock && !isDetailTitleEmptyForFallback(rootBlock.title)) {
+    return { value: (rootBlock.title as string).trim(), source: 'root' };
+  }
+  return { value: '', source: 'root' };
+}
+
+/** Если в цепочке заголовок не найден, но контент есть — берём title с любой локали (порядок en → ru → root). */
+function resolveDetailBlockTitleFallbackAnyWithSource(
+  blockId: number,
+  maps: DetailLocaleMaps
+): { value: string; source: AlbumEditFieldSource } {
+  for (const loc of TRANSLATION_LOCALE_ORDER) {
+    const b = maps[loc].get(blockId);
+    if (!b) continue;
+    if (isDetailTitleEmptyForFallback(b.title)) continue;
+    return { value: (b.title as string).trim(), source: loc };
+  }
+  const rootBlock = maps.root.get(blockId);
+  if (rootBlock && !isDetailTitleEmptyForFallback(rootBlock.title)) {
+    return { value: (rootBlock.title as string).trim(), source: 'root' };
+  }
+  return { value: '', source: 'root' };
+}
+
+function resolveDetailBlockContentWithSource(
+  blockId: number,
+  chain: SupportedLang[],
+  maps: DetailLocaleMaps
+): { value: detailsProps['content']; source: AlbumEditFieldSource } {
+  for (const loc of chain) {
+    const b = maps[loc].get(blockId);
+    if (!b) continue;
+    if (!Array.isArray(b.content) || b.content.length === 0) continue;
+
+    return { value: b.content as detailsProps['content'], source: loc };
+  }
+  const rootBlock = maps.root.get(blockId);
+  if (rootBlock && Array.isArray(rootBlock.content) && rootBlock.content.length > 0) {
+    return { value: rootBlock.content as detailsProps['content'], source: 'root' };
+  }
+  return { value: [], source: 'root' };
+}
+
+function combineDetailBlockFallbackMeta(
+  titleSource: AlbumEditFieldSource,
+  contentSource: AlbumEditFieldSource,
+  lang: SupportedLang
+): { isFallback: boolean; source: AlbumEditFieldSource } {
+  const isFallback = titleSource !== lang || contentSource !== lang;
+  const source: AlbumEditFieldSource =
+    titleSource !== lang ? titleSource : contentSource !== lang ? contentSource : lang;
+  return { isFallback, source };
+}
+
+function mergeAlbumEditDetailBlockMetas(
+  metas: ResolvedAlbumEditDetailBlockMeta[],
+  lang: SupportedLang
+): ResolvedAlbumEditDetailBlockMeta {
+  const isFallback = metas.some((m) => m.isFallback);
+  const source =
+    metas.find((m) => m.source === lang)?.source ??
+    metas.find((m) => !m.isFallback)?.source ??
+    metas[0].source;
+  return { isFallback, source };
+}
+
+/**
+ * Union id из en/ru/root даёт два блока одного kind с разными id — схлопываем в один ряд + meta.
+ */
+function dedupeMergedAlbumDetailsWithMeta(
+  details: detailsProps[],
+  blockMeta: ResolvedAlbumEditDetailBlockMeta[],
+  lang: SupportedLang
+): { details: detailsProps[]; blockMeta: ResolvedAlbumEditDetailBlockMeta[] } {
+  if (details.length !== blockMeta.length) {
+    return { details, blockMeta };
+  }
+
+  const kindToIndices = new Map<AlbumDetailSemanticKind, number[]>();
+  const customIndices: number[] = [];
+
+  details.forEach((d, i) => {
+    const k = classifyAlbumDetailSemanticKind(d.title);
+    if (!k) customIndices.push(i);
+    else {
+      const arr = kindToIndices.get(k) ?? [];
+      arr.push(i);
+      kindToIndices.set(k, arr);
+    }
+  });
+
+  const outD: detailsProps[] = [];
+  const outM: ResolvedAlbumEditDetailBlockMeta[] = [];
+
+  for (const i of customIndices) {
+    outD.push(details[i]);
+    outM.push(blockMeta[i]);
+  }
+
+  for (const kind of ALBUM_DETAIL_SEMANTIC_KIND_ORDER) {
+    const indices = kindToIndices.get(kind);
+    if (!indices?.length) continue;
+    const blocks = indices.map((i) => details[i]);
+    const metas = indices.map((i) => blockMeta[i]);
+    const mergedD =
+      blocks.length === 1
+        ? { ...blocks[0], title: canonicalAlbumDetailTitleForKind(kind, lang) }
+        : mergeAlbumDetailBlocksForKind(kind, blocks, lang);
+    outD.push(mergedD);
+    outM.push(mergeAlbumEditDetailBlockMetas(metas, lang));
+  }
+
+  return { details: outD, blockMeta: outM };
+}
+
+function applyStripGenreBlocksToMerged(
+  details: detailsProps[],
+  blockMeta: ResolvedAlbumEditDetailBlockMeta[]
+): { details: detailsProps[]; blockMeta: ResolvedAlbumEditDetailBlockMeta[] } {
+  const outD: detailsProps[] = [];
+  const outM: ResolvedAlbumEditDetailBlockMeta[] = [];
+  for (let i = 0; i < details.length; i++) {
+    const d = details[i];
+    const title = String((d as { title?: string }).title ?? '');
+    if (GENRE_DETAIL_TITLES.has(title)) continue;
+    outD.push(d);
+    outM.push(blockMeta[i]);
+  }
+  return { details: outD, blockMeta: outM };
+}
+
+/**
+ * Display / edit: union всех `id` из en + ru (+ root), затем для каждого id:
+ * - `title` и `content` выбираются по цепочке `buildTranslationFallbackLocales(lang, …)` (сначала текущая локаль, потом fallback);
+ * - если блок есть только в RU, при UI `en` данные берутся из `maps.ru` после исчерпания `en`.
+ */
+function buildMergedAlbumDetails(
+  album: IAlbums,
+  lang: SupportedLang,
+  options: { withBlockMeta: boolean; stripGenreBlocks: boolean }
+): { details: detailsProps[]; blockMeta: ResolvedAlbumEditDetailBlockMeta[] } {
+  const chain = buildTranslationFallbackLocales(
+    lang,
+    DEFAULT_CONTENT_LOCALE,
+    TRANSLATION_LOCALE_ORDER
+  );
+  const maps = buildAlbumDetailLocaleMaps(album);
+  const ids = collectAllDetailBlockIds(album);
+  if (ids.size === 0) {
+    return { details: [], blockMeta: [] };
+  }
+
+  const sortedIds = [...ids].sort((a, b) => a - b);
+  const details: detailsProps[] = [];
+  const blockMeta: ResolvedAlbumEditDetailBlockMeta[] = [];
+
+  for (const blockId of sortedIds) {
+    let titleRes = resolveDetailBlockTitleWithSource(blockId, chain, maps);
+    const contentRes = resolveDetailBlockContentWithSource(blockId, chain, maps);
+    const hasContent = Array.isArray(contentRes.value) && contentRes.value.length > 0;
+
+    if (!titleRes.value && hasContent) {
+      const fb = resolveDetailBlockTitleFallbackAnyWithSource(blockId, maps);
+      if (fb.value) titleRes = fb;
+    }
+
+    const title = titleRes.value;
+    if (!title.trim() && !hasContent) continue;
+
+    details.push({
+      id: blockId,
+      title: title || '',
+      content: hasContent ? contentRes.value : [],
+    });
+    if (options.withBlockMeta) {
+      blockMeta.push(combineDetailBlockFallbackMeta(titleRes.source, contentRes.source, lang));
+    }
+  }
+
+  if (options.stripGenreBlocks && details.length > 0) {
+    return applyStripGenreBlocksToMerged(details, blockMeta);
+  }
+
+  return { details, blockMeta };
+}
 
 /**
  * Значение поля для формы: та же цепочка, что и на display (current → default → en, ru), затем корень.
@@ -144,27 +441,15 @@ export function getAlbumDetailsForEdit(
   lang: SupportedLang
 ): ResolvedAlbumEditDetails {
   const stripGenres = readGenreCodesFromRelease(album.release).length > 0;
-
-  const chain = buildTranslationFallbackLocales(
-    lang,
-    DEFAULT_CONTENT_LOCALE,
-    TRANSLATION_LOCALE_ORDER
-  );
-  for (const loc of chain) {
-    const d = album.translations?.[loc]?.details;
-    if (Array.isArray(d) && d.length > 0) {
-      const details = stripGenres
-        ? stripGenreDetailBlocks(d as detailsProps[])
-        : (d as detailsProps[]);
-      return { details, isFallback: loc !== lang, source: loc };
-    }
-  }
-  const root = Array.isArray(album.details) ? album.details : [];
-  const details = stripGenres ? stripGenreDetailBlocks(root) : root;
+  const { details, blockMeta } = buildMergedAlbumDetails(album, lang, {
+    withBlockMeta: true,
+    stripGenreBlocks: stripGenres,
+  });
+  const deduped = dedupeMergedAlbumDetailsWithMeta(details, blockMeta, lang);
   return {
-    details,
-    isFallback: details.length > 0,
-    source: 'root',
+    details: deduped.details,
+    blocksMeta: deduped.blockMeta,
+    isFallback: deduped.blockMeta.some((b) => b.isFallback),
   };
 }
 
@@ -333,17 +618,13 @@ export function resolveTrackForDisplay(track: TracksProps, lang: SupportedLang):
   };
 }
 
+/** См. `buildMergedAlbumDetails` — та же union по id и fallback по локалям. */
 function resolveAlbumDetailsForDisplay(album: IAlbums, lang: SupportedLang): detailsProps[] {
-  const chain = buildTranslationFallbackLocales(
-    lang,
-    DEFAULT_CONTENT_LOCALE,
-    TRANSLATION_LOCALE_ORDER
-  );
-  for (const loc of chain) {
-    const d = album.translations?.[loc]?.details;
-    if (Array.isArray(d) && d.length > 0) return d;
-  }
-  return Array.isArray(album.details) ? album.details : [];
+  const raw = buildMergedAlbumDetails(album, lang, {
+    withBlockMeta: false,
+    stripGenreBlocks: false,
+  }).details;
+  return dedupeMergedAlbumDetailsForDisplay(raw, lang);
 }
 
 /**

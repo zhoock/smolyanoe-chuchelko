@@ -10,7 +10,9 @@ import { useLang } from '@app/providers/lang';
 import { getToken, getUser } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
-import type { IAlbums } from '@models';
+import type { IAlbums, detailsProps } from '@models';
+import { mergeSemanticSourceIntoLocaleDetails } from '@entities/album/lib/albumDetailSemanticKind';
+import type { SupportedLang } from '@shared/model/lang';
 import {
   buildTranslatedContentEditFallbackNotice,
   collectAlbumEditFallbackSources,
@@ -34,6 +36,7 @@ import {
   STREAMING_SERVICES,
 } from './EditAlbumModal.constants';
 import {
+  dedupeSemanticAlbumDetailBlocks,
   makeEmptyForm,
   validateStep,
   transformFormDataToAlbumFormat,
@@ -42,7 +45,6 @@ import {
   formatDateInput,
   parseRecordingText,
   buildRecordingText,
-  EDITABLE_ALBUM_DETAIL_BLOCK_TITLES,
 } from './EditAlbumModal.utils';
 import { EditAlbumModalStep1 } from '../../steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from '../../steps/EditAlbumModalStep2';
@@ -195,7 +197,10 @@ export function EditAlbumModal({
     const fallbackSources = collectAlbumEditFallbackSources([
       titleResolved,
       descriptionResolved,
-      detailsResolved,
+      ...detailsResolved.blocksMeta.map((meta) => ({
+        isFallback: meta.isFallback,
+        source: meta.source,
+      })),
     ]);
     setEditLocaleFallbackNotice(buildTranslatedContentEditFallbackNotice(fallbackSources, lang));
 
@@ -1533,11 +1538,35 @@ export function EditAlbumModal({
       }
     }
 
+    // База для id в transformFormDataToAlbumFormat — details текущей локали в БД (согласованные id).
+    // При новом альбоме originalAlbum нет → [].
+    const baselineDetails = originalAlbum?.translations?.[lang]?.details || [];
+
     const {
       release,
       buttons,
       details: newDetails,
-    } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined);
+    } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined, baselineDetails);
+
+    const cleanedDetails = dedupeSemanticAlbumDetailBlocks(newDetails, lang, ui ?? undefined);
+
+    const semanticForLocales = cleanedDetails as detailsProps[];
+    const detailsByLocale: Record<SupportedLang, detailsProps[]> = {
+      en: mergeSemanticSourceIntoLocaleDetails(
+        originalAlbum?.translations?.en?.details,
+        semanticForLocales,
+        'en',
+        ui ?? undefined,
+        { preferSemanticSourceForContent: normalizedLang === 'en' }
+      ),
+      ru: mergeSemanticSourceIntoLocaleDetails(
+        originalAlbum?.translations?.ru?.details,
+        semanticForLocales,
+        'ru',
+        ui ?? undefined,
+        { preferSemanticSourceForContent: normalizedLang === 'ru' }
+      ),
+    };
 
     const albumTitle = formData.title || originalAlbum?.album || '';
     const fullName =
@@ -1551,42 +1580,7 @@ export function EditAlbumModal({
       originalAlbumTitle: originalAlbum?.album,
     });
 
-    // База для merge: details выбранной локали (en/ru), а не только корень merged-альбома (часто ru).
-    // При POST исходного альбома нет — берём только блоки из формы.
-    const baselineDetails =
-      exists && originalAlbum ? getAlbumDetailsForEdit(originalAlbum, normalizedLang).details : [];
-    const originalDetails = (baselineDetails as Array<{ id: number; title: string }>) || [];
-
-    const uiDetailLabels = [
-      ui?.dashboard?.genre,
-      ui?.dashboard?.bandMembers,
-      ui?.dashboard?.sessionMusicians,
-      ui?.dashboard?.producing,
-      ui?.dashboard?.masteredBy,
-      ui?.dashboard?.recordedAt,
-      ui?.dashboard?.mixedAt,
-    ].filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
-
-    const titlesToStrip = new Set<string>([
-      ...EDITABLE_ALBUM_DETAIL_BLOCK_TITLES,
-      ...uiDetailLabels,
-    ]);
-
-    const mergedDetails = originalDetails.filter(
-      (d) =>
-        d &&
-        typeof d === 'object' &&
-        !titlesToStrip.has(String((d as { title?: string }).title ?? ''))
-    );
-
-    newDetails.forEach((newDetail) => {
-      const detail = newDetail as { id: number; title: string };
-      mergedDetails.push(detail);
-    });
-
-    // Сортируем по id
-    mergedDetails.sort((a, b) => (a.id || 0) - (b.id || 0));
-
+    // Семантические блоки (участники, продюсеры, …) синхронизируются в en/ru; пользовательские — только в текущей локали.
     const updateData: Record<string, unknown> = {
       albumId: finalAlbumId,
       album: albumTitle,
@@ -1597,7 +1591,8 @@ export function EditAlbumModal({
             finalFormData.description !== undefined
               ? finalFormData.description
               : originalAlbum?.description || '',
-          details: mergedDetails.length > 0 ? mergedDetails : [],
+          details:
+            detailsByLocale[normalizedLang].length > 0 ? detailsByLocale[normalizedLang] : [],
         },
       },
       release: release,
@@ -1672,6 +1667,35 @@ export function EditAlbumModal({
           errorData,
         });
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
+      }
+
+      if (method === 'PUT' && exists) {
+        const otherLang: SupportedLang = normalizedLang === 'en' ? 'ru' : 'en';
+        const syncPayload: Record<string, unknown> = {
+          albumId: finalAlbumId,
+          lang: otherLang,
+          translations: {
+            [otherLang]: {
+              details: detailsByLocale[otherLang],
+            },
+          },
+        };
+        const syncRes = await fetch('/api/albums', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(syncPayload),
+        });
+        if (!syncRes.ok) {
+          const syncErr = await syncRes.json().catch(() => ({}));
+          console.warn('[EditAlbumModal] Sync semantic details to other locale failed:', {
+            otherLang,
+            status: syncRes.status,
+            syncErr,
+          });
+        }
       }
 
       const result = await response.json();

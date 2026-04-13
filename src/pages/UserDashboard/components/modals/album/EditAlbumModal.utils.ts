@@ -2,7 +2,12 @@
 import type { AlbumFormData, ProducingCredits } from './EditAlbumModal.types';
 import { DEFAULT_PRODUCING_CREDIT_TYPES } from './EditAlbumModal.constants';
 import type { SupportedLang } from '@shared/model/lang';
-import type { IInterface } from '@models';
+import type { IInterface, detailsProps } from '@models';
+import {
+  type AlbumDetailSemanticKind,
+  classifyAlbumDetailSemanticKind,
+  dedupeMergedAlbumDetailsForDisplay,
+} from '@entities/album/lib/albumDetailSemanticKind';
 
 /**
  * Заголовки блоков `details`, которые форма редактирования полностью перезаписывает при сохранении.
@@ -30,6 +35,72 @@ export const EDITABLE_ALBUM_DETAIL_BLOCK_TITLES = new Set<string>([
   'Mixed At',
   'Сведение',
 ]);
+
+/** Семантика редактируемых блоков details — один id на блок во всех локалях. */
+type DetailBlockKind = AlbumDetailSemanticKind;
+
+function classifyDetailBlockTitle(title: string, ui?: IInterface): DetailBlockKind | null {
+  return classifyAlbumDetailSemanticKind(title, ui);
+}
+
+/** true, если блок относится к одному из шести редактируемых «смысловых» kind (по normalize(title), не по точной строке). */
+export function isEditableSemanticAlbumDetailBlock(title: string, ui?: IInterface): boolean {
+  return classifyAlbumDetailSemanticKind(title, ui) != null;
+}
+
+/** Сохранение: тот же дедуп, что и на отображении (один блок на kind, канонический title). */
+export function dedupeSemanticAlbumDetailBlocks(
+  details: unknown[],
+  lang: SupportedLang,
+  ui?: IInterface
+): unknown[] {
+  return dedupeMergedAlbumDetailsForDisplay(details as detailsProps[], lang, ui) as unknown[];
+}
+
+/** kind через `classifyDetailBlockTitle` → `normalize(title)`; первый встреченный id для kind сохраняется. */
+function collectExistingDetailIdsByKind(
+  existingDetails: unknown,
+  ui?: IInterface
+): { kindToId: Map<DetailBlockKind, number>; maxId: number } {
+  const kindToId = new Map<DetailBlockKind, number>();
+  let maxId = 0;
+  if (!Array.isArray(existingDetails)) return { kindToId, maxId };
+
+  for (const raw of existingDetails) {
+    if (!raw || typeof raw !== 'object') continue;
+    const id = (raw as { id?: unknown }).id;
+    const title = (raw as { title?: unknown }).title;
+    if (typeof id !== 'number' || !Number.isFinite(id)) continue;
+    maxId = Math.max(maxId, id);
+    if (typeof title !== 'string') continue;
+    const kind = classifyDetailBlockTitle(title, ui);
+    if (kind && !kindToId.has(kind)) {
+      kindToId.set(kind, id);
+    }
+  }
+  return { kindToId, maxId };
+}
+
+/**
+ * Id из merged baseline по kind; если kind уже есть в карте — только он (без замены на новый id из-за usedIds).
+ * Новый id только если kind в baseline не встречался.
+ */
+function takeDetailBlockId(
+  kind: DetailBlockKind,
+  kindToId: Map<DetailBlockKind, number>,
+  usedIds: Set<number>,
+  maxIdRef: { n: number }
+): number {
+  if (kindToId.has(kind)) {
+    const id = kindToId.get(kind)!;
+    usedIds.add(id);
+    return id;
+  }
+  maxIdRef.n += 1;
+  while (usedIds.has(maxIdRef.n)) maxIdRef.n += 1;
+  usedIds.add(maxIdRef.n);
+  return maxIdRef.n;
+}
 
 /**
  * Форматирует дату из формата YYYY-MM-DD в формат "MON. DD, YYYY" (английский)
@@ -457,7 +528,12 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
 export const transformFormDataToAlbumFormat = (
   formData: AlbumFormData,
   lang: SupportedLang,
-  ui?: IInterface
+  ui?: IInterface,
+  /**
+   * Merged details (например `getAlbumDetailsForEdit(...).details`): id берутся по `kind`
+   * из `classifyDetailBlockTitle(normalize(title))`, а не по заголовку только текущей локали.
+   */
+  existingDetails?: unknown[]
 ): {
   release: Record<string, string>;
   buttons: Record<string, string>;
@@ -563,12 +639,15 @@ export const transformFormDataToAlbumFormat = (
 
   const details: unknown[] = [];
 
-  let nextId = 1;
+  const { kindToId, maxId } = collectExistingDetailIdsByKind(existingDetails, ui);
+  const usedIds = new Set<number>();
+  const maxIdRef = { n: maxId };
+  const takeId = (kind: DetailBlockKind) => takeDetailBlockId(kind, kindToId, usedIds, maxIdRef);
 
   if (formData.bandMembers.length > 0) {
     details.push({
-      id: nextId++,
-      title: ui?.dashboard?.bandMembers ?? 'Band members',
+      id: takeId('bandMembers'),
+      title: lang === 'ru' ? 'Исполнители' : 'Band members',
       content: formData.bandMembers.map((m) => {
         // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
         const roleClean = m.role.trim().replace(/\.+$/, '');
@@ -598,8 +677,8 @@ export const transformFormDataToAlbumFormat = (
 
   if (formData.sessionMusicians.length > 0) {
     details.push({
-      id: nextId++,
-      title: ui?.dashboard?.sessionMusicians ?? 'Session musicians',
+      id: takeId('sessionMusicians'),
+      title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
       content: formData.sessionMusicians.map((m) => {
         // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
         const roleClean = m.role.trim().replace(/\.+$/, '');
@@ -621,8 +700,8 @@ export const transformFormDataToAlbumFormat = (
   // Добавляем Producer
   if (formData.producer && formData.producer.length > 0) {
     details.push({
-      id: nextId++,
-      title: ui?.dashboard?.producing ?? 'Producing',
+      id: takeId('producing'),
+      title: lang === 'ru' ? 'Продюсирование' : 'Producing',
       content: formData.producer.map((member) => {
         // Новый формат: используем BandMember с name и role
         // Сохраняем в формате ["Имя", "роль"]
@@ -645,8 +724,8 @@ export const transformFormDataToAlbumFormat = (
   // Добавляем Mastering
   if (formData.mastering && formData.mastering.length > 0) {
     details.push({
-      id: nextId++,
-      title: ui?.dashboard?.masteredBy ?? 'Mastered By',
+      id: takeId('mastering'),
+      title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
       content: formData.mastering.map((entry) => {
         // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
@@ -667,8 +746,8 @@ export const transformFormDataToAlbumFormat = (
   // Добавляем Recorded At
   if (formData.recordedAt.length > 0) {
     details.push({
-      id: nextId++,
-      title: ui?.dashboard?.recordedAt ?? 'Recorded At',
+      id: takeId('recordedAt'),
+      title: lang === 'ru' ? 'Запись' : 'Recorded At',
       content: formData.recordedAt.map((entry) => {
         // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
@@ -689,8 +768,8 @@ export const transformFormDataToAlbumFormat = (
   // Добавляем Mixed At
   if (formData.mixedAt.length > 0) {
     details.push({
-      id: nextId++,
-      title: ui?.dashboard?.mixedAt ?? 'Mixed At',
+      id: takeId('mixedAt'),
+      title: lang === 'ru' ? 'Сведение' : 'Mixed At',
       content: formData.mixedAt.map((entry) => {
         // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
         const result: any = {};
