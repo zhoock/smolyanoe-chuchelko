@@ -31,7 +31,7 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
-import { getClient } from './lib/db';
+import { getClient, query } from './lib/db';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { TRACK_ORDER_INDEX_STEP } from '../../src/shared/lib/tracks/trackOrderIndex';
 
