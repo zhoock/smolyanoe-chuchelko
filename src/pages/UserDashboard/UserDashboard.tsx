@@ -1727,7 +1727,10 @@ function UserDashboard() {
         ]);
 
         const cachedAuthorship = getCachedAuthorship(albumId, trackId, lang);
-        const fallbackAuthorship = track.authorship || cachedAuthorship;
+        // Как на сайте: авторство из merge (resolveAlbumForDisplay). Ответ synced-lyrics может отдать
+        // authorship с «чужой» локали, если синхра выбрана через fallback — не перекрываем merged-трек.
+        const mergedAuthorship =
+          (track.authorship && track.authorship.trim()) || cachedAuthorship?.trim() || '';
         const fallbackText = track.lyricsText || '';
 
         const finalText = storedText !== null ? storedText : fallbackText;
@@ -1762,7 +1765,7 @@ function UserDashboard() {
           trackStatus: track.lyricsStatus,
           hasSyncedLyrics,
           initialLyrics: finalText,
-          initialAuthorship: storedAuthorship || fallbackAuthorship || undefined,
+          initialAuthorship: mergedAuthorship || storedAuthorship || undefined,
         });
       }
     } else if (action === 'prev') {
@@ -1773,11 +1776,14 @@ function UserDashboard() {
         () => null
       );
 
-      // Загружаем авторство из БД
-      const authorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(() => null);
+      const storedPrevAuthorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(
+        () => null
+      );
 
       const album = albumsData.find((a) => a.id === albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
+      const cachedPrev = getCachedAuthorship(albumId, trackId, lang);
+      const mergedPrev = (track?.authorship && track.authorship.trim()) || cachedPrev?.trim() || '';
 
       console.log('[UserDashboard] Opening Preview Lyrics:', {
         albumId,
@@ -1792,7 +1798,7 @@ function UserDashboard() {
         isOpen: true,
         lyrics,
         syncedLyrics: syncedLyrics || undefined,
-        authorship: authorship || undefined,
+        authorship: mergedPrev || storedPrevAuthorship || undefined,
         trackSrc: track?.src,
       });
     } else if (action === 'sync') {
@@ -1830,6 +1836,7 @@ function UserDashboard() {
 
       if (result.success) {
         setCachedAuthorship(addLyricsModal.albumId, addLyricsModal.trackId, lang, authorship);
+        void dispatch(fetchAlbums({ force: true }));
         setAlbumsData((prev) =>
           prev.map((a) => {
             if (a.id === addLyricsModal.albumId) {
@@ -1946,6 +1953,8 @@ function UserDashboard() {
             : null
         );
 
+        void dispatch(fetchAlbums({ force: true }));
+
         console.log('✅ Lyrics saved and albumsData updated:', {
           albumId: editLyricsModal.albumId,
           trackId: editLyricsModal.trackId,
@@ -1986,17 +1995,20 @@ function UserDashboard() {
       () => null
     );
 
-    // Загружаем авторство из БД
-    const authorship = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(() => null);
+    const storedAuthorshipPreview = await loadAuthorshipFromStorage(albumId, trackId, lang).catch(
+      () => null
+    );
 
     const album = albumsData.find((a) => a.id === albumId);
     const track = album?.tracks.find((t) => t.id === trackId);
+    const cached = getCachedAuthorship(albumId, trackId, lang);
+    const mergedPreview = (track?.authorship && track.authorship.trim()) || cached?.trim() || '';
 
     setPreviewLyricsModal({
       isOpen: true,
       lyrics,
       syncedLyrics: syncedLyrics || undefined,
-      authorship: authorship || undefined,
+      authorship: mergedPreview || storedAuthorshipPreview || undefined,
       trackSrc: track?.src,
     });
   };

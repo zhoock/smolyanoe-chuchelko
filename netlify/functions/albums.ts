@@ -99,11 +99,10 @@ interface AlbumData {
   tracks: TrackData[];
 }
 
+/** В merge GET: только переводимые поля; текст и синхронизация — на корне трека (канон). */
 interface TrackLocalePayload {
   title: string;
-  content?: string;
   authorship?: string;
-  syncedLyrics?: unknown;
 }
 
 interface TrackData {
@@ -423,6 +422,36 @@ function sortAlbumRowsForMerge(rows: AlbumRow[]): AlbumRow[] {
   );
 }
 
+function syncedLyricsHaveTimingsMerge(raw: unknown): boolean {
+  if (!Array.isArray(raw)) return false;
+  return raw.some(
+    (line: { startTime?: unknown }) => Number((line as { startTime?: number })?.startTime) > 0
+  );
+}
+
+function firstNonEmptyTrackContent(sorted: AlbumData[], trackId: string): string | undefined {
+  for (const p of sorted) {
+    const m = p.tracks.find((t) => t.id === trackId);
+    const c = m?.content;
+    if (typeof c === 'string' && c.trim()) return c;
+  }
+  return undefined;
+}
+
+function firstSyncedLyricsWithTimings(sorted: AlbumData[], trackId: string): unknown {
+  for (const p of sorted) {
+    const m = p.tracks.find((t) => t.id === trackId);
+    if (m?.syncedLyrics && syncedLyricsHaveTimingsMerge(m.syncedLyrics)) {
+      return m.syncedLyrics;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Текст и синхронизация — один канон (корень трека, приоритет ru-строки альбома).
+ * В translations[lang] только title + authorship.
+ */
 function mergeTrackPayloads(payloads: AlbumData[]): TrackData[] {
   const sorted = [...payloads].sort((a, b) => {
     const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
@@ -437,14 +466,24 @@ function mergeTrackPayloads(payloads: AlbumData[]): TrackData[] {
       if (match) {
         translations[p.lang] = {
           title: match.title,
-          content: match.content,
           authorship: match.authorship,
-          syncedLyrics: match.syncedLyrics,
         };
       }
     }
+    const tid = ct.id;
+    let mergedContent = typeof ct.content === 'string' ? ct.content : '';
+    if (!mergedContent.trim()) {
+      mergedContent = firstNonEmptyTrackContent(sorted, tid) ?? '';
+    }
+    let mergedSync = ct.syncedLyrics;
+    if (!syncedLyricsHaveTimingsMerge(mergedSync)) {
+      const alt = firstSyncedLyricsWithTimings(sorted, tid);
+      if (alt !== undefined) mergedSync = alt;
+    }
     return {
       ...ct,
+      content: mergedContent,
+      syncedLyrics: mergedSync,
       translations,
     };
   });
@@ -608,7 +647,9 @@ async function loadAlbumDataFromRow(album: AlbumRow): Promise<AlbumData> {
       return {
         ...track,
         synced_lyrics: syncedData.synced_lyrics,
-        authorship: syncedData.authorship || track.authorship,
+        // Источник истины — `tracks.authorship`. Синхронизация пишется под канонический lang;
+        // строка `synced_lyrics` для другой локали могла не обновиться и перетирала EN при чтении.
+        authorship: track.authorship ?? syncedData.authorship,
       };
     }
     return track;

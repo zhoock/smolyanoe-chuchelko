@@ -50,6 +50,14 @@ function hasSyncedLyricsData(lines: TracksProps['syncedLyrics']): boolean {
   return Array.isArray(lines) && lines.length > 0;
 }
 
+/**
+ * Для публичного отображения: «есть синхронизация» только если есть тайминги (как в плеере / transformAlbumData).
+ * Массив только с startTime === 0 не блокирует fallback на другую локаль — иначе при UI=EN теряются тайминги из RU.
+ */
+function hasSyncedLyricsTimingsForDisplay(lines: TracksProps['syncedLyrics']): boolean {
+  return Array.isArray(lines) && lines.length > 0 && lines.some((l) => (l?.startTime ?? 0) > 0);
+}
+
 export function stripGenreDetailBlocks(details: detailsProps[]): detailsProps[] {
   return details.filter(
     (d) =>
@@ -546,9 +554,9 @@ export function buildTranslatedContentEditFallbackNotice(
   };
   const joined = [...new Set(sources)].map(label).join(', ');
   if (lang === 'ru') {
-    return `Подставлены данные из: ${joined}. Та же логика, что на сайте. При сохранении запишется версия для текущего языка интерфейса.`;
+    return `Подставлены данные из: ${joined}. Текст песни и синхронизация общие; авторство и название — по локалям.`;
   }
-  return `Prefilled from: ${joined} (same as on the site). Saving will update the ${lang === 'en' ? 'English' : 'Russian'} copy.`;
+  return `Prefilled from: ${joined}. Lyrics and sync are shared; title and authorship are per locale.`;
 }
 
 export function resolveTrackFieldForEdit(
@@ -556,6 +564,10 @@ export function resolveTrackFieldForEdit(
   field: 'title' | 'content' | 'authorship',
   lang: SupportedLang
 ): ResolvedAlbumEditField {
+  if (field === 'content') {
+    const v = (track.content ?? '').trim();
+    return { value: v, isFallback: false, source: lang };
+  }
   const chain = buildTranslationFallbackLocales(
     lang,
     DEFAULT_CONTENT_LOCALE,
@@ -569,7 +581,6 @@ export function resolveTrackFieldForEdit(
   }
   let root = '';
   if (field === 'title') root = (track.title ?? '').trim();
-  else if (field === 'content') root = (track.content ?? '').trim();
   else root = (track.authorship ?? '').trim();
   return {
     value: root,
@@ -586,19 +597,8 @@ export type ResolvedTrackEditSyncedLyrics = {
 
 export function getTrackSyncedLyricsForEdit(
   track: TracksProps,
-  lang: SupportedLang
+  _lang: SupportedLang
 ): ResolvedTrackEditSyncedLyrics {
-  const chain = buildTranslationFallbackLocales(
-    lang,
-    DEFAULT_CONTENT_LOCALE,
-    TRANSLATION_LOCALE_ORDER
-  );
-  for (const loc of chain) {
-    const lines = track.translations?.[loc]?.syncedLyrics;
-    if (hasSyncedLyricsData(lines)) {
-      return { lines, isFallback: loc !== lang, source: loc };
-    }
-  }
   const root = track.syncedLyrics;
   const hasRoot = hasSyncedLyricsData(root);
   return {
@@ -633,20 +633,12 @@ export function resolveAlbumStringField(
   return album.description ?? '';
 }
 
-function pickTrackSyncedLyricsForDisplay(
-  track: TracksProps,
-  lang: SupportedLang
-): TracksProps['syncedLyrics'] {
-  const chain = buildTranslationFallbackLocales(
-    lang,
-    DEFAULT_CONTENT_LOCALE,
-    TRANSLATION_LOCALE_ORDER
-  );
-  for (const loc of chain) {
-    const lines = track.translations?.[loc]?.syncedLyrics;
-    if (hasSyncedLyricsData(lines)) return lines;
+/** Единая синхронизация на корне трека (без fallback по локалям). */
+function pickTrackSyncedLyricsForDisplay(track: TracksProps): TracksProps['syncedLyrics'] {
+  if (hasSyncedLyricsTimingsForDisplay(track.syncedLyrics)) {
+    return track.syncedLyrics;
   }
-  return track.syncedLyrics;
+  return [];
 }
 
 export function resolveTrackForDisplay(track: TracksProps, lang: SupportedLang): TracksProps {
@@ -654,13 +646,6 @@ export function resolveTrackForDisplay(track: TracksProps, lang: SupportedLang):
     {
       en: track.translations?.en?.title,
       ru: track.translations?.ru?.title,
-    },
-    lang
-  );
-  const content = resolveTranslationString(
-    {
-      en: track.translations?.en?.content,
-      ru: track.translations?.ru?.content,
     },
     lang
   );
@@ -673,7 +658,7 @@ export function resolveTrackForDisplay(track: TracksProps, lang: SupportedLang):
   );
 
   const resolvedTitle = !isTranslationValueMissing(title) ? title : track.title;
-  const resolvedContent = !isTranslationValueMissing(content) ? content : track.content;
+  const resolvedContent = track.content ?? '';
   const resolvedAuthorship = !isTranslationValueMissing(authorship)
     ? authorship
     : (track.authorship ?? '');
@@ -683,7 +668,7 @@ export function resolveTrackForDisplay(track: TracksProps, lang: SupportedLang):
     title: resolvedTitle,
     content: resolvedContent,
     authorship: resolvedAuthorship || undefined,
-    syncedLyrics: pickTrackSyncedLyricsForDisplay(track, lang),
+    syncedLyrics: pickTrackSyncedLyricsForDisplay(track),
   };
 }
 

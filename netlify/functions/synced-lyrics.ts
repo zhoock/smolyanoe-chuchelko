@@ -25,7 +25,8 @@ interface SyncedLyricsRow {
 interface SaveSyncedLyricsRequest {
   albumId: string;
   trackId: string | number;
-  lang: string;
+  /** @deprecated сохраняется в каноническую локаль (ru → en) */
+  lang?: string;
   syncedLyrics: Array<{
     text: string;
     startTime: number;
@@ -46,6 +47,24 @@ interface SyncedLyricsResponse {
   };
   message?: string;
   error?: string;
+}
+
+type AlbumRowCanonical = { id: string; user_id: string | null; lang: string };
+
+/** Канонический ряд альбома (ru → en): один источник текста и синхронизации. */
+async function findCanonicalAlbumForUser(
+  albumId: string,
+  userId: string
+): Promise<AlbumRowCanonical | null> {
+  const r = await query<AlbumRowCanonical>(
+    `SELECT id, user_id, lang FROM albums
+     WHERE album_id = $1 AND user_id = $2 AND lang IN ('ru', 'en')
+     ORDER BY CASE lang WHEN 'ru' THEN 0 WHEN 'en' THEN 1 END
+     LIMIT 1`,
+    [albumId, userId],
+    0
+  );
+  return r.rows[0] ?? null;
 }
 
 export const handler: Handler = async (
@@ -133,20 +152,11 @@ export const handler: Handler = async (
         targetUserId,
       });
 
-      // Ищем альбом только в контексте выбранного артиста.
-      const albumResult = await query<{ id: string; user_id: string | null }>(
-        `SELECT id, user_id FROM albums
-         WHERE album_id = $1 AND lang = $2 AND user_id = $3
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [albumId, lang, targetUserId],
-        0
-      );
+      const albumRow = await findCanonicalAlbumForUser(albumId, targetUserId);
 
-      if (albumResult.rows.length === 0) {
+      if (!albumRow) {
         console.log('[synced-lyrics.ts GET] No album found:', {
           albumId,
-          lang,
         });
         return {
           statusCode: 200,
@@ -158,35 +168,36 @@ export const handler: Handler = async (
         };
       }
 
-      const albumDbId = albumResult.rows[0].id;
-      const albumUserId = albumResult.rows[0].user_id;
+      const albumDbId = albumRow.id;
+      const albumUserId = albumRow.user_id;
+      const canonicalLang = albumRow.lang === 'ru' ? 'ru' : 'en';
 
-      console.log('[synced-lyrics.ts GET] Found album:', {
+      console.log('[synced-lyrics.ts GET] Found canonical album:', {
         albumId,
-        lang,
         albumDbId,
+        canonicalLang,
         albumUserId,
-        isTargetArtistAlbum: albumUserId === targetUserId,
       });
 
-      // Загружаем синхронизации для владельца выбранного артиста.
-      const syncedResult = await query<SyncedLyricsRow>(
+      const syncedResult = await query<{
+        synced_lyrics: unknown;
+        authorship: string | null;
+      }>(
         `SELECT synced_lyrics, authorship
          FROM synced_lyrics
-         WHERE album_id = $1 AND track_id = $2 AND lang = $3
-           AND user_id = $4
-         ORDER BY updated_at DESC
+         WHERE album_id = $1 AND track_id = $2 AND user_id = $3 AND lang = $4
+         ORDER BY updated_at DESC NULLS LAST
          LIMIT 1`,
-        [albumId, String(trackId), lang, albumUserId],
+        [albumId, String(trackId), albumUserId, canonicalLang],
         0
       );
 
-      // Если нашли синхронизированный текст, возвращаем его
-      if (syncedResult.rows.length > 0) {
-        const row = syncedResult.rows[0];
-        console.log('[synced-lyrics.ts GET] ✅ Found synced lyrics:', {
+      const row = syncedResult.rows[0];
+      if (row) {
+        console.log('[synced-lyrics.ts GET] ✅ Found synced lyrics (canonical):', {
           linesCount: Array.isArray(row.synced_lyrics) ? row.synced_lyrics.length : 0,
           hasAuthorship: !!row.authorship,
+          canonicalLang,
         });
 
         return {
@@ -202,24 +213,6 @@ export const handler: Handler = async (
         };
       }
 
-      // Если синхронизированного текста нет, проверяем tracks.content
-
-      if (albumResult.rows.length === 0) {
-        console.log('[synced-lyrics.ts GET] No album found:', {
-          albumId,
-          lang,
-        });
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: true,
-            data: undefined,
-          } as SyncedLyricsResponse),
-        };
-      }
-
-      // Загружаем текст из tracks.content
       console.log('[synced-lyrics.ts GET] Loading track text from tracks.content:', {
         albumId,
         trackId,
@@ -284,19 +277,17 @@ export const handler: Handler = async (
     if (event.httpMethod === 'POST') {
       const data: SaveSyncedLyricsRequest = JSON.parse(event.body || '{}');
 
-      // Валидация данных
-      if (!data.albumId || !data.trackId || !data.lang || !Array.isArray(data.syncedLyrics)) {
+      if (!data.albumId || !data.trackId || !Array.isArray(data.syncedLyrics)) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({
             success: false,
-            error: 'Invalid request data. Required: albumId, trackId, lang, syncedLyrics[]',
+            error: 'Invalid request data. Required: albumId, trackId, syncedLyrics[]',
           } as SyncedLyricsResponse),
         };
       }
 
-      // Извлекаем user_id из токена (обязательно для сохранения)
       const userId = getUserIdFromEvent(event);
 
       if (!userId) {
@@ -310,13 +301,24 @@ export const handler: Handler = async (
         };
       }
 
-      // Сохраняем в таблицу synced_lyrics (UPSERT) для пользователя
-      // НЕ обновляем tracks.synced_lyrics и не ищем альбом - это лишние запросы
-      // Синхронизации загружаются из synced_lyrics при загрузке альбомов
+      const canonAlbum = await findCanonicalAlbumForUser(data.albumId, userId);
+      if (!canonAlbum) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Album not found',
+          } as SyncedLyricsResponse),
+        };
+      }
+
+      const storeLang = canonAlbum.lang === 'ru' ? 'ru' : 'en';
+
       console.log('[synced-lyrics.ts POST] Saving synced lyrics:', {
         albumId: data.albumId,
         trackId: data.trackId,
-        lang: data.lang,
+        storeLang,
         userId,
         linesCount: data.syncedLyrics.length,
         hasAuthorship: data.authorship !== undefined,
@@ -336,7 +338,7 @@ export const handler: Handler = async (
             userId,
             data.albumId,
             String(data.trackId),
-            data.lang,
+            storeLang,
             JSON.stringify(data.syncedLyrics),
             data.authorship || null,
           ],
@@ -345,7 +347,7 @@ export const handler: Handler = async (
         console.log('[synced-lyrics.ts POST] ✅ Saved to synced_lyrics table:', {
           albumId: data.albumId,
           trackId: data.trackId,
-          lang: data.lang,
+          lang: storeLang,
           savedId: result.rows[0]?.id,
           savedUserId: result.rows[0]?.user_id,
           linesCount: data.syncedLyrics.length,
@@ -358,7 +360,7 @@ export const handler: Handler = async (
       console.log('✅ Synced lyrics saved to database:', {
         albumId: data.albumId,
         trackId: data.trackId,
-        lang: data.lang,
+        lang: storeLang,
         linesCount: data.syncedLyrics.length,
         hasAuthorship: data.authorship !== undefined,
       });

@@ -63,36 +63,23 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
         );
         if (cancelled) return;
 
-        // ✅ ВАЖНО: Проверяем синхронизацию перед использованием fallback
-        // На мобильных устройствах storedSync может быть null из-за медленной сети,
-        // но не должны использовать несинхронизированные данные из currentTrack.syncedLyrics
-        let synced = storedSync;
+        // Приоритет: ответ API для lang; если там только «текст» (часто fallback из tracks.content
+        // с startTime:0) — тайминги из merged-трека (resolveAlbumForDisplay, другая локаль).
+        const lineHasTiming = (line: SyncedLyricsLine) => (line.startTime ?? 0) > 0;
+        const linesAreSynced = (lines: SyncedLyricsLine[] | null) =>
+          !!lines && lines.length > 0 && lines.some(lineHasTiming);
 
-        // Используем fallback только если storedSync === null И currentTrack.syncedLyrics синхронизирован
-        if (!synced && currentTrack.syncedLyrics && currentTrack.syncedLyrics.length > 0) {
-          const isTrackSynced = currentTrack.syncedLyrics.some((line) => line.startTime > 0);
-          // Используем fallback только если данные действительно синхронизированы
-          if (isTrackSynced) {
-            synced = currentTrack.syncedLyrics;
-          }
+        let synced: SyncedLyricsLine[] | null = null;
+        if (linesAreSynced(storedSync)) {
+          synced = storedSync;
+        } else if (linesAreSynced(currentTrack.syncedLyrics ?? null)) {
+          synced = currentTrack.syncedLyrics ?? null;
         }
 
         if (cancelled) return;
 
         if (synced && synced.length > 0) {
-          // Проверяем, действительно ли текст синхронизирован
-          // Если все строки имеют startTime: 0, это обычный текст (не синхронизированный)
-          const isActuallySynced = synced.some((line) => line.startTime > 0);
-
-          if (isActuallySynced) {
-            // Текст действительно синхронизирован - показываем его
-            setSyncedLyrics(synced);
-          } else {
-            // Текст не синхронизирован (все строки имеют startTime: 0) - не показываем
-            // Он будет отображаться как обычный текст через другой компонент
-            setSyncedLyrics(null);
-            setCurrentLineIndex(null);
-          }
+          setSyncedLyrics(synced);
         } else {
           setSyncedLyrics(null);
           setCurrentLineIndex(null);

@@ -24,9 +24,7 @@ function hydrateTrack<T extends TracksProps>(track: T): T {
   if (track.translations?.ru) return track;
   const ru: IAlbumTrackTranslationsLocale = {
     title: track.title ?? '',
-    content: track.content,
     authorship: track.authorship,
-    syncedLyrics: track.syncedLyrics,
   };
   return {
     ...track,

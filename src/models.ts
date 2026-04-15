@@ -113,11 +113,13 @@ export interface SyncedLyricsLine {
   endTime?: number;
 }
 
-/** Переводимые поля трека внутри альбома. */
+/** Переводимые поля трека внутри альбома (текст песни и синхронизация — на корне трека). */
 export interface IAlbumTrackTranslationsLocale {
   title: string;
+  /** @deprecated legacy; текст единый в `track.content` */
   content?: string;
   authorship?: string;
+  /** @deprecated legacy; синхронизация в `track.syncedLyrics` */
   syncedLyrics?: SyncedLyricsLine[];
 }
 
@@ -125,7 +127,7 @@ export type IAlbumTrackTranslations = Partial<Record<SupportedLang, IAlbumTrackT
 
 /** Трек в составе альбома: базовые поля сущности `Track` плюс тексты и метаданные воспроизведения. */
 export interface TracksProps extends Track {
-  /** Текст песни (кэш для чтения); запись — `translations[lang].content` / строка трека для данной локали в БД. */
+  /** Единый текст песни (не зависит от языка UI). */
   content: string;
   /** Синхронизированный текст с тайм-кодами (для karaoke-style отображения) */
   syncedLyrics?: SyncedLyricsLine[];

@@ -12,8 +12,8 @@ import { getUserIdFromEvent } from './lib/api-helpers';
 interface SaveTrackTextRequest {
   albumId: string;
   trackId: string | number;
+  /** Локаль UI для поля authorship; текст песни сохраняется в канонический альбом (ru, иначе en). */
   lang: string;
-  /** Переводимые поля только внутри translations[lang] (не дублировать content в корне). */
   translations: Partial<Record<'en' | 'ru', { content: string; authorship?: string }>>;
 }
 
@@ -39,6 +39,29 @@ function lyricsFingerprintFromSyncedLines(
     .map((l) => (typeof l.text === 'string' ? l.text.trim() : ''))
     .filter((l) => l.length > 0)
     .join('\n');
+}
+
+type AlbumLangRow = { id: string; lang: string };
+
+async function findUserAlbumLangRows(userId: string, albumIdSlug: string): Promise<AlbumLangRow[]> {
+  const r = await query<AlbumLangRow>(
+    `SELECT id, lang FROM albums
+     WHERE album_id = $1 AND user_id = $2 AND lang IN ('ru', 'en')
+     ORDER BY CASE lang WHEN 'ru' THEN 0 WHEN 'en' THEN 1 END`,
+    [albumIdSlug, userId],
+    0
+  );
+  return r.rows;
+}
+
+function pickCanonicalAlbum(rows: AlbumLangRow[]): AlbumLangRow | null {
+  if (!rows.length) return null;
+  const ru = rows.find((x) => x.lang === 'ru');
+  return ru ?? rows[0] ?? null;
+}
+
+function pickLocaleAlbum(rows: AlbumLangRow[], loc: 'en' | 'ru'): AlbumLangRow | null {
+  return rows.find((x) => x.lang === loc) ?? pickCanonicalAlbum(rows);
 }
 
 export const handler: Handler = async (
@@ -114,17 +137,23 @@ export const handler: Handler = async (
         };
       }
 
-      // Находим альбом пользователя
-      const albumResult = await query<{ id: string; user_id: string | null }>(
-        `SELECT id, user_id FROM albums 
-         WHERE album_id = $1 AND lang = $2
-           AND user_id = $3
-         ORDER BY created_at DESC
-         LIMIT 1`,
-        [data.albumId, data.lang, userId]
-      );
+      const uiLang = data.lang as 'en' | 'ru';
+      if (uiLang !== 'en' && uiLang !== 'ru') {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            message: 'lang must be "en" or "ru"',
+          } as SaveTrackTextResponse),
+        };
+      }
 
-      if (albumResult.rows.length === 0) {
+      const albumRows = await findUserAlbumLangRows(userId, data.albumId);
+      const canonicalAlbum = pickCanonicalAlbum(albumRows);
+      const localeAlbum = pickLocaleAlbum(albumRows, uiLang);
+
+      if (!canonicalAlbum || !localeAlbum) {
         console.error('[save-track-text.ts] ❌ Album not found:', {
           albumId: data.albumId,
           lang: data.lang,
@@ -139,72 +168,81 @@ export const handler: Handler = async (
         };
       }
 
-      const albumDbId = albumResult.rows[0].id;
-      const albumUserId = albumResult.rows[0].user_id;
+      const canonicalDbId = canonicalAlbum.id;
+      const localeDbId = localeAlbum.id;
+      const canonicalLang = canonicalAlbum.lang === 'ru' ? 'ru' : 'en';
+      const sameAlbumRow = canonicalDbId === localeDbId;
+      const authorshipVal = locale?.authorship ?? null;
 
-      console.log('[save-track-text.ts] Found album:', {
+      console.log('[save-track-text.ts] Found albums:', {
         albumId: data.albumId,
-        lang: data.lang,
-        albumDbId,
-        albumUserId,
-        isUserAlbum: albumUserId === userId,
-        isPublicAlbum: albumUserId === null,
-      });
-
-      // Используем UPSERT для обновления или создания трека
-      // Если трек не существует, он будет создан; если существует - обновлен
-      console.log('[save-track-text.ts] Upserting track:', {
-        albumId: data.albumId,
-        trackId: data.trackId,
-        lang: data.lang,
-        albumDbId,
+        uiLang,
+        canonicalDbId,
+        localeDbId,
+        canonicalLang,
+        sameAlbumRow,
         contentLength: content.length,
       });
 
-      // Сначала получаем информацию о треке, чтобы сохранить существующие данные
-      const existingTrackResult = await query<{
+      const existingCanonResult = await query<{
         title: string | null;
         duration: number | null;
         src: string | null;
         order_index: number | null;
+        authorship: string | null;
       }>(
-        `SELECT title, duration, src, order_index 
-         FROM tracks 
+        `SELECT title, duration, src, order_index, authorship
+         FROM tracks
          WHERE album_id = $1 AND track_id = $2
          LIMIT 1`,
-        [albumDbId, String(data.trackId)]
+        [canonicalDbId, String(data.trackId)],
+        0
       );
+      const existingCanon = existingCanonResult.rows[0];
 
-      const existingTrack = existingTrackResult.rows[0];
+      const upsertAuthorshipOnCanon = sameAlbumRow
+        ? authorshipVal
+        : (existingCanon?.authorship ?? null);
 
-      // Используем UPSERT для обновления или создания трека
-      const upsertResult = await query(
-        `INSERT INTO tracks (album_id, track_id, title, duration, src, content, authorship, order_index, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), NOW())
-         ON CONFLICT (album_id, track_id)
-         DO UPDATE SET
-           content = EXCLUDED.content,
-           authorship = EXCLUDED.authorship,
-           updated_at = NOW()
-         RETURNING id, content, authorship`,
+      const upsertResult = await query<{
+        id: string;
+        content: string | null;
+        authorship: string | null;
+      }>(
+        sameAlbumRow
+          ? `INSERT INTO tracks (album_id, track_id, title, duration, src, content, authorship, order_index, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), NOW())
+             ON CONFLICT (album_id, track_id)
+             DO UPDATE SET
+               content = EXCLUDED.content,
+               authorship = EXCLUDED.authorship,
+               updated_at = NOW()
+             RETURNING id, content, authorship`
+          : `INSERT INTO tracks (album_id, track_id, title, duration, src, content, authorship, order_index, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), NOW())
+             ON CONFLICT (album_id, track_id)
+             DO UPDATE SET
+               content = EXCLUDED.content,
+               updated_at = NOW()
+             RETURNING id, content, authorship`,
         [
-          albumDbId,
+          canonicalDbId,
           String(data.trackId),
-          existingTrack?.title || null,
-          existingTrack?.duration || null,
-          existingTrack?.src || null,
+          existingCanon?.title || null,
+          existingCanon?.duration || null,
+          existingCanon?.src || null,
           content,
-          locale?.authorship || null,
-          existingTrack?.order_index || 0,
-        ]
+          upsertAuthorshipOnCanon,
+          existingCanon?.order_index || 0,
+        ],
+        0
       );
 
       if (upsertResult.rows.length === 0) {
-        console.error('[save-track-text.ts] ❌ Failed to upsert track:', {
+        console.error('[save-track-text.ts] ❌ Failed to upsert canonical track:', {
           albumId: data.albumId,
           trackId: data.trackId,
-          lang: data.lang,
-          albumDbId,
+          canonicalDbId,
         });
         return {
           statusCode: 500,
@@ -216,11 +254,44 @@ export const handler: Handler = async (
         };
       }
 
+      // EN-строка альбома может ещё не иметь строки в `tracks` — чистый UPDATE тогда не пишет authorship.
+      if (!sameAlbumRow) {
+        const canonMeta = await query<{
+          title: string | null;
+          duration: number | null;
+          src: string | null;
+          content: string | null;
+          order_index: number | null;
+        }>(
+          `SELECT title, duration, src, content, order_index FROM tracks WHERE album_id = $1 AND track_id = $2 LIMIT 1`,
+          [canonicalDbId, String(data.trackId)],
+          0
+        );
+        const cm = canonMeta.rows[0];
+        const rowContent = cm?.content ?? content ?? '';
+        await query(
+          `INSERT INTO tracks (album_id, track_id, title, duration, src, content, authorship, order_index, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), NOW())
+           ON CONFLICT (album_id, track_id)
+           DO UPDATE SET authorship = EXCLUDED.authorship, updated_at = NOW()`,
+          [
+            localeDbId,
+            String(data.trackId),
+            cm?.title ?? null,
+            cm?.duration ?? null,
+            cm?.src ?? null,
+            rowContent,
+            authorshipVal,
+            cm?.order_index ?? 0,
+          ],
+          0
+        );
+      }
+
       const savedRow = upsertResult.rows[0];
+      const syncAuthorshipMirror = savedRow.authorship ?? null;
 
-      // synced_lyrics: при изменении текста песни — сбрасываем тайм-коды; при смене только авторства — сохраняем JSON.
       const newFingerprint = lyricsFingerprintFromContent(content);
-
       const plainLinesForInsert = content
         .split('\n')
         .map((line) => ({ text: line, startTime: 0 }))
@@ -233,7 +304,7 @@ export const handler: Handler = async (
           `SELECT synced_lyrics FROM synced_lyrics
            WHERE user_id = $1 AND album_id = $2 AND track_id = $3 AND lang = $4
            LIMIT 1`,
-          [userId, data.albumId, String(data.trackId), data.lang],
+          [userId, data.albumId, String(data.trackId), canonicalLang],
           0
         );
 
@@ -267,13 +338,13 @@ export const handler: Handler = async (
             `UPDATE synced_lyrics
              SET authorship = $1, updated_at = NOW()
              WHERE user_id = $2 AND album_id = $3 AND track_id = $4 AND lang = $5`,
-            [locale?.authorship || null, userId, data.albumId, String(data.trackId), data.lang],
+            [syncAuthorshipMirror, userId, data.albumId, String(data.trackId), canonicalLang],
             0
           );
-          console.log('✅ Synced lyrics preserved (authorship-only update):', {
+          console.log('✅ Synced lyrics preserved (authorship mirror from canonical track):', {
             albumId: data.albumId,
             trackId: data.trackId,
-            lang: data.lang,
+            canonicalLang,
           });
         } else {
           await query(
@@ -288,22 +359,21 @@ export const handler: Handler = async (
               userId,
               data.albumId,
               String(data.trackId),
-              data.lang,
+              canonicalLang,
               JSON.stringify(plainLinesForInsert),
-              locale?.authorship || null,
+              syncAuthorshipMirror,
             ],
             0
           );
           console.log('✅ Synced lyrics updated:', {
             albumId: data.albumId,
             trackId: data.trackId,
-            lang: data.lang,
+            canonicalLang,
             linesCount: plainLinesForInsert.length,
             resetTiming: true,
           });
         }
       } catch (syncError) {
-        // Логируем ошибку, но не прерываем сохранение
         console.warn('⚠️ Failed to update synced_lyrics (non-critical):', syncError);
       }
 
@@ -314,7 +384,7 @@ export const handler: Handler = async (
         contentLength: content.length,
         savedContentLength: savedRow.content?.length || 0,
         hasAuthorship: locale?.authorship !== undefined,
-        albumDbId,
+        canonicalDbId,
         trackDbId: savedRow.id,
       });
 

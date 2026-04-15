@@ -127,32 +127,18 @@ export function useLyricsContent({
         );
         if (cancelled || !isKeyActual(key)) return;
 
-        // уточняем hasSyncedLyricsAvailable по факту storage (важно для мобилки)
-        if (storedSync && storedSync.length > 0 && isActuallySynced(storedSync)) {
-          setHasSyncedLyricsAvailable(true);
-        } else if (storedSync === null || (Array.isArray(storedSync) && storedSync.length === 0)) {
-          // null — нет ответа / нет данных; [] — БД вернула пустой synced_lyrics после очистки в админке
-          setHasSyncedLyricsAvailable(false);
-        } else if (storedSync && storedSync.length > 0 && !isActuallySynced(storedSync)) {
-          // Только текст в БД (все startTime: 0) — показываем plain, не скелетон и не подсказку по JSON
-          setHasSyncedLyricsAvailable(false);
-        } else {
-          // Нет осмысленного ответа API — редкий случай; подсказка только из JSON с реальными таймкодами
-          const hint =
-            currentTrack.syncedLyrics?.length && isActuallySynced(currentTrack.syncedLyrics);
-          setHasSyncedLyricsAvailable(!!hint);
-        }
+        // Есть тайминги в ответе API / в merged JSON трека (resolveAlbumForDisplay fallback по локалям).
+        const trackTimed =
+          currentTrack.syncedLyrics?.length && isActuallySynced(currentTrack.syncedLyrics);
+        const storedTimed = storedSync && storedSync.length > 0 && isActuallySynced(storedSync);
+        setHasSyncedLyricsAvailable(!!(storedTimed || trackTimed));
 
-        // 2.2 базовая синхра из API; fallback на JSON только если API не дал записи (null), не если [] после удаления
+        // 2.2 База для караоке: приоритет строк из synced_lyrics для lang; если там только текст (например
+        // fallback API из tracks.content со startTime:0) — берём тайминги из currentTrack (другая локаль).
         let base: SyncedLyricsLine[] | null = null;
-
-        if (storedSync && storedSync.length > 0 && isActuallySynced(storedSync)) {
+        if (storedTimed) {
           base = storedSync;
-        } else if (
-          storedSync === null &&
-          currentTrack.syncedLyrics?.length &&
-          isActuallySynced(currentTrack.syncedLyrics)
-        ) {
+        } else if (trackTimed && currentTrack.syncedLyrics) {
           base = currentTrack.syncedLyrics;
         }
 
