@@ -12,6 +12,7 @@ import { getUserImageUrl } from '@shared/api/albums';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums, detailsProps } from '@models';
 import { mergeSemanticSourceIntoLocaleDetails } from '@entities/album/lib/albumDetailSemanticKind';
+import { generateAlbumIdFromTitle } from '@shared/lib/album/generateAlbumIdFromTitle';
 import type { SupportedLang } from '@shared/model/lang';
 import {
   buildTranslatedContentEditFallbackNotice,
@@ -88,6 +89,10 @@ export function EditAlbumModal({
 
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);
+  /** Название альбома при открытии формы (для смены slug при редактировании title). */
+  const albumTitleAtOpenRef = useRef('');
+  /** Актуальный album_id из загруженного альбома (после переименования slug важнее пропа). */
+  const canonicalAlbumIdRef = useRef('');
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -226,6 +231,8 @@ export function EditAlbumModal({
     didInitRef.current = true;
 
     const titleResolved = resolveAlbumFieldForEdit(album, 'album', lang);
+    albumTitleAtOpenRef.current = (titleResolved.value || '').trim();
+    canonicalAlbumIdRef.current = album.albumId ?? '';
     const descriptionResolved = resolveAlbumFieldForEdit(album, 'description', lang);
     const photographerResolved = resolveAlbumCoverCreditFieldForEdit(album, 'photographer', lang);
     const photographerURLResolved = resolveAlbumCoverCreditFieldForEdit(
@@ -726,11 +733,21 @@ export function EditAlbumModal({
     // ВАЖНО: Инициализация происходит только один раз
   }, [isOpen, albumId, lang, albumsFromStore]);
 
+  useEffect(() => {
+    if (isOpen && !albumId) {
+      albumTitleAtOpenRef.current = '';
+      canonicalAlbumIdRef.current = '';
+    }
+  }, [isOpen, albumId]);
+
   // Сбрасываем форму при закрытии модального окна
   useEffect(() => {
     if (isOpen) return;
 
     setFormData(makeEmptyForm());
+
+    albumTitleAtOpenRef.current = '';
+    canonicalAlbumIdRef.current = '';
 
     setCurrentStep(1);
 
@@ -1735,10 +1752,13 @@ export function EditAlbumModal({
     const profileArtistName = getProfileArtistName();
     const effectiveArtistName = profileArtistName.trim();
 
-    // Если albumId не передан, генерируем его из названия альбома и артиста
-    let finalAlbumId = albumId;
-    if (!finalAlbumId) {
-      // Проверяем, что есть минимальные данные для генерации albumId
+    // Новый альбом: генерируем albumId из названия. Существующий: при смене названия — новый slug + previousAlbumId.
+    let finalAlbumId: string;
+    let previousAlbumIdForApi: string | undefined;
+    /** Id для поиска альбома в store (slug до смены в этом запросе). */
+    let lookupAlbumId: string;
+
+    if (!albumId) {
       if (!formData.title) {
         setAlertModal({
           isOpen: true,
@@ -1750,93 +1770,35 @@ export function EditAlbumModal({
         return;
       }
 
-      // Генерируем albumId из названия альбома (site_name задаётся в профиле, не в альбоме)
-      const generateAlbumIdFromTitle = (title: string): string => {
-        // Таблица транслитерации кириллицы в латиницу
-        const transliterationMap: Record<string, string> = {
-          а: 'a',
-          б: 'b',
-          в: 'v',
-          г: 'g',
-          д: 'd',
-          е: 'e',
-          ё: 'yo',
-          ж: 'zh',
-          з: 'z',
-          и: 'i',
-          й: 'y',
-          к: 'k',
-          л: 'l',
-          м: 'm',
-          н: 'n',
-          о: 'o',
-          п: 'p',
-          р: 'r',
-          с: 's',
-          т: 't',
-          у: 'u',
-          ф: 'f',
-          х: 'h',
-          ц: 'ts',
-          ч: 'ch',
-          ш: 'sh',
-          щ: 'sch',
-          ъ: '',
-          ы: 'y',
-          ь: '',
-          э: 'e',
-          ю: 'yu',
-          я: 'ya',
-        };
-
-        const transliterate = (str: string): string => {
-          return str
-            .toLowerCase()
-            .split('')
-            .map((char) => {
-              // Если это кириллица, транслитерируем
-              if (transliterationMap[char]) {
-                return transliterationMap[char];
-              }
-              // Если это латиница или цифра, оставляем как есть
-              if (/[a-z0-9]/.test(char)) {
-                return char;
-              }
-              // Пробелы и дефисы заменяем на дефис
-              if (/[\s-]/.test(char)) {
-                return '-';
-              }
-              // Все остальное удаляем
-              return '';
-            })
-            .join('');
-        };
-
-        const normalize = (str: string) => {
-          const transliterated = transliterate(str.trim());
-          return transliterated
-            .replace(/-+/g, '-') // Убираем множественные дефисы
-            .replace(/^-|-$/g, ''); // Убираем дефисы в начале и конце
-        };
-
-        const titleSlug = normalize(title);
-
-        if (!titleSlug) {
-          return `album-${Date.now()}`;
-        }
-
-        return titleSlug;
-      };
-
       finalAlbumId = generateAlbumIdFromTitle(formData.title);
+      lookupAlbumId = finalAlbumId;
       console.log('🆕 [EditAlbumModal] Generated albumId for new album:', {
         title: formData.title,
         generatedAlbumId: finalAlbumId,
       });
+    } else {
+      const idProp = albumId;
+      // Текущий slug в БД: store и ref после переименования надёжнее, чем один только проп.
+      const slugFromStore =
+        albumsFromStore.find((a) => a.albumId === idProp)?.albumId ??
+        albumsFromStore.find((a) => a.albumId === canonicalAlbumIdRef.current)?.albumId;
+      const slugBeforeRename = (slugFromStore ?? canonicalAlbumIdRef.current) || idProp;
+      finalAlbumId = slugBeforeRename;
+      lookupAlbumId = slugBeforeRename;
+
+      const titleAtOpen = albumTitleAtOpenRef.current;
+      const currentTitle = (formData.title || '').trim();
+      if (currentTitle !== titleAtOpen) {
+        const candidateId = generateAlbumIdFromTitle(formData.title);
+        if (candidateId && candidateId !== finalAlbumId) {
+          previousAlbumIdForApi = finalAlbumId;
+          finalAlbumId = candidateId;
+        }
+      }
     }
 
-    // Проверяем, существует ли версия языка для этого альбома
-    const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === finalAlbumId);
+    // Проверяем, существует ли версия языка для этого альбома (по id в store, до смены slug)
+    const originalAlbum = albumsFromStore.find((a: IAlbums) => a.albumId === lookupAlbumId);
     const exists = !!originalAlbum;
     const method = exists ? 'PUT' : 'POST';
 
@@ -2307,7 +2269,7 @@ export function EditAlbumModal({
       ),
     };
 
-    const albumTitle = formData.title || originalAlbum?.album || '';
+    const albumTitle = (finalFormData.title || '').trim() || (originalAlbum?.album || '').trim();
     const fullName =
       effectiveArtistName && albumTitle ? `${effectiveArtistName} — ${albumTitle}` : albumTitle;
 
@@ -2322,6 +2284,7 @@ export function EditAlbumModal({
     // Семантические блоки (участники, продюсеры, …) синхронизируются в en/ru; пользовательские — только в текущей локали.
     const updateData: Record<string, unknown> = {
       albumId: finalAlbumId,
+      ...(previousAlbumIdForApi ? { previousAlbumId: previousAlbumIdForApi } : {}),
       album: albumTitle,
       translations: {
         [normalizedLang]: {
@@ -2417,6 +2380,7 @@ export function EditAlbumModal({
         const syncPayload: Record<string, unknown> = {
           albumId: finalAlbumId,
           lang: otherLang,
+          album: albumTitle,
           translations: {
             [otherLang]: {
               details: detailsByLocale[otherLang],
@@ -2473,6 +2437,11 @@ export function EditAlbumModal({
       // Передаём обновленный альбом в onNext для обновления UI
       const updatedAlbum: IAlbums | undefined =
         result.data && Array.isArray(result.data) ? result.data[0] : undefined;
+
+      if (updatedAlbum?.albumId) {
+        canonicalAlbumIdRef.current = updatedAlbum.albumId;
+        albumTitleAtOpenRef.current = (updatedAlbum.album ?? formData.title ?? '').trim();
+      }
 
       if (onNext) {
         await onNext(formData, updatedAlbum);

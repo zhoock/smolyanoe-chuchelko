@@ -24,6 +24,7 @@ import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
+import { migrateUserAlbumAudioFolderAfterRename } from './lib/migrate-storage-album-folder';
 import { normalizeTrackIdString } from '../../src/shared/lib/tracks/normalizeTrackIdString';
 import { rankToOrderIndex } from '../../src/shared/lib/tracks/trackOrderIndex';
 import { hydrateMissingRuTranslationsOnAlbum } from '../../src/entities/album/lib/hydrateMissingRuTranslations';
@@ -145,6 +146,8 @@ interface UpdateAlbumRequest {
   buttons?: Record<string, unknown>;
   lang: SupportedLang;
   isPublic?: boolean;
+  /** Старый album_id при смене slug (вместе с albumId = новый). */
+  previousAlbumId?: string;
 }
 
 const LEGACY_ALBUM_TRANSLATABLE_ROOT = ['fullName', 'description', 'details'] as const;
@@ -166,6 +169,19 @@ const RELEASE_COVER_FIELD_KEYS = [
   'designer',
   'designerURL',
 ] as const;
+
+/**
+ * Название альбома из fullName вида «Artist — Title» (длинное тире U+2014, как в EditAlbumModal).
+ * Если разделителя нет — считаем, что вся строка есть название.
+ */
+function deriveAlbumTitleFromFullName(fullName: string): string {
+  const raw = fullName.trim();
+  if (!raw) return '';
+  const sep = ' — ';
+  const idx = raw.lastIndexOf(sep);
+  if (idx >= 0) return raw.slice(idx + sep.length).trim();
+  return raw;
+}
 
 /** Общий `release` не должен содержать кредиты обложки (они на строке локали / translations). */
 function stripReleaseCoverCredits(release: unknown): Record<string, unknown> {
@@ -413,6 +429,80 @@ async function syncSharedAlbumMetadataAcrossLocales(
   );
 }
 
+const ALBUM_STRING_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Переименование строкового album_id у пользователя: albums + synced_lyrics + orders + purchases.
+ * Треки (FK на UUID albums.id) не трогаем.
+ */
+async function renameUserAlbumStringId(
+  userId: string,
+  oldId: string,
+  newId: string
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  if (oldId === newId) return { ok: true };
+  // album-${Date.now()} и прочие id с цифрами
+  if (!ALBUM_STRING_ID_PATTERN.test(newId) || newId.length > 255) {
+    return { ok: false, status: 400, message: 'Invalid albumId format' };
+  }
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const checkOld = await client.query(
+      `SELECT 1 FROM albums WHERE user_id = $1 AND album_id = $2 LIMIT 1`,
+      [userId, oldId]
+    );
+    if (checkOld.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { ok: false, status: 404, message: 'Album not found' };
+    }
+    const checkNew = await client.query(
+      `SELECT 1 FROM albums WHERE user_id = $1 AND album_id = $2 LIMIT 1`,
+      [userId, newId]
+    );
+    if (checkNew.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return {
+        ok: false,
+        status: 409,
+        message: 'An album with this URL id already exists',
+      };
+    }
+
+    await client.query(
+      `UPDATE purchases p SET album_id = $3
+       FROM orders o
+       WHERE p.order_id = o.id AND o.user_id = $1 AND o.album_id = $2 AND p.album_id = $2`,
+      [userId, oldId, newId]
+    );
+    await client.query(`UPDATE orders SET album_id = $3 WHERE user_id = $1 AND album_id = $2`, [
+      userId,
+      oldId,
+      newId,
+    ]);
+    await client.query(
+      `UPDATE synced_lyrics SET album_id = $3 WHERE user_id = $1 AND album_id = $2`,
+      [userId, oldId, newId]
+    );
+    await client.query(`UPDATE albums SET album_id = $3 WHERE user_id = $1 AND album_id = $2`, [
+      userId,
+      oldId,
+      newId,
+    ]);
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (e) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      // ignore
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 function sortAlbumRowsForMerge(rows: AlbumRow[]): AlbumRow[] {
   const rank = (l: string) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
   return [...rows].sort(
@@ -500,6 +590,14 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
     return tb - ta;
   });
   const shared = sortedForShared[0];
+  /** Название альбома общее для локалей; не брать только с «самой свежей» строки — после PUT по details у ru/en может быть более новый updated_at при старом album. */
+  const enPayload = payloads.find((p) => p.lang === 'en');
+  const ruPayload = payloads.find((p) => p.lang === 'ru');
+  const sharedAlbumTitle =
+    (enPayload?.album && String(enPayload.album).trim()) ||
+    (ruPayload?.album && String(ruPayload.album).trim()) ||
+    (shared.album && String(shared.album).trim()) ||
+    '';
   const sortedForTracks = [...payloads].sort((a, b) => {
     const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
     return rank(a.lang) - rank(b.lang);
@@ -525,7 +623,7 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
     userId: shared.userId,
     albumId: shared.albumId,
     artist: shared.artist,
-    album: shared.album,
+    album: sharedAlbumTitle,
     fullName: textRoot.fullName,
     description: textRoot.description,
     cover: shared.cover,
@@ -958,7 +1056,51 @@ export const handler: Handler = async (
           );
         }
 
+        const previousAlbumIdRaw =
+          typeof data.previousAlbumId === 'string' ? data.previousAlbumId.trim() : '';
+        let albumIdRenameApplied = false;
+        if (previousAlbumIdRaw && previousAlbumIdRaw !== data.albumId) {
+          const renameResult = await renameUserAlbumStringId(
+            userId,
+            previousAlbumIdRaw,
+            data.albumId
+          );
+          if (!renameResult.ok) {
+            return createErrorResponse(renameResult.status, renameResult.message);
+          }
+          albumIdRenameApplied = true;
+          const storageMigrate = await migrateUserAlbumAudioFolderAfterRename({
+            userId,
+            oldAlbumId: previousAlbumIdRaw,
+            newAlbumId: data.albumId,
+          });
+          if (!storageMigrate.ok) {
+            console.error(
+              '[albums.ts PUT] Storage migration after album URL id rename failed:',
+              storageMigrate.message
+            );
+            return createErrorResponse(500, storageMigrate.message);
+          }
+          console.log('[albums.ts PUT] Storage paths migrated after album id rename:', {
+            movedFiles: storageMigrate.movedFiles,
+          });
+        }
+
         const localePatch = data.translations?.[data.lang];
+        const fullNameFromPatch =
+          localePatch && typeof localePatch === 'object' && 'fullName' in localePatch
+            ? String((localePatch as { fullName?: unknown }).fullName ?? '').trim()
+            : '';
+        const derivedAlbumTitle = deriveAlbumTitleFromFullName(fullNameFromPatch);
+        /** Колонка `album` в БД: явный корень или вывод из fullName (иначе UI обновлялся по full_name, а album оставался старым). */
+        const albumForDb: string | undefined = (() => {
+          if (typeof data.album === 'string' && data.album.trim()) {
+            return data.album.trim();
+          }
+          if (derivedAlbumTitle) return derivedAlbumTitle;
+          if (typeof data.album === 'string') return data.album;
+          return undefined;
+        })();
 
         console.log('[albums.ts PUT] Searching for existing album:', {
           albumId: data.albumId,
@@ -1002,6 +1144,9 @@ export const handler: Handler = async (
               ? String((localePatch as { album?: string }).album ?? '').trim()
               : '';
           const sharedAlbumTitle =
+            (albumForDb !== undefined && String(albumForDb).trim() !== ''
+              ? String(albumForDb).trim()
+              : null) ||
             (typeof data.album === 'string' && data.album.trim()) ||
             legacyPatchAlbum ||
             (sibling.album || '').trim();
@@ -1133,9 +1278,9 @@ export const handler: Handler = async (
         const updateValues: unknown[] = [];
         let paramIndex = 1;
 
-        if (data.album !== undefined) {
+        if (albumForDb !== undefined) {
           updateFields.push(`album = $${paramIndex++}`);
-          updateValues.push(data.album);
+          updateValues.push(albumForDb);
         }
         if (localePatch?.fullName !== undefined) {
           updateFields.push(`full_name = $${paramIndex++}`);
@@ -1193,66 +1338,78 @@ export const handler: Handler = async (
           updateValues.push(data.isPublic);
         }
 
-        if (updateFields.length === 0) {
+        if (updateFields.length === 0 && !albumIdRenameApplied) {
           return createErrorResponse(400, 'No fields to update.');
         }
 
-        updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+        let updatedAlbum: AlbumRow;
 
-        // 🔍 DEBUG: Проверяем, что будет отправлено в БД
-        console.log('[albums.ts PUT] Update query fields:', updateFields);
-        console.log('[albums.ts PUT] Update query values:', updateValues);
-        const coverIndex = updateFields.findIndex((f) => f.includes('cover'));
-        if (coverIndex >= 0) {
-          console.log('[albums.ts PUT] Cover will be updated:', {
-            field: updateFields[coverIndex],
-            value: updateValues[coverIndex],
-          });
+        if (updateFields.length === 0 && albumIdRenameApplied) {
+          const reloaded = await query<AlbumRow>(`SELECT * FROM albums WHERE id = $1 LIMIT 1`, [
+            existingAlbum.id,
+          ]);
+          if (reloaded.rows.length === 0) {
+            return createErrorResponse(500, 'Album reload failed after rename.');
+          }
+          updatedAlbum = reloaded.rows[0];
         } else {
-          console.log('[albums.ts PUT] ⚠️ Cover NOT in updateFields!');
-        }
+          updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
-        // Добавляем условия WHERE
-        updateValues.push(existingAlbum.id);
+          // 🔍 DEBUG: Проверяем, что будет отправлено в БД
+          console.log('[albums.ts PUT] Update query fields:', updateFields);
+          console.log('[albums.ts PUT] Update query values:', updateValues);
+          const coverIndex = updateFields.findIndex((f) => f.includes('cover'));
+          if (coverIndex >= 0) {
+            console.log('[albums.ts PUT] Cover will be updated:', {
+              field: updateFields[coverIndex],
+              value: updateValues[coverIndex],
+            });
+          } else {
+            console.log('[albums.ts PUT] ⚠️ Cover NOT in updateFields!');
+          }
 
-        // Обновляем альбом в БД
-        const updateQuery = `
+          // Добавляем условия WHERE
+          updateValues.push(existingAlbum.id);
+
+          // Обновляем альбом в БД
+          const updateQuery = `
         UPDATE albums 
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
       `;
 
-        console.log('[albums.ts PUT] Executing update query:', {
-          query: updateQuery.substring(0, 200),
-          paramsCount: updateValues.length,
-          fieldsCount: updateFields.length,
-        });
-
-        let updateResult;
-        try {
-          updateResult = await query<AlbumRow>(updateQuery, updateValues);
-          console.log('[albums.ts PUT] Update query executed successfully:', {
-            rowsUpdated: updateResult.rows.length,
+          console.log('[albums.ts PUT] Executing update query:', {
+            query: updateQuery.substring(0, 200),
+            paramsCount: updateValues.length,
+            fieldsCount: updateFields.length,
           });
-        } catch (updateError) {
-          console.error('❌ [albums.ts PUT] Error executing update query:', updateError);
-          console.error('❌ [albums.ts PUT] Update query was:', updateQuery);
-          console.error('❌ [albums.ts PUT] Update values were:', updateValues);
-          throw updateError;
+
+          let updateResult;
+          try {
+            updateResult = await query<AlbumRow>(updateQuery, updateValues);
+            console.log('[albums.ts PUT] Update query executed successfully:', {
+              rowsUpdated: updateResult.rows.length,
+            });
+          } catch (updateError) {
+            console.error('❌ [albums.ts PUT] Error executing update query:', updateError);
+            console.error('❌ [albums.ts PUT] Update query was:', updateQuery);
+            console.error('❌ [albums.ts PUT] Update values were:', updateValues);
+            throw updateError;
+          }
+
+          if (updateResult.rows.length === 0) {
+            console.error('❌ [albums.ts PUT] Update query returned 0 rows:', {
+              albumId: data.albumId,
+              existingAlbumId: existingAlbum.id,
+            });
+            return createErrorResponse(500, 'Album update failed: no rows affected.');
+          }
+
+          updatedAlbum = updateResult.rows[0];
         }
 
-        if (updateResult.rows.length === 0) {
-          console.error('❌ [albums.ts PUT] Update query returned 0 rows:', {
-            albumId: data.albumId,
-            existingAlbumId: existingAlbum.id,
-          });
-          return createErrorResponse(500, 'Album update failed: no rows affected.');
-        }
-
-        const updatedAlbum = updateResult.rows[0];
-
-        const syncAlbum = data.album !== undefined ? String(data.album) : undefined;
+        const syncAlbum = albumForDb !== undefined ? String(albumForDb) : undefined;
         const syncRelease =
           data.release !== undefined
             ? JSON.stringify(stripReleaseCoverCredits(data.release))
@@ -1277,6 +1434,21 @@ export const handler: Handler = async (
             cover: syncCover,
             buttonsJson: syncButtons,
           });
+        }
+
+        // Гарантированно обновляем `album` у всех строк локалей (один album_id), если есть непустое название.
+        if (albumForDb !== undefined && String(albumForDb).trim() !== '') {
+          await query(
+            `UPDATE albums SET album = $1, updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = $2 AND album_id = $3`,
+            [String(albumForDb).trim(), userId, data.albumId]
+          );
+          const refreshed = await query<AlbumRow>(`SELECT * FROM albums WHERE id = $1 LIMIT 1`, [
+            updatedAlbum.id,
+          ]);
+          if (refreshed.rows[0]) {
+            updatedAlbum = refreshed.rows[0];
+          }
         }
 
         // 🔍 DEBUG: Проверяем, что пришло из БД

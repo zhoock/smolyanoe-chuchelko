@@ -2233,7 +2233,15 @@ function UserDashboard() {
                                         className="user-dashboard__edit-album-button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEditAlbumModal({ isOpen: true, albumId: album.id });
+                                          const fromStore = albumsFromStore.find(
+                                            (a) =>
+                                              a.albumId === album.id || a.albumId === album.albumId
+                                          );
+                                          setEditAlbumModal({
+                                            isOpen: true,
+                                            albumId:
+                                              fromStore?.albumId ?? album.albumId ?? album.id,
+                                          });
                                         }}
                                       >
                                         {ui?.dashboard?.editAlbum ?? 'Edit Album'}
@@ -3019,6 +3027,7 @@ function UserDashboard() {
       {/* Edit Album Modal */}
       {editAlbumModal && (
         <EditAlbumModal
+          key={editAlbumModal.albumId ?? 'new-album'}
           isOpen={editAlbumModal.isOpen}
           albumId={editAlbumModal.albumId}
           onClose={() => setEditAlbumModal(null)}
