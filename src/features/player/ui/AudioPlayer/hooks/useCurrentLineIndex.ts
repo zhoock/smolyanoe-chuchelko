@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { SyncedLyricsLine } from '@models';
 import type { PlayerTimeState } from '@features/player/model/types/playerSchema';
+import { getSyncedLineEndTime } from '@features/player/lib/syncedLyricsTiming';
 
 interface UseCurrentLineIndexParams {
   syncedLyrics: SyncedLyricsLine[] | null;
@@ -48,18 +49,7 @@ export function useCurrentLineIndex({
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const nextLine = lines[i + 1];
-
-      // Определяем границу окончания строки
-      // Если endTime задан - используем его, иначе используем startTime следующей строки (или Infinity для последней)
-      let lineEndTime: number;
-      if (line.endTime !== undefined) {
-        lineEndTime = line.endTime;
-      } else if (nextLine) {
-        lineEndTime = nextLine.startTime;
-      } else {
-        // Последняя строка без endTime - активна до конца трека
-        lineEndTime = Infinity;
-      }
+      const lineEndTime = getSyncedLineEndTime(lines, i);
 
       // Проверяем, попадает ли время в диапазон текущей строки
       // ВАЖНО: используем строгое < для endTime, чтобы при равенстве времени и endTime активной была следующая строка
@@ -68,15 +58,7 @@ export function useCurrentLineIndex({
         break; // Нашли активную строку, выходим из цикла
       }
 
-      // Если это последняя строка и мы дошли сюда, значит время >= lineEndTime
-      // Для последней строки без endTime это может быть только если lineEndTime === Infinity
-      // Но в этом случае условие выше должно было сработать
-      // Для последней строки с endTime - если время >= endTime, то строка уже не активна
       if (!nextLine) {
-        // Если это последняя строка и время >= startTime, но >= endTime
-        // И endTime был Infinity (не был задан), то строка должна быть активна
-        // Но это уже обработано выше
-        // Если endTime был задан и время >= endTime, строка не активна
         break;
       }
     }

@@ -5,6 +5,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
 import type { SyncedLyricsLine } from '@models';
+import { getSyncedLineEndTime } from '@features/player/lib/syncedLyricsTiming';
 import { getUserAudioUrl } from '@shared/api/albums';
 import './PreviewLyricsModal.style.scss';
 
@@ -164,10 +165,7 @@ export function PreviewLyricsModal({
         const line = linesWithAuthorship[i];
         const nextLine = linesWithAuthorship[i + 1];
 
-        // Определяем границу окончания строки
-        // Если endTime задан - используем его, иначе используем startTime следующей строки (или Infinity для последней)
-        const lineEndTime =
-          line.endTime !== undefined ? line.endTime : nextLine ? nextLine.startTime : Infinity;
+        const lineEndTime = getSyncedLineEndTime(linesWithAuthorship, i);
 
         // Если время попадает в диапазон текущей строки
         if (timeValue >= line.startTime && timeValue < lineEndTime) {

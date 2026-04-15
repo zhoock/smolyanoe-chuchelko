@@ -11,6 +11,7 @@ import { loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import type { SyncedLyricsLine, IAlbums } from '@models';
 import { useLang } from '@app/providers/lang';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
+import { getSyncedLineEndTime } from '@features/player/lib/syncedLyricsTiming';
 import './style.scss';
 
 interface SyncedLyricsDisplayProps {
@@ -119,10 +120,7 @@ export function SyncedLyricsDisplay({ album }: SyncedLyricsDisplayProps) {
       const line = lines[i];
       const nextLine = lines[i + 1];
 
-      // Определяем границу окончания строки
-      // Если endTime задан - используем его, иначе используем startTime следующей строки (или Infinity для последней)
-      const lineEndTime =
-        line.endTime !== undefined ? line.endTime : nextLine ? nextLine.startTime : Infinity;
+      const lineEndTime = getSyncedLineEndTime(lines, i);
 
       // Если время попадает в диапазон текущей строки
       if (time >= line.startTime && time < lineEndTime) {
