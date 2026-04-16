@@ -1,1 +1,5 @@
-export { ServiceButtons } from './ui/ServiceButtons';
+export {
+  ServiceButtons,
+  hasAlbumPurchaseSectionContent,
+  hasAlbumStreamSectionContent,
+} from './ui/ServiceButtons';

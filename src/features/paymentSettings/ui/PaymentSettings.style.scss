@@ -104,7 +104,6 @@
     margin: 0;
     padding: 0;
     color: var(--warm-concrete);
-    font-size: var(--ms-0);
     line-height: 1.6;
 
     p {
@@ -118,7 +117,6 @@
 
     ol {
       margin: 0 0 var(--ms-0);
-      padding-inline-start: var(--ms-1);
 
       li {
         margin: 0 0 var(--ms-01);
@@ -268,14 +266,11 @@
 
   &__form-label {
     color: var(--white);
-    font-size: var(--ms-0);
-    font-weight: 600;
   }
 
   &__form-input {
     padding: var(--ms-01);
     color: var(--white);
-    font-size: var(--ms-0);
     background: var(--deep-black);
     border: 1px solid var(--iron-slate);
     border-radius: var(--ms-01);

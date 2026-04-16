@@ -226,7 +226,7 @@ export function EditAlbumModalStep1({
       </div>
 
       <div className="edit-album-modal__field">
-        <label className="edit-album-modal__label">Visible on album page</label>
+        <label className="edit-album-modal__label">Album visibility</label>
         <div className="edit-album-modal__checkbox-wrapper">
           <input
             type="checkbox"
@@ -236,7 +236,7 @@ export function EditAlbumModalStep1({
             onChange={(e) => onFormDataChange('visibleOnAlbumPage', e.target.checked)}
           />
           <label htmlFor="visible-on-page" className="edit-album-modal__checkbox-label">
-            Visible on album page
+            Visible
           </label>
         </div>
       </div>

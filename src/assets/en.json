@@ -273,7 +273,8 @@
           "upcEan": "UPC / EAN",
           "albumArt": "Album art",
           "description": "Description",
-          "visibleOnAlbumPage": "Visible on album page",
+          "albumVisibility": "Album visibility",
+          "albumVisibleCheckbox": "Visible",
           "allowDownloadSale": "Allow download / sale",
           "regularPrice": "Regular price",
           "preorderReleaseDate": "Pre-order release date"

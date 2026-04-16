@@ -5,7 +5,11 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumsDataResolved } from '@entities/album';
+import {
+  selectAlbumsStatus,
+  selectAlbumsError,
+  selectPublicAlbumsDataResolved,
+} from '@entities/album/model';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './AlbumsSection.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
@@ -26,7 +30,7 @@ export function AlbumsSection() {
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsError = useAppSelector(selectAlbumsError);
-  const allAlbums = useAppSelector(selectAlbumsDataResolved);
+  const allAlbums = useAppSelector(selectPublicAlbumsDataResolved);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const [initialCount, setInitialCount] = useState(getInitialCount);

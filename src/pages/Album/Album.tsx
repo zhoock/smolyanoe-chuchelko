@@ -7,12 +7,17 @@ import { Helmet } from 'react-helmet-async';
 import { AlbumCover, AlbumDetails } from '@entities/album';
 import { AlbumTracks } from '@widgets/albumTracks';
 import { Share } from '@features/share';
-import { ServiceButtons } from '@entities/service';
+import {
+  ServiceButtons,
+  hasAlbumPurchaseSectionContent,
+  hasAlbumStreamSectionContent,
+} from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumByIdResolved } from '@entities/album';
+import { getUser } from '@shared/lib/auth';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
@@ -141,6 +146,18 @@ export default function Album() {
     );
   }
 
+  const viewerId = getUser()?.id ?? null;
+  const isAlbumOwner = Boolean(album.userId && viewerId && album.userId === viewerId);
+  if (album.isPublic === false && !isAlbumOwner) {
+    return (
+      <section className="album main-background" aria-label="Блок c альбомом">
+        <div className="wrapper album__wrapper">
+          <ErrorI18n code="albumNotFound" />
+        </div>
+      </section>
+    );
+  }
+
   // SEO (RU/EN) для конкретного альбома — имя из профиля, не albums.artist / album.fullName
   const seoTitle = formatAlbumDisplayFullName(siteArtistName, album.album);
   const seoDesc = album.description;
@@ -192,13 +209,17 @@ export default function Album() {
           <AlbumTracks album={album} />
         </div>
 
-        <div className="item">
-          <ServiceButtons album={album} section="Купить" />
-        </div>
+        {hasAlbumPurchaseSectionContent(album) && (
+          <div className="item">
+            <ServiceButtons album={album} section="Купить" />
+          </div>
+        )}
 
-        <div className="item">
-          <ServiceButtons album={album} section="Слушать" />
-        </div>
+        {hasAlbumStreamSectionContent(album) && (
+          <div className="item">
+            <ServiceButtons album={album} section="Слушать" />
+          </div>
+        )}
       </div>
 
       <AlbumDetails album={album} />

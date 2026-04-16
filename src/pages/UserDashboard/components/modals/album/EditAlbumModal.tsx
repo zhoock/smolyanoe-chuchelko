@@ -61,7 +61,6 @@ import {
   InlineEditDiscardDialog,
   getSwitchEditConfirmLabels,
 } from '../../shared/EditableCardField';
-import { EditAlbumModalStep1 } from '../../steps/EditAlbumModalStep1';
 import { EditAlbumModalStep2 } from '../../steps/EditAlbumModalStep2';
 import { EditAlbumModalStep3 } from '../../steps/EditAlbumModalStep3';
 import { EditAlbumModalStep4 } from '../../steps/EditAlbumModalStep4';
@@ -702,8 +701,9 @@ export function EditAlbumModal({
         showAddMixedAtInputs: false,
         showAddProducerInputs: false,
         showAddMasteringInputs: false,
-        purchaseLinks: purchaseLinks.length ? purchaseLinks : prevForm.purchaseLinks,
-        streamingLinks: streamingLinks.length ? streamingLinks : prevForm.streamingLinks,
+        // Всегда брать распарсенные ссылки из альбома; при отсутствии ссылок в API — [] (не оставлять prevForm).
+        purchaseLinks,
+        streamingLinks,
         tags: tagsFromRelease.length > 0 ? tagsFromRelease : prevForm.tags || [],
         visibleOnAlbumPage:
           typeof album.isPublic === 'boolean'
@@ -2422,10 +2422,8 @@ export function EditAlbumModal({
         },
       },
       release: release,
-      buttons:
-        exists && originalAlbum?.buttons
-          ? { ...(originalAlbum.buttons as any), ...buttons }
-          : buttons,
+      // Полный объект кнопок из формы — иначе merge со старым `buttons` не удаляет снятые ссылки.
+      buttons,
       lang: normalizedLang,
       isPublic: finalFormData.visibleOnAlbumPage,
       ...(newCover ? { cover: newCover } : {}),
@@ -2808,8 +2806,7 @@ export function EditAlbumModal({
 
           <div className="edit-album-modal__field">
             <label className="edit-album-modal__label">
-              {ui?.dashboard?.editAlbumModal?.fieldLabels?.visibleOnAlbumPage ??
-                'Visible on album page'}
+              {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibility ?? 'Album visibility'}
             </label>
             <div className="edit-album-modal__checkbox-wrapper">
               <input
@@ -2820,8 +2817,7 @@ export function EditAlbumModal({
                 onChange={(e) => handleInputChange('visibleOnAlbumPage', e.target.checked)}
               />
               <label htmlFor="visible-on-page" className="edit-album-modal__checkbox-label">
-                {ui?.dashboard?.editAlbumModal?.fieldLabels?.visibleOnAlbumPage ??
-                  'Visible on album page'}
+                {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibleCheckbox ?? 'Visible'}
               </label>
             </div>
           </div>

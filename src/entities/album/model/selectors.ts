@@ -29,6 +29,12 @@ export const selectAlbumsDataResolved = createSelector(
   (albums, lang): IAlbums[] => albums.map((a) => resolveAlbumForDisplay(a, lang))
 );
 
+/** Публичный каталог: только альбомы с `isPublic !== false` (undefined — как раньше, видимы). */
+export const selectPublicAlbumsDataResolved = createSelector(
+  [selectAlbumsDataResolved],
+  (albums): IAlbums[] => albums.filter((a) => a.isPublic !== false)
+);
+
 export const selectAlbumByIdResolved = createSelector(
   [selectAlbumsDataResolved, (_state: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.albumId === albumId)

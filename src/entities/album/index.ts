@@ -10,6 +10,7 @@ export {
   selectAlbumsData,
   selectAlbumById,
   selectAlbumsDataResolved,
+  selectPublicAlbumsDataResolved,
   selectAlbumByIdResolved,
 } from './model/selectors';
 export type { AlbumsState, RequestStatus } from './model/types';

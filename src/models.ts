@@ -432,7 +432,8 @@ export interface IInterface {
         upcEan: string;
         albumArt: string;
         description: string;
-        visibleOnAlbumPage: string;
+        albumVisibility: string;
+        albumVisibleCheckbox: string;
         allowDownloadSale: string;
         regularPrice: string;
         preorderReleaseDate: string;
