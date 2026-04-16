@@ -17,6 +17,17 @@ import {
 
 export const EMPTY_BAND_MEMBER: BandMember = { name: '', role: '', url: undefined };
 
+/** Черновик ссылки (purchase / streaming) для сравнения с сохранённой строкой. */
+export const EMPTY_LINK = { service: '', url: '' };
+
+export function linkEditHasChanges(
+  saved: { service: string; url: string },
+  serviceDraft: string,
+  urlDraft: string
+): boolean {
+  return saved.service.trim() !== serviceDraft.trim() || saved.url.trim() !== urlDraft.trim();
+}
+
 export function bandMemberEditHasChanges(
   saved: BandMember,
   name: string,

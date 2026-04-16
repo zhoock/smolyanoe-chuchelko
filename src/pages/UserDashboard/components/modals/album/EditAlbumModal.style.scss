@@ -626,6 +626,13 @@ dialog {
       grid-template-columns: 1fr 1fr;
       gap: var(--ms-01);
 
+      // Колонки с двумя полями друг под другом (обложка: фотограф / дизайнер)
+      > div {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ms-01);
+      }
+
       @include breakpoint(phones) {
         grid-template-columns: 1fr;
       }
@@ -849,57 +856,15 @@ dialog {
       border-top: 1px solid var(--dashboard-divider);
     }
 
-    // Links section (Step 4)
-    &__links-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--ms-2);
-      margin-top: var(--ms-0);
-
-      @include breakpoint(phones) {
-        grid-template-columns: 1fr;
-        gap: var(--ms-1);
-      }
-    }
-
-    &__links-column {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-0);
-    }
-
-    &__links-label {
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: var(--ms-01);
-    }
-
-    &__links-list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-01);
-      margin-bottom: var(--ms-0);
-    }
-
-    &__link-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--ms-0);
-
+    // Step 5: link rows (purchase / streaming) use __list-item + __list-item--links
+    &__list-item--links {
       @include breakpoint(phones) {
         flex-wrap: wrap;
       }
+    }
 
-      &--editing {
-        padding: var(--ms-01) var(--ms-0);
-        background: var(--dashboard-card-bg);
-        border: 1px solid var(--dashboard-card-border);
-        border-radius: var(--ms-01);
-      }
+    select.edit-album-modal__list-item-input {
+      cursor: pointer;
     }
 
     &__link-content {
@@ -920,127 +885,11 @@ dialog {
 
     &__link-name {
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      font-size: var(--dashboard-font-size);
       font-weight: 500;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    &__link-item-actions {
-      display: flex;
-      gap: var(--ms-02);
-      flex-shrink: 0;
-    }
-
-    &__link-edit {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-01);
-      width: 100%;
-    }
-
-    &__link-select {
-      width: 100%;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-family: inherit;
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      cursor: pointer;
-      transition: border-color 0.2s;
-
-      &:focus {
-        outline: none;
-        border-color: var(--dark-greenish-yellow);
-      }
-
-      option {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-card-bg);
-      }
-    }
-
-    &__link-input {
-      width: 100%;
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-family: inherit;
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      transition: border-color 0.2s;
-
-      &:focus {
-        outline: none;
-        border-color: var(--dark-greenish-yellow);
-      }
-
-      &::placeholder {
-        color: var(--dashboard-text-secondary);
-      }
-    }
-
-    &__link-actions {
-      display: flex;
-      gap: var(--ms-01);
-      align-items: center;
-
-      @include breakpoint(phones) {
-        flex-direction: column-reverse;
-        align-items: stretch;
-      }
-    }
-
-    &__link-save {
-      @include button-variant(
-        $color: var(--dashboard-text-primary),
-        $background: var(--dashboard-hover-bg),
-        $hover-color: var(--dashboard-text-primary),
-        $hover-background: var(--dashboard-button-primary-bg),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--dashboard-card-border),
-        $border-radius: var(--ms-01)
-      );
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      @include breakpoint(phones) {
-        width: 100%;
-        padding: var(--ms-01);
-      }
-    }
-
-    &__link-cancel {
-      @include button-variant(
-        $color: var(--dashboard-text-primary),
-        $background: transparent,
-        $hover-color: var(--dashboard-text-primary),
-        $hover-background: var(--dashboard-hover-bg),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--dashboard-card-border),
-        $border-radius: var(--ms-01)
-      );
-
-      @include breakpoint(phones) {
-        width: 100%;
-        padding: var(--ms-01);
-      }
-    }
-
-    &__link-add {
-      display: flex;
-      flex-direction: column;
-      gap: var(--ms-01);
-      margin-top: var(--ms-01);
     }
 
     // Review section (Step 6)

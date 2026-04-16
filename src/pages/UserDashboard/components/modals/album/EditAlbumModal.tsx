@@ -50,6 +50,8 @@ import {
   buildRecordingText,
   bandMemberEditHasChanges,
   EMPTY_BAND_MEMBER,
+  EMPTY_LINK,
+  linkEditHasChanges,
   emptyRecordingFormDraft,
   recordingFormDraftIsDirty,
   recordingFormDraftCanSave,
@@ -1653,11 +1655,70 @@ export function EditAlbumModal({
     setPurchaseLinkUrl('');
   };
 
-  const handleEditPurchaseLink = (index: number) => {
+  const executeEditPurchaseLink = (index: number) => {
     const link = formData.purchaseLinks[index];
     setPurchaseLinkService(link.service);
     setPurchaseLinkUrl(link.url);
     setEditingPurchaseLink(index);
+  };
+
+  const handleEditPurchaseLink = (index: number) => {
+    if (editingPurchaseLink === index) return;
+
+    if (editingStreamingLink !== null) {
+      const saved = formData.streamingLinks[editingStreamingLink];
+      if (linkEditHasChanges(saved, streamingLinkService, streamingLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setStreamingLinkService('');
+            setStreamingLinkUrl('');
+            setEditingStreamingLink(null);
+            executeEditPurchaseLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    if (editingStreamingLink === null) {
+      if (linkEditHasChanges(EMPTY_LINK, streamingLinkService, streamingLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setStreamingLinkService('');
+            setStreamingLinkUrl('');
+            executeEditPurchaseLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    if (editingPurchaseLink === null) {
+      if (linkEditHasChanges(EMPTY_LINK, purchaseLinkService, purchaseLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setPurchaseLinkService('');
+            setPurchaseLinkUrl('');
+            executeEditPurchaseLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    if (editingPurchaseLink !== null && editingPurchaseLink !== index) {
+      const saved = formData.purchaseLinks[editingPurchaseLink];
+      if (linkEditHasChanges(saved, purchaseLinkService, purchaseLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditPurchaseLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditPurchaseLink(index);
   };
 
   const handleCancelEditPurchaseLink = () => {
@@ -1701,11 +1762,70 @@ export function EditAlbumModal({
     setStreamingLinkUrl('');
   };
 
-  const handleEditStreamingLink = (index: number) => {
+  const executeEditStreamingLink = (index: number) => {
     const link = formData.streamingLinks[index];
     setStreamingLinkService(link.service);
     setStreamingLinkUrl(link.url);
     setEditingStreamingLink(index);
+  };
+
+  const handleEditStreamingLink = (index: number) => {
+    if (editingStreamingLink === index) return;
+
+    if (editingPurchaseLink !== null) {
+      const saved = formData.purchaseLinks[editingPurchaseLink];
+      if (linkEditHasChanges(saved, purchaseLinkService, purchaseLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setPurchaseLinkService('');
+            setPurchaseLinkUrl('');
+            setEditingPurchaseLink(null);
+            executeEditStreamingLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    if (editingPurchaseLink === null) {
+      if (linkEditHasChanges(EMPTY_LINK, purchaseLinkService, purchaseLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setPurchaseLinkService('');
+            setPurchaseLinkUrl('');
+            executeEditStreamingLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    if (editingStreamingLink === null) {
+      if (linkEditHasChanges(EMPTY_LINK, streamingLinkService, streamingLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            setStreamingLinkService('');
+            setStreamingLinkUrl('');
+            executeEditStreamingLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    if (editingStreamingLink !== null && editingStreamingLink !== index) {
+      const saved = formData.streamingLinks[editingStreamingLink];
+      if (linkEditHasChanges(saved, streamingLinkService, streamingLinkUrl)) {
+        setBlockSwitchDialog({
+          onDiscard: () => {
+            executeEditStreamingLink(index);
+          },
+        });
+        return;
+      }
+    }
+
+    executeEditStreamingLink(index);
   };
 
   const handleCancelEditStreamingLink = () => {
