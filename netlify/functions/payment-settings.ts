@@ -58,7 +58,8 @@ async function getPaymentSettings(
       provider: row.provider,
       shopId: row.shop_id || undefined,
       isActive: row.is_active,
-      connectedAt: row.created_at.toISOString(),
+      /** Дата последнего сохранения настроек (не только первого подключения). */
+      connectedAt: row.updated_at.toISOString(),
       lastUsedAt: row.last_used_at ? row.last_used_at.toISOString() : undefined,
     };
   } catch (error) {
@@ -117,7 +118,7 @@ async function savePaymentSettings(
       provider: row.provider,
       shopId: row.shop_id || undefined,
       isActive: row.is_active,
-      connectedAt: row.created_at.toISOString(),
+      connectedAt: row.updated_at.toISOString(),
       lastUsedAt: row.last_used_at ? row.last_used_at.toISOString() : undefined,
     };
   } catch (error) {

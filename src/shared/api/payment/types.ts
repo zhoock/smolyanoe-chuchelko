@@ -10,6 +10,7 @@ export interface UserPaymentSettings {
   shopId?: string;
   secretKey?: string; // Зашифровано
   isActive: boolean;
+  /** ISO-время последнего сохранения настроек (updated_at в БД). */
   connectedAt?: string;
   lastUsedAt?: string;
 }

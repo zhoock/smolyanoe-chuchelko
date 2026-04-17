@@ -53,7 +53,7 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
             </p>
             {settings.connectedAt && (
               <p className="payment-settings__connected-meta">
-                Подключено: {new Date(settings.connectedAt).toLocaleDateString('ru-RU')}
+                Обновлено: {new Date(settings.connectedAt).toLocaleDateString('ru-RU')}
               </p>
             )}
             <p className="payment-settings__connected-lede">
