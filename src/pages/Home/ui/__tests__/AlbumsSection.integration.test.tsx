@@ -45,6 +45,7 @@ describe('AlbumsSection integration tests', () => {
           error: null,
           data: [],
           lastUpdated: null,
+          fetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -77,6 +78,7 @@ describe('AlbumsSection integration tests', () => {
           error: 'Failed to load albums',
           data: [],
           lastUpdated: null,
+          fetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -109,6 +111,7 @@ describe('AlbumsSection integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -150,6 +153,7 @@ describe('AlbumsSection integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -188,6 +192,7 @@ describe('AlbumsSection integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -218,6 +223,7 @@ describe('AlbumsSection integration tests', () => {
           error: null,
           data: [],
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         uiDictionary: {
           en: {

@@ -9,7 +9,8 @@ export interface CreatePaymentRequest {
   albumId: string;
   customerEmail: string;
   returnUrl?: string;
-  userId?: string; // ID музыканта-продавца (опционально, если нет - используется аккаунт платформы)
+  /** Опционально: проверка совпадения с владельцем альбома; продавец берётся из альбома на сервере */
+  userId?: string;
   paymentToken?: string; // Токен от Checkout.js для оплаты на сайте
   billingData?: {
     firstName: string;
@@ -34,12 +35,14 @@ export type { PaymentProvider, UserPaymentSettings, PaymentSettingsResponse } fr
 export { getPaymentSettings, savePaymentSettings, disconnectPaymentProvider } from './settings';
 
 /**
- * Получает Shop ID платформы YooKassa для Checkout.js
- * @returns Promise с Shop ID или ошибкой
+ * Shop ID YooKassa продавца альбома для Checkout.js (требуется активная ЮKassa у артиста).
  */
-export async function getYooKassaShopId(): Promise<{ shopId?: string; error?: string }> {
+export async function getYooKassaShopId(
+  albumId: string
+): Promise<{ shopId?: string; error?: string }> {
   try {
-    const response = await fetch('/api/yookassa-shop-id', {
+    const qs = new URLSearchParams({ albumId });
+    const response = await fetch(`/api/yookassa-shop-id?${qs.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

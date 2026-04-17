@@ -37,25 +37,28 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
 
     return (
       <div key={provider.id} className="payment-settings__provider-card">
-        <div className="payment-settings__provider-logo">{provider.name}</div>
-        <h3 className="payment-settings__provider-heading">{provider.description}</h3>
-        <p className="payment-settings__provider-details">{provider.details}</p>
+        {!(settings && settings.isActive) && (
+          <>
+            <div className="payment-settings__provider-logo">{provider.name}</div>
+            <h3 className="payment-settings__provider-heading">{provider.description}</h3>
+            <p className="payment-settings__provider-details">{provider.details}</p>
+          </>
+        )}
 
         {settings && settings.isActive ? (
-          <div className="payment-settings__connected">
-            <div className="payment-settings__status">
-              <span className="payment-settings__status-badge payment-settings__status-badge--connected">
-                ✓ Подключено
-              </span>
-              {settings.connectedAt && (
-                <span className="payment-settings__connected-date">
-                  Подключено: {new Date(settings.connectedAt).toLocaleDateString('ru-RU')}
-                </span>
-              )}
-            </div>
-            <div className="payment-settings__shop-id">
-              <strong>Shop ID:</strong> {settings.shopId}
-            </div>
+          <div className="payment-settings__connected-block">
+            <div className="payment-settings__connected-title">{provider.name}</div>
+            <p className="payment-settings__connected-status" role="status">
+              ✔ Подключено
+            </p>
+            {settings.connectedAt && (
+              <p className="payment-settings__connected-meta">
+                Подключено: {new Date(settings.connectedAt).toLocaleDateString('ru-RU')}
+              </p>
+            )}
+            <p className="payment-settings__connected-lede">
+              Теперь пользователи могут оплачивать покупки на вашем сайте
+            </p>
             <button
               type="button"
               className="payment-settings__disconnect-button"

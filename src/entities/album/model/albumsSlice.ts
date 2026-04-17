@@ -13,14 +13,33 @@ import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
-import type { AlbumsState } from './types';
+import type { AlbumsState, FetchAlbumsFulfilledPayload } from './types';
 
 const initialState: AlbumsState = {
   status: 'idle',
   error: null,
   data: [],
   lastUpdated: null,
+  fetchContextKey: null,
 };
+
+/** Ключ кэша списка альбомов: дашборд / публичный artist / без artist. */
+function getAlbumsFetchContextKey(getState: () => RootState): string {
+  if (typeof window === 'undefined') {
+    return 'ssr';
+  }
+  const isDashboardRoute = window.location.pathname.startsWith('/dashboard');
+  const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
+  if (isDashboardRoute) return 'dashboard';
+  return publicSlug ? `public:${publicSlug}` : 'public:no-slug';
+}
+
+function wrapAlbumsResult(
+  albums: IAlbums[],
+  getState: () => RootState
+): FetchAlbumsFulfilledPayload {
+  return { albums, fetchContextKey: getAlbumsFetchContextKey(getState) };
+}
 
 function albumHasDisplayableTitle(album: {
   album?: unknown;
@@ -126,7 +145,7 @@ async function loadStaticAlbumsFallback(signal: AbortSignal): Promise<unknown[]>
 }
 
 export const fetchAlbums = createAsyncThunk<
-  IAlbums[],
+  FetchAlbumsFulfilledPayload,
   { force?: boolean },
   { rejectValue: string; state: RootState }
 >(
@@ -257,12 +276,12 @@ export const fetchAlbums = createAsyncThunk<
             const data = await loadStaticAlbumsFallback(signal);
             if (Array.isArray(data) && data.length > 0) {
               console.warn('[albumsSlice] ⚠️ Используется статический JSON (нет artist в store)');
-              return normalize(data);
+              return wrapAlbumsResult(normalize(data), getState);
             }
-            return [];
+            return wrapAlbumsResult([], getState);
           } catch (fallbackError) {
             console.warn('⚠️ Static JSON fallback unavailable:', fallbackError);
-            return [];
+            return wrapAlbumsResult([], getState);
           }
         }
 
@@ -295,7 +314,7 @@ export const fetchAlbums = createAsyncThunk<
           const result = await response.json();
           if (result.success && result.data && Array.isArray(result.data)) {
             if (result.data.length === 0) {
-              return [];
+              return wrapAlbumsResult([], getState);
             }
 
             const firstAlbum = result.data[0];
@@ -315,7 +334,7 @@ export const fetchAlbums = createAsyncThunk<
                 : null,
             });
 
-            return normalize(result.data);
+            return wrapAlbumsResult(normalize(result.data), getState);
           }
           throw new Error('Failed to fetch albums. Invalid response format.');
         }
@@ -332,7 +351,7 @@ export const fetchAlbums = createAsyncThunk<
         const data = await loadStaticAlbumsFallback(signal);
         if (Array.isArray(data) && data.length > 0) {
           console.warn('[albumsSlice] ⚠️ Используется статический JSON (fallback)');
-          return normalize(data);
+          return wrapAlbumsResult(normalize(data), getState);
         }
       } catch (fallbackError) {
         console.warn('⚠️ Static JSON fallback also unavailable:', fallbackError);
@@ -370,7 +389,8 @@ const albumsSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {
-        state.data = Array.isArray(action.payload) ? [...action.payload] : action.payload;
+        state.data = [...action.payload.albums];
+        state.fetchContextKey = action.payload.fetchContextKey;
         state.status = 'succeeded';
         state.error = null;
         state.lastUpdated = Date.now();

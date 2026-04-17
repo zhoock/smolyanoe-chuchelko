@@ -148,7 +148,8 @@ export default function Album() {
 
   const viewerId = getUser()?.id ?? null;
   const isAlbumOwner = Boolean(album.userId && viewerId && album.userId === viewerId);
-  if (album.isPublic === false && !isAlbumOwner) {
+  const inArtistPublicContext = Boolean(artistParam?.trim());
+  if (album.isPublic === false && !isAlbumOwner && !inArtistPublicContext) {
     return (
       <section className="album main-background" aria-label="Блок c альбомом">
         <div className="wrapper album__wrapper">

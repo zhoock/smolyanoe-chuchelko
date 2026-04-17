@@ -11,7 +11,12 @@ import {
   selectArticlesStatus,
   selectArticlesData,
 } from '@entities/article';
-import { fetchAlbums, selectAlbumsStatus, selectAlbumsData } from '@entities/album';
+import {
+  fetchAlbums,
+  selectAlbumsStatus,
+  selectAlbumsData,
+  selectAlbumsFetchContextKey,
+} from '@entities/album';
 import {
   fetchHelpArticles,
   selectHelpArticlesStatus,
@@ -93,8 +98,18 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     pathname.startsWith('/stems') ||
     pathname.startsWith('/dashboard')
   ) {
+    const desiredAlbumsFetchKey = pathname.startsWith('/dashboard')
+      ? 'dashboard'
+      : publicArtistFromUrl
+        ? `public:${publicArtistFromUrl}`
+        : 'public:no-slug';
+
     const status = selectAlbumsStatus(state);
-    if (status === 'succeeded') {
+    const albumsFetchContextKey = selectAlbumsFetchContextKey(state);
+    const albumsCacheValid =
+      status === 'succeeded' && albumsFetchContextKey === desiredAlbumsFetchKey;
+
+    if (albumsCacheValid) {
       templateA = Promise.resolve(selectAlbumsData(state));
     } else if (status === 'loading') {
       // Данные уже загружаются - возвращаем текущие данные или пустой массив
@@ -102,7 +117,9 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
       const currentData = selectAlbumsData(state);
       templateA = Promise.resolve(currentData || []);
     } else {
-      const fetchThunkPromise = store.dispatch(fetchAlbums({}));
+      const fetchThunkPromise = store.dispatch(
+        fetchAlbums({ force: status === 'succeeded' || status === 'failed' })
+      );
 
       const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
 
@@ -115,19 +132,22 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
         };
         signal.addEventListener('abort', abortHandler, { once: true });
 
-        templateA = fetchThunkPromise.unwrap().catch((error) => {
-          if (
-            error === 'AbortError' ||
-            error === 'Aborted' ||
-            (typeof error === 'object' &&
-              error !== null &&
-              'name' in error &&
-              (error as { name?: string }).name === 'AbortError')
-          ) {
-            return createNeverResolvingPromise();
-          }
-          throw error;
-        });
+        templateA = fetchThunkPromise
+          .unwrap()
+          .then((p) => p.albums)
+          .catch((error) => {
+            if (
+              error === 'AbortError' ||
+              error === 'Aborted' ||
+              (typeof error === 'object' &&
+                error !== null &&
+                'name' in error &&
+                (error as { name?: string }).name === 'AbortError')
+            ) {
+              return createNeverResolvingPromise();
+            }
+            throw error;
+          });
       }
     }
   }

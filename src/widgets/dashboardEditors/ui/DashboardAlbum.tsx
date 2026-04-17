@@ -157,6 +157,7 @@ export default function DashboardAlbum({
               {album.cover && (
                 <AlbumCover
                   img={album.cover}
+                  userId={album.userId}
                   fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
                 />
               )}

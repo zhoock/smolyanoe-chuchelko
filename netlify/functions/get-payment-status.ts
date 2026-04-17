@@ -87,6 +87,7 @@ interface YooKassaPaymentStatus {
 
 interface PaymentStatusResponse {
   success: boolean;
+  message?: string;
   payment?: {
     id: string;
     status: string;
@@ -110,59 +111,37 @@ interface PaymentStatusResponse {
 }
 
 /**
- * Получает YooKassa credentials из user settings или env
+ * Только учётные данные продавца из БД (активная ЮKassa). Без fallback на env платформы.
  */
-async function getYooKassaCredentials(orderId?: string): Promise<{
+async function getYooKassaCredentialsForOrder(orderId: string): Promise<{
   shopId: string;
   secretKey: string;
-  source: 'user_settings' | 'env';
-}> {
-  let shopId: string | undefined;
-  let secretKey: string | undefined;
-  let source: 'user_settings' | 'env' = 'env';
+} | null> {
+  const orderResult = await query<{ user_id: string | null }>(
+    'SELECT user_id FROM orders WHERE id = $1',
+    [orderId]
+  );
 
-  // Если есть orderId, пытаемся получить credentials из user settings
-  if (orderId) {
-    try {
-      const orderResult = await query<{ user_id: string | null }>(
-        'SELECT user_id FROM orders WHERE id = $1',
-        [orderId]
-      );
-
-      if (orderResult.rows.length > 0 && orderResult.rows[0].user_id) {
-        const userId = orderResult.rows[0].user_id;
-        try {
-          const { getDecryptedSecretKey } = await import('./payment-settings');
-          const userCredentials = await getDecryptedSecretKey(userId, 'yookassa');
-
-          if (userCredentials && userCredentials.shopId && userCredentials.secretKey) {
-            shopId = userCredentials.shopId.trim();
-            secretKey = userCredentials.secretKey.trim();
-            source = 'user_settings';
-            console.log(`✅ Using user ${userId} payment settings for order ${orderId}`);
-          }
-        } catch (error) {
-          console.warn(`⚠️ Could not get user ${userId} credentials, falling back to env:`, error);
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not get order user_id, falling back to env:', error);
-    }
+  if (orderResult.rows.length === 0 || !orderResult.rows[0].user_id) {
+    console.warn(`⚠️ Order ${orderId} missing or has no seller user_id`);
+    return null;
   }
 
-  // Fallback на platform account
-  if (!shopId || !secretKey) {
-    shopId = process.env.YOOKASSA_SHOP_ID?.trim();
-    secretKey = process.env.YOOKASSA_SECRET_KEY?.trim();
-    source = 'env';
+  const userId = orderResult.rows[0].user_id;
+  const { getDecryptedSecretKey } = await import('./payment-settings');
+  const userCredentials = await getDecryptedSecretKey(userId, 'yookassa');
+
+  if (!userCredentials?.shopId || !userCredentials.secretKey) {
+    console.warn(`⚠️ No active YooKassa credentials for seller ${userId} (order ${orderId})`);
+    return null;
   }
 
-  // Проверка валидности
-  if (!shopId || !secretKey || shopId.length === 0 || secretKey.length === 0) {
-    throw new Error('YooKassa credentials not configured');
-  }
+  console.log(`✅ Using seller ${userId} YooKassa credentials for order ${orderId}`);
 
-  return { shopId, secretKey, source };
+  return {
+    shopId: userCredentials.shopId.trim(),
+    secretKey: userCredentials.secretKey.trim(),
+  };
 }
 
 /**
@@ -496,9 +475,11 @@ export const handler: Handler = async (
       }
     }
 
-    // Если передан orderId, получаем paymentId из БД (только после валидации)
-    let actualPaymentId = paymentId;
-    if (!actualPaymentId && orderId) {
+    // Резолвим заказ и YooKassa payment id (без env-платформы — только продавец из orders)
+    let actualPaymentId: string | undefined = paymentId;
+    let resolvedOrderId: string | undefined;
+
+    if (orderId) {
       const orderResult = await query<{ payment_id: string | null }>(
         'SELECT payment_id FROM orders WHERE id = $1',
         [orderId]
@@ -526,10 +507,48 @@ export const handler: Handler = async (
           } as PaymentStatusResponse),
         };
       }
+      resolvedOrderId = orderId;
+    } else if (paymentId) {
+      const byPayment = await query<{ id: string }>('SELECT id FROM orders WHERE payment_id = $1', [
+        paymentId,
+      ]);
+      if (byPayment.rows.length === 0) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'No order found for this payment',
+          } as PaymentStatusResponse),
+        };
+      }
+      resolvedOrderId = byPayment.rows[0].id;
     }
 
-    // Получаем credentials
-    const credentials = await getYooKassaCredentials(orderId || undefined);
+    if (!actualPaymentId || !resolvedOrderId) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Could not resolve order for payment status',
+        } as PaymentStatusResponse),
+      };
+    }
+
+    const credentials = await getYooKassaCredentialsForOrder(resolvedOrderId);
+    if (!credentials) {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'seller_payment_not_configured',
+          message:
+            'This artist has not connected YooKassa or payments are disabled. Payment status is unavailable.',
+        } as PaymentStatusResponse),
+      };
+    }
 
     // Делаем запрос к YooKassa API
     const apiUrl = process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments';

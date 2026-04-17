@@ -68,6 +68,74 @@ interface CreatePaymentResponse {
   message?: string;
 }
 
+/**
+ * Определяет продавца (владельца альбома) только из БД — не доверяем телу запроса.
+ * При несовпадении optional `userId` из клиента с владельцем — 403.
+ */
+async function resolveSellerUserIdForPayment(
+  data: CreatePaymentRequest
+): Promise<
+  | { ok: true; sellerUserId: string }
+  | { ok: false; statusCode: number; body: CreatePaymentResponse }
+> {
+  if (data.orderId) {
+    const r = await query<{ user_id: string | null; album_id: string }>(
+      'SELECT user_id, album_id FROM orders WHERE id = $1',
+      [data.orderId]
+    );
+    if (r.rows.length === 0) {
+      return { ok: false, statusCode: 404, body: { success: false, error: 'Order not found' } };
+    }
+    const row = r.rows[0];
+    if (row.album_id !== data.albumId) {
+      return {
+        ok: false,
+        statusCode: 400,
+        body: { success: false, error: 'albumId does not match order' },
+      };
+    }
+    if (!row.user_id) {
+      return {
+        ok: false,
+        statusCode: 400,
+        body: { success: false, error: 'Order has no seller' },
+      };
+    }
+    if (data.userId && data.userId !== row.user_id) {
+      return {
+        ok: false,
+        statusCode: 403,
+        body: { success: false, error: 'Invalid seller context' },
+      };
+    }
+    return { ok: true, sellerUserId: row.user_id };
+  }
+
+  const ar = await query<{ user_id: string | null }>(
+    'SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1',
+    [data.albumId]
+  );
+  if (ar.rows.length === 0) {
+    return { ok: false, statusCode: 404, body: { success: false, error: 'Album not found' } };
+  }
+  const sellerUserId = ar.rows[0].user_id;
+  if (!sellerUserId) {
+    return {
+      ok: false,
+      statusCode: 400,
+      body: { success: false, error: 'Album has no owner' },
+    };
+  }
+  if (data.userId && data.userId !== sellerUserId) {
+    return {
+      ok: false,
+      statusCode: 403,
+      body: { success: false, error: 'Invalid seller context' },
+    };
+  }
+  return { ok: true, sellerUserId };
+}
+
 interface YooKassaPaymentRequest {
   amount: {
     value: string;
@@ -265,83 +333,7 @@ export const handler: Handler = async (
       return await handleDiagnosticMode(event, headers);
     }
 
-    // Получаем shopId и secretKey
-    // Если указан userId, используем индивидуальный аккаунт музыканта
-    // Иначе используем аккаунт платформы по умолчанию
-    let shopId: string | undefined;
-    let secretKey: string | undefined;
-    let credentialsSource: 'user_settings' | 'env' = 'env';
-
-    if (data.userId) {
-      // Получаем настройки платежей из БД для конкретного пользователя
-      try {
-        const { getDecryptedSecretKey } = await import('./payment-settings');
-        const userCredentials = await getDecryptedSecretKey(data.userId, 'yookassa');
-
-        if (userCredentials && userCredentials.shopId && userCredentials.secretKey) {
-          shopId = userCredentials.shopId?.trim();
-          secretKey = userCredentials.secretKey?.trim();
-          credentialsSource = 'user_settings';
-          console.log(`✅ Using user ${data.userId} payment settings`);
-        } else {
-          console.log(`ℹ️ User ${data.userId} has no payment settings - using platform account`);
-        }
-      } catch (error) {
-        console.error(`❌ Error getting user ${data.userId} payment settings:`, error);
-        // При ошибке используем аккаунт платформы
-        console.log(`ℹ️ Falling back to platform account for user ${data.userId}`);
-      }
-    }
-
-    // Если не найден индивидуальный аккаунт, используем аккаунт платформы
-    if (!shopId || !secretKey) {
-      shopId = process.env.YOOKASSA_SHOP_ID?.trim();
-      secretKey = process.env.YOOKASSA_SECRET_KEY?.trim();
-      credentialsSource = 'env';
-    }
-
-    // ЖЁСТКАЯ ПРОВЕРКА: проверяем что credentials не пустые и не состоят только из пробелов
-    const hasValidShopId = shopId && shopId.length > 0;
-    const hasValidSecretKey = secretKey && secretKey.length > 0;
-
-    if (!hasValidShopId || !hasValidSecretKey) {
-      console.error('❌ YooKassa credentials validation failed:', {
-        hasShopId: hasValidShopId,
-        hasSecret: hasValidSecretKey,
-        shopIdLength: shopId?.length || 0,
-        secretKeyLength: secretKey?.length || 0,
-        credentialsSource,
-        nodeEnv: process.env.NODE_ENV,
-        netlifyDev: process.env.NETLIFY_DEV,
-        // Безопасное логирование: только префикс секрета
-        secretKeyPrefix: secretKey?.substring(0, 6) || 'not set',
-      });
-
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Payment service not configured',
-          message:
-            'YooKassa credentials are missing or invalid. Check Netlify environment variables.',
-        } as CreatePaymentResponse),
-      };
-    }
-
-    // Безопасное логирование credentials (без полного секрета)
-    // После проверки выше мы знаем, что shopId и secretKey не undefined
-    console.log('🔐 YooKassa credentials loaded:', {
-      shopId: shopId!,
-      shopIdLength: shopId!.length,
-      secretKeyLength: secretKey!.length,
-      secretKeyPrefix: secretKey!.substring(0, 6) + '***',
-      credentialsSource,
-      nodeEnv: process.env.NODE_ENV,
-      netlifyDev: process.env.NETLIFY_DEV,
-    });
-
-    // Валидация данных
+    // Валидация полей до доступа к БД / ключам
     if (!data.amount || !data.description || !data.albumId || !data.customerEmail) {
       return {
         statusCode: 400,
@@ -364,6 +356,60 @@ export const handler: Handler = async (
         } as CreatePaymentResponse),
       };
     }
+
+    const sellerResolved = await resolveSellerUserIdForPayment(data);
+    if (!sellerResolved.ok) {
+      return {
+        statusCode: sellerResolved.statusCode,
+        headers,
+        body: JSON.stringify(sellerResolved.body),
+      };
+    }
+    const sellerUserId = sellerResolved.sellerUserId;
+
+    let shopId: string;
+    let secretKey: string;
+    try {
+      const { getDecryptedSecretKey } = await import('./payment-settings');
+      const userCredentials = await getDecryptedSecretKey(sellerUserId, 'yookassa');
+      if (!userCredentials?.shopId || !userCredentials?.secretKey) {
+        console.warn(`⚠️ Seller ${sellerUserId} has no active YooKassa credentials`);
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'seller_payment_not_configured',
+            message:
+              'This artist has not connected YooKassa or payments are disabled. Purchases are unavailable.',
+          } as CreatePaymentResponse),
+        };
+      }
+      shopId = userCredentials.shopId.trim();
+      secretKey = userCredentials.secretKey.trim();
+    } catch (credErr) {
+      console.error(`❌ Error loading YooKassa credentials for seller ${sellerUserId}:`, credErr);
+      return {
+        statusCode: 503,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'payment_credentials_unavailable',
+          message: 'Could not load payment settings for this seller.',
+        } as CreatePaymentResponse),
+      };
+    }
+
+    console.log('🔐 YooKassa credentials loaded (seller only, no platform fallback):', {
+      shopId,
+      sellerUserId,
+      shopIdLength: shopId.length,
+      secretKeyLength: secretKey.length,
+      secretKeyPrefix: `${secretKey.substring(0, 6)}***`,
+      credentialsSource: 'user_settings',
+      nodeEnv: process.env.NODE_ENV,
+      netlifyDev: process.env.NETLIFY_DEV,
+    });
 
     // Создаем или получаем заказ
     let orderId: string;
@@ -469,7 +515,7 @@ export const handler: Handler = async (
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING id`,
           [
-            data.userId || null,
+            sellerUserId,
             data.albumId,
             data.amount,
             'RUB', // YooKassa работает только с рублями
@@ -927,17 +973,18 @@ export const handler: Handler = async (
 
         // Специальная обработка для 401 ошибки (invalid_credentials)
         if (yookassaResponse.status === 401) {
-          console.error('🔐 Authentication failed! Check credentials:', {
+          console.error('🔐 Authentication failed! Check seller YooKassa credentials:', {
+            sellerUserId,
             shopIdPrefix: shopId?.substring(0, 6),
             secretKeyPrefix: secretKey?.substring(0, 6) + '***',
             secretKeyLength: secretKey?.length,
-            credentialsSource: credentialsSource,
+            credentialsSource: 'user_settings',
             errorCode: parsedError.code,
             errorDescription: parsedError.description,
             nodeEnv: process.env.NODE_ENV,
             netlifyDev: process.env.NETLIFY_DEV,
           });
-          errorMessage = `Payment service credentials are invalid or missing. Check Netlify env vars.`;
+          errorMessage = `Payment credentials rejected by YooKassa for this seller.`;
         }
       } catch (parseError) {
         // Если не удалось распарсить, используем текст как есть

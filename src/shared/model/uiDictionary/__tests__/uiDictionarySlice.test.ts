@@ -42,6 +42,7 @@ const createTestStore = () => {
         error: null,
         data: [],
         lastUpdated: null,
+        fetchContextKey: null,
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -419,6 +420,7 @@ describe('uiDictionarySlice', () => {
         error: null,
         data: [],
         lastUpdated: null,
+        fetchContextKey: null,
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

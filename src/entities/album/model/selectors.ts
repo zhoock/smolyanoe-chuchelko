@@ -18,6 +18,11 @@ export const selectAlbumsError = createSelector([selectAlbumsState], (s) => s.er
 
 export const selectAlbumsData = createSelector([selectAlbumsState], (s): IAlbums[] => s.data);
 
+export const selectAlbumsFetchContextKey = createSelector(
+  [selectAlbumsState],
+  (s) => s.fetchContextKey
+);
+
 export const selectAlbumById = createSelector(
   [selectAlbumsData, (_state: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.albumId === albumId)
@@ -33,6 +38,19 @@ export const selectAlbumsDataResolved = createSelector(
 export const selectPublicAlbumsDataResolved = createSelector(
   [selectAlbumsDataResolved],
   (albums): IAlbums[] => albums.filter((a) => a.isPublic !== false)
+);
+
+/**
+ * Список на /albums: при `restrictToPublished === true` — как публичный каталог;
+ * при `false` (есть `?artist=`) — полный список владельца.
+ */
+export const selectAlbumsResolvedForAllAlbumsPage = createSelector(
+  [
+    selectAlbumsDataResolved,
+    (_state: RootState, restrictToPublished: boolean) => restrictToPublished,
+  ],
+  (albums, restrictToPublished): IAlbums[] =>
+    restrictToPublished ? albums.filter((a) => a.isPublic !== false) : albums
 );
 
 export const selectAlbumByIdResolved = createSelector(

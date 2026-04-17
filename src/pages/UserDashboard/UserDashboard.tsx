@@ -3044,7 +3044,8 @@ function UserDashboard() {
                 updatedAlbumId: updatedAlbum?.albumId,
                 isNewAlbum: !editAlbumModal.albumId,
               });
-              const result = await dispatch(fetchAlbums({ force: true })).unwrap();
+              const fetchPayload = await dispatch(fetchAlbums({ force: true })).unwrap();
+              const result = fetchPayload.albums;
               console.log('✅ [UserDashboard] Albums fetched:', {
                 count: result?.length || 0,
                 albumIds: result?.map((a: IAlbums) => a.albumId) || [],

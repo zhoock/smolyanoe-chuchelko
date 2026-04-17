@@ -17,7 +17,7 @@ const currentArtistSlice = createSlice({
   reducers: {
     setPublicArtistSlug(state, action: PayloadAction<string | null>) {
       const raw = action.payload;
-      const v = typeof raw === 'string' ? raw.trim() : '';
+      const v = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
       state.publicSlug = v.length > 0 ? v : null;
     },
   },

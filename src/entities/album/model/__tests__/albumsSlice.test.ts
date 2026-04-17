@@ -65,6 +65,7 @@ describe('albumsSlice', () => {
         error: null,
         data: [],
         lastUpdated: null,
+        fetchContextKey: null,
       });
     });
   });
@@ -94,7 +95,10 @@ describe('albumsSlice', () => {
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({}));
 
       expect(result.type).toBe('albums/fetchMerged/fulfilled');
-      expect(result.payload).toEqual(mockAlbums);
+      expect(result.payload).toEqual({
+        albums: mockAlbums,
+        fetchContextKey: 'public:test-artist',
+      });
 
       const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('succeeded');
@@ -203,7 +207,10 @@ describe('albumsSlice', () => {
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({}));
 
       expect(result.type).toBe('albums/fetchMerged/fulfilled');
-      expect(result.payload).toEqual([]);
+      expect(result.payload).toEqual({
+        albums: [],
+        fetchContextKey: 'public:test-artist',
+      });
 
       const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('succeeded');
@@ -374,6 +381,7 @@ describe('albumsSlice', () => {
           },
         ],
         lastUpdated: 1234567890,
+        fetchContextKey: 'public:test-artist',
       },
       lang: { current: 'en' as SupportedLang },
       currentArtist: { publicSlug: null as string | null },

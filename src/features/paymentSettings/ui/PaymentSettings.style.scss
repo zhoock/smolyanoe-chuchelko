@@ -193,62 +193,49 @@
     }
   }
 
-  &__connected {
+  &__connected-block {
     display: flex;
     flex-direction: column;
-    gap: var(--ms-0);
-    margin-block-start: var(--ms-01);
-    padding-block-start: var(--ms-0);
-    border-block-start: 1px solid var(--iron-slate);
-  }
-
-  &__status {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
     gap: var(--ms-01);
+    margin: 0;
+    padding: 0;
   }
 
-  &__status-badge {
-    &--connected {
-      display: inline-flex;
-      align-items: center;
-      font-weight: 400;
-      text-transform: none;
-      letter-spacing: normal;
-      font-size: var(--dashboard-font-size);
-      line-height: 16px;
-
-      @include button-variant(
-        $color: var(--dashboard-button-primary-text),
-        $background: var(--dashboard-button-primary-bg),
-        $hover-color: var(--dashboard-button-primary-text),
-        $hover-background: var(--dashboard-button-primary-hover),
-        $margin: 0,
-        $padding: var(--ms-02) var(--ms-01),
-        $border: 0,
-        $border-radius: var(--ms-01)
-      );
-    }
+  &__connected-title {
+    margin: 0;
+    color: var(--white);
+    font-size: var(--ms-1);
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
-  &__connected-date {
+  &__connected-status {
+    margin: 0;
+    padding: 0;
+    color: var(--honeydew-melon);
+    font-family:
+      'apple-system', system-ui, 'blinkmacsystemfont', 'Segoe UI', 'roboto', 'Helvetica Neue',
+      'arial', sans-serif;
+    font-size: var(--dashboard-font-size);
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: default;
+  }
+
+  &__connected-meta {
+    margin: 0;
+    padding: 0;
     color: var(--warm-concrete);
     font-size: var(--dashboard-font-size);
+    line-height: 1.5;
   }
 
-  &__shop-id {
-    padding: var(--ms-01);
-    color: var(--white);
+  &__connected-lede {
+    margin: 0;
+    padding: 0;
+    color: var(--warm-concrete);
     font-size: var(--dashboard-font-size);
-    background: rgba(var(--white-rgb, 255 255 255) / 5%);
-    border: 1px solid var(--iron-slate);
-    border-radius: var(--ms-01);
-
-    strong {
-      font-weight: 600;
-      margin-inline-end: var(--ms-01);
-    }
+    line-height: 1.6;
   }
 
   &__form {

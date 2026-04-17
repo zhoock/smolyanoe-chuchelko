@@ -1,15 +1,20 @@
 /**
- * API endpoint для получения Shop ID платформы YooKassa
- * Используется для инициализации Checkout.js на frontend
- * Shop ID - публичная информация, поэтому безопасно отдавать его на frontend
+ * Shop ID продавца YooKassa для Checkout.js (по альбому).
+ * Без общего shop ID платформы: только владелец альбома с активной ЮKassa.
  */
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { query } from './lib/db';
 
 interface ShopIdResponse {
   success: boolean;
   shopId?: string;
   error?: string;
+  message?: string;
+}
+
+function isValidUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 export const handler: Handler = async (
@@ -45,15 +50,63 @@ export const handler: Handler = async (
   }
 
   try {
-    const shopId = process.env.YOOKASSA_SHOP_ID?.trim();
+    const albumId = event.queryStringParameters?.albumId?.trim();
+    if (!albumId) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'albumId query parameter is required',
+        } as ShopIdResponse),
+      };
+    }
 
-    if (!shopId) {
+    if (!isValidUUID(albumId)) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'albumId must be a valid UUID',
+        } as ShopIdResponse),
+      };
+    }
+
+    const albumRow = await query<{ user_id: string | null }>(
+      'SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1',
+      [albumId]
+    );
+
+    if (albumRow.rows.length === 0 || !albumRow.rows[0].user_id) {
       return {
         statusCode: 404,
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'Shop ID not configured',
+          error: 'Album not found',
+        } as ShopIdResponse),
+      };
+    }
+
+    const sellerId = albumRow.rows[0].user_id;
+
+    const settings = await query<{ shop_id: string | null }>(
+      `SELECT shop_id FROM user_payment_settings
+       WHERE user_id = $1 AND provider = 'yookassa' AND is_active = true`,
+      [sellerId]
+    );
+
+    const shopId = settings.rows[0]?.shop_id?.trim();
+    if (!shopId) {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'seller_payment_not_configured',
+          message:
+            'This artist has not connected YooKassa or payments are disabled. Checkout is unavailable.',
         } as ShopIdResponse),
       };
     }

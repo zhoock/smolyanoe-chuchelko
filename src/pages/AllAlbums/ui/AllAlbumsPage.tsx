@@ -8,7 +8,7 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectAlbumsStatus, selectPublicAlbumsDataResolved } from '@entities/album/model';
+import { selectAlbumsStatus, selectAlbumsResolvedForAllAlbumsPage } from '@entities/album';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/album/ui/style.scss';
 import './style.scss';
@@ -24,7 +24,9 @@ export function AllAlbumsPage() {
   const artistSlug = searchParams.get('artist');
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const allAlbums = useAppSelector(selectPublicAlbumsDataResolved);
+  const allAlbums = useAppSelector((state) =>
+    selectAlbumsResolvedForAllAlbumsPage(state, !artistSlug)
+  );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const [displayedCount, setDisplayedCount] = useState(BATCH_SIZE);

@@ -55,6 +55,7 @@ describe('HomePage integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -97,6 +98,7 @@ describe('HomePage integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -148,6 +150,7 @@ describe('HomePage integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -211,6 +214,7 @@ describe('HomePage integration tests', () => {
           error: null,
           data: mockAlbums,
           lastUpdated: Date.now(),
+          fetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
