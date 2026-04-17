@@ -10,6 +10,7 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectArticleById } from '@entities/article';
 import { getToken } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
+import { emptyStringMediaSrc, optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { uploadFile } from '@shared/api/storage';
 import { fetchArticles, resolveArticleForDisplay } from '@entities/article';
 import type { IArticles } from '@models';
@@ -477,7 +478,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       });
       setBlocks(simplified);
       // Преобразуем блоки в HTML для единого contentEditable
-      const html = blocksToHtml(simplified);
+      const html = blocksToHtml(simplified, article.userId ?? undefined);
       agentLog({
         location: 'EditArticleModal.tsx:230',
         message: 'Initializing contentHtml',
@@ -1794,7 +1795,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       // Вставляем изображение в contentEditable
       if (contentEditableRef.current) {
         const imageHtml = `<div data-block-type="image" data-image="${imageFileName}" contenteditable="false" class="edit-article-modal__inline-image">
-          <img src="${getUserImageUrl(imageFileName, 'articles')}" alt="" />
+          <img src="${emptyStringMediaSrc(getUserImageUrl(imageFileName, 'articles', '.jpg', undefined, article.userId), 'EditArticleModal:pasteImage', { articleId: article.articleId })}" alt="" />
         </div>`;
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
@@ -2505,7 +2506,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       setBlocks((prev) => {
         const newBlocks = prev.filter((_, i) => i !== index);
         // Обновляем contentHtml после удаления блока
-        const newHtml = blocksToHtml(newBlocks);
+        const newHtml = blocksToHtml(newBlocks, article.userId ?? undefined);
         setContentHtml(newHtml);
         if (contentEditableRef.current) {
           contentEditableRef.current.innerHTML = newHtml;
@@ -2515,7 +2516,7 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
       });
       scheduleAutoSave();
     },
-    [scheduleAutoSave, saveToHistory]
+    [scheduleAutoSave, saveToHistory, article.userId]
   );
 
   // Сохраняем deleteBlock в ref для использования в useEffect
@@ -4110,7 +4111,14 @@ export function EditArticleModal({ isOpen, article, onClose }: EditArticleModalP
                   <div className="edit-article-modal__carousel-edit-images">
                     {blocks[editingCarouselIndex].img.map((img, index) => (
                       <div key={index} className="edit-article-modal__carousel-edit-image">
-                        <img src={getUserImageUrl(img, 'articles')} alt={`Image ${index + 1}`} />
+                        <img
+                          src={optionalMediaSrc(
+                            getUserImageUrl(img, 'articles', '.jpg', undefined, article.userId),
+                            'EditArticleModal:carouselEdit',
+                            { index }
+                          )}
+                          alt={`Image ${index + 1}`}
+                        />
                         <button
                           type="button"
                           className="edit-article-modal__carousel-edit-image-remove"

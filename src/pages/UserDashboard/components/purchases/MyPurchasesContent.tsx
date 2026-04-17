@@ -244,17 +244,27 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
                       <div className="user-dashboard__my-purchases-purchase-cover">
                         <img
                           src={(() => {
+                            const ownerId = purchase.albumUserId ?? undefined;
                             const imageUrl = getUserImageUrl(
                               purchase.cover,
                               'albums',
                               '.jpg',
-                              true
+                              true,
+                              ownerId
                             );
                             console.log('🖼️ [MyPurchases] Image URL:', {
                               purchaseCover: purchase.cover,
                               generatedUrl: imageUrl,
                               albumId: purchase.albumId,
+                              albumUserId: purchase.albumUserId,
                             });
+                            if (imageUrl == null) {
+                              console.error('[BUG] MyPurchasesContent: cover URL is null', {
+                                albumId: purchase.albumId,
+                                albumUserId: purchase.albumUserId,
+                              });
+                              return '/images/album-placeholder.png';
+                            }
                             return imageUrl;
                           })()}
                           alt={`${purchase.artist} — ${purchase.album}`}

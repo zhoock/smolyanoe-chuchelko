@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Waveform } from '@shared/ui/waveform';
 import { useLang } from '@app/providers/lang';
 import { getUserImageUrl, getUserAudioUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -51,111 +52,17 @@ function resolveStoragePublicUrl(storagePath: string): string | null {
   return null;
 }
 
-// Функция для получения дефолтной обложки стема из папки Mixer
-function getDefaultStemPortrait(stemKind: StemKind): string {
-  // Маппинг StemKind на имена файлов в папке Mixer
+// Дефолтная обложка стема из папки Mixer (нужен ownerUserId — без сессии/fallback user URL не строим)
+function getDefaultStemPortrait(stemKind: StemKind, ownerUserId: string): string | null {
   const fileNameMap: Record<StemKind, string> = {
     drums: 'drums',
     bass: 'bass',
-    guitar: 'guitars', // В папке Mixer используем 'guitars' (как в админке)
-    vocal: 'vocals', // В папке Mixer используем 'vocals' (как в админке)
+    guitar: 'guitars',
+    vocal: 'vocals',
   };
   const fileName = fileNameMap[stemKind];
-  // Возвращаем URL из папки Mixer в категории stems
-  return getUserImageUrl(`Mixer/${fileName}`, 'stems', '.png');
+  return getUserImageUrl(`Mixer/${fileName}`, 'stems', '.png', undefined, ownerUserId);
 }
-
-// Статические песни для обратной совместимости (используются как fallback)
-const STATIC_SONGS: Song[] = [
-  {
-    id: 'song-1',
-    title: 'Последний поршневый бомбардировщик',
-    mix: getUserAudioUrl('Smolyanoe-chuchelko/01-The-last-piston-bomber-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('EP_Mixer/01_PPB_drums.mp3'),
-      bass: getUserAudioUrl('EP_Mixer/01_PPB_bass.mp3'),
-      guitar: getUserAudioUrl('EP_Mixer/01_PPB_guitars.mp3'),
-      vocal: getUserAudioUrl('EP_Mixer/01_PPB_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-2',
-    title: 'Водянистая влага',
-    mix: getUserAudioUrl('Smolyanoe-chuchelko/02-Watery-moisture-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('EP_Mixer/02_VV_drums.mp3'),
-      bass: getUserAudioUrl('EP_Mixer/02_VV_bass.mp3'),
-      guitar: getUserAudioUrl('EP_Mixer/02_VV_guitars.mp3'),
-      vocal: getUserAudioUrl('EP_Mixer/02_VV_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-3',
-    title: 'Рулевой мёртв',
-    mix: getUserAudioUrl('Smolyanoe-chuchelko/03-Helmsman-is-dead-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('EP_Mixer/03_RM_drums.mp3'),
-      bass: getUserAudioUrl('EP_Mixer/03_RM_bass.mp3'),
-      guitar: getUserAudioUrl('EP_Mixer/03_RM_guitars.mp3'),
-      vocal: getUserAudioUrl('EP_Mixer/03_RM_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-4',
-    title: 'Бром и сталь',
-    mix: getUserAudioUrl('Smolyanoe-chuchelko/04-Bromine-and-steel-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('EP_Mixer/04_BIS_drums.mp3'),
-      bass: getUserAudioUrl('EP_Mixer/04_BIS_bass.mp3'),
-      guitar: getUserAudioUrl('EP_Mixer/04_BIS_guitars.mp3'),
-      vocal: getUserAudioUrl('EP_Mixer/04_BIS_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-5',
-    title: 'Падение кита',
-    mix: getUserAudioUrl('Smolyanoe-chuchelko/05-Whale-falling-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('EP_Mixer/05_PK_drums.mp3'),
-      bass: getUserAudioUrl('EP_Mixer/05_PK_bass.mp3'),
-      guitar: getUserAudioUrl('EP_Mixer/05_PK_guitars.mp3'),
-      vocal: getUserAudioUrl('EP_Mixer/05_PK_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-6',
-    title: 'Фиджийская русалка Барнума',
-    mix: getUserAudioUrl('23/01-Barnums-Fijian-Mermaid-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('23_Mixer/01_FRB_drums.mp3'),
-      bass: getUserAudioUrl('23_Mixer/01_FRB_bass.mp3'),
-      guitar: getUserAudioUrl('23_Mixer/01_FRB_guitars.mp3'),
-      vocal: getUserAudioUrl('23_Mixer/01_FRB_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-7',
-    title: 'Слипер',
-    mix: getUserAudioUrl('23/02-Sleeper-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('23_Mixer/02_SL_drums.mp3'),
-      bass: getUserAudioUrl('23_Mixer/02_SL_bass.mp3'),
-      guitar: getUserAudioUrl('23_Mixer/02_SL_guitars.mp3'),
-      vocal: getUserAudioUrl('23_Mixer/02_SL_vocals.mp3'),
-    },
-  },
-  {
-    id: 'song-8',
-    title: 'Швайс',
-    mix: getUserAudioUrl('23/03-Schweiz-1644.wav'),
-    stems: {
-      drums: getUserAudioUrl('23_Mixer/03_SH_drums.mp3'),
-      bass: getUserAudioUrl('23_Mixer/03_SH_bass.mp3'),
-      guitar: getUserAudioUrl('23_Mixer/03_SH_guitars.mp3'),
-      vocal: getUserAudioUrl('23_Mixer/03_SH_vocals.mp3'),
-    },
-  },
-];
 
 export default function StemsPlayground() {
   const dispatch = useAppDispatch();
@@ -168,22 +75,22 @@ export default function StemsPlayground() {
   /** Метка момента смены артиста/языка: не строим список из кэша альбомов до свежего fetchAlbums.fulfilled. */
   const stemsSyncEpochRef = useRef(0);
 
-  // Состояние для динамически загруженных песен
+  const fallbackOwnerUserId = useMemo(
+    () => albums?.[0]?.userId ?? getUserUserId() ?? null,
+    [albums]
+  );
+
   const [dynamicSongs, setDynamicSongs] = useState<Song[]>([]);
   const [loadingSongs, setLoadingSongs] = useState(true);
 
-  // Пока грузим альбомы или сканируем Storage — не показываем fallback STATIC (иначе мигание чужих/демо названий)
+  /** Только треки из альбомов со стемами в Storage (без демо-списка в коде). */
   const SONGS = useMemo(() => {
     if (albumsStatus === 'loading' || loadingSongs) {
       return [];
     }
-    if (dynamicSongs.length > 0) {
-      return dynamicSongs;
-    }
-    return STATIC_SONGS;
+    return dynamicSongs;
   }, [dynamicSongs, albumsStatus, loadingSongs]);
 
-  // Инициализируем selectedId - используем первую динамическую или статическую песню
   const [selectedId, setSelectedId] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [muted, setMuted] = useState<Record<StemKind, boolean>>({
@@ -212,15 +119,18 @@ export default function StemsPlayground() {
 
   const currentSong = useMemo(() => SONGS.find((s) => s.id === selectedId), [selectedId, SONGS]);
 
-  // Мемоизируем дефолтные портреты стемов, чтобы не вызывать функции при каждом рендере
   const defaultPortraits = useMemo(() => {
+    const id = fallbackOwnerUserId;
+    if (!id) {
+      return { drums: null, bass: null, guitar: null, vocal: null };
+    }
     return {
-      drums: getDefaultStemPortrait('drums'),
-      bass: getDefaultStemPortrait('bass'),
-      guitar: getDefaultStemPortrait('guitar'),
-      vocal: getDefaultStemPortrait('vocal'),
+      drums: getDefaultStemPortrait('drums', id),
+      bass: getDefaultStemPortrait('bass', id),
+      guitar: getDefaultStemPortrait('guitar', id),
+      vocal: getDefaultStemPortrait('vocal', id),
     };
-  }, []); // Пустой массив зависимостей - портреты не зависят от состояния
+  }, [fallbackOwnerUserId]);
 
   // Смена артиста/языка: сразу очищаем каталог стемов, чтобы не мигали треки другого артиста
   useEffect(() => {
@@ -283,6 +193,8 @@ export default function StemsPlayground() {
     }
 
     if (!albums || albums.length === 0) {
+      setDynamicSongs([]);
+      setSelectedId('');
       setLoadingSongs(false);
       return;
     }
@@ -388,7 +300,11 @@ export default function StemsPlayground() {
               // Если нет пользовательского портрета, используем дефолтный из Mixer
               // Но только если стем загружен (иначе карточка будет disabled)
               if (!portraitUrl && stems[stemKind]) {
-                portraitUrl = getDefaultStemPortrait(stemKind);
+                portraitUrl = optionalMediaSrc(
+                  getDefaultStemPortrait(stemKind, storageUserId),
+                  'StemsPlayground:defaultPortrait',
+                  { stemKind, albumId, trackId }
+                );
               }
 
               if (portraitUrl) {
@@ -397,7 +313,13 @@ export default function StemsPlayground() {
             }
 
             // Формируем URL для микса (полный трек)
-            const mixUrl = track.src ? getUserAudioUrl(track.src, true) : undefined;
+            const mixUrl = track.src
+              ? optionalMediaSrc(
+                  getUserAudioUrl(track.src, true, storageUserId),
+                  'StemsPlayground:dynamicMix',
+                  { albumId, trackId }
+                )
+              : undefined;
 
             songsWithStems.push({
               id: `track-${albumId}-${trackId}`,
@@ -421,26 +343,25 @@ export default function StemsPlayground() {
       // Если нет динамических, используем первую статическую как fallback
       if (songsWithStems.length > 0) {
         setSelectedId(songsWithStems[0].id);
-      } else if (STATIC_SONGS.length > 0) {
-        setSelectedId(STATIC_SONGS[0].id);
+      } else {
+        setSelectedId('');
       }
     };
 
     loadStemsForTracks();
   }, [albums, albumsStatus, albumsLastUpdated, publicArtistSlug]);
 
-  // Обновляем selectedId при смене списка (не трогаем во время загрузки — иначе мигание демо-треков)
+  // Обновляем selectedId при смене списка (не трогаем во время загрузки)
   useEffect(() => {
     if (loadingSongs || albumsStatus === 'loading') {
       return;
     }
     if (dynamicSongs.length > 0) {
-      const isStaticSelected = STATIC_SONGS.some((s) => s.id === selectedId);
-      if (isStaticSelected || !dynamicSongs.find((s) => s.id === selectedId)) {
+      if (!dynamicSongs.find((s) => s.id === selectedId)) {
         setSelectedId(dynamicSongs[0].id);
       }
-    } else if (dynamicSongs.length === 0 && !selectedId && STATIC_SONGS.length > 0) {
-      setSelectedId(STATIC_SONGS[0].id);
+    } else {
+      setSelectedId('');
     }
   }, [dynamicSongs, selectedId, loadingSongs, albumsStatus]);
 
@@ -637,9 +558,13 @@ export default function StemsPlayground() {
               aria-label="Выбор песни"
               disabled={selectDisabled}
             >
-              {SONGS.length === 0 && (albumsStatus === 'loading' || loadingSongs) ? (
+              {albumsStatus === 'loading' || loadingSongs ? (
                 <option value="" disabled>
                   {lang === 'en' ? 'Loading…' : 'Загрузка…'}
+                </option>
+              ) : SONGS.length === 0 ? (
+                <option value="" disabled>
+                  {lang === 'en' ? 'No tracks with stems' : 'Нет треков со стемами'}
                 </option>
               ) : (
                 SONGS.map((s) => (
@@ -701,7 +626,7 @@ export default function StemsPlayground() {
             title={labels.drums}
             img={
               currentSong?.portraits?.drums ||
-              (currentSong?.stems?.drums ? defaultPortraits.drums : undefined)
+              (currentSong?.stems?.drums ? (defaultPortraits.drums ?? undefined) : undefined)
             }
             active={!muted.drums}
             disabled={!currentSong?.stems?.drums}
@@ -711,7 +636,7 @@ export default function StemsPlayground() {
             title={labels.bass}
             img={
               currentSong?.portraits?.bass ||
-              (currentSong?.stems?.bass ? defaultPortraits.bass : undefined)
+              (currentSong?.stems?.bass ? (defaultPortraits.bass ?? undefined) : undefined)
             }
             active={!muted.bass}
             disabled={!currentSong?.stems?.bass}
@@ -721,7 +646,7 @@ export default function StemsPlayground() {
             title={labels.guitar}
             img={
               currentSong?.portraits?.guitar ||
-              (currentSong?.stems?.guitar ? defaultPortraits.guitar : undefined)
+              (currentSong?.stems?.guitar ? (defaultPortraits.guitar ?? undefined) : undefined)
             }
             active={!muted.guitar}
             disabled={!currentSong?.stems?.guitar}
@@ -731,7 +656,7 @@ export default function StemsPlayground() {
             title={labels.vocals}
             img={
               currentSong?.portraits?.vocal ||
-              (currentSong?.stems?.vocal ? defaultPortraits.vocal : undefined)
+              (currentSong?.stems?.vocal ? (defaultPortraits.vocal ?? undefined) : undefined)
             }
             active={!muted.vocal}
             disabled={!currentSong?.stems?.vocal}

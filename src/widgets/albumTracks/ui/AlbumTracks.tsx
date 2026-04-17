@@ -11,6 +11,7 @@ import { useLang } from '@app/providers/lang';
 import { gaEvent } from '@shared/lib/analytics';
 import { TrackList } from '@entities/track/ui/TrackList';
 import { getUserAudioUrl } from '@shared/api/albums';
+import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 import {
@@ -22,10 +23,15 @@ import './style.scss';
 /**
  * Преобразует треки, заменяя пути к аудио файлам на Supabase Storage URL, если это включено
  */
-function transformTracksForStorage(tracks: TracksProps[]): TracksProps[] {
+function transformTracksForStorage(tracks: TracksProps[], albumUserId?: string): TracksProps[] {
   return tracks.map((track) => ({
     ...track,
-    src: getUserAudioUrl(track.src),
+    // TracksProps.src — string; пустая строка только если резолв вернул null (см. [BUG] в getUserAudioUrl + emptyStringMediaSrc)
+    src: emptyStringMediaSrc(
+      getUserAudioUrl(track.src, undefined, albumUserId),
+      'AlbumTracks:transformTracksForStorage',
+      { trackId: track.id, albumUserId }
+    ),
   }));
 }
 
@@ -109,7 +115,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
         Math.min(savedState.currentTrackIndex, album.tracks.length - 1)
       );
 
-      dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+      dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks, album.userId)));
       dispatch(playerActions.setCurrentTrackIndex(validTrackIndex));
       dispatch(
         playerActions.setAlbumInfo({
@@ -137,7 +143,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       dispatch(playerActions.setVolume(savedState.volume));
       dispatch(playerActions.pause());
     } else {
-      dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks)));
+      dispatch(playerActions.setPlaylist(transformTracksForStorage(album.tracks, album.userId)));
       dispatch(playerActions.setCurrentTrackIndex(0));
       dispatch(playerActions.setAlbumInfo({ albumId: currentAlbumId, albumTitle: album.album }));
       dispatch(
@@ -210,7 +216,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       const playlist = album.tracks || [];
       const selectedTrack = playlist[trackIndex];
 
-      dispatch(playerActions.setPlaylist(transformTracksForStorage(playlist)));
+      dispatch(playerActions.setPlaylist(transformTracksForStorage(playlist, album.userId)));
 
       if (selectedTrack) {
         const currentState = store.getState().player;

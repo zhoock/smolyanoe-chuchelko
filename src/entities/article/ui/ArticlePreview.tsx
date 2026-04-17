@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
 import { getImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
@@ -17,7 +18,11 @@ export function ArticlePreview({ articleId, img, nameArticle, date, userId }: Ar
       <Link to={articlePath}>
         <div className="articles__picture">
           <img
-            src={getImageUrl(img, '.jpg', userId ? { userId, category: 'articles' } : undefined)}
+            src={optionalMediaSrc(
+              getImageUrl(img, '.jpg', userId ? { userId, category: 'articles' } : undefined),
+              'ArticlePreview',
+              { articleId, hasUserId: !!userId }
+            )}
             alt={nameArticle}
             loading="lazy"
             decoding="async"

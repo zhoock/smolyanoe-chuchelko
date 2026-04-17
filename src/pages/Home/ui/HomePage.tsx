@@ -9,6 +9,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { playerActions } from '@features/player';
 import { getUserAudioUrl } from '@shared/api/albums';
+import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { IAlbums, TracksProps } from '@models';
 import { fetchAlbums } from '@entities/album';
 import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay';
@@ -140,7 +141,11 @@ export function HomePage() {
 
           const playlist: TracksProps[] = resolvedAlbum.tracks.map((track) => ({
             ...track,
-            src: getUserAudioUrl(track.src),
+            src: emptyStringMediaSrc(
+              getUserAudioUrl(track.src, undefined, resolvedAlbum.userId),
+              'HomePage:heroPlaylist',
+              { trackId: track.id, albumUserId: resolvedAlbum.userId }
+            ),
           }));
 
           dispatch(playerActions.setPlaylist(playlist));

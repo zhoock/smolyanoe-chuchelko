@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { getUserImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { ArticledetailsProps } from '@models';
 import { ArticleSkeleton } from '@pages/Article/ui/ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -346,6 +347,7 @@ function ArticleContent({
   const BlockWithAnchor = (details: ArticledetailsProps) => {
     const titleId = details.title ? createAnchor(details.title) : undefined;
     const subtitleId = details.subtitle ? createAnchor(details.subtitle) : undefined;
+    const mediaOwnerId = details.userId ?? article.userId ?? undefined;
 
     return (
       <>
@@ -353,10 +355,19 @@ function ArticleContent({
         {details.img && (
           <div className="uncollapse">
             {Array.isArray(details.img) ? (
-              <ImageCarousel images={details.img} alt={details.alt ?? ''} category="articles" />
+              <ImageCarousel
+                images={details.img}
+                alt={details.alt ?? ''}
+                category="articles"
+                userId={mediaOwnerId}
+              />
             ) : (
               <img
-                src={getUserImageUrl(details.img, 'articles')}
+                src={optionalMediaSrc(
+                  getUserImageUrl(details.img, 'articles', '.jpg', undefined, mediaOwnerId),
+                  'HelpArticlePage:blockImage',
+                  { articleId: article.articleId, hasMediaOwnerId: !!mediaOwnerId }
+                )}
                 alt={details.alt ?? ''}
                 loading="lazy"
                 decoding="async"

@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import type { ArticleBlockData } from '../modals/article/EditArticleModal.types';
 import { getUserImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import './ArticleBlockEditor.style.scss';
 
 interface ArticleBlockEditorProps {
+  /** Владелец медиа в Storage */
+  articleUserId?: string;
   block: ArticleBlockData;
   index: number;
   onUpdate: (updatedBlock: ArticleBlockData) => void;
@@ -17,6 +20,7 @@ interface ArticleBlockEditorProps {
 }
 
 export function ArticleBlockEditor({
+  articleUserId,
   block,
   index,
   onUpdate,
@@ -254,7 +258,11 @@ export function ArticleBlockEditor({
                     {block.img.map((img, idx) => (
                       <img
                         key={idx}
-                        src={getUserImageUrl(img, 'articles')}
+                        src={optionalMediaSrc(
+                          getUserImageUrl(img, 'articles', '.jpg', undefined, articleUserId),
+                          'ArticleBlockEditor:carouselThumb',
+                          { index: idx }
+                        )}
                         alt={block.alt || `Image ${idx + 1}`}
                         className="article-block-editor__preview-image"
                       />
@@ -265,7 +273,10 @@ export function ArticleBlockEditor({
                   </div>
                 ) : (
                   <img
-                    src={getUserImageUrl(block.img, 'articles')}
+                    src={optionalMediaSrc(
+                      getUserImageUrl(block.img, 'articles', '.jpg', undefined, articleUserId),
+                      'ArticleBlockEditor:singleImage'
+                    )}
                     alt={block.alt || 'Block image'}
                     className="article-block-editor__preview-image"
                   />

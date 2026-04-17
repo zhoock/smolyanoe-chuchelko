@@ -38,20 +38,28 @@ describe('getImageUrl', () => {
 });
 
 describe('getUserImageUrl', () => {
-  test('генерирует URL для текущего пользователя', () => {
-    expect(getUserImageUrl('album_cover', 'albums')).toContain('users%2F');
-    expect(getUserImageUrl('album_cover', 'albums')).toContain('%2Falbums%2Falbum_cover.jpg');
+  test('генерирует URL при явном userId', () => {
+    expect(getUserImageUrl('album_cover', 'albums', '.jpg', undefined, TEST_USER_ID)).toContain(
+      'users%2F'
+    );
+    expect(getUserImageUrl('album_cover', 'albums', '.jpg', undefined, TEST_USER_ID)).toContain(
+      '%2Falbums%2Falbum_cover.jpg'
+    );
   });
 
   test('использует переданный формат', () => {
-    expect(getUserImageUrl('album_cover', 'albums', '.webp')).toContain(
+    expect(getUserImageUrl('album_cover', 'albums', '.webp', undefined, TEST_USER_ID)).toContain(
       '%2Falbums%2Falbum_cover.webp'
     );
   });
 
   test('работает с разными категориями', () => {
-    expect(getUserImageUrl('article_img', 'articles')).toContain('%2Farticles%2Farticle_img.jpg');
-    expect(getUserImageUrl('avatar', 'profile', '.png')).toContain('%2Fprofile%2Favatar.png');
+    expect(getUserImageUrl('article_img', 'articles', '.jpg', undefined, TEST_USER_ID)).toContain(
+      '%2Farticles%2Farticle_img.jpg'
+    );
+    expect(getUserImageUrl('avatar', 'profile', '.png', undefined, TEST_USER_ID)).toContain(
+      '%2Fprofile%2Favatar.png'
+    );
   });
 });
 

@@ -2,7 +2,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { IInterface } from '@models';
 import type { AlbumData, TrackData } from '@entities/album/lib/transformAlbumData';
-import { uploadFile, listStorageByPrefix, getStorageFileUrl } from '@shared/api/storage';
+import { uploadFile, listStorageByPrefix } from '@shared/api/storage';
 import { getUserImageUrl } from '@shared/api/albums';
 import {
   buildStoragePublicObjectUrl,
@@ -780,6 +780,22 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
             {albums.map((album, index) => {
               const tracks = getAlbumTracks(album.id);
               const isAlbumOpen = expandedAlbumId === album.id;
+              if (album.cover && !album.userId) {
+                console.error('[BUG] album.userId missing', {
+                  albumId: album.id,
+                  context: 'mixerAlbumThumbnail',
+                });
+              }
+              const coverThumbBase =
+                album.cover && album.userId
+                  ? getUserImageUrl(album.cover, 'albums', '-128.webp', undefined, album.userId)
+                  : null;
+              if (album.cover && album.userId && coverThumbBase == null) {
+                console.error('[BUG] MixerAdmin album thumbnail: getUserImageUrl returned null', {
+                  albumId: album.id,
+                  albumUserId: album.userId,
+                });
+              }
               return (
                 <React.Fragment key={album.id}>
                   <div
@@ -796,9 +812,9 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                     aria-label={isAlbumOpen ? 'Collapse album' : 'Expand album'}
                   >
                     <div className="user-dashboard__album-thumbnail">
-                      {album.cover ? (
+                      {album.cover && coverThumbBase ? (
                         <img
-                          src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
+                          src={`${coverThumbBase}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
                           alt={album.title}
                           onError={(e) => {
                             const img = e.target as HTMLImageElement;
@@ -808,6 +824,8 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                             }
                           }}
                         />
+                      ) : album.cover ? (
+                        <img src="/images/album-placeholder.png" alt={album.title} />
                       ) : (
                         <img src="/images/album-placeholder.png" alt={album.title} />
                       )}

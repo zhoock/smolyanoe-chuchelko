@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { getImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { ArticledetailsProps } from '@models';
 import { ArticleSkeleton } from './ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
@@ -103,10 +104,14 @@ export function ArticlePage() {
         {singleImage && (
           <div className="uncollapse">
             <img
-              src={getImageUrl(
-                singleImage,
-                '.jpg',
-                userId ? { userId, category: 'articles' } : undefined
+              src={optionalMediaSrc(
+                getImageUrl(
+                  singleImage,
+                  '.jpg',
+                  userId ? { userId, category: 'articles' } : undefined
+                ),
+                'ArticlePage:singleImage',
+                { hasUserId: !!userId }
               )}
               alt={alt ?? ''}
               loading="lazy"

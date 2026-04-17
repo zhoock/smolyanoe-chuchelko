@@ -1,8 +1,11 @@
 // src/pages/UserDashboard/components/blocks/BlockCarousel.tsx
 import React, { useState } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 
 interface BlockCarouselProps {
+  /** Владелец медиа в Storage (users/{id}/articles/...) */
+  mediaOwnerUserId?: string;
   imageKeys: string[];
   caption?: string;
   onChange: (imageKeys: string[], caption?: string) => void;
@@ -16,6 +19,7 @@ interface BlockCarouselProps {
 }
 
 export function BlockCarousel({
+  mediaOwnerUserId,
   imageKeys,
   caption,
   onChange,
@@ -88,7 +92,11 @@ export function BlockCarousel({
     );
   }
 
-  const currentImageUrl = getUserImageUrl(imageKeys[currentIndex], 'articles');
+  const currentImageUrl = optionalMediaSrc(
+    getUserImageUrl(imageKeys[currentIndex], 'articles', '.jpg', undefined, mediaOwnerUserId),
+    'BlockCarousel',
+    { index: currentIndex, key: imageKeys[currentIndex] }
+  );
   const totalImages = imageKeys.length;
 
   return (
@@ -110,7 +118,10 @@ export function BlockCarousel({
     >
       <div className="uncollapse edit-article-v2__carousel-view">
         <div className="edit-article-v2__carousel-image-wrapper">
-          <img src={currentImageUrl} alt={`Image ${currentIndex + 1} of ${totalImages}`} />
+          <img
+            src={currentImageUrl ?? '/images/album-placeholder.png'}
+            alt={`Image ${currentIndex + 1} of ${totalImages}`}
+          />
 
           {/* Кнопка "Редактировать карусель" и бейдж "1 из N" в правом верхнем углу */}
           <div className="edit-article-v2__carousel-top-right">

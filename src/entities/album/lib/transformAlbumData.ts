@@ -12,6 +12,8 @@ import { resolveAlbumForDisplay } from './resolveAlbumDisplay';
 export interface AlbumData {
   id: string;
   albumId: string; // Строковый ID альбома (например, "23-remastered")
+  /** Владелец альбома в storage (users/{id}/...); нужен для явных URL медиа */
+  userId?: string;
   title: string;
   artist: string;
   year: string;
@@ -122,6 +124,7 @@ export function transformAlbumToAlbumData(
   return {
     id: albumId,
     albumId: source.albumId || albumId, // Сохраняем строковый ID альбома
+    userId: source.userId,
     title: source.album,
     artist: artistLabel,
     year: releaseDate ? releaseDate.getFullYear().toString() : '',

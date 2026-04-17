@@ -2,6 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadFile } from '@shared/api/storage';
+import { getUser } from '@shared/lib/auth';
 
 interface BlockImageProps {
   imageKey?: string;
@@ -83,7 +84,15 @@ export function BlockImage({
     }
   };
 
-  const imageUrl = imageKey ? getUserImageUrl(imageKey, 'articles') : '';
+  const authId = getUser()?.id;
+  let imageUrl: string | null = null;
+  if (imageKey) {
+    if (!authId) {
+      console.error('[BUG] BlockImage: no auth userId for image URL');
+    } else {
+      imageUrl = getUserImageUrl(imageKey, 'articles', '.jpg', undefined, authId);
+    }
+  }
 
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();

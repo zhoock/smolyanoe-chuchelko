@@ -16,6 +16,8 @@ interface Purchase {
   id: string;
   orderId: string;
   albumId: string;
+  /** Владелец альбома в Storage (обложка в bucket пользователя) */
+  albumUserId: string | null;
   artist: string;
   album: string;
   cover: string | null;
@@ -128,7 +130,8 @@ export const handler: Handler = async (
           album: string;
           lang: string;
           cover: string | null;
-        }>(`SELECT artist, album, lang, cover FROM albums WHERE album_id = $1 LIMIT 1`, [
+          user_id: string | null;
+        }>(`SELECT artist, album, lang, cover, user_id FROM albums WHERE album_id = $1 LIMIT 1`, [
           purchaseRow.album_id,
         ]);
 
@@ -138,6 +141,7 @@ export const handler: Handler = async (
             id: purchaseRow.id,
             orderId: purchaseRow.order_id,
             albumId: purchaseRow.album_id,
+            albumUserId: null,
             artist: 'Unknown',
             album: purchaseRow.album_id,
             cover: null,
@@ -167,6 +171,7 @@ export const handler: Handler = async (
           id: purchaseRow.id,
           orderId: purchaseRow.order_id,
           albumId: purchaseRow.album_id,
+          albumUserId: album.user_id,
           artist: album.artist,
           album: album.album,
           cover: album.cover || null,

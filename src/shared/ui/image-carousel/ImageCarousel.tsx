@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { ImageCategory } from '@config/user';
 import './style.scss';
 
@@ -200,7 +201,11 @@ export function ImageCarousel({ images, alt, category = 'articles', userId }: Im
         {images.map((img, index) => (
           <div key={img} className="image-carousel__slide">
             <img
-              src={getImageUrl(img, '.jpg', userId ? { userId, category } : undefined)}
+              src={optionalMediaSrc(
+                getImageUrl(img, '.jpg', userId ? { userId, category } : undefined),
+                'ImageCarousel:slide',
+                { index, category, hasUserId: !!userId }
+              )}
               alt={index === 0 ? alt : `${alt} (${index + 1})`}
               loading={index === 0 ? 'lazy' : 'lazy'}
               decoding="async"

@@ -726,10 +726,17 @@ export function EditAlbumModal({
 
       // Собираем имя с суффиксом размера и передаём расширение отдельно
       const base = stripExt(coverName); // "my-cover" или "my-cover-448" -> "my-cover" или "my-cover-448"
-      const coverUrl = getUserImageUrl(`${base}-448`, 'albums', '.webp', false);
+      if (!album.userId) {
+        console.error('[BUG] album.userId missing', {
+          albumId: album.albumId,
+          context: 'editAlbumModalCoverPreview',
+        });
+      } else {
+        const coverUrl = getUserImageUrl(`${base}-448`, 'albums', '.webp', false, album.userId);
 
-      if (coverUrl) {
-        setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
+        if (coverUrl) {
+          setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
+        }
       }
     }
     // ВАЖНО: Инициализация происходит только один раз

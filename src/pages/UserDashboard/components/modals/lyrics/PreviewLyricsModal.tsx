@@ -15,6 +15,8 @@ interface PreviewLyricsModalProps {
   syncedLyrics?: SyncedLyricsLine[];
   authorship?: string;
   trackSrc?: string;
+  /** Владелец файла в Storage (users/{id}/audio/...) */
+  mediaOwnerUserId?: string;
   onClose: () => void;
 }
 
@@ -31,14 +33,15 @@ export function PreviewLyricsModal({
   syncedLyrics,
   authorship,
   trackSrc,
+  mediaOwnerUserId,
   onClose,
 }: PreviewLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const audioPlaybackUrl = useMemo(
-    () => (trackSrc?.trim() ? getUserAudioUrl(trackSrc) : ''),
-    [trackSrc]
-  );
+  const audioPlaybackUrl = useMemo(() => {
+    if (!trackSrc?.trim()) return null;
+    return getUserAudioUrl(trackSrc, undefined, mediaOwnerUserId);
+  }, [trackSrc, mediaOwnerUserId]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);

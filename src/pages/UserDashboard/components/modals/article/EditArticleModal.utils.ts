@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/EditArticleModal.utils.ts
 import type { ArticledetailsProps } from '@models';
 import { getUserImageUrl } from '@shared/api/albums';
+import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 
 // Упрощенная структура блока
 export interface SimplifiedBlock {
@@ -107,7 +108,7 @@ export function simplifiedToDetails(blocks: SimplifiedBlock[]): ArticledetailsPr
 /**
  * Преобразует блоки в HTML для единого contentEditable блока
  */
-export function blocksToHtml(blocks: SimplifiedBlock[]): string {
+export function blocksToHtml(blocks: SimplifiedBlock[], mediaOwnerUserId?: string): string {
   const htmlParts: string[] = [];
 
   blocks.forEach((block) => {
@@ -123,7 +124,7 @@ export function blocksToHtml(blocks: SimplifiedBlock[]): string {
       const imageUrl = typeof block.img === 'string' ? block.img : block.img[0];
       htmlParts.push(
         `<div data-block-type="image" data-block-id="${block.id || ''}" data-image="${escapeHtml(imageUrl)}" contenteditable="false" class="edit-article-modal__inline-image">
-          <img src="${getUserImageUrl(imageUrl, 'articles')}" alt="${escapeHtml(block.alt || '')}" />
+          <img src="${emptyStringMediaSrc(getUserImageUrl(imageUrl, 'articles', '.jpg', undefined, mediaOwnerUserId), 'blocksToHtml:image', { blockId: block.id })}" alt="${escapeHtml(block.alt || '')}" />
         </div>`
       );
     }
@@ -133,7 +134,7 @@ export function blocksToHtml(blocks: SimplifiedBlock[]): string {
       const imagesJson = JSON.stringify(block.img);
       htmlParts.push(
         `<div data-block-type="carousel" data-block-id="${block.id || ''}" data-images='${escapeHtml(imagesJson)}' contenteditable="false" class="edit-article-modal__inline-carousel">
-          <img src="${getUserImageUrl(block.img[0], 'articles')}" alt="${escapeHtml(block.alt || '')}" />
+          <img src="${emptyStringMediaSrc(getUserImageUrl(block.img[0], 'articles', '.jpg', undefined, mediaOwnerUserId), 'blocksToHtml:carousel', { blockId: block.id })}" alt="${escapeHtml(block.alt || '')}" />
           <span class="edit-article-modal__carousel-indicator">${block.img.length} фото</span>
         </div>`
       );

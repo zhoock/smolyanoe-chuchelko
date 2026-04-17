@@ -13,6 +13,8 @@ import { BlockImage } from './BlockImage';
 import { BlockCarousel } from './BlockCarousel';
 
 interface SortableBlockProps {
+  /** Владелец медиа статьи (Storage path) */
+  articleOwnerUserId?: string;
   block: Block;
   index: number;
   isFocused: boolean;
@@ -39,6 +41,7 @@ interface SortableBlockProps {
 }
 
 export function SortableBlock({
+  articleOwnerUserId,
   block,
   index,
   isFocused,
@@ -160,6 +163,7 @@ export function SortableBlock({
       case 'carousel':
         return (
           <BlockCarousel
+            mediaOwnerUserId={articleOwnerUserId}
             imageKeys={block.imageKeys}
             caption={block.caption}
             onChange={(imageKeys, caption) =>

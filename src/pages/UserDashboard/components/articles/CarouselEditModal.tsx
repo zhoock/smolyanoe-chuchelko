@@ -1,10 +1,13 @@
 // src/pages/UserDashboard/components/CarouselEditModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
+import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { uploadFile } from '@shared/api/storage';
 import { Popup } from '@shared/ui/popup';
 
 interface CarouselEditModalProps {
+  /** Владелец медиа в Storage */
+  mediaOwnerUserId?: string;
   blockId: string;
   initialImageKeys: string[];
   initialCaption?: string;
@@ -13,6 +16,7 @@ interface CarouselEditModalProps {
 }
 
 export function CarouselEditModal({
+  mediaOwnerUserId,
   blockId,
   initialImageKeys,
   initialCaption,
@@ -43,6 +47,7 @@ export function CarouselEditModal({
           file,
           category: 'articles',
           fileName,
+          userId: mediaOwnerUserId,
         });
 
         if (url) {
@@ -98,7 +103,16 @@ export function CarouselEditModal({
           <div className="edit-article-v2__carousel-edit-thumbnails">
             {imageKeys.map((imageKey, index) => (
               <div key={imageKey} className="edit-article-v2__carousel-edit-thumbnail">
-                <img src={getUserImageUrl(imageKey, 'articles')} alt={`Image ${index + 1}`} />
+                <img
+                  src={
+                    optionalMediaSrc(
+                      getUserImageUrl(imageKey, 'articles', '.jpg', undefined, mediaOwnerUserId),
+                      'CarouselEditModal:thumbnail',
+                      { index }
+                    ) ?? '/images/album-placeholder.png'
+                  }
+                  alt={`Image ${index + 1}`}
+                />
                 <button
                   type="button"
                   className="edit-article-v2__carousel-edit-remove"

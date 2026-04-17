@@ -93,6 +93,14 @@ const buildSrcSet = ({
       if (!suffix) return null;
 
       const url = getImageUrl(img, suffix, userId ? { userId, category: 'albums' } : undefined);
+      if (url == null) {
+        console.error('[BUG] AlbumCover buildSrcSet: getImageUrl returned null', {
+          img,
+          userId,
+          suffix,
+        });
+        return null;
+      }
       return `${withCacheBust(url, cacheBust)} ${formatDescriptor(density)}`;
     })
     .filter(Boolean)
@@ -159,6 +167,10 @@ function AlbumCover({
     if (useSupabaseStorage) {
       const suffix = supaSuffix('webp', effectiveBaseSize) ?? '-448.webp';
       const url = getImageUrl(img, suffix, userId ? { userId, category: 'albums' } : undefined);
+      if (url == null) {
+        console.error('[BUG] AlbumCover fallbackSrc: getImageUrl returned null', { img, userId });
+        return '';
+      }
       return withCacheBust(url, cacheBust);
     }
 
@@ -166,6 +178,13 @@ function AlbumCover({
     const baseUrl = primarySuffix
       ? getImageUrl(img, primarySuffix, userId ? { userId, category: 'albums' } : undefined)
       : getImageUrl(img, '.jpg', userId ? { userId, category: 'albums' } : undefined);
+    if (baseUrl == null) {
+      console.error('[BUG] AlbumCover fallbackSrc (local): getImageUrl returned null', {
+        img,
+        userId,
+      });
+      return '';
+    }
 
     return withCacheBust(baseUrl, cacheBust);
   }, [img, userId, effectiveBaseSize, cacheBust]);

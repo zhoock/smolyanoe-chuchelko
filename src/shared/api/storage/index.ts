@@ -67,7 +67,7 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
   try {
     const resolvedUserId = options.userId ?? getUserUserId();
     if (!resolvedUserId) {
-      console.error('❌ [uploadFile] userId is required (pass options.userId or sign in).');
+      console.error('[BUG] userId is missing in uploadFile (pass options.userId or sign in).');
       return null;
     }
     const userId = resolvedUserId;
@@ -367,9 +367,7 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
     } = options;
     const userId = explicitUserId;
     if (!userId) {
-      console.error(
-        '❌ [uploadFileAdmin] userId is required (service uploads must target a specific user).'
-      );
+      console.error('[BUG] userId is missing in uploadFileAdmin.');
       return null;
     }
 
@@ -409,13 +407,13 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
 /**
  * Получить публичный URL файла из Supabase Storage
  * @param options - опции для получения URL
- * @returns Публичный URL файла
+ * @returns Публичный URL или null, если нет userId / клиента Supabase (ошибка в консоли)
  */
-export function getStorageFileUrl(options: GetFileUrlOptions): string {
+export function getStorageFileUrl(options: GetFileUrlOptions): string | null {
   const resolvedUserId = options.userId ?? getUserUserId();
   if (!resolvedUserId) {
-    console.error('❌ [getStorageFileUrl] userId is required (pass options.userId or sign in).');
-    return '';
+    console.error('[BUG] userId is missing in getStorageFileUrl (pass options.userId or sign in).');
+    return null;
   }
   const { category, fileName } = options;
   const userId = resolvedUserId;
@@ -437,8 +435,10 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
   if (category === 'audio') {
     const supabase = createSupabaseClient();
     if (!supabase) {
-      console.error('Supabase client is not available. Please set required environment variables.');
-      return '';
+      console.error(
+        '[BUG] getStorageFileUrl: Supabase client is not available (check VITE_SUPABASE_*).'
+      );
+      return null;
     }
     const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(storagePath);
     return data.publicUrl;
@@ -468,9 +468,7 @@ export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<s
   try {
     const resolvedUserId = options.userId ?? getUserUserId();
     if (!resolvedUserId) {
-      console.error(
-        '❌ [getStorageSignedUrl] userId is required (pass options.userId or sign in).'
-      );
+      console.error('[BUG] userId is missing in getStorageSignedUrl.');
       return null;
     }
     const { category, fileName, expiresIn = 3600 } = options;

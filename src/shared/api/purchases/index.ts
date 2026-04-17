@@ -11,6 +11,8 @@ export interface Purchase {
   id: string;
   orderId: string;
   albumId: string;
+  /** Владелец альбома в Storage (обложка в bucket пользователя) */
+  albumUserId?: string | null;
   artist: string;
   album: string;
   cover: string | null;

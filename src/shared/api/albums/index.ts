@@ -47,7 +47,7 @@ export function getImageUrl(
   img: string,
   format: string = '.jpg',
   options?: ImageUrlOptions
-): string {
+): string | null {
   // Если это уже готовый URL, возвращаем как есть
   // (важно для multi-artist: backend может присылать proxy/cdn ссылки напрямую).
   if (
@@ -72,7 +72,15 @@ export function getImageUrl(
 
     // Используем Supabase Storage, если включено
     if (shouldUseSupabaseStorage(options)) {
-      return getStorageFileUrl({ userId, category, fileName });
+      const url = getStorageFileUrl({ userId, category, fileName });
+      if (url == null) {
+        console.error('[BUG] getImageUrl: getStorageFileUrl returned null', {
+          userId,
+          category,
+          fileName,
+        });
+      }
+      return url;
     }
 
     // Локальные файлы
@@ -89,7 +97,8 @@ export function getImageUrl(
  * @param category - категория изображения
  * @param format - расширение файла (по умолчанию '.jpg')
  * @param useSupabaseStorage - использовать Supabase Storage (опционально)
- * @returns URL изображения
+ * @returns URL изображения или `null`, если нет userId / Storage вернул ошибку — причина уже в `[BUG]` в консоли.
+ * Для пропов React не «тихо» приводите к `undefined`: `optionalMediaSrc()` в `@shared/lib/media/optionalMediaUrl` добавит контекст компонента.
  *
  * @example
  * getUserImageUrl('album_cover', 'albums') // '/images/users/<uuid>/albums/album_cover.jpg'
@@ -99,12 +108,17 @@ export function getUserImageUrl(
   img: string,
   category: ImageCategory,
   format: string = '.jpg',
-  useSupabaseStorage?: boolean
-): string {
-  const userId = getUserUserId();
+  useSupabaseStorage?: boolean,
+  /** Явный владелец медиа (альбом/статья); иначе берётся из сессии */
+  explicitUserId?: string | null
+): string | null {
+  const userId =
+    explicitUserId !== undefined && explicitUserId !== null && String(explicitUserId).trim() !== ''
+      ? String(explicitUserId).trim()
+      : getUserUserId();
   if (!userId) {
-    console.error('❌ [getUserImageUrl] userId is required (sign in).');
-    return '';
+    console.error('[BUG] userId is missing in getUserImageUrl (pass explicitUserId or sign in).');
+    return null;
   }
   return getImageUrl(img, format, {
     userId,
@@ -118,16 +132,21 @@ export function getUserImageUrl(
  * @param audioPath - путь к аудио файлу относительно src/audio (например, "23/01-Barnums-Fijian-Mermaid-1644.wav" или "EP_Mixer/01_PPB_drums.mp3")
  *                   или полный путь вида "/audio/23/01-Barnums-Fijian-Mermaid-1644.wav" (будет автоматически обработан)
  * @param useSupabaseStorage - использовать Supabase Storage (опционально, по умолчанию из переменной окружения)
- * @returns URL аудио файла
+ * @returns URL аудио или `null` при ошибке (см. `[BUG]` в консоли). Для плейлиста со строгим `string`: `emptyStringMediaSrc()` в `@shared/lib/media/optionalMediaUrl`.
  *
  * @example
  * getUserAudioUrl('23/01-Barnums-Fijian-Mermaid-1644.wav') // '/audio/23/01-Barnums-Fijian-Mermaid-1644.wav'
  * getUserAudioUrl('/audio/23/01-Barnums-Fijian-Mermaid-1644.wav') // '/audio/23/01-Barnums-Fijian-Mermaid-1644.wav' или Supabase Storage URL
  * getUserAudioUrl('EP_Mixer/01_PPB_drums.mp3', true) // Supabase Storage URL
  */
-export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean): string {
+export function getUserAudioUrl(
+  audioPath: string,
+  useSupabaseStorage?: boolean,
+  /** Владелец для относительных путей в bucket (users/{id}/audio/...) */
+  explicitUserId?: string | null
+): string | null {
   if (audioPath == null || String(audioPath).trim() === '') {
-    return '';
+    return null;
   }
 
   const raw = String(audioPath).trim();
@@ -168,10 +187,18 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   if (shouldUseStorage) {
     // Используем Supabase Storage
     // normalizedPath может быть с подпапками, например "23/01-Barnums-Fijian-Mermaid-1644.wav"
-    const userId = getUserUserId();
+    const userId =
+      explicitUserId !== undefined &&
+      explicitUserId !== null &&
+      String(explicitUserId).trim() !== ''
+        ? String(explicitUserId).trim()
+        : getUserUserId();
     if (!userId) {
-      console.error('❌ [getUserAudioUrl] userId is required for storage paths (sign in).');
-      return '';
+      console.error(
+        '[BUG] userId is missing in getUserAudioUrl for storage path (pass explicitUserId or sign in).',
+        { audioPath: normalizedPath }
+      );
+      return null;
     }
     return getStorageFileUrl({
       userId,

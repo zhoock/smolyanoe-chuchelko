@@ -30,6 +30,8 @@ interface SyncLyricsModalProps {
   trackId: string;
   trackTitle: string;
   trackSrc?: string;
+  /** Владелец файла в Storage (users/{id}/audio/...) */
+  mediaOwnerUserId?: string;
   /** Длительность из метаданных трека (сек), если audio.duration ещё NaN */
   trackDurationSeconds?: number;
   authorship?: string; // fallback
@@ -96,6 +98,7 @@ export function SyncLyricsModal({
   trackId,
   trackTitle,
   trackSrc,
+  mediaOwnerUserId,
   trackDurationSeconds,
   authorship: propAuthorship,
   onClose,
@@ -123,10 +126,10 @@ export function SyncLyricsModal({
   // ключ текущего трека/языка
   const keyNow = `${albumId}::${trackId}::${lang}`;
 
-  const audioPlaybackUrl = useMemo(
-    () => (trackSrc?.trim() ? getUserAudioUrl(trackSrc) : ''),
-    [trackSrc]
-  );
+  const audioPlaybackUrl = useMemo(() => {
+    if (!trackSrc?.trim()) return null;
+    return getUserAudioUrl(trackSrc, undefined, mediaOwnerUserId);
+  }, [trackSrc, mediaOwnerUserId]);
 
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;

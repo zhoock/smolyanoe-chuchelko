@@ -1842,6 +1842,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                     {blocks.map((block, index) => (
                       <React.Fragment key={block.id}>
                         <SortableBlock
+                          articleOwnerUserId={article.userId ?? undefined}
                           block={block}
                           index={index}
                           isFocused={focusBlockId === block.id}
@@ -1999,6 +2000,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           {/* Модал редактирования карусели */}
           {carouselEditModal && (
             <CarouselEditModal
+              mediaOwnerUserId={article.userId ?? undefined}
               blockId={carouselEditModal!.blockId}
               initialImageKeys={carouselEditModal!.imageKeys}
               initialCaption={carouselEditModal!.caption}

@@ -682,6 +682,7 @@ function UserDashboard() {
     syncedLyrics?: { text: string; startTime: number; endTime?: number }[];
     authorship?: string;
     trackSrc?: string;
+    mediaOwnerUserId?: string;
   } | null>(null);
   const [syncLyricsModal, setSyncLyricsModal] = useState<{
     isOpen: boolean;
@@ -689,6 +690,7 @@ function UserDashboard() {
     trackId: string;
     trackTitle: string;
     trackSrc?: string;
+    mediaOwnerUserId?: string;
     trackDurationSeconds?: number;
     lyricsText?: string;
     authorship?: string;
@@ -1794,17 +1796,25 @@ function UserDashboard() {
         syncedLyricsCount: syncedLyrics?.length || 0,
       });
 
+      if (track?.src?.trim() && !album?.userId) {
+        console.error('[BUG] album.userId missing', { albumId, context: 'previewLyricsModal' });
+      }
+
       setPreviewLyricsModal({
         isOpen: true,
         lyrics,
         syncedLyrics: syncedLyrics || undefined,
         authorship: mergedPrev || storedPrevAuthorship || undefined,
         trackSrc: track?.src,
+        mediaOwnerUserId: album?.userId,
       });
     } else if (action === 'sync') {
       const album = albumsData.find((a) => a.id === albumId);
       const track = album?.tracks.find((t) => t.id === trackId);
       if (track) {
+        if (track.src?.trim() && !album?.userId) {
+          console.error('[BUG] album.userId missing', { albumId, context: 'syncLyricsModal' });
+        }
         const lyricsText = getTrackLyricsText(albumId, trackId);
         const trackDurationSeconds = parseTrackDurationToSeconds(track.duration);
         setSyncLyricsModal({
@@ -1813,6 +1823,7 @@ function UserDashboard() {
           trackId,
           trackTitle,
           trackSrc: track.src,
+          mediaOwnerUserId: album?.userId,
           trackDurationSeconds,
           lyricsText,
           authorship: track.authorship,
@@ -2004,12 +2015,17 @@ function UserDashboard() {
     const cached = getCachedAuthorship(albumId, trackId, lang);
     const mergedPreview = (track?.authorship && track.authorship.trim()) || cached?.trim() || '';
 
+    if (track?.src?.trim() && !album?.userId) {
+      console.error('[BUG] album.userId missing', { albumId, context: 'previewLyricsFromEdit' });
+    }
+
     setPreviewLyricsModal({
       isOpen: true,
       lyrics,
       syncedLyrics: syncedLyrics || undefined,
       authorship: mergedPreview || storedAuthorshipPreview || undefined,
       trackSrc: track?.src,
+      mediaOwnerUserId: album?.userId,
     });
   };
 
@@ -2024,6 +2040,9 @@ function UserDashboard() {
     const album = albumsData.find((a) => a.id === albumId);
     const track = album?.tracks.find((t) => t.id === trackId);
     if (track) {
+      if (track.src?.trim() && !album?.userId) {
+        console.error('[BUG] album.userId missing', { albumId, context: 'syncLyricsFromEdit' });
+      }
       const trackDurationSeconds = parseTrackDurationToSeconds(track.duration);
       // Используем переданный текст напрямую (он уже сохранён через handleSaveLyrics)
       setSyncLyricsModal({
@@ -2032,6 +2051,7 @@ function UserDashboard() {
         trackId,
         trackTitle,
         trackSrc: track.src,
+        mediaOwnerUserId: album?.userId,
         trackDurationSeconds,
         lyricsText: currentLyrics,
         authorship: currentAuthorship,
@@ -2169,6 +2189,28 @@ function UserDashboard() {
                           <div className="user-dashboard__albums-list">
                             {albumsData.map((album, index) => {
                               const isExpanded = expandedAlbumId === album.id;
+                              if (album.cover && !album.userId) {
+                                console.error('[BUG] album.userId missing', {
+                                  albumId: album.id,
+                                  context: 'albumListThumbnail',
+                                });
+                              }
+                              const coverThumbBase =
+                                album.cover && album.userId
+                                  ? getUserImageUrl(
+                                      album.cover,
+                                      'albums',
+                                      '-128.webp',
+                                      undefined,
+                                      album.userId
+                                    )
+                                  : null;
+                              if (album.cover && album.userId && coverThumbBase == null) {
+                                console.error(
+                                  '[BUG] UserDashboard album thumbnail: getUserImageUrl returned null',
+                                  { albumId: album.id, albumUserId: album.userId }
+                                );
+                              }
                               return (
                                 <React.Fragment key={album.id}>
                                   <div
@@ -2185,10 +2227,10 @@ function UserDashboard() {
                                     aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
                                   >
                                     <div className="user-dashboard__album-thumbnail">
-                                      {album.cover ? (
+                                      {album.cover && coverThumbBase ? (
                                         <img
                                           key={`cover-${album.id}-${album.cover}-${album.coverUpdatedAt || ''}`}
-                                          src={`${getUserImageUrl(album.cover, 'albums', '-128.webp')}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
+                                          src={`${coverThumbBase}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
                                           alt={album.title}
                                           onError={(e) => {
                                             const img = e.target as HTMLImageElement;
@@ -2198,6 +2240,11 @@ function UserDashboard() {
                                               img.src = `${currentSrc.split('&v=')[0]}&v=${album.cover}&_retry=${Date.now()}`;
                                             }
                                           }}
+                                        />
+                                      ) : album.cover ? (
+                                        <img
+                                          src="/images/album-placeholder.png"
+                                          alt={album.title}
                                         />
                                       ) : (
                                         <img
@@ -2496,6 +2543,13 @@ function UserDashboard() {
                           <div className="user-dashboard__albums-list">
                             {articlesFromStore.map((article, index) => {
                               const isExpanded = expandedArticleId === article.articleId;
+                              if (article.img && !article.userId) {
+                                console.error('[BUG] article.userId missing', {
+                                  articleId: article.articleId,
+                                  context: 'articlesList',
+                                });
+                              }
+                              const articleOwnerId = article.userId;
                               return (
                                 <React.Fragment key={article.articleId}>
                                   <div
@@ -2516,7 +2570,17 @@ function UserDashboard() {
                                     <div className="user-dashboard__album-thumbnail">
                                       {article.img ? (
                                         <img
-                                          src={getUserImageUrl(article.img, 'articles')}
+                                          src={
+                                            articleOwnerId
+                                              ? (getUserImageUrl(
+                                                  article.img,
+                                                  'articles',
+                                                  '.jpg',
+                                                  undefined,
+                                                  articleOwnerId
+                                                ) ?? '/images/album-placeholder.png')
+                                              : '/images/album-placeholder.png'
+                                          }
                                           alt={article.nameArticle}
                                           loading="lazy"
                                           decoding="async"
@@ -2576,13 +2640,34 @@ function UserDashboard() {
 
                                           if (hasCover) {
                                             const previewUrl =
-                                              coverState?.preview ||
-                                              getUserImageUrl(article.img || '', 'articles');
+                                              coverState?.preview ??
+                                              (article.img && articleOwnerId
+                                                ? getUserImageUrl(
+                                                    article.img,
+                                                    'articles',
+                                                    '.jpg',
+                                                    undefined,
+                                                    articleOwnerId
+                                                  )
+                                                : null);
+                                            if (
+                                              previewUrl == null &&
+                                              article.img &&
+                                              !coverState?.preview &&
+                                              articleOwnerId
+                                            ) {
+                                              console.error(
+                                                '[BUG] UserDashboard article cover preview: getUserImageUrl returned null',
+                                                { articleId: article.articleId, articleOwnerId }
+                                              );
+                                            }
                                             return (
                                               <div className="user-dashboard__article-cover-wrap">
                                                 <div className="user-dashboard__article-cover-preview">
                                                   <img
-                                                    src={previewUrl}
+                                                    src={
+                                                      previewUrl ?? '/images/album-placeholder.png'
+                                                    }
                                                     alt="Article cover preview"
                                                     className="user-dashboard__article-cover-image"
                                                   />
@@ -2934,6 +3019,7 @@ function UserDashboard() {
           syncedLyrics={previewLyricsModal.syncedLyrics}
           authorship={previewLyricsModal.authorship}
           trackSrc={previewLyricsModal.trackSrc}
+          mediaOwnerUserId={previewLyricsModal.mediaOwnerUserId}
           onClose={() => setPreviewLyricsModal(null)}
         />
       )}
@@ -2946,6 +3032,7 @@ function UserDashboard() {
           trackId={syncLyricsModal.trackId}
           trackTitle={syncLyricsModal.trackTitle}
           trackSrc={syncLyricsModal.trackSrc}
+          mediaOwnerUserId={syncLyricsModal.mediaOwnerUserId}
           trackDurationSeconds={syncLyricsModal.trackDurationSeconds}
           authorship={syncLyricsModal.authorship}
           onClose={() => setSyncLyricsModal(null)}
