@@ -77,6 +77,8 @@ interface AlbumLocalePayload {
 
 interface AlbumData {
   userId?: string;
+  /** Первичный ключ строки в БД (`albums.id`), для платёжных API вместе с `albumId`. */
+  dbAlbumId?: string;
   albumId: string;
   artist: string;
   album: string;
@@ -284,6 +286,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
 
   return {
     userId: album.user_id || undefined,
+    dbAlbumId: album.id,
     albumId: album.album_id,
     artist: album.artist,
     album: album.album,
@@ -621,6 +624,7 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
   const tracks = mergeTrackPayloads(sortedForTracks);
   return {
     userId: shared.userId,
+    dbAlbumId: shared.dbAlbumId,
     albumId: shared.albumId,
     artist: shared.artist,
     album: sharedAlbumTitle,

@@ -3,3 +3,4 @@ export {
   hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
 } from './ui/ServiceButtons';
+export { useShowAlbumPurchaseSection } from './lib/useYooKassaShopAvailableForAlbum';

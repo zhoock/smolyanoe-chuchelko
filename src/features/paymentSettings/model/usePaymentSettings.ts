@@ -26,7 +26,11 @@ interface UsePaymentSettingsReturn {
   setLocalSecretKey: Dispatch<SetStateAction<Record<PaymentProvider, string>>>;
   setShowForm: Dispatch<SetStateAction<Record<PaymentProvider, boolean>>>;
   loadSettings: () => Promise<void>;
-  handleConnect: (provider: PaymentProvider) => Promise<void>;
+  handleConnect: (
+    provider: PaymentProvider,
+    shopIdFromForm?: string,
+    secretKeyFromForm?: string
+  ) => Promise<void>;
   handleDisconnect: (provider: PaymentProvider) => Promise<void>;
 }
 
@@ -107,8 +111,14 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
     loadSettings();
   }, [loadSettings]);
 
-  const handleConnect = async (provider: PaymentProvider) => {
-    if (!shopId.trim() || !secretKey.trim()) {
+  const handleConnect = async (
+    provider: PaymentProvider,
+    shopIdFromForm?: string,
+    secretKeyFromForm?: string
+  ) => {
+    const sid = (shopIdFromForm ?? shopId).trim();
+    const sec = (secretKeyFromForm ?? secretKey).trim();
+    if (!sid || !sec) {
       setError('Пожалуйста, заполните все поля');
       return;
     }
@@ -121,8 +131,8 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
       const result = await savePaymentSettings({
         userId,
         provider,
-        shopId: shopId.trim(),
-        secretKey: secretKey.trim(),
+        shopId: sid,
+        secretKey: sec,
         isActive: true,
       });
 

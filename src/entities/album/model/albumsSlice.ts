@@ -235,8 +235,10 @@ export const fetchAlbums = createAsyncThunk<
             })
           : [];
 
+        const rawAlbum = album as Record<string, unknown>;
         return {
           userId: album.userId,
+          dbAlbumId: typeof rawAlbum.dbAlbumId === 'string' ? rawAlbum.dbAlbumId : undefined,
           albumId: album.albumId,
           artist: album.artist,
           album: album.album,

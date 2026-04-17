@@ -174,9 +174,11 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
                     type="button"
                     className="payment-settings__save-button"
                     onClick={() => {
-                      setShopId(localShopId[provider.id] || '');
-                      setSecretKey(localSecretKey[provider.id] || '');
-                      handleConnect(provider.id);
+                      const sid = localShopId[provider.id] || '';
+                      const sec = localSecretKey[provider.id] || '';
+                      setShopId(sid);
+                      setSecretKey(sec);
+                      void handleConnect(provider.id, sid, sec);
                     }}
                     disabled={
                       isSaving ||

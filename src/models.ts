@@ -46,6 +46,8 @@ export type IAlbumTranslations = Partial<Record<SupportedLang, IAlbumTranslation
 
 export interface IAlbums {
   userId?: string;
+  /** Первичный ключ `albums.id` (UUID), если пришёл из API — для ЮKassa и create-payment. */
+  dbAlbumId?: string;
   /** Идентификатор альбома */
   albumId?: string;
   /**

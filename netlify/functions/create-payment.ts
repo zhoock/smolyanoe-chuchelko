@@ -35,6 +35,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
+import { resolveAlbumSellerUserId } from './lib/resolveAlbumSellerUserId';
 import dns from 'node:dns';
 
 // Форсируем IPv4 для избежания проблем с fetch в некоторых сетях
@@ -111,14 +112,7 @@ async function resolveSellerUserIdForPayment(
     return { ok: true, sellerUserId: row.user_id };
   }
 
-  const ar = await query<{ user_id: string | null }>(
-    'SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1',
-    [data.albumId]
-  );
-  if (ar.rows.length === 0) {
-    return { ok: false, statusCode: 404, body: { success: false, error: 'Album not found' } };
-  }
-  const sellerUserId = ar.rows[0].user_id;
+  const sellerUserId = await resolveAlbumSellerUserId(data.albumId);
   if (!sellerUserId) {
     return {
       ok: false,

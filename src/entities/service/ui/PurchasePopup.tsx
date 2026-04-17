@@ -12,6 +12,7 @@ import { useCart } from '../model/CartContext';
 import './PurchasePopup.style.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
+import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 
 type Step = 'cart' | 'checkout';
 
@@ -314,7 +315,8 @@ function CheckoutStep({
           : '';
 
       // Создаем платеж через ЮKassa API
-      if (!album.albumId) {
+      const albumKey = getAlbumKeyForPaymentApis(album);
+      if (!albumKey) {
         setPaymentError('Album ID is missing. Please try again.');
         setIsPaymentLoading(false);
         return;
@@ -325,7 +327,7 @@ function CheckoutStep({
         amount: total,
         currency,
         description,
-        albumId: album.albumId,
+        albumId: albumKey,
         customerEmail: email,
         returnUrl,
         billingData: {

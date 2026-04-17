@@ -34,40 +34,53 @@ export interface CreatePaymentResponse {
 export type { PaymentProvider, UserPaymentSettings, PaymentSettingsResponse } from './types';
 export { getPaymentSettings, savePaymentSettings, disconnectPaymentProvider } from './settings';
 
+/** Только дедупликация параллельных запросов; после завершения запись снимается, чтобы после подключения ЮKassa повторный запрос увидел актуальные данные в БД. */
+const yookassaShopIdInflight = new Map<string, Promise<{ shopId?: string; error?: string }>>();
+
 /**
  * Shop ID YooKassa продавца альбома для Checkout.js (требуется активная ЮKassa у артиста).
+ * `albumId` — UUID `albums.id` или строка `albums.album_id` (как в URL магазина).
  */
 export async function getYooKassaShopId(
   albumId: string
 ): Promise<{ shopId?: string; error?: string }> {
-  try {
-    const qs = new URLSearchParams({ albumId });
-    const response = await fetch(`/api/yookassa-shop-id?${qs.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+  let pending = yookassaShopIdInflight.get(albumId);
+  if (!pending) {
+    pending = (async (): Promise<{ shopId?: string; error?: string }> => {
+      try {
+        const qs = new URLSearchParams({ albumId });
+        const response = await fetch(`/api/yookassa-shop-id?${qs.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({
+            error: `HTTP ${response.status}: ${response.statusText}`,
+          }));
+          return { error: errorData.error || `HTTP ${response.status}` };
+        }
+
+        const data = await response.json();
+        if (data.success && data.shopId) {
+          return { shopId: data.shopId };
+        }
+
+        return { error: data.error || 'Shop ID not found' };
+      } catch (error) {
+        console.error('Error getting YooKassa Shop ID:', error);
+        return {
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        };
+      }
+    })().finally(() => {
+      yookassaShopIdInflight.delete(albumId);
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      return { error: errorData.error || `HTTP ${response.status}` };
-    }
-
-    const data = await response.json();
-    if (data.success && data.shopId) {
-      return { shopId: data.shopId };
-    }
-
-    return { error: data.error || 'Shop ID not found' };
-  } catch (error) {
-    console.error('Error getting YooKassa Shop ID:', error);
-    return {
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
+    yookassaShopIdInflight.set(albumId, pending);
   }
+  return pending;
 }
 
 /**

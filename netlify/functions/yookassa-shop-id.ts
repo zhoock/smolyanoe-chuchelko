@@ -5,16 +5,13 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
+import { resolveAlbumSellerUserId } from './lib/resolveAlbumSellerUserId';
 
 interface ShopIdResponse {
   success: boolean;
   shopId?: string;
   error?: string;
   message?: string;
-}
-
-function isValidUUID(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 export const handler: Handler = async (
@@ -62,23 +59,9 @@ export const handler: Handler = async (
       };
     }
 
-    if (!isValidUUID(albumId)) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'albumId must be a valid UUID',
-        } as ShopIdResponse),
-      };
-    }
+    const sellerId = await resolveAlbumSellerUserId(albumId);
 
-    const albumRow = await query<{ user_id: string | null }>(
-      'SELECT user_id FROM albums WHERE album_id = $1 LIMIT 1',
-      [albumId]
-    );
-
-    if (albumRow.rows.length === 0 || !albumRow.rows[0].user_id) {
+    if (!sellerId) {
       return {
         statusCode: 404,
         headers,
@@ -88,8 +71,6 @@ export const handler: Handler = async (
         } as ShopIdResponse),
       };
     }
-
-    const sellerId = albumRow.rows[0].user_id;
 
     const settings = await query<{ shop_id: string | null }>(
       `SELECT shop_id FROM user_payment_settings

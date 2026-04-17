@@ -9,8 +9,8 @@ import { AlbumTracks } from '@widgets/albumTracks';
 import { Share } from '@features/share';
 import {
   ServiceButtons,
-  hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
+  useShowAlbumPurchaseSection,
 } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
@@ -38,6 +38,7 @@ export default function Album() {
   const albumsError = useAppSelector(selectAlbumsError);
   const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const showPurchaseSection = useShowAlbumPurchaseSection(album);
 
   // 🔍 DEBUG: Логируем данные альбома для диагностики
   useEffect(() => {
@@ -210,7 +211,7 @@ export default function Album() {
           <AlbumTracks album={album} />
         </div>
 
-        {hasAlbumPurchaseSectionContent(album) && (
+        {showPurchaseSection === true && (
           <div className="item">
             <ServiceButtons album={album} section="Купить" />
           </div>

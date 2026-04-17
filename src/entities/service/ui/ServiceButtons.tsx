@@ -4,6 +4,13 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { String, IAlbums } from '@models';
 import { GetButton } from './GetButton';
 import { useCart } from '../model/CartContext';
+import {
+  getAllowDownloadSaleValue,
+  hasAlbumPurchaseSectionContent,
+  hasAlbumStreamSectionContent,
+  hasTruthyButtonUrl,
+} from '../lib/albumPurchaseUtils';
+import { useYooKassaShopAvailableForAlbum } from '../lib/useYooKassaShopAvailableForAlbum';
 import './style.scss';
 
 type ServiceButtonsProps = {
@@ -11,38 +18,10 @@ type ServiceButtonsProps = {
   section: string;
 };
 
-function getAllowDownloadSaleValue(album: IAlbums): string {
-  return album?.release && typeof album.release === 'object' && 'allowDownloadSale' in album.release
-    ? String((album.release as Record<string, unknown>).allowDownloadSale)
-    : 'no';
-}
-
-function hasTruthyButtonUrl(buttons: String | undefined, keys: readonly string[]): boolean {
-  return keys.some((key) => Boolean(buttons?.[key]?.trim()));
-}
-
-/** Есть ли что показать в блоке «Купить»: скачивание/продажа или хотя бы одна ссылка (iTunes / Bandcamp / Amazon). */
-export function hasAlbumPurchaseSectionContent(album: IAlbums): boolean {
-  const buttons = album?.buttons as String | undefined;
-  const allowDownloadSale = getAllowDownloadSaleValue(album);
-  const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
-  const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
-  return isDownloadAllowed || hasPurchaseLinks;
-}
-
-/** Есть ли что показать в блоке «Слушать»: хотя бы одна стриминговая ссылка. */
-export function hasAlbumStreamSectionContent(album: IAlbums): boolean {
-  const buttons = album?.buttons as String | undefined;
-  return hasTruthyButtonUrl(buttons, [
-    'apple',
-    'vk',
-    'youtube',
-    'spotify',
-    'yandex',
-    'deezer',
-    'tidal',
-  ]);
-}
+export {
+  hasAlbumPurchaseSectionContent,
+  hasAlbumStreamSectionContent,
+} from '../lib/albumPurchaseUtils';
 
 function ServiceButtonsContent({
   album,
@@ -56,6 +35,14 @@ function ServiceButtonsContent({
   const { addToCart, cartAlbums } = useCart();
   const buttons = album?.buttons as String;
 
+  const allowDownloadSale = getAllowDownloadSaleValue(album);
+  const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
+  const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
+
+  const yookassaCheckEnabled = section === 'Купить' && isDownloadAllowed;
+  const { loading: yookassaLoading, available: yookassaAvailable } =
+    useYooKassaShopAvailableForAlbum(album, yookassaCheckEnabled);
+
   if (section === 'Купить' && !hasAlbumPurchaseSectionContent(album)) {
     return null;
   }
@@ -63,12 +50,15 @@ function ServiceButtonsContent({
     return null;
   }
 
-  // Проверяем, разрешено ли скачивание/продажа
-  // Если поле отсутствует или равно 'no', кнопка не показывается
-  const allowDownloadSale = getAllowDownloadSaleValue(album);
-  const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
+  if (section === 'Купить' && !hasPurchaseLinks && isDownloadAllowed) {
+    if (yookassaLoading) {
+      return null;
+    }
+    if (!yookassaAvailable) {
+      return null;
+    }
+  }
 
-  // Проверяем, есть ли альбом уже в корзине
   const isInCart = album.albumId ? cartAlbums.some((a) => a.albumId === album.albumId) : false;
 
   const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -77,6 +67,9 @@ function ServiceButtonsContent({
       addToCart(album);
     }
   };
+
+  const showDownloadButton =
+    isDownloadAllowed && !yookassaLoading && yookassaAvailable && section === 'Купить';
 
   return (
     <div className="service-buttons">
@@ -87,7 +80,7 @@ function ServiceButtonsContent({
             className="service-buttons__list"
             aria-label="Блок со ссылками на платные музыкальные агрегаторы"
           >
-            {isDownloadAllowed && (
+            {showDownloadButton && (
               <li className="service-buttons__list-item">
                 <a
                   href="#"
