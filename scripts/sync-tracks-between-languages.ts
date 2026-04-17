@@ -47,13 +47,18 @@ async function syncTracksBetweenLanguages() {
   console.log('🔄 Синхронизируем треки между языковыми версиями альбомов...\n');
 
   try {
-    // Находим пользователя
+    const targetEmail = process.env.SCRIPT_TARGET_EMAIL?.trim();
+    if (!targetEmail) {
+      console.error('❌ Задайте SCRIPT_TARGET_EMAIL (пользователь в БД).');
+      return;
+    }
+
     const userResult = await query<{ id: string }>(`SELECT id FROM users WHERE email = $1`, [
-      'zhoock@zhoock.ru',
+      targetEmail,
     ]);
 
     if (userResult.rows.length === 0) {
-      console.error('❌ Пользователь zhoock@zhoock.ru не найден');
+      console.error('❌ Пользователь не найден', { email: targetEmail });
       return;
     }
 

@@ -249,7 +249,7 @@ export async function loadHeaderImagesFromDatabase(
         if (url.startsWith('users/') && url.includes('/hero/')) {
           // Извлекаем путь к файлу из storagePath
           // Формат: users/{userId}/hero/hero-123-1920.jpg
-          // Для обратной совместимости поддерживаем и users/zhoock/hero/ и users/{UUID}/hero/
+          // storagePath: users/{userId}/hero/...
 
           // Определяем origin более надежным способом
           let origin = '';

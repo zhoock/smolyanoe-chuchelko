@@ -365,7 +365,7 @@ function PaymentSuccess() {
                           <>
                             <div className="payment-success__success-message">
                               <img
-                                src="/images/users/zhoock/tarbaby/successful-payment.png"
+                                src="/images/illustrations/successful-payment.png"
                                 alt="Оплата успешна"
                                 className="payment-success__success-icon"
                               />

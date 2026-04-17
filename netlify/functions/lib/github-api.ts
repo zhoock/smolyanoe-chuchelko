@@ -129,7 +129,13 @@ export async function updateAlbumsJson(
   albumId: string,
   token?: string
 ): Promise<{ success: boolean; error?: string }> {
-  const owner = process.env.GITHUB_OWNER || 'zhoock';
+  const owner = process.env.GITHUB_OWNER;
+  if (!owner?.trim()) {
+    return {
+      success: false,
+      error: 'GITHUB_OWNER is not configured',
+    };
+  }
   const repo = process.env.GITHUB_REPO || 'smolyanoe-chuchelko';
   const path = `src/assets/albums-${lang}.json`;
   const branch = process.env.GITHUB_BRANCH || 'main';

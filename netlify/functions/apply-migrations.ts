@@ -21,6 +21,15 @@ interface MigrationResult {
   error?: string;
 }
 
+/** Email владельца сайта для исторических SQL (миграции 010, 024); без хардкода в коде */
+function ownerEmailSqlEscaped(): string {
+  const e = process.env.SITE_OWNER_EMAIL?.trim().toLowerCase();
+  if (!e) {
+    throw new Error('SITE_OWNER_EMAIL is required for migrations 010 and 024');
+  }
+  return e.replace(/'/g, "''");
+}
+
 // Встроенные SQL миграции (чтобы не зависеть от файловой системы в Netlify Functions)
 const MIGRATION_003 = `
 -- Миграция: Создание таблиц для мультипользовательской системы
@@ -199,9 +208,10 @@ WHERE id IN (
 );
 `;
 
-const MIGRATION_010 = `
--- Миграция: Привязка всех публичных данных к владельцу сайта
--- Владелец: zhoock@zhoock.ru
+function buildMigration010(): string {
+  const esc = ownerEmailSqlEscaped();
+  return `
+-- Миграция: Привязка всех публичных данных к владельцу сайта (email из SITE_OWNER_EMAIL)
 -- Все публичные данные (user_id IS NULL) привязываются к этому пользователю
 -- Новые пользователи получат пустой сайт
 
@@ -216,13 +226,13 @@ BEGIN
   -- Находим ID пользователя-владельца по email
   SELECT id INTO owner_user_id
   FROM users
-  WHERE email = 'zhoock@zhoock.ru'
+  WHERE email = '${esc}'
   LIMIT 1;
 
   -- Если пользователь не найден, создаём его
   IF owner_user_id IS NULL THEN
     INSERT INTO users (email, name, is_active)
-    VALUES ('zhoock@zhoock.ru', 'Site Owner', true)
+    VALUES ('${esc}', 'Site Owner', true)
     RETURNING id INTO owner_user_id;
   END IF;
 
@@ -262,6 +272,7 @@ BEGIN
   GET DIAGNOSTICS articles_updated = ROW_COUNT;
 END $$;
 `;
+}
 
 const MIGRATION_011 = `
 -- Миграция: Обновление имен обложек альбомов
@@ -539,19 +550,20 @@ ADD COLUMN IF NOT EXISTS site_name VARCHAR(255);
 COMMENT ON COLUMN users.site_name IS 'Название сайта/группы (Site/Band Name) из формы регистрации';
 `;
 
-const MIGRATION_024 = `
+function buildMigration024(): string {
+  const esc = ownerEmailSqlEscaped();
+  return `
 -- Миграция: Установка site_name для владельца сайта
 -- Дата: 2025
 
--- Обновляем site_name для пользователя zhoock@zhoock.ru
 UPDATE users
 SET site_name = 'Смоляное чучелко',
     updated_at = NOW()
-WHERE email = 'zhoock@zhoock.ru' AND is_active = true;
+WHERE email = '${esc}' AND is_active = true;
 
--- Комментарий
 COMMENT ON COLUMN users.site_name IS 'Название сайта/группы (Site/Band Name) из формы регистрации';
 `;
+}
 
 const MIGRATION_026 = `
 -- Миграция: Преобразование the_band в двуязычный формат (RU/EN)
@@ -691,17 +703,9 @@ BEGIN
 
   SELECT id INTO chosen_default_id
   FROM users
-  WHERE email = 'zhoock@zhoock.ru' AND is_active = true
-  ORDER BY created_at ASC
+  WHERE is_active = true
+  ORDER BY created_at ASC, id ASC
   LIMIT 1;
-
-  IF chosen_default_id IS NULL THEN
-    SELECT id INTO chosen_default_id
-    FROM users
-    WHERE is_active = true
-    ORDER BY created_at ASC, id ASC
-    LIMIT 1;
-  END IF;
 
   IF chosen_default_id IS NULL THEN
     RAISE EXCEPTION 'Configuration error: no active users found to set default public site';
@@ -719,10 +723,21 @@ const MIGRATION_029 = `
 ALTER TABLE albums ADD COLUMN IF NOT EXISTS photographer TEXT;
 ALTER TABLE albums ADD COLUMN IF NOT EXISTS photographer_url TEXT;
 ALTER TABLE albums ADD COLUMN IF NOT EXISTS designer TEXT;
-ALTER TABLE albums ADD COLUMN IF NOT EXISTS designer_url TEXT;
+  ALTER TABLE albums ADD COLUMN IF NOT EXISTS designer_url TEXT;
 `;
 
-const MIGRATIONS: Record<string, string> = {
+const MIGRATION_031 = `
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(32) NOT NULL DEFAULT 'user';
+COMMENT ON COLUMN users.role IS 'Уровень доступа: user | admin';
+UPDATE users
+SET role = 'admin'
+WHERE is_default_public_site = true
+  AND is_active = true;
+`;
+
+type MigrationSql = string | (() => string);
+
+const MIGRATIONS: Record<string, MigrationSql> = {
   '003_create_users_albums_tracks.sql': MIGRATION_003,
   '004_add_user_id_to_synced_lyrics.sql': MIGRATION_004,
   '005_add_the_band_to_users.sql': MIGRATION_005,
@@ -730,7 +745,7 @@ const MIGRATIONS: Record<string, string> = {
   '007_alter_articles_user_id_nullable.sql': MIGRATION_007,
   '008_remove_duplicate_albums.sql': MIGRATION_008,
   '009_remove_duplicate_articles.sql': MIGRATION_009,
-  '010_claim_public_data_to_owner.sql': MIGRATION_010,
+  '010_claim_public_data_to_owner.sql': buildMigration010,
   '011_update_album_cover_names.sql': MIGRATION_011,
   '012_force_update_album_cover_names.sql': MIGRATION_012,
   '013_direct_update_album_covers.sql': MIGRATION_013,
@@ -739,11 +754,12 @@ const MIGRATIONS: Record<string, string> = {
   '017_add_is_draft_to_articles.sql': MIGRATION_017,
   '022_add_header_images_to_users.sql': MIGRATION_022,
   '023_add_site_name_to_users.sql': MIGRATION_023,
-  '024_set_site_name_for_owner.sql': MIGRATION_024,
+  '024_set_site_name_for_owner.sql': buildMigration024,
   '026_make_the_band_bilingual.sql': MIGRATION_026,
   '027_add_public_slug_and_default_flag.sql': MIGRATION_027,
   '028_backfill_public_slug_and_default_user.sql': MIGRATION_028,
   '029_album_locale_cover_credits.sql': MIGRATION_029,
+  '031_add_user_role.sql': MIGRATION_031,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -892,12 +908,14 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '027_add_public_slug_and_default_flag.sql',
       '028_backfill_public_slug_and_default_user.sql',
       '029_album_locale_cover_credits.sql',
+      '031_add_user_role.sql',
     ];
 
     const results: MigrationResult[] = [];
 
     for (const migrationFile of migrationFiles) {
-      const sql = MIGRATIONS[migrationFile];
+      const raw = MIGRATIONS[migrationFile];
+      const sql = typeof raw === 'function' ? raw() : raw;
 
       if (!sql) {
         console.error(`❌ Миграция не найдена: ${migrationFile}`);

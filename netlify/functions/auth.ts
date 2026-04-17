@@ -24,6 +24,7 @@ interface UserRow {
   name: string | null;
   password_hash: string;
   is_active: boolean;
+  role: string;
 }
 
 interface RegisterRequest {
@@ -52,6 +53,7 @@ interface AuthData {
     id: string;
     email: string;
     name: string | null;
+    role: 'user' | 'admin';
   };
 }
 
@@ -199,7 +201,7 @@ export const handler: Handler = async (
           result = await query<UserRow>(
             `INSERT INTO users (email, name, username, site_name, public_slug, password, password_hash, is_active)
              VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-             RETURNING id, email, name`,
+             RETURNING id, email, name, role`,
             [
               normalizedEmail,
               data.name || null,
@@ -229,7 +231,7 @@ export const handler: Handler = async (
       const user = result.rows[0];
 
       // Генерируем JWT токен
-      const token = generateToken(user.id, user.email);
+      const token = generateToken(user.id, user.email, user.role === 'admin' ? 'admin' : 'user');
 
       return createSuccessResponse(
         {
@@ -238,6 +240,7 @@ export const handler: Handler = async (
             id: user.id,
             email: user.email,
             name: user.name,
+            role: user.role === 'admin' ? 'admin' : 'user',
           },
         },
         201
@@ -254,7 +257,7 @@ export const handler: Handler = async (
 
       // Ищем пользователя
       const result = await query<UserRow>(
-        `SELECT id, email, name, password_hash, is_active
+        `SELECT id, email, name, password_hash, is_active, role
          FROM users
          WHERE email = $1`,
         [data.email.toLowerCase().trim()],
@@ -279,7 +282,7 @@ export const handler: Handler = async (
       }
 
       // Генерируем JWT токен
-      const token = generateToken(user.id, user.email);
+      const token = generateToken(user.id, user.email, user.role === 'admin' ? 'admin' : 'user');
 
       return createSuccessResponse({
         token,
@@ -287,6 +290,7 @@ export const handler: Handler = async (
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role === 'admin' ? 'admin' : 'user',
         },
       });
     }

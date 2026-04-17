@@ -7,7 +7,7 @@ export const NotFoundPage = () => {
 
   return (
     <section className="not-found main-background">
-      <img src="/images/users/zhoock/tarbaby/404.png" alt="404 - Страница не найдена" role="img" />
+      <img src="/images/illustrations/404.png" alt="404 - Страница не найдена" role="img" />
 
       <button type="button" onClick={() => navigate('/', { replace: true })}>
         Вернуться на главную

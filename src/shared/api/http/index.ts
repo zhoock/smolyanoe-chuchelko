@@ -1,6 +1,10 @@
+const safeEnv =
+  typeof process !== 'undefined' && process.env ? process.env : ({} as NodeJS.ProcessEnv);
+const rawAssetsBase = safeEnv.VITE_RAW_ASSETS_BASE_URL;
+
 const BASE_URL =
-  process.env.NODE_ENV === 'production'
-    ? 'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/main/src/assets'
+  safeEnv.NODE_ENV === 'production' && rawAssetsBase?.trim()
+    ? rawAssetsBase.trim().replace(/\/$/, '')
     : '/assets';
 
 export async function getJSON<T>(path: string, signal?: AbortSignal): Promise<T> {

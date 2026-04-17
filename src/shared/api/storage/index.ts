@@ -7,7 +7,7 @@ import {
   createSupabaseAdminClient,
   STORAGE_BUCKET_NAME,
 } from '@config/supabase';
-import { CURRENT_USER_CONFIG, getUserUserId, type ImageCategory } from '@config/user';
+import { getUserUserId, type ImageCategory } from '@config/user';
 
 export interface UploadFileOptions {
   userId?: string;
@@ -32,16 +32,7 @@ function getStoragePath(userId: string, category: ImageCategory, fileName: strin
   // Используем UUID пользователя для всех категорий
   // Это обеспечивает правильную изоляцию данных для мультипользовательской системы
 
-  // Обратная совместимость: если fileName уже содержит путь со старым 'zhoock', заменяем на UUID
-  // Это может произойти, если fileName содержит полный путь из базы данных
   let normalizedFileName = fileName;
-  if (normalizedFileName.includes('users/zhoock/')) {
-    console.warn(
-      '[getStoragePath] Found old path with "zhoock", replacing with UUID:',
-      normalizedFileName
-    );
-    normalizedFileName = normalizedFileName.replace(/users\/zhoock\//g, `users/${userId}/`);
-  }
 
   // Если fileName уже содержит полный путь (начинается с users/), возвращаем как есть
   if (normalizedFileName.startsWith('users/')) {
@@ -74,9 +65,13 @@ async function fileToBase64(file: File | Blob): Promise<string> {
  */
 export async function uploadFile(options: UploadFileOptions): Promise<string | null> {
   try {
-    // Получаем UUID текущего пользователя, или используем переданный userId, или fallback на 'zhoock'
-    const defaultUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
-    const { userId = defaultUserId, category, file, fileName, contentType } = options;
+    const resolvedUserId = options.userId ?? getUserUserId();
+    if (!resolvedUserId) {
+      console.error('❌ [uploadFile] userId is required (pass options.userId or sign in).');
+      return null;
+    }
+    const userId = resolvedUserId;
+    const { category, file, fileName, contentType } = options;
 
     const fileSizeMB = file.size / (1024 * 1024);
     console.log('📤 [uploadFile] Начало загрузки:', {
@@ -286,7 +281,7 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
 
 /**
  * Получить список файлов/папок в произвольном префиксе хранилища (public bucket)
- * @param prefix полный путь внутри bucket, например "users/zhoock/audio" или "users/zhoock/audio/23_Mixer"
+ * @param prefix полный путь внутри bucket, например "users/{uuid}/audio" или "users/{uuid}/audio/23_Mixer"
  */
 export async function listStorageByPrefix(prefix: string): Promise<string[] | null> {
   try {
@@ -346,7 +341,7 @@ export async function listStorageByPrefix(prefix: string): Promise<string[] | nu
 
 /**
  * Сформировать прокси URL по полному пути в Storage
- * @param storagePath полный путь, например "users/zhoock/audio/23_Mixer/01_FRB_drums.mp3"
+ * @param storagePath полный путь, например "users/{uuid}/audio/23_Mixer/01_FRB_drums.mp3"
  */
 export function buildProxyUrlFromPath(storagePath: string): string {
   const origin =
@@ -363,13 +358,20 @@ export function buildProxyUrlFromPath(storagePath: string): string {
 export async function uploadFileAdmin(options: UploadFileOptions): Promise<string | null> {
   try {
     const {
-      userId = CURRENT_USER_CONFIG.userId,
+      userId: explicitUserId,
       category,
       file,
       fileName,
       contentType,
       upsert = false,
     } = options;
+    const userId = explicitUserId;
+    if (!userId) {
+      console.error(
+        '❌ [uploadFileAdmin] userId is required (service uploads must target a specific user).'
+      );
+      return null;
+    }
 
     const supabase = createSupabaseAdminClient();
     if (!supabase) {
@@ -410,9 +412,13 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
  * @returns Публичный URL файла
  */
 export function getStorageFileUrl(options: GetFileUrlOptions): string {
-  // Получаем UUID текущего пользователя, или используем переданный userId, или fallback на UUID из конфига
-  const defaultUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
-  const { userId = defaultUserId, category, fileName } = options;
+  const resolvedUserId = options.userId ?? getUserUserId();
+  if (!resolvedUserId) {
+    console.error('❌ [getStorageFileUrl] userId is required (pass options.userId or sign in).');
+    return '';
+  }
+  const { category, fileName } = options;
+  const userId = resolvedUserId;
 
   // Убираем логирование для предотвращения бесконечных циклов
   // Если нужно отладить, используйте React DevTools или добавьте breakpoint
@@ -460,8 +466,15 @@ export function getStorageFileUrl(options: GetFileUrlOptions): string {
  */
 export async function getStorageSignedUrl(options: GetFileUrlOptions): Promise<string | null> {
   try {
-    const defaultUserId = getUserUserId() || CURRENT_USER_CONFIG.userId;
-    const { userId = defaultUserId, category, fileName, expiresIn = 3600 } = options;
+    const resolvedUserId = options.userId ?? getUserUserId();
+    if (!resolvedUserId) {
+      console.error(
+        '❌ [getStorageSignedUrl] userId is required (pass options.userId or sign in).'
+      );
+      return null;
+    }
+    const { category, fileName, expiresIn = 3600 } = options;
+    const userId = resolvedUserId;
 
     const supabase = createSupabaseClient();
     if (!supabase) {

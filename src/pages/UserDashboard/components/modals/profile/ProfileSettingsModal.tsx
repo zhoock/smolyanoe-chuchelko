@@ -28,7 +28,7 @@ export function ProfileSettingsModal({
   isOpen,
   onClose,
   userName = 'Site Owner',
-  userEmail = 'zhook@zhoock.ru',
+  userEmail = '',
 }: ProfileSettingsModalProps) {
   const { lang: currentLang, setLang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));

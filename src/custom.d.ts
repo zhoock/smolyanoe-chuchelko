@@ -20,6 +20,8 @@ declare global {
     readonly VITE_SUPABASE_URL?: string;
     readonly VITE_SUPABASE_ANON_KEY?: string;
     readonly VITE_USE_SUPABASE_STORAGE?: string;
+    /** Базовый URL для JSON/ассетов в production (например raw.githubusercontent.com/.../src/assets) */
+    readonly VITE_RAW_ASSETS_BASE_URL?: string;
   }
 
   interface ImportMeta {

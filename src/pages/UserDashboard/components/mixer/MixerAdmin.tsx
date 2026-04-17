@@ -9,7 +9,7 @@ import {
   createSupabaseClient,
   STORAGE_BUCKET_NAME,
 } from '@config/supabase';
-import { getUserUserId, CURRENT_USER_CONFIG } from '@config/user';
+import { getUserUserId } from '@config/user';
 import { Waveform } from '@shared/ui/waveform';
 
 interface MixerAdminProps {
@@ -62,7 +62,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
   const ensureTrackStems = useCallback(
     async (albumId: string, trackId: string) => {
       // Используем UUID пользователя из пропсов или получаем динамически
-      const storageUserId = userId || getUserUserId() || CURRENT_USER_CONFIG.userId;
+      const storageUserId = userId || getUserUserId();
       if (!storageUserId) {
         console.warn('⚠️ [MixerAdmin] No userId provided, cannot load stems');
         return;
@@ -284,7 +284,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
 
   const handleStemUpload = useCallback(
     async (albumId: string, track: TrackData, stemKey: StemKey, file: File) => {
-      const storageUserId = userId || getUserUserId() || CURRENT_USER_CONFIG.userId;
+      const storageUserId = userId || getUserUserId();
       if (!storageUserId) {
         setTrackStems((prev) => ({
           ...prev,
@@ -538,7 +538,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
 
   const handleStemCoverUpload = useCallback(
     async (albumId: string, track: TrackData, stemKey: StemKey, file: File) => {
-      const storageUserId = userId || getUserUserId() || CURRENT_USER_CONFIG.userId;
+      const storageUserId = userId || getUserUserId();
       if (!storageUserId) {
         setTrackStemCovers((prev) => ({
           ...prev,
@@ -645,7 +645,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
       }
 
       const trackFolder = track.id || (track as any).trackId || 'track';
-      const storageUserId = userId || getUserUserId() || CURRENT_USER_CONFIG.userId;
+      const storageUserId = userId || getUserUserId();
       if (!storageUserId) {
         console.warn('⚠️ [MixerAdmin] No userId provided, cannot delete stem cover');
         return;
@@ -924,13 +924,11 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
 
                                                     // Удаляем файл из Supabase Storage
                                                     if (stem.fileName) {
-                                                      if (!userId) {
+                                                      const storageUserId =
+                                                        userId || getUserUserId();
+                                                      if (!storageUserId) {
                                                         throw new Error('No userId available');
                                                       }
-                                                      const storageUserId =
-                                                        userId ||
-                                                        getUserUserId() ||
-                                                        CURRENT_USER_CONFIG.userId;
                                                       // ВАЖНО: Используем album.albumId (строковый ID, например "smolyanoechuchelko") вместо album.id (UUID)
                                                       const albumIdForPath =
                                                         album.albumId || album.id;

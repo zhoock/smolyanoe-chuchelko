@@ -202,7 +202,7 @@ function readCoverCreditsFromRow(
   designer: string;
   designerURL: string;
 } {
-  const row = album as Record<string, unknown>;
+  const row = album as unknown as Record<string, unknown>;
   /** После миграции 029 колонки есть в SELECT * — всегда читаем их (даже NULL), иначе пустые значения ошибочно брались из очищенного `release`. */
   const hasMigratedColumns =
     'photographer' in row ||

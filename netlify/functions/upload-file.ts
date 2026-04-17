@@ -17,7 +17,7 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import type { ImageCategory } from '../../src/config/user';
-import { CURRENT_USER_CONFIG } from '../../src/config/user';
+import { extractRoleFromToken } from './lib/jwt';
 import {
   createOptionsResponse,
   createErrorResponse,
@@ -108,8 +108,14 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Используем userId из токена или из запроса (если указан)
     const targetUserId = body.userId || userId;
 
-    // Проверяем, что пользователь загружает только в свою папку
-    if (targetUserId !== userId && targetUserId !== CURRENT_USER_CONFIG.userId) {
+    const authHeader =
+      (event.headers?.authorization as string | undefined) ||
+      (event.headers?.Authorization as string | undefined) ||
+      ((event as any).clientContext?.user?.token as string | undefined);
+    const isAdmin = extractRoleFromToken(authHeader) === 'admin';
+
+    // Своя папка или загрузка админом в папку другого пользователя
+    if (targetUserId !== userId && !isAdmin) {
       return createErrorResponse(403, 'Forbidden. You can only upload to your own folder.');
     }
 

@@ -36,7 +36,7 @@ describe('NotFoundPage integration tests', () => {
 
     const logo = screen.getByRole('img', { name: /404 - страница не найдена/i });
     expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute('src', '/images/users/zhoock/tarbaby/404.png');
+    expect(logo).toHaveAttribute('src', '/images/illustrations/404.png');
   });
 
   test('должен отобразить кнопку "Вернуться на главную"', () => {

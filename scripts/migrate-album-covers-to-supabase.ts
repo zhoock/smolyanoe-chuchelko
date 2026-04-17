@@ -49,10 +49,14 @@ import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Конфигурация
 const STORAGE_BUCKET_NAME = 'user-media';
-const USER_ID = 'zhoock'; // ID пользователя
-const LOCAL_ALBUMS_PATH = path.join(__dirname, '../src/images/users/zhoock/albums');
+const USER_ID = process.env.MIGRATION_TARGET_USER_ID?.trim();
+if (!USER_ID) {
+  console.error('❌ Задайте MIGRATION_TARGET_USER_ID (UUID пользователя в Storage).');
+  process.exit(1);
+}
+const legacyLocalDir = process.env.MIGRATION_LOCAL_IMAGES_USER_DIR?.trim() || 'legacy-user';
+const LOCAL_ALBUMS_PATH = path.join(__dirname, '../src/images/users', legacyLocalDir, 'albums');
 const STORAGE_ALBUMS_PATH = `users/${USER_ID}/albums`;
 
 // Получаем переменные окружения
@@ -103,7 +107,7 @@ function collectImageFiles(dir: string, baseDir: string = dir, albumFolder?: str
         const fileName = entry.name;
         // Формируем путь в Storage
         // ВСЕ файлы сохраняем в корень albums/ (без подпапок)
-        // Это нужно, потому что getUserImageUrl формирует путь как users/zhoock/albums/{fileName}
+        // Путь в Storage: users/{userId}/albums/{fileName}
         // и не учитывает подпапки
         const storagePath = `${STORAGE_ALBUMS_PATH}/${fileName}`;
 

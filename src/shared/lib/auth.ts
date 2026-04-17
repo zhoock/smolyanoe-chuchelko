@@ -9,6 +9,8 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
+  /** Роль с бэкенда; старые сессии могут не иметь поля */
+  role?: 'user' | 'admin';
 }
 
 export interface AuthResponse {

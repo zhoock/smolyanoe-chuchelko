@@ -84,7 +84,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // Извлекаем базовое имя файла из URL
     // URL может быть:
-    // 1. Proxy URL: /.netlify/functions/proxy-image?path=users%2Fzhoock%2Fhero%2Fhero-123-1920.jpg
+    // 1. Proxy URL: /.netlify/functions/proxy-image?path=users%2F{userId}%2Fhero%2Fhero-123-1920.jpg
     // 2. Полный URL: https://.../users/.../hero/hero-123-1920.jpg
     // 3. image-set() строка: image-set(url('.../hero-123-1920.jpg') ...)
     // 4. Storage path: users/{userId}/hero/hero-123-1920.jpg

@@ -1,4 +1,15 @@
 import { describe, test, expect } from '@jest/globals';
+
+const TEST_USER_ID = '00000000-0000-4000-8000-000000000001';
+
+jest.mock('@shared/lib/auth', () => ({
+  getUser: () => ({
+    id: '00000000-0000-4000-8000-000000000001',
+    email: 'test@example.com',
+    name: null,
+  }),
+}));
+
 import { getImageUrl, getUserImageUrl, formatDate } from '@shared/api/albums';
 
 describe('getImageUrl', () => {
@@ -11,17 +22,17 @@ describe('getImageUrl', () => {
   });
 
   test('использует новую структуру с userId и category', () => {
-    expect(getImageUrl('album_cover', '.jpg', { userId: 'zhoock', category: 'albums' })).toContain(
-      'users%2Fzhoock%2Falbums%2Falbum_cover.jpg'
-    );
+    expect(
+      getImageUrl('album_cover', '.jpg', { userId: TEST_USER_ID, category: 'albums' })
+    ).toMatch(/users%2F.*%2Falbums%2Falbum_cover\.jpg/);
   });
 
   test('работает с разными категориями', () => {
     expect(
-      getImageUrl('article_img', '.jpg', { userId: 'zhoock', category: 'articles' })
-    ).toContain('users%2Fzhoock%2Farticles%2Farticle_img.jpg');
-    expect(getImageUrl('avatar', '.png', { userId: 'zhoock', category: 'profile' })).toContain(
-      'users%2Fzhoock%2Fprofile%2Favatar.png'
+      getImageUrl('article_img', '.jpg', { userId: TEST_USER_ID, category: 'articles' })
+    ).toMatch(/users%2F.*%2Farticles%2Farticle_img\.jpg/);
+    expect(getImageUrl('avatar', '.png', { userId: TEST_USER_ID, category: 'profile' })).toMatch(
+      /users%2F.*%2Fprofile%2Favatar\.png/
     );
   });
 });

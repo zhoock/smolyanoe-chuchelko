@@ -34,7 +34,6 @@ if (existsSync(envPath)) {
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { uploadFileAdmin } from '../src/shared/api/storage';
-import { CURRENT_USER_CONFIG } from '../src/config/user';
 
 /**
  * Определяет MIME тип по расширению файла
@@ -80,6 +79,12 @@ async function readFilesRecursively(
  * Миграция локальных аудио файлов в Supabase Storage
  */
 async function migrateAudioFilesToStorage() {
+  const targetUserId = process.env.MIGRATION_TARGET_USER_ID?.trim();
+  if (!targetUserId) {
+    console.error('❌ Задайте MIGRATION_TARGET_USER_ID (UUID пользователя в Storage).');
+    process.exit(1);
+  }
+
   const audioDir = path.resolve(__dirname, '../src/audio');
 
   console.log('🚀 Начало миграции аудио файлов в Supabase Storage...\n');
@@ -127,6 +132,7 @@ async function migrateAudioFilesToStorage() {
       console.log(`   📤 Загрузка: ${storageFileName} (${fileSizeMB} MB)...`);
 
       const url = await uploadFileAdmin({
+        userId: targetUserId,
         category: 'audio',
         file: fileBlob,
         fileName: storageFileName,

@@ -205,6 +205,9 @@ module.exports = {
       'process.env.VITE_USE_SUPABASE_STORAGE': JSON.stringify(
         process.env.VITE_USE_SUPABASE_STORAGE || 'false'
       ),
+      'process.env.VITE_RAW_ASSETS_BASE_URL': JSON.stringify(
+        process.env.VITE_RAW_ASSETS_BASE_URL || ''
+      ),
     }),
   ],
 

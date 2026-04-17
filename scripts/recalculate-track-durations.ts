@@ -62,9 +62,12 @@ function getAudioFileUrl(src: string): string | null {
 
   // Если локального файла нет, пробуем получить URL из Supabase Storage
   // Формируем путь в Supabase Storage
-  // Формат: users/zhoock/audio/{albumId}/{fileName}
+  // Формат: users/{userId}/audio/{albumId}/{fileName}
   // normalizedPath может быть "23/01-Barnums-Fijian-Mermaid-1644.wav"
-  const userId = process.env.CURRENT_USER_ID || 'zhoock';
+  const userId = process.env.CURRENT_USER_ID?.trim();
+  if (!userId) {
+    return null;
+  }
   const storagePath = `users/${userId}/audio/${normalizedPath}`;
 
   // Создаём Supabase клиент

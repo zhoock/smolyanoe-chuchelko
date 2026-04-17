@@ -19,7 +19,7 @@ import {
   createSupabaseClient,
   STORAGE_BUCKET_NAME,
 } from '@config/supabase';
-import { getUserUserId, CURRENT_USER_CONFIG } from '@config/user';
+import { getUserUserId } from '@config/user';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import './style.scss';
 
@@ -305,10 +305,15 @@ export default function StemsPlayground() {
           const trackId = String(track.id);
           const albumId = album.albumId;
 
-          const storageUserId =
-            (album.userId && String(album.userId).trim()) ||
-            getUserUserId() ||
-            CURRENT_USER_CONFIG.userId;
+          const storageUserId = (album.userId && String(album.userId).trim()) || getUserUserId();
+
+          if (!storageUserId) {
+            console.warn('⚠️ [StemsPlayground] Пропуск трека: нет userId для альбома', {
+              albumId,
+              trackId,
+            });
+            continue;
+          }
 
           // Проверяем наличие стемов в Storage
           const audioFolderPath = `users/${storageUserId}/audio/${albumId}/${trackId}`;

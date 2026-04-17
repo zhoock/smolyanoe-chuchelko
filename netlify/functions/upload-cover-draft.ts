@@ -32,7 +32,6 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
-import { CURRENT_USER_CONFIG } from '../../src/config/user';
 import { generateImageVariants } from './lib/image-processor';
 
 const STORAGE_BUCKET_NAME = 'user-media';

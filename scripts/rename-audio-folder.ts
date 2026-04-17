@@ -83,20 +83,25 @@ async function renameAudioFolder() {
 
   const OLD_FOLDER_NAME = 'Smolyanoe-chuchelko';
   const NEW_FOLDER_NAME = 'smolyanoechuchelko';
-  const STORAGE_PATH = `users/zhoock/audio`;
+
+  const targetEmail = process.env.SCRIPT_TARGET_EMAIL?.trim();
+  if (!targetEmail) {
+    console.error('❌ Задайте SCRIPT_TARGET_EMAIL (пользователь в БД).');
+    return;
+  }
 
   try {
-    // Находим пользователя
     const userResult = await query<{ id: string }>(`SELECT id FROM users WHERE email = $1`, [
-      'zhoock@zhoock.ru',
+      targetEmail,
     ]);
 
     if (userResult.rows.length === 0) {
-      console.error('❌ Пользователь zhoock@zhoock.ru не найден');
+      console.error('❌ Пользователь не найден', { email: targetEmail });
       return;
     }
 
     const userId = userResult.rows[0].id;
+    const STORAGE_PATH = `users/${userId}/audio`;
 
     // Находим все треки с старым путём
     const tracksResult = await query<TrackRow>(

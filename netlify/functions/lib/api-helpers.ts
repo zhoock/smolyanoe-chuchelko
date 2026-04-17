@@ -4,7 +4,7 @@
  */
 
 import type { HandlerEvent } from '@netlify/functions';
-import { extractUserIdFromToken, extractEmailFromToken } from './jwt';
+import { extractUserIdFromToken, extractRoleFromToken, type UserRole } from './jwt';
 
 /**
  * Стандартные CORS заголовки для всех API endpoints
@@ -142,12 +142,10 @@ export function requireAuth(event: HandlerEvent): string | null {
 }
 
 /**
- * Проверяет, является ли пользователь админом (zhoock@zhoock.ru)
- * @param userEmail - Email пользователя
- * @returns true если пользователь - админ, false иначе
+ * Проверяет роль администратора по JWT (поле role, выдаётся при логине из БД).
  */
-export function isAdmin(userEmail: string): boolean {
-  return userEmail.toLowerCase().trim() === 'zhoock@zhoock.ru';
+export function isAdminRole(role: UserRole): boolean {
+  return role === 'admin';
 }
 
 /**
@@ -161,7 +159,6 @@ export function requireAdmin(event: HandlerEvent): string | null {
     return null;
   }
 
-  // Получаем email из токена
   const auth =
     (event.headers?.authorization as string | undefined) ||
     (event.headers?.Authorization as string | undefined) ||
@@ -173,9 +170,9 @@ export function requireAdmin(event: HandlerEvent): string | null {
   }
 
   try {
-    const email = extractEmailFromToken(auth);
-    if (!email || !isAdmin(email)) {
-      console.warn('⚠️ requireAdmin: User is not admin', { userId, email });
+    const role = extractRoleFromToken(auth);
+    if (!isAdminRole(role)) {
+      console.warn('⚠️ requireAdmin: User is not admin', { userId, role });
       return null;
     }
     return userId;

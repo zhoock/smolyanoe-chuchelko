@@ -9,9 +9,13 @@ const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-
 // expiresIn может быть строкой (например, "7d", "1h") или числом (секунды)
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as string | number;
 
+export type UserRole = 'user' | 'admin';
+
 export interface JWTPayload {
   userId: string;
   email: string;
+  /** Старые токены могли выдаваться без поля — считаем user */
+  role?: UserRole;
   iat?: number;
   exp?: number;
 }
@@ -20,12 +24,14 @@ export interface JWTPayload {
  * Генерирует JWT токен для пользователя
  * @param userId - ID пользователя
  * @param email - Email пользователя
+ * @param role - Роль (user | admin)
  * @returns JWT токен
  */
-export function generateToken(userId: string, email: string): string {
+export function generateToken(userId: string, email: string, role: UserRole = 'user'): string {
   const payload: JWTPayload = {
     userId,
     email,
+    role: role ?? 'user',
   };
 
   return jwt.sign(payload, JWT_SECRET, {
@@ -48,23 +54,27 @@ export function verifyToken(token: string): JWTPayload | null {
   }
 }
 
+function parseBearerToken(authHeader: string | undefined): string | null {
+  if (!authHeader) {
+    return null;
+  }
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return null;
+  }
+  return parts[1];
+}
+
 /**
  * Извлекает user_id из JWT токена из Authorization header
  * @param authHeader - Значение заголовка Authorization (например, "Bearer <token>")
  * @returns user_id или null, если токен невалиден или отсутствует
  */
 export function extractUserIdFromToken(authHeader: string | undefined): string | null {
-  if (!authHeader) {
+  const token = parseBearerToken(authHeader);
+  if (!token) {
     return null;
   }
-
-  // Проверяем формат "Bearer <token>"
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    return null;
-  }
-
-  const token = parts[1];
   const payload = verifyToken(token);
 
   if (!payload || !payload.userId) {
@@ -75,22 +85,30 @@ export function extractUserIdFromToken(authHeader: string | undefined): string |
 }
 
 /**
+ * Роль из JWT (старые токены без поля role считаются user).
+ */
+export function extractRoleFromToken(authHeader: string | undefined): UserRole {
+  const token = parseBearerToken(authHeader);
+  if (!token) {
+    return 'user';
+  }
+  const payload = verifyToken(token);
+  if (!payload) {
+    return 'user';
+  }
+  return payload.role === 'admin' ? 'admin' : 'user';
+}
+
+/**
  * Извлекает email из JWT токена из Authorization header
  * @param authHeader - Значение заголовка Authorization (например, "Bearer <token>")
  * @returns email или null, если токен невалиден или отсутствует
  */
 export function extractEmailFromToken(authHeader: string | undefined): string | null {
-  if (!authHeader) {
+  const token = parseBearerToken(authHeader);
+  if (!token) {
     return null;
   }
-
-  // Проверяем формат "Bearer <token>"
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    return null;
-  }
-
-  const token = parts[1];
   const payload = verifyToken(token);
 
   if (!payload || !payload.email) {

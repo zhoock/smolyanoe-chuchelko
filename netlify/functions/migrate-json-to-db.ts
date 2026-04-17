@@ -260,8 +260,17 @@ export const handler: Handler = async (event: HandlerEvent) => {
   try {
     console.log('🚀 Начинаем миграцию JSON → БД...');
 
-    // Загружаем JSON файлы из GitHub (как в клиентском коде)
-    const BASE_URL = 'https://raw.githubusercontent.com/zhoock/smolyanoe-chuchelko/main/src/assets';
+    const BASE_URL = process.env.GITHUB_RAW_ASSETS_BASE_URL?.trim();
+    if (!BASE_URL) {
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          success: false,
+          error: 'GITHUB_RAW_ASSETS_BASE_URL is not configured (raw base URL for src/assets JSON)',
+        }),
+      };
+    }
 
     let albumsRu: AlbumData[];
     let albumsEn: AlbumData[];

@@ -314,11 +314,14 @@ export async function migrateJsonToDatabase(): Promise<void> {
   console.log('🚀 Начинаем миграцию JSON → БД...');
 
   try {
-    // Получаем user_id пользователя zhoock@zhoock.ru
-    console.log('👤 Ищем пользователя zhoock@zhoock.ru...');
+    const ownerEmail = process.env.SITE_OWNER_EMAIL?.trim();
+    if (!ownerEmail) {
+      throw new Error('SITE_OWNER_EMAIL is required for migrateJsonToDatabase');
+    }
+    console.log('👤 Ищем пользователя по SITE_OWNER_EMAIL...');
     const userResult = await query<{ id: string }>(
       `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-      ['zhoock@zhoock.ru']
+      [ownerEmail.toLowerCase()]
     );
 
     let userId: string | null = null;
@@ -326,12 +329,12 @@ export async function migrateJsonToDatabase(): Promise<void> {
       userId = userResult.rows[0].id;
       console.log(`✅ Найден пользователь: ${userId}`);
     } else {
-      console.log('⚠️  Пользователь zhoock@zhoock.ru не найден. Создаём...');
+      console.log('⚠️  Пользователь не найден. Создаём...');
       const newUserResult = await query<{ id: string }>(
         `INSERT INTO users (email, name, is_active) 
          VALUES ($1, $2, $3) 
          RETURNING id`,
-        ['zhoock@zhoock.ru', 'Site Owner', true]
+        [ownerEmail.toLowerCase(), 'Site Owner', true]
       );
       userId = newUserResult.rows[0].id;
       console.log(`✅ Создан пользователь: ${userId}`);

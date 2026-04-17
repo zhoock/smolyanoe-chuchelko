@@ -42,7 +42,11 @@ if (existsSync(envPath)) {
 import { createClient } from '@supabase/supabase-js';
 
 const STORAGE_BUCKET_NAME = 'user-media';
-const USER_ID = 'zhoock';
+const USER_ID = process.env.MIGRATION_TARGET_USER_ID?.trim();
+if (!USER_ID) {
+  console.error('❌ Задайте MIGRATION_TARGET_USER_ID (UUID пользователя в Storage).');
+  process.exit(1);
+}
 const STORAGE_ALBUMS_PATH = `users/${USER_ID}/albums`;
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';

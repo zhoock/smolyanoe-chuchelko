@@ -35,10 +35,9 @@ if (existsSync(envPath)) {
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { uploadFileAdmin } from '../src/shared/api/storage';
-import { CURRENT_USER_CONFIG, type ImageCategory } from '../src/config/user';
+import type { ImageCategory } from '../src/config/user';
 
-// UUID пользователя zhoock@zhoock.ru (после миграции)
-const TARGET_USER_ID = 'af97f741-8dae-410b-94a6-3f828f9140a4';
+const TARGET_USER_ID = process.env.MIGRATION_TARGET_USER_ID?.trim();
 
 /**
  * Определяет MIME тип по расширению файла
@@ -88,7 +87,13 @@ async function readFilesRecursively(
  * Миграция локальных файлов в Supabase Storage
  */
 async function migrateLocalFilesToStorage() {
-  const imagesDir = path.resolve(__dirname, '../src/images/users/zhoock');
+  if (!TARGET_USER_ID) {
+    console.error('❌ Задайте MIGRATION_TARGET_USER_ID (UUID пользователя в Storage).');
+    process.exit(1);
+  }
+
+  const legacyUserDir = process.env.MIGRATION_LOCAL_IMAGES_USER_DIR?.trim() || 'legacy-user';
+  const imagesDir = path.resolve(__dirname, '../src/images/users', legacyUserDir);
   // Мигрируем albums и articles
   const categories: ImageCategory[] = ['albums', 'articles'];
 
@@ -144,7 +149,7 @@ async function migrateLocalFilesToStorage() {
           console.log(`   📤 Загрузка: ${storageFileName}...`);
 
           const url = await uploadFileAdmin({
-            userId: TARGET_USER_ID, // Используем UUID вместо 'zhoock'
+            userId: TARGET_USER_ID,
             category,
             file: fileBlob,
             fileName: storageFileName,

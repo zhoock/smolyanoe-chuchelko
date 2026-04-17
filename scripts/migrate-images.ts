@@ -8,7 +8,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const IMAGES_DIR = path.resolve(__dirname, '../src/images');
-const USER_DIR = path.join(IMAGES_DIR, 'users/zhoock');
+const LEGACY_USER_DIR = process.env.MIGRATION_LOCAL_IMAGES_USER_DIR?.trim() || 'legacy-user';
+const USER_DIR = path.join(IMAGES_DIR, 'users', LEGACY_USER_DIR);
 
 // Категории и соответствующие им паттерны файлов
 const MIGRATION_MAP: Record<string, string[]> = {
@@ -20,7 +21,7 @@ const MIGRATION_MAP: Record<string, string[]> = {
     'smolyanoe-chuchelko-Cover',
   ],
   articles: [
-    'yaroslav_zhoock',
+    'yaroslav',
     'smolyanoe_chuchelko_effects_pedals',
     'effects_pedal_',
     'recording_',
@@ -29,7 +30,7 @@ const MIGRATION_MAP: Record<string, string[]> = {
     'drum_recording_',
     'guitar_recording_',
   ],
-  profile: ['yaroslav_zhoock', 'banner-for-header'],
+  profile: ['yaroslav', 'banner-for-header'],
   stems: [], // Папка stems будет перемещена целиком
 };
 
@@ -83,7 +84,7 @@ function migrateFile(filePath: string, category: string): boolean {
 
   // Перемещаем файл
   fs.renameSync(filePath, destPath);
-  console.log(`✓ ${fileName} → users/zhoock/${category}/`);
+  console.log(`✓ ${fileName} → users/${LEGACY_USER_DIR}/${category}/`);
   return true;
 }
 
@@ -108,7 +109,7 @@ function main() {
           fs.mkdirSync(path.dirname(stemsDest), { recursive: true });
         }
         fs.renameSync(stemsSource, stemsDest);
-        console.log(`✓ stems/ → users/zhoock/stems/`);
+        console.log(`✓ stems/ → users/${LEGACY_USER_DIR}/stems/`);
         migratedCount++;
       }
       continue;
@@ -152,7 +153,7 @@ function main() {
   console.log(`\n✅ Миграция завершена! Перемещено файлов: ${migratedCount}`);
   console.log('\n📁 Структура после миграции:');
   console.log('   images/');
-  console.log('   ├── users/zhoock/');
+  console.log(`   ├── users/${LEGACY_USER_DIR}/`);
   console.log('   │   ├── albums/     (обложки альбомов)');
   console.log('   │   ├── articles/   (фото для статей)');
   console.log('   │   ├── profile/    (аватар, баннер)');

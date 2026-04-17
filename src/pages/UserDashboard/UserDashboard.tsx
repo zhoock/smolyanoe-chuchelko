@@ -2147,7 +2147,9 @@ function UserDashboard() {
               {/* Content area */}
               <div className="user-dashboard__content">
                 {activeTab === 'payment-settings' ? (
-                  <PaymentSettings userId={user?.id || 'zhoock'} />
+                  user?.id ? (
+                    <PaymentSettings userId={user.id} />
+                  ) : null
                 ) : activeTab === 'my-purchases' ? (
                   <MyPurchasesContent userEmail={user?.email} />
                 ) : activeTab === 'mixer' ? (

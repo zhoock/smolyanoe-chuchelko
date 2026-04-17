@@ -1,5 +1,5 @@
 import { buildStoragePublicObjectUrl } from '@config/supabase';
-import { CURRENT_USER_CONFIG, getUserUserId, type ImageCategory } from '@config/user';
+import { getUserUserId, type ImageCategory } from '@config/user';
 import { getStorageFileUrl } from '@shared/api/storage';
 
 export interface ImageUrlOptions {
@@ -36,12 +36,12 @@ function shouldUseSupabaseStorage(_options?: ImageUrlOptions): boolean {
  * getImageUrl('album_cover') // '/images/album_cover.jpg'
  *
  * // Новый способ с категорией (локальные файлы)
- * getImageUrl('album_cover', '.jpg', { userId: 'zhoock', category: 'albums' })
- * // '/images/users/zhoock/albums/album_cover.jpg'
+ * getImageUrl('album_cover', '.jpg', { userId: '<uuid>', category: 'albums' })
+ * // '/images/users/<uuid>/albums/album_cover.jpg'
  *
  * // Новый способ с Supabase Storage
- * getImageUrl('album_cover', '.jpg', { userId: 'zhoock', category: 'albums', useSupabaseStorage: true })
- * // 'https://[project].supabase.co/storage/v1/object/public/user-media/users/zhoock/albums/album_cover.jpg'
+ * getImageUrl('album_cover', '.jpg', { userId: '<uuid>', category: 'albums', useSupabaseStorage: true })
+ * // 'https://[project].supabase.co/storage/v1/object/public/user-media/users/<uuid>/albums/album_cover.jpg'
  */
 export function getImageUrl(
   img: string,
@@ -92,7 +92,7 @@ export function getImageUrl(
  * @returns URL изображения
  *
  * @example
- * getUserImageUrl('album_cover', 'albums') // '/images/users/zhoock/albums/album_cover.jpg'
+ * getUserImageUrl('album_cover', 'albums') // '/images/users/<uuid>/albums/album_cover.jpg'
  * getUserImageUrl('album_cover', 'albums', '.jpg', true) // Supabase Storage URL
  */
 export function getUserImageUrl(
@@ -101,8 +101,11 @@ export function getUserImageUrl(
   format: string = '.jpg',
   useSupabaseStorage?: boolean
 ): string {
-  // Получаем UUID текущего пользователя, или fallback на 'zhoock' для обратной совместимости
-  const userId = getUserUserId() || CURRENT_USER_CONFIG.userId;
+  const userId = getUserUserId();
+  if (!userId) {
+    console.error('❌ [getUserImageUrl] userId is required (sign in).');
+    return '';
+  }
   return getImageUrl(img, format, {
     userId,
     category,
@@ -165,7 +168,11 @@ export function getUserAudioUrl(audioPath: string, useSupabaseStorage?: boolean)
   if (shouldUseStorage) {
     // Используем Supabase Storage
     // normalizedPath может быть с подпапками, например "23/01-Barnums-Fijian-Mermaid-1644.wav"
-    const userId = getUserUserId() || CURRENT_USER_CONFIG.userId;
+    const userId = getUserUserId();
+    if (!userId) {
+      console.error('❌ [getUserAudioUrl] userId is required for storage paths (sign in).');
+      return '';
+    }
     return getStorageFileUrl({
       userId,
       category: 'audio',

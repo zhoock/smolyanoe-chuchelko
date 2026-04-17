@@ -36,9 +36,16 @@ import * as path from 'path';
 import { uploadFileAdmin } from '../src/shared/api/storage';
 
 const MIXER_FILES = ['drums.png', 'bass.png', 'guitars.png', 'vocals.png'];
-const MIXER_DIR = path.resolve(__dirname, '../src/images/users/zhoock/stems/Mixer');
 
 async function uploadMixerStems() {
+  const targetUserId = process.env.MIGRATION_TARGET_USER_ID?.trim();
+  if (!targetUserId) {
+    console.error('❌ Задайте MIGRATION_TARGET_USER_ID.');
+    process.exit(1);
+  }
+  const legacyUserDir = process.env.MIGRATION_LOCAL_IMAGES_USER_DIR?.trim() || 'legacy-user';
+  const MIXER_DIR = path.resolve(__dirname, '../src/images/users', legacyUserDir, 'stems/Mixer');
+
   console.log('🚀 Загрузка файлов Mixer в Supabase Storage...\n');
   console.log(`📁 Директория: ${MIXER_DIR}\n`);
 
@@ -58,6 +65,7 @@ async function uploadMixerStems() {
 
       // Загружаем в папку Mixer в категории stems
       const url = await uploadFileAdmin({
+        userId: targetUserId,
         category: 'stems',
         file: fileBlob,
         fileName: `Mixer/${fileName}`,
