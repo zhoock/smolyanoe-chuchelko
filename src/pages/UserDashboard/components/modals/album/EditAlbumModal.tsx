@@ -1,5 +1,6 @@
 // src/pages/UserDashboard/components/EditAlbumModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
 import { AlertModal } from '@shared/ui/alertModal';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -66,6 +67,7 @@ import { EditAlbumModalStep3 } from '../../steps/EditAlbumModalStep3';
 import { EditAlbumModalStep4 } from '../../steps/EditAlbumModalStep4';
 import { EditAlbumModalStep5 } from '../../steps/EditAlbumModalStep5';
 import './EditAlbumModal.style.scss';
+import { useYooKassaPaymentConnected } from '@shared/lib/payment/useYooKassaPaymentConnected';
 
 // Re-export types for backward compatibility
 export type {
@@ -81,6 +83,7 @@ export function EditAlbumModal({
   onClose,
   onNext,
 }: EditAlbumModalProps): JSX.Element | null {
+  const navigate = useNavigate();
   const { lang } = useLang();
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -100,6 +103,17 @@ export function EditAlbumModal({
 
   // Данные формы
   const [formData, setFormData] = useState<AlbumFormData>(makeEmptyForm());
+
+  const paymentUser = getUser();
+  const { loading: yookassaLoading, hasYooKassa } = useYooKassaPaymentConnected(paymentUser?.id);
+  /** Для валидации и сохранения: без ЮKassa продажа в релиз не уходит. */
+  const saleModeForValidation: 'no' | 'yes' | 'preorder' = hasYooKassa
+    ? formData.allowDownloadSale
+    : 'no';
+  const showPriceFields =
+    hasYooKassa &&
+    (formData.allowDownloadSale === 'yes' || formData.allowDownloadSale === 'preorder');
+  const showPreorderDate = hasYooKassa && formData.allowDownloadSale === 'preorder';
 
   const [dragActive, setDragActive] = useState(false);
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false);
@@ -206,6 +220,9 @@ export function EditAlbumModal({
 
   // Упрощенный handleInputChange для совместимости со старым кодом
   const handleInputChange = (field: keyof AlbumFormData, value: any) => {
+    if (field === 'allowDownloadSale' && !hasYooKassa) {
+      return;
+    }
     setFormData((prev) => ({ ...prev, [field]: value as never }));
   };
 
@@ -1853,7 +1870,9 @@ export function EditAlbumModal({
 
   const handleNext = () => {
     // Валидируем текущий шаг перед переходом
-    if (!validateStep(currentStep, formData)) {
+    if (
+      !validateStep(currentStep, formData, { effectiveAllowDownloadSale: saleModeForValidation })
+    ) {
       return; // Останавливаем переход, если валидация не прошла
     }
 
@@ -2374,7 +2393,9 @@ export function EditAlbumModal({
       release,
       buttons,
       details: newDetails,
-    } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined, baselineDetails);
+    } = transformFormDataToAlbumFormat(finalFormData, lang, ui ?? undefined, baselineDetails, {
+      hasYooKassaPayment: hasYooKassa,
+    });
 
     const cleanedDetails = dedupeSemanticAlbumDetailBlocks(newDetails, lang, ui ?? undefined);
 
@@ -2607,10 +2628,6 @@ export function EditAlbumModal({
     onClose();
   };
 
-  const showPriceFields =
-    formData.allowDownloadSale === 'yes' || formData.allowDownloadSale === 'preorder';
-  const showPreorderDate = formData.allowDownloadSale === 'preorder';
-
   const renderStepContent = () => {
     if (currentStep === 1) {
       return (
@@ -2829,65 +2846,100 @@ export function EditAlbumModal({
             </div>
           </div>
 
-          <div className="edit-album-modal__field">
-            <label className="edit-album-modal__label">
-              {ui?.dashboard?.editAlbumModal?.fieldLabels?.allowDownloadSale ??
-                'Allow download / sale'}
-            </label>
-            <div className="edit-album-modal__help-text">
-              {ui?.dashboard?.editAlbumModal?.helpText?.controlDownloadSale ??
-                'Control whether fans can buy/download this album.'}
-            </div>
-            <div className="edit-album-modal__radio-group">
-              <div className="edit-album-modal__radio-wrapper">
-                <input
-                  type="radio"
-                  id="download-no"
-                  name="allow-download-sale"
-                  className="edit-album-modal__radio"
-                  checked={formData.allowDownloadSale === 'no'}
-                  onChange={() => handleInputChange('allowDownloadSale', 'no')}
-                />
-                <label htmlFor="download-no" className="edit-album-modal__radio-label">
-                  {ui?.dashboard?.editAlbumModal?.radioOptions?.no ?? 'No'}
-                </label>
+          <div className="edit-album-modal__field edit-album-modal__field--album-sale">
+            {yookassaLoading ? (
+              <p className="edit-album-modal__help-text edit-album-modal__album-sale-loading">
+                {ui?.dashboard?.editAlbumModal?.albumSale?.loadingPayment ?? 'Loading…'}
+              </p>
+            ) : !hasYooKassa ? (
+              <div className="edit-album-modal__album-sale-connect">
+                <div className="edit-album-modal__album-sale-title">
+                  {ui?.dashboard?.editAlbumModal?.albumSale?.sectionTitle ?? 'Album sale'}
+                </div>
+                <p className="edit-album-modal__album-sale-desc">
+                  {ui?.dashboard?.editAlbumModal?.albumSale?.connectPaymentHint ??
+                    'To sell this album, connect a payment method.'}
+                </p>
+                <a
+                  href="/dashboard-new?tab=payment-settings"
+                  className="edit-album-modal__connect-payment-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onClose();
+                    navigate('/dashboard-new?tab=payment-settings');
+                  }}
+                >
+                  {ui?.dashboard?.editAlbumModal?.albumSale?.connectPaymentButton ??
+                    'Connect payment →'}
+                </a>
               </div>
+            ) : (
+              <>
+                <div className="edit-album-modal__album-sale-title">
+                  {ui?.dashboard?.editAlbumModal?.albumSale?.sectionTitle ?? 'Album sale'}
+                </div>
+                <p className="edit-album-modal__album-sale-desc">
+                  {ui?.dashboard?.editAlbumModal?.albumSale?.saleIntro ??
+                    'Choose whether the album is available for purchase or download.'}
+                </p>
+                <div
+                  className="edit-album-modal__radio-group"
+                  role="radiogroup"
+                  aria-label={
+                    ui?.dashboard?.editAlbumModal?.albumSale?.saleRadiogroupAriaLabel ??
+                    'Album sale'
+                  }
+                >
+                  <div className="edit-album-modal__radio-wrapper">
+                    <input
+                      type="radio"
+                      id="download-no"
+                      name="allow-download-sale"
+                      className="edit-album-modal__radio"
+                      checked={formData.allowDownloadSale === 'no'}
+                      onChange={() => handleInputChange('allowDownloadSale', 'no')}
+                    />
+                    <label htmlFor="download-no" className="edit-album-modal__radio-label">
+                      {ui?.dashboard?.editAlbumModal?.radioOptions?.no ?? 'Не продавать'}
+                    </label>
+                  </div>
 
-              <div className="edit-album-modal__radio-wrapper">
-                <input
-                  type="radio"
-                  id="download-yes"
-                  name="allow-download-sale"
-                  className="edit-album-modal__radio"
-                  checked={formData.allowDownloadSale === 'yes'}
-                  onChange={() => handleInputChange('allowDownloadSale', 'yes')}
-                />
-                <label htmlFor="download-yes" className="edit-album-modal__radio-label">
-                  {ui?.dashboard?.editAlbumModal?.radioOptions?.yes ?? 'Yes'}
-                </label>
-              </div>
+                  <div className="edit-album-modal__radio-wrapper">
+                    <input
+                      type="radio"
+                      id="download-yes"
+                      name="allow-download-sale"
+                      className="edit-album-modal__radio"
+                      checked={formData.allowDownloadSale === 'yes'}
+                      onChange={() => handleInputChange('allowDownloadSale', 'yes')}
+                    />
+                    <label htmlFor="download-yes" className="edit-album-modal__radio-label">
+                      {ui?.dashboard?.editAlbumModal?.radioOptions?.yes ?? 'Продавать'}
+                    </label>
+                  </div>
 
-              <div className="edit-album-modal__radio-wrapper">
-                <input
-                  type="radio"
-                  id="download-preorder"
-                  name="allow-download-sale"
-                  className="edit-album-modal__radio"
-                  checked={formData.allowDownloadSale === 'preorder'}
-                  onChange={() => handleInputChange('allowDownloadSale', 'preorder')}
-                />
-                <label htmlFor="download-preorder" className="edit-album-modal__radio-label">
-                  {ui?.dashboard?.editAlbumModal?.radioOptions?.acceptPreorders ??
-                    'Accept pre-orders'}
-                </label>
-              </div>
-            </div>
+                  <div className="edit-album-modal__radio-wrapper">
+                    <input
+                      type="radio"
+                      id="download-preorder"
+                      name="allow-download-sale"
+                      className="edit-album-modal__radio"
+                      checked={formData.allowDownloadSale === 'preorder'}
+                      onChange={() => handleInputChange('allowDownloadSale', 'preorder')}
+                    />
+                    <label htmlFor="download-preorder" className="edit-album-modal__radio-label">
+                      {ui?.dashboard?.editAlbumModal?.radioOptions?.acceptPreorders ?? 'Предзаказ'}
+                    </label>
+                  </div>
+                </div>
 
-            {formData.allowDownloadSale === 'preorder' && (
-              <div className="edit-album-modal__preorder-help">
-                {ui?.dashboard?.editAlbumModal?.helpText?.fansCanBuyNow ??
-                  'Fans can buy now, download after release date'}
-              </div>
+                {formData.allowDownloadSale === 'preorder' && (
+                  <div className="edit-album-modal__preorder-help">
+                    {ui?.dashboard?.editAlbumModal?.helpText?.fansCanBuyNow ??
+                      'Fans can buy now, download after release date'}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -2916,7 +2968,6 @@ export function EditAlbumModal({
                   className="edit-album-modal__input edit-album-modal__input--price"
                   value={formData.regularPrice}
                   onChange={(e) => handleInputChange('regularPrice', e.target.value)}
-                  disabled={formData.allowDownloadSale === 'no'}
                 />
               </div>
             </div>

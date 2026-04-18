@@ -3,9 +3,9 @@ import type { IAlbums, String } from '@models';
 import { getYooKassaShopId } from '@shared/api/payment';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import {
-  getAllowDownloadSaleValue,
   hasAlbumPurchaseSectionContent,
   hasTruthyButtonUrl,
+  isAlbumPaidSaleEnabled,
 } from './albumPurchaseUtils';
 
 type YookassaState = { status: 'loading' | 'done'; available: boolean };
@@ -55,8 +55,7 @@ export function useYooKassaShopAvailableForAlbum(album: IAlbums, enabled: boolea
  */
 export function useShowAlbumPurchaseSection(album: IAlbums | undefined): boolean | null {
   const buttons = album?.buttons as String | undefined;
-  const allowDownloadSale = album ? getAllowDownloadSaleValue(album) : 'no';
-  const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
+  const isDownloadAllowed = album ? isAlbumPaidSaleEnabled(album) : false;
   const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
   const { loading, available } = useYooKassaShopAvailableForAlbum(
     album ?? ({ albumId: '' } as IAlbums),

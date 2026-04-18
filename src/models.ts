@@ -521,6 +521,15 @@ export interface IInterface {
         stay?: string;
         discard?: string;
       };
+      /** Блок продажи альбома (ЮKassa и т.п.) */
+      albumSale?: {
+        loadingPayment: string;
+        sectionTitle: string;
+        connectPaymentHint: string;
+        connectPaymentButton: string;
+        saleIntro: string;
+        saleRadiogroupAriaLabel: string;
+      };
     };
   };
 }

@@ -5,10 +5,10 @@ import type { String, IAlbums } from '@models';
 import { GetButton } from './GetButton';
 import { useCart } from '../model/CartContext';
 import {
-  getAllowDownloadSaleValue,
   hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
   hasTruthyButtonUrl,
+  isAlbumPaidSaleEnabled,
 } from '../lib/albumPurchaseUtils';
 import { useYooKassaShopAvailableForAlbum } from '../lib/useYooKassaShopAvailableForAlbum';
 import './style.scss';
@@ -21,6 +21,7 @@ type ServiceButtonsProps = {
 export {
   hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
+  isAlbumPaidSaleEnabled,
 } from '../lib/albumPurchaseUtils';
 
 function ServiceButtonsContent({
@@ -35,11 +36,10 @@ function ServiceButtonsContent({
   const { addToCart, cartAlbums } = useCart();
   const buttons = album?.buttons as String;
 
-  const allowDownloadSale = getAllowDownloadSaleValue(album);
-  const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
+  const isPaidSaleEnabled = isAlbumPaidSaleEnabled(album);
   const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
 
-  const yookassaCheckEnabled = section === 'Купить' && isDownloadAllowed;
+  const yookassaCheckEnabled = section === 'Купить' && isPaidSaleEnabled;
   const { loading: yookassaLoading, available: yookassaAvailable } =
     useYooKassaShopAvailableForAlbum(album, yookassaCheckEnabled);
 
@@ -50,7 +50,7 @@ function ServiceButtonsContent({
     return null;
   }
 
-  if (section === 'Купить' && !hasPurchaseLinks && isDownloadAllowed) {
+  if (section === 'Купить' && !hasPurchaseLinks && isPaidSaleEnabled) {
     if (yookassaLoading) {
       return null;
     }
@@ -69,7 +69,7 @@ function ServiceButtonsContent({
   };
 
   const showDownloadButton =
-    isDownloadAllowed && !yookassaLoading && yookassaAvailable && section === 'Купить';
+    isPaidSaleEnabled && !yookassaLoading && yookassaAvailable && section === 'Купить';
 
   return (
     <div className="service-buttons">

@@ -6,6 +6,12 @@ export function getAllowDownloadSaleValue(album: IAlbums): string {
     : 'no';
 }
 
+/** Альбом помечен как платная продажа/предзаказ (настройка в release). */
+export function isAlbumPaidSaleEnabled(album: IAlbums): boolean {
+  const v = getAllowDownloadSaleValue(album);
+  return v === 'yes' || v === 'preorder';
+}
+
 export function hasTruthyButtonUrl(buttons: String | undefined, keys: readonly string[]): boolean {
   return keys.some((key) => Boolean(buttons?.[key]?.trim()));
 }
@@ -13,8 +19,7 @@ export function hasTruthyButtonUrl(buttons: String | undefined, keys: readonly s
 /** Есть ли что показать в блоке «Купить»: скачивание/продажа или хотя бы одна ссылка (iTunes / Bandcamp / Amazon). */
 export function hasAlbumPurchaseSectionContent(album: IAlbums): boolean {
   const buttons = album?.buttons as String | undefined;
-  const allowDownloadSale = getAllowDownloadSaleValue(album);
-  const isDownloadAllowed = allowDownloadSale === 'yes' || allowDownloadSale === 'preorder';
+  const isDownloadAllowed = isAlbumPaidSaleEnabled(album);
   const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
   return isDownloadAllowed || hasPurchaseLinks;
 }

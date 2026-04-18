@@ -290,6 +290,59 @@ dialog {
       font-size: var(--ms-01);
     }
 
+    &__help-text--muted {
+      margin-top: var(--ms-01);
+      font-style: italic;
+    }
+
+    &__field--album-sale {
+      margin-top: var(--ms-0);
+    }
+
+    &__album-sale-connect {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--ms-01);
+    }
+
+    &__album-sale-title {
+      margin: 0 0 var(--ms-01);
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
+      font-weight: 600;
+    }
+
+    &__album-sale-desc {
+      margin: 0;
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+    }
+
+    &__album-sale-loading {
+      margin: 0;
+    }
+
+    &__connect-payment-link {
+      align-self: flex-start;
+      width: fit-content;
+      color: var(--dark-greenish-yellow);
+      font-size: var(--ms-01);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--dashboard-text-primary);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--dark-greenish-yellow);
+        outline-offset: 2px;
+      }
+    }
+
     &__checkbox-wrapper {
       display: flex;
       align-items: center;

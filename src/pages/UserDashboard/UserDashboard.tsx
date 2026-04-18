@@ -607,6 +607,44 @@ function SortableTrackItem({
   );
 }
 
+/** Query `?tab=` values for dashboard deep links. Read once, then removed from the URL (see effect in UserDashboard). */
+const DASHBOARD_TAB_QUERY_VALUES = [
+  'albums',
+  'posts',
+  'payment-settings',
+  'my-purchases',
+  'profile',
+  'mixer',
+] as const;
+
+export type DashboardTab = (typeof DASHBOARD_TAB_QUERY_VALUES)[number];
+
+/** Survives React Strict Mode remount after ?tab= is stripped (state is set in navigate replace). */
+const DASHBOARD_TAB_DEEP_LINK_STATE_KEY = '__dashboardDeepLinkTab' as const;
+
+function tabFromSearchParam(tab: string | null): DashboardTab | null {
+  if (!tab) return null;
+  return (DASHBOARD_TAB_QUERY_VALUES as readonly string[]).includes(tab)
+    ? (tab as DashboardTab)
+    : null;
+}
+
+function tabFromLocationState(state: unknown): DashboardTab | null {
+  const v = (state as Record<string, unknown> | null | undefined)?.[
+    DASHBOARD_TAB_DEEP_LINK_STATE_KEY
+  ];
+  if (typeof v !== 'string') return null;
+  return tabFromSearchParam(v);
+}
+
+/** Prefer ?tab=; then state from our own replace-after-strip (Strict Mode). */
+function resolveInitialDashboardTab(
+  tabFromQuery: string | null,
+  locationState: unknown
+): DashboardTab {
+  return tabFromSearchParam(tabFromQuery) ?? tabFromLocationState(locationState) ?? 'albums';
+}
+
 function UserDashboard() {
   const { lang, setLang } = useLang();
   const { displayName: siteArtistDisplayName } = useSiteArtistDisplayName(lang, {
@@ -626,19 +664,39 @@ function UserDashboard() {
   const user = getUser();
   const userId = user?.id ?? null;
 
-  // Получаем вкладку из URL параметра или используем значение по умолчанию
+  // Вкладка из ?tab= только для первичного открытия; параметр сразу убирается из URL (replace), чтобы не «залипал».
   const tabParam = searchParams.get('tab');
-  const validTabs: Array<
-    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer'
-  > = ['albums', 'posts', 'payment-settings', 'my-purchases', 'profile', 'mixer'];
-  const initialTab =
-    tabParam && validTabs.includes(tabParam as any)
-      ? (tabParam as 'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer')
-      : 'albums';
 
-  const [activeTab, setActiveTab] = useState<
-    'albums' | 'posts' | 'payment-settings' | 'my-purchases' | 'profile' | 'mixer'
-  >(initialTab);
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() =>
+    resolveInitialDashboardTab(tabParam, location.state)
+  );
+
+  useEffect(() => {
+    const t = tabFromSearchParam(searchParams.get('tab'));
+    if (!t) {
+      return;
+    }
+    setActiveTab(t);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('tab');
+    const nextQuery = nextParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextQuery ? `?${nextQuery}` : '',
+      },
+      {
+        replace: true,
+        state: {
+          ...(typeof location.state === 'object' && location.state !== null
+            ? (location.state as object)
+            : {}),
+          [DASHBOARD_TAB_DEEP_LINK_STATE_KEY]: t,
+        },
+      }
+    );
+  }, [searchParams, navigate, location.pathname, location.state]);
+
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);

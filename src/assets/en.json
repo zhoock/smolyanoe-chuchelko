@@ -307,9 +307,9 @@
           "fansCanBuyNow": "Fans can buy now, download after release date"
         },
         "radioOptions": {
-          "no": "No",
-          "yes": "Yes",
-          "acceptPreorders": "Accept pre-orders"
+          "no": "Don't sell",
+          "yes": "Sell",
+          "acceptPreorders": "Pre-order"
         },
         "step2": {
           "genre": "Genre",
@@ -352,6 +352,14 @@
           "message": "Discard changes?",
           "stay": "Stay",
           "discard": "Discard"
+        },
+        "albumSale": {
+          "loadingPayment": "Loading…",
+          "sectionTitle": "Album sale",
+          "connectPaymentHint": "To sell this album, connect a payment method.",
+          "connectPaymentButton": "Connect payment →",
+          "saleIntro": "Choose whether the album is available for purchase or download.",
+          "saleRadiogroupAriaLabel": "Album sale"
         }
       }
     },

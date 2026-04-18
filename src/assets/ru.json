@@ -307,9 +307,9 @@
           "fansCanBuyNow": "Фанаты могут купить сейчас, скачать после даты релиза"
         },
         "radioOptions": {
-          "no": "Нет",
-          "yes": "Да",
-          "acceptPreorders": "Принимать предзаказы"
+          "no": "Не продавать",
+          "yes": "Продавать",
+          "acceptPreorders": "Предзаказ"
         },
         "step2": {
           "genre": "Жанр",
@@ -352,6 +352,14 @@
           "message": "Отменить изменения?",
           "stay": "Остаться",
           "discard": "Не сохранять"
+        },
+        "albumSale": {
+          "loadingPayment": "Загрузка…",
+          "sectionTitle": "Продажа альбома",
+          "connectPaymentHint": "Чтобы продавать альбом, подключите оплату",
+          "connectPaymentButton": "Подключить оплату →",
+          "saleIntro": "Выберите, доступен ли альбом для покупки или скачивания",
+          "saleRadiogroupAriaLabel": "Продажа альбома"
         }
       }
     },

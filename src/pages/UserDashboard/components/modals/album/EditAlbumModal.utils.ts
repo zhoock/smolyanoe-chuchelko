@@ -510,7 +510,13 @@ export const makeEmptyForm = (): AlbumFormData => ({
   streamingLinks: [],
 });
 
-export const validateStep = (step: number, formData: AlbumFormData): boolean => {
+export const validateStep = (
+  step: number,
+  formData: AlbumFormData,
+  opts?: { effectiveAllowDownloadSale?: 'no' | 'yes' | 'preorder' }
+): boolean => {
+  const saleMode = opts?.effectiveAllowDownloadSale ?? formData.allowDownloadSale;
+
   if (step === 1) {
     // Шаг 1: Basic Info
     const errors: string[] = [];
@@ -527,15 +533,12 @@ export const validateStep = (step: number, formData: AlbumFormData): boolean => 
       errors.push('Description');
     }
     // Regular price обязателен только если продажа включена
-    if (
-      formData.allowDownloadSale !== 'no' &&
-      (!formData.regularPrice || !formData.regularPrice.trim())
-    ) {
+    if (saleMode !== 'no' && (!formData.regularPrice || !formData.regularPrice.trim())) {
       errors.push('Regular price');
     }
     // Pre-order release date обязателен только если pre-order включен
     if (
-      formData.allowDownloadSale === 'preorder' &&
+      saleMode === 'preorder' &&
       (!formData.preorderReleaseDate || !formData.preorderReleaseDate.trim())
     ) {
       errors.push('Pre-order release date');
@@ -594,7 +597,8 @@ export const transformFormDataToAlbumFormat = (
    * Merged details (например `getAlbumDetailsForEdit(...).details`): id берутся по `kind`
    * из `classifyDetailBlockTitle(normalize(title))`, а не по заголовку только текущей локали.
    */
-  existingDetails?: unknown[]
+  existingDetails?: unknown[],
+  options?: { hasYooKassaPayment?: boolean }
 ): {
   release: Record<string, string>;
   buttons: Record<string, string>;
@@ -609,11 +613,14 @@ export const transformFormDataToAlbumFormat = (
     UPC: formData.upcEan,
   };
 
+  const allowDownloadSale =
+    options?.hasYooKassaPayment === false ? 'no' : formData.allowDownloadSale || 'no';
+
   // Сохраняем allowDownloadSale (всегда, даже если 'no')
-  release.allowDownloadSale = formData.allowDownloadSale || 'no';
+  release.allowDownloadSale = allowDownloadSale;
 
   // Сохраняем preorderReleaseDate, если включен preorder
-  if (formData.allowDownloadSale === 'preorder' && formData.preorderReleaseDate) {
+  if (allowDownloadSale === 'preorder' && formData.preorderReleaseDate) {
     const preorderDateISO = formatDateToISO(formData.preorderReleaseDate);
     if (preorderDateISO) {
       release.preorderReleaseDate = preorderDateISO;
