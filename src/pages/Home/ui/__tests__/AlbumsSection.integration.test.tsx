@@ -102,6 +102,61 @@ describe('AlbumsSection integration tests', () => {
     expect(region).toBeInTheDocument();
   });
 
+  test('не показывает альбомы с isPublic === false на витрине артиста', () => {
+    const withHidden: IAlbums[] = [
+      ...mockAlbums,
+      {
+        albumId: 'album-hidden',
+        album: 'Hidden',
+        artist: 'Artist 1',
+        fullName: 'Artist 1 — Hidden',
+        description: '',
+        release: { date: '2024-03-01' },
+        cover: 'cover-h',
+        tracks: [],
+        buttons: {},
+        details: [],
+        isPublic: false,
+      },
+    ];
+
+    renderWithProviders(<AlbumsSection />, {
+      preloadedState: {
+        lang: { current: 'en' },
+        albums: {
+          status: 'succeeded',
+          error: null,
+          data: withHidden,
+          lastUpdated: Date.now(),
+          fetchContextKey: null,
+        },
+        uiDictionary: {
+          en: {
+            status: 'succeeded',
+            error: null,
+            data: [
+              {
+                menu: {},
+                buttons: { viewAllAlbums: 'All ({count})' },
+                titles: { albums: 'Albums' },
+              },
+            ],
+            lastUpdated: Date.now(),
+          },
+          ru: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+          },
+        },
+      },
+    });
+
+    expect(screen.queryByAltText(/Обложка альбома Hidden/)).not.toBeInTheDocument();
+    expect(screen.getByAltText(/Обложка альбома Album 1/)).toBeInTheDocument();
+  });
+
   test('должен отобразить список альбомов', () => {
     renderWithProviders(<AlbumsSection />, {
       preloadedState: {
