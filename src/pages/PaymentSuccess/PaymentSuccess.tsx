@@ -403,7 +403,7 @@ function PaymentSuccess() {
                               <button
                                 type="button"
                                 className="payment-success__button payment-success__button--primary"
-                                onClick={() => navigate('/dashboard-new?tab=my-purchases')}
+                                onClick={() => navigate('/dashboard-new/my-purchases')}
                               >
                                 Мои покупки
                               </button>

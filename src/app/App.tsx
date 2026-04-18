@@ -7,6 +7,8 @@ import {
   useSearchParams,
   Routes,
   Route,
+  Navigate,
+  useParams,
   useRevalidator,
   matchPath,
 } from 'react-router-dom';
@@ -45,6 +47,12 @@ const PaymentSuccess = lazy(() => import('@pages/PaymentSuccess/PaymentSuccess')
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
+
+/** Старые пути `/dashboard/:tab` → `/dashboard-new/:tab` */
+function LegacyDashboardTabRedirect() {
+  const { tab } = useParams();
+  return <Navigate to={`/dashboard-new/${tab ?? 'albums'}`} replace />;
+}
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
 const router = createBrowserRouter([
@@ -203,6 +211,7 @@ function Layout() {
     '/dashboard',
     '/dashboard/:tab',
     '/dashboard-new',
+    '/dashboard-new/:tab',
     '/auth',
   ];
 
@@ -290,29 +299,15 @@ function Layout() {
           }
         />
         <Route
-          path="/dashboard-new"
+          path="/dashboard-new/:tab?"
           element={
             <Suspense fallback={<PageLoader />}>
               <UserDashboard />
             </Suspense>
           }
         />
-        <Route
-          path="/dashboard"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <UserDashboard />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/dashboard/:tab"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <UserDashboard />
-            </Suspense>
-          }
-        />
+        <Route path="/dashboard" element={<Navigate to="/dashboard-new" replace />} />
+        <Route path="/dashboard/:tab" element={<LegacyDashboardTabRedirect />} />
         <Route
           path="/auth"
           element={
