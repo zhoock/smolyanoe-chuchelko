@@ -911,7 +911,10 @@ export function ProfileSettingsModal({
                       onBlur={(e) => setPublicSlug(normalizePublicSlug(e.target.value))}
                     />
                     <div className="profile-settings-modal__field-hint">
-                      Изменение slug может повлиять на существующие публичные ссылки.
+                      {ui?.dashboard?.profileSettingsModal?.hints?.publicSlug ??
+                        (currentLang === 'en'
+                          ? 'Changing the slug may affect existing public links.'
+                          : 'Изменение slug может повлиять на существующие публичные ссылки.')}
                     </div>
                   </div>
 

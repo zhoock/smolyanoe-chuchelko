@@ -1869,6 +1869,7 @@ export function EditAlbumModal({
   // Валидация полей для каждого шага
 
   const handleNext = () => {
+    if (isSaving) return;
     // Валидируем текущий шаг перед переходом
     if (
       !validateStep(currentStep, formData, { effectiveAllowDownloadSale: saleModeForValidation })
@@ -1884,6 +1885,7 @@ export function EditAlbumModal({
   };
 
   const handlePrevious = () => {
+    if (isSaving) return;
     if (currentStep > 1) setCurrentStep((s) => s - 1);
   };
 
@@ -2596,8 +2598,8 @@ export function EditAlbumModal({
       // Небольшая задержка перед закрытием модалки для гарантии обновления UI
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // Закрываем модалку
-      handleClose();
+      // Закрываем модалку (isSaving ещё true — нужен force)
+      handleClose({ force: true });
 
       return result;
     } catch (error) {
@@ -2620,7 +2622,8 @@ export function EditAlbumModal({
     }
   };
 
-  const handleClose = () => {
+  const handleClose = (opts?: { force?: boolean }) => {
+    if (isSaving && !opts?.force) return;
     if (localPreviewUrlRef.current) {
       URL.revokeObjectURL(localPreviewUrlRef.current);
       localPreviewUrlRef.current = null;
@@ -3192,15 +3195,19 @@ export function EditAlbumModal({
 
   return (
     <>
-      <Popup isActive={isOpen} onClose={handleClose}>
+      <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isSaving}>
         <div className="edit-album-modal">
-          <div className="edit-album-modal__card">
+          <div
+            className={`edit-album-modal__card${isSaving ? ' edit-album-modal__card--saving' : ''}`}
+            aria-busy={isSaving}
+          >
             <div className="edit-album-modal__header">
               <h2 className="edit-album-modal__title">{getStepTitle()}</h2>
               <button
                 type="button"
                 className="edit-album-modal__close"
-                onClick={handleClose}
+                onClick={() => handleClose()}
+                disabled={isSaving}
                 aria-label={ui?.dashboard?.close ?? 'Close'}
               >
                 ×
@@ -3222,6 +3229,7 @@ export function EditAlbumModal({
                     type="button"
                     className="edit-album-modal__button edit-album-modal__button--secondary"
                     onClick={handlePrevious}
+                    disabled={isSaving}
                   >
                     {ui?.dashboard?.editAlbumModal?.buttons?.previous ?? 'Previous'}
                   </button>
@@ -3229,7 +3237,8 @@ export function EditAlbumModal({
                   <button
                     type="button"
                     className="edit-album-modal__button edit-album-modal__button--cancel"
-                    onClick={handleClose}
+                    onClick={() => handleClose()}
+                    disabled={isSaving}
                   >
                     {ui?.dashboard?.cancel ?? 'Cancel'}
                   </button>
@@ -3238,21 +3247,29 @@ export function EditAlbumModal({
                 {currentStep === 5 ? (
                   <button
                     type="button"
-                    className="edit-album-modal__button edit-album-modal__button--primary"
+                    className={`edit-album-modal__button edit-album-modal__button--primary${
+                      isSaving ? ' edit-album-modal__button--primary-loading' : ''
+                    }`}
                     onClick={handlePublish}
                     disabled={isSaving}
                   >
-                    {isSaving
-                      ? (ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...')
-                      : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId)
-                        ? (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
-                        : (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')}
+                    {isSaving ? (
+                      <>
+                        <span className="edit-album-modal__button-spinner" aria-hidden />
+                        {ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...'}
+                      </>
+                    ) : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId) ? (
+                      (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
+                    ) : (
+                      (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')
+                    )}
                   </button>
                 ) : (
                   <button
                     type="button"
                     className="edit-album-modal__button edit-album-modal__button--primary"
                     onClick={handleNext}
+                    disabled={isSaving}
                   >
                     {ui?.dashboard?.editAlbumModal?.buttons?.next ?? 'Next'}
                   </button>

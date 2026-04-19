@@ -603,17 +603,26 @@ export function SyncLyricsModal({
 
   const progress = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
 
+  const handleRequestClose = useCallback(() => {
+    if (isSaving) return;
+    onClose();
+  }, [isSaving, onClose]);
+
   return (
     <>
-      <Popup isActive={isOpen} onClose={onClose}>
+      <Popup isActive={isOpen} onClose={handleRequestClose} closeBlocked={isSaving}>
         <div className="sync-lyrics-modal">
-          <div className="sync-lyrics-modal__card">
+          <div
+            className={`sync-lyrics-modal__card${isSaving ? ' sync-lyrics-modal__card--saving' : ''}`}
+            aria-busy={isSaving}
+          >
             <div className="sync-lyrics-modal__header">
               <h2 className="sync-lyrics-modal__title">Синхронизация текста</h2>
               <button
                 type="button"
                 className="sync-lyrics-modal__close"
-                onClick={onClose}
+                onClick={handleRequestClose}
+                disabled={isSaving}
                 aria-label="Закрыть"
               >
                 ×
@@ -791,7 +800,8 @@ export function SyncLyricsModal({
                   <button
                     type="button"
                     className="sync-lyrics-modal__button sync-lyrics-modal__button--cancel"
-                    onClick={onClose}
+                    onClick={handleRequestClose}
+                    disabled={isSaving}
                   >
                     {ui?.dashboard?.cancel ?? 'Cancel'}
                   </button>
@@ -811,11 +821,18 @@ export function SyncLyricsModal({
                       type="button"
                       onClick={handleSave}
                       disabled={!isDirty || isSaving}
-                      className="sync-lyrics-modal__button sync-lyrics-modal__button--primary"
+                      className={`sync-lyrics-modal__button sync-lyrics-modal__button--primary${
+                        isSaving ? ' sync-lyrics-modal__button--primary-loading' : ''
+                      }`}
                     >
-                      {isSaving
-                        ? (ui?.dashboard?.saving ?? 'Saving...')
-                        : (ui?.dashboard?.save ?? 'Save')}
+                      {isSaving ? (
+                        <>
+                          <span className="sync-lyrics-modal__button-spinner" aria-hidden />
+                          {ui?.dashboard?.saving ?? 'Saving...'}
+                        </>
+                      ) : (
+                        (ui?.dashboard?.save ?? 'Save')
+                      )}
                     </button>
                   </div>
                 </div>

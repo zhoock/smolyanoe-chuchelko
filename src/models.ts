@@ -22,6 +22,8 @@ export interface HamburgerProps extends NavigationProps {
 export interface PopupProps extends HamburgerProps {
   children: React.ReactNode;
   'aria-labelledby'?: string;
+  /** Блокирует закрытие по Escape (событие cancel у нативного dialog). */
+  closeBlocked?: boolean;
 }
 
 /**
@@ -382,6 +384,7 @@ export interface IInterface {
       };
       hints: {
         primaryGenreCatalog: string;
+        publicSlug: string;
         aboutBand: string;
         headerImages: string;
         coverImage: string;

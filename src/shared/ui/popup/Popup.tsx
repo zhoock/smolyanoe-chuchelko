@@ -8,9 +8,21 @@ const PopupComponent = ({
   isActive,
   bgColor,
   onClose,
+  closeBlocked,
   'aria-labelledby': ariaLabelledBy,
 }: PopupProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const onCancel = (e: Event) => {
+      if (closeBlocked) e.preventDefault();
+    };
+    dialog.addEventListener('cancel', onCancel);
+    return () => dialog.removeEventListener('cancel', onCancel);
+  }, [closeBlocked]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
