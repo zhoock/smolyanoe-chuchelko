@@ -4,6 +4,7 @@ import { getUserImageUrl } from '@shared/api/albums';
 import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { uploadFile } from '@shared/api/storage';
 import { Popup } from '@shared/ui/popup';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 
 interface CarouselEditModalProps {
   /** Владелец медиа в Storage */
@@ -73,9 +74,17 @@ export function CarouselEditModal({
     onSave(imageKeys, caption || undefined);
   };
 
+  const handleRequestCancel = () => {
+    if (isUploading) return;
+    onCancel();
+  };
+
   return (
-    <Popup isActive={true} onClose={onCancel}>
-      <div className="edit-article-v2__carousel-edit-modal">
+    <Popup isActive={true} onClose={handleRequestCancel} closeBlocked={isUploading}>
+      <div
+        className={`edit-article-v2__carousel-edit-modal${isUploading ? ' dashboard-save-card--busy' : ''}`}
+        aria-busy={isUploading}
+      >
         <div className="edit-article-v2__carousel-edit-header">
           <h2 className="edit-article-v2__carousel-edit-title">Редактирование карусели</h2>
           <div className="edit-article-v2__carousel-edit-count">
@@ -85,7 +94,8 @@ export function CarouselEditModal({
             <button
               type="button"
               className="edit-article-v2__carousel-edit-cancel"
-              onClick={onCancel}
+              onClick={handleRequestCancel}
+              disabled={isUploading}
             >
               Отмена
             </button>
@@ -93,6 +103,7 @@ export function CarouselEditModal({
               type="button"
               className="edit-article-v2__carousel-edit-save"
               onClick={handleSave}
+              disabled={isUploading}
             >
               Сохранить
             </button>

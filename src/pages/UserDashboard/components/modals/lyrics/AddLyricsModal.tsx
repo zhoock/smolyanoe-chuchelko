@@ -1,16 +1,19 @@
 // src/pages/UserDashboard/components/AddLyricsModal.tsx
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
+import { useDashboardSaveLock } from '@shared/lib/hooks/useDashboardSaveLock';
+import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './AddLyricsModal.style.scss';
 
 interface AddLyricsModalProps {
   isOpen: boolean;
   trackTitle: string;
   onClose: () => void;
-  onSave: (lyrics: string, authorship?: string) => void;
+  onSave: (lyrics: string, authorship?: string) => void | Promise<void>;
   onPreview?: () => void;
 }
 
@@ -25,23 +28,30 @@ export function AddLyricsModal({
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [lyricsText, setLyricsText] = useState('');
   const [authorship, setAuthorship] = useState('');
+  const { isSaving, withSaving } = useDashboardSaveLock();
 
   const handleSave = () => {
-    onSave(lyricsText, authorship.trim() || undefined);
-    setLyricsText('');
-    setAuthorship('');
+    void withSaving(async () => {
+      await Promise.resolve(onSave(lyricsText, authorship.trim() || undefined));
+      setLyricsText('');
+      setAuthorship('');
+    });
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
+    if (isSaving) return;
     setLyricsText('');
     setAuthorship('');
     onClose();
-  };
+  }, [isSaving, onClose]);
 
   return (
-    <Popup isActive={isOpen} onClose={handleClose}>
+    <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isSaving}>
       <div className="add-lyrics-modal">
-        <div className="add-lyrics-modal__card">
+        <div
+          className={`add-lyrics-modal__card${isSaving ? ' dashboard-save-card--busy' : ''}`}
+          aria-busy={isSaving}
+        >
           <div className="add-lyrics-modal__header">
             <div className="add-lyrics-modal__header-content">
               <h2 className="add-lyrics-modal__title">
@@ -54,6 +64,7 @@ export function AddLyricsModal({
                 type="button"
                 className="add-lyrics-modal__preview-button"
                 onClick={onPreview}
+                disabled={isSaving}
               >
                 {ui?.dashboard?.preview ?? 'Preview'}
               </button>
@@ -101,15 +112,26 @@ export function AddLyricsModal({
               type="button"
               className="add-lyrics-modal__button add-lyrics-modal__button--cancel"
               onClick={handleClose}
+              disabled={isSaving}
             >
               {ui?.dashboard?.cancel ?? 'Cancel'}
             </button>
             <button
               type="button"
-              className="add-lyrics-modal__button add-lyrics-modal__button--primary"
+              className={`add-lyrics-modal__button add-lyrics-modal__button--primary${
+                isSaving ? ' add-lyrics-modal__button--primary-loading' : ''
+              }`}
               onClick={handleSave}
+              disabled={isSaving}
             >
-              {ui?.dashboard?.addLyrics ?? 'Add Lyrics'}
+              {isSaving ? (
+                <>
+                  <DashboardSaveSpinner />
+                  {ui?.dashboard?.saving ?? 'Saving...'}
+                </>
+              ) : (
+                (ui?.dashboard?.addLyrics ?? 'Add Lyrics')
+              )}
             </button>
           </div>
         </div>

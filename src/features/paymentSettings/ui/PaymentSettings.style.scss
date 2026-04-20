@@ -191,6 +191,13 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    &--loading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--ms-01);
+    }
   }
 
   &__connected-block {
@@ -326,6 +333,13 @@
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    &--loading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--ms-01);
     }
   }
 }

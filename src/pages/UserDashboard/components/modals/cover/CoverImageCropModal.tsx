@@ -6,6 +6,8 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
 import { getUser } from '@shared/lib/auth';
+import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './CoverImageCropModal.style.scss';
 
 interface CoverImageCropModalProps {
@@ -211,13 +213,14 @@ export function CoverImageCropModal({
   }, [imageSrc, croppedAreaPixels, onSave, onClose, ui]);
 
   const handleCancel = useCallback(() => {
+    if (isSaving) return;
     if (isPreviewMode) {
       setIsPreviewMode(false);
       setPreviewBlob(null);
     } else {
       onClose();
     }
-  }, [isPreviewMode, onClose]);
+  }, [isSaving, isPreviewMode, onClose]);
 
   // Функции для работы с localStorage (временное решение)
   function loadCropData(): CropData | null {
@@ -260,8 +263,8 @@ export function CoverImageCropModal({
   if (!isOpen) return null;
 
   return (
-    <Popup isActive={isOpen} onClose={handleCancel}>
-      <div className="cover-image-crop-modal">
+    <Popup isActive={isOpen} onClose={handleCancel} closeBlocked={isSaving}>
+      <div className={`cover-image-crop-modal${isSaving ? ' dashboard-save-card--busy' : ''}`}>
         <div className="cover-image-crop-modal__header">
           <h2 className="cover-image-crop-modal__title">
             {ui?.dashboard?.profileSettingsModal?.messages?.coverEditTitle ??
@@ -271,6 +274,7 @@ export function CoverImageCropModal({
             type="button"
             className="cover-image-crop-modal__close"
             onClick={handleCancel}
+            disabled={isSaving}
             aria-label={ui?.dashboard?.close ?? 'Закрыть'}
           >
             ×
@@ -375,6 +379,7 @@ export function CoverImageCropModal({
                 type="button"
                 className="cover-image-crop-modal__button"
                 onClick={handleCancel}
+                disabled={isSaving}
               >
                 {ui?.dashboard?.cancel ?? 'Отмена'}
               </button>
@@ -388,7 +393,7 @@ export function CoverImageCropModal({
               >
                 {isSaving ? (
                   <>
-                    <span className="cover-image-crop-modal__button-spinner"></span>
+                    <DashboardSaveSpinner className="cover-image-crop-modal__button-spinner" />
                     {ui?.dashboard?.saving ?? 'Сохранение...'}
                   </>
                 ) : (
@@ -410,6 +415,7 @@ export function CoverImageCropModal({
                 type="button"
                 className="cover-image-crop-modal__button"
                 onClick={handleCancel}
+                disabled={isSaving}
               >
                 {ui?.dashboard?.cancel ?? 'Отмена'}
               </button>
@@ -423,7 +429,7 @@ export function CoverImageCropModal({
               >
                 {isSaving ? (
                   <>
-                    <span className="cover-image-crop-modal__button-spinner"></span>
+                    <DashboardSaveSpinner className="cover-image-crop-modal__button-spinner" />
                     {ui?.dashboard?.saving ?? 'Сохранение...'}
                   </>
                 ) : (

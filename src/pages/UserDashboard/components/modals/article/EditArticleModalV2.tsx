@@ -32,6 +32,8 @@ import { SortableBlock } from '../../blocks/SortableBlock';
 import { SlashMenu } from '../../blocks/SlashMenu';
 import { CarouselEditModal } from '../../articles/CarouselEditModal';
 import { ArticleEditSkeleton } from '../../articles/ArticleEditSkeleton';
+import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './EditArticleModalV2.style.scss';
 
 interface EditArticleModalV2Props {
@@ -444,12 +446,12 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Обработка закрытия модального окна
   const handleClose = useCallback(() => {
+    if (saveStatus === 'saving' || isPublishing) return;
     if (hasChanges) {
-      // Если есть изменения, отменяем их и закрываем
       handleCancel();
     }
     onClose();
-  }, [hasChanges, handleCancel, onClose]);
+  }, [saveStatus, isPublishing, hasChanges, handleCancel, onClose]);
 
   // Публикация
   const handlePublish = useCallback(async () => {
@@ -1797,14 +1799,19 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     );
   };
 
+  const isArticleSaveBusy = saveStatus === 'saving' || isPublishing;
+
   return (
-    <Popup isActive={isOpen} onClose={handleClose}>
+    <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isArticleSaveBusy}>
       {isLoading ? (
         //   {true ? (
         <ArticleEditSkeleton />
       ) : (
         <div className="edit-article-v2">
-          <div className="edit-article-v2__container">
+          <div
+            className={`edit-article-v2__container${isPublishing ? ' edit-article-v2__container--saving' : ''}`}
+            aria-busy={isArticleSaveBusy}
+          >
             {/* Sticky Header */}
             <div className="edit-article-v2__header">
               <div className="edit-article-v2__header-content">
@@ -1821,6 +1828,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                 type="button"
                 className="edit-article-v2__close"
                 onClick={handleClose}
+                disabled={isArticleSaveBusy}
                 aria-label={texts.close}
               >
                 ×
@@ -1982,16 +1990,26 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                   type="button"
                   className="edit-article-v2__button edit-article-v2__button--cancel"
                   onClick={handleCancel}
+                  disabled={isArticleSaveBusy}
                 >
                   {texts.cancel}
                 </button>
                 <button
                   type="button"
-                  className="edit-article-v2__button edit-article-v2__button--publish"
+                  className={`edit-article-v2__button edit-article-v2__button--publish${
+                    isPublishing ? ' edit-article-v2__button--publish-loading' : ''
+                  }`}
                   onClick={handlePublish}
                   disabled={isPublishing || saveStatus === 'saving'}
                 >
-                  {isPublishing ? texts.publishing : texts.publish}
+                  {isPublishing ? (
+                    <>
+                      <DashboardSaveSpinner />
+                      {texts.publishing}
+                    </>
+                  ) : (
+                    texts.publish
+                  )}
                 </button>
               </div>
             )}

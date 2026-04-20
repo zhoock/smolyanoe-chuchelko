@@ -1,6 +1,8 @@
 import React from 'react';
 import { usePaymentSettings } from '../model/usePaymentSettings';
 import { PAYMENT_PROVIDERS } from '../lib/constants';
+import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './PaymentSettings.style.scss';
 
 interface PaymentSettingsProps {
@@ -30,13 +32,20 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
     handleDisconnect,
   } = usePaymentSettings(userId);
 
+  /** Любой запрос к API (подключение/отключение) — блокируем остальные действия. */
+  const isSaveInProgress = saving !== null;
+
   const renderProviderCard = (provider: (typeof PAYMENT_PROVIDERS)[0]) => {
     const settings = settingsMap[provider.id];
-    const isSaving = saving === provider.id;
+    const isThisSaving = saving === provider.id;
     const isFormOpen = showForm[provider.id];
 
     return (
-      <div key={provider.id} className="payment-settings__provider-card">
+      <div
+        key={provider.id}
+        className={`payment-settings__provider-card${isThisSaving ? ' dashboard-save-card--busy' : ''}`}
+        aria-busy={isThisSaving}
+      >
         {!(settings && settings.isActive) && (
           <>
             <div className="payment-settings__provider-logo">{provider.name}</div>
@@ -61,11 +70,20 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
             </p>
             <button
               type="button"
-              className="payment-settings__disconnect-button"
+              className={`payment-settings__disconnect-button${
+                isThisSaving ? ' payment-settings__disconnect-button--loading' : ''
+              }`}
               onClick={() => handleDisconnect(provider.id)}
-              disabled={isSaving}
+              disabled={isSaveInProgress}
             >
-              {isSaving ? 'Отключение...' : `Отключить ${provider.name}`}
+              {isThisSaving ? (
+                <>
+                  <DashboardSaveSpinner />
+                  Отключение...
+                </>
+              ) : (
+                `Отключить ${provider.name}`
+              )}
             </button>
           </div>
         ) : (
@@ -101,6 +119,7 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
                     setLocalShopId((prev) => ({ ...prev, [provider.id]: settings?.shopId || '' }));
                     setLocalSecretKey((prev) => ({ ...prev, [provider.id]: '' }));
                   }}
+                  disabled={isSaveInProgress}
                 >
                   Ввести Shop ID и Secret Key
                 </button>
@@ -123,7 +142,7 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
                       setLocalShopId((prev) => ({ ...prev, [provider.id]: e.target.value }))
                     }
                     placeholder="Введите ваш Shop ID"
-                    disabled={isSaving}
+                    disabled={isSaveInProgress}
                   />
                   <small className="payment-settings__form-hint">
                     Shop ID находится в разделе "Настройки" → "Магазин" в личном кабинете ЮKassa
@@ -146,7 +165,7 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
                       setLocalSecretKey((prev) => ({ ...prev, [provider.id]: e.target.value }))
                     }
                     placeholder="Введите ваш Secret Key"
-                    disabled={isSaving}
+                    disabled={isSaveInProgress}
                   />
                   <small className="payment-settings__form-hint">
                     Secret Key нужно выпустить в разделе "Интеграция" → "Ключи API". Важно: ключ
@@ -166,13 +185,15 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
                       }));
                       setLocalSecretKey((prev) => ({ ...prev, [provider.id]: '' }));
                     }}
-                    disabled={isSaving}
+                    disabled={isSaveInProgress}
                   >
                     Отмена
                   </button>
                   <button
                     type="button"
-                    className="payment-settings__save-button"
+                    className={`payment-settings__save-button${
+                      isThisSaving ? ' payment-settings__save-button--loading' : ''
+                    }`}
                     onClick={() => {
                       const sid = localShopId[provider.id] || '';
                       const sec = localSecretKey[provider.id] || '';
@@ -181,12 +202,19 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
                       void handleConnect(provider.id, sid, sec);
                     }}
                     disabled={
-                      isSaving ||
+                      isSaveInProgress ||
                       !localShopId[provider.id]?.trim() ||
                       !localSecretKey[provider.id]?.trim()
                     }
                   >
-                    {isSaving ? 'Подключение...' : 'Подключить'}
+                    {isThisSaving ? (
+                      <>
+                        <DashboardSaveSpinner />
+                        Подключение...
+                      </>
+                    ) : (
+                      'Подключить'
+                    )}
                   </button>
                 </div>
               </div>
@@ -206,7 +234,7 @@ export function PaymentSettings({ userId }: PaymentSettingsProps) {
   }
 
   return (
-    <div className="payment-settings">
+    <div className="payment-settings" aria-busy={isSaveInProgress}>
       {error && (
         <div className="payment-settings__error" role="alert">
           <strong>Ошибка:</strong> {error}

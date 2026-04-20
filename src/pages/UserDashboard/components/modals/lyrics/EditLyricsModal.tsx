@@ -4,6 +4,9 @@ import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useLang } from '@app/providers/lang';
+import { useDashboardSaveLock } from '@shared/lib/hooks/useDashboardSaveLock';
+import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './EditLyricsModal.style.scss';
 
 interface EditLyricsModalProps {
@@ -23,6 +26,7 @@ export function EditLyricsModal({
 }: EditLyricsModalProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const { isSaving, withSaving } = useDashboardSaveLock();
   const [lyricsText, setLyricsText] = useState(initialLyrics);
   const [authorship, setAuthorship] = useState(initialAuthorship || '');
 
@@ -63,38 +67,41 @@ export function EditLyricsModal({
     setAuthorship(initialAuthorshipValue);
   }, [initialLyricsValue, initialAuthorshipValue]);
 
-  const handleSave = async () => {
-    try {
-      await onSave(lyricsText, authorship.trim() || undefined);
-      // Обновляем начальные значения после успешного сохранения
-      setInitialLyricsValue(lyricsText);
-      setInitialAuthorshipValue(authorship.trim() || '');
-      // Закрываем модальное окно только после успешного сохранения
-      onClose();
-    } catch (error) {
-      console.error('Error saving lyrics:', error);
-      // Не закрываем модальное окно при ошибке
-    }
+  const handleSave = () => {
+    void withSaving(async () => {
+      try {
+        await onSave(lyricsText, authorship.trim() || undefined);
+        setInitialLyricsValue(lyricsText);
+        setInitialAuthorshipValue(authorship.trim() || '');
+        onClose();
+      } catch (error) {
+        console.error('Error saving lyrics:', error);
+      }
+    });
   };
 
   // Обработка закрытия модального окна
   const handleClose = useCallback(() => {
+    if (isSaving) return;
     if (hasChanges) {
-      // Если есть изменения, отменяем их и закрываем
       handleCancel();
     }
     onClose();
-  }, [hasChanges, handleCancel, onClose]);
+  }, [isSaving, hasChanges, handleCancel, onClose]);
 
   return (
-    <Popup isActive={isOpen} onClose={handleClose}>
+    <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isSaving}>
       <div className="edit-lyrics-modal">
-        <div className="edit-lyrics-modal__card">
+        <div
+          className={`edit-lyrics-modal__card${isSaving ? ' dashboard-save-card--busy' : ''}`}
+          aria-busy={isSaving}
+        >
           <div className="edit-lyrics-modal__header">
             <button
               type="button"
               className="edit-lyrics-modal__close"
               onClick={handleClose}
+              disabled={isSaving}
               aria-label={ui?.dashboard?.close ?? 'Закрыть'}
             >
               ×
@@ -168,15 +175,26 @@ export function EditLyricsModal({
                 type="button"
                 className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
                 onClick={handleCancel}
+                disabled={isSaving}
               >
                 {ui?.dashboard?.cancel ?? 'Cancel'}
               </button>
               <button
                 type="button"
-                className="edit-lyrics-modal__button edit-lyrics-modal__button--primary"
+                className={`edit-lyrics-modal__button edit-lyrics-modal__button--primary${
+                  isSaving ? ' edit-lyrics-modal__button--primary-loading' : ''
+                }`}
                 onClick={handleSave}
+                disabled={isSaving}
               >
-                {ui?.dashboard?.save ?? 'Save'}
+                {isSaving ? (
+                  <>
+                    <DashboardSaveSpinner />
+                    {ui?.dashboard?.saving ?? 'Saving...'}
+                  </>
+                ) : (
+                  (ui?.dashboard?.save ?? 'Save')
+                )}
               </button>
             </div>
           )}

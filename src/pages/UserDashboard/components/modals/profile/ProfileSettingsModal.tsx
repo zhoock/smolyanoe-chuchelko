@@ -13,6 +13,8 @@ import {
 } from '@entities/user/lib';
 import { HeaderImagesUpload } from '../../upload/HeaderImagesUpload';
 import { GENRE_OPTIONS } from '../album/EditAlbumModal.constants';
+import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
+import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './ProfileSettingsModal.style.scss';
 
 interface ProfileSettingsModalProps {
@@ -47,6 +49,7 @@ export function ProfileSettingsModal({
   const [aboutText, setAboutText] = useState<string>(''); // Текущий текст для выбранного языка
   const [isLoadingAboutText, setIsLoadingAboutText] = useState(false);
   const [isSavingAboutText, setIsSavingAboutText] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Поля для смены пароля
   const [currentPassword, setCurrentPassword] = useState('');
@@ -170,6 +173,8 @@ export function ProfileSettingsModal({
   const hasPasswordChanges =
     activeTab === 'security' && (currentPassword || newPassword || confirmPassword);
   const hasChanges = hasProfileChanges || hasPasswordChanges;
+
+  const isDashboardBusy = isChangingPassword || isSavingAboutText || isSavingProfile;
 
   const handleCancel = () => {
     // Возвращаем исходные значения в зависимости от активной вкладки
@@ -370,6 +375,7 @@ export function ProfileSettingsModal({
         needsHeaderImagesUpdate ||
         needsGenreUpdate
       ) {
+        setIsSavingProfile(true);
         try {
           const token = getToken();
           if (!token) {
@@ -441,6 +447,8 @@ export function ProfileSettingsModal({
             `Ошибка сохранения: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
           );
           return;
+        } finally {
+          setIsSavingProfile(false);
         }
       } else {
         console.log('ℹ️ [ProfileSettingsModal] Нет изменений для сохранения');
@@ -464,6 +472,7 @@ export function ProfileSettingsModal({
   };
 
   const handleHeaderClose = () => {
+    if (isDashboardBusy) return;
     if (hasChanges) {
       // Если есть изменения, отменяем их и закрываем
       handleCancel();
@@ -712,6 +721,7 @@ export function ProfileSettingsModal({
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (isDashboardBusy) return;
         if (isDropdownOpen) {
           setIsDropdownOpen(false);
         } else {
@@ -722,8 +732,9 @@ export function ProfileSettingsModal({
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
+    // isDashboardBusy: блокируем Escape во время сохранения; handleHeaderClose — см. стабильность выше
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, isDropdownOpen]);
+  }, [isOpen, isDropdownOpen, isDashboardBusy]);
 
   const handleSelectLanguage = (lang: 'ru' | 'en') => {
     setSelectedLang(lang);
@@ -732,14 +743,18 @@ export function ProfileSettingsModal({
   };
 
   return (
-    <Popup isActive={isOpen} onClose={handleHeaderClose}>
+    <Popup isActive={isOpen} onClose={handleHeaderClose} closeBlocked={isDashboardBusy}>
       <div className="profile-settings-modal">
-        <div className="profile-settings-modal__card">
+        <div
+          className={`profile-settings-modal__card${isDashboardBusy ? ' dashboard-save-card--busy' : ''}`}
+          aria-busy={isDashboardBusy}
+        >
           <div className="profile-settings-modal__header">
             <button
               type="button"
               className="profile-settings-modal__close"
               onClick={handleHeaderClose}
+              disabled={isDashboardBusy}
               aria-label={ui?.dashboard?.close ?? 'Закрыть'}
             >
               ×
@@ -1232,23 +1247,26 @@ export function ProfileSettingsModal({
                 type="button"
                 className="profile-settings-modal__button profile-settings-modal__button--cancel"
                 onClick={handleCancel}
-                disabled={isChangingPassword}
+                disabled={isDashboardBusy}
               >
                 {ui?.dashboard?.cancel ?? 'Отмена'}
               </button>
               <button
                 type="button"
-                className="profile-settings-modal__button profile-settings-modal__button--save"
+                className={`profile-settings-modal__button profile-settings-modal__button--save${
+                  isDashboardBusy ? ' profile-settings-modal__button--save-loading' : ''
+                }`}
                 onClick={handleSave}
-                disabled={
-                  isChangingPassword ||
-                  isSavingAboutText ||
-                  (activeTab === 'security' && !isPasswordFormValid)
-                }
+                disabled={isDashboardBusy || (activeTab === 'security' && !isPasswordFormValid)}
               >
-                {isChangingPassword || isSavingAboutText
-                  ? (ui?.dashboard?.saving ?? ui?.dashboard?.uploading ?? 'Сохранение...')
-                  : (ui?.dashboard?.save ?? 'Сохранить')}
+                {isDashboardBusy ? (
+                  <>
+                    <DashboardSaveSpinner />
+                    {ui?.dashboard?.saving ?? ui?.dashboard?.uploading ?? 'Сохранение...'}
+                  </>
+                ) : (
+                  (ui?.dashboard?.save ?? 'Сохранить')
+                )}
               </button>
             </div>
           )}

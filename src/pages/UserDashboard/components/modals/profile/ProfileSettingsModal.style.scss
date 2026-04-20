@@ -74,6 +74,11 @@ dialog {
         outline: 2px solid var(--dark-greenish-yellow);
         outline-offset: 2px;
       }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
     }
 
     &__tabs {
@@ -432,11 +437,9 @@ dialog {
       &--save {
         @include dashboard-button;
 
-        & {
-          color: var(--dashboard-card-bg);
-          background: var(--white);
-          border: 1px solid var(--dashboard-card-border);
-        }
+        color: var(--dashboard-card-bg);
+        background: var(--white);
+        border: 1px solid var(--dashboard-card-border);
 
         &:hover {
           color: var(--dashboard-card-bg);
@@ -452,6 +455,13 @@ dialog {
           opacity: 0.6;
           cursor: not-allowed;
         }
+      }
+
+      &--save-loading {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--ms-01);
       }
 
       &:disabled {

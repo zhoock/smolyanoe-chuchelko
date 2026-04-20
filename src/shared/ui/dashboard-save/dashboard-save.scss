@@ -1,0 +1,21 @@
+.dashboard-save-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: dashboard-save-spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.dashboard-save-card--busy {
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes dashboard-save-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

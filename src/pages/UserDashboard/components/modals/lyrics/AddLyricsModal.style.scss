@@ -61,6 +61,11 @@ dialog {
 
     &__preview-button {
       @include dashboard-button;
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
     }
 
     &__divider {
@@ -122,11 +127,9 @@ dialog {
       &--primary {
         @include dashboard-button;
 
-        & {
-          color: var(--dashboard-card-bg);
-          background: var(--white);
-          border: 1px solid var(--dashboard-card-border);
-        }
+        color: var(--dashboard-card-bg);
+        background: var(--white);
+        border: 1px solid var(--dashboard-card-border);
 
         &:hover {
           color: var(--dashboard-card-bg);
@@ -137,6 +140,13 @@ dialog {
         &:active {
           opacity: 0.8;
         }
+      }
+
+      &--primary-loading {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--ms-01);
       }
     }
   }
