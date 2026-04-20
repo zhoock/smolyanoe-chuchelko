@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
 import { uploadFile } from '@shared/api/storage';
 import { getUser } from '@shared/lib/auth';
+import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 
 interface BlockImageProps {
   imageKey?: string;
@@ -40,8 +41,7 @@ export function BlockImage({
     try {
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const baseFileName = file.name.replace(/\.[^/.]+$/, '');
-      const timestamp = Date.now();
-      const fileName = `article_${timestamp}_${baseFileName}.${fileExtension}`;
+      const fileName = `article_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
       const imageKey = fileName;
 
       const url = await uploadFile({

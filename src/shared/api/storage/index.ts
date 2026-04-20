@@ -8,6 +8,7 @@ import {
   STORAGE_BUCKET_NAME,
 } from '@config/supabase';
 import { getUserUserId, type ImageCategory } from '@config/user';
+import { sanitizeFileName } from '@shared/lib/sanitizeFileName';
 
 export interface UploadFileOptions {
   userId?: string;
@@ -25,21 +26,43 @@ export interface GetFileUrlOptions {
   expiresIn?: number; // Время жизни ссылки в секундах (по умолчанию 1 час)
 }
 
+export { sanitizeFileName };
+
+/** Имя для загрузки: basename нормализуем; полный путь `users/...` не трогаем. */
+function sanitizeUploadFileName(fileName: string): string {
+  if (fileName.startsWith('users/')) {
+    return fileName;
+  }
+  return sanitizeFileName(fileName);
+}
+
+/**
+ * Совпадение ключа в bucket с полем в БД: uploadFile кладёт sanitizeFileName(name).
+ * Если в БД осталось имя с пробелами — приводим к тому же виду.
+ * Не вызываем sanitize для «нормальных» имён (альбомы): там lower-case ломает регистр ключей в Storage.
+ */
+function normalizeStorageFileNameForLookup(fileName: string): string {
+  if (/\s/.test(fileName)) {
+    return sanitizeUploadFileName(fileName);
+  }
+  return fileName;
+}
+
 /**
  * Получить путь к файлу в Storage
  */
 function getStoragePath(userId: string, category: ImageCategory, fileName: string): string {
-  // Используем UUID пользователя для всех категорий
-  // Это обеспечивает правильную изоляцию данных для мультипользовательской системы
-
   let normalizedFileName = fileName;
 
-  // Если fileName уже содержит полный путь (начинается с users/), возвращаем как есть
   if (normalizedFileName.startsWith('users/')) {
-    return normalizedFileName;
+    const parts = normalizedFileName.split('/');
+    const last = parts.pop() ?? '';
+    if (!last) return normalizedFileName;
+    parts.push(normalizeStorageFileNameForLookup(last));
+    return parts.join('/');
   }
 
-  return `users/${userId}/${category}/${normalizedFileName}`;
+  return `users/${userId}/${category}/${normalizeStorageFileNameForLookup(normalizedFileName)}`;
 }
 
 /**
@@ -71,7 +94,8 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       return null;
     }
     const userId = resolvedUserId;
-    const { category, file, fileName, contentType } = options;
+    const { category, file, fileName: rawFileName, contentType } = options;
+    const fileName = sanitizeUploadFileName(rawFileName);
 
     const fileSizeMB = file.size / (1024 * 1024);
     console.log('📤 [uploadFile] Начало загрузки:', {
@@ -145,17 +169,19 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
     console.log(`⏱️ [uploadFile] Запрос выполнен за ${fetchTime}ms, status: ${response.status}`);
 
     if (!response.ok) {
-      let errorData;
+      let errorData: { error?: string; success?: boolean };
       try {
         errorData = await response.json();
       } catch (parseError) {
         const text = await response.text().catch(() => 'Unable to read response');
         errorData = { error: `HTTP ${response.status}: ${text}` };
       }
+      const serverMessage =
+        typeof errorData?.error === 'string' ? errorData.error : JSON.stringify(errorData);
       console.error('❌ Error uploading file via Netlify Function:', {
         status: response.status,
         statusText: response.statusText,
-        error: errorData,
+        serverMessage,
         url: response.url,
       });
       return null;
@@ -361,10 +387,11 @@ export async function uploadFileAdmin(options: UploadFileOptions): Promise<strin
       userId: explicitUserId,
       category,
       file,
-      fileName,
+      fileName: rawFileName,
       contentType,
       upsert = false,
     } = options;
+    const fileName = sanitizeUploadFileName(rawFileName);
     const userId = explicitUserId;
     if (!userId) {
       console.error('[BUG] userId is missing in uploadFileAdmin.');

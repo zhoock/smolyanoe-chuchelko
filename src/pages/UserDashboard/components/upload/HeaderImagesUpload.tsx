@@ -6,6 +6,7 @@ import { useLang } from '@app/providers/lang';
 import { CoverImageCropModal } from '../modals/cover/CoverImageCropModal';
 import { uploadFile, deleteHeroImage } from '@shared/api/storage';
 import { getUser } from '@shared/lib/auth';
+import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import './HeaderImagesUpload.style.scss';
 
 interface HeaderImagesUploadProps {
@@ -207,7 +208,7 @@ export function HeaderImagesUpload({
         throw new Error('User not authenticated');
       }
 
-      const fileName = `hero-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.jpg`;
+      const fileName = `hero-${uniqueUploadFileSuffix()}.jpg`;
       console.log('📤 [HeaderImagesUpload] Загрузка hero изображения:', {
         fileName,
         fileSize: croppedBlob.size,

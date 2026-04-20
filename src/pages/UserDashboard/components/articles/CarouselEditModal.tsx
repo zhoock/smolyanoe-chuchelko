@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
 import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { uploadFile } from '@shared/api/storage';
+import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import { Popup } from '@shared/ui/popup';
 import '@shared/ui/dashboard-save/dashboard-save.scss';
 
@@ -40,8 +41,7 @@ export function CarouselEditModal({
         const file = files[i];
         const fileExtension = file.name.split('.').pop() || 'jpg';
         const baseFileName = file.name.replace(/\.[^/.]+$/, '');
-        const timestamp = Date.now() + i;
-        const fileName = `article_${timestamp}_${baseFileName}.${fileExtension}`;
+        const fileName = `article_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
         const imageKey = fileName;
 
         const url = await uploadFile({

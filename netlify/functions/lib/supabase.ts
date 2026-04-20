@@ -38,11 +38,15 @@ export function createSupabaseAnonClient(): SupabaseClient | null {
  * ⚠️ Безопасность: НЕ используем VITE_* переменные (только server env)
  */
 export function createSupabaseAdminClient(): SupabaseClient | null {
-  const supabaseUrl = process.env.SUPABASE_URL || '';
+  // Локально часто задают только VITE_SUPABASE_URL; для функций дублируем fallback URL.
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
-    console.error('❌ [supabase] Supabase credentials not found');
+    console.error('❌ [supabase] Supabase credentials not found', {
+      hasUrl: !!supabaseUrl,
+      hasServiceRoleKey: !!serviceRoleKey,
+    });
     return null;
   }
 

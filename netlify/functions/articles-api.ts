@@ -414,6 +414,46 @@ async function removeArticleStorageFiles(
   }
 }
 
+/**
+ * Точные ключи в bucket для старой обложки статьи (без list/stem — как в upload-file).
+ * В БД часто лежит только имя файла; в Storage объект: users/{userId}/articles/{fileName}.
+ */
+function storagePathsToRemoveForArticleCoverImg(
+  raw: string | null | undefined,
+  ownerUserId: string
+): string[] {
+  if (raw == null) return [];
+  const s = String(raw).trim();
+  if (!s) return [];
+
+  const ownerPrefix = `users/${ownerUserId}/articles/`;
+  const parsed = tryParseUsersStoragePath(s);
+  if (parsed) {
+    if (parsed.startsWith(ownerPrefix)) {
+      return [parsed];
+    }
+    return [];
+  }
+
+  const fileName = s.includes('/') ? (s.split('/').pop() ?? s) : s;
+  const base = fileName.trim();
+  if (!base || INVALID_ARTICLE_STEMS.has(base)) return [];
+  return [`${ownerPrefix}${base}`];
+}
+
+async function removeStorageObjectsExact(supabase: SupabaseClient, paths: string[]): Promise<void> {
+  const uniq = [...new Set(paths)].filter(Boolean);
+  if (uniq.length === 0) return;
+  const chunkSize = 100;
+  for (let i = 0; i < uniq.length; i += chunkSize) {
+    const batch = uniq.slice(i, i + chunkSize);
+    const { error } = await supabase.storage.from(STORAGE_BUCKET_NAME).remove(batch);
+    if (error) {
+      console.error('[articles-api] Storage remove (exact paths) failed:', error.message, batch);
+    }
+  }
+}
+
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
@@ -711,6 +751,15 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'articleId in body does not match article');
       }
 
+      const previousImgRow = await query<{ img: string | null }>(
+        `SELECT img FROM articles
+         WHERE user_id = $1::uuid AND article_id = $2
+         ORDER BY updated_at DESC NULLS LAST
+         LIMIT 1`,
+        [userId, resolvedArticleId]
+      );
+      const previousImg = previousImgRow.rows[0]?.img ?? null;
+
       const patch = data.translations?.[data.lang];
       const existingLocale = await query<ArticleRow>(
         `SELECT id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at
@@ -793,6 +842,40 @@ export const handler: Handler = async (
           date: data.date !== undefined ? data.date : undefined,
           isDraft: data.isDraft !== undefined ? data.isDraft : undefined,
         });
+      }
+
+      if (data.img !== undefined) {
+        const prev = String(previousImg ?? '').trim();
+        const next = String(data.img).trim();
+        if (prev && prev !== next) {
+          const supabaseAdmin = createSupabaseAdminClient();
+          if (supabaseAdmin) {
+            try {
+              const pathsToRemove = storagePathsToRemoveForArticleCoverImg(prev, userId);
+              if (pathsToRemove.length > 0) {
+                console.log('[articles-api PUT] Removing previous article cover from storage:', {
+                  previousImg: prev,
+                  pathsToRemove,
+                });
+                await removeStorageObjectsExact(supabaseAdmin, pathsToRemove);
+              } else {
+                console.warn(
+                  '[articles-api PUT] Could not resolve storage path for previous cover:',
+                  prev
+                );
+              }
+            } catch (cleanupErr) {
+              console.error(
+                '[articles-api PUT] Previous cover image storage cleanup failed:',
+                cleanupErr
+              );
+            }
+          } else {
+            console.warn(
+              '[articles-api PUT] Supabase admin client missing; skipped previous cover removal'
+            );
+          }
+        }
       }
 
       return createSuccessMessageResponse('Article updated successfully');

@@ -6,6 +6,7 @@ import { useLang } from '@app/providers/lang';
 import { CoverImageCropModal } from '../modals/cover/CoverImageCropModal';
 import { uploadFile } from '@shared/api/storage';
 import { getUser } from '@shared/lib/auth';
+import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import './CoverImageUpload.style.scss';
 
 interface CoverImageUploadProps {
@@ -156,7 +157,7 @@ export function CoverImageUpload({ currentCoverUrl, onCoverUpdated }: CoverImage
         throw new Error('User not authenticated');
       }
 
-      const fileName = `cover-${Date.now()}.jpg`;
+      const fileName = `cover-${uniqueUploadFileSuffix()}.jpg`;
       const url = await uploadFile({
         userId: user.id,
         category: 'profile',

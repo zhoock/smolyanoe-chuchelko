@@ -437,9 +437,13 @@ dialog {
       &--save {
         @include dashboard-button;
 
-        color: var(--dashboard-card-bg);
-        background: var(--white);
-        border: 1px solid var(--dashboard-card-border);
+        /* stylelint-disable no-duplicate-selectors -- Sass mixed-decls: https://sass-lang.com/d/mixed-decls */
+        & {
+          color: var(--dashboard-card-bg);
+          background: var(--white);
+          border: 1px solid var(--dashboard-card-border);
+        }
+        /* stylelint-enable no-duplicate-selectors */
 
         &:hover {
           color: var(--dashboard-card-bg);

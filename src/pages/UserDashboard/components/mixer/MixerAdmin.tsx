@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import type { IInterface } from '@models';
 import type { AlbumData, TrackData } from '@entities/album/lib/transformAlbumData';
 import { uploadFile, listStorageByPrefix } from '@shared/api/storage';
+import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import { getUserImageUrl } from '@shared/api/albums';
 import {
   buildStoragePublicObjectUrl,
@@ -304,7 +305,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
       const fileExt = file.name.split('.').pop() || 'wav';
       // TrackData не гарантирует наличие trackId, поэтому берём безопасно через id или fallback
       const trackId = track.id || (track as any).trackId || 'track';
-      const fileName = `${stemKey}-${Date.now()}.${fileExt}`;
+      const fileName = `${stemKey}-${uniqueUploadFileSuffix()}.${fileExt}`;
 
       setTrackStems((prev) => ({
         ...prev,
@@ -814,13 +815,14 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                     <div className="user-dashboard__album-thumbnail">
                       {album.cover && coverThumbBase ? (
                         <img
-                          src={`${coverThumbBase}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
+                          src={`${coverThumbBase}&v=${encodeURIComponent(`${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`)}`}
                           alt={album.title}
                           onError={(e) => {
                             const img = e.target as HTMLImageElement;
                             const currentSrc = img.src;
                             if (!currentSrc.includes('&_retry=')) {
-                              img.src = `${currentSrc.split('&v=')[0]}&v=${album.cover}&_retry=${Date.now()}`;
+                              const base = currentSrc.split(/[&](?:v|_retry)=/)[0];
+                              img.src = `${base}&_retry=${Date.now()}`;
                             }
                           }}
                         />

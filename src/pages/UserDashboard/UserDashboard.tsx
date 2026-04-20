@@ -45,6 +45,7 @@ import {
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
+import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import { loadAuthorshipFromStorage, loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import { uploadTracks, prepareAndUploadTrack, type TrackUploadData } from '@shared/api/tracks';
 import { TRACK_ORDER_INDEX_STEP } from '@shared/lib/tracks/trackOrderIndex';
@@ -882,8 +883,7 @@ function UserDashboard() {
 
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const baseFileName = file.name.replace(/\.[^/.]+$/, '');
-      const timestamp = Date.now();
-      const fileName = `article_cover_${timestamp}_${baseFileName}.${fileExtension}`;
+      const fileName = `article_cover_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
 
       setArticleCoverUpload((prev) => ({
         ...prev,
@@ -971,6 +971,7 @@ function UserDashboard() {
 
         // API поддерживает id=UUID и id=article_id (без UUID в Redux — всё равно сохраняем обложку).
         const idParam = article.id ?? article.articleId;
+        // Обновляем только img (shared metadata), без translations — иначе 400 при пустом nameArticle в UI-локали.
         const response = await fetch(`/api/articles-api?id=${encodeURIComponent(idParam)}`, {
           method: 'PUT',
           headers: {
@@ -980,16 +981,7 @@ function UserDashboard() {
           body: JSON.stringify({
             articleId: article.articleId,
             lang,
-            translations: {
-              [lang]: {
-                nameArticle: article.nameArticle,
-                description: article.description ?? '',
-                details: Array.isArray(article.details) ? article.details : [],
-              },
-            },
             img: finalImageKey,
-            date: article.date,
-            isDraft: article.isDraft ?? true,
           }),
         });
 
@@ -2258,14 +2250,15 @@ function UserDashboard() {
                                           {album.cover && coverThumbBase ? (
                                             <img
                                               key={`cover-${album.id}-${album.cover}-${album.coverUpdatedAt || ''}`}
-                                              src={`${coverThumbBase}&v=${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`}
+                                              src={`${coverThumbBase}&v=${encodeURIComponent(`${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`)}`}
                                               alt={album.title}
                                               onError={(e) => {
                                                 const img = e.target as HTMLImageElement;
-                                                // При ошибке загрузки добавляем timestamp для принудительной перезагрузки
                                                 const currentSrc = img.src;
                                                 if (!currentSrc.includes('&_retry=')) {
-                                                  img.src = `${currentSrc.split('&v=')[0]}&v=${album.cover}&_retry=${Date.now()}`;
+                                                  const base =
+                                                    currentSrc.split(/[&](?:v|_retry)=/)[0];
+                                                  img.src = `${base}&_retry=${Date.now()}`;
                                                 }
                                               }}
                                             />

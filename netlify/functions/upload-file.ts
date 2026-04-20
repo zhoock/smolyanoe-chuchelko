@@ -15,7 +15,6 @@
  */
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
-import { createClient } from '@supabase/supabase-js';
 import type { ImageCategory } from '../../src/config/user';
 import { extractRoleFromToken } from './lib/jwt';
 import {
@@ -25,36 +24,26 @@ import {
   requireAuth,
   parseJsonBody,
 } from './lib/api-helpers';
+import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
+import { sanitizeUploadFileName } from './lib/sanitizeFileName';
 import { generateHeroImageVariants, extractBaseName } from './lib/image-processor';
 
-const STORAGE_BUCKET_NAME = 'user-media';
+const ALLOWED_CATEGORIES: readonly ImageCategory[] = [
+  'albums',
+  'articles',
+  'profile',
+  'uploads',
+  'stems',
+  'audio',
+  'hero',
+];
 
-function createSupabaseAdminClient() {
-  // В Netlify Functions переменные с префиксом VITE_ недоступны
-  // Используем переменные без префикса для серверных функций
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error('Supabase credentials not found', {
-      hasUrl: !!supabaseUrl,
-      hasServiceRoleKey: !!serviceRoleKey,
-    });
-    return null;
-  }
-
-  try {
-    return createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-  } catch (error) {
-    console.error('❌ Failed to create Supabase admin client:', error);
-    return null;
-  }
+function normalizeImageCategory(raw: unknown): ImageCategory | null {
+  if (raw == null || typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (s === 'article') return 'articles';
+  if ((ALLOWED_CATEGORIES as readonly string[]).includes(s)) return s as ImageCategory;
+  return null;
 }
 
 interface UploadFileRequest {
@@ -99,10 +88,26 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Парсим JSON body
     const body = parseJsonBody<Partial<UploadFileRequest>>(event.body, {});
 
-    const { fileBase64, fileName, category, contentType, originalFileSize } = body;
+    const {
+      fileBase64,
+      fileName: rawFileName,
+      category: categoryRaw,
+      contentType,
+      originalFileSize,
+    } = body;
 
-    if (!fileBase64 || !fileName || !category) {
+    if (!fileBase64 || !rawFileName || !categoryRaw) {
       return createErrorResponse(400, 'Missing required fields: fileBase64, fileName, category');
+    }
+
+    const fileName = sanitizeUploadFileName(String(rawFileName).trim());
+
+    const normalizedCategory = normalizeImageCategory(categoryRaw);
+    if (!normalizedCategory) {
+      return createErrorResponse(
+        400,
+        `Invalid category "${String(categoryRaw)}". Use: ${ALLOWED_CATEGORIES.join(', ')} (alias: article → articles)`
+      );
     }
 
     // Используем userId из токена или из запроса (если указан)
@@ -124,14 +129,14 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     if (!supabase) {
       return createErrorResponse(
         500,
-        'Supabase admin client is not available. Please check environment variables.'
+        'Uploads require SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY in .env for Netlify Functions.'
       );
     }
 
     // Декодируем base64 в Buffer
     console.log('🔄 [upload-file] Декодирование base64...', {
       base64Length: fileBase64.length,
-      category,
+      category: normalizedCategory,
       fileName,
       originalFileSize,
     });
@@ -153,7 +158,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     }
 
     // Для категории hero генерируем варианты изображений
-    if (category === 'hero') {
+    if (normalizedCategory === 'hero') {
       // Используем UUID пользователя из токена
       const heroUserId = userId;
 
@@ -191,7 +196,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       const uploadErrors: string[] = [];
 
       for (const [variantFileName, buffer] of Object.entries(variants)) {
-        const variantPath = getStoragePath(heroUserId, category, variantFileName);
+        const variantPath = getStoragePath(heroUserId, normalizedCategory, variantFileName);
         const variantContentType = variantFileName.endsWith('.avif')
           ? 'image/avif'
           : variantFileName.endsWith('.webp')
@@ -228,7 +233,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
       // Используем -1920.jpg как основной файл (Full HD версия)
       const mainFileName = `${baseName}-1920.jpg`;
-      const mainPath = getStoragePath(heroUserId, category, mainFileName);
+      const mainPath = getStoragePath(heroUserId, normalizedCategory, mainFileName);
 
       // Для hero изображений возвращаем storagePath, клиент сформирует URL через getStorageFileUrl
       // Это более надежно, чем формировать URL на сервере
@@ -236,7 +241,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         mainPath,
         baseName,
         heroUserId,
-        category,
+        category: normalizedCategory,
       });
 
       // Генерируем proxy URL на клиенте через getStorageFileUrl
@@ -255,15 +260,15 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Формируем путь в Storage
     // Используем UUID пользователя из токена для всех категорий
     const audioUserId = targetUserId;
-    const storagePath = getStoragePath(audioUserId, category, fileName);
+    const storagePath = getStoragePath(audioUserId, normalizedCategory, fileName);
 
     // Для категории profile удаляем старые файлы профиля
-    if (category === 'profile') {
+    if (normalizedCategory === 'profile') {
       // Проверяем, существует ли файл с таким именем или любое изображение профиля
       // Ищем все файлы в папке profile, чтобы удалить старые версии (например, profile.png, если загружаем profile.jpg)
       const { data: existingFiles } = await supabase.storage
         .from(STORAGE_BUCKET_NAME)
-        .list(`users/${targetUserId}/${category}`, {
+        .list(`users/${targetUserId}/${normalizedCategory}`, {
           limit: 100, // Получаем все файлы в папке
         });
 
@@ -274,7 +279,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       // ВАЖНО: удаляем ВСЕ файлы profile.*, включая тот, который собираемся загрузить
       if (profileFiles.length > 0) {
         const filesToDelete = profileFiles.map((f) =>
-          getStoragePath(targetUserId, category, f.name)
+          getStoragePath(targetUserId, normalizedCategory, f.name)
         );
 
         // Удаляем все старые файлы
@@ -294,11 +299,15 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Загружаем новый файл в Supabase Storage
     // Используем upsert для гарантированной замены
     const defaultContentType =
-      category === 'audio' ? 'audio/wav' : category === 'stems' ? 'image/jpeg' : 'image/jpeg';
+      normalizedCategory === 'audio'
+        ? 'audio/wav'
+        : normalizedCategory === 'stems'
+          ? 'image/jpeg'
+          : 'image/jpeg';
     const finalContentType = contentType || defaultContentType;
 
     console.log('📤 [upload-file] Uploading file:', {
-      category,
+      category: normalizedCategory,
       storagePath,
       fileSize: fileBuffer.length,
       contentType: finalContentType,
@@ -310,7 +319,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       .upload(storagePath, fileBuffer, {
         contentType: finalContentType,
         upsert: true, // Обязательно true для замены существующего файла
-        cacheControl: category === 'audio' ? '3600' : 'no-cache', // Для audio кеш на 1 час
+        cacheControl: normalizedCategory === 'audio' ? '3600' : 'no-cache', // Для audio кеш на 1 час
       });
 
     if (error) {
