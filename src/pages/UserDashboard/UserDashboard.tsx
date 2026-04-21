@@ -42,6 +42,7 @@ import {
   selectArticlesStatus,
   selectArticlesDataResolved,
   selectArticlesError,
+  ArticleCoverImage,
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
@@ -902,10 +903,17 @@ function UserDashboard() {
         },
       }));
 
+      const existingArticle = articlesFromStore.find((a) => a.articleId === articleId);
+      const previousCoverKey =
+        existingArticle?.img && existingArticle.img.startsWith('article_cover_')
+          ? existingArticle.img
+          : undefined;
+
       const url = await uploadFile({
         file,
         category: 'articles',
         fileName: rawFileName,
+        ...(previousCoverKey ? { previousImageKey: previousCoverKey } : {}),
       });
 
       setArticleCoverUpload((prev) => ({
@@ -2605,29 +2613,22 @@ function UserDashboard() {
                                       >
                                         <div className="user-dashboard__album-thumbnail">
                                           {article.img ? (
-                                            <img
-                                              src={
-                                                articleOwnerId
-                                                  ? (getUserImageUrl(
-                                                      article.img,
-                                                      'articles',
-                                                      '.jpg',
-                                                      undefined,
-                                                      articleOwnerId
-                                                    ) ?? '/images/album-placeholder.png')
-                                                  : '/images/album-placeholder.png'
-                                              }
-                                              alt={article.nameArticle}
-                                              loading="lazy"
-                                              decoding="async"
-                                              onError={(e) => {
-                                                const img = e.target as HTMLImageElement;
-                                                const currentSrc = img.src;
-                                                if (!currentSrc.includes('&_retry=')) {
-                                                  img.src = `${currentSrc}&_retry=${Date.now()}`;
-                                                }
-                                              }}
-                                            />
+                                            articleOwnerId ? (
+                                              <ArticleCoverImage
+                                                img={article.img}
+                                                userId={articleOwnerId}
+                                                role="admin"
+                                                alt={article.nameArticle}
+                                                loading="lazy"
+                                                decoding="async"
+                                                debugLabel={`UserDashboard:articleThumb:${article.articleId}`}
+                                              />
+                                            ) : (
+                                              <img
+                                                src="/images/album-placeholder.png"
+                                                alt={article.nameArticle}
+                                              />
+                                            )
                                           ) : (
                                             <img
                                               src="/images/album-placeholder.png"
@@ -2676,39 +2677,31 @@ function UserDashboard() {
                                               const hasCover = article.img || coverState?.preview;
 
                                               if (hasCover) {
-                                                const previewUrl =
-                                                  coverState?.preview ??
-                                                  (article.img && articleOwnerId
-                                                    ? getUserImageUrl(
-                                                        article.img,
-                                                        'articles',
-                                                        '.jpg',
-                                                        undefined,
-                                                        articleOwnerId
-                                                      )
-                                                    : null);
-                                                if (
-                                                  previewUrl == null &&
-                                                  article.img &&
-                                                  !coverState?.preview &&
-                                                  articleOwnerId
-                                                ) {
-                                                  console.error(
-                                                    '[BUG] UserDashboard article cover preview: getUserImageUrl returned null',
-                                                    { articleId: article.articleId, articleOwnerId }
-                                                  );
-                                                }
                                                 return (
                                                   <div className="user-dashboard__article-cover-wrap">
                                                     <div className="user-dashboard__article-cover-preview">
-                                                      <img
-                                                        src={
-                                                          previewUrl ??
-                                                          '/images/album-placeholder.png'
-                                                        }
-                                                        alt="Article cover preview"
-                                                        className="user-dashboard__article-cover-image"
-                                                      />
+                                                      {coverState?.preview ? (
+                                                        <img
+                                                          src={coverState.preview}
+                                                          alt="Article cover preview"
+                                                          className="user-dashboard__article-cover-image"
+                                                        />
+                                                      ) : article.img && articleOwnerId ? (
+                                                        <ArticleCoverImage
+                                                          img={article.img}
+                                                          userId={articleOwnerId}
+                                                          role="admin"
+                                                          alt="Article cover preview"
+                                                          className="user-dashboard__article-cover-image"
+                                                          debugLabel={`UserDashboard:articleCoverPreview:${article.articleId}`}
+                                                        />
+                                                      ) : (
+                                                        <img
+                                                          src="/images/album-placeholder.png"
+                                                          alt="Article cover preview"
+                                                          className="user-dashboard__article-cover-image"
+                                                        />
+                                                      )}
                                                     </div>
 
                                                     <div className="user-dashboard__article-cover-actions">

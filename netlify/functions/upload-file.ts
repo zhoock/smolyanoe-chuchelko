@@ -26,7 +26,11 @@ import {
 } from './lib/api-helpers';
 import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
 import { sanitizeUploadFileName } from './lib/sanitizeFileName';
-import { generateHeroImageVariants, extractBaseName } from './lib/image-processor';
+import {
+  generateHeroImageVariants,
+  generateArticleCoverVariants,
+  extractBaseName,
+} from './lib/image-processor';
 
 const ALLOWED_CATEGORIES: readonly ImageCategory[] = [
   'albums',
@@ -54,6 +58,8 @@ interface UploadFileRequest {
   contentType?: string;
   originalFileSize?: number; // Размер оригинального файла для проверки
   originalFileName?: string; // Имя оригинального файла для логирования
+  /** Ключ предыдущей обложки в БД — удалить все объекты Storage с этим baseName (другой суффикс, чем у новой загрузки) */
+  previousImageKey?: string;
 }
 
 interface UploadFileResponse {
@@ -94,6 +100,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       category: categoryRaw,
       contentType,
       originalFileSize,
+      previousImageKey: previousImageKeyRaw,
     } = body;
 
     if (!fileBase64 || !rawFileName || !categoryRaw) {
@@ -250,6 +257,107 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         {
           url: mainPath, // Возвращаем storagePath, клиент сформирует proxy URL
           storagePath: mainPath,
+          baseName,
+        },
+        200
+      );
+    }
+
+    // Обложка статьи (article_cover_*): варианты -896 / -320 (webp + jpg)
+    if (normalizedCategory === 'articles' && fileName.startsWith('article_cover_')) {
+      const articleUserId = targetUserId;
+      const baseName = extractBaseName(fileName);
+
+      console.log('🖼️ Generating article cover variants for:', baseName);
+      const variants = await generateArticleCoverVariants(fileBuffer, baseName);
+
+      const articlesFolder = `users/${articleUserId}/articles`;
+      const { data: existingArticleFiles } = await supabase.storage
+        .from(STORAGE_BUCKET_NAME)
+        .list(articlesFolder, {
+          limit: 1000,
+        });
+
+      const pathsToDelete = new Set<string>();
+
+      const addFilesMatchingBase = (targetBase: string) => {
+        if (!existingArticleFiles?.length || !targetBase) return;
+        for (const f of existingArticleFiles) {
+          if (extractBaseName(f.name) === targetBase) {
+            pathsToDelete.add(`${articlesFolder}/${f.name}`);
+          }
+        }
+      };
+
+      // Замена обложки: новый файл имеет другой baseName — удаляем объекты старого ключа
+      if (
+        previousImageKeyRaw != null &&
+        typeof previousImageKeyRaw === 'string' &&
+        previousImageKeyRaw.trim() !== ''
+      ) {
+        const prevSanitized = sanitizeUploadFileName(previousImageKeyRaw.trim());
+        if (prevSanitized.startsWith('article_cover_')) {
+          const prevBase = extractBaseName(prevSanitized);
+          if (prevBase && prevBase !== baseName) {
+            addFilesMatchingBase(prevBase);
+            console.log('🗑️ Article cover replace: removing previous base', prevBase);
+          }
+        }
+      }
+
+      // Перезапись того же base (повторная загрузка) или мусор с тем же именем
+      addFilesMatchingBase(baseName);
+
+      if (pathsToDelete.size > 0) {
+        const pathsArray = [...pathsToDelete];
+        console.log(`🗑️ Removing ${pathsArray.length} article cover file(s) from storage`);
+        await supabase.storage.from(STORAGE_BUCKET_NAME).remove(pathsArray);
+      }
+
+      const uploadedArticleFiles: string[] = [];
+      const uploadArticleErrors: string[] = [];
+
+      for (const [variantFileName, buffer] of Object.entries(variants)) {
+        const variantPath = getStoragePath(articleUserId, 'articles', variantFileName);
+        const variantContentType = variantFileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+
+        const { error: variantError } = await supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .upload(variantPath, buffer, {
+            contentType: variantContentType,
+            upsert: true,
+            cacheControl: '3600',
+          });
+
+        if (variantError) {
+          console.error(
+            `Error uploading article cover variant ${variantFileName}:`,
+            variantError.message
+          );
+          uploadArticleErrors.push(`${variantFileName}: ${variantError.message}`);
+        } else {
+          uploadedArticleFiles.push(variantFileName);
+        }
+      }
+
+      if (uploadArticleErrors.length > 0) {
+        console.error('Some article cover variants failed to upload:', uploadArticleErrors);
+        if (uploadedArticleFiles.length === 0) {
+          return createErrorResponse(
+            500,
+            `Failed to upload any article cover variants: ${uploadArticleErrors.join(', ')}`
+          );
+        }
+      }
+
+      console.log(`✅ Uploaded ${uploadedArticleFiles.length} article cover variants`);
+
+      const previewPath = getStoragePath(articleUserId, 'articles', `${baseName}-320.webp`);
+
+      return createSuccessResponse(
+        {
+          url: previewPath,
+          storagePath: previewPath,
           baseName,
         },
         200

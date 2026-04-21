@@ -107,6 +107,12 @@ dialog {
       border-radius: var(--ms-02);
       overflow: hidden;
 
+      picture {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
       img {
         width: 100%;
         height: 100%;
@@ -293,6 +299,12 @@ dialog {
       overflow: hidden;
       box-shadow: 0 4px 16px rgb(var(--black-rgb) / 10%);
       flex-shrink: 0;
+
+      picture {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
     }
 
     &__article-cover-image {

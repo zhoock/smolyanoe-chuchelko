@@ -1,10 +1,9 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
-import { getImageUrl } from '@shared/api/albums';
-import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
+import { ArticleCoverImage } from './ArticleCoverImage';
 import './style.scss';
 
 export function ArticlePreview({ articleId, img, nameArticle, date, userId }: ArticleProps) {
@@ -17,15 +16,14 @@ export function ArticlePreview({ articleId, img, nameArticle, date, userId }: Ar
     <article className="articles__card">
       <Link to={articlePath}>
         <div className="articles__picture">
-          <img
-            src={optionalMediaSrc(
-              getImageUrl(img, '.jpg', userId ? { userId, category: 'articles' } : undefined),
-              'ArticlePreview',
-              { articleId, hasUserId: !!userId }
-            )}
+          <ArticleCoverImage
+            img={img}
+            userId={userId}
+            role="public"
             alt={nameArticle}
             loading="lazy"
             decoding="async"
+            debugLabel={`ArticlePreview:${articleId}`}
           />
         </div>
         <div className="articles__description">

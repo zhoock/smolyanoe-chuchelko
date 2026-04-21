@@ -17,6 +17,8 @@ export interface UploadFileOptions {
   fileName: string;
   contentType?: string;
   upsert?: boolean; // Заменить файл, если существует
+  /** При замене обложки статьи — ключ предыдущего файла в БД (имя в Storage), чтобы удалить старые объекты с другим baseName */
+  previousImageKey?: string;
 }
 
 export interface GetFileUrlOptions {
@@ -129,7 +131,9 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       `✅ [uploadFile] Конвертация завершена за ${convertTime}ms, размер base64: ${fileBase64.length} символов`
     );
 
-    const payload = {
+    const { previousImageKey } = options;
+
+    const payload: Record<string, unknown> = {
       fileBase64,
       fileName,
       userId,
@@ -138,6 +142,10 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       originalFileSize: file.size,
       originalFileName: file instanceof File ? file.name : undefined,
     };
+
+    if (previousImageKey != null && String(previousImageKey).trim() !== '') {
+      payload.previousImageKey = String(previousImageKey).trim();
+    }
 
     const payloadSizeMB = JSON.stringify(payload).length / (1024 * 1024);
     console.log('📡 [uploadFile] Отправка запроса к /api/upload-file...', {
@@ -296,6 +304,53 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
           origin,
         });
       }
+    }
+
+    // Обложка статьи: storagePath users/.../articles/...-320.webp → proxy (как hero)
+    if (
+      category === 'articles' &&
+      typeof finalUrl === 'string' &&
+      finalUrl.startsWith('users/') &&
+      finalUrl.includes('/articles/')
+    ) {
+      let origin = '';
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        const port = window.location.port;
+
+        const isProduction =
+          hostname !== 'localhost' &&
+          hostname !== '127.0.0.1' &&
+          !hostname.includes('localhost') &&
+          !hostname.includes('127.0.0.1') &&
+          (hostname.includes('smolyanoechuchelko.ru') || hostname.includes('netlify.app'));
+
+        if (isProduction) {
+          origin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+        } else {
+          origin = window.location.origin;
+        }
+      } else {
+        origin = process.env.NETLIFY_SITE_URL || '';
+      }
+
+      const isProduction =
+        typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1' &&
+        !window.location.hostname.includes('localhost') &&
+        !window.location.hostname.includes('127.0.0.1') &&
+        (window.location.hostname.includes('smolyanoechuchelko.ru') ||
+          window.location.hostname.includes('netlify.app'));
+
+      const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+      finalUrl = `${origin}${proxyPath}?path=${encodeURIComponent(finalUrl)}`;
+
+      console.log('🔗 [uploadFile] Сформирован proxy URL для article cover:', {
+        storagePath: result.data.url,
+        finalUrl,
+      });
     }
 
     return finalUrl;

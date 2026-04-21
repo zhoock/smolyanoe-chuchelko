@@ -123,6 +123,50 @@ export async function generateHeroImageVariants(
 }
 
 /**
+ * Обложки статей (article_cover_*): публичный список/страница — 896px, админ-превью — 320px.
+ * WebP + JPEG для совместимости и ретины.
+ */
+export async function generateArticleCoverVariants(
+  imageBuffer: Buffer,
+  baseName: string
+): Promise<Record<string, Buffer>> {
+  const variants: ImageVariant[] = [
+    { suffix: '-896.webp', width: 896, format: 'webp', quality: 85 },
+    { suffix: '-896.jpg', width: 896, format: 'jpg', quality: 85 },
+    { suffix: '-320.webp', width: 320, format: 'webp', quality: 85 },
+    { suffix: '-320.jpg', width: 320, format: 'jpg', quality: 85 },
+  ];
+
+  const results: Record<string, Buffer> = {};
+
+  const metadata = await sharp(imageBuffer).metadata();
+  const originalWidth = metadata.width || 1;
+  const originalHeight = metadata.height || 1;
+  const aspectRatio = originalWidth / originalHeight;
+
+  for (const variant of variants) {
+    const height = variant.height || Math.round(variant.width / aspectRatio);
+
+    let sharpInstance = sharp(imageBuffer).resize(variant.width, height, {
+      fit: 'cover',
+      position: 'center',
+    });
+
+    if (variant.format === 'webp') {
+      sharpInstance = sharpInstance.webp({ quality: variant.quality || 85 });
+    } else if (variant.format === 'jpg') {
+      sharpInstance = sharpInstance.jpeg({ quality: variant.quality || 85, mozjpeg: true });
+    }
+
+    const buffer = await sharpInstance.toBuffer();
+    const fileName = `${baseName}${variant.suffix}`;
+    results[fileName] = buffer;
+  }
+
+  return results;
+}
+
+/**
  * Получает базовое имя файла из полного пути или простого имени файла
  * @param pathOrFileName - полный путь в Storage (например "users/{userId}/albums/23-cover.webp") или простое имя файла (например "hero-123.jpg")
  * @returns базовое имя без расширения и суффиксов размеров, например "hero-123" или "23-cover"
@@ -135,6 +179,6 @@ export function extractBaseName(pathOrFileName: string): string {
   // Убираем расширение и суффиксы размеров
   // Паттерн: -640.jpg, -1920.avif, -2560.webp и т.д.
   return fileName
-    .replace(/[-.](640|1280|1920|2560|64|128|448|896|1344)\.(jpg|jpeg|png|webp|avif)$/i, '')
+    .replace(/[-.](640|1280|1920|2560|64|128|320|448|896|1344)\.(jpg|jpeg|png|webp|avif)$/i, '')
     .replace(/\.(jpg|jpeg|png|webp|avif)$/i, '');
 }
