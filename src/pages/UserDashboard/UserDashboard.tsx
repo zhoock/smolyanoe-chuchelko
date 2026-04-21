@@ -45,6 +45,7 @@ import {
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
+import { sanitizeFileName } from '@shared/lib/sanitizeFileName';
 import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import { loadAuthorshipFromStorage, loadSyncedLyricsFromStorage } from '@features/syncedLyrics/lib';
 import { uploadTracks, prepareAndUploadTrack, type TrackUploadData } from '@shared/api/tracks';
@@ -883,7 +884,9 @@ function UserDashboard() {
 
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const baseFileName = file.name.replace(/\.[^/.]+$/, '');
-      const fileName = `article_cover_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
+      const rawFileName = `article_cover_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
+      /** Совпадает с ключом в Storage после upload-file (sanitizeUploadFileName). */
+      const finalImageKey = sanitizeFileName(rawFileName);
 
       setArticleCoverUpload((prev) => ({
         ...prev,
@@ -902,7 +905,7 @@ function UserDashboard() {
       const url = await uploadFile({
         file,
         category: 'articles',
-        fileName,
+        fileName: rawFileName,
       });
 
       setArticleCoverUpload((prev) => ({
@@ -920,9 +923,6 @@ function UserDashboard() {
       }));
 
       if (url) {
-        // Ключ в БД совпадает с именем объекта в Storage (с расширением), чтобы URL не подставлял .jpg по умолчанию.
-        const finalImageKey = fileName;
-
         const token = getToken();
         if (!token) {
           if (articleCoverLocalPreviewRefs.current[articleId]) {

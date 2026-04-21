@@ -25,6 +25,7 @@ import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/publ
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractBaseName } from './lib/image-processor';
 import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
+import { sanitizeUploadFileName } from './lib/sanitizeFileName';
 import { hydrateMissingRuTranslationsOnArticle } from '../../src/entities/article/lib/hydrateMissingRuTranslations';
 
 interface ArticleRow {
@@ -415,8 +416,8 @@ async function removeArticleStorageFiles(
 }
 
 /**
- * Точные ключи в bucket для старой обложки статьи (без list/stem — как в upload-file).
- * В БД часто лежит только имя файла; в Storage объект: users/{userId}/articles/{fileName}.
+ * Точные ключи в bucket для старой обложки статьи (как upload-file: sanitizeUploadFileName).
+ * В БД иногда лежит «сырое» имя, а в Storage — sanitizeFileName(...); удаляем оба варианта.
  */
 function storagePathsToRemoveForArticleCoverImg(
   raw: string | null | undefined,
@@ -427,18 +428,38 @@ function storagePathsToRemoveForArticleCoverImg(
   if (!s) return [];
 
   const ownerPrefix = `users/${ownerUserId}/articles/`;
+  const out = new Set<string>();
+
+  const addBasename = (base: string) => {
+    const b = base.trim();
+    if (!b || INVALID_ARTICLE_STEMS.has(b)) return;
+    out.add(`${ownerPrefix}${b}`);
+    const san = sanitizeUploadFileName(b);
+    if (san !== b) {
+      out.add(`${ownerPrefix}${san}`);
+    }
+  };
+
   const parsed = tryParseUsersStoragePath(s);
   if (parsed) {
     if (parsed.startsWith(ownerPrefix)) {
-      return [parsed];
+      out.add(parsed);
+      const parts = parsed.split('/');
+      const last = parts.pop() ?? '';
+      if (last) {
+        const san = sanitizeUploadFileName(last);
+        if (san !== last) {
+          out.add([...parts, san].join('/'));
+        }
+      }
+      return [...out];
     }
     return [];
   }
 
   const fileName = s.includes('/') ? (s.split('/').pop() ?? s) : s;
-  const base = fileName.trim();
-  if (!base || INVALID_ARTICLE_STEMS.has(base)) return [];
-  return [`${ownerPrefix}${base}`];
+  addBasename(fileName);
+  return [...out];
 }
 
 async function removeStorageObjectsExact(supabase: SupabaseClient, paths: string[]): Promise<void> {

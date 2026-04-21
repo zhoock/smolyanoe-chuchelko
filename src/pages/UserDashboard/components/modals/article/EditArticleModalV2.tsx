@@ -34,6 +34,7 @@ import { CarouselEditModal } from '../../articles/CarouselEditModal';
 import { ArticleEditSkeleton } from '../../articles/ArticleEditSkeleton';
 import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
 import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
+import { sanitizeFileName } from '@shared/lib/sanitizeFileName';
 import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './EditArticleModalV2.style.scss';
 
@@ -1524,13 +1525,13 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           const file = files[i];
           const fileExtension = file.name.split('.').pop() || 'jpg';
           const baseFileName = file.name.replace(/\.[^/.]+$/, '');
-          const fileName = `article_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
-          const imageKey = fileName;
+          const rawFileName = `article_${uniqueUploadFileSuffix()}_${baseFileName}.${fileExtension}`;
+          const imageKey = sanitizeFileName(rawFileName);
 
           const url = await uploadFile({
             file,
             category: 'articles',
-            fileName,
+            fileName: rawFileName,
           });
 
           if (url) {
