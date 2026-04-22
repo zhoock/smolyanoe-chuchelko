@@ -416,16 +416,16 @@ $desktops: 'width >= 1024px';
     gap: $ms-1;
     margin: 0 0 var(--ms-1);
     padding: 0;
-    grid-template: minmax(323px, auto) / repeat(auto-fit, minmax(calc(1 / 4 * 1000px), 1fr));
+    grid-template: minmax(323px, auto) / repeat(auto-fill, minmax(calc(1 / 4 * 1000px), 1fr));
 
     &:has(:hover) #{$block}__card:not(:hover) {
       opacity: 0.5;
     }
   }
 
-  @include breakpoint(desktops) {
-    grid-template-columns: repeat(auto-fill, minmax(calc(1 / 4 * 1000px), 1fr));
-  }
+  // @include breakpoint(desktops) {
+  //   grid-template-columns: repeat(auto-fill, minmax(calc(1 / 4 * 1000px), 1fr));
+  // }
 }
 
 %hide-scrollbar {
