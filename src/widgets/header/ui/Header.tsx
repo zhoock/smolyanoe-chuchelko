@@ -1,5 +1,5 @@
 // src/widgets/header/ui/Header.tsx
-import { memo, useEffect, useState, useRef, useCallback } from 'react';
+import { memo, useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
@@ -7,11 +7,7 @@ import { useLang } from '@app/providers/lang'; // берём из контекс
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { isAuthenticated } from '@shared/lib/auth';
-import {
-  getStoredProfileAvatarUrl,
-  PROFILE_AVATAR_CHANGED_EVENT,
-  PROFILE_AVATAR_LOCALSTORAGE_KEY,
-} from '@shared/lib/hooks/useAvatar';
+import { useStoredProfileAvatarUrl } from '@shared/lib/hooks/useAvatar';
 import type { SupportedLang } from '@shared/model/lang';
 import './style.scss';
 
@@ -31,29 +27,7 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
   const isAuthed = isAuthenticated();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
-  const [headerAvatarSrc, setHeaderAvatarSrc] = useState(getStoredProfileAvatarUrl);
-
-  const syncHeaderAvatar = useCallback(() => {
-    setHeaderAvatarSrc(getStoredProfileAvatarUrl());
-  }, []);
-
-  useEffect(() => {
-    syncHeaderAvatar();
-  }, [location.pathname, location.key, syncHeaderAvatar]);
-
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === PROFILE_AVATAR_LOCALSTORAGE_KEY || e.key === null) {
-        syncHeaderAvatar();
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    window.addEventListener(PROFILE_AVATAR_CHANGED_EVENT, syncHeaderAvatar);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener(PROFILE_AVATAR_CHANGED_EVENT, syncHeaderAvatar);
-    };
-  }, [syncHeaderAvatar]);
+  const headerAvatarSrc = useStoredProfileAvatarUrl();
 
   // Закрываем меню при клике вне
   useEffect(() => {
@@ -115,6 +89,7 @@ const HeaderComponent = ({ theme, onToggleTheme }: HeaderProps) => {
             <Link
               className="header__profile"
               to="/dashboard-new"
+              state={{ backgroundLocation: location }}
               onClick={() => setLangOpen(false)}
               aria-label={ui?.header?.openProfile ?? 'My profile'}
             >

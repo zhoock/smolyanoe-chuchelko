@@ -1,6 +1,6 @@
 // src/pages/PaymentSuccess/PaymentSuccess.tsx
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import './PaymentSuccess.style.scss';
 
@@ -62,6 +62,7 @@ function isOrderUUID(value: string): boolean {
 function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const paymentIdParam = searchParams.get('paymentId');
   const orderIdParam = searchParams.get('orderId');
   const returnTo = searchParams.get('returnTo'); // Исходная страница для возврата
@@ -403,7 +404,11 @@ function PaymentSuccess() {
                               <button
                                 type="button"
                                 className="payment-success__button payment-success__button--primary"
-                                onClick={() => navigate('/dashboard-new/my-purchases')}
+                                onClick={() =>
+                                  navigate('/dashboard-new/my-purchases', {
+                                    state: { backgroundLocation: location },
+                                  })
+                                }
                               >
                                 Мои покупки
                               </button>

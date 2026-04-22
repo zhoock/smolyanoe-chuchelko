@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { IAlbums, TracksProps } from '@models';
 import { getAudioDuration } from '@shared/lib/audio/getAudioDuration';
 import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdString';
@@ -327,6 +327,7 @@ interface CreateAlbumProps {
 }
 
 export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
+  const location = useLocation();
   const [draft, setDraft] = useState<AlbumDraft>(emptyAlbum);
 
   const handleAlbumChange = useCallback((field: AlbumBaseField, value: string) => {
@@ -481,7 +482,11 @@ export default function CreateAlbum({ onBack }: CreateAlbumProps = {}) {
                 ← Назад
               </button>
             ) : (
-              <Link to="/dashboard/albums" className="album-builder__back">
+              <Link
+                to="/dashboard-new/albums"
+                state={location.state}
+                className="album-builder__back"
+              >
                 ← Назад
               </Link>
             )}

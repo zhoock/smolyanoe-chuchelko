@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/components/EditAlbumModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Popup } from '@shared/ui/popup';
 import { AlertModal } from '@shared/ui/alertModal';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -84,6 +84,7 @@ export function EditAlbumModal({
   onNext,
 }: EditAlbumModalProps): JSX.Element | null {
   const navigate = useNavigate();
+  const location = useLocation();
   const { lang } = useLang();
   const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -2869,7 +2870,7 @@ export function EditAlbumModal({
                   onClick={(e) => {
                     e.preventDefault();
                     onClose();
-                    navigate('/dashboard-new/payment-settings');
+                    navigate('/dashboard-new/payment-settings', { state: location.state });
                   }}
                 >
                   {ui?.dashboard?.editAlbumModal?.albumSale?.connectPaymentButton ??

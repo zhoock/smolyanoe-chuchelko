@@ -49,10 +49,24 @@ const PaymentSuccess = lazy(() => import('@pages/PaymentSuccess/PaymentSuccess')
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
 
-/** Старые пути `/dashboard/:tab` → `/dashboard-new/:tab` */
+/** Старые пути `/dashboard/:tab` → `/dashboard-new/:tab` (сохраняем location.state) */
 function LegacyDashboardTabRedirect() {
   const { tab } = useParams();
-  return <Navigate to={`/dashboard-new/${tab ?? 'albums'}`} replace />;
+  const { state } = useLocation();
+  return <Navigate to={`/dashboard-new/${tab ?? 'albums'}`} replace state={state} />;
+}
+
+function DashboardRootRedirect() {
+  const { state } = useLocation();
+  return <Navigate to="/dashboard-new" replace state={state} />;
+}
+
+function isDashboardAppPathname(pathname: string): boolean {
+  return (
+    pathname.startsWith('/dashboard-new') ||
+    pathname === '/dashboard' ||
+    pathname.startsWith('/dashboard/')
+  );
 }
 
 // Упрощённый роутер: один корневой маршрут, всё остальное рисуем в Layout
@@ -312,7 +326,7 @@ function Layout() {
           </Suspense>
         }
       />
-      <Route path="/dashboard" element={<Navigate to="/dashboard-new" replace />} />
+      <Route path="/dashboard" element={<DashboardRootRedirect />} />
       <Route path="/dashboard/:tab" element={<LegacyDashboardTabRedirect />} />
       <Route
         path="/auth"
@@ -335,7 +349,13 @@ function Layout() {
     </Routes>
   );
 
-  const authModalRoutes = backgroundLocation ? (
+  const showAuthModal =
+    Boolean(backgroundLocation) &&
+    Boolean(matchPath({ path: '/auth', end: true }, location.pathname));
+  const showDashboardModal =
+    Boolean(backgroundLocation) && isDashboardAppPathname(location.pathname);
+
+  const authModalRoutes = showAuthModal ? (
     <Routes>
       <Route
         path="/auth"
@@ -348,10 +368,26 @@ function Layout() {
     </Routes>
   ) : null;
 
+  const dashboardModalRoutes = showDashboardModal ? (
+    <Routes>
+      <Route
+        path="/dashboard-new/:tab?"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <UserDashboard />
+          </Suspense>
+        }
+      />
+      <Route path="/dashboard" element={<DashboardRootRedirect />} />
+      <Route path="/dashboard/:tab" element={<LegacyDashboardTabRedirect />} />
+    </Routes>
+  ) : null;
+
   const standardRoutes = (
     <>
       {mainRoutes}
       {authModalRoutes}
+      {dashboardModalRoutes}
     </>
   );
 

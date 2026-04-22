@@ -1,7 +1,14 @@
 // src/pages/UserDashboard/UserDashboard.tsx
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams, useLocation, useParams, Navigate } from 'react-router-dom';
+import {
+  useNavigate,
+  useSearchParams,
+  useLocation,
+  useParams,
+  Navigate,
+  type Location,
+} from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -641,6 +648,22 @@ function UserDashboard() {
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
   const location = useLocation();
+  const backgroundLocation = (location.state as { backgroundLocation?: Location } | null)
+    ?.backgroundLocation;
+  const dashboardNavState = backgroundLocation ? { backgroundLocation } : undefined;
+  const closeDashboard = useCallback(() => {
+    if (backgroundLocation) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  }, [backgroundLocation, navigate]);
+  const goDashboard = useCallback(
+    (path: string) => {
+      navigate(path, { ...(dashboardNavState ? { state: dashboardNavState } : {}) });
+    },
+    [navigate, dashboardNavState]
+  );
   const { tab: tabFromRoute } = useParams<{ tab?: string }>();
   const [searchParams] = useSearchParams();
   const albumsStatus = useAppSelector(selectAlbumsStatus);
@@ -779,9 +802,9 @@ function UserDashboard() {
         pathname: location.pathname,
         search: nextQuery ? `?${nextQuery}` : '',
       },
-      { replace: true }
+      { replace: true, state: location.state }
     );
-  }, [searchParams, navigate, location.pathname]);
+  }, [searchParams, navigate, location.pathname, location.state]);
 
   // Функции для загрузки обложки статьи
   const handleArticleCoverDrag = (articleId: string, e: React.DragEvent) => {
@@ -1088,12 +1111,11 @@ function UserDashboard() {
     }
   };
 
-  // Проверка авторизации: модалка /auth поверх текущего URL дашборда (как на остальном сайте)
+  // Без сессии админка недоступна: на главную. /auth только по клику «Войти», не автоматически.
   useEffect(() => {
     if (isAuthenticated()) return;
-    if (location.pathname === '/auth') return;
-    navigate('/auth', { replace: true, state: { backgroundLocation: location } });
-  }, [navigate, location]);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     if (!isAvatarMenuOpen) return;
@@ -2118,7 +2140,7 @@ function UserDashboard() {
   };
 
   if (tabInvalid) {
-    return <Navigate to="/dashboard-new/albums" replace />;
+    return <Navigate to="/dashboard-new/albums" replace state={location.state} />;
   }
 
   const albumsInitialLoading =
@@ -2131,14 +2153,14 @@ function UserDashboard() {
         <title>{ui?.dashboard?.title ?? 'User Dashboard'} — Смоляное Чучелко</title>
       </Helmet>
 
-      <Popup isActive={true} onClose={() => navigate('/')}>
+      <Popup isActive={true} onClose={closeDashboard}>
         <div className="user-dashboard">
           {/* Main card container */}
           <div className="user-dashboard__card">
             {/* Header with controls */}
             <div className="user-dashboard__header">
               <h2 className="user-dashboard__title">{ui?.dashboard?.title ?? 'Dashboard'}</h2>
-              <Hamburger isActive={true} onToggle={() => navigate('/')} />
+              <Hamburger isActive={true} onToggle={closeDashboard} />
             </div>
 
             {/* Main body with sidebar and content */}
@@ -2150,7 +2172,7 @@ function UserDashboard() {
                   className={`user-dashboard__nav-item ${
                     activeTab === 'profile' ? 'user-dashboard__nav-item--active' : ''
                   }`}
-                  onClick={() => navigate('/dashboard-new/profile')}
+                  onClick={() => goDashboard('/dashboard-new/profile')}
                 >
                   {ui?.dashboard?.profile ?? 'Profile'}
                 </button>
@@ -2159,7 +2181,7 @@ function UserDashboard() {
                   className={`user-dashboard__nav-item ${
                     activeTab === 'albums' ? 'user-dashboard__nav-item--active' : ''
                   }`}
-                  onClick={() => navigate('/dashboard-new/albums')}
+                  onClick={() => goDashboard('/dashboard-new/albums')}
                 >
                   {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                 </button>
@@ -2168,7 +2190,7 @@ function UserDashboard() {
                   className={`user-dashboard__nav-item ${
                     activeTab === 'posts' ? 'user-dashboard__nav-item--active' : ''
                   }`}
-                  onClick={() => navigate('/dashboard-new/posts')}
+                  onClick={() => goDashboard('/dashboard-new/posts')}
                 >
                   {ui?.dashboard?.tabs?.posts ?? 'Articles'}
                 </button>
@@ -2177,7 +2199,7 @@ function UserDashboard() {
                   className={`user-dashboard__nav-item ${
                     activeTab === 'mixer' ? 'user-dashboard__nav-item--active' : ''
                   }`}
-                  onClick={() => navigate('/dashboard-new/mixer')}
+                  onClick={() => goDashboard('/dashboard-new/mixer')}
                 >
                   {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
                 </button>
@@ -2186,7 +2208,7 @@ function UserDashboard() {
                   className={`user-dashboard__nav-item ${
                     activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
                   }`}
-                  onClick={() => navigate('/dashboard-new/payment-settings')}
+                  onClick={() => goDashboard('/dashboard-new/payment-settings')}
                 >
                   {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
                 </button>
@@ -2195,7 +2217,7 @@ function UserDashboard() {
                   className={`user-dashboard__nav-item ${
                     activeTab === 'my-purchases' ? 'user-dashboard__nav-item--active' : ''
                   }`}
-                  onClick={() => navigate('/dashboard-new/my-purchases')}
+                  onClick={() => goDashboard('/dashboard-new/my-purchases')}
                 >
                   {ui?.dashboard?.tabs?.myPurchases ?? 'My Purchases'}
                 </button>
@@ -3091,7 +3113,7 @@ function UserDashboard() {
                                 className="user-dashboard__logout-button"
                                 onClick={() => {
                                   logout();
-                                  navigate('/auth');
+                                  navigate('/', { replace: true });
                                 }}
                               >
                                 {ui?.dashboard?.logout ?? 'Logout'}

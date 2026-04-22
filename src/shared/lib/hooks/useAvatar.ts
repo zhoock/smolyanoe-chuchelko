@@ -3,7 +3,8 @@
  * Хук для работы с аватаром пользователя
  */
 
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   AVATAR_MAX_FILE_SIZE_BYTES,
   appendUrlCacheBustParam,
@@ -36,6 +37,37 @@ export function getStoredProfileAvatarUrl(): string {
     console.warn('Failed to read avatar URL from localStorage:', error);
   }
   return DEFAULT_AVATAR;
+}
+
+/**
+ * URL аватара из localStorage с подпиской на смену (шапка, главная сцена и т.д.).
+ */
+export function useStoredProfileAvatarUrl(): string {
+  const location = useLocation();
+  const [src, setSrc] = useState(getStoredProfileAvatarUrl);
+  const sync = useCallback(() => {
+    setSrc(getStoredProfileAvatarUrl());
+  }, []);
+
+  useEffect(() => {
+    sync();
+  }, [location.pathname, location.key, sync]);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === PROFILE_AVATAR_LOCALSTORAGE_KEY || e.key === null) {
+        sync();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener(PROFILE_AVATAR_CHANGED_EVENT, sync);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(PROFILE_AVATAR_CHANGED_EVENT, sync);
+    };
+  }, [sync]);
+
+  return src;
 }
 
 const DEFAULT_FILE_TOO_LARGE_MSG =

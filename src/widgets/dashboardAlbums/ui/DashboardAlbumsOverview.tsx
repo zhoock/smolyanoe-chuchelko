@@ -4,7 +4,7 @@
  * Отображает список альбомов с прогрессом синхронизации.
  */
 import { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -95,6 +95,7 @@ export default function DashboardAlbumsOverview({
   onAlbumSelect,
   onBuilderOpen,
 }: DashboardAlbumsOverviewProps) {
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const { lang } = useLang();
   const { displayName: siteArtistName, displayLabel: siteArtistLabel } = useSiteArtistDisplayName(
@@ -197,7 +198,11 @@ export default function DashboardAlbumsOverview({
               <span className="admin__create-button-text">Добавить альбом</span>
             </button>
           ) : (
-            <Link to="/dashboard/albums/new" className="admin__create-button">
+            <Link
+              to="/dashboard/albums/new"
+              state={location.state}
+              className="admin__create-button"
+            >
               <span className="admin__create-button-icon">+</span>
               <span className="admin__create-button-text">Добавить альбом</span>
             </Link>
