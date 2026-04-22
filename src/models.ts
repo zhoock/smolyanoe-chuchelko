@@ -226,6 +226,11 @@ export interface IInterface {
     pageTitle: string;
     notice: string;
   };
+  /** Кнопка входа/регистрации в шапке; ссылка в кабинет по аватару */
+  header?: {
+    signIn: string;
+    openProfile: string;
+  };
   errors?: {
     [key: string]: string;
   };

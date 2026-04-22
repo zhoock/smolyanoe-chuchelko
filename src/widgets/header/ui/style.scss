@@ -13,13 +13,54 @@
 
   &__wrapper {
     display: grid;
-    grid-template-columns: min-content min-content min-content;
+    grid-template-columns: min-content min-content 1fr min-content;
     place-items: center end;
     gap: var(--ms-1);
     block-size: calc(var(--ms-1) * 2);
 
-    @include breakpoint(desktops) {
-      grid-template-columns: min-content min-content 1fr min-content;
+    .header__end {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--ms-0);
+    }
+
+    .header__sign-in {
+      text-decoration: none;
+      font-size: 0.95em;
+      font-weight: 600;
+      line-height: 1.1;
+      text-transform: uppercase;
+      white-space: nowrap;
+
+      @include link-colors(
+        --links-header-color,
+        --links-header-color-hover,
+        --links-header-color-active
+      );
+    }
+
+    .header__profile {
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      text-decoration: none;
+      border-radius: 50%;
+      outline-offset: 2px;
+
+      &:focus-visible {
+        outline: 2px solid var(--links-header-color, currentcolor);
+      }
+    }
+
+    .header__profile-avatar {
+      display: block;
+      background: rgb(var(--extra-background-color-rgb) / 60%);
+      border: 1px solid rgb(255 255 255 / 20%);
+      border-radius: 50%;
+      inline-size: 36px;
+      block-size: 36px;
+      object-fit: cover;
     }
 
     .logo {

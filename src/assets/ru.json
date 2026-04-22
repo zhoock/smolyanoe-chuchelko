@@ -6,6 +6,10 @@
       "articles": "статьи",
       "stems": "миксер"
     },
+    "header": {
+      "signIn": "Вход / регистрация",
+      "openProfile": "Мой профиль"
+    },
     "buttons": {
       "playButton": "воспроизвести",
       "purchase": "купить",

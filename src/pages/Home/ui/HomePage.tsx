@@ -23,6 +23,9 @@ import {
   siteArtistUiLabel,
 } from '@shared/lib/profileDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
+import { isAuthenticated } from '@shared/lib/auth';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
@@ -36,6 +39,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { lang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const universeRef = useRef<Universe3D | null>(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -263,6 +267,25 @@ export function HomePage() {
           zIndex: 20,
         }}
       >
+        {!isAuthenticated() && (
+          <button
+            type="button"
+            onClick={() =>
+              navigate('/auth?mode=register', { state: { backgroundLocation: location } })
+            }
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.35)',
+              background: 'rgba(12,12,14,0.72)',
+              color: '#fff',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            {ui?.header?.signIn ?? 'Sign in'}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {

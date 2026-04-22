@@ -15,8 +15,28 @@ import {
   uploadFile,
 } from '@shared/api/storage';
 
-const AVATAR_URL_KEY = 'user-avatar-url';
+export const PROFILE_AVATAR_LOCALSTORAGE_KEY = 'user-avatar-url';
+const AVATAR_URL_KEY = PROFILE_AVATAR_LOCALSTORAGE_KEY;
 const DEFAULT_AVATAR = '/images/avatar.png';
+
+/** Событие после смены URL аватара в localStorage (для синхронизации шапки и т.п.) */
+export const PROFILE_AVATAR_CHANGED_EVENT = 'profile-avatar-changed';
+
+function dispatchProfileAvatarChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(PROFILE_AVATAR_CHANGED_EVENT));
+}
+
+/** Публичный URL аватара из localStorage (без cache-bust), иначе placeholder */
+export function getStoredProfileAvatarUrl(): string {
+  try {
+    const savedUrl = localStorage.getItem(AVATAR_URL_KEY);
+    if (savedUrl) return savedUrl;
+  } catch (error) {
+    console.warn('Failed to read avatar URL from localStorage:', error);
+  }
+  return DEFAULT_AVATAR;
+}
 
 const DEFAULT_FILE_TOO_LARGE_MSG =
   'The image is too large. Maximum file size is 2 MB. Choose a smaller file.';
@@ -79,6 +99,7 @@ export function useAvatar(options?: UseAvatarOptions) {
       }
       const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setAvatarSrc(appendUrlCacheBustParam(DEFAULT_AVATAR, bust));
+      dispatchProfileAvatarChanged();
     } catch (error) {
       console.error('Failed to remove avatar:', error);
       alert(
@@ -182,6 +203,7 @@ export function useAvatar(options?: UseAvatarOptions) {
 
         // Обновляем состояние только после предзагрузки
         setAvatarSrc(avatarUrl);
+        dispatchProfileAvatarChanged();
       } catch (error) {
         console.error('❌ Error uploading avatar:', error);
         alert(

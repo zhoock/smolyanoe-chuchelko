@@ -1,7 +1,6 @@
 // src/routes/loaders/albumsLoader.ts
 import type { LoaderFunctionArgs } from 'react-router';
 import type { IAlbums, IArticles, IInterface } from '@models';
-import { getJSON } from '@shared/api/http';
 import { getStore } from '@shared/model/appStore';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { selectCurrentLang } from '@shared/model/lang';
@@ -27,6 +26,17 @@ import {
   selectUiDictionaryStatus,
   selectUiDictionaryData,
 } from '@shared/model/uiDictionary';
+
+/**
+ * createAsyncThunk: при `condition` → false unwrap() отклоняет plain object
+ * `{ name: 'ConditionError' }`, не Error — иначе получаем unhandledrejection «[object Object]».
+ */
+function isAbortLikeOrConditionSkipError(error: unknown): boolean {
+  if (error === 'AbortError' || error === 'Aborted') return true;
+  if (typeof error !== 'object' || error === null || !('name' in error)) return false;
+  const name = (error as { name?: string }).name;
+  return name === 'AbortError' || name === 'ConditionError';
+}
 
 export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
@@ -71,14 +81,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
       signal.addEventListener('abort', abortHandler, { once: true });
 
       templateC = fetchThunkPromise.unwrap().catch((error) => {
-        if (
-          error === 'AbortError' ||
-          error === 'Aborted' ||
-          (typeof error === 'object' &&
-            error !== null &&
-            'name' in error &&
-            (error as { name?: string }).name === 'AbortError')
-        ) {
+        if (isAbortLikeOrConditionSkipError(error)) {
           return createNeverResolvingPromise();
         }
         throw error;
@@ -136,14 +139,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
           .unwrap()
           .then((p) => p.albums)
           .catch((error) => {
-            if (
-              error === 'AbortError' ||
-              error === 'Aborted' ||
-              (typeof error === 'object' &&
-                error !== null &&
-                'name' in error &&
-                (error as { name?: string }).name === 'AbortError')
-            ) {
+            if (isAbortLikeOrConditionSkipError(error)) {
               return createNeverResolvingPromise();
             }
             throw error;
@@ -185,14 +181,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
           .unwrap()
           .then((r) => r.articles)
           .catch((error) => {
-            if (
-              error === 'AbortError' ||
-              error === 'Aborted' ||
-              (typeof error === 'object' &&
-                error !== null &&
-                'name' in error &&
-                (error as { name?: string }).name === 'AbortError')
-            ) {
+            if (isAbortLikeOrConditionSkipError(error)) {
               return createNeverResolvingPromise();
             }
             throw error;
@@ -226,14 +215,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
         signal.addEventListener('abort', abortHandler, { once: true });
 
         templateD = fetchThunkPromise.unwrap().catch((error) => {
-          if (
-            error === 'AbortError' ||
-            error === 'Aborted' ||
-            (typeof error === 'object' &&
-              error !== null &&
-              'name' in error &&
-              (error as { name?: string }).name === 'AbortError')
-          ) {
+          if (isAbortLikeOrConditionSkipError(error)) {
             return createNeverResolvingPromise();
           }
           throw error;

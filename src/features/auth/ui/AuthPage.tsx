@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { isAuthenticated } from '@shared/lib/auth';
 import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
@@ -10,10 +10,19 @@ import './AuthPage.scss';
 type AuthMode = 'login' | 'register';
 
 export function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<AuthMode>(() =>
+    searchParams.get('mode') === 'register' ? 'register' : 'login'
+  );
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const navigate = useNavigate();
   const { setLang } = useLang();
+
+  useEffect(() => {
+    const m = searchParams.get('mode');
+    if (m === 'register') setMode('register');
+    else if (m === 'login') setMode('login');
+  }, [searchParams]);
 
   useEffect(() => {
     // Не делаем автоматический редирект, если показывается модалка выбора языка

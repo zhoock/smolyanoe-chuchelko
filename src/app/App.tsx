@@ -11,6 +11,7 @@ import {
   useParams,
   useRevalidator,
   matchPath,
+  type Location,
 } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '@routes/loaders/albumsLoader';
@@ -224,8 +225,14 @@ function Layout() {
   );
 
   const shouldHideChrome = !isKnownRoute;
-  const isHomeRoute = location.pathname === '/' || location.pathname === '/en';
-  const hasArtistParam = new URLSearchParams(location.search).has('artist');
+
+  const backgroundLocation = (
+    location.state as { backgroundLocation?: Location } | null | undefined
+  )?.backgroundLocation;
+  const activeLocation = backgroundLocation ?? location;
+
+  const isHomeRoute = activeLocation.pathname === '/' || activeLocation.pathname === '/en';
+  const hasArtistParam = new URLSearchParams(activeLocation.search).has('artist');
   const isHomeSceneRoute = isHomeRoute && !hasArtistParam;
 
   useLayoutEffect(() => {
@@ -239,94 +246,112 @@ function Layout() {
     };
   }, [isHomeSceneRoute]);
 
+  const mainRoutes = (
+    <Routes location={activeLocation}>
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <Home />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/albums"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <AllAlbums />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/albums/:albumId"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <Album />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/articles"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <AllArticles />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/articles/:articleId"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <ArticlePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/help/articles/:articleId"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <HelpArticlePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/offer"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <OfferPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/dashboard-new/:tab?"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <UserDashboard />
+          </Suspense>
+        }
+      />
+      <Route path="/dashboard" element={<Navigate to="/dashboard-new" replace />} />
+      <Route path="/dashboard/:tab" element={<LegacyDashboardTabRedirect />} />
+      <Route
+        path="/auth"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <AuthPage />
+          </Suspense>
+        }
+      />
+      <Route path="/forms" element={<Form />} />
+      <Route
+        path="/stems"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <StemsPlayground />
+          </Suspense>
+        }
+      />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+
+  const authModalRoutes = backgroundLocation ? (
+    <Routes>
+      <Route
+        path="/auth"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <AuthPage />
+          </Suspense>
+        }
+      />
+    </Routes>
+  ) : null;
+
   const standardRoutes = (
     <>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <Home />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/albums"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AllAlbums />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/albums/:albumId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <Album />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/articles"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AllArticles />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/articles/:articleId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <ArticlePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/help/articles/:articleId"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <HelpArticlePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/offer"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <OfferPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/dashboard-new/:tab?"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <UserDashboard />
-            </Suspense>
-          }
-        />
-        <Route path="/dashboard" element={<Navigate to="/dashboard-new" replace />} />
-        <Route path="/dashboard/:tab" element={<LegacyDashboardTabRedirect />} />
-        <Route
-          path="/auth"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <AuthPage />
-            </Suspense>
-          }
-        />
-        <Route path="/forms" element={<Form />} />
-        <Route
-          path="/stems"
-          element={
-            <Suspense fallback={<PageLoader />}>
-              <StemsPlayground />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      {mainRoutes}
+      {authModalRoutes}
     </>
   );
 

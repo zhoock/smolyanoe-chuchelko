@@ -1088,12 +1088,12 @@ function UserDashboard() {
     }
   };
 
-  // Проверка авторизации
+  // Проверка авторизации: модалка /auth поверх текущего URL дашборда (как на остальном сайте)
   useEffect(() => {
-    if (!isAuthenticated()) {
-      navigate('/auth', { replace: true });
-    }
-  }, [navigate]);
+    if (isAuthenticated()) return;
+    if (location.pathname === '/auth') return;
+    navigate('/auth', { replace: true, state: { backgroundLocation: location } });
+  }, [navigate, location]);
 
   useEffect(() => {
     if (!isAvatarMenuOpen) return;

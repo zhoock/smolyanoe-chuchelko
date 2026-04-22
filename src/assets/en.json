@@ -6,6 +6,10 @@
       "articles": "articles",
       "stems": "mixer"
     },
+    "header": {
+      "signIn": "Sign in",
+      "openProfile": "My profile"
+    },
     "buttons": {
       "playButton": "play",
       "purchase": "purchase",
