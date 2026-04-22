@@ -76,6 +76,7 @@ export function FloatingCart() {
               >
                 <AlbumCover
                   img={album.cover!}
+                  userId={album.userId}
                   fullName={formatAlbumDisplayFullName(siteArtistName, album.album)}
                   size={56}
                   densities={[1, 2]}
@@ -98,6 +99,7 @@ export function FloatingCart() {
           <div className="floating-cart__thumbnail">
             <AlbumCover
               img={cartAlbums[0].cover!}
+              userId={cartAlbums[0].userId}
               fullName={formatAlbumDisplayFullName(siteArtistName, cartAlbums[0].album)}
               size={56}
               densities={[1, 2]}

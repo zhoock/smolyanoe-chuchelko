@@ -219,6 +219,7 @@ export default memo(AlbumCover, (prevProps, nextProps) => {
 
   return (
     prevProps.img === nextProps.img &&
+    prevProps.userId === nextProps.userId &&
     prevProps.fullName === nextProps.fullName &&
     prevProps.size === nextProps.size &&
     prevProps.densities === nextProps.densities &&

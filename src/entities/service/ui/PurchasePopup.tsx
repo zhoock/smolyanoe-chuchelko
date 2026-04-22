@@ -145,6 +145,7 @@ function CartStep({
                 {album?.cover ? (
                   <AlbumCover
                     img={album.cover}
+                    userId={album.userId}
                     fullName={formatAlbumDisplayFullName(siteDisplayName, album.album)}
                     size={64}
                     densities={[1, 2]}
@@ -601,6 +602,7 @@ function CheckoutStep({
                       {album?.cover ? (
                         <AlbumCover
                           img={album.cover}
+                          userId={album.userId}
                           fullName={formatAlbumDisplayFullName(siteDisplayName, album.album)}
                           size={64}
                           densities={[1, 2]}
