@@ -2870,7 +2870,10 @@ export function EditAlbumModal({
                   onClick={(e) => {
                     e.preventDefault();
                     onClose();
-                    navigate('/dashboard-new/payment-settings', { state: location.state });
+                    navigate('/dashboard-new/payment-settings', {
+                      replace: true,
+                      state: location.state,
+                    });
                   }}
                 >
                   {ui?.dashboard?.editAlbumModal?.albumSale?.connectPaymentButton ??

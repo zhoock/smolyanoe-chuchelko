@@ -660,7 +660,10 @@ function UserDashboard() {
   }, [backgroundLocation, navigate]);
   const goDashboard = useCallback(
     (path: string) => {
-      navigate(path, { ...(dashboardNavState ? { state: dashboardNavState } : {}) });
+      navigate(path, {
+        replace: true,
+        ...(dashboardNavState ? { state: dashboardNavState } : {}),
+      });
     },
     [navigate, dashboardNavState]
   );
