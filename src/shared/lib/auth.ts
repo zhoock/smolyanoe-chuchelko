@@ -5,6 +5,14 @@
 const TOKEN_STORAGE_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'auth_user';
 
+/** Синхронизация UI после login/logout (localStorage `auth_user` в той же вкладке storage-событие не шлёт). */
+export const AUTH_SESSION_CHANGED_EVENT = 'auth-session-changed';
+
+function dispatchAuthSessionChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -30,6 +38,7 @@ export function saveAuth(token: string, user: AuthUser): void {
   try {
     localStorage.setItem(TOKEN_STORAGE_KEY, token);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    dispatchAuthSessionChanged();
   } catch (error) {
     console.error('❌ Failed to save auth data:', error);
   }
@@ -82,6 +91,7 @@ export function clearAuth(): void {
   try {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
+    dispatchAuthSessionChanged();
   } catch (error) {
     console.error('❌ Failed to clear auth data:', error);
   }

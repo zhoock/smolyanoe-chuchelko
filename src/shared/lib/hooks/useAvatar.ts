@@ -5,6 +5,7 @@
 
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { getUser, AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
 import {
   AVATAR_MAX_FILE_SIZE_BYTES,
   appendUrlCacheBustParam,
@@ -16,8 +17,20 @@ import {
   uploadFile,
 } from '@shared/api/storage';
 
+/** @deprecated Старый глобальный ключ — кэш был общий для всех аккаунтов; не использовать для чтения. */
 export const PROFILE_AVATAR_LOCALSTORAGE_KEY = 'user-avatar-url';
-const AVATAR_URL_KEY = PROFILE_AVATAR_LOCALSTORAGE_KEY;
+
+const PROFILE_AVATAR_KEY_PREFIX = 'user-avatar-url:';
+
+export function getProfileAvatarLocalStorageKey(userId: string): string {
+  return `${PROFILE_AVATAR_KEY_PREFIX}${userId}`;
+}
+
+function getAvatarKeyForCurrentUser(): string | null {
+  const id = getUser()?.id;
+  return id ? getProfileAvatarLocalStorageKey(id) : null;
+}
+
 const DEFAULT_AVATAR = '/images/avatar.png';
 
 /** Событие после смены URL аватара в localStorage (для синхронизации шапки и т.п.) */
@@ -28,13 +41,27 @@ function dispatchProfileAvatarChanged() {
   window.dispatchEvent(new Event(PROFILE_AVATAR_CHANGED_EVENT));
 }
 
-/** Публичный URL аватара из localStorage (без cache-bust), иначе placeholder */
-export function getStoredProfileAvatarUrl(): string {
+function readAvatarUrlFromStorageForKey(key: string): string | null {
   try {
-    const savedUrl = localStorage.getItem(AVATAR_URL_KEY);
-    if (savedUrl) return savedUrl;
+    return localStorage.getItem(key);
   } catch (error) {
     console.warn('Failed to read avatar URL from localStorage:', error);
+    return null;
+  }
+}
+
+/**
+ * Кэш URL аватара в localStorage **по пользователю** (userId), иначе placeholder.
+ * Без сессии — плейсхолдер (общий кэш не используем).
+ */
+export function getStoredProfileAvatarUrl(): string {
+  const key = getAvatarKeyForCurrentUser();
+  if (!key) {
+    return DEFAULT_AVATAR;
+  }
+  const savedUrl = readAvatarUrlFromStorageForKey(key);
+  if (savedUrl) {
+    return savedUrl;
   }
   return DEFAULT_AVATAR;
 }
@@ -55,15 +82,26 @@ export function useStoredProfileAvatarUrl(): string {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === PROFILE_AVATAR_LOCALSTORAGE_KEY || e.key === null) {
+      const cur = getAvatarKeyForCurrentUser();
+      if (
+        e.key === null ||
+        (cur && e.key === cur) ||
+        e.key?.startsWith(PROFILE_AVATAR_KEY_PREFIX) ||
+        e.key === PROFILE_AVATAR_LOCALSTORAGE_KEY
+      ) {
         sync();
       }
     };
+    const onSession = () => {
+      sync();
+    };
     window.addEventListener('storage', onStorage);
     window.addEventListener(PROFILE_AVATAR_CHANGED_EVENT, sync);
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onSession);
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener(PROFILE_AVATAR_CHANGED_EVENT, sync);
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onSession);
     };
   }, [sync]);
 
@@ -93,9 +131,12 @@ export function useAvatar(options?: UseAvatarOptions) {
 
   const [avatarSrc, setAvatarSrc] = useState<string>(() => {
     try {
-      const savedUrl = localStorage.getItem(AVATAR_URL_KEY);
+      const key = getAvatarKeyForCurrentUser();
+      if (!key) {
+        return DEFAULT_AVATAR;
+      }
+      const savedUrl = readAvatarUrlFromStorageForKey(key);
       if (savedUrl) {
-        // Добавляем cache-bust при загрузке из localStorage для принудительного обновления
         const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         return appendUrlCacheBustParam(savedUrl, bust);
       }
@@ -108,6 +149,32 @@ export function useAvatar(options?: UseAvatarOptions) {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    const onSession = () => {
+      try {
+        if (localStorage.getItem(PROFILE_AVATAR_LOCALSTORAGE_KEY)) {
+          localStorage.removeItem(PROFILE_AVATAR_LOCALSTORAGE_KEY);
+        }
+      } catch {
+        /* ignore */
+      }
+      const key = getAvatarKeyForCurrentUser();
+      if (!key) {
+        setAvatarSrc(DEFAULT_AVATAR);
+        return;
+      }
+      const savedUrl = readAvatarUrlFromStorageForKey(key);
+      if (savedUrl) {
+        const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        setAvatarSrc(appendUrlCacheBustParam(savedUrl, bust));
+      } else {
+        setAvatarSrc(DEFAULT_AVATAR);
+      }
+    };
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onSession);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onSession);
+  }, []);
+
   const handleAvatarClick = useCallback(() => {
     if (isUploadingAvatar) return;
     avatarInputRef.current?.click();
@@ -117,6 +184,7 @@ export function useAvatar(options?: UseAvatarOptions) {
     if (isUploadingAvatar) return;
     setIsUploadingAvatar(true);
     try {
+      const key = getAvatarKeyForCurrentUser();
       const ok = await deleteProfileAvatarFromServer();
       if (!ok) {
         alert(
@@ -124,10 +192,12 @@ export function useAvatar(options?: UseAvatarOptions) {
         );
         return;
       }
-      try {
-        localStorage.removeItem(AVATAR_URL_KEY);
-      } catch (error) {
-        console.warn('Failed to clear avatar from localStorage:', error);
+      if (key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.warn('Failed to clear avatar from localStorage:', error);
+        }
       }
       const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       setAvatarSrc(appendUrlCacheBustParam(DEFAULT_AVATAR, bust));
@@ -226,11 +296,16 @@ export function useAvatar(options?: UseAvatarOptions) {
           preloadImg.src = avatarUrl;
         });
 
-        // Сохраняем URL в localStorage (без cache-bust)
-        try {
-          localStorage.setItem(AVATAR_URL_KEY, displayUrl);
-        } catch (error) {
-          console.warn('Failed to save avatar URL to localStorage:', error);
+        const storageKey = getAvatarKeyForCurrentUser();
+        if (storageKey) {
+          try {
+            localStorage.setItem(storageKey, displayUrl);
+            if (localStorage.getItem(PROFILE_AVATAR_LOCALSTORAGE_KEY)) {
+              localStorage.removeItem(PROFILE_AVATAR_LOCALSTORAGE_KEY);
+            }
+          } catch (error) {
+            console.warn('Failed to save avatar URL to localStorage:', error);
+          }
         }
 
         // Обновляем состояние только после предзагрузки
