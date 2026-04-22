@@ -166,6 +166,37 @@ export async function generateArticleCoverVariants(
   return results;
 }
 
+const PROFILE_AVATAR_SIZE = [128, 256] as const;
+
+/**
+ * Аватар профиля: квадрат (cover + center), 128px и 256px, WebP + JPEG. Оригинал не сохраняем.
+ */
+export async function generateProfileAvatarVariants(
+  imageBuffer: Buffer,
+  baseName: string
+): Promise<Record<string, Buffer>> {
+  const results: Record<string, Buffer> = {};
+
+  for (const size of PROFILE_AVATAR_SIZE) {
+    for (const format of ['webp', 'jpg'] as const) {
+      const suffix = format === 'jpg' ? `-${size}.jpg` : `-${size}.webp`;
+      let sharpInstance = sharp(imageBuffer).resize(size, size, {
+        fit: 'cover',
+        position: 'center',
+      });
+      if (format === 'webp') {
+        sharpInstance = sharpInstance.webp({ quality: 85 });
+      } else {
+        sharpInstance = sharpInstance.jpeg({ quality: 85, mozjpeg: true });
+      }
+      const buffer = await sharpInstance.toBuffer();
+      results[`${baseName}${suffix}`] = buffer;
+    }
+  }
+
+  return results;
+}
+
 /**
  * Получает базовое имя файла из полного пути или простого имени файла
  * @param pathOrFileName - полный путь в Storage (например "users/{userId}/albums/23-cover.webp") или простое имя файла (например "hero-123.jpg")
@@ -179,6 +210,6 @@ export function extractBaseName(pathOrFileName: string): string {
   // Убираем расширение и суффиксы размеров
   // Паттерн: -640.jpg, -1920.avif, -2560.webp и т.д.
   return fileName
-    .replace(/[-.](640|1280|1920|2560|64|128|320|448|896|1344)\.(jpg|jpeg|png|webp|avif)$/i, '')
+    .replace(/[-.](640|1280|1920|2560|64|128|256|320|448|896|1344)\.(jpg|jpeg|png|webp|avif)$/i, '')
     .replace(/\.(jpg|jpeg|png|webp|avif)$/i, '');
 }

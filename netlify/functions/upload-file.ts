@@ -10,10 +10,12 @@
  *   fileName: string,
  *   userId?: string (опционально, по умолчанию из токена),
  *   category: 'albums' | 'articles' | 'profile' | 'uploads' | 'stems',
+ *   — profile + fileName `profile.jpg|png|webp`: сервер генерирует квадратные 128/256 (webp+jpeg), уникальный префикс `profile-<hex>`, канонический URL — `.../profile-<hex>-128.webp`.
  *   contentType?: string (опционально, по умолчанию 'image/jpeg')
  * }
  */
 
+import { randomBytes } from 'crypto';
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import type { ImageCategory } from '../../src/config/user';
 import { extractRoleFromToken } from './lib/jwt';
@@ -29,8 +31,13 @@ import { sanitizeUploadFileName } from './lib/sanitizeFileName';
 import {
   generateHeroImageVariants,
   generateArticleCoverVariants,
+  generateProfileAvatarVariants,
   extractBaseName,
 } from './lib/image-processor';
+import {
+  AVATAR_MAX_FILE_SIZE_BYTES,
+  isProfileAvatarStorageObjectName,
+} from '../../src/shared/lib/avatarUpload';
 
 const ALLOWED_CATEGORIES: readonly ImageCategory[] = [
   'albums',
@@ -162,6 +169,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         receivedSize,
         difference: Math.abs(receivedSize - originalFileSize),
       });
+    }
+
+    if (normalizedCategory === 'profile' && receivedSize > AVATAR_MAX_FILE_SIZE_BYTES) {
+      return createErrorResponse(
+        400,
+        `Avatar file is too large. Maximum size is ${AVATAR_MAX_FILE_SIZE_BYTES / (1024 * 1024)} MB.`
+      );
     }
 
     // Для категории hero генерируем варианты изображений
@@ -358,6 +372,100 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         {
           url: previewPath,
           storagePath: previewPath,
+          baseName,
+        },
+        200
+      );
+    }
+
+    /** Аватар (только `profile.jpg|png|webp`): квадратные 128/256, без сохранения оригинала. Обложки `cover-*` — ниже, как один файл. */
+    const isProfileAvatarUpload =
+      normalizedCategory === 'profile' && /^profile\.(jpe?g|png|webp)$/i.test(fileName);
+
+    if (isProfileAvatarUpload) {
+      const profileUserId = targetUserId;
+      const uploadId = randomBytes(8).toString('hex');
+      const baseName = `profile-${uploadId}`;
+
+      console.log('🖼️ [upload-file] Generating profile avatar variants for:', fileName, {
+        baseName,
+      });
+      const variants = await generateProfileAvatarVariants(fileBuffer, baseName);
+
+      const profileFolder = `users/${profileUserId}/profile`;
+      const { data: existingProfileFiles } = await supabase.storage
+        .from(STORAGE_BUCKET_NAME)
+        .list(profileFolder, { limit: 200 });
+
+      const fromList = (existingProfileFiles || [])
+        .filter((f) => f.name && isProfileAvatarStorageObjectName(f.name))
+        .map((f) => `${profileFolder}/${f.name}`);
+
+      const toRemove = [...new Set(fromList)];
+
+      if (toRemove.length > 0) {
+        console.log(
+          `🗑️ [upload-file] Removing ${toRemove.length} old avatar file(s) from storage`,
+          {
+            paths: toRemove,
+          }
+        );
+        const { error: removeProfileErr } = await supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .remove(toRemove);
+        if (removeProfileErr) {
+          // Часто «not found» на первом аплоаде — не критично, upsert всё равно перезапишет
+          console.warn('[upload-file] profile avatar remove:', removeProfileErr.message);
+        }
+      }
+
+      const uploadedProfileFiles: string[] = [];
+      const uploadProfileErrors: string[] = [];
+
+      for (const [variantFileName, buffer] of Object.entries(variants)) {
+        const variantPath = getStoragePath(profileUserId, 'profile', variantFileName);
+        const variantContentType = variantFileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+
+        const { error: variantError } = await supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .upload(variantPath, buffer, {
+            contentType: variantContentType,
+            upsert: true,
+            // 0: иначе CDN/превью в панели Supabase долго отдают старое тело при том же имени файла
+            cacheControl: '0',
+          });
+
+        if (variantError) {
+          console.error(
+            `Error uploading profile avatar variant ${variantFileName}:`,
+            variantError.message
+          );
+          uploadProfileErrors.push(`${variantFileName}: ${variantError.message}`);
+        } else {
+          uploadedProfileFiles.push(variantFileName);
+        }
+      }
+
+      if (uploadProfileErrors.length > 0) {
+        console.error('Some profile avatar variants failed to upload:', uploadProfileErrors);
+        if (uploadedProfileFiles.length === 0) {
+          return createErrorResponse(
+            500,
+            `Failed to upload any profile avatar variants: ${uploadProfileErrors.join(', ')}`
+          );
+        }
+      }
+
+      console.log(
+        `✅ [upload-file] Uploaded ${uploadedProfileFiles.length} profile avatar variant(s)`
+      );
+
+      const canonicalPath = getStoragePath(profileUserId, 'profile', `${baseName}-128.webp`);
+
+      return createSuccessResponse(
+        {
+          url: canonicalPath,
+          storagePath: canonicalPath,
           baseName,
         },
         200

@@ -84,6 +84,46 @@ async function fileToBase64(file: File | Blob): Promise<string> {
 }
 
 /**
+ * Локальный URL для `/.netlify/functions/proxy-image` (или /api/ на проде) по пути в bucket `users/...`.
+ * Нужен, если API вернул storagePath, а не https к объекту.
+ */
+export function buildProxyImageUrlFromStoragePath(storagePath: string): string {
+  let origin = '';
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const port = window.location.port;
+
+    const isProduction =
+      hostname !== 'localhost' &&
+      hostname !== '127.0.0.1' &&
+      !hostname.includes('localhost') &&
+      !hostname.includes('127.0.0.1') &&
+      (hostname.includes('smolyanoechuchelko.ru') || hostname.includes('netlify.app'));
+
+    if (isProduction) {
+      origin = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
+    } else {
+      origin = window.location.origin;
+    }
+  } else {
+    origin = process.env.NETLIFY_SITE_URL || '';
+  }
+
+  const isProduction =
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1' &&
+    !window.location.hostname.includes('localhost') &&
+    !window.location.hostname.includes('127.0.0.1') &&
+    (window.location.hostname.includes('smolyanoechuchelko.ru') ||
+      window.location.hostname.includes('netlify.app'));
+
+  const proxyPath = isProduction ? '/api/proxy-image' : '/.netlify/functions/proxy-image';
+  return `${origin}${proxyPath}?path=${encodeURIComponent(storagePath)}`;
+}
+
+/**
  * Загрузить файл в Supabase Storage
  * @param options - опции загрузки
  * @returns URL загруженного файла или null в случае ошибки
@@ -353,6 +393,21 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
       });
     }
 
+    // Аватар: storagePath `users/.../profile/...` → proxy (все варианты имён, не только `profile-NNN`)
+    if (
+      category === 'profile' &&
+      typeof finalUrl === 'string' &&
+      finalUrl.startsWith('users/') &&
+      finalUrl.includes('/profile/')
+    ) {
+      finalUrl = buildProxyImageUrlFromStoragePath(finalUrl);
+
+      console.log('🔗 [uploadFile] Сформирован proxy URL для profile:', {
+        storagePath: result.data.url,
+        finalUrl,
+      });
+    }
+
     return finalUrl;
   } catch (error) {
     console.error('Error in uploadFile:', error);
@@ -611,6 +666,48 @@ export async function deleteStorageFile(
     return true;
   } catch (error) {
     console.error('Error in deleteStorageFile:', error);
+    return false;
+  }
+}
+
+/**
+ * Удалить все файлы аватара (`profile.*` и `profile-128|256.*`) в Storage через Netlify Function + service role.
+ * Надёжнее, чем deleteStorageFile с anon key (политики RLS).
+ * @returns true при успехе (в т.ч. если файлов не было)
+ */
+export async function deleteProfileAvatarFromServer(): Promise<boolean> {
+  try {
+    const { getAuthHeader, getToken } = await import('@shared/lib/auth');
+    const token = getToken();
+    if (!token) {
+      console.error('[deleteProfileAvatarFromServer] Not authenticated');
+      return false;
+    }
+    const authHeader = getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...authHeader,
+    };
+    if (!headers.Authorization && !headers.authorization) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/delete-profile-avatar', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.error('[deleteProfileAvatarFromServer] HTTP error:', response.status, err);
+      return false;
+    }
+
+    const result = (await response.json()) as { success?: boolean };
+    return result.success === true;
+  } catch (error) {
+    console.error('[deleteProfileAvatarFromServer]', error);
     return false;
   }
 }

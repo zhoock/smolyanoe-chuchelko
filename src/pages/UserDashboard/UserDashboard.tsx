@@ -657,6 +657,8 @@ function UserDashboard() {
   const activeTab: DashboardTab = tabInvalid ? 'albums' : dashboardTabFromRouteParam(tabFromRoute);
 
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+  const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
@@ -668,8 +670,6 @@ function UserDashboard() {
   const [isUploadingTracks, setIsUploadingTracks] = useState<{ [albumId: string]: boolean }>({});
   const [uploadProgress, setUploadProgress] = useState<{ [albumId: string]: number }>({});
   const fileInputRefs = useRef<{ [albumId: string]: HTMLInputElement | null }>({});
-  const { avatarSrc, isUploadingAvatar, avatarInputRef, handleAvatarClick, handleAvatarChange } =
-    useAvatar();
   const [addLyricsModal, setAddLyricsModal] = useState<{
     isOpen: boolean;
     albumId: string;
@@ -730,6 +730,27 @@ function UserDashboard() {
     message: string;
     variant?: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
+
+  const onAvatarFileTooLarge = useCallback((message: string) => {
+    setAlertModal({
+      isOpen: true,
+      message,
+      variant: 'warning',
+    });
+  }, []);
+
+  const {
+    avatarSrc,
+    avatarRetinaSrc,
+    isUploadingAvatar,
+    avatarInputRef,
+    handleAvatarClick,
+    handleAvatarChange,
+    handleAvatarRemove,
+  } = useAvatar({
+    avatarFileTooLargeMessage: ui?.dashboard?.avatarFileTooLarge,
+    onAvatarFileTooLarge,
+  });
 
   // Состояние для загрузки обложки статьи
   const [articleCoverUpload, setArticleCoverUpload] = useState<{
@@ -1073,6 +1094,29 @@ function UserDashboard() {
       navigate('/auth', { replace: true });
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (!isAvatarMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (
+        avatarMenuContainerRef.current &&
+        !avatarMenuContainerRef.current.contains(e.target as Node)
+      ) {
+        setIsAvatarMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isAvatarMenuOpen]);
 
   // Загрузка альбомов: всегда force при смене аккаунта/языка,
   // чтобы не показывать данные предыдущего пользователя из Redux-кэша.
@@ -2902,55 +2946,94 @@ function UserDashboard() {
                         <div className="user-dashboard__section">
                           <div className="user-dashboard__profile-content">
                             <div className="user-dashboard__avatar">
-                              <div
-                                className="user-dashboard__avatar-img"
-                                role="button"
-                                tabIndex={0}
-                                aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
-                                onClick={handleAvatarClick}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    handleAvatarClick();
-                                  }
-                                }}
-                              >
-                                <img
-                                  src={avatarSrc}
-                                  alt={ui?.dashboard?.profile ?? 'Profile'}
-                                  onError={(e) => {
-                                    const img = e.target as HTMLImageElement;
-                                    const applied = img.dataset.fallbackApplied;
+                              <div className="user-dashboard__avatar-block">
+                                <div className="user-dashboard__avatar-img">
+                                  <img
+                                    src={avatarSrc}
+                                    srcSet={avatarRetinaSrc ? `${avatarRetinaSrc} 2x` : undefined}
+                                    alt={ui?.dashboard?.profile ?? 'Profile'}
+                                    onError={(e) => {
+                                      const img = e.target as HTMLImageElement;
+                                      const applied = img.dataset.fallbackApplied;
 
-                                    // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
-                                    if (!applied) {
-                                      img.dataset.fallbackApplied = 'default';
-                                      img.src = '/images/avatar.png';
-                                      return;
-                                    }
+                                      // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
+                                      if (!applied) {
+                                        img.dataset.fallbackApplied = 'default';
+                                        img.src = '/images/avatar.png';
+                                        return;
+                                      }
 
-                                    // 2) если и дефолтный не загрузился — скрываем
-                                    img.style.display = 'none';
-                                  }}
-                                />
-                                {isUploadingAvatar && (
-                                  <div
-                                    className="user-dashboard__avatar-loader"
-                                    aria-live="polite"
-                                    aria-busy="true"
-                                  >
-                                    <div className="user-dashboard__avatar-spinner"></div>
-                                  </div>
-                                )}
-                                <button
-                                  type="button"
-                                  className="user-dashboard__avatar-edit"
-                                  onClick={handleAvatarClick}
-                                  disabled={isUploadingAvatar}
-                                  aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
+                                      // 2) если и дефолтный не загрузился — скрываем
+                                      img.style.display = 'none';
+                                    }}
+                                  />
+                                  {isUploadingAvatar && (
+                                    <div
+                                      className="user-dashboard__avatar-loader"
+                                      aria-live="polite"
+                                      aria-busy="true"
+                                    >
+                                      <div className="user-dashboard__avatar-spinner"></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div
+                                  className="user-dashboard__avatar-actions"
+                                  ref={avatarMenuContainerRef}
                                 >
-                                  ✎
-                                </button>
+                                  <button
+                                    type="button"
+                                    className="user-dashboard__avatar-edit"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsAvatarMenuOpen((open) => !open);
+                                    }}
+                                    disabled={isUploadingAvatar}
+                                    aria-label={ui?.dashboard?.changeAvatar ?? 'Change avatar'}
+                                    aria-haspopup="menu"
+                                    aria-expanded={isAvatarMenuOpen}
+                                    id="user-dashboard-avatar-edit-button"
+                                  >
+                                    <span className="user-dashboard__avatar-edit-icon" aria-hidden>
+                                      ✎
+                                    </span>
+                                    <span>{ui?.dashboard?.avatarEdit ?? 'Edit'}</span>
+                                  </button>
+                                  {isAvatarMenuOpen && (
+                                    <div
+                                      className="user-dashboard__avatar-menu"
+                                      role="menu"
+                                      aria-labelledby="user-dashboard-avatar-edit-button"
+                                    >
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="user-dashboard__avatar-menu-item"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsAvatarMenuOpen(false);
+                                          handleAvatarClick();
+                                        }}
+                                        disabled={isUploadingAvatar}
+                                      >
+                                        {ui?.dashboard?.uploadAvatarPhoto ?? 'Upload the photo...'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="user-dashboard__avatar-menu-item"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsAvatarMenuOpen(false);
+                                          void handleAvatarRemove();
+                                        }}
+                                        disabled={isUploadingAvatar}
+                                      >
+                                        {ui?.dashboard?.removeAvatarPhoto ?? 'Remove photo'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <input
                                 ref={avatarInputRef}

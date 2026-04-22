@@ -302,6 +302,14 @@ export interface IInterface {
     failedToLoadAlbums?: string;
     selectLanguage?: string;
     changeAvatar?: string;
+    /** Кнопка у аватара: «Edit» */
+    avatarEdit?: string;
+    /** Меню аватара: загрузка */
+    uploadAvatarPhoto?: string;
+    /** Меню аватара: удаление */
+    removeAvatarPhoto?: string;
+    /** Файл аватара больше лимита (2 MB) */
+    avatarFileTooLarge?: string;
     errorSavingText?: string;
     enterLink: string;
     addImage: string;

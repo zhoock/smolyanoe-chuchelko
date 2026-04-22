@@ -82,6 +82,11 @@ export const handler: Handler = async (
       decodedPath = imagePath;
     }
 
+    // Не допускаем, чтобы `?t=...` (cache-bust) из query попал в path — иначе имя объекта в Storage будет `file.webp?t=...` (404)
+    if (decodedPath.includes('?')) {
+      decodedPath = decodedPath.split('?')[0];
+    }
+
     console.log('[proxy-image] Request details:', {
       originalPath: imagePath,
       decodedPath,

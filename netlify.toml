@@ -135,6 +135,13 @@
   status = 200
   force = true
 
+# Удаление аватара в Storage (service role)
+[[redirects]]
+  from = "/api/delete-profile-avatar*"
+  to = "/.netlify/functions/delete-profile-avatar"
+  status = 200
+  force = true
+
 # Update/check covers
 [[redirects]]
   from = "/api/update-album-covers*"
