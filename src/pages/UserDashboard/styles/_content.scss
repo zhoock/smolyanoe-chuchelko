@@ -102,6 +102,7 @@ dialog {
     }
 
     &__album-thumbnail {
+      position: relative;
       width: calc(var(--ms-1) * 2.7);
       height: calc(var(--ms-1) * 2.7);
       flex-shrink: 0;
@@ -118,6 +119,7 @@ dialog {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        transition: opacity 0.2s ease;
       }
     }
 
@@ -636,6 +638,30 @@ dialog {
         $padding: var(--ms-0) var(--ms-1),
         $border-radius: var(--ms-01)
       );
+    }
+
+    // После всех менее специфичных `img` в этом файле (stylelint no-descending-specificity)
+    &__album-thumbnail--cover-loading {
+      .skeleton--image {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: var(--iron-slate);
+      }
+
+      .user-dashboard__album-cover-img--visible,
+      img {
+        position: relative;
+        z-index: 1;
+      }
+
+      img:not(.user-dashboard__album-cover-img--visible) {
+        opacity: 0;
+      }
+
+      .user-dashboard__album-cover-img--visible {
+        opacity: 1;
+      }
     }
   }
 }

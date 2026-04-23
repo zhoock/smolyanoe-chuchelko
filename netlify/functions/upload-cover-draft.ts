@@ -23,6 +23,7 @@
  * }
  */
 
+import { randomUUID } from 'node:crypto';
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -133,7 +134,6 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       contentType,
       originalFileSize,
       path: event.path,
-      rawPath: event.rawPath,
     });
 
     if (!fileBase64) {
@@ -216,17 +216,19 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         .replace(/^-|-$/g, ''); // Убираем дефисы в начале/конце
     };
 
+    // Уникальный корень пути, как article_cover_* у статей: при каждой загрузке новый ключ
+    // — иначе тот же human-readable base → те же пути в Storage и битый/устаревший кэш.
+    const coverKey = `album_cover_${randomUUID()}`;
+
     let baseName: string;
     if (artist && album) {
-      // Формат: Groupe-Cover-Album-Name
       const groupeFormatted = formatForFileName(artist);
       const albumFormatted = formatForFileName(album);
-      baseName = `${groupeFormatted}-Cover-${albumFormatted}`;
+      baseName = `${coverKey}_${groupeFormatted}-Cover-${albumFormatted}`;
     } else if (albumId) {
-      // Fallback: используем albumId
-      baseName = `${albumId}-cover`;
+      baseName = `${coverKey}_${albumId}-cover`;
     } else {
-      baseName = `draft-${Date.now()}-cover`;
+      baseName = `${coverKey}_new-album`;
     }
 
     // Генерируем все варианты изображения

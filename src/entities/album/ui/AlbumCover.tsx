@@ -3,6 +3,7 @@ import { memo, useMemo } from 'react';
 import { getImageUrl } from '@shared/api/albums';
 import type { CoverProps } from 'models';
 import { useImageColor } from '@shared/lib/hooks/useImageColor';
+import { getAlbumStorageBaseName } from '@shared/lib/albumCoverUrl';
 
 type ImageFormat = 'webp' | 'jpg';
 type Density = 1 | 2 | 3;
@@ -121,7 +122,8 @@ function AlbumCover({
 }: CoverProps & {
   onColorsExtracted?: (colors: { dominant: string; palette: string[] }) => void;
 }) {
-  const imgRef = useImageColor(img, onColorsExtracted);
+  const baseName = useMemo(() => getAlbumStorageBaseName(img), [img]);
+  const imgRef = useImageColor(baseName, onColorsExtracted);
   const effectiveBaseSize = size ?? DEFAULT_BASE_SIZE;
 
   const densitySteps = useMemo(() => {
@@ -131,34 +133,34 @@ function AlbumCover({
   }, [densities]);
 
   /**
-   * cacheBust уникальный на монтирование + пересчитывается при смене img
+   * cacheBust уникальный на монтирование + пересчитывается при смене обложки
    */
-  const cacheBust = useMemo(() => `${Date.now()}`, [img]);
+  const cacheBust = useMemo(() => `${Date.now()}`, [baseName]);
 
   const webpSrcSet = useMemo(
     () =>
       buildSrcSet({
-        img,
+        img: baseName,
         userId,
         baseSize: effectiveBaseSize,
         format: 'webp',
         densities: densitySteps,
         cacheBust,
       }),
-    [img, userId, effectiveBaseSize, densitySteps, cacheBust]
+    [baseName, userId, effectiveBaseSize, densitySteps, cacheBust]
   );
 
   const jpegSrcSet = useMemo(
     () =>
       buildSrcSet({
-        img,
+        img: baseName,
         userId,
         baseSize: effectiveBaseSize,
         format: 'jpg',
         densities: densitySteps,
         cacheBust,
       }),
-    [img, userId, effectiveBaseSize, densitySteps, cacheBust]
+    [baseName, userId, effectiveBaseSize, densitySteps, cacheBust]
   );
 
   const fallbackSrc = useMemo(() => {
@@ -166,9 +168,16 @@ function AlbumCover({
 
     if (useSupabaseStorage) {
       const suffix = supaSuffix('webp', effectiveBaseSize) ?? '-448.webp';
-      const url = getImageUrl(img, suffix, userId ? { userId, category: 'albums' } : undefined);
+      const url = getImageUrl(
+        baseName,
+        suffix,
+        userId ? { userId, category: 'albums' } : undefined
+      );
       if (url == null) {
-        console.error('[BUG] AlbumCover fallbackSrc: getImageUrl returned null', { img, userId });
+        console.error('[BUG] AlbumCover fallbackSrc: getImageUrl returned null', {
+          img: baseName,
+          userId,
+        });
         return '';
       }
       return withCacheBust(url, cacheBust);
@@ -176,18 +185,18 @@ function AlbumCover({
 
     const primarySuffix = DENSITY_SUFFIX.jpg[1]?.(effectiveBaseSize);
     const baseUrl = primarySuffix
-      ? getImageUrl(img, primarySuffix, userId ? { userId, category: 'albums' } : undefined)
-      : getImageUrl(img, '.jpg', userId ? { userId, category: 'albums' } : undefined);
+      ? getImageUrl(baseName, primarySuffix, userId ? { userId, category: 'albums' } : undefined)
+      : getImageUrl(baseName, '.jpg', userId ? { userId, category: 'albums' } : undefined);
     if (baseUrl == null) {
       console.error('[BUG] AlbumCover fallbackSrc (local): getImageUrl returned null', {
-        img,
+        img: baseName,
         userId,
       });
       return '';
     }
 
     return withCacheBust(baseUrl, cacheBust);
-  }, [img, userId, effectiveBaseSize, cacheBust]);
+  }, [baseName, userId, effectiveBaseSize, cacheBust]);
 
   const resolvedSizes =
     sizes ??

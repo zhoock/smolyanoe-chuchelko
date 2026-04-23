@@ -18,7 +18,6 @@ export interface AlbumData {
   artist: string;
   year: string;
   cover?: string;
-  coverUpdatedAt?: number; // Timestamp для принудительной перезагрузки изображения
   releaseDate?: string;
   tracks: TrackData[];
 }
@@ -129,7 +128,6 @@ export function transformAlbumToAlbumData(
     artist: artistLabel,
     year: releaseDate ? releaseDate.getFullYear().toString() : '',
     cover: source.cover,
-    coverUpdatedAt: Date.now(), // Добавляем timestamp для принудительной перезагрузки изображения
     releaseDate: releaseDate
       ? releaseDate.toLocaleDateString('en-US', {
           year: 'numeric',

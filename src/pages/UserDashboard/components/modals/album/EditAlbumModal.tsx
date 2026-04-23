@@ -10,6 +10,7 @@ import { selectAlbumsData, fetchAlbums } from '@entities/album';
 import { useLang } from '@app/providers/lang';
 import { getToken, getUser } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
+import { getAlbumStorageBaseName } from '@shared/lib/albumCoverUrl';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums, detailsProps } from '@models';
 import { mergeSemanticSourceIntoLocaleDetails } from '@entities/album/lib/albumDetailSemanticKind';
@@ -739,19 +740,16 @@ export function EditAlbumModal({
           : null;
 
     if (coverName) {
-      // Убираем расширение из coverName если есть (на всякий случай)
       const stripExt = (s: string) => s.replace(/\.(webp|jpg|jpeg|png)$/i, '');
-
-      // Собираем имя с суффиксом размера и передаём расширение отдельно
-      const base = stripExt(coverName); // "my-cover" или "my-cover-448" -> "my-cover" или "my-cover-448"
-      if (!album.userId) {
+      const base = getAlbumStorageBaseName(stripExt(coverName));
+      const storageUserId = album.userId ?? getUser()?.id ?? null;
+      if (!storageUserId) {
         console.error('[BUG] album.userId missing', {
           albumId: album.albumId,
           context: 'editAlbumModalCoverPreview',
         });
       } else {
-        const coverUrl = getUserImageUrl(`${base}-448`, 'albums', '.webp', false, album.userId);
-
+        const coverUrl = getUserImageUrl(`${base}-448`, 'albums', '.webp', false, storageUserId);
         if (coverUrl) {
           setAlbumArtPreview(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}v=${Date.now()}`);
         }

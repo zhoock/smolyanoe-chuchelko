@@ -32,7 +32,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getUserImageUrl, formatDate } from '@shared/api/albums';
+import { formatDate } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
@@ -43,6 +43,7 @@ import {
   selectAlbumsStatus,
   selectAlbumsData,
   selectAlbumsError,
+  AlbumCoverImage,
 } from '@entities/album';
 import {
   fetchArticles,
@@ -81,6 +82,20 @@ import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import './UserDashboard.style.scss';
+
+/** В кабинете список альбомов всегда принадлежит сессии; бэкенд иногда не присылает `userId`. */
+function withDashboardAlbumOwner(
+  albums: AlbumData[],
+  sessionUserId: string | null | undefined
+): AlbumData[] {
+  if (sessionUserId == null || sessionUserId === '') {
+    return albums;
+  }
+  return albums.map((a) => ({
+    ...a,
+    userId: a.userId ?? sessionUserId,
+  }));
+}
 
 // Компонент для сортируемого трека
 interface SortableTrackItemProps {
@@ -1176,6 +1191,12 @@ function UserDashboard() {
       return;
     }
 
+    // Пока fetchAlbums в полёте, в store ещё предыдущий снимок; не пересобираем albumsData
+    // (вкладка Albums — skeleton; миксер/модалки сохраняют последний валидный список).
+    if (albumsStatus === 'loading') {
+      return;
+    }
+
     setIsLoadingTracks(true);
     const abortController = new AbortController();
 
@@ -1202,7 +1223,7 @@ function UserDashboard() {
 
         // Обновляем локальное состояние из Redux store
         if (!abortController.signal.aborted) {
-          setAlbumsData([...transformedAlbums]);
+          setAlbumsData(withDashboardAlbumOwner([...transformedAlbums], userId));
           setIsLoadingTracks(false);
         }
       } catch (error) {
@@ -1216,7 +1237,7 @@ function UserDashboard() {
     return () => {
       abortController.abort();
     };
-  }, [albumsFromStore, lang, siteArtistDisplayName]);
+  }, [albumsFromStore, albumsStatus, lang, siteArtistDisplayName, userId]);
 
   const toggleAlbum = (albumId: string) => {
     setExpandedAlbumId((prev) => (prev === albumId ? null : albumId));
@@ -2281,33 +2302,13 @@ function UserDashboard() {
                           {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                         </h3>
                         <div className="user-dashboard__section">
-                          {albumsData.length > 0 ? (
+                          {albumsStatus === 'loading' ? (
+                            <ArticlesListSkeleton count={4} />
+                          ) : albumsData.length > 0 ? (
                             <>
                               <div className="user-dashboard__albums-list">
                                 {albumsData.map((album, index) => {
                                   const isExpanded = expandedAlbumId === album.id;
-                                  if (album.cover && !album.userId) {
-                                    console.error('[BUG] album.userId missing', {
-                                      albumId: album.id,
-                                      context: 'albumListThumbnail',
-                                    });
-                                  }
-                                  const coverThumbBase =
-                                    album.cover && album.userId
-                                      ? getUserImageUrl(
-                                          album.cover,
-                                          'albums',
-                                          '-128.webp',
-                                          undefined,
-                                          album.userId
-                                        )
-                                      : null;
-                                  if (album.cover && album.userId && coverThumbBase == null) {
-                                    console.error(
-                                      '[BUG] UserDashboard album thumbnail: getUserImageUrl returned null',
-                                      { albumId: album.id, albumUserId: album.userId }
-                                    );
-                                  }
                                   return (
                                     <React.Fragment key={album.id}>
                                       <div
@@ -2324,25 +2325,14 @@ function UserDashboard() {
                                         aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
                                       >
                                         <div className="user-dashboard__album-thumbnail">
-                                          {album.cover && coverThumbBase ? (
-                                            <img
-                                              key={`cover-${album.id}-${album.cover}-${album.coverUpdatedAt || ''}`}
-                                              src={`${coverThumbBase}&v=${encodeURIComponent(`${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`)}`}
+                                          {album.cover ? (
+                                            <AlbumCoverImage
+                                              cover={album.cover}
+                                              userId={album.userId ?? userId ?? undefined}
                                               alt={album.title}
-                                              onError={(e) => {
-                                                const img = e.target as HTMLImageElement;
-                                                const currentSrc = img.src;
-                                                if (!currentSrc.includes('&_retry=')) {
-                                                  const base =
-                                                    currentSrc.split(/[&](?:v|_retry)=/)[0];
-                                                  img.src = `${base}&_retry=${Date.now()}`;
-                                                }
-                                              }}
-                                            />
-                                          ) : album.cover ? (
-                                            <img
-                                              src="/images/album-placeholder.png"
-                                              alt={album.title}
+                                              contextAlbumId={album.id}
+                                              loading="lazy"
+                                              decoding="async"
                                             />
                                           ) : (
                                             <img
@@ -3340,7 +3330,7 @@ function UserDashboard() {
                   });
                 });
 
-                setAlbumsData(transformedAlbums);
+                setAlbumsData(withDashboardAlbumOwner(transformedAlbums, userId));
                 console.log('✅ [UserDashboard] albumsData updated:', {
                   count: transformedAlbums.length,
                   albumIds: transformedAlbums.map((a) => a.id),

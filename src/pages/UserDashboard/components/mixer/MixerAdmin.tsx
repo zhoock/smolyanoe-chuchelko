@@ -4,7 +4,7 @@ import type { IInterface } from '@models';
 import type { AlbumData, TrackData } from '@entities/album/lib/transformAlbumData';
 import { uploadFile, listStorageByPrefix } from '@shared/api/storage';
 import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
-import { getUserImageUrl } from '@shared/api/albums';
+import { AlbumCoverImage } from '@entities/album';
 import {
   buildStoragePublicObjectUrl,
   createSupabaseClient,
@@ -781,22 +781,6 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
             {albums.map((album, index) => {
               const tracks = getAlbumTracks(album.id);
               const isAlbumOpen = expandedAlbumId === album.id;
-              if (album.cover && !album.userId) {
-                console.error('[BUG] album.userId missing', {
-                  albumId: album.id,
-                  context: 'mixerAlbumThumbnail',
-                });
-              }
-              const coverThumbBase =
-                album.cover && album.userId
-                  ? getUserImageUrl(album.cover, 'albums', '-128.webp', undefined, album.userId)
-                  : null;
-              if (album.cover && album.userId && coverThumbBase == null) {
-                console.error('[BUG] MixerAdmin album thumbnail: getUserImageUrl returned null', {
-                  albumId: album.id,
-                  albumUserId: album.userId,
-                });
-              }
               return (
                 <React.Fragment key={album.id}>
                   <div
@@ -813,21 +797,16 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                     aria-label={isAlbumOpen ? 'Collapse album' : 'Expand album'}
                   >
                     <div className="user-dashboard__album-thumbnail">
-                      {album.cover && coverThumbBase ? (
-                        <img
-                          src={`${coverThumbBase}&v=${encodeURIComponent(`${album.cover}${album.coverUpdatedAt ? `-${album.coverUpdatedAt}` : ''}`)}`}
+                      {album.cover ? (
+                        <AlbumCoverImage
+                          cover={album.cover}
+                          userId={album.userId ?? userId}
                           alt={album.title}
-                          onError={(e) => {
-                            const img = e.target as HTMLImageElement;
-                            const currentSrc = img.src;
-                            if (!currentSrc.includes('&_retry=')) {
-                              const base = currentSrc.split(/[&](?:v|_retry)=/)[0];
-                              img.src = `${base}&_retry=${Date.now()}`;
-                            }
-                          }}
+                          contextAlbumId={album.id}
+                          logContext="mixer"
+                          loading="lazy"
+                          decoding="async"
                         />
-                      ) : album.cover ? (
-                        <img src="/images/album-placeholder.png" alt={album.title} />
                       ) : (
                         <img src="/images/album-placeholder.png" alt={album.title} />
                       )}
