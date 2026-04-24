@@ -11,6 +11,7 @@ import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IArticles } from '@models';
 import type { SupportedLang } from '@shared/model/lang';
 import type { AppDispatch } from '@shared/model/appStore/types';
+import * as publicArtistContext from '@shared/lib/publicArtistContext';
 import { currentArtistReducer, setPublicArtistSlug } from '@shared/model/currentArtist';
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
@@ -110,6 +111,21 @@ describe('articlesSlice', () => {
       expect(selectArticlesStatus(state)).toBe('failed');
       expect(selectArticlesError(state)).toBe(errorMessage);
       expect(selectArticlesData(state)).toEqual([]);
+    });
+
+    test('в /dashboard при ошибке API не запрашивает статический articles-*.json', async () => {
+      const dashSpy = jest.spyOn(publicArtistContext, 'isDashboardPathname').mockReturnValue(true);
+
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchArticles({ force: true }));
+
+      dashSpy.mockRestore();
+
+      expect(result.type).toBe('articles/fetchMerged/rejected');
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(String(mockFetch.mock.calls[0][0])).toContain('articles-api');
     });
 
     test('должен установить статус loading при начале загрузки', async () => {

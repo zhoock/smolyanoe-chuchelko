@@ -256,6 +256,10 @@ export const fetchAlbums = createAsyncThunk<
     };
 
     try {
+      const isDashboardRoute =
+        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+      const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -267,10 +271,6 @@ export const fetchAlbums = createAsyncThunk<
             signal.addEventListener('abort', () => controller.abort(), { once: true });
           }
         }
-
-        const isDashboardRoute =
-          typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
-        const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
 
         // Публичный каталог: без artist не дергаем API (инвариант), только статический fallback.
         if (!isDashboardRoute && !publicSlug) {
@@ -342,6 +342,13 @@ export const fetchAlbums = createAsyncThunk<
         }
         throw new Error(`Failed to fetch albums. Status: ${response.status}`);
       } catch (apiError) {
+        if (isDashboardRoute) {
+          console.error(
+            '❌ [albumsSlice] albums API failed in /dashboard; static JSON fallback is disabled',
+            apiError
+          );
+          throw apiError instanceof Error ? apiError : new Error(String(apiError));
+        }
         if (apiError instanceof Error && apiError.name === 'AbortError') {
           console.warn('⚠️ API request timeout (8s), trying fallback to static JSON');
         } else {
@@ -349,14 +356,16 @@ export const fetchAlbums = createAsyncThunk<
         }
       }
 
-      try {
-        const data = await loadStaticAlbumsFallback(signal);
-        if (Array.isArray(data) && data.length > 0) {
-          console.warn('[albumsSlice] ⚠️ Используется статический JSON (fallback)');
-          return wrapAlbumsResult(normalize(data), getState);
+      if (!isDashboardRoute) {
+        try {
+          const data = await loadStaticAlbumsFallback(signal);
+          if (Array.isArray(data) && data.length > 0) {
+            console.warn('[albumsSlice] ⚠️ Используется статический JSON (fallback)');
+            return wrapAlbumsResult(normalize(data), getState);
+          }
+        } catch (fallbackError) {
+          console.warn('⚠️ Static JSON fallback also unavailable:', fallbackError);
         }
-      } catch (fallbackError) {
-        console.warn('⚠️ Static JSON fallback also unavailable:', fallbackError);
       }
 
       throw new Error('Failed to fetch albums from both API and static JSON');

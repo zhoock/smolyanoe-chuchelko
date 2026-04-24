@@ -3,6 +3,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import { hydrateMissingRuTranslationsOnArticle } from '../lib/hydrateMissingRuTranslations';
@@ -68,8 +69,7 @@ export const fetchArticles = createAsyncThunk<
     try {
       const { getAuthHeader } = await import('@shared/lib/auth');
       const authHeader = getAuthHeader();
-      const isDashboardRoute =
-        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+      const isDashboardRoute = isDashboardPathname();
 
       const resolvedSlug = !isDashboardRoute ? resolvePublicArtistSlugForFetch(_arg, getState) : '';
 
@@ -145,14 +145,30 @@ export const fetchArticles = createAsyncThunk<
       } catch (apiError) {
         apiFailure = apiError;
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        console.warn('[fetchArticles] API request failed, trying static fallback:', errorMessage);
+        if (isDashboardRoute) {
+          console.warn(
+            '❌ [articlesSlice] articles API failed in /dashboard; static JSON fallback is disabled',
+            apiError
+          );
+        } else {
+          console.warn('[fetchArticles] API request failed, trying static fallback:', errorMessage);
+        }
       }
 
-      const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
-      if (fallback && fallback.ok) {
-        const data = await fallback.json();
-        if (Array.isArray(data)) {
-          return slugMeta(normalize(data));
+      if (isDashboardRoute) {
+        if (apiFailure instanceof Error) {
+          throw apiFailure;
+        }
+        if (apiFailure != null) {
+          throw new Error(String(apiFailure));
+        }
+      } else {
+        const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
+        if (fallback && fallback.ok) {
+          const data = await fallback.json();
+          if (Array.isArray(data)) {
+            return slugMeta(normalize(data));
+          }
         }
       }
 
@@ -177,8 +193,7 @@ export const fetchArticles = createAsyncThunk<
         return false;
       }
 
-      const isDashboard =
-        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+      const isDashboard = isDashboardPathname();
       if (isDashboard) {
         if (state.articles.status === 'succeeded') {
           return false;

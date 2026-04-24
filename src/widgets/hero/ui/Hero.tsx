@@ -20,6 +20,8 @@ import './style.scss';
 
 const HERO_CLUSTER_PALETTE = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5] as const;
 
+const defaultArtistName = '';
+
 /**
  * Преобразует URL изображения в формат для background-image
  * Всегда возвращает простой url(), так как многие браузеры не поддерживают image-set в inline style
@@ -367,14 +369,9 @@ export function Hero() {
     }
   }, [location.pathname, headerImages]);
 
-  // Для artist-режима не подставляем дефолтное имя, чтобы не смешивать данные.
-  // Для default-режима сохраняем текущее поведение.
+  // Пока грузим профиль в artist-режиме — пустой заголовок; иначе имя из API/хранилища либо пусто.
   const isArtistLoading = hasArtistParam && (isProfileLoading || isImagesLoading);
-  const displayName = hasArtistParam
-    ? isArtistLoading
-      ? ''
-      : profileName || ''
-    : profileName || 'Смоляное чучелко';
+  const displayName = hasArtistParam && isArtistLoading ? '' : profileName || defaultArtistName;
 
   /** Latest profile/header for canvas fallback without re-running Universe3D effect. */
   const profileNameForCanvasRef = useRef(profileName);
