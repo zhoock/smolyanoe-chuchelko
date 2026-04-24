@@ -1,5 +1,13 @@
 // src/app/App.tsx
-import { useEffect, useLayoutEffect, useRef, useState, Suspense, lazy } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
+import {
+  primeDashboardModalSessionFromLocation,
+  readDashboardModalBackground,
+  locationFromDashboardModalStored,
+  syncDashboardAlbumsPublicCatalogOverlay,
+  isDashboardAlbumsPublicCatalogOverlay,
+} from '@shared/lib/dashboardModalBackground';
+import { DashboardModalShellContext } from '@shared/lib/dashboardModalShellContext';
 import {
   createBrowserRouter,
   RouterProvider,
@@ -94,9 +102,28 @@ export default function App() {
 
 /** Синхронизирует `?artist=` из URL в Redux (F5 и клиентская навигация). */
 function CurrentArtistSync() {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const dispatch = useAppDispatch();
-  const artist = searchParams.get('artist')?.trim() ?? '';
+  const artistFromUrl = searchParams.get('artist')?.trim() ?? '';
+
+  const stateBg = (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation;
+  const sessionBg =
+    isDashboardAppPathname(location.pathname) && isDashboardAlbumsPublicCatalogOverlay()
+      ? readDashboardModalBackground()
+      : null;
+  const surfaceSearch =
+    stateBg?.pathname && !stateBg.pathname.startsWith('/dashboard')
+      ? stateBg.search
+      : sessionBg && !sessionBg.pathname.startsWith('/dashboard')
+        ? sessionBg.search
+        : '';
+  const artistFromModalSurface =
+    isDashboardAppPathname(location.pathname) && surfaceSearch !== ''
+      ? (new URLSearchParams(surfaceSearch.replace(/^\?/, '')).get('artist')?.trim() ?? '')
+      : '';
+
+  const artist = artistFromUrl || artistFromModalSurface;
 
   useEffect(() => {
     dispatch(setPublicArtistSlug(artist || null));
@@ -240,9 +267,37 @@ function Layout() {
 
   const shouldHideChrome = !isKnownRoute;
 
-  const backgroundLocation = (
+  const backgroundFromState = (
     location.state as { backgroundLocation?: Location } | null | undefined
   )?.backgroundLocation;
+
+  /** Последняя страница не-дашборд: fallback, если при открытии модалки потеряли `location.state`. */
+  const lastNonDashboardLocationRef = useRef<Location | null>(null);
+  useLayoutEffect(() => {
+    primeDashboardModalSessionFromLocation(location);
+    if (!isDashboardAppPathname(location.pathname)) {
+      lastNonDashboardLocationRef.current = location;
+    }
+  }, [location]);
+
+  const storedBg = readDashboardModalBackground();
+  const backgroundFromSession =
+    isDashboardAppPathname(location.pathname) &&
+    storedBg &&
+    !storedBg.pathname.startsWith('/dashboard')
+      ? locationFromDashboardModalStored(storedBg)
+      : null;
+
+  const backgroundFromLastSurface =
+    isDashboardAppPathname(location.pathname) &&
+    lastNonDashboardLocationRef.current &&
+    !isDashboardAppPathname(lastNonDashboardLocationRef.current.pathname)
+      ? lastNonDashboardLocationRef.current
+      : null;
+
+  const backgroundLocation =
+    backgroundFromState ?? backgroundFromLastSurface ?? backgroundFromSession;
+
   const activeLocation = backgroundLocation ?? location;
 
   const isHomeRoute = activeLocation.pathname === '/' || activeLocation.pathname === '/en';
@@ -355,6 +410,18 @@ function Layout() {
   const showDashboardModal =
     Boolean(backgroundLocation) && isDashboardAppPathname(location.pathname);
 
+  if (typeof window !== 'undefined') {
+    syncDashboardAlbumsPublicCatalogOverlay(showDashboardModal);
+  }
+
+  const dashboardModalShell = useMemo(
+    () => ({
+      overlayOpen: showDashboardModal,
+      surfaceLocation: showDashboardModal ? backgroundLocation : null,
+    }),
+    [showDashboardModal, backgroundLocation]
+  );
+
   const authModalRoutes = showAuthModal ? (
     <Routes>
       <Route
@@ -420,7 +487,7 @@ function Layout() {
   );
 
   return (
-    <>
+    <DashboardModalShellContext.Provider value={dashboardModalShell}>
       <CurrentArtistSync />
       {/* БАЗОВЫЙ Helmet для всех страниц без собственного */}
       <Helmet>
@@ -486,6 +553,6 @@ function Layout() {
           <FloatingCart />
         </ErrorBoundary>
       )}
-    </>
+    </DashboardModalShellContext.Provider>
   );
 }

@@ -14,6 +14,7 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './AlbumsSection.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
+import { useShowAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
 
 // Адаптивное количество альбомов для отображения на главной
 const getInitialCount = () => {
@@ -33,6 +34,7 @@ export function AlbumsSection() {
   /** Публичная витрина артиста: только альбомы с «Visible on page» (`isPublic !== false`). */
   const allAlbums = useAppSelector(selectPublicAlbumsDataResolved);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const showAlbumsLoadingShell = useShowAlbumsLoadingShell(albumsStatus, allAlbums.length > 0);
 
   const [initialCount, setInitialCount] = useState(getInitialCount);
 
@@ -60,7 +62,7 @@ export function AlbumsSection() {
       <div className="wrapper">
         <h2 id="home-albums-heading">{ui?.titles?.albums ?? '…'}</h2>
 
-        {albumsStatus === 'loading' || albumsStatus === 'idle' ? (
+        {showAlbumsLoadingShell ? (
           <AlbumsSkeleton count={initialCount} />
         ) : albumsStatus === 'failed' || albumsError ? (
           <ErrorI18n code="albumsLoadFailed" />

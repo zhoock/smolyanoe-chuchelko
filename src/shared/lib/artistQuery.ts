@@ -1,3 +1,5 @@
+import { isDashboardAlbumsPublicCatalogOverlay } from '@shared/lib/dashboardModalBackground';
+
 interface BuildApiUrlOptions {
   includeArtist?: boolean;
   /**
@@ -12,8 +14,13 @@ function shouldIncludeArtistOnCurrentPage(): boolean {
     return false;
   }
 
-  // Не вмешиваем artist в админ-потоки.
-  return !window.location.pathname.startsWith('/dashboard');
+  const path = window.location.pathname;
+  // Оверлей кабинета: в адресной строке /dashboard*, но грузим публичный каталог — нужен ?artist=.
+  if (path.startsWith('/dashboard') && isDashboardAlbumsPublicCatalogOverlay()) {
+    return true;
+  }
+  // Полноэкранный кабинет: artist в query не передаём (JWT + режим владельца на бэкенде).
+  return !path.startsWith('/dashboard');
 }
 
 export function buildApiUrl(

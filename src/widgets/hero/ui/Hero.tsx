@@ -1,6 +1,6 @@
 // src/widgets/hero/ui/Hero.tsx
-import { useEffect, useState, useRef } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
@@ -16,6 +16,7 @@ import {
   UNIVERSE_FOCUS_ARTIST_STORAGE_KEY,
 } from '@/components/view/Universe3D';
 import '@/components/view/Universe3D.style.scss';
+import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
 import './style.scss';
 
 const HERO_CLUSTER_PALETTE = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5] as const;
@@ -66,15 +67,30 @@ export function Hero() {
   const [isImagesLoading, setIsImagesLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const publicArtistSlug = useAppSelector(selectPublicArtistSlug);
   const heroCanvasRef = useRef<HTMLDivElement | null>(null);
   const lastPathRef = useRef<string>('');
   const imagesLoadedRef = useRef<boolean>(false);
   const imageSelectedForPathRef = useRef<string>('');
-  const hasArtistParam = !!searchParams.get('artist');
-  const artistParamKey = searchParams.get('artist')?.trim() ?? '';
-  const isDashboardRoute = location.pathname.startsWith('/dashboard');
+  const { overlayOpen: dashboardOverlayOpen, surfaceLocation } = useDashboardModalShell();
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') && !dashboardOverlayOpen;
+  const heroPathname =
+    dashboardOverlayOpen && surfaceLocation?.pathname
+      ? surfaceLocation.pathname
+      : location.pathname;
+  /** Пока открыт оверлей дашборда, URL в строке — /dashboard*; для Hero используем query фоновой страницы. */
+  const heroSearchString = useMemo(() => {
+    if (dashboardOverlayOpen && surfaceLocation?.search !== undefined) {
+      return surfaceLocation.search;
+    }
+    return location.search;
+  }, [dashboardOverlayOpen, surfaceLocation?.search, location.search]);
+  const heroUrlParams = useMemo(
+    () => new URLSearchParams(heroSearchString.replace(/^\?/, '')),
+    [heroSearchString]
+  );
+  const hasArtistParam = !!heroUrlParams.get('artist');
+  const artistParamKey = heroUrlParams.get('artist')?.trim() ?? '';
 
   // Загружаем изображения из БД
   useEffect(() => {
@@ -129,7 +145,7 @@ export function Hero() {
       }
     };
     loadImages();
-  }, [location.search, publicArtistSlug]);
+  }, [heroSearchString, publicArtistSlug]);
 
   // Загружаем название группы:
   // - public (/ и /?artist=...): всегда из API public профиля, без JWT
@@ -255,8 +271,8 @@ export function Hero() {
     artistParamKey,
     hasArtistParam,
     isDashboardRoute,
-    location.pathname,
-    location.search,
+    heroPathname,
+    heroSearchString,
     publicArtistSlug,
   ]);
 
@@ -269,15 +285,15 @@ export function Hero() {
 
     // Выбираем случайное изображение при изменении пути
     // При перезагрузке страницы компонент монтируется заново, поэтому будет новое случайное изображение
-    const pathChanged = lastPathRef.current !== location.pathname;
+    const pathChanged = lastPathRef.current !== heroPathname;
 
-    if (!pathChanged && imageSelectedForPathRef.current === location.pathname) {
+    if (!pathChanged && imageSelectedForPathRef.current === heroPathname) {
       // Изображение уже выбрано для этого пути, не меняем
       return;
     }
 
-    lastPathRef.current = location.pathname;
-    imageSelectedForPathRef.current = location.pathname;
+    lastPathRef.current = heroPathname;
+    imageSelectedForPathRef.current = heroPathname;
 
     // Выбираем изображение из БД
     if (headerImages.length > 0) {
@@ -367,7 +383,7 @@ export function Hero() {
       console.warn('⚠️ [Hero] Нет изображений для отображения (headerImages пустой)');
       setBackgroundImage('');
     }
-  }, [location.pathname, headerImages]);
+  }, [heroPathname, headerImages]);
 
   // Пока грузим профиль в artist-режиме — пустой заголовок; иначе имя из API/хранилища либо пусто.
   const isArtistLoading = hasArtistParam && (isProfileLoading || isImagesLoading);

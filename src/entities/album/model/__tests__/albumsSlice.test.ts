@@ -118,7 +118,7 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Failed to fetch albums from both API and static JSON');
+      expect(selectAlbumsError(state)).toBe(errorMessage);
       expect(selectAlbumsData(state)).toEqual([]);
     });
 
@@ -228,7 +228,7 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Failed to fetch albums from both API and static JSON');
+      expect(selectAlbumsError(state)).toBe('null');
     });
 
     test('должен обработать ошибку без Error объекта (строка)', async () => {
@@ -241,7 +241,7 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Failed to fetch albums from both API and static JSON');
+      expect(selectAlbumsError(state)).toBe('String error');
     });
 
     test('должен обработать ошибку без Error объекта (undefined)', async () => {
@@ -254,7 +254,7 @@ describe('albumsSlice', () => {
 
       const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Failed to fetch albums from both API and static JSON');
+      expect(selectAlbumsError(state)).toBe('undefined');
     });
 
     test('должен обработать отмену запроса (abort signal)', async () => {
@@ -283,13 +283,28 @@ describe('albumsSlice', () => {
 
       let state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Failed to fetch albums from both API and static JSON');
+      expect(selectAlbumsError(state)).toBe('Network error');
 
       // Вторая попытка - успех
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
       await (store.dispatch as AppDispatch)(fetchAlbums({}));
 
       state = store.getState();
+      expect(selectAlbumsStatus(state)).toBe('succeeded');
+      expect(selectAlbumsError(state)).toBeNull();
+      expect(selectAlbumsData(state)).toEqual(mockAlbums);
+    });
+
+    test('ошибка фоновой загрузки при непустом кэше не ломает статус succeeded', async () => {
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/rejected');
+      const state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('succeeded');
       expect(selectAlbumsError(state)).toBeNull();
       expect(selectAlbumsData(state)).toEqual(mockAlbums);
@@ -321,7 +336,7 @@ describe('albumsSlice', () => {
 
       let state = store.getState();
       expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Failed to fetch albums from both API and static JSON');
+      expect(selectAlbumsError(state)).toBe('First error');
 
       // Начинаем новую загрузку - ошибка должна быть очищена
       mockFetch.mockImplementation(() => new Promise(() => {}));

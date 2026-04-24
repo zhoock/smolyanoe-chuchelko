@@ -26,6 +26,7 @@ import {
   selectUiDictionaryStatus,
   selectUiDictionaryData,
 } from '@shared/model/uiDictionary';
+import { resolveDashboardModalBackgroundForLoader } from '@shared/lib/dashboardModalBackground';
 
 /**
  * createAsyncThunk: при `condition` → false unwrap() отклоняет plain object
@@ -50,8 +51,13 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   const { signal, url } = request;
   const requestUrl = new URL(url);
   const { pathname } = requestUrl;
+  const { pathname: loaderPathname, search: loaderSearch } =
+    resolveDashboardModalBackgroundForLoader(pathname, requestUrl.search);
+  const loaderSearchParams = new URLSearchParams(
+    loaderSearch.startsWith('?') ? loaderSearch.slice(1) : loaderSearch
+  );
   const store = getStore();
-  const publicArtistFromUrl = requestUrl.searchParams.get('artist')?.trim() ?? '';
+  const publicArtistFromUrl = loaderSearchParams.get('artist')?.trim() ?? '';
   store.dispatch(setPublicArtistSlug(publicArtistFromUrl || null));
   const state = store.getState();
   const lang = selectCurrentLang(state);
@@ -96,12 +102,12 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Альбомы нужны на "/", "/albums*", "/stems" (миксер) и "/dashboard*" (включая /dashboard-new)
   if (
-    pathname === '/' ||
-    pathname.startsWith('/albums') ||
-    pathname.startsWith('/stems') ||
-    pathname.startsWith('/dashboard')
+    loaderPathname === '/' ||
+    loaderPathname.startsWith('/albums') ||
+    loaderPathname.startsWith('/stems') ||
+    loaderPathname.startsWith('/dashboard')
   ) {
-    const desiredAlbumsFetchKey = pathname.startsWith('/dashboard')
+    const desiredAlbumsFetchKey = loaderPathname.startsWith('/dashboard')
       ? 'dashboard'
       : publicArtistFromUrl
         ? `public:${publicArtistFromUrl}`
@@ -149,7 +155,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   }
 
   // Статьи нужны на "/" (главная) и "/articles*"
-  if (pathname === '/' || pathname.startsWith('/articles')) {
+  if (loaderPathname === '/' || loaderPathname.startsWith('/articles')) {
     const publicArtistSlug = publicArtistFromUrl;
     const articlesState = selectArticlesState(state);
     const status = articlesState.status;
@@ -191,7 +197,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   }
 
   // Статьи помощи нужны на "/help/articles*"
-  if (pathname.startsWith('/help/articles')) {
+  if (loaderPathname.startsWith('/help/articles')) {
     const status = selectHelpArticlesStatus(state, lang);
     if (status === 'succeeded') {
       templateD = Promise.resolve(selectHelpArticlesData(state, lang));

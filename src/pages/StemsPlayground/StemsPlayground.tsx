@@ -22,6 +22,7 @@ import {
 } from '@config/supabase';
 import { getUserUserId } from '@config/user';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { useShowAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
 import './style.scss';
 
 type Song = {
@@ -71,6 +72,7 @@ export default function StemsPlayground() {
   const albums = useAppSelector(selectAlbumsDataResolved);
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsLastUpdated = useAppSelector((s) => s.albums.lastUpdated);
+  const showAlbumsLoadingShell = useShowAlbumsLoadingShell(albumsStatus, albums.length > 0);
 
   /** Метка момента смены артиста/языка: не строим список из кэша альбомов до свежего fetchAlbums.fulfilled. */
   const stemsSyncEpochRef = useRef(0);
@@ -85,11 +87,11 @@ export default function StemsPlayground() {
 
   /** Только треки из альбомов со стемами в Storage (без демо-списка в коде). */
   const SONGS = useMemo(() => {
-    if (albumsStatus === 'loading' || loadingSongs) {
+    if (showAlbumsLoadingShell || loadingSongs) {
       return [];
     }
     return dynamicSongs;
-  }, [dynamicSongs, albumsStatus, loadingSongs]);
+  }, [dynamicSongs, showAlbumsLoadingShell, loadingSongs]);
 
   const [selectedId, setSelectedId] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -353,7 +355,7 @@ export default function StemsPlayground() {
 
   // Обновляем selectedId при смене списка (не трогаем во время загрузки)
   useEffect(() => {
-    if (loadingSongs || albumsStatus === 'loading') {
+    if (loadingSongs || showAlbumsLoadingShell) {
       return;
     }
     if (dynamicSongs.length > 0) {
@@ -363,7 +365,7 @@ export default function StemsPlayground() {
     } else {
       setSelectedId('');
     }
-  }, [dynamicSongs, selectedId, loadingSongs, albumsStatus]);
+  }, [dynamicSongs, selectedId, loadingSongs, showAlbumsLoadingShell]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -504,7 +506,7 @@ export default function StemsPlayground() {
     if (wasPlayingRef.current && !isPlaying) return;
   };
 
-  const selectDisabled = isPlaying || loading || albumsStatus === 'loading' || loadingSongs;
+  const selectDisabled = isPlaying || loading || showAlbumsLoadingShell || loadingSongs;
 
   const b = ui?.buttons ?? {};
   const pageTitle = (ui?.stems?.pageTitle as string) ?? '';
@@ -558,7 +560,7 @@ export default function StemsPlayground() {
               aria-label="Выбор песни"
               disabled={selectDisabled}
             >
-              {albumsStatus === 'loading' || loadingSongs ? (
+              {showAlbumsLoadingShell || loadingSongs ? (
                 <option value="" disabled>
                   {lang === 'en' ? 'Loading…' : 'Загрузка…'}
                 </option>

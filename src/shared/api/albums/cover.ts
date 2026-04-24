@@ -157,7 +157,8 @@ export async function commitCover(
 ): Promise<CommitCoverResponse> {
   try {
     const token = getToken();
-    if (!token) return { success: false, error: 'User is not authenticated. Please log in.' };const response = await fetch('/api/albums/cover/commit', {
+    if (!token) return { success: false, error: 'User is not authenticated. Please log in.' };
+    const response = await fetch('/api/albums/cover/commit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -166,7 +167,8 @@ export async function commitCover(
       body: JSON.stringify({ draftKey, albumId, ...meta }),
     });
 
-    const json: unknown = await response.json().catch(() => null);if (!response.ok) {
+    const json: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
       if (isApiError(json)) return json;
       return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
     }
@@ -188,7 +190,8 @@ export async function commitCover(
       }
     }
 
-    if (!isCommitCoverResponse(json)) {console.error('❌ commitCover: Invalid response shape', {
+    if (!isCommitCoverResponse(json)) {
+      console.error('❌ commitCover: Invalid response shape', {
         response: json,
         expected: 'CommitCoverResponse with baseName: string',
         actual:
@@ -227,7 +230,8 @@ export async function commitCover(
       }
 
       return { success: false, error: 'Invalid response shape from commit-cover' };
-    }return json;
+    }
+    return json;
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }

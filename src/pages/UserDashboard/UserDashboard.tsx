@@ -81,6 +81,7 @@ import {
 import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
+import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
 import './UserDashboard.style.scss';
 
 /** В кабинете список альбомов всегда принадлежит сессии; бэкенд иногда не присылает `userId`. */
@@ -663,8 +664,11 @@ function UserDashboard() {
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const navigate = useNavigate();
   const location = useLocation();
-  const backgroundLocation = (location.state as { backgroundLocation?: Location } | null)
-    ?.backgroundLocation;
+  const { surfaceLocation: dashboardSurfaceFromLayout } = useDashboardModalShell();
+  const backgroundLocation =
+    (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation ??
+    dashboardSurfaceFromLayout ??
+    undefined;
   const dashboardNavState = backgroundLocation ? { backgroundLocation } : undefined;
   const closeDashboard = useCallback(() => {
     if (backgroundLocation) {

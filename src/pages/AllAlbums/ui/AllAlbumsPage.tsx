@@ -14,6 +14,7 @@ import '@entities/album/ui/style.scss';
 import './style.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
+import { useShowAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
 
 // Количество альбомов для подгрузки за раз
 const BATCH_SIZE = 16;
@@ -28,6 +29,7 @@ export function AllAlbumsPage() {
     selectAlbumsResolvedForAllAlbumsPage(state, !artistSlug)
   );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const showAlbumsLoadingShell = useShowAlbumsLoadingShell(albumsStatus, allAlbums.length > 0);
 
   const [displayedCount, setDisplayedCount] = useState(BATCH_SIZE);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -95,7 +97,7 @@ export function AllAlbumsPage() {
 
         <h2>{ui?.titles?.albums ?? seoTitle}</h2>
 
-        {albumsStatus === 'loading' || albumsStatus === 'idle' ? (
+        {showAlbumsLoadingShell ? (
           <AlbumsSkeleton count={BATCH_SIZE} />
         ) : albumsStatus === 'failed' ? (
           <ErrorI18n code="albumsLoadFailed" />
