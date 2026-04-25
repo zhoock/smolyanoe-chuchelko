@@ -232,6 +232,6 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
   }
 
   return Array.isArray(album?.details)
-    ? album.details.map((d) => <Block {...d} key={d.id} />)
+    ? album.details.map((d, index) => <Block {...d} key={`album-detail-${d.id}-${index}`} />)
     : null;
 }
