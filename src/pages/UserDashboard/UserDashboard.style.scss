@@ -16,7 +16,7 @@ dialog {
   // Общие стили для всех кнопок в дашборде и попапах
   button {
     display: inline-block;
-    font-size: 12px;
+    font-size: var(--dashboard-font-size);
     line-height: 16px;
   }
 
@@ -28,7 +28,7 @@ dialog {
     min-height: 100vh;
     line-height: 1.2;
 
-    // Main card - светлая карточка
+    // Main card
     &__card {
       display: flex;
       flex-direction: column;
@@ -39,14 +39,13 @@ dialog {
       overflow: hidden;
       background: var(--dashboard-card-bg);
       border: 1px solid var(--dashboard-card-border);
-      border-radius: 0;
+      border-radius: var(--ms-0);
       box-shadow: 0 8px 32px var(--dashboard-shadow);
 
       @include breakpoint(tablet) {
         max-width: 1000px;
         min-height: 600px;
         max-height: 90vh;
-        border-radius: var(--ms-0);
       }
     }
 

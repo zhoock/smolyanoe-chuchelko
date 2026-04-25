@@ -1,3 +1,4 @@
+/* stylelint-disable order/properties-order */
 // Tracks styles for UserDashboard
 // Tracks, lyrics, upload
 
@@ -13,7 +14,6 @@ dialog {
       gap: var(--ms-0);
       padding: var(--ms-1);
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
       background: var(--dashboard-card-bg, var(--moon-ash));
       border: 2px dashed var(--dashboard-input-border);
       border-radius: var(--ms-01);
@@ -80,14 +80,11 @@ dialog {
 
     &__track-item {
       display: flex;
+      padding: var(--ms-01);
       height: 56px;
       align-items: center;
-      color: var(--dashboard-text-primary);
       cursor: pointer;
-      background: var(--dashboard-card-bg);
       transition: opacity 0.2s ease;
-
-      @include dashboard-button($margin: 0, $padding: 0, $border-radius: 0);
 
       &--dragging {
         opacity: 0.5;
