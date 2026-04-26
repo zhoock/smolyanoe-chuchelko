@@ -622,7 +622,9 @@ export function SyncLyricsModal({
             aria-busy={isSaving}
           >
             <div className="sync-lyrics-modal__header">
-              <h2 className="sync-lyrics-modal__title">Синхронизация текста</h2>
+              <h2 className="sync-lyrics-modal__title">
+                {ui?.dashboard?.syncLyricsTitle ?? 'Sync lyrics'}
+              </h2>
               <button
                 type="button"
                 className="sync-lyrics-modal__close"

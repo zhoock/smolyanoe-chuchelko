@@ -97,105 +97,107 @@ export function EditLyricsModal({
           aria-busy={isSaving}
         >
           <div className="edit-lyrics-modal__header">
+            <h2 className="edit-lyrics-modal__title">
+              {ui?.dashboard?.editLyrics ?? 'Edit Lyrics'}
+            </h2>
             <button
               type="button"
               className="edit-lyrics-modal__close"
               onClick={handleClose}
               disabled={isSaving}
-              aria-label={ui?.dashboard?.close ?? 'Закрыть'}
+              aria-label={ui?.dashboard?.close ?? 'Close'}
             >
               ×
             </button>
-            <h2 className="edit-lyrics-modal__title">
-              {ui?.dashboard?.editLyrics ?? 'Edit Lyrics'}
-            </h2>
-          </div>
-          <div className="edit-lyrics-modal__content">
-            <div className="edit-lyrics-modal__divider"></div>
-            <textarea
-              className="edit-lyrics-modal__textarea"
-              value={lyricsText}
-              onChange={(e) => setLyricsText(e.target.value)}
-            />
-            <div className="edit-lyrics-modal__divider"></div>
-            <div className="edit-lyrics-modal__field">
-              <label className="edit-lyrics-modal__label">
-                {ui?.dashboard?.authorship ?? 'Authorship:'}
-              </label>
-              <input
-                type="text"
-                className="edit-lyrics-modal__input"
-                name="authorship"
-                id="authorship"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                data-gramm="false"
-                data-lpignore="true"
-                data-form-type="other"
-                inputMode="text"
-                aria-autocomplete="none"
-                placeholder={
-                  ui?.dashboard?.authorshipPlaceholder ?? 'For example: John Doe — words and music'
-                }
-                value={authorship}
-                onChange={(e) => setAuthorship(e.target.value)}
-                onFocus={(e) => {
-                  // Предотвращаем всплытие события, чтобы избежать конфликтов с расширениями браузера
-                  e.stopPropagation();
-                }}
-                onBlur={(e) => {
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-                onKeyDown={(e) => {
-                  e.stopPropagation();
-                }}
-                onKeyUp={(e) => {
-                  e.stopPropagation();
-                }}
-                onKeyPress={(e) => {
-                  e.stopPropagation();
-                }}
-                onInput={(e) => {
-                  e.stopPropagation();
-                }}
-              />
-            </div>
           </div>
 
-          {/* Footer с кнопками - показывается только при наличии изменений */}
+          <div className="edit-lyrics-modal__divider" />
+
+          <textarea
+            className="edit-lyrics-modal__textarea"
+            value={lyricsText}
+            onChange={(e) => setLyricsText(e.target.value)}
+          />
+
+          <div className="edit-lyrics-modal__field">
+            <label className="edit-lyrics-modal__label" htmlFor="edit-lyrics-authorship">
+              {ui?.dashboard?.authorship ?? 'Written by: '}
+            </label>
+            <input
+              type="text"
+              className="edit-lyrics-modal__input"
+              name="authorship"
+              id="edit-lyrics-authorship"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-gramm="false"
+              data-lpignore="true"
+              data-form-type="other"
+              inputMode="text"
+              aria-autocomplete="none"
+              placeholder={
+                ui?.dashboard?.authorshipPlaceholder ?? 'For example: John Doe — words and music'
+              }
+              value={authorship}
+              onChange={(e) => setAuthorship(e.target.value)}
+              onFocus={(e) => {
+                // Предотвращаем всплытие события, чтобы избежать конфликтов с расширениями браузера
+                e.stopPropagation();
+              }}
+              onBlur={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+              }}
+              onKeyUp={(e) => {
+                e.stopPropagation();
+              }}
+              onKeyPress={(e) => {
+                e.stopPropagation();
+              }}
+              onInput={(e) => {
+                e.stopPropagation();
+              }}
+            />
+          </div>
+
           {hasChanges && (
-            <div className="edit-lyrics-modal__footer">
-              <button
-                type="button"
-                className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                {ui?.dashboard?.cancel ?? 'Cancel'}
-              </button>
-              <button
-                type="button"
-                className={`edit-lyrics-modal__button edit-lyrics-modal__button--primary${
-                  isSaving ? ' edit-lyrics-modal__button--primary-loading' : ''
-                }`}
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <DashboardSaveSpinner />
-                    {ui?.dashboard?.saving ?? 'Saving...'}
-                  </>
-                ) : (
-                  (ui?.dashboard?.save ?? 'Save')
-                )}
-              </button>
-            </div>
+            <>
+              <div className="edit-lyrics-modal__divider" />
+              <div className="edit-lyrics-modal__actions">
+                <button
+                  type="button"
+                  className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                >
+                  {ui?.dashboard?.cancel ?? 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  className={`edit-lyrics-modal__button edit-lyrics-modal__button--primary${
+                    isSaving ? ' edit-lyrics-modal__button--primary-loading' : ''
+                  }`}
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <DashboardSaveSpinner />
+                      {ui?.dashboard?.saving ?? 'Saving...'}
+                    </>
+                  ) : (
+                    (ui?.dashboard?.save ?? 'Save')
+                  )}
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>

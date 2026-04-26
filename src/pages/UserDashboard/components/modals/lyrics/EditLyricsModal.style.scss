@@ -6,51 +6,31 @@ dialog {
   @include dashboard-modal-dialog-buttons;
 
   .edit-lyrics-modal {
-    @include dashboard-modal-shell($padding: null);
+    @include dashboard-modal-shell;
 
     &__card {
-      @include dashboard-modal-panel($padding: 0, $gap: 0, $overflow-y: hidden);
+      @include dashboard-modal-panel($gap: var(--ms-1));
     }
 
     &__header {
-      @include dashboard-modal-header(
-        $justify-content: flex-start,
-        $gap: var(--ms-0),
-        $padding: var(--ms-1) var(--ms-2),
-        $border-bottom: var(--dashboard-divider),
-        $flex-shrink: 0
-      );
-    }
-
-    &__close {
-      @include dashboard-modal-close($focus-visible: true, $reset-text: true);
-    }
-
-    &__content {
-      display: flex;
-      flex: 1 1 0;
-      flex-direction: column;
-      gap: var(--ms-1);
-      min-height: 0;
-      overflow-y: auto;
-      padding: var(--ms-2);
+      @include dashboard-modal-header($gap: var(--ms-0));
     }
 
     &__title {
-      @include dashboard-modal-title(
-        $margin: 0,
-        $padding: 0,
-        $font-weight: 700,
-        $line-height: 1.2,
-        $reset-text: true
-      );
+      @include dashboard-modal-title;
+    }
+
+    &__close {
+      @include dashboard-modal-close($reset-text: true);
     }
 
     &__divider {
-      width: 100%;
-      height: 1px;
-      background: var(--dashboard-divider);
       flex-shrink: 0;
+      width: calc(100% + var(--ms-2) * 2);
+      height: 1px;
+      margin-left: calc(var(--ms-2) * -1);
+      margin-right: calc(var(--ms-2) * -1);
+      background: var(--dashboard-hover-bg);
     }
 
     &__textarea {
@@ -66,6 +46,10 @@ dialog {
       border-radius: var(--ms-01);
       resize: vertical;
       box-sizing: border-box;
+
+      &::placeholder {
+        color: var(--dashboard-text-secondary);
+      }
 
       &:focus {
         outline: none;
@@ -85,8 +69,11 @@ dialog {
       @include dashboard-form-input;
     }
 
-    &__footer {
-      @include dashboard-modal-footer;
+    &__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--ms-0);
+      margin-top: var(--ms-0);
     }
 
     &__button {

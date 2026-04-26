@@ -269,6 +269,8 @@ export interface IInterface {
     noLyrics: string;
     edit: string;
     sync: string;
+    /** Заголовок модалки синхронизации текста с аудио */
+    syncLyricsTitle?: string;
     add: string;
     prev: string;
     addLyrics: string;
