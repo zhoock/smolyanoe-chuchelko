@@ -523,8 +523,9 @@ function syncedLyricsHaveTimingsMerge(raw: unknown): boolean {
 }
 
 function firstNonEmptyTrackContent(sorted: AlbumData[], trackId: string): string | undefined {
+  const tid = String(trackId);
   for (const p of sorted) {
-    const m = p.tracks.find((t) => t.id === trackId);
+    const m = p.tracks.find((t) => String(t.id) === tid);
     const c = m?.content;
     if (typeof c === 'string' && c.trim()) return c;
   }
@@ -533,7 +534,7 @@ function firstNonEmptyTrackContent(sorted: AlbumData[], trackId: string): string
 
 function firstSyncedLyricsWithTimings(sorted: AlbumData[], trackId: string): unknown {
   for (const p of sorted) {
-    const m = p.tracks.find((t) => t.id === trackId);
+    const m = p.tracks.find((t) => String(t.id) === String(trackId));
     if (m?.syncedLyrics && syncedLyricsHaveTimingsMerge(m.syncedLyrics)) {
       return m.syncedLyrics;
     }
@@ -541,21 +542,58 @@ function firstSyncedLyricsWithTimings(sorted: AlbumData[], trackId: string): unk
   return undefined;
 }
 
+function pickFirstTrackWithId(sorted: AlbumData[], trackId: string): TrackData | undefined {
+  const tid = String(trackId);
+  for (const p of sorted) {
+    const m = p.tracks.find((t) => String(t.id) === tid);
+    if (m) return m;
+  }
+  return undefined;
+}
+
 /**
  * Текст и синхронизация — один канон (корень трека, приоритет ru-строки альбома).
  * В translations[lang] только title + authorship.
+ *
+ * Важно: не брать только `sorted[0].tracks` — если треки загружены только в en-строку альбома,
+ * а ru-строка пустая, иначе сливной GET отдаёт 0 треков и кабинет «теряет» их.
  */
 function mergeTrackPayloads(payloads: AlbumData[]): TrackData[] {
   const sorted = [...payloads].sort((a, b) => {
     const rank = (l: string | undefined) => (l === 'ru' ? 0 : l === 'en' ? 1 : 2);
     return rank(a.lang) - rank(b.lang);
   });
-  const canonical = sorted[0];
-  return canonical.tracks.map((ct) => {
+
+  const orderById = new Map<string, number>();
+  for (const p of sorted) {
+    for (const t of p.tracks) {
+      const id = String(t.id);
+      const ord =
+        typeof t.order_index === 'number' && !Number.isNaN(t.order_index) ? t.order_index : 0;
+      if (!orderById.has(id)) {
+        orderById.set(id, ord);
+      } else {
+        orderById.set(id, Math.min(orderById.get(id)!, ord));
+      }
+    }
+  }
+
+  const uniqueIds = [...orderById.keys()].sort((a, b) => {
+    const oa = orderById.get(a) ?? 0;
+    const ob = orderById.get(b) ?? 0;
+    if (oa !== ob) return oa - ob;
+    return a.localeCompare(b);
+  });
+
+  return uniqueIds.map((tid) => {
+    const ct = pickFirstTrackWithId(sorted, tid);
+    if (!ct) {
+      throw new Error(`mergeTrackPayloads: missing track ${tid}`);
+    }
     const translations: Partial<Record<SupportedLang, TrackLocalePayload>> = {};
     for (const p of sorted) {
       if (!p.lang || !validateLang(p.lang)) continue;
-      const match = p.tracks.find((t) => t.id === ct.id);
+      const match = p.tracks.find((t) => String(t.id) === tid);
       if (match) {
         translations[p.lang] = {
           title: match.title,
@@ -563,7 +601,6 @@ function mergeTrackPayloads(payloads: AlbumData[]): TrackData[] {
         };
       }
     }
-    const tid = ct.id;
     let mergedContent = typeof ct.content === 'string' ? ct.content : '';
     if (!mergedContent.trim()) {
       mergedContent = firstNonEmptyTrackContent(sorted, tid) ?? '';
@@ -1728,37 +1765,35 @@ export const handler: Handler = async (
             userId,
           });
 
-          // Находим альбом пользователя по album_id и lang
-          const albumResult = await query<AlbumRow>(
-            `SELECT id, album_id, lang, user_id FROM albums
-             WHERE album_id = $1 AND lang = $2
-             AND user_id = $3
-             ORDER BY created_at DESC
+          // Треки привязаны к UUID строки albums (отдельные строки на ru/en). Нельзя искать только
+          // по lang из UI: трек, загруженный в русской версии, иначе не находится при удалении из EN.
+          const trackOwnerResult = await query<{
+            src: string | null;
+            album_pk: string;
+            lang: string;
+          }>(
+            `SELECT t.src, a.id AS album_pk, a.lang
+             FROM tracks t
+             INNER JOIN albums a ON a.id = t.album_id
+             WHERE a.user_id = $1
+               AND a.album_id = $2
+               AND t.track_id = $3
+             ORDER BY CASE WHEN a.lang = $4 THEN 0 ELSE 1 END,
+                      a.updated_at DESC NULLS LAST,
+                      a.created_at DESC
              LIMIT 1`,
-            [albumIdFromQuery, langFromQuery, userId]
+            [userId, albumIdFromQuery, String(trackId), langFromQuery]
           );
 
-          if (albumResult.rows.length === 0) {
-            return createErrorResponse(404, 'Album not found.');
-          }
-
-          const album = albumResult.rows[0];
-
-          // Сначала получаем информацию о треке, чтобы удалить файл из Storage
-          const trackResult = await query<{ src: string | null }>(
-            `SELECT src FROM tracks 
-             WHERE album_id = $1 AND track_id = $2`,
-            [album.id, String(trackId)]
-          );
-
-          if (trackResult.rows.length === 0) {
+          if (trackOwnerResult.rows.length === 0) {
             return createErrorResponse(404, 'Track not found.');
           }
 
-          const track = trackResult.rows[0];
+          const trackRow = trackOwnerResult.rows[0];
+          const albumDbId = trackRow.album_pk;
 
           // Удаляем аудиофайл из Supabase Storage, если он есть
-          if (track.src) {
+          if (trackRow.src) {
             try {
               const { createClient } = await import('@supabase/supabase-js');
               const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
@@ -1778,32 +1813,32 @@ export const handler: Handler = async (
                 // Извлекаем путь к файлу из src
                 // src может быть полным URL или относительным путем
                 let storagePath: string;
-                if (track.src.startsWith('http://') || track.src.startsWith('https://')) {
+                if (trackRow.src.startsWith('http://') || trackRow.src.startsWith('https://')) {
                   // Если это полный URL, извлекаем путь
                   // Формат Supabase Storage public URL:
                   // https://{project}.supabase.co/storage/v1/object/public/user-media/users/{userId}/audio/...
-                  const urlMatch = track.src.match(/\/user-media\/(.+)$/);
+                  const urlMatch = trackRow.src.match(/\/user-media\/(.+)$/);
                   if (urlMatch) {
                     storagePath = urlMatch[1];
                   } else {
                     // Альтернативный формат: путь после /audio/
-                    const audioMatch = track.src.match(/\/audio\/(.+)$/);
+                    const audioMatch = trackRow.src.match(/\/audio\/(.+)$/);
                     if (audioMatch) {
                       storagePath = `users/${userId}/audio/${audioMatch[1]}`;
                     } else {
-                      console.warn('⚠️ Could not extract storage path from src:', track.src);
+                      console.warn('⚠️ Could not extract storage path from src:', trackRow.src);
                       storagePath = '';
                     }
                   }
                 } else {
                   // Если это относительный путь, добавляем префикс
                   // Формат: /audio/albumId/fileName или users/{userId}/audio/albumId/fileName
-                  if (track.src.startsWith('/audio/')) {
-                    storagePath = `users/${userId}${track.src}`;
-                  } else if (track.src.startsWith('users/')) {
-                    storagePath = track.src;
+                  if (trackRow.src.startsWith('/audio/')) {
+                    storagePath = `users/${userId}${trackRow.src}`;
+                  } else if (trackRow.src.startsWith('users/')) {
+                    storagePath = trackRow.src;
                   } else {
-                    storagePath = `users/${userId}/audio/${track.src}`;
+                    storagePath = `users/${userId}/audio/${trackRow.src}`;
                   }
                 }
 
@@ -1839,24 +1874,25 @@ export const handler: Handler = async (
             `DELETE FROM tracks 
              WHERE album_id = $1 AND track_id = $2
              RETURNING id`,
-            [album.id, String(trackId)]
+            [albumDbId, String(trackId)]
           );
 
           if (deleteTrackResult.rows.length === 0) {
             return createErrorResponse(404, 'Track not found.');
           }
 
-          // Также удаляем синхронизированные тексты для этого трека
+          // Синхронизации: album_id в таблице — строковый album_id; убираем все локали для трека.
           await query(
             `DELETE FROM synced_lyrics 
-             WHERE album_id = $1 AND track_id = $2 AND lang = $3`,
-            [albumIdFromQuery, String(trackId), langFromQuery]
+             WHERE album_id = $1 AND track_id = $2`,
+            [albumIdFromQuery, String(trackId)]
           );
 
           console.log('✅ DELETE /api/albums - Track deleted:', {
             albumId: albumIdFromQuery,
             trackId,
-            lang: langFromQuery,
+            uiLang: langFromQuery,
+            trackRowLang: trackRow.lang,
           });
 
           return {

@@ -87,19 +87,25 @@ export const handler: Handler = async (
         };
       }
 
-      // Находим альбом пользователя
-      const albumResult = await query<{ id: string; user_id: string | null }>(
-        `SELECT id, user_id FROM albums 
-         WHERE album_id = $1 AND lang = $2
-           AND user_id = $3
-         ORDER BY created_at DESC
+      // Строка альбома в БД зависит от lang (ru/en); трек может жить только в «другой» локали.
+      const trackOwner = await query<{ album_pk: string }>(
+        `SELECT a.id AS album_pk
+         FROM tracks t
+         INNER JOIN albums a ON a.id = t.album_id
+         WHERE a.user_id = $1
+           AND a.album_id = $2
+           AND t.track_id = $3
+         ORDER BY CASE WHEN a.lang = $4 THEN 0 ELSE 1 END,
+                  a.updated_at DESC NULLS LAST,
+                  a.created_at DESC
          LIMIT 1`,
-        [data.albumId, data.lang, userId]
+        [userId, data.albumId, String(data.trackId), data.lang]
       );
 
-      if (albumResult.rows.length === 0) {
-        console.error('[update-track-title.ts] ❌ Album not found:', {
+      if (trackOwner.rows.length === 0) {
+        console.error('[update-track-title.ts] ❌ Track / album not found:', {
           albumId: data.albumId,
+          trackId: data.trackId,
           lang: data.lang,
         });
         return {
@@ -107,12 +113,12 @@ export const handler: Handler = async (
           headers,
           body: JSON.stringify({
             success: false,
-            message: 'Album not found',
+            message: 'Track not found',
           } as UpdateTrackTitleResponse),
         };
       }
 
-      const albumDbId = albumResult.rows[0].id;
+      const albumDbId = trackOwner.rows[0].album_pk;
 
       // Обновляем название трека
       const updateResult = await query<{ id: string; title: string }>(

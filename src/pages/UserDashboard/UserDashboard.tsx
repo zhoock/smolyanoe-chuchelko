@@ -2346,7 +2346,7 @@ function UserDashboard() {
                           {ui?.dashboard?.tabs?.albums ?? 'Albums'}
                         </h3>
                         <div className="user-dashboard__section">
-                          {albumsStatus === 'loading' ? (
+                          {albumsInitialLoading ? (
                             <ArticlesListSkeleton count={4} />
                           ) : albumsData.length > 0 ? (
                             <>
