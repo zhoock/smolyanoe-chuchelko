@@ -12,6 +12,7 @@ import type { IAlbums } from '@models';
 import type { SupportedLang } from '@shared/model/lang';
 import type { AppDispatch } from '@shared/model/appStore/types';
 import { currentArtistReducer, setPublicArtistSlug } from '@shared/model/currentArtist';
+import { syncDashboardAlbumsPublicCatalogOverlay } from '@shared/lib/dashboardModalBackground';
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 const mockSuccessResponse = (data: unknown) =>
@@ -55,6 +56,9 @@ describe('albumsSlice', () => {
     jest.clearAllMocks();
     mockFetch.mockReset();
     (globalThis as unknown as { fetch: typeof fetch }).fetch = mockFetch;
+    window.history.pushState({}, '', '/');
+    window.localStorage.clear();
+    syncDashboardAlbumsPublicCatalogOverlay(false);
   });
 
   describe('reducer', () => {
@@ -107,6 +111,32 @@ describe('albumsSlice', () => {
       expect(selectAlbumsData(state)[0].albumId).toBe('album-1');
     });
 
+    test('на dashboard должен загружать альбомы владельца, игнорируя публичный artist context', async () => {
+      window.history.pushState({}, '', '/dashboard-new/albums');
+      window.localStorage.setItem('auth_token', 'owner-token');
+      syncDashboardAlbumsPublicCatalogOverlay(true);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+      const store = createTestStore();
+      store.dispatch(setPublicArtistSlug('artist-a'));
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toEqual({
+        albums: mockAlbums,
+        fetchContextKey: 'dashboard',
+      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/albums',
+        expect.objectContaining({
+          cache: 'no-store',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer owner-token',
+          }),
+        })
+      );
+    });
+
     test('должен обработать ошибку загрузки', async () => {
       const errorMessage = 'Network error';
       mockFetch.mockRejectedValueOnce(new Error(errorMessage));
@@ -153,6 +183,59 @@ describe('albumsSlice', () => {
 
       promise1.abort();
       promise2.abort();
+    });
+
+    test('с force: true разрешает запуск, пока первая загрузка в полёте', async () => {
+      mockFetch.mockImplementation(() => new Promise(() => {}));
+
+      const store = createTestStore();
+      (store.dispatch as AppDispatch)(fetchAlbums({}));
+      (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    test('ответ, устаревший после смены маршрута на dashboard, не затирает store', async () => {
+      let releaseFirst!: (r: Response) => void;
+      const firstHangs = new Promise<Response>((r) => {
+        releaseFirst = r;
+      });
+
+      const publicOnly: IAlbums = {
+        ...mockAlbums[0],
+        albumId: 'public-album',
+        album: 'Public Catalog',
+        fullName: 'Public Catalog',
+      };
+      const ownerAlbum: IAlbums = {
+        ...mockAlbums[0],
+        albumId: 'owner-album',
+        album: 'My Dashboard',
+        fullName: 'My Dashboard',
+      };
+
+      mockFetch
+        .mockImplementationOnce(() => firstHangs)
+        .mockResolvedValueOnce(mockSuccessResponse([ownerAlbum]));
+
+      const store = createTestStore();
+      const pPublic = (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+      window.history.pushState({}, '', '/dashboard-new');
+      window.localStorage.setItem('auth_token', 'owner-token');
+      const pDash = (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      // Сначала завершается dashboard (второй mock), в store — альбомы владельца.
+      await pDash;
+      expect(selectAlbumsData(store.getState())).toEqual([ownerAlbum]);
+
+      // Потом приходит «отложенный» публичный ответ — контекст уже dashboard, payload stale.
+      releaseFirst(mockSuccessResponse([publicOnly]));
+      await pPublic;
+
+      const final = store.getState();
+      expect(selectAlbumsData(final)).toEqual([ownerAlbum]);
+      expect(final.albums.fetchContextKey).toBe('dashboard');
     });
 
     test('не должен запускать загрузку, если данные уже загружены', async () => {

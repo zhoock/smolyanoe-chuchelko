@@ -6,7 +6,6 @@ import type { RootState } from '@shared/model/appStore/types';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
-import { isDashboardAlbumsPublicCatalogOverlay } from '@shared/lib/dashboardModalBackground';
 
 import type { AlbumsState, FetchAlbumsFulfilledPayload } from './types';
 
@@ -24,17 +23,22 @@ function getAlbumsFetchContextKey(getState: () => RootState): string {
     return 'ssr';
   }
   const onDashboardUrl = window.location.pathname.startsWith('/dashboard');
-  const useDashboardKey = onDashboardUrl && !isDashboardAlbumsPublicCatalogOverlay();
-  if (useDashboardKey) return 'dashboard';
+  if (onDashboardUrl) return 'dashboard';
   const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
   return publicSlug ? `public:${publicSlug}` : 'public:no-slug';
 }
 
-function wrapAlbumsResult(
-  albums: IAlbums[],
-  getState: () => RootState
-): FetchAlbumsFulfilledPayload {
-  return { albums, fetchContextKey: getAlbumsFetchContextKey(getState) };
+function wrapAlbumsResult(albums: IAlbums[], fetchContextKey: string): FetchAlbumsFulfilledPayload {
+  return { albums, fetchContextKey };
+}
+
+function staleSnapshotPayload(getState: () => RootState): FetchAlbumsFulfilledPayload {
+  const s = getState().albums;
+  return {
+    albums: s.data,
+    fetchContextKey: s.fetchContextKey ?? 'stale-keep',
+    staleAbort: true,
+  };
 }
 
 function albumHasDisplayableTitle(album: {
@@ -161,10 +165,10 @@ export const fetchAlbums = createAsyncThunk<
 
     try {
       const isDashboardRoute =
-        typeof window !== 'undefined' &&
-        window.location.pathname.startsWith('/dashboard') &&
-        !isDashboardAlbumsPublicCatalogOverlay();
+        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
       const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
+      /** Снимок контекста на старте запроса (не пересчитывать в fulfilled после смены маршрута). */
+      const requestFetchKey = getAlbumsFetchContextKey(getState);
 
       try {
         const controller = new AbortController();
@@ -180,7 +184,10 @@ export const fetchAlbums = createAsyncThunk<
 
         // Публичный каталог: без public slug API не вызываем (нужен контекст артиста).
         if (!isDashboardRoute && !publicSlug) {
-          return wrapAlbumsResult([], getState);
+          if (getAlbumsFetchContextKey(getState) !== requestFetchKey) {
+            return staleSnapshotPayload(getState);
+          }
+          return wrapAlbumsResult([], requestFetchKey);
         }
 
         const token = getToken();
@@ -196,7 +203,7 @@ export const fetchAlbums = createAsyncThunk<
             '/api/albums',
             {},
             {
-              includeArtist: true,
+              includeArtist: !isDashboardRoute,
               artistSlugOverride: isDashboardRoute ? null : publicSlug,
             }
           ),
@@ -212,7 +219,10 @@ export const fetchAlbums = createAsyncThunk<
           const result = await response.json();
           if (result.success && result.data && Array.isArray(result.data)) {
             if (result.data.length === 0) {
-              return wrapAlbumsResult([], getState);
+              if (getAlbumsFetchContextKey(getState) !== requestFetchKey) {
+                return staleSnapshotPayload(getState);
+              }
+              return wrapAlbumsResult([], requestFetchKey);
             }
 
             const firstAlbum = result.data[0];
@@ -232,7 +242,10 @@ export const fetchAlbums = createAsyncThunk<
                 : null,
             });
 
-            return wrapAlbumsResult(normalize(result.data), getState);
+            if (getAlbumsFetchContextKey(getState) !== requestFetchKey) {
+              return staleSnapshotPayload(getState);
+            }
+            return wrapAlbumsResult(normalize(result.data), requestFetchKey);
           }
           throw new Error('Failed to fetch albums. Invalid response format.');
         }
@@ -258,7 +271,7 @@ export const fetchAlbums = createAsyncThunk<
     condition: ({ force }, { getState }) => {
       const { status } = getState().albums;
 
-      if (status === 'loading') return false;
+      if (status === 'loading' && !force) return false;
 
       if (status === 'succeeded' && !force) return false;
 
@@ -278,6 +291,11 @@ const albumsSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {
+        // Устаревший HTTP-ответ не трогаем: иначе при двух запросах (public + dashboard)
+        // сброс в succeeded до завершения актуального запроса.
+        if (action.payload.staleAbort) {
+          return;
+        }
         state.data = [...action.payload.albums];
         state.fetchContextKey = action.payload.fetchContextKey;
         state.status = 'succeeded';

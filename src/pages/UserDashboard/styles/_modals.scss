@@ -2,61 +2,33 @@
 // Edit Track Modal
 
 @use '../../../scss/abstracts/mixins' as *;
+@use '../../../scss/components/modal' as *;
 
 dialog {
   .user-dashboard {
     // Edit Track Modal
     .edit-track-modal {
       &__card {
-        @include dashboard-modal-card;
+        @include dashboard-modal-panel($padding: null, $gap: null, $overflow-y: null);
       }
 
       &__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--ms-1) var(--ms-2);
-        border-bottom: 1px solid var(--dashboard-divider);
+        @include dashboard-modal-header(
+          $padding: var(--ms-1) var(--ms-2),
+          $border-bottom: var(--dashboard-divider)
+        );
       }
 
       &__close {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: calc(var(--ms-1) * 1.5);
-        height: calc(var(--ms-1) * 1.5);
-        padding: 0;
-        color: var(--dashboard-text-primary);
-        font-size: var(--dashboard-heading-font-size);
-        font-weight: 300;
-        line-height: 1;
-        background: transparent;
-        border: none;
-        border-radius: var(--ms-02);
-        cursor: pointer;
-        transition: all 0.2s;
-
-        &:hover {
-          color: var(--dashboard-text-primary);
-          background: var(--dashboard-hover-bg);
-        }
-
-        &:focus {
-          outline: none;
-        }
-
-        &:focus-visible {
-          outline: 2px solid var(--dark-greenish-yellow);
-          outline-offset: 2px;
-        }
+        @include dashboard-modal-close(
+          $font-size: var(--dashboard-heading-font-size),
+          $focus-visible: true,
+          $disabled: false
+        );
       }
 
       &__title {
-        margin: 0;
-        padding: 0;
-        color: var(--dashboard-text-primary);
-        font-size: var(--dashboard-heading-font-size);
-        font-weight: 700;
+        @include dashboard-modal-title($margin: 0, $padding: 0, $font-weight: 700);
       }
 
       &__content {

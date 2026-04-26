@@ -19,4 +19,6 @@ export interface AlbumsState {
 export interface FetchAlbumsFulfilledPayload {
   albums: IAlbums[];
   fetchContextKey: string;
+  /** Ответ устарел: маршрут/контекст сменился до завершения запроса — не перезаписывать store. */
+  staleAbort?: boolean;
 }

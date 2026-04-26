@@ -1,0 +1,243 @@
+@use '../abstracts/mixins' as dashboard;
+
+@mixin dashboard-modal-dialog-buttons($font-size: 12px, $line-height: 16px) {
+  button {
+    font-size: $font-size;
+    line-height: $line-height;
+  }
+}
+
+@mixin dashboard-modal-shell($padding: var(--ms-2), $background: transparent) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+
+  @if $padding {
+    padding: $padding;
+  }
+
+  @if $background {
+    background: $background;
+  }
+}
+
+@mixin dashboard-modal-panel(
+  $padding: var(--ms-2),
+  $gap: var(--ms-0),
+  $overflow-y: auto,
+  $mobile-max-height: 90vh,
+  $desktop-width: 680px,
+  $desktop-height: 600px
+) {
+  @if $padding {
+    padding: $padding;
+  }
+
+  @if $gap {
+    gap: $gap;
+  }
+
+  @if $overflow-y {
+    overflow-y: $overflow-y;
+  }
+
+  @include dashboard.dashboard-modal-card(
+    $mobile-max-height: $mobile-max-height,
+    $desktop-width: $desktop-width,
+    $desktop-height: $desktop-height
+  );
+}
+
+@mixin dashboard-modal-header(
+  $justify-content: space-between,
+  $align-items: center,
+  $gap: null,
+  $padding: null,
+  $border-bottom: null,
+  $flex-shrink: null,
+  $background: null
+) {
+  display: flex;
+
+  @if $flex-shrink {
+    flex-shrink: $flex-shrink;
+  }
+
+  align-items: $align-items;
+  justify-content: $justify-content;
+
+  @if $gap {
+    gap: $gap;
+  }
+
+  @if $padding {
+    padding: $padding;
+  }
+
+  @if $border-bottom {
+    border-bottom: 1px solid $border-bottom;
+  }
+
+  @if $background {
+    background: $background;
+  }
+}
+
+@mixin dashboard-modal-title(
+  $margin: null,
+  $padding: null,
+  $font-weight: null,
+  $line-height: null,
+  $reset-text: false
+) {
+  @if $margin {
+    margin: $margin;
+  }
+
+  @if $padding {
+    padding: $padding;
+  }
+
+  color: var(--dashboard-text-primary);
+  font-size: var(--dashboard-heading-font-size);
+
+  @if $font-weight {
+    font-weight: $font-weight;
+  }
+
+  @if $line-height {
+    line-height: $line-height;
+  }
+
+  @if $reset-text {
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+}
+
+@mixin dashboard-modal-close(
+  $font-size: var(--ms-1),
+  $focus-reset: true,
+  $focus-visible: false,
+  $disabled: true,
+  $reset-text: false,
+  $active-opacity: null,
+  $flex-shrink: null
+) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--ms-1) * 1.5);
+  height: calc(var(--ms-1) * 1.5);
+  padding: 0;
+  color: var(--dashboard-text-primary);
+  font-size: $font-size;
+  font-weight: 300;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-radius: var(--ms-02);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  @if $flex-shrink {
+    flex-shrink: $flex-shrink;
+  }
+
+  @if $reset-text {
+    text-transform: none !important;
+    letter-spacing: normal !important;
+  }
+
+  &:hover {
+    color: var(--dashboard-text-primary);
+    background: var(--dashboard-hover-bg);
+  }
+
+  @if $active-opacity {
+    &:active {
+      opacity: $active-opacity;
+    }
+  }
+
+  @if $focus-reset {
+    &:focus {
+      outline: none;
+    }
+  }
+
+  @if $focus-visible {
+    &:focus-visible {
+      outline: 2px solid var(--dark-greenish-yellow);
+      outline-offset: 2px;
+    }
+  }
+
+  @if $disabled {
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+  }
+}
+
+@mixin dashboard-modal-divider($background: var(--dashboard-hover-bg), $bleed: var(--ms-2)) {
+  width: calc(100% + #{$bleed} * 2);
+  height: 1px;
+  background: $background;
+  margin-left: calc(#{$bleed} * -1);
+  margin-right: calc(#{$bleed} * -1);
+}
+
+@mixin dashboard-modal-primary-button($disabled-opacity: null) {
+  @include dashboard.dashboard-button;
+
+  & {
+    color: var(--dashboard-card-bg);
+    background: var(--white);
+    border: 1px solid var(--dashboard-card-border);
+  }
+
+  &:hover {
+    color: var(--dashboard-card-bg);
+    background: var(--white);
+    opacity: 0.9;
+  }
+
+  &:active {
+    opacity: 0.8;
+  }
+
+  @if $disabled-opacity {
+    &:disabled {
+      cursor: not-allowed;
+      opacity: $disabled-opacity;
+    }
+  }
+}
+
+@mixin dashboard-modal-inline-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ms-01);
+}
+
+@mixin dashboard-modal-spinner($animation-name) {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: #{$animation-name} 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@mixin dashboard-nested-modal-backdrop($selector: 'dialog dialog::backdrop') {
+  @at-root #{$selector} {
+    background: var(--dashboard-backdrop);
+    backdrop-filter: blur(4px);
+  }
+}

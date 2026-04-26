@@ -67,7 +67,6 @@ dialog {
       width: 100%;
       min-width: 100%;
       padding: var(--ms-01) var(--ms-01);
-      border-right: none;
       border-bottom: 1px solid var(--dashboard-card-border);
       background: var(--dashboard-card-bg);
 
@@ -76,7 +75,6 @@ dialog {
         width: 200px;
         min-width: 200px;
         padding: var(--ms-1) var(--ms-01);
-        border-right: 1px solid var(--dashboard-card-border);
         border-bottom: none;
         overflow: auto hidden;
       }

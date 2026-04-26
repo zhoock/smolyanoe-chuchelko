@@ -128,6 +128,26 @@ describe('articlesSlice', () => {
       expect(String(mockFetch.mock.calls[0][0])).toContain('articles-api');
     });
 
+    test('на главной без artist не парсит HTML fallback как JSON', async () => {
+      const store = createTestStore();
+      store.dispatch(setPublicArtistSlug(null));
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'text/html' },
+        json: jest.fn(async () => {
+          throw new SyntaxError('Unexpected token <');
+        }),
+      } as unknown as Response);
+
+      const result = await (store.dispatch as AppDispatch)(
+        fetchArticles({ force: true, publicArtistSlug: '' })
+      );
+
+      expect(result.type).toBe('articles/fetchMerged/fulfilled');
+      expect((result.payload as FetchArticlesResult).articles).toEqual([]);
+      expect(mockFetch).toHaveBeenCalledWith('/assets/articles-en.json', expect.any(Object));
+    });
+
     test('должен установить статус loading при начале загрузки', async () => {
       mockFetch.mockImplementation(() => new Promise(() => {}));
 

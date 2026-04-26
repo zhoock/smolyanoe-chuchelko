@@ -36,6 +36,22 @@ function resolvePublicArtistSlugForFetch(arg: FetchArticlesArg, getState: () => 
   return selectPublicArtistSlug(getState())?.trim() ?? '';
 }
 
+async function readStaticArticlesFallback(
+  lang: 'en' | 'ru',
+  signal: AbortSignal
+): Promise<unknown[]> {
+  const fallback = await fetch(`/assets/articles-${lang}.json`, { signal });
+  if (!fallback || !fallback.ok) return [];
+
+  const contentType = fallback.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    return [];
+  }
+
+  const data = await fallback.json();
+  return Array.isArray(data) ? data : [];
+}
+
 export const fetchArticles = createAsyncThunk<
   FetchArticlesResult,
   FetchArticlesArg,
@@ -83,19 +99,13 @@ export const fetchArticles = createAsyncThunk<
       // Публичный каталог: без artist не дергаем API (инвариант), только статический fallback.
       if (!isDashboardRoute && !resolvedSlug) {
         try {
-          const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
-          if (fallback && fallback.ok) {
-            const data = await fallback.json();
-            if (Array.isArray(data)) {
-              return slugMeta(normalize(data));
-            }
-          }
+          const data = await readStaticArticlesFallback(fallbackLang, signal);
+          return slugMeta(normalize(data));
         } catch (e) {
           const errorMessage = e instanceof Error ? e.message : String(e);
           console.warn('[fetchArticles] Static fallback failed:', errorMessage);
-          return rejectWithValue(errorMessage);
+          return slugMeta([]);
         }
-        return { articles: [], lastPublicArtistSlug: '' };
       }
 
       let apiFailure: unknown = null;
@@ -163,13 +173,8 @@ export const fetchArticles = createAsyncThunk<
           throw new Error(String(apiFailure));
         }
       } else {
-        const fallback = await fetch(`/assets/articles-${fallbackLang}.json`, { signal });
-        if (fallback && fallback.ok) {
-          const data = await fallback.json();
-          if (Array.isArray(data)) {
-            return slugMeta(normalize(data));
-          }
-        }
+        const data = await readStaticArticlesFallback(fallbackLang, signal);
+        if (data.length > 0) return slugMeta(normalize(data));
       }
 
       if (apiFailure instanceof Error) {

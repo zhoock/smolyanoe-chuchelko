@@ -1,76 +1,29 @@
 // src/pages/UserDashboard/components/EditLyricsModal.style.scss
 @use '../../../../../scss/abstracts/mixins' as *;
+@use '../../../../../scss/components/modal' as *;
 
 dialog {
-  // Общие стили для всех кнопок в попапе
-  button {
-    font-size: 12px;
-    line-height: 16px;
-  }
+  @include dashboard-modal-dialog-buttons;
 
   .edit-lyrics-modal {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    background: transparent;
+    @include dashboard-modal-shell($padding: null);
 
     &__card {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      padding: 0;
-      gap: 0;
-
-      @include dashboard-modal-card;
+      @include dashboard-modal-panel($padding: 0, $gap: 0, $overflow-y: hidden);
     }
 
     &__header {
-      display: flex;
-      flex-shrink: 0;
-      align-items: center;
-      gap: var(--ms-0);
-      padding: var(--ms-1) var(--ms-2);
-      border-bottom: 1px solid var(--dashboard-divider);
+      @include dashboard-modal-header(
+        $justify-content: flex-start,
+        $gap: var(--ms-0),
+        $padding: var(--ms-1) var(--ms-2),
+        $border-bottom: var(--dashboard-divider),
+        $flex-shrink: 0
+      );
     }
 
     &__close {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: calc(var(--ms-1) * 1.5);
-      height: calc(var(--ms-1) * 1.5);
-      padding: 0;
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
-      font-weight: 300;
-      line-height: 1;
-      background: transparent;
-      border: none;
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: none !important;
-      letter-spacing: normal !important;
-
-      &:hover {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-hover-bg);
-      }
-
-      &:focus {
-        outline: none;
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--dark-greenish-yellow);
-        outline-offset: 2px;
-      }
-
-      &:disabled {
-        cursor: not-allowed;
-        opacity: 0.45;
-      }
+      @include dashboard-modal-close($focus-visible: true, $reset-text: true);
     }
 
     &__content {
@@ -84,14 +37,13 @@ dialog {
     }
 
     &__title {
-      margin: 0;
-      padding: 0;
-      color: var(--dashboard-text-primary);
-      font-size: var(--dashboard-heading-font-size);
-      font-weight: 700;
-      line-height: 1.2;
-      text-transform: none !important;
-      letter-spacing: normal !important;
+      @include dashboard-modal-title(
+        $margin: 0,
+        $padding: 0,
+        $font-weight: 700,
+        $line-height: 1.2,
+        $reset-text: true
+      );
     }
 
     &__divider {
@@ -143,39 +95,15 @@ dialog {
       }
 
       &--primary {
-        @include dashboard-button;
-
-        /* stylelint-disable no-duplicate-selectors -- Sass mixed-decls: https://sass-lang.com/d/mixed-decls */
-        & {
-          color: var(--dashboard-card-bg);
-          background: var(--white);
-          border: 1px solid var(--dashboard-card-border);
-        }
-        /* stylelint-enable no-duplicate-selectors */
-
-        &:hover {
-          color: var(--dashboard-card-bg);
-          background: var(--white);
-          opacity: 0.9;
-        }
-
-        &:active {
-          opacity: 0.8;
-        }
+        @include dashboard-modal-primary-button;
       }
 
       &--primary-loading {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: var(--ms-01);
+        @include dashboard-modal-inline-loading;
       }
     }
   }
 }
 
 // Overlay для модалки поверх модалки
-dialog dialog::backdrop {
-  background: var(--dashboard-backdrop);
-  backdrop-filter: blur(4px);
-}
+@include dashboard-nested-modal-backdrop;

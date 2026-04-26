@@ -51,6 +51,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   const { signal, url } = request;
   const requestUrl = new URL(url);
   const { pathname } = requestUrl;
+  const requestIsDashboard = pathname.startsWith('/dashboard');
   const { pathname: loaderPathname, search: loaderSearch } =
     resolveDashboardModalBackgroundForLoader(pathname, requestUrl.search);
   const loaderSearchParams = new URLSearchParams(
@@ -102,12 +103,12 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
   // Альбомы нужны на "/", "/albums*", "/stems" (миксер) и "/dashboard*" (включая /dashboard-new)
   if (
+    requestIsDashboard ||
     loaderPathname === '/' ||
     loaderPathname.startsWith('/albums') ||
-    loaderPathname.startsWith('/stems') ||
-    loaderPathname.startsWith('/dashboard')
+    loaderPathname.startsWith('/stems')
   ) {
-    const desiredAlbumsFetchKey = loaderPathname.startsWith('/dashboard')
+    const desiredAlbumsFetchKey = requestIsDashboard
       ? 'dashboard'
       : publicArtistFromUrl
         ? `public:${publicArtistFromUrl}`

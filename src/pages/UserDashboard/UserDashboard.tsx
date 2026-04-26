@@ -1164,6 +1164,8 @@ function UserDashboard() {
 
   // Загрузка альбомов: всегда force при смене аккаунта/языка,
   // чтобы не показывать данные предыдущего пользователя из Redux-кэша.
+  // pathname: переход с публичной страницы на дашборд при том же userId/lang
+  // должен снова вызвать fetch в контексте дашборда.
   useEffect(() => {
     dispatch(fetchAlbums({ force: true })).catch((error: any) => {
       // ConditionError - это нормально, condition отменил запрос
@@ -1172,7 +1174,7 @@ function UserDashboard() {
       }
       console.error('Error fetching albums:', error);
     });
-  }, [dispatch, lang, userId]);
+  }, [dispatch, lang, userId, location.pathname]);
 
   // Загрузка статей при переключении на вкладку posts.
   // Тоже force, чтобы после релогина не было "хвостов" старого аккаунта.
