@@ -23,6 +23,11 @@ export const selectAlbumsFetchContextKey = createSelector(
   (s) => s.fetchContextKey
 );
 
+export const selectAlbumsInFlightFetchContextKey = createSelector(
+  [selectAlbumsState],
+  (s) => s.inFlightFetchContextKey
+);
+
 export const selectAlbumById = createSelector(
   [selectAlbumsData, (_state: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.albumId === albumId)

@@ -21,7 +21,7 @@ import { getUser } from '@shared/lib/auth';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
-import { useShowAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
+import { useShowSurfaceAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
 
 export default function Album() {
   const { lang } = useLang();
@@ -40,7 +40,7 @@ export default function Album() {
   const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showPurchaseSection = useShowAlbumPurchaseSection(album);
-  const showAlbumLoadingShell = useShowAlbumsLoadingShell(albumsStatus, Boolean(album));
+  const showAlbumLoadingShell = useShowSurfaceAlbumsLoadingShell(albumsStatus, Boolean(album));
 
   // 🔍 DEBUG: Логируем данные альбома для диагностики
   useEffect(() => {

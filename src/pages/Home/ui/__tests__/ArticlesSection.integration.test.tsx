@@ -34,6 +34,7 @@ describe('ArticlesSection integration tests', () => {
           data: [],
           lastUpdated: null,
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -67,6 +68,7 @@ describe('ArticlesSection integration tests', () => {
           data: [],
           lastUpdated: null,
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -100,6 +102,7 @@ describe('ArticlesSection integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -142,6 +145,7 @@ describe('ArticlesSection integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -181,6 +185,7 @@ describe('ArticlesSection integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -212,6 +217,7 @@ describe('ArticlesSection integration tests', () => {
           data: [],
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {

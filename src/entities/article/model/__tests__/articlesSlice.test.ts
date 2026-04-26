@@ -35,6 +35,7 @@ const createTestStore = () => {
         data: [],
         lastUpdated: null,
         fetchContextKey: null,
+        inFlightFetchContextKey: null,
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -66,6 +67,7 @@ describe('articlesSlice', () => {
         data: [],
         lastUpdated: null,
         lastPublicArtistSlug: null,
+        inFlightFetchContextKey: null,
       });
     });
   });
@@ -368,6 +370,7 @@ describe('articlesSlice', () => {
         ],
         lastUpdated: 1234567890,
         lastPublicArtistSlug: null,
+        inFlightFetchContextKey: null,
       },
       currentArtist: { publicSlug: null as string | null },
       lang: { current: 'en' as SupportedLang },
@@ -379,6 +382,7 @@ describe('articlesSlice', () => {
         data: [],
         lastUpdated: null,
         fetchContextKey: null,
+        inFlightFetchContextKey: null,
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

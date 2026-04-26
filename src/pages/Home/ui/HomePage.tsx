@@ -12,6 +12,7 @@ import { getUserAudioUrl } from '@shared/api/albums';
 import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { IAlbums, TracksProps } from '@models';
 import { fetchAlbums } from '@entities/album';
+import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay';
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
@@ -64,6 +65,9 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
+    // Пока в адресной строке открыт кабинет, фоновая Home с ?artist= не должна
+    // с force дёргать тот же Redux (thunk и так смотрит window → дубли и «мигание» фона).
+    if (isDashboardPathname()) return;
     if (!hasArtistParam) return;
     void dispatch(fetchAlbums({ force: true }));
     void dispatch(fetchArticles({ force: true, publicArtistSlug: artistSlug }));

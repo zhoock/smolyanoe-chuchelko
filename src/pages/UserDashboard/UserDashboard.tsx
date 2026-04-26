@@ -32,6 +32,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getAlbumsDashboardRouteScopeKey } from '@shared/lib/albumsRouteScope';
 import { formatDate } from '@shared/api/albums';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
@@ -704,6 +705,9 @@ function UserDashboard() {
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastPostsArticlesFetchContextRef = useRef<{ userId: string | null; lang: string } | null>(
+    null
+  );
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
@@ -1164,8 +1168,10 @@ function UserDashboard() {
 
   // Загрузка альбомов: всегда force при смене аккаунта/языка,
   // чтобы не показывать данные предыдущего пользователя из Redux-кэша.
-  // pathname: переход с публичной страницы на дашборд при том же userId/lang
-  // должен снова вызвать fetch в контексте дашборда.
+  // `routeScopeKey`: переход / → дашборд (или публичная страница → дашборд) с тем же userId/lang;
+  // без него при /dashboard/.../albums → .../posts не дёргаем fetch — общий `albums` остаётся
+  // спокойным для фоновой страницы под модалкой.
+  const albumsRouteScopeKey = getAlbumsDashboardRouteScopeKey(location.pathname);
   useEffect(() => {
     dispatch(fetchAlbums({ force: true })).catch((error: any) => {
       // ConditionError - это нормально, condition отменил запрос
@@ -1174,14 +1180,22 @@ function UserDashboard() {
       }
       console.error('Error fetching albums:', error);
     });
-  }, [dispatch, lang, userId, location.pathname]);
+  }, [dispatch, lang, userId, albumsRouteScopeKey]);
 
-  // Загрузка статей при переключении на вкладку posts.
-  // Тоже force, чтобы после релогина не было "хвостов" старого аккаунта.
+  // Статьи для вкладки posts: грузим не при каждом клике на Posts (только при смене
+  // пользователя/языка), иначе `force: true` обходит `condition` и фон снова тянет тот же slice.
   useEffect(() => {
-    if (activeTab !== 'posts') return;
+    if (activeTab !== 'posts') {
+      return;
+    }
 
-    dispatch(fetchArticles({ force: true })).catch((error: any) => {
+    const prev = lastPostsArticlesFetchContextRef.current;
+    const isFirstOnPosts = prev === null;
+    const userOrLangChanged = !isFirstOnPosts && (prev.userId !== userId || prev.lang !== lang);
+    lastPostsArticlesFetchContextRef.current = { userId, lang: String(lang) };
+    const force = userOrLangChanged;
+
+    dispatch(fetchArticles({ force })).catch((error: any) => {
       if (error?.name === 'ConditionError') {
         return;
       }

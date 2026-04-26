@@ -36,6 +36,7 @@ const createTestStore = () => {
         data: [],
         lastUpdated: null,
         lastPublicArtistSlug: null,
+        inFlightFetchContextKey: null,
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -70,6 +71,7 @@ describe('albumsSlice', () => {
         data: [],
         lastUpdated: null,
         fetchContextKey: null,
+        inFlightFetchContextKey: null,
       });
     });
   });
@@ -480,6 +482,7 @@ describe('albumsSlice', () => {
         ],
         lastUpdated: 1234567890,
         fetchContextKey: 'public:test-artist',
+        inFlightFetchContextKey: null,
       },
       lang: { current: 'en' as SupportedLang },
       currentArtist: { publicSlug: null as string | null },
@@ -491,6 +494,7 @@ describe('albumsSlice', () => {
         data: [],
         lastUpdated: null,
         lastPublicArtistSlug: null,
+        inFlightFetchContextKey: null,
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

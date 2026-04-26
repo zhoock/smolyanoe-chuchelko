@@ -14,6 +14,11 @@ export interface AlbumsState {
   lastUpdated: number | null;
   /** Какой контекст запроса соответствует `data` (см. albumsLoader + fetchAlbums). */
   fetchContextKey: string | null;
+  /**
+   * Какой контекст у текущего in-flight `fetchAlbums` (снимок `window` в pending),
+   * чтобы фон (Home под модалкой) не мигал скелетоном, пока дашборд качает тот же слайс.
+   */
+  inFlightFetchContextKey: 'dashboard' | 'public' | null;
 }
 
 export interface FetchAlbumsFulfilledPayload {

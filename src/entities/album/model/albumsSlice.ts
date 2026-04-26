@@ -15,6 +15,7 @@ const initialState: AlbumsState = {
   data: [],
   lastUpdated: null,
   fetchContextKey: null,
+  inFlightFetchContextKey: null,
 };
 
 /** Ключ кэша списка альбомов: дашборд / публичный artist / без artist. */
@@ -289,11 +290,17 @@ const albumsSlice = createSlice({
       .addCase(fetchAlbums.pending, (state) => {
         state.status = 'loading';
         state.error = null;
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+          state.inFlightFetchContextKey = 'dashboard';
+        } else {
+          state.inFlightFetchContextKey = 'public';
+        }
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {
         // Устаревший HTTP-ответ не трогаем: иначе при двух запросах (public + dashboard)
         // сброс в succeeded до завершения актуального запроса.
         if (action.payload.staleAbort) {
+          state.inFlightFetchContextKey = null;
           return;
         }
         state.data = [...action.payload.albums];
@@ -301,6 +308,7 @@ const albumsSlice = createSlice({
         state.status = 'succeeded';
         state.error = null;
         state.lastUpdated = Date.now();
+        state.inFlightFetchContextKey = null;
       })
       .addCase(fetchAlbums.rejected, (state, action) => {
         let errorText = 'Failed to fetch albums';
@@ -312,10 +320,12 @@ const albumsSlice = createSlice({
         if (state.data.length > 0) {
           state.status = 'succeeded';
           state.error = null;
+          state.inFlightFetchContextKey = null;
           return;
         }
         state.status = 'failed';
         state.error = errorText;
+        state.inFlightFetchContextKey = null;
       });
   },
 });

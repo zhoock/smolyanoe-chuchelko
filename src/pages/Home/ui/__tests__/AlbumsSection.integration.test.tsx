@@ -46,6 +46,7 @@ describe('AlbumsSection integration tests', () => {
           data: [],
           lastUpdated: null,
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -79,6 +80,7 @@ describe('AlbumsSection integration tests', () => {
           data: [],
           lastUpdated: null,
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -129,6 +131,7 @@ describe('AlbumsSection integration tests', () => {
           data: withHidden,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -167,6 +170,7 @@ describe('AlbumsSection integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -209,6 +213,7 @@ describe('AlbumsSection integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -248,6 +253,7 @@ describe('AlbumsSection integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -279,6 +285,7 @@ describe('AlbumsSection integration tests', () => {
           data: [],
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {

@@ -6,6 +6,7 @@ import { ArticlePreview } from '@entities/article';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
 import { selectArticlesStatus, selectArticlesDataResolved } from '@entities/article';
+import { useShowSurfaceArticlesLoadingShell } from '@shared/lib/hooks/useShowSurfaceArticlesLoadingShell';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import './ArticlesSection.scss';
@@ -24,6 +25,10 @@ export function ArticlesSection() {
   const allArticlesPath = withPublicArtistQuery('/articles', searchParams.get('artist'));
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
   const allArticles = useAppSelector((state) => selectArticlesDataResolved(state));
+  const showArticlesLoadingShell = useShowSurfaceArticlesLoadingShell(
+    articlesStatus,
+    allArticles.length > 0
+  );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const [initialCount, setInitialCount] = useState(getInitialCount);
@@ -56,7 +61,7 @@ export function ArticlesSection() {
       <div className="wrapper articles__wrapper">
         <h2 id="home-articles-heading">{ui?.titles?.articles ?? '…'}</h2>
 
-        {articlesStatus === 'loading' || articlesStatus === 'idle' ? (
+        {showArticlesLoadingShell ? (
           <ArticlesSkeleton count={initialCount} />
         ) : articlesStatus === 'failed' ? (
           <ErrorI18n code="articlesLoadFailed" />

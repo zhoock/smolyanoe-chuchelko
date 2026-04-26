@@ -16,6 +16,7 @@ const initialState: ArticlesState = {
   data: [],
   lastUpdated: null,
   lastPublicArtistSlug: null,
+  inFlightFetchContextKey: null,
 };
 
 export type FetchArticlesArg = {
@@ -201,7 +202,10 @@ export const fetchArticles = createAsyncThunk<
       const isDashboard = isDashboardPathname();
       if (isDashboard) {
         if (state.articles.status === 'succeeded') {
-          return false;
+          // Только `null` = данные владельца; иначе в slice ещё публичные статьи (фон под модалкой).
+          if (state.articles.lastPublicArtistSlug == null) {
+            return false;
+          }
         }
         return true;
       }
@@ -228,6 +232,11 @@ const articlesSlice = createSlice({
       .addCase(fetchArticles.pending, (state) => {
         state.status = 'loading';
         state.error = null;
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+          state.inFlightFetchContextKey = 'dashboard';
+        } else {
+          state.inFlightFetchContextKey = 'public';
+        }
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
         const { articles, lastPublicArtistSlug } = action.payload;
@@ -236,8 +245,10 @@ const articlesSlice = createSlice({
         state.error = null;
         state.lastUpdated = Date.now();
         state.lastPublicArtistSlug = lastPublicArtistSlug;
+        state.inFlightFetchContextKey = null;
       })
       .addCase(fetchArticles.rejected, (state, action) => {
+        state.inFlightFetchContextKey = null;
         state.status = 'failed';
         let errorText = 'Failed to fetch articles';
         if (action.payload) {

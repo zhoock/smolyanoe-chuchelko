@@ -56,6 +56,7 @@ describe('HomePage integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -63,6 +64,7 @@ describe('HomePage integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -99,6 +101,7 @@ describe('HomePage integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -106,6 +109,7 @@ describe('HomePage integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -151,6 +155,7 @@ describe('HomePage integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -158,6 +163,7 @@ describe('HomePage integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {
@@ -215,6 +221,7 @@ describe('HomePage integration tests', () => {
           data: mockAlbums,
           lastUpdated: Date.now(),
           fetchContextKey: null,
+          inFlightFetchContextKey: null,
         },
         articles: {
           status: 'succeeded',
@@ -222,6 +229,7 @@ describe('HomePage integration tests', () => {
           data: mockArticles,
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
+          inFlightFetchContextKey: null,
         },
         uiDictionary: {
           en: {

@@ -22,7 +22,7 @@ import {
 } from '@config/supabase';
 import { getUserUserId } from '@config/user';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
-import { useShowAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
+import { useShowSurfaceAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
 import './style.scss';
 
 type Song = {
@@ -72,7 +72,7 @@ export default function StemsPlayground() {
   const albums = useAppSelector(selectAlbumsDataResolved);
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsLastUpdated = useAppSelector((s) => s.albums.lastUpdated);
-  const showAlbumsLoadingShell = useShowAlbumsLoadingShell(albumsStatus, albums.length > 0);
+  const showAlbumsLoadingShell = useShowSurfaceAlbumsLoadingShell(albumsStatus, albums.length > 0);
 
   /** Метка момента смены артиста/языка: не строим список из кэша альбомов до свежего fetchAlbums.fulfilled. */
   const stemsSyncEpochRef = useRef(0);

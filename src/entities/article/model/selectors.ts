@@ -15,6 +15,11 @@ export const selectArticlesState = (state: RootState): ArticlesState => state.ar
 
 export const selectArticlesStatus = createSelector([selectArticlesState], (s) => s.status);
 
+export const selectArticlesInFlightFetchContextKey = createSelector(
+  [selectArticlesState],
+  (s) => s.inFlightFetchContextKey
+);
+
 export const selectArticlesError = createSelector([selectArticlesState], (s) => s.error);
 
 export const selectArticlesData = createSelector([selectArticlesState], (s): IArticles[] => s.data);

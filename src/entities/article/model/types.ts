@@ -13,4 +13,9 @@ export interface ArticlesState {
   lastUpdated: number | null;
   /** Публичный контекст последней успешной загрузки: '' = дефолтный сайт, иначе public_slug */
   lastPublicArtistSlug?: string | null;
+  /**
+   * Какой контекст у текущего in-flight `fetchArticles` (см. pending в articlesSlice;
+   * фон под модалкой дашборда не должен мигать скелетоном).
+   */
+  inFlightFetchContextKey: 'dashboard' | 'public' | null;
 }

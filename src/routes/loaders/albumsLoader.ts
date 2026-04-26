@@ -160,8 +160,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     const publicArtistSlug = publicArtistFromUrl;
     const articlesState = selectArticlesState(state);
     const status = articlesState.status;
-    const cacheOk =
-      status === 'succeeded' && (articlesState.lastPublicArtistSlug ?? '') === publicArtistSlug;
+    // На дашборде кэш «по ?artist= с фона» невалиден: `lastPublicArtistSlug: null` = список владельца.
+    const cacheOk = requestIsDashboard
+      ? status === 'succeeded' && articlesState.lastPublicArtistSlug == null
+      : status === 'succeeded' && (articlesState.lastPublicArtistSlug ?? '') === publicArtistSlug;
 
     if (cacheOk) {
       templateB = Promise.resolve(selectArticlesData(state));

@@ -10,6 +10,7 @@ export {
   selectAlbumsError,
   selectAlbumsData,
   selectAlbumsFetchContextKey,
+  selectAlbumsInFlightFetchContextKey,
   selectAlbumById,
   selectAlbumsDataResolved,
   selectPublicAlbumsDataResolved,
