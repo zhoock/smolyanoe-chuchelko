@@ -41,16 +41,16 @@ import { AlertModal } from '@shared/ui/alertModal';
 import { logout, isAuthenticated, getUser, getToken } from '@shared/lib/auth';
 import {
   fetchAlbums,
-  selectAlbumsStatus,
-  selectAlbumsData,
-  selectAlbumsError,
+  selectDashboardAlbumsStatus,
+  selectDashboardAlbumsData,
+  selectDashboardAlbumsError,
   AlbumCoverImage,
 } from '@entities/album';
 import {
   fetchArticles,
-  selectArticlesStatus,
-  selectArticlesDataResolved,
-  selectArticlesError,
+  selectDashboardArticlesStatus,
+  selectDashboardArticlesError,
+  selectDashboardArticlesDataResolved,
   ArticleCoverImage,
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
@@ -689,12 +689,12 @@ function UserDashboard() {
   );
   const { tab: tabFromRoute } = useParams<{ tab?: string }>();
   const [searchParams] = useSearchParams();
-  const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const albumsError = useAppSelector(selectAlbumsError);
-  const albumsFromStore = useAppSelector(selectAlbumsData);
-  const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
-  const articlesError = useAppSelector((state) => selectArticlesError(state));
-  const articlesFromStore = useAppSelector((state) => selectArticlesDataResolved(state));
+  const albumsStatus = useAppSelector(selectDashboardAlbumsStatus);
+  const albumsError = useAppSelector(selectDashboardAlbumsError);
+  const albumsFromStore = useAppSelector(selectDashboardAlbumsData);
+  const articlesStatus = useAppSelector(selectDashboardArticlesStatus);
+  const articlesError = useAppSelector(selectDashboardArticlesError);
+  const articlesFromStore = useAppSelector((state) => selectDashboardArticlesDataResolved(state));
   const user = getUser();
   const userId = user?.id ?? null;
 

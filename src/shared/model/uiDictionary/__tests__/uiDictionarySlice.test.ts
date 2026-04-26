@@ -37,6 +37,13 @@ const createTestStore = () => {
         lastUpdated: null,
         lastPublicArtistSlug: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       }),
       albums: () => ({
         status: 'idle' as const,
@@ -45,6 +52,13 @@ const createTestStore = () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -417,6 +431,13 @@ describe('uiDictionarySlice', () => {
         lastUpdated: null,
         lastPublicArtistSlug: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       },
       albums: {
         status: 'idle' as const,
@@ -425,6 +446,13 @@ describe('uiDictionarySlice', () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

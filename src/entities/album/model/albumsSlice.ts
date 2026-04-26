@@ -5,6 +5,7 @@ import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdStrin
 import type { RootState } from '@shared/model/appStore/types';
 import { getToken } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import type { AlbumsState, FetchAlbumsFulfilledPayload } from './types';
@@ -16,29 +17,50 @@ const initialState: AlbumsState = {
   lastUpdated: null,
   fetchContextKey: null,
   inFlightFetchContextKey: null,
+  dashboard: {
+    status: 'idle',
+    error: null,
+    data: [],
+    lastUpdated: null,
+    inFlightFetchContextKey: null,
+  },
 };
 
-/** Ключ кэша списка альбомов: дашборд / публичный artist / без artist. */
-function getAlbumsFetchContextKey(getState: () => RootState): string {
+/** Ключ кэша публичного каталога в `data` (artist slug из store / фон под модалкой). */
+function getCatalogAlbumsFetchContextKey(getState: () => RootState): string {
   if (typeof window === 'undefined') {
     return 'ssr';
   }
-  const onDashboardUrl = window.location.pathname.startsWith('/dashboard');
-  if (onDashboardUrl) return 'dashboard';
   const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
   return publicSlug ? `public:${publicSlug}` : 'public:no-slug';
 }
 
-function wrapAlbumsResult(albums: IAlbums[], fetchContextKey: string): FetchAlbumsFulfilledPayload {
-  return { albums, fetchContextKey };
+function wrapAlbumsResult(
+  albums: IAlbums[],
+  fetchContextKey: string,
+  writeTarget: 'catalog' | 'dashboard'
+): FetchAlbumsFulfilledPayload {
+  return { albums, fetchContextKey, writeTarget };
 }
 
-function staleSnapshotPayload(getState: () => RootState): FetchAlbumsFulfilledPayload {
+function staleSnapshotPayload(
+  getState: () => RootState,
+  target: 'catalog' | 'dashboard'
+): FetchAlbumsFulfilledPayload {
   const s = getState().albums;
+  if (target === 'dashboard') {
+    return {
+      albums: s.dashboard.data,
+      fetchContextKey: 'dashboard',
+      staleAbort: true,
+      writeTarget: 'dashboard',
+    };
+  }
   return {
     albums: s.data,
     fetchContextKey: s.fetchContextKey ?? 'stale-keep',
     staleAbort: true,
+    writeTarget: 'catalog',
   };
 }
 
@@ -165,11 +187,18 @@ export const fetchAlbums = createAsyncThunk<
     };
 
     try {
-      const isDashboardRoute =
-        typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard');
+      const isDashboardRoute = isDashboardPathname();
       const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
-      /** Снимок контекста на старте запроса (не пересчитывать в fulfilled после смены маршрута). */
-      const requestFetchKey = getAlbumsFetchContextKey(getState);
+      const requestWasDashboard = isDashboardRoute;
+      const requestFetchKey = requestWasDashboard
+        ? 'dashboard'
+        : getCatalogAlbumsFetchContextKey(getState);
+      const writeTarget: 'catalog' | 'dashboard' = requestWasDashboard ? 'dashboard' : 'catalog';
+
+      const catalogStale = (): boolean =>
+        getCatalogAlbumsFetchContextKey(getState) !== requestFetchKey;
+
+      const dashboardStale = (): boolean => !isDashboardPathname();
 
       try {
         const controller = new AbortController();
@@ -185,10 +214,10 @@ export const fetchAlbums = createAsyncThunk<
 
         // Публичный каталог: без public slug API не вызываем (нужен контекст артиста).
         if (!isDashboardRoute && !publicSlug) {
-          if (getAlbumsFetchContextKey(getState) !== requestFetchKey) {
-            return staleSnapshotPayload(getState);
+          if (catalogStale()) {
+            return staleSnapshotPayload(getState, 'catalog');
           }
-          return wrapAlbumsResult([], requestFetchKey);
+          return wrapAlbumsResult([], requestFetchKey, 'catalog');
         }
 
         const token = getToken();
@@ -220,10 +249,14 @@ export const fetchAlbums = createAsyncThunk<
           const result = await response.json();
           if (result.success && result.data && Array.isArray(result.data)) {
             if (result.data.length === 0) {
-              if (getAlbumsFetchContextKey(getState) !== requestFetchKey) {
-                return staleSnapshotPayload(getState);
+              if (requestWasDashboard) {
+                if (dashboardStale()) {
+                  return staleSnapshotPayload(getState, 'dashboard');
+                }
+              } else if (catalogStale()) {
+                return staleSnapshotPayload(getState, 'catalog');
               }
-              return wrapAlbumsResult([], requestFetchKey);
+              return wrapAlbumsResult([], requestFetchKey, writeTarget);
             }
 
             const firstAlbum = result.data[0];
@@ -243,10 +276,14 @@ export const fetchAlbums = createAsyncThunk<
                 : null,
             });
 
-            if (getAlbumsFetchContextKey(getState) !== requestFetchKey) {
-              return staleSnapshotPayload(getState);
+            if (requestWasDashboard) {
+              if (dashboardStale()) {
+                return staleSnapshotPayload(getState, 'dashboard');
+              }
+            } else if (catalogStale()) {
+              return staleSnapshotPayload(getState, 'catalog');
             }
-            return wrapAlbumsResult(normalize(result.data), requestFetchKey);
+            return wrapAlbumsResult(normalize(result.data), requestFetchKey, writeTarget);
           }
           throw new Error('Failed to fetch albums. Invalid response format.');
         }
@@ -270,12 +307,19 @@ export const fetchAlbums = createAsyncThunk<
   },
   {
     condition: ({ force }, { getState }) => {
-      const { status } = getState().albums;
+      const albums = getState().albums;
+      const onDashboard = isDashboardPathname();
 
+      if (onDashboard) {
+        const { status } = albums.dashboard;
+        if (status === 'loading' && !force) return false;
+        if (status === 'succeeded' && !force) return false;
+        return true;
+      }
+
+      const { status } = albums;
       if (status === 'loading' && !force) return false;
-
       if (status === 'succeeded' && !force) return false;
-
       return true;
     },
   }
@@ -288,19 +332,33 @@ const albumsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchAlbums.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
-          state.inFlightFetchContextKey = 'dashboard';
+        const onDashboard = isDashboardPathname();
+        if (onDashboard) {
+          state.dashboard.status = 'loading';
+          state.dashboard.error = null;
+          state.dashboard.inFlightFetchContextKey = 'dashboard';
         } else {
+          state.status = 'loading';
+          state.error = null;
           state.inFlightFetchContextKey = 'public';
         }
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {
-        // Устаревший HTTP-ответ не трогаем: иначе при двух запросах (public + dashboard)
-        // сброс в succeeded до завершения актуального запроса.
+        const target = action.payload.writeTarget ?? 'catalog';
         if (action.payload.staleAbort) {
-          state.inFlightFetchContextKey = null;
+          if (target === 'dashboard') {
+            state.dashboard.inFlightFetchContextKey = null;
+          } else {
+            state.inFlightFetchContextKey = null;
+          }
+          return;
+        }
+        if (target === 'dashboard') {
+          state.dashboard.data = [...action.payload.albums];
+          state.dashboard.status = 'succeeded';
+          state.dashboard.error = null;
+          state.dashboard.lastUpdated = Date.now();
+          state.dashboard.inFlightFetchContextKey = null;
           return;
         }
         state.data = [...action.payload.albums];
@@ -317,15 +375,31 @@ const albumsSlice = createSlice({
         } else if (action.error && typeof action.error === 'object' && 'message' in action.error) {
           errorText = String((action.error as { message?: string }).message || errorText);
         }
-        if (state.data.length > 0) {
-          state.status = 'succeeded';
-          state.error = null;
-          state.inFlightFetchContextKey = null;
-          return;
+
+        const dashInFlight = state.dashboard.inFlightFetchContextKey != null;
+        const catInFlight = state.inFlightFetchContextKey != null;
+
+        if (dashInFlight) {
+          state.dashboard.inFlightFetchContextKey = null;
+          if (state.dashboard.data.length > 0) {
+            state.dashboard.status = 'succeeded';
+            state.dashboard.error = null;
+          } else {
+            state.dashboard.status = 'failed';
+            state.dashboard.error = errorText;
+          }
         }
-        state.status = 'failed';
-        state.error = errorText;
-        state.inFlightFetchContextKey = null;
+
+        if (catInFlight) {
+          state.inFlightFetchContextKey = null;
+          if (state.data.length > 0) {
+            state.status = 'succeeded';
+            state.error = null;
+          } else {
+            state.status = 'failed';
+            state.error = errorText;
+          }
+        }
       });
   },
 });

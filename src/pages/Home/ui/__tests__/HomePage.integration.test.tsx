@@ -57,6 +57,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         articles: {
           status: 'succeeded',
@@ -65,6 +72,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -102,6 +116,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         articles: {
           status: 'succeeded',
@@ -110,6 +131,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -156,6 +184,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         articles: {
           status: 'succeeded',
@@ -164,6 +199,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -222,6 +264,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         articles: {
           status: 'succeeded',
@@ -230,6 +279,13 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {

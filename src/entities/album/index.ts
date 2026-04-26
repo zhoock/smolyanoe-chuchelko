@@ -4,17 +4,6 @@ export { default as WrapperAlbumCover } from './ui/WrapperAlbumCover';
 export { default as AlbumDetails } from './ui/AlbumDetails/AlbumDetails';
 
 export { albumsReducer, fetchAlbums } from './model/albumsSlice';
-export {
-  selectAlbumsState,
-  selectAlbumsStatus,
-  selectAlbumsError,
-  selectAlbumsData,
-  selectAlbumsFetchContextKey,
-  selectAlbumsInFlightFetchContextKey,
-  selectAlbumById,
-  selectAlbumsDataResolved,
-  selectPublicAlbumsDataResolved,
-  selectAlbumsResolvedForAllAlbumsPage,
-  selectAlbumByIdResolved,
-} from './model/selectors';
+/** Все селекторы из `model/selectors` (в т.ч. `selectDashboardAlbumById`) — единая точка реэкспорта. */
+export * from './model/selectors';
 export type { AlbumsState, RequestStatus } from './model/types';

@@ -7,7 +7,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
+import {
+  selectDashboardAlbumsStatus,
+  selectDashboardAlbumsError,
+  selectDashboardAlbumById,
+} from '@entities/album';
 import {
   buildTranslatedContentEditFallbackNotice,
   collectAlbumEditFallbackSources,
@@ -43,9 +47,9 @@ export default function EditTrackText({
   }>();
   const albumId = propAlbumId || paramAlbumId; // Используем prop или param
   const trackId = propTrackId || paramTrackId; // Используем prop или param
-  const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const albumsError = useAppSelector(selectAlbumsError);
-  const album = useAppSelector((state) => selectAlbumById(state, albumId));
+  const albumsStatus = useAppSelector(selectDashboardAlbumsStatus);
+  const albumsError = useAppSelector(selectDashboardAlbumsError);
+  const album = useAppSelector((state) => selectDashboardAlbumById(state, albumId));
 
   const [text, setText] = useState<string>('');
   const [authorship, setAuthorship] = useState<string>('');

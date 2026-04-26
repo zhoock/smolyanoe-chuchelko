@@ -35,6 +35,13 @@ describe('ArticlesSection integration tests', () => {
           lastUpdated: null,
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -69,6 +76,13 @@ describe('ArticlesSection integration tests', () => {
           lastUpdated: null,
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -103,6 +117,13 @@ describe('ArticlesSection integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -146,6 +167,13 @@ describe('ArticlesSection integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -186,6 +214,13 @@ describe('ArticlesSection integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -218,6 +253,13 @@ describe('ArticlesSection integration tests', () => {
           lastUpdated: Date.now(),
           lastPublicArtistSlug: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {

@@ -6,6 +6,7 @@ import {
   selectAlbumsError,
   selectAlbumsData,
   selectAlbumById,
+  selectDashboardAlbumsData,
 } from '../selectors';
 import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IAlbums } from '@models';
@@ -37,6 +38,13 @@ const createTestStore = () => {
         lastUpdated: null,
         lastPublicArtistSlug: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -72,6 +80,13 @@ describe('albumsSlice', () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle',
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       });
     });
   });
@@ -104,6 +119,7 @@ describe('albumsSlice', () => {
       expect(result.payload).toEqual({
         albums: mockAlbums,
         fetchContextKey: 'public:test-artist',
+        writeTarget: 'catalog',
       });
 
       const state = store.getState();
@@ -127,7 +143,10 @@ describe('albumsSlice', () => {
       expect(result.payload).toEqual({
         albums: mockAlbums,
         fetchContextKey: 'dashboard',
+        writeTarget: 'dashboard',
       });
+      expect(selectAlbumsData(store.getState())).toEqual([]);
+      expect(selectDashboardAlbumsData(store.getState())).toEqual(mockAlbums);
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/albums',
         expect.objectContaining({
@@ -229,15 +248,17 @@ describe('albumsSlice', () => {
 
       // Сначала завершается dashboard (второй mock), в store — альбомы владельца.
       await pDash;
-      expect(selectAlbumsData(store.getState())).toEqual([ownerAlbum]);
+      expect(selectDashboardAlbumsData(store.getState())).toEqual([ownerAlbum]);
+      expect(selectAlbumsData(store.getState())).toEqual([]);
 
-      // Потом приходит «отложенный» публичный ответ — контекст уже dashboard, payload stale.
+      // Отложенный публичный ответ записывается в каталог; кабинет не затирается.
       releaseFirst(mockSuccessResponse([publicOnly]));
       await pPublic;
 
       const final = store.getState();
-      expect(selectAlbumsData(final)).toEqual([ownerAlbum]);
-      expect(final.albums.fetchContextKey).toBe('dashboard');
+      expect(selectAlbumsData(final)).toEqual([publicOnly]);
+      expect(selectDashboardAlbumsData(final)).toEqual([ownerAlbum]);
+      expect(final.albums.fetchContextKey).toBe('public:test-artist');
     });
 
     test('не должен запускать загрузку, если данные уже загружены', async () => {
@@ -295,6 +316,7 @@ describe('albumsSlice', () => {
       expect(result.payload).toEqual({
         albums: [],
         fetchContextKey: 'public:test-artist',
+        writeTarget: 'catalog',
       });
 
       const state = store.getState();
@@ -483,6 +505,13 @@ describe('albumsSlice', () => {
         lastUpdated: 1234567890,
         fetchContextKey: 'public:test-artist',
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       },
       lang: { current: 'en' as SupportedLang },
       currentArtist: { publicSlug: null as string | null },

@@ -15,10 +15,21 @@ export interface AlbumsState {
   /** Какой контекст запроса соответствует `data` (см. albumsLoader + fetchAlbums). */
   fetchContextKey: string | null;
   /**
-   * Какой контекст у текущего in-flight `fetchAlbums` (снимок `window` в pending),
-   * чтобы фон (Home под модалкой) не мигал скелетоном, пока дашборд качает тот же слайс.
+   * Какой контекст у текущего in-flight публичного каталога (`data`),
+   * чтобы фон не мигал, пока грузится только ветка кабинета.
    */
   inFlightFetchContextKey: 'dashboard' | 'public' | null;
+  /**
+   * Альбомы владельца для `/dashboard*`: не пересекаются с публичным каталогом в `data`
+   * (модальный кабинет поверх страницы артиста).
+   */
+  dashboard: {
+    status: RequestStatus;
+    error: string | null;
+    data: IAlbums[];
+    lastUpdated: number | null;
+    inFlightFetchContextKey: 'dashboard' | null;
+  };
 }
 
 export interface FetchAlbumsFulfilledPayload {
@@ -26,4 +37,6 @@ export interface FetchAlbumsFulfilledPayload {
   fetchContextKey: string;
   /** Ответ устарел: маршрут/контекст сменился до завершения запроса — не перезаписывать store. */
   staleAbort?: boolean;
+  /** Куда писать результат: публичный каталог или кабинет. */
+  writeTarget?: 'catalog' | 'dashboard';
 }

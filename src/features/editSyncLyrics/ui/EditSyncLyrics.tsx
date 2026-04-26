@@ -14,7 +14,11 @@ import { playerActions, playerSelectors } from '@features/player';
 import { audioController } from '@features/player/model/lib/audioController';
 import type { SyncedLyricsLine } from '@/models';
 import { AlbumCover } from '@entities/album';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumById } from '@entities/album';
+import {
+  selectDashboardAlbumsStatus,
+  selectDashboardAlbumsError,
+  selectDashboardAlbumById,
+} from '@entities/album';
 import {
   buildTranslatedContentEditFallbackNotice,
   collectAlbumEditFallbackSources,
@@ -53,9 +57,9 @@ export default function EditSyncLyrics({
   const location = useLocation();
   const albumId = propAlbumId || paramAlbumId; // Используем prop или param
   const trackId = propTrackId || paramTrackId; // Используем prop или param
-  const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const albumsError = useAppSelector(selectAlbumsError);
-  const album = useAppSelector((state) => selectAlbumById(state, albumId));
+  const albumsStatus = useAppSelector(selectDashboardAlbumsStatus);
+  const albumsError = useAppSelector(selectDashboardAlbumsError);
+  const album = useAppSelector((state) => selectDashboardAlbumById(state, albumId));
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
     variant: 'authenticated',
   });

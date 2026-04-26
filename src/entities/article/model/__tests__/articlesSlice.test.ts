@@ -36,6 +36,13 @@ const createTestStore = () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       }),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -68,6 +75,13 @@ describe('articlesSlice', () => {
         lastUpdated: null,
         lastPublicArtistSlug: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle',
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       });
     });
   });
@@ -128,6 +142,10 @@ describe('articlesSlice', () => {
       expect(result.type).toBe('articles/fetchMerged/rejected');
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(String(mockFetch.mock.calls[0][0])).toContain('articles-api');
+
+      const state = store.getState();
+      expect(state.articles.dashboard.status).toBe('failed');
+      expect(selectArticlesStatus(state)).toBe('idle');
     });
 
     test('на главной без artist не парсит HTML fallback как JSON', async () => {
@@ -371,6 +389,13 @@ describe('articlesSlice', () => {
         lastUpdated: 1234567890,
         lastPublicArtistSlug: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       },
       currentArtist: { publicSlug: null as string | null },
       lang: { current: 'en' as SupportedLang },
@@ -383,6 +408,13 @@ describe('articlesSlice', () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        dashboard: {
+          status: 'idle' as const,
+          error: null,
+          data: [],
+          lastUpdated: null,
+          inFlightFetchContextKey: null,
+        },
       },
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

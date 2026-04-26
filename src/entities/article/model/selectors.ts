@@ -13,6 +13,31 @@ import type { ArticlesState } from './types';
 
 export const selectArticlesState = (state: RootState): ArticlesState => state.articles;
 
+export const selectDashboardArticlesState = createSelector(
+  [selectArticlesState],
+  (s) => s.dashboard
+);
+
+export const selectDashboardArticlesStatus = createSelector(
+  [selectDashboardArticlesState],
+  (d) => d.status
+);
+
+export const selectDashboardArticlesError = createSelector(
+  [selectDashboardArticlesState],
+  (d) => d.error
+);
+
+export const selectDashboardArticlesData = createSelector(
+  [selectDashboardArticlesState],
+  (d): IArticles[] => d.data
+);
+
+export const selectDashboardArticlesDataResolved = createSelector(
+  [selectDashboardArticlesData, selectCurrentLang],
+  (articles, lang): IArticles[] => articles.map((a) => resolveArticleForDisplay(a, lang))
+);
+
 export const selectArticlesStatus = createSelector([selectArticlesState], (s) => s.status);
 
 export const selectArticlesInFlightFetchContextKey = createSelector(

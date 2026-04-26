@@ -6,7 +6,7 @@ import { AlertModal } from '@shared/ui/alertModal';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { selectAlbumsData, fetchAlbums } from '@entities/album';
+import { selectDashboardAlbumsData, fetchAlbums } from '@entities/album';
 import { useLang } from '@app/providers/lang';
 import { getToken, getUser } from '@shared/lib/auth';
 import { getUserImageUrl } from '@shared/api/albums';
@@ -91,7 +91,7 @@ export function EditAlbumModal({
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   // Получаем альбомы для текущего языка сайта
-  const albumsFromStore = useAppSelector(selectAlbumsData);
+  const albumsFromStore = useAppSelector(selectDashboardAlbumsData);
 
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);

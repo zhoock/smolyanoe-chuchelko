@@ -47,6 +47,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: null,
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -81,6 +88,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: null,
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -132,6 +146,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -171,6 +192,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -214,6 +242,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -254,6 +289,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {
@@ -286,6 +328,13 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
         },
         uiDictionary: {
           en: {

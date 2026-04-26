@@ -17,6 +17,13 @@ const initialState: ArticlesState = {
   lastUpdated: null,
   lastPublicArtistSlug: null,
   inFlightFetchContextKey: null,
+  dashboard: {
+    status: 'idle',
+    error: null,
+    data: [],
+    lastUpdated: null,
+    inFlightFetchContextKey: null,
+  },
 };
 
 export type FetchArticlesArg = {
@@ -28,6 +35,8 @@ export type FetchArticlesArg = {
 export type FetchArticlesResult = {
   articles: IArticles[];
   lastPublicArtistSlug: string | null;
+  writeTarget?: 'catalog' | 'dashboard';
+  staleAbort?: boolean;
 };
 
 function resolvePublicArtistSlugForFetch(arg: FetchArticlesArg, getState: () => RootState): string {
@@ -95,6 +104,7 @@ export const fetchArticles = createAsyncThunk<
       const slugMeta = (rows: IArticles[]): FetchArticlesResult => ({
         articles: rows,
         lastPublicArtistSlug: isDashboardRoute ? null : resolvedSlug,
+        writeTarget: isDashboardRoute ? 'dashboard' : 'catalog',
       });
 
       // Публичный каталог: без artist не дергаем API (инвариант), только статический fallback.
@@ -195,19 +205,16 @@ export const fetchArticles = createAsyncThunk<
         return true;
       }
       const state = getState();
-      if (state.articles.status === 'loading') {
-        return false;
-      }
-
       const isDashboard = isDashboardPathname();
       if (isDashboard) {
-        if (state.articles.status === 'succeeded') {
-          // Только `null` = данные владельца; иначе в slice ещё публичные статьи (фон под модалкой).
-          if (state.articles.lastPublicArtistSlug == null) {
-            return false;
-          }
-        }
+        const d = state.articles.dashboard;
+        if (d.status === 'loading') return false;
+        if (d.status === 'succeeded') return false;
         return true;
+      }
+
+      if (state.articles.status === 'loading') {
+        return false;
       }
 
       const slug = resolvePublicArtistSlugForFetch(arg, getState);
@@ -230,16 +237,37 @@ const articlesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchArticles.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
-          state.inFlightFetchContextKey = 'dashboard';
+        const onDashboard = isDashboardPathname();
+        if (onDashboard) {
+          state.dashboard.status = 'loading';
+          state.dashboard.error = null;
+          state.dashboard.inFlightFetchContextKey = 'dashboard';
         } else {
+          state.status = 'loading';
+          state.error = null;
           state.inFlightFetchContextKey = 'public';
         }
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
+        if (action.payload.staleAbort) {
+          const target = action.payload.writeTarget ?? 'catalog';
+          if (target === 'dashboard') {
+            state.dashboard.inFlightFetchContextKey = null;
+          } else {
+            state.inFlightFetchContextKey = null;
+          }
+          return;
+        }
         const { articles, lastPublicArtistSlug } = action.payload;
+        const target = action.payload.writeTarget ?? 'catalog';
+        if (target === 'dashboard') {
+          state.dashboard.data = Array.isArray(articles) ? [...articles] : [];
+          state.dashboard.status = 'succeeded';
+          state.dashboard.error = null;
+          state.dashboard.lastUpdated = Date.now();
+          state.dashboard.inFlightFetchContextKey = null;
+          return;
+        }
         state.data = Array.isArray(articles) ? [...articles] : [];
         state.status = 'succeeded';
         state.error = null;
@@ -248,8 +276,6 @@ const articlesSlice = createSlice({
         state.inFlightFetchContextKey = null;
       })
       .addCase(fetchArticles.rejected, (state, action) => {
-        state.inFlightFetchContextKey = null;
-        state.status = 'failed';
         let errorText = 'Failed to fetch articles';
         if (action.payload) {
           errorText = action.payload;
@@ -264,7 +290,31 @@ const articlesSlice = createSlice({
             errorText = (action.error as { message?: string }).message || errorText;
           }
         }
-        state.error = errorText;
+
+        const dashInFlight = state.dashboard.inFlightFetchContextKey != null;
+        const catInFlight = state.inFlightFetchContextKey != null;
+
+        if (dashInFlight) {
+          state.dashboard.inFlightFetchContextKey = null;
+          if (state.dashboard.data.length > 0) {
+            state.dashboard.status = 'succeeded';
+            state.dashboard.error = null;
+          } else {
+            state.dashboard.status = 'failed';
+            state.dashboard.error = errorText;
+          }
+        }
+
+        if (catInFlight) {
+          state.inFlightFetchContextKey = null;
+          if (state.data.length > 0) {
+            state.status = 'succeeded';
+            state.error = null;
+          } else {
+            state.status = 'failed';
+            state.error = errorText;
+          }
+        }
       });
   },
 });

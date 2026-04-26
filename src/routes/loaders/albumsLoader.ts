@@ -108,49 +108,81 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
     loaderPathname.startsWith('/albums') ||
     loaderPathname.startsWith('/stems')
   ) {
-    const desiredAlbumsFetchKey = requestIsDashboard
-      ? 'dashboard'
-      : publicArtistFromUrl
+    if (requestIsDashboard) {
+      const dash = state.albums.dashboard;
+      const status = dash.status;
+      const albumsCacheValid = status === 'succeeded';
+
+      if (albumsCacheValid) {
+        templateA = Promise.resolve(dash.data);
+      } else if (status === 'loading') {
+        templateA = Promise.resolve(dash.data.length > 0 ? dash.data : []);
+      } else {
+        const fetchThunkPromise = store.dispatch(fetchAlbums({ force: status === 'failed' }));
+
+        const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
+
+        if (signal.aborted) {
+          fetchThunkPromise.abort();
+          templateA = createNeverResolvingPromise();
+        } else {
+          const abortHandler = () => {
+            fetchThunkPromise.abort();
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+
+          templateA = fetchThunkPromise
+            .unwrap()
+            .then((p) => p.albums)
+            .catch((error) => {
+              if (isAbortLikeOrConditionSkipError(error)) {
+                return createNeverResolvingPromise();
+              }
+              throw error;
+            });
+        }
+      }
+    } else {
+      const desiredAlbumsFetchKey = publicArtistFromUrl
         ? `public:${publicArtistFromUrl}`
         : 'public:no-slug';
 
-    const status = selectAlbumsStatus(state);
-    const albumsFetchContextKey = selectAlbumsFetchContextKey(state);
-    const albumsCacheValid =
-      status === 'succeeded' && albumsFetchContextKey === desiredAlbumsFetchKey;
+      const status = selectAlbumsStatus(state);
+      const albumsFetchContextKey = selectAlbumsFetchContextKey(state);
+      const albumsCacheValid =
+        status === 'succeeded' && albumsFetchContextKey === desiredAlbumsFetchKey;
 
-    if (albumsCacheValid) {
-      templateA = Promise.resolve(selectAlbumsData(state));
-    } else if (status === 'loading') {
-      // Данные уже загружаются - возвращаем текущие данные или пустой массив
-      // Это предотвращает зацикливание, когда loader вызывается повторно во время загрузки
-      const currentData = selectAlbumsData(state);
-      templateA = Promise.resolve(currentData || []);
-    } else {
-      const fetchThunkPromise = store.dispatch(
-        fetchAlbums({ force: status === 'succeeded' || status === 'failed' })
-      );
-
-      const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
-
-      if (signal.aborted) {
-        fetchThunkPromise.abort();
-        templateA = createNeverResolvingPromise();
+      if (albumsCacheValid) {
+        templateA = Promise.resolve(selectAlbumsData(state));
+      } else if (status === 'loading') {
+        const currentData = selectAlbumsData(state);
+        templateA = Promise.resolve(currentData || []);
       } else {
-        const abortHandler = () => {
-          fetchThunkPromise.abort();
-        };
-        signal.addEventListener('abort', abortHandler, { once: true });
+        const fetchThunkPromise = store.dispatch(
+          fetchAlbums({ force: status === 'succeeded' || status === 'failed' })
+        );
 
-        templateA = fetchThunkPromise
-          .unwrap()
-          .then((p) => p.albums)
-          .catch((error) => {
-            if (isAbortLikeOrConditionSkipError(error)) {
-              return createNeverResolvingPromise();
-            }
-            throw error;
-          });
+        const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
+
+        if (signal.aborted) {
+          fetchThunkPromise.abort();
+          templateA = createNeverResolvingPromise();
+        } else {
+          const abortHandler = () => {
+            fetchThunkPromise.abort();
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+
+          templateA = fetchThunkPromise
+            .unwrap()
+            .then((p) => p.albums)
+            .catch((error) => {
+              if (isAbortLikeOrConditionSkipError(error)) {
+                return createNeverResolvingPromise();
+              }
+              throw error;
+            });
+        }
       }
     }
   }
@@ -158,43 +190,84 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   // Статьи нужны на "/" (главная) и "/articles*"
   if (loaderPathname === '/' || loaderPathname.startsWith('/articles')) {
     const publicArtistSlug = publicArtistFromUrl;
-    const articlesState = selectArticlesState(state);
-    const status = articlesState.status;
-    // На дашборде кэш «по ?artist= с фона» невалиден: `lastPublicArtistSlug: null` = список владельца.
-    const cacheOk = requestIsDashboard
-      ? status === 'succeeded' && articlesState.lastPublicArtistSlug == null
-      : status === 'succeeded' && (articlesState.lastPublicArtistSlug ?? '') === publicArtistSlug;
 
-    if (cacheOk) {
-      templateB = Promise.resolve(selectArticlesData(state));
-    } else {
-      const fetchThunkPromise = store.dispatch(
-        fetchArticles({
-          force: status === 'loading',
-          publicArtistSlug,
-        })
-      );
+    if (requestIsDashboard) {
+      const articlesState = selectArticlesState(state);
+      const dash = articlesState.dashboard;
+      const status = dash.status;
+      const cacheOk = status === 'succeeded';
 
-      const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
-
-      if (signal.aborted) {
-        fetchThunkPromise.abort();
-        templateB = createNeverResolvingPromise();
+      if (cacheOk) {
+        templateB = Promise.resolve(dash.data);
+      } else if (status === 'loading') {
+        templateB = Promise.resolve(dash.data.length > 0 ? dash.data : []);
       } else {
-        const abortHandler = () => {
-          fetchThunkPromise.abort();
-        };
-        signal.addEventListener('abort', abortHandler, { once: true });
+        const fetchThunkPromise = store.dispatch(
+          fetchArticles({
+            force: status === 'failed',
+            publicArtistSlug,
+          })
+        );
 
-        templateB = fetchThunkPromise
-          .unwrap()
-          .then((r) => r.articles)
-          .catch((error) => {
-            if (isAbortLikeOrConditionSkipError(error)) {
-              return createNeverResolvingPromise();
-            }
-            throw error;
-          });
+        const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
+
+        if (signal.aborted) {
+          fetchThunkPromise.abort();
+          templateB = createNeverResolvingPromise();
+        } else {
+          const abortHandler = () => {
+            fetchThunkPromise.abort();
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+
+          templateB = fetchThunkPromise
+            .unwrap()
+            .then((r) => r.articles)
+            .catch((error) => {
+              if (isAbortLikeOrConditionSkipError(error)) {
+                return createNeverResolvingPromise();
+              }
+              throw error;
+            });
+        }
+      }
+    } else {
+      const articlesState = selectArticlesState(state);
+      const status = articlesState.status;
+      const cacheOk =
+        status === 'succeeded' && (articlesState.lastPublicArtistSlug ?? '') === publicArtistSlug;
+
+      if (cacheOk) {
+        templateB = Promise.resolve(selectArticlesData(state));
+      } else {
+        const fetchThunkPromise = store.dispatch(
+          fetchArticles({
+            force: status === 'loading',
+            publicArtistSlug,
+          })
+        );
+
+        const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
+
+        if (signal.aborted) {
+          fetchThunkPromise.abort();
+          templateB = createNeverResolvingPromise();
+        } else {
+          const abortHandler = () => {
+            fetchThunkPromise.abort();
+          };
+          signal.addEventListener('abort', abortHandler, { once: true });
+
+          templateB = fetchThunkPromise
+            .unwrap()
+            .then((r) => r.articles)
+            .catch((error) => {
+              if (isAbortLikeOrConditionSkipError(error)) {
+                return createNeverResolvingPromise();
+              }
+              throw error;
+            });
+        }
       }
     }
   }

@@ -13,9 +13,9 @@ import { ErrorMessage } from '@shared/ui/error-message';
 import {
   AlbumCover,
   fetchAlbums,
-  selectAlbumsStatus,
-  selectAlbumsError,
-  selectAlbumByIdResolved,
+  selectDashboardAlbumsStatus,
+  selectDashboardAlbumsError,
+  selectDashboardAlbumByIdResolved,
 } from '@entities/album';
 import type { TracksProps } from '@models';
 import { getTrackStatus, type TrackStatus } from '@widgets/dashboard/lib/trackStatus';
@@ -47,9 +47,9 @@ export default function DashboardAlbum({
       variant: 'authenticated',
     }
   );
-  const status = useAppSelector(selectAlbumsStatus);
-  const error = useAppSelector(selectAlbumsError);
-  const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
+  const status = useAppSelector(selectDashboardAlbumsStatus);
+  const error = useAppSelector(selectDashboardAlbumsError);
+  const album = useAppSelector((state) => selectDashboardAlbumByIdResolved(state, albumId));
   const [trackStatuses, setTrackStatuses] = useState<Map<string | number, TrackStatus>>(new Map());
 
   // Создаем стабильный ключ для треков, чтобы избежать бесконечного цикла

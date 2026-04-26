@@ -13,9 +13,9 @@ import { ErrorMessage } from '@shared/ui/error-message';
 import {
   AlbumCover,
   fetchAlbums,
-  selectAlbumsStatus,
-  selectAlbumsError,
-  selectAlbumsDataResolved,
+  selectDashboardAlbumsStatus,
+  selectDashboardAlbumsError,
+  selectDashboardAlbumsDataResolved,
 } from '@entities/album';
 import type { IAlbums } from '@models';
 import {
@@ -104,9 +104,9 @@ export default function DashboardAlbumsOverview({
       variant: 'authenticated',
     }
   );
-  const status = useAppSelector(selectAlbumsStatus);
-  const error = useAppSelector(selectAlbumsError);
-  const albums = useAppSelector(selectAlbumsDataResolved);
+  const status = useAppSelector(selectDashboardAlbumsStatus);
+  const error = useAppSelector(selectDashboardAlbumsError);
+  const albums = useAppSelector(selectDashboardAlbumsDataResolved);
   const [albumsStats, setAlbumsStats] = useState<Map<string, AlbumStats>>(new Map());
 
   // Создаем стабильный ключ для массива альбомов, чтобы избежать бесконечного цикла
