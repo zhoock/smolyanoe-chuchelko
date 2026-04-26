@@ -9,6 +9,8 @@ dialog {
     @include dashboard-modal-shell;
 
     &__card {
+      overflow-x: hidden;
+
       @include dashboard-modal-panel;
     }
 

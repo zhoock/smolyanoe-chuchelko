@@ -212,6 +212,16 @@ export const fetchAlbums = createAsyncThunk<
           }
         }
 
+        const token = getToken();
+
+        // Кабинет без JWT: иначе GET /api/albums без ?artist= → 400 на бэкенде.
+        if (isDashboardRoute && !token) {
+          if (dashboardStale()) {
+            return staleSnapshotPayload(getState, 'dashboard');
+          }
+          return wrapAlbumsResult([], 'dashboard', 'dashboard');
+        }
+
         // Публичный каталог: без public slug API не вызываем (нужен контекст артиста).
         if (!isDashboardRoute && !publicSlug) {
           if (catalogStale()) {
@@ -220,11 +230,10 @@ export const fetchAlbums = createAsyncThunk<
           return wrapAlbumsResult([], requestFetchKey, 'catalog');
         }
 
-        const token = getToken();
         const headers: Record<string, string> = {
           'Cache-Control': 'no-cache',
         };
-        if (isDashboardRoute && token) {
+        if (token) {
           headers.Authorization = `Bearer ${token}`;
         }
 

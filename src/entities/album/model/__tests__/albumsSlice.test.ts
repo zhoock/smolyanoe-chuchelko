@@ -158,6 +158,40 @@ describe('albumsSlice', () => {
       );
     });
 
+    test('на dashboard без токена не дергает API (иначе 400 без ?artist=)', async () => {
+      window.history.pushState({}, '', '/dashboard-new/albums');
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toEqual({
+        albums: [],
+        fetchContextKey: 'dashboard',
+        writeTarget: 'dashboard',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(selectDashboardAlbumsData(store.getState())).toEqual([]);
+    });
+
+    test('на публичной странице с токеном передаёт Authorization (бэкенд принимает JWT без ?artist=)', async () => {
+      window.localStorage.setItem('auth_token', 'session-token');
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+      const store = createTestStore();
+      await (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/albums?artist=test-artist',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer session-token',
+          }),
+        })
+      );
+    });
+
     test('должен обработать ошибку загрузки', async () => {
       const errorMessage = 'Network error';
       mockFetch.mockRejectedValueOnce(new Error(errorMessage));
