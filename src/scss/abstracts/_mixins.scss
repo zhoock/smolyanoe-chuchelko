@@ -1,3 +1,4 @@
+/* stylelint-disable order/properties-order */
 // src/scss/abstracts/_mixins.scss
 
 // Преобразуем CSS-переменные в SCSS-переменные
@@ -23,10 +24,12 @@ $ms-4: 123.363px; // 6.854rem;
   $padding: var(--ms-01) var(--ms-0),
   $border: 0,
   $border-radius: var(--ms-01),
-  $disabled-background: var(--button-disabled-background, #9b9b9a)
+  $disabled-background: var(--button-disabled-background, #9b9b9a),
+  $font-size: var(--ms-0)
 ) {
   margin: $margin;
   padding: $padding;
+  font-size: $font-size;
   color: $color;
   background: $background;
   border: $border;
@@ -60,7 +63,8 @@ $ms-4: 123.363px; // 6.854rem;
 @mixin dashboard-button(
   $margin: 0,
   $padding: var(--ms-01) var(--ms-0),
-  $border-radius: var(--ms-01)
+  $border-radius: var(--ms-01),
+  $font-size: var(--dashboard-font-size)
 ) {
   @include button-variant(
     $color: var(--dashboard-button-cancel-text),
@@ -69,7 +73,8 @@ $ms-4: 123.363px; // 6.854rem;
     $hover-background: var(--dashboard-button-cancel-hover),
     $margin: $margin,
     $padding: $padding,
-    $border-radius: $border-radius
+    $border-radius: $border-radius,
+    $font-size: $font-size
   );
 }
 
@@ -80,7 +85,8 @@ $ms-4: 123.363px; // 6.854rem;
     $background: rgb(139 69 19 / 30%),
     $hover-color: var(--dashboard-button-cancel-text),
     $hover-background: rgb(220 38 38 / 30%),
-    $margin: 0
+    $margin: 0,
+    $font-size: var(--dashboard-font-size)
   );
 }
 

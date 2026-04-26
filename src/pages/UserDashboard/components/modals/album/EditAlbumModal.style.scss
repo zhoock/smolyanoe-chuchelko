@@ -202,16 +202,7 @@ dialog {
     }
 
     &__art-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--dashboard-card-border);
-
-      @include dashboard-button(
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button;
     }
 
     &__art-meta {

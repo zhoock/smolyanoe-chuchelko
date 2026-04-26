@@ -239,7 +239,7 @@
     &--checkout {
       border: 1px solid var(--dashboard-card-border);
 
-      @include dashboard-button($padding: var(--ms-01) var(--ms-1));
+      @include dashboard-button;
 
       &:hover {
         background: var(--dashboard-hover-bg);

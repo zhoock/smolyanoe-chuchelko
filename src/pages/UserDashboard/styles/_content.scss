@@ -327,20 +327,7 @@ dialog {
     }
 
     &__article-cover-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-
-      @include button-variant(
-        $color: var(--dashboard-text-primary),
-        $background: var(--dashboard-button-bg),
-        $hover-color: var(--dashboard-text-primary),
-        $hover-background: var(--dashboard-button-primary-bg),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 0,
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button;
     }
 
     &__article-cover-status {

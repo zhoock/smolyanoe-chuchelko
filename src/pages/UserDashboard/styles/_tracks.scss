@@ -449,19 +449,9 @@ dialog {
     }
 
     &__lyrics-action-button {
-      font-size: var(--ms-01);
       white-space: nowrap;
 
-      @include button-variant(
-        $color: var(--dashboard-button-cancel-text),
-        $background: var(--dashboard-button-cancel-bg),
-        $hover-color: var(--dashboard-button-cancel-text),
-        $hover-background: var(--dashboard-button-cancel-hover),
-        $margin: 0,
-        $padding: var(--ms-02) var(--ms-01),
-        $border: 0,
-        $border-radius: var(--ms-02)
-      );
+      @include dashboard-button;
     }
   }
 }

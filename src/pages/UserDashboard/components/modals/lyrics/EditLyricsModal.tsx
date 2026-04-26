@@ -137,8 +137,7 @@ export function EditLyricsModal({
                 inputMode="text"
                 aria-autocomplete="none"
                 placeholder={
-                  ui?.dashboard?.authorshipPlaceholder ??
-                  'For example: Yaroslav Zhuk — words and music'
+                  ui?.dashboard?.authorshipPlaceholder ?? 'For example: John Doe — words and music'
                 }
                 value={authorship}
                 onChange={(e) => setAuthorship(e.target.value)}

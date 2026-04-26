@@ -79,7 +79,9 @@ export function AddLyricsModal({
           />
           <div className="add-lyrics-modal__divider"></div>
           <div className="add-lyrics-modal__field">
-            <label className="add-lyrics-modal__label">Авторство:</label>
+            <label className="add-lyrics-modal__label">
+              {ui?.dashboard?.authorship ?? 'Written by: '}
+            </label>
             <input
               type="text"
               className="add-lyrics-modal__input"
@@ -94,7 +96,9 @@ export function AddLyricsModal({
               data-form-type="other"
               inputMode="text"
               aria-autocomplete="none"
-              placeholder="Например: Ярослав Жук — слова и музыка"
+              placeholder={
+                ui?.dashboard?.authorshipPlaceholder ?? 'For example: John Doe — words and music'
+              }
               value={authorship}
               onChange={(e) => setAuthorship(e.target.value)}
               onFocus={(e) => e.stopPropagation()}
