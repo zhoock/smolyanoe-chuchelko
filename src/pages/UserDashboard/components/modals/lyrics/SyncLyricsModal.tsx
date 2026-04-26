@@ -34,6 +34,8 @@ interface SyncLyricsModalProps {
   mediaOwnerUserId?: string;
   /** Длительность из метаданных трека (сек), если audio.duration ещё NaN */
   trackDurationSeconds?: number;
+  /** Текст из дашборда, если в БД ещё нет строки (новые треки, гонка после сохранения). */
+  initialLyricsText?: string;
   authorship?: string; // fallback
   onClose: () => void;
   onSave?: () => void;
@@ -100,6 +102,7 @@ export function SyncLyricsModal({
   trackSrc,
   mediaOwnerUserId,
   trackDurationSeconds,
+  initialLyricsText,
   authorship: propAuthorship,
   onClose,
   onSave,
@@ -239,7 +242,9 @@ export function SyncLyricsModal({
           console.error('[SyncLyricsModal] Failed to load text from DB:', error);
           return null;
         });
-        const textToUse = rawText !== null ? rawText : '';
+        // null = нет записи / ошибка — берём текст из дашборда (новый трек, только что добавленный текст).
+        // Пустая строка из БД — явно сохранённый пустой текст, не подменяем пропом.
+        const textToUse = rawText !== null ? rawText : (initialLyricsText ?? '');
 
         if (!isRequestValid()) return;
 
@@ -411,7 +416,7 @@ export function SyncLyricsModal({
       requestIdRef.current += 1;
     };
     // ❗ duration НЕ включаем в deps: иначе при загрузке метаданных будет повторная загрузка текста
-  }, [isOpen, albumId, trackId, lang, propAuthorship]);
+  }, [isOpen, albumId, trackId, lang, propAuthorship, initialLyricsText]);
 
   const displayLines = useMemo((): DisplayLine[] => {
     const auth = trackAuthorship.trim();
