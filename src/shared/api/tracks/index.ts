@@ -114,10 +114,24 @@ export async function uploadTracks(
       typeof json === 'object' &&
       json !== null &&
       'success' in json &&
-      json.success === true &&
+      (json as { success: unknown }).success === true &&
       'data' in json
     ) {
-      return json as TrackUploadResponse;
+      let data = (json as { data: unknown }).data;
+      // Старый баг бэкенда: data был { success: true, data: [...] } вместо массива.
+      if (
+        data &&
+        typeof data === 'object' &&
+        !Array.isArray(data) &&
+        'data' in (data as object) &&
+        Array.isArray((data as { data: unknown }).data)
+      ) {
+        data = (data as { data: TrackUploadResponse['data'] }).data;
+      }
+      if (!Array.isArray(data)) {
+        return { success: false, error: 'Invalid response shape from upload-tracks' };
+      }
+      return { success: true, data };
     }
 
     return { success: false, error: 'Invalid response shape from upload-tracks' };

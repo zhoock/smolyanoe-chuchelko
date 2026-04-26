@@ -258,6 +258,8 @@ export interface IInterface {
     newPost: string;
     dropTracksHere: string;
     chooseFiles: string;
+    /** Прогресс загрузки треков в альбом (перед процентом). */
+    uploadingTracks: string;
     lyrics: string;
     track: string;
     status: string;
@@ -294,6 +296,8 @@ export interface IInterface {
     confirmAction: string;
     error: string;
     success?: string;
+    /** Префикс сообщения «загружено N трек(ов)»; слово «трек» подставляется в коде с учётом числа. */
+    uploadedTracksSuccessPrefix?: string;
     errorDeletingArticle: string;
     russian: string;
     english: string;

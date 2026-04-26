@@ -289,13 +289,8 @@ export const handler: Handler = async (
       );
     }
 
-    return createSuccessResponse(
-      {
-        success: true,
-        data: uploadedTracks,
-      },
-      200
-    );
+    // createSuccessResponse уже кладёт payload в { success, data } — не дублировать вложенность.
+    return createSuccessResponse(uploadedTracks, 200);
   } catch (error) {
     console.error('❌ Error in upload-tracks function:', {
       error: error instanceof Error ? error.message : String(error),

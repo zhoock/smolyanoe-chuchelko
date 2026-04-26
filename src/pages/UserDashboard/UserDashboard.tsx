@@ -83,7 +83,30 @@ import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
+import type { SupportedLang } from '@shared/model/lang';
 import './UserDashboard.style.scss';
+
+/** Сообщение об успешной загрузке треков: RU — формы 1 трек / 2 трека / 5 треков. */
+function formatUploadedTracksSuccessMessage(
+  count: number,
+  lang: SupportedLang,
+  ui: IInterface | null | undefined
+): string {
+  if (lang === 'ru') {
+    const n = count % 100;
+    const n1 = count % 10;
+    let form = 'треков';
+    if (n < 11 || n > 14) {
+      if (n1 === 1) form = 'трек';
+      else if (n1 >= 2 && n1 <= 4) form = 'трека';
+    }
+    const prefix = ui?.dashboard?.uploadedTracksSuccessPrefix ?? 'Успешно загружено';
+    return `${prefix} ${count} ${form}`;
+  }
+  const prefix = ui?.dashboard?.uploadedTracksSuccessPrefix ?? 'Successfully uploaded';
+  const unit = count === 1 ? 'track' : 'tracks';
+  return `${prefix} ${count} ${unit}`;
+}
 
 /** В кабинете список альбомов всегда принадлежит сессии; бэкенд иногда не присылает `userId`. */
 function withDashboardAlbumOwner(
@@ -1717,7 +1740,8 @@ function UserDashboard() {
       const result = await uploadTracks(albumId, lang, tracksData);
 
       if (result.success && result.data) {
-        const uploadedCount = Array.isArray(result.data) ? result.data.length : 0;
+        const fromResponse = Array.isArray(result.data) ? result.data.length : 0;
+        const uploadedCount = fromResponse > 0 ? fromResponse : tracksData.length;
 
         // Обновляем прогресс: завершение (100%)
         setUploadProgress((prev) => ({ ...prev, [albumId]: 100 }));
@@ -1766,7 +1790,7 @@ function UserDashboard() {
         setAlertModal({
           isOpen: true,
           title: ui?.dashboard?.success ?? 'Success',
-          message: `Successfully uploaded ${uploadedCount} track(s)`,
+          message: formatUploadedTracksSuccessMessage(uploadedCount, lang, ui),
           variant: 'success',
         });
       } else {
@@ -2428,7 +2452,8 @@ function UserDashboard() {
                                             {isUploadingTracks[album.id] ? (
                                               <div className="user-dashboard__track-upload-progress">
                                                 <div className="user-dashboard__track-upload-text">
-                                                  Uploading tracks...{' '}
+                                                  {ui?.dashboard?.uploadingTracks ??
+                                                    'Uploading tracks…'}{' '}
                                                   {Math.round(uploadProgress[album.id] || 0)}%
                                                 </div>
                                                 <div className="user-dashboard__track-upload-progress-bar">
@@ -3194,6 +3219,7 @@ function UserDashboard() {
           trackSrc={syncLyricsModal.trackSrc}
           mediaOwnerUserId={syncLyricsModal.mediaOwnerUserId}
           trackDurationSeconds={syncLyricsModal.trackDurationSeconds}
+          initialLyricsText={syncLyricsModal.lyricsText}
           authorship={syncLyricsModal.authorship}
           onClose={() => setSyncLyricsModal(null)}
           onSave={async () => {
