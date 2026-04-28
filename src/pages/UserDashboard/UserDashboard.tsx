@@ -2334,11 +2334,18 @@ function UserDashboard() {
                       hidden={activeTab !== 'mixer'}
                       aria-hidden={activeTab !== 'mixer'}
                     >
-                      <MixerAdmin
-                        ui={ui || undefined}
-                        userId={user?.id || undefined}
-                        albums={albumsData}
-                      />
+                      <>
+                        <h3 className="user-dashboard__section-title">
+                          {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
+                        </h3>
+                        <div className="user-dashboard__section">
+                          <MixerAdmin
+                            ui={ui || undefined}
+                            userId={user?.id || undefined}
+                            albums={albumsData}
+                          />
+                        </div>
+                      </>
                     </div>
                     <div
                       className="user-dashboard__tab-panel"
@@ -2578,35 +2585,37 @@ function UserDashboard() {
                                                     className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions"
                                                     data-label={ui?.dashboard?.actions ?? 'Actions'}
                                                   >
-                                                    {(() => {
-                                                      // Вычисляем hasSyncedLyrics для логирования
-                                                      const hasSyncedLyrics =
-                                                        Array.isArray(track.syncedLyrics) &&
-                                                        track.syncedLyrics.length > 0 &&
-                                                        track.syncedLyrics.some(
-                                                          (line) => line.startTime > 0
+                                                    <div className="user-dashboard__lyrics-actions-row">
+                                                      {(() => {
+                                                        // Вычисляем hasSyncedLyrics для логирования
+                                                        const hasSyncedLyrics =
+                                                          Array.isArray(track.syncedLyrics) &&
+                                                          track.syncedLyrics.length > 0 &&
+                                                          track.syncedLyrics.some(
+                                                            (line) => line.startTime > 0
+                                                          );
+                                                        return getLyricsActions(
+                                                          track.lyricsStatus,
+                                                          hasSyncedLyrics
                                                         );
-                                                      return getLyricsActions(
-                                                        track.lyricsStatus,
-                                                        hasSyncedLyrics
-                                                      );
-                                                    })().map((action, idx) => (
-                                                      <button
-                                                        key={idx}
-                                                        type="button"
-                                                        className="user-dashboard__lyrics-action-button"
-                                                        onClick={() =>
-                                                          handleLyricsAction(
-                                                            action.action,
-                                                            album.id,
-                                                            track.id,
-                                                            track.title
-                                                          )
-                                                        }
-                                                      >
-                                                        {action.label}
-                                                      </button>
-                                                    ))}
+                                                      })().map((action, idx) => (
+                                                        <button
+                                                          key={idx}
+                                                          type="button"
+                                                          className="user-dashboard__lyrics-action-button"
+                                                          onClick={() =>
+                                                            handleLyricsAction(
+                                                              action.action,
+                                                              album.id,
+                                                              track.id,
+                                                              track.title
+                                                            )
+                                                          }
+                                                        >
+                                                          {action.label}
+                                                        </button>
+                                                      ))}
+                                                    </div>
                                                   </div>
                                                 </div>
                                               ))}

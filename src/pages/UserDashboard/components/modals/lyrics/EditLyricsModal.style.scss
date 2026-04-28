@@ -9,6 +9,8 @@ dialog {
     @include dashboard-modal-shell;
 
     &__card {
+      overflow-x: hidden;
+
       @include dashboard-modal-panel($gap: var(--ms-1));
     }
 
@@ -26,10 +28,10 @@ dialog {
 
     &__divider {
       flex-shrink: 0;
-      width: calc(100% + var(--ms-2) * 2);
+      width: calc(100% + var(--ms-1) * 2);
       height: 1px;
-      margin-left: calc(var(--ms-2) * -1);
-      margin-right: calc(var(--ms-2) * -1);
+      margin-left: calc(var(--ms-1) * -1);
+      margin-right: calc(var(--ms-1) * -1);
       background: var(--dashboard-hover-bg);
     }
 

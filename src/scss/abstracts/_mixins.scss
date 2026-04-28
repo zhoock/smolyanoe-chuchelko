@@ -129,7 +129,7 @@ $ms-4: 123.363px; // 6.854rem;
   font-size: var(--dashboard-heading-font-size);
 }
 
-// Dashboard form field - контейнер для поля формы (стиль ChatGPT)
+// Dashboard form field - контейнер для поля формы
 @mixin dashboard-form-field {
   display: flex;
   flex-direction: column;
@@ -137,7 +137,7 @@ $ms-4: 123.363px; // 6.854rem;
   margin-bottom: 20px;
 }
 
-// Dashboard form label - метка поля формы (стиль ChatGPT)
+// Dashboard form label - метка поля формы
 @mixin dashboard-form-label {
   color: var(--dashboard-text-primary);
   font-size: var(--dashboard-font-size);
@@ -148,7 +148,7 @@ $ms-4: 123.363px; // 6.854rem;
   margin-bottom: 4px;
 }
 
-// Dashboard form input - текстовое поле (стиль ChatGPT)
+// Dashboard form input - текстовое поле
 @mixin dashboard-form-input($padding: 12px 16px) {
   display: block;
   width: 100%;
@@ -183,7 +183,7 @@ $ms-4: 123.363px; // 6.854rem;
   }
 }
 
-// Dashboard form textarea - многострочное поле (стиль ChatGPT)
+// Dashboard form textarea - многострочное поле
 @mixin dashboard-form-textarea($padding: 12px 16px, $min-height: 120px) {
   display: block;
   width: 100%;
@@ -220,7 +220,7 @@ $ms-4: 123.363px; // 6.854rem;
   }
 }
 
-// Dashboard form select - выпадающий список (стиль ChatGPT)
+// Dashboard form select - выпадающий список
 @mixin dashboard-form-select($padding: 12px 16px) {
   display: block;
   width: 100%;

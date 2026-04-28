@@ -136,22 +136,26 @@ function RecordingEntryEditor({
         <div className="edit-album-modal__list-item edit-album-modal__list-item--editing">
           <div className="edit-album-modal__list-item-edit-wrapper">
             <div className="edit-album-modal__two-column-inputs">
-              <input
-                type="date"
-                className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
-                placeholder="From"
-                value={dateFrom}
-                onChange={(e) => onDateFromChange(e.target.value)}
-                onKeyDown={keyHandlers}
-              />
-              <input
-                type="date"
-                className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
-                placeholder="To"
-                value={dateTo}
-                onChange={(e) => onDateToChange(e.target.value)}
-                onKeyDown={keyHandlers}
-              />
+              <div className="edit-album-modal__date-input-shell">
+                <input
+                  type="date"
+                  className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
+                  placeholder="From"
+                  value={dateFrom}
+                  onChange={(e) => onDateFromChange(e.target.value)}
+                  onKeyDown={keyHandlers}
+                />
+              </div>
+              <div className="edit-album-modal__date-input-shell">
+                <input
+                  type="date"
+                  className="edit-album-modal__list-item-input edit-album-modal__list-item-input--title"
+                  placeholder="To"
+                  value={dateTo}
+                  onChange={(e) => onDateToChange(e.target.value)}
+                  onKeyDown={keyHandlers}
+                />
+              </div>
             </div>
             <input
               type="text"

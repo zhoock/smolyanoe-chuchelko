@@ -7,6 +7,8 @@
     flex-direction: column !important;
     align-items: stretch !important;
     padding: var(--ms-01) var(--ms-0) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     background: var(--deep-black) !important;
 
     .edit-album-modal__list-item-edit-wrapper {
@@ -14,6 +16,8 @@
       flex-direction: column;
       gap: var(--ms-01);
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .edit-album-modal__list-item-actions {
@@ -28,23 +32,20 @@
     }
 
     .edit-album-modal__list-item-save {
-      @include breakpoint(phones) {
-        width: 100% !important;
-        padding: var(--ms-01) !important;
-      }
+      @include dashboard-button;
     }
 
     .edit-album-modal__list-item-cancel {
-      @include breakpoint(phones) {
-        width: 100% !important;
-        padding: var(--ms-01) !important;
-      }
+      @include dashboard-button;
     }
   }
 }
 
 .edit-album-modal__list-item-input {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: var(--ms-01) var(--ms-0);
   color: var(--white) !important;
   font-family: inherit;
@@ -64,7 +65,25 @@
   }
 
   &--title {
+    max-width: 100%;
     font-size: var(--dashboard-font-size);
+  }
+
+  &[type='date'] {
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding: var(--ms-01) var(--ms-1) var(--ms-01) var(--ms-0);
+
+    &::-webkit-calendar-picker-indicator {
+      margin-inline-start: 0;
+      opacity: 1;
+    }
+
+    &::-webkit-datetime-edit,
+    &::-webkit-datetime-edit-fields-wrapper {
+      max-width: calc(100% - var(--ms-1));
+    }
   }
 
   &--description {

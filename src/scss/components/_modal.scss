@@ -23,7 +23,7 @@
 }
 
 @mixin dashboard-modal-panel(
-  $padding: var(--ms-2),
+  $padding: var(--ms-1),
   $gap: var(--ms-0),
   $overflow-y: auto,
   $mobile-max-height: 90vh,
@@ -111,8 +111,8 @@
   }
 
   @if $reset-text {
-    text-transform: none !important;
-    letter-spacing: normal !important;
+    text-transform: none;
+    letter-spacing: normal;
   }
 }
 
