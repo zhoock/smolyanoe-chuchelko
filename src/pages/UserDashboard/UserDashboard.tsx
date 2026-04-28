@@ -67,6 +67,7 @@ import { EditAlbumModal, type AlbumFormData } from './components/modals/album/Ed
 import { EditArticleModalV2 } from './components/modals/article/EditArticleModalV2';
 import { ArticlesListSkeleton } from './components/articles/ArticlesListSkeleton';
 import { DashboardTabContentSkeleton } from './components/DashboardTabContentSkeleton';
+import { ProfileTabSkeleton } from './components/ProfileTabSkeleton';
 import { SyncLyricsModal } from './components/modals/lyrics/SyncLyricsModal';
 import { ProfileSettingsModal } from './components/modals/profile/ProfileSettingsModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
@@ -2293,8 +2294,11 @@ function UserDashboard() {
 
               {/* Content area: стабильная оболочка; вкладки скрыты через hidden, не размонтируются */}
               <div className="user-dashboard__content user-dashboard__tab-shell">
-                {albumsInitialLoading && !albumsLoadFailed ? (
+                {/* На первой загрузке альбомов: свой скелетон под активную вкладку */}
+                {albumsInitialLoading && !albumsLoadFailed && activeTab === 'albums' ? (
                   <DashboardTabContentSkeleton />
+                ) : albumsInitialLoading && !albumsLoadFailed && activeTab === 'profile' ? (
+                  <ProfileTabSkeleton />
                 ) : albumsLoadFailed ? (
                   <div
                     className="user-dashboard__error user-dashboard__error--tab-shell"

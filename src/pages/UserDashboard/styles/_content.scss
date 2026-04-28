@@ -51,6 +51,80 @@ dialog {
       height: 1.25rem;
     }
 
+    /** Скелетон вкладки Profile */
+    &__profile-tab-skeleton {
+      .user-dashboard__profile-skeleton-inner {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ms-1);
+      }
+
+      .user-dashboard__profile-skeleton-avatar-wrap {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+      }
+
+      .user-dashboard__profile-skeleton-avatar-circle {
+        inline-size: calc(var(--ms-2) * 2.7);
+        block-size: calc(var(--ms-2) * 2.7);
+        border-radius: 50%;
+
+        &.skeleton--image {
+          inline-size: calc(var(--ms-2) * 2.7);
+          block-size: calc(var(--ms-2) * 2.7);
+          border-radius: 50%;
+        }
+      }
+
+      .user-dashboard__profile-skeleton-edit {
+        display: flex;
+        justify-content: center;
+      }
+
+      .user-dashboard__profile-skeleton-edit-bar {
+        inline-size: min(40%, 7.5rem);
+      }
+
+      .user-dashboard__profile-skeleton-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ms-02);
+      }
+
+      .user-dashboard__profile-skeleton-input {
+        inline-size: 100%;
+        max-width: 100%;
+      }
+
+      .user-dashboard__profile-skeleton-actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ms-01);
+        margin-block-start: var(--ms-01);
+
+        @include breakpoint(tablet) {
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+          gap: var(--ms-1);
+        }
+      }
+
+      .user-dashboard__profile-skeleton-btn {
+        inline-size: 100%;
+        block-size: 2.35rem;
+
+        @include breakpoint(tablet) {
+          inline-size: min(48%, 11rem);
+        }
+      }
+
+      .skeleton--bar-medium.user-dashboard__profile-skeleton-btn {
+        block-size: 2.35rem;
+      }
+    }
+
     &__tab-placeholder {
       margin: 0;
       padding: var(--ms-1) 0;
