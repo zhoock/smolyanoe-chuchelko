@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { isAuthenticated } from '@shared/lib/auth';
+import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
 import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
@@ -11,12 +12,22 @@ type AuthMode = 'login' | 'register';
 
 export function AuthPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [mode, setMode] = useState<AuthMode>(() =>
     searchParams.get('mode') === 'register' ? 'register' : 'login'
   );
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const navigate = useNavigate();
   const { setLang } = useLang();
+
+  const postAuthPath = useMemo(
+    () =>
+      resolvePostAuthDestination({
+        returnToSearchParam: searchParams.get('returnTo'),
+        routerState: location.state,
+      }),
+    [searchParams, location.state]
+  );
 
   useEffect(() => {
     const m = searchParams.get('mode');
@@ -27,9 +38,9 @@ export function AuthPage() {
   useEffect(() => {
     // Не делаем автоматический редирект, если показывается модалка выбора языка
     if (isAuthenticated() && !showLanguageModal) {
-      navigate('/dashboard-new', { replace: true });
+      navigate(postAuthPath, { replace: true });
     }
-  }, [navigate, showLanguageModal]);
+  }, [navigate, showLanguageModal, postAuthPath]);
 
   // Если уже авторизован и модалка не показывается, ничего не рендерим
   if (isAuthenticated() && !showLanguageModal) {
@@ -44,13 +55,12 @@ export function AuthPage() {
   const handleLanguageSelected = (lang: 'ru' | 'en') => {
     setLang(lang);
     setShowLanguageModal(false);
-    navigate('/dashboard-new');
+    navigate(postAuthPath);
   };
 
   const handleCloseLanguageModal = () => {
-    // При закрытии модалки используем текущий язык и переходим в dashboard
     setShowLanguageModal(false);
-    navigate('/dashboard-new');
+    navigate(postAuthPath);
   };
 
   return (

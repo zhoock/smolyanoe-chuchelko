@@ -24,6 +24,7 @@ import {
   siteArtistUiLabel,
 } from '@shared/lib/profileDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
+import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { isAuthenticated } from '@shared/lib/auth';
 import { ProfileAvatarMenu } from '@widgets/header';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -277,9 +278,14 @@ export function HomePage() {
         ) : (
           <button
             type="button"
-            onClick={() =>
-              navigate('/auth?mode=register', { state: { backgroundLocation: location } })
-            }
+            onClick={() => {
+              const authParams = new URLSearchParams({ mode: 'register' });
+              appendReturnTo(authParams, location);
+              navigate(
+                { pathname: '/auth', search: `?${authParams.toString()}` },
+                { state: { backgroundLocation: location } }
+              );
+            }}
             style={{
               padding: '6px 10px',
               borderRadius: 8,

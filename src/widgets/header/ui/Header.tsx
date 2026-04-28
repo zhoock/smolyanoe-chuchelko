@@ -3,6 +3,7 @@ import { memo, useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
+import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { useLang } from '@app/providers/lang'; // берём из контекста
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -35,6 +36,8 @@ const HeaderComponent = ({
   const location = useLocation();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const isAuthed = isAuthenticated();
+  const authParams = new URLSearchParams({ mode: 'register' });
+  appendReturnTo(authParams, location);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -125,7 +128,7 @@ const HeaderComponent = ({
           ) : (
             <Link
               className="header__sign-in"
-              to="/auth?mode=register"
+              to={{ pathname: '/auth', search: `?${authParams.toString()}` }}
               state={{ backgroundLocation: location }}
               onClick={() => setLangOpen(false)}
             >
