@@ -80,10 +80,14 @@ dialog {
     }
   }
 
-  // Анимация и эффекты только для попапа с плеером
+  // Плеер: живой градиент — только у слоя `.popup__gradient`.
+  // `animation: spin` НЕ на самом <dialog>: иначе анимируется --rotate на всём слое + backdrop-filter
+  // и в браузерах попап визуально «крутится»/наклоняется целиком вместо лёгкой крутящейся подложки.
   &.popup:has(.player) {
+    // Статичный угол градиента на диалоге (inline background использует var(--rotate))
+    --rotate: 132deg;
+
     backdrop-filter: blur(20px);
-    animation: spin 11.125s linear infinite;
 
     .popup__gradient {
       position: absolute;
@@ -93,6 +97,13 @@ dialog {
       inline-size: 100%;
       block-size: 100%;
       inset-block-start: calc(var(--card-height) / 6);
+      animation: spin 11.125s linear infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+        --rotate: 132deg;
+
+        animation: none;
+      }
     }
   }
 }

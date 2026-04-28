@@ -148,7 +148,6 @@
     button {
       width: var(--ms-3);
       height: var(--ms-3);
-      font-size: var(--ms-2);
 
       @include button-variant(
         $color: var(--white, #ffffff),
@@ -157,7 +156,8 @@
         $hover-background: rgb(255 255 255 / 8%),
         $margin: 0,
         $padding: 0,
-        $border-radius: 50%
+        $border-radius: 50%,
+        $font-size: var(--ms-2)
       );
 
       &:active {
