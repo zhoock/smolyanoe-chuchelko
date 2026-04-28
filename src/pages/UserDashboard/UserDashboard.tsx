@@ -38,7 +38,8 @@ import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import { AlertModal } from '@shared/ui/alertModal';
-import { logout, isAuthenticated, getUser, getToken } from '@shared/lib/auth';
+import { logout, isAuthenticated, getToken } from '@shared/lib/auth';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
   selectDashboardAlbumsStatus,
@@ -719,7 +720,7 @@ function UserDashboard() {
   const articlesStatus = useAppSelector(selectDashboardArticlesStatus);
   const articlesError = useAppSelector(selectDashboardArticlesError);
   const articlesFromStore = useAppSelector((state) => selectDashboardArticlesDataResolved(state));
-  const user = getUser();
+  const user = useAuthSessionUser();
   const userId = user?.id ?? null;
 
   const tabInvalid =
@@ -729,9 +730,6 @@ function UserDashboard() {
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
-  const lastPostsArticlesFetchContextRef = useRef<{ userId: string | null; lang: string } | null>(
-    null
-  );
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
@@ -1206,20 +1204,15 @@ function UserDashboard() {
     });
   }, [dispatch, lang, userId, albumsRouteScopeKey]);
 
-  // Статьи для вкладки posts: грузим не при каждом клике на Posts (только при смене
-  // пользователя/языка), иначе `force: true` обходит `condition` и фон снова тянет тот же slice.
+  // Статьи для вкладки posts: всегда `force`, иначе после смены аккаунта `fetchArticles.condition`
+  // держит `dashboard.status === 'succeeded'` и пропускает запрос со старыми данными в store.
+  // (Подписка на сессию — `useAuthSessionUser`, иначе `userId` не обновляется до перезагрузки.)
   useEffect(() => {
     if (activeTab !== 'posts') {
       return;
     }
 
-    const prev = lastPostsArticlesFetchContextRef.current;
-    const isFirstOnPosts = prev === null;
-    const userOrLangChanged = !isFirstOnPosts && (prev.userId !== userId || prev.lang !== lang);
-    lastPostsArticlesFetchContextRef.current = { userId, lang: String(lang) };
-    const force = userOrLangChanged;
-
-    dispatch(fetchArticles({ force })).catch((error: any) => {
+    dispatch(fetchArticles({ force: true })).catch((error: any) => {
       if (error?.name === 'ConditionError') {
         return;
       }

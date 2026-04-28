@@ -13,6 +13,32 @@ function dispatchAuthSessionChanged() {
   window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
 }
 
+/**
+ * Подписка на смену аккаунта в этой вкладке (`saveAuth` / `clearAuth`) и в других (`storage`).
+ * Нужна для `useSyncExternalStore`: при смене `auth_user` без полного перезагрузки React иначе
+ * не перерисуется и эффекты с `userId` не сработают.
+ */
+export function subscribeAuthSession(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const run = () => callback();
+  window.addEventListener(AUTH_SESSION_CHANGED_EVENT, run);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === USER_STORAGE_KEY || e.key === TOKEN_STORAGE_KEY || e.key === null) run();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, run);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+/** Стабильный ключ сессии для сравнения в `useSyncExternalStore` (смена id/email). */
+export function getAuthSessionIdentityKey(): string {
+  const u = getUser();
+  if (!u) return '';
+  return `${u.id}\0${u.email}`;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
