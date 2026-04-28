@@ -8,7 +8,12 @@
     },
     "header": {
       "signIn": "Вход / регистрация",
-      "openProfile": "Мой профиль"
+      "openProfile": "Мой профиль",
+      "avatarMenu": {
+        "settings": "Настройки",
+        "upgradePlan": "Тариф / подписка",
+        "logOut": "Выйти"
+      }
     },
     "buttons": {
       "playButton": "воспроизвести",

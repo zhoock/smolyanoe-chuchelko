@@ -34,30 +34,6 @@
       );
     }
 
-    .header__profile {
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-      text-decoration: none;
-      border-radius: 50%;
-      outline-offset: 2px;
-
-      &:focus-visible {
-        outline: 2px solid var(--links-header-color, currentcolor);
-      }
-    }
-
-    .header__profile-avatar {
-      display: block;
-      margin: 0;
-      background: rgb(var(--extra-background-color-rgb) / 60%);
-      border: 1px solid rgb(255 255 255 / 20%);
-      border-radius: 50%;
-      inline-size: 40.25px;
-      block-size: 40.25px;
-      object-fit: cover;
-    }
-
     .logo {
       text-decoration: none;
       font-weight: var(--bold, 700);

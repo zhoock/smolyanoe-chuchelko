@@ -1,5 +1,5 @@
 // src/widgets/header/ui/Header.tsx
-import { memo, useEffect, useState, useRef } from 'react';
+import { memo, useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
@@ -7,9 +7,9 @@ import { useLang } from '@app/providers/lang'; // берём из контекс
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { isAuthenticated } from '@shared/lib/auth';
-import { useStoredProfileAvatarUrl } from '@shared/lib/hooks/useAvatar';
 import type { SupportedLang } from '@shared/model/lang';
 import { Hamburger } from '@shared/ui/hamburger';
+import { ProfileAvatarMenu } from './ProfileAvatarMenu';
 import './style.scss';
 
 const LANG_OPTIONS: SupportedLang[] = ['en', 'ru'];
@@ -37,12 +37,12 @@ const HeaderComponent = ({
   const isAuthed = isAuthenticated();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
-  const headerAvatarSrc = useStoredProfileAvatarUrl();
 
-  // Закрываем меню при клике вне
+  // Закрываем меню языка при клике вне
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (langRef.current && !langRef.current.contains(t)) {
         setLangOpen(false);
       }
     };
@@ -58,6 +58,10 @@ const HeaderComponent = ({
     setLangOpen(false);
   };
 
+  const openLang = useCallback(() => {
+    setLangOpen((open) => !open);
+  }, []);
+
   return (
     <header className="header">
       <div className="wrapper header__wrapper">
@@ -69,7 +73,8 @@ const HeaderComponent = ({
           <div className="lang-menu" ref={langRef}>
             <button
               className="lang-current"
-              onClick={() => setLangOpen(!langOpen)}
+              type="button"
+              onClick={openLang}
               aria-haspopup="listbox"
               aria-expanded={langOpen}
               aria-label={`Выбрать язык. Текущий язык: ${lang === 'ru' ? 'Русский' : 'English'}`}
@@ -111,22 +116,12 @@ const HeaderComponent = ({
         <div className="header__trailing">
           <Navigation />
           {isAuthed ? (
-            <Link
-              className="header__profile"
-              to="/dashboard-new"
-              state={{ backgroundLocation: location }}
-              onClick={() => setLangOpen(false)}
-              aria-label={ui?.header?.openProfile ?? 'My profile'}
-            >
-              <img
-                className="header__profile-avatar"
-                src={headerAvatarSrc}
-                alt=""
-                width={36}
-                height={36}
-                decoding="async"
-              />
-            </Link>
+            <ProfileAvatarMenu
+              closeWhenLangMenuOpen={langOpen}
+              onOpenChange={(open) => {
+                if (open) setLangOpen(false);
+              }}
+            />
           ) : (
             <Link
               className="header__sign-in"

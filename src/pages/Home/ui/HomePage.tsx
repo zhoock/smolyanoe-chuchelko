@@ -4,7 +4,7 @@ import {
   UNIVERSE_FOCUS_ARTIST_STORAGE_KEY,
 } from '../../../components/view/Universe3D';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { playerActions } from '@features/player';
@@ -25,7 +25,7 @@ import {
 } from '@shared/lib/profileDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 import { isAuthenticated } from '@shared/lib/auth';
-import { useStoredProfileAvatarUrl } from '@shared/lib/hooks/useAvatar';
+import { ProfileAvatarMenu } from '@widgets/header';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { AboutSection } from './AboutSection';
@@ -42,7 +42,6 @@ export function HomePage() {
   const [searchParams] = useSearchParams();
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const homeProfileAvatarSrc = useStoredProfileAvatarUrl();
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const universeRef = useRef<Universe3D | null>(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -274,35 +273,7 @@ export function HomePage() {
         }}
       >
         {isAuthenticated() ? (
-          <Link
-            to="/dashboard-new"
-            state={{ backgroundLocation: location }}
-            aria-label={ui?.header?.openProfile ?? 'My profile'}
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              textDecoration: 'none',
-              borderRadius: '50%',
-              flexShrink: 0,
-            }}
-          >
-            <img
-              src={homeProfileAvatarSrc}
-              alt=""
-              width={36}
-              height={36}
-              decoding="async"
-              style={{
-                display: 'block',
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(12,12,14,0.72)',
-              }}
-            />
-          </Link>
+          <ProfileAvatarMenu avatarImgClassName="header__profile-avatar--home" />
         ) : (
           <button
             type="button"

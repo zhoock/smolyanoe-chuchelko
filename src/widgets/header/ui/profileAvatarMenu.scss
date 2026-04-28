@@ -1,0 +1,107 @@
+// Выпадающее меню аватара: шапка и главная (home scene без header)
+@use '../../../scss/abstracts/mixins' as *;
+
+.header__profile-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.header__profile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  outline-offset: 2px;
+
+  &:focus-visible {
+    outline: 2px solid var(--links-header-color, currentcolor);
+  }
+}
+
+.header__profile-menu {
+  position: absolute;
+  z-index: 120;
+  inset-block-start: calc(100% + var(--ms-01));
+  inset-inline-end: 0;
+  inline-size: min(100vw - var(--ms-2), 16.5rem);
+  margin: 0;
+  padding: var(--ms-01) 0;
+  list-style: none;
+  background: rgb(var(--extra-background-color-rgb, 32 32 30) / 96%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--ms-0);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(12px);
+
+  @include breakpoint(desktops) {
+    inline-size: 17.5rem;
+  }
+}
+
+.header__profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ms-01);
+  inline-size: 100%;
+  margin: 0;
+  padding: var(--ms-01) var(--ms-0);
+  text-align: start;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-block-end: 1px solid rgb(255 255 255 / 8%);
+  cursor: pointer;
+  appearance: none;
+  font-family: var(--base-font-family);
+
+  @include adjust-font-size-to($ms-0, 0, 11.125px);
+
+  &:last-child {
+    border-block-end: none;
+  }
+
+  @include link-colors(
+    --links-header-color,
+    --links-header-color-hover,
+    --links-header-color-active
+  );
+
+  &:hover {
+    background: rgb(255 255 255 / 6%);
+  }
+
+  &--danger {
+    color: var(--link-hamburger-color, #dddddd);
+
+    &:hover {
+      color: var(--error-color, #cf807d);
+    }
+  }
+}
+
+.header__profile-menu-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.header__profile-avatar {
+  display: block;
+  margin: 0;
+  background: rgb(var(--extra-background-color-rgb) / 60%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 50%;
+  inline-size: 40.25px;
+  block-size: 40.25px;
+  object-fit: cover;
+}
+
+/* Главная (облако): те же размеры, что были у инлайн-стилей */
+.header__profile-avatar--home {
+  inline-size: 36px;
+  block-size: 36px;
+}

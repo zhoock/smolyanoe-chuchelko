@@ -8,7 +8,12 @@
     },
     "header": {
       "signIn": "Sign in",
-      "openProfile": "My profile"
+      "openProfile": "My profile",
+      "avatarMenu": {
+        "settings": "Settings",
+        "upgradePlan": "Upgrade plan",
+        "logOut": "Log out"
+      }
     },
     "buttons": {
       "playButton": "play",

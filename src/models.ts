@@ -240,6 +240,11 @@ export interface IInterface {
   header?: {
     signIn: string;
     openProfile: string;
+    avatarMenu?: {
+      settings: string;
+      upgradePlan: string;
+      logOut: string;
+    };
   };
   errors?: {
     [key: string]: string;
