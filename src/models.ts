@@ -12,11 +12,21 @@ export interface NavigationProps {
 export interface HamburgerProps extends NavigationProps {
   /** Отвечает за состояние Popup (открыт/закрыт) */
   isActive: boolean;
+  /**
+   * `floating` — фиксация поверх страницы (плеер, модальные диалоги).
+   * `inline` — как обычный элемент в строке шапки (мобильное меню).
+   */
+  variant?: 'floating' | 'inline';
   /** CSS свойство */
   zIndex?: string;
   bgColor?: string;
   onClose?: () => void; // Новый пропс
   className?: string;
+  /**
+   * Инлайн-гамбургер в шапке: при открытом `dialog.showModal()` шапка оказывается под top layer —
+   * включают «призрак-кнопку» (слот занят, но клики и экран недоступны); рабочая кнопка дублируется внутри `<dialog>`.
+   */
+  behindDialogOverlap?: boolean;
 }
 
 export interface PopupProps extends HamburgerProps {

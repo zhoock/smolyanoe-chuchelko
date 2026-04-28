@@ -7,16 +7,27 @@ import './style.scss';
 /**
  * Компонент отображает гамбургер-меню.
  */
-const HamburgerComponent = ({ isActive, onToggle, zIndex, className }: HamburgerProps) => {
+const HamburgerComponent = ({
+  isActive,
+  onToggle,
+  zIndex,
+  className,
+  variant = 'floating',
+  behindDialogOverlap,
+}: HamburgerProps) => {
   return (
     <button
       className={clsx(
         'hamburger', // базовый класс
+        variant === 'inline' && 'hamburger--inline',
+        behindDialogOverlap && variant === 'inline' && 'hamburger--inline-slot-only',
         isActive && 'active', // добавляется, если isActive === true
         className
       )}
+      aria-hidden={behindDialogOverlap && variant === 'inline' ? true : undefined}
+      tabIndex={behindDialogOverlap && variant === 'inline' ? -1 : undefined}
       onClick={onToggle}
-      style={{ zIndex }}
+      style={variant === 'inline' ? undefined : { zIndex }}
       type="button"
     >
       <span className="one" aria-hidden="true"></span>

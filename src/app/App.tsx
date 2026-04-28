@@ -30,13 +30,13 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
 import { Popup } from '@shared/ui/popup';
+import { Hamburger } from '@shared/ui/hamburger';
 import { NotFoundPage } from '@widgets/notFound';
 import { Form } from '@widgets/form';
 import { Hero } from '@widgets/hero';
 import { Header } from '@widgets/header';
 import { Footer } from '@widgets/footer';
 import { Navigation } from '@features/navigation';
-import { Hamburger } from '@shared/ui/hamburger';
 import { PlayerShell } from '@features/player';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
 import { FloatingCart } from '@entities/service/ui/FloatingCart';
@@ -531,20 +531,25 @@ function Layout() {
         </ErrorBoundary>
       ) : (
         <ErrorBoundary>
-          <Header theme={theme} onToggleTheme={toggleTheme} />
+          <Header
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            navMenuOpen={popup}
+            onNavMenuToggle={() => {
+              if (popup) dispatch(closePopup());
+              else dispatch(openPopup());
+            }}
+          />
           <main>
             {!isHomeSceneRoute && <Hero />}
 
             {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
             <Popup isActive={popup} onClose={() => dispatch(closePopup())}>
-              <Hamburger isActive={popup} onToggle={() => dispatch(closePopup())} zIndex="1000" />
+              {/* Гамбургер внутри native dialog — в top layer, кликабелен; инлайн в шапке при открытом меню скрыт через behindDialogOverlap */}
+              <Hamburger isActive={popup} onToggle={() => dispatch(closePopup())} zIndex="1500" />
               <Navigation onToggle={() => dispatch(closePopup())} />
             </Popup>
-
-            {!popup && (
-              <Hamburger isActive={popup} onToggle={() => dispatch(openPopup())} zIndex="1000" />
-            )}
 
             <ErrorBoundary>{standardRoutes}</ErrorBoundary>
           </main>

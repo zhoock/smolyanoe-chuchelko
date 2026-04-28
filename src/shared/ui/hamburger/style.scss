@@ -23,6 +23,22 @@
     $border-radius: 50%
   );
 
+  &--inline {
+    position: static;
+    flex-shrink: 0;
+    inset: auto;
+    z-index: auto;
+
+    &.hamburger--inline-slot-only {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    @include breakpoint(desktops) {
+      display: none;
+    }
+  }
+
   &:hover {
     span {
       background: var(--link-hamburger-color-hover, #ffffff);
@@ -60,7 +76,8 @@
   }
 }
 
-.hero ~ .hamburger {
+/* Плавающий гамбургер у Hero (если снова вынесут в main). Не перекрывает инлайн-кнопку в header. */
+.hero ~ .hamburger:not(.hamburger--inline) {
   @include breakpoint(desktops) {
     display: none;
   }

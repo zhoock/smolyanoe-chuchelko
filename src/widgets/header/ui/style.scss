@@ -12,18 +12,12 @@
   font-family: 'Oswald', sans-serif;
 
   &__wrapper {
-    display: grid;
-    grid-template-columns: min-content min-content 1fr min-content;
-    place-items: center end;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--ms-1);
+    box-sizing: border-box;
     block-size: calc(var(--ms-1) * 2);
-
-    .header__end {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: var(--ms-0);
-    }
 
     .header__sign-in {
       text-decoration: none;
@@ -55,11 +49,12 @@
 
     .header__profile-avatar {
       display: block;
+      margin: 0;
       background: rgb(var(--extra-background-color-rgb) / 60%);
       border: 1px solid rgb(255 255 255 / 20%);
       border-radius: 50%;
-      inline-size: 36px;
-      block-size: 36px;
+      inline-size: 40.25px;
+      block-size: 40.25px;
       object-fit: cover;
     }
 
@@ -160,6 +155,23 @@
         }
       }
     }
+  }
+
+  &__start {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-1);
+    flex-shrink: 0;
+    min-inline-size: 0;
+  }
+
+  &__trailing {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ms-1);
+    flex-shrink: 0;
+    min-inline-size: 0;
   }
 }
 
