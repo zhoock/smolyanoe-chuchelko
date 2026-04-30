@@ -1,3 +1,6 @@
+@use '../../../scss/abstracts/mixins' as *;
+@use '../../../scss/components/modal' as dashboard-modal;
+
 .confirmation-modal {
   display: flex;
   align-items: center;
@@ -23,9 +26,12 @@
 
   &__title {
     margin: 0;
-    color: var(--text-primary);
-    font-size: 20px;
-    font-weight: 600;
+    padding: 0;
+    color: var(--dashboard-text-primary);
+    font-size: var(--dashboard-heading-font-size);
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   &__close {
@@ -35,7 +41,7 @@
     width: calc(var(--ms-1) * 1.5);
     height: calc(var(--ms-1) * 1.5);
     padding: 0;
-    color: var(--text-color);
+    color: var(--dashboard-text-primary);
     font-size: var(--ms-1);
     font-weight: 300;
     line-height: 1;
@@ -49,8 +55,8 @@
     flex-shrink: 0;
 
     &:hover {
-      color: var(--text-color);
-      background: var(--extra-background-color);
+      color: var(--dashboard-text-primary);
+      background: var(--dashboard-hover-bg);
     }
 
     &:focus {
@@ -58,80 +64,85 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--accent-color);
+      outline: 2px solid var(--dark-greenish-yellow);
       outline-offset: 2px;
     }
   }
 
   &__message {
     margin: 0 0 12px;
-    color: var(--text-primary);
-    font-size: 16px;
+    color: var(--dashboard-text-primary);
+    font-size: var(--dashboard-font-size);
     line-height: 1.5;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   &__warning {
     margin: 0 0 24px;
-    color: var(--text-secondary);
-    font-size: 14px;
+    color: var(--dashboard-text-secondary);
+    font-size: var(--ms-01);
+    line-height: 1.45;
     font-style: italic;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   &__actions {
+    @include dashboard-modal.dashboard-modal-dialog-buttons(
+      $font-size: var(--dashboard-font-size),
+      $line-height: 1.35
+    );
+
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: var(--ms-0);
     justify-content: flex-end;
   }
 
   &__button {
-    padding: 10px 20px;
-    font-size: 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    transition: all 0.2s;
-    font-weight: 500;
-    cursor: pointer;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
 
-    &--cancel {
-      color: var(--text-primary);
-      background: transparent;
-
-      &:hover {
-        background: var(--hover-background);
-      }
-    }
-
-    &--confirm {
-      color: white;
-
-      &--info {
-        background: var(--primary-color, #007bff);
-
-        &:hover {
-          background: var(--primary-color-hover, #0056b3);
-        }
-      }
-
-      &--warning {
-        background: var(--warning-color, #ffc107);
-
-        &:hover {
-          background: var(--warning-color-hover, #e0a800);
-        }
-      }
-
-      &--danger {
-        background: var(--danger-color, #dc3545);
-
-        &:hover {
-          background: var(--danger-color-hover, #c82333);
-        }
-      }
-    }
-
-    &:focus {
-      outline: 2px solid var(--primary-color, #007bff);
+    &:focus-visible {
+      outline: 2px solid var(--dark-greenish-yellow);
       outline-offset: 2px;
+    }
+  }
+
+  &__button--cancel {
+    @include dashboard-button($margin: 0);
+  }
+
+  &__button--confirm.confirmation-modal__button--info,
+  &__button--confirm.confirmation-modal__button--warning {
+    @include button-variant(
+      $color: var(--dashboard-button-primary-text),
+      $background: var(--dashboard-button-primary-bg),
+      $hover-color: var(--dashboard-button-primary-text),
+      $hover-background: var(--dashboard-button-primary-bg-hover),
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $border: 0,
+      $border-radius: var(--ms-01),
+      $font-size: var(--dashboard-font-size)
+    );
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+
+  &__button--confirm.confirmation-modal__button--danger {
+    font-size: var(--dashboard-font-size);
+
+    @include dashboard-delete-button;
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
   }
 }

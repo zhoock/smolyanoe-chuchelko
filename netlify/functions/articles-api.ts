@@ -27,6 +27,7 @@ import { extractBaseName } from './lib/image-processor';
 import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
 import { sanitizeUploadFileName } from './lib/sanitizeFileName';
 import { hydrateMissingRuTranslationsOnArticle } from '../../src/entities/article/lib/hydrateMissingRuTranslations';
+import { formatPostgresDateOnly } from '../../src/shared/lib/dateCalendar';
 
 interface ArticleRow {
   id: string;
@@ -210,7 +211,7 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
     articleId: article.article_id, // строковый идентификатор
     nameArticle: article.name_article,
     img: article.img || '',
-    date: article.date.toISOString().split('T')[0], // YYYY-MM-DD
+    date: formatPostgresDateOnly(article.date),
     details: (details as unknown[]) || [],
     description: article.description || '',
     isDraft: article.is_draft ?? false, // Статус черновика
@@ -811,11 +812,10 @@ export const handler: Handler = async (
         let dateVal: string;
         if (data.date !== undefined) {
           dateVal = data.date;
-        } else if (cur?.date) {
-          const d = cur.date as Date;
-          dateVal = d.toISOString().split('T')[0];
+        } else if (cur?.date != null) {
+          dateVal = formatPostgresDateOnly(cur.date) || formatPostgresDateOnly(new Date());
         } else {
-          dateVal = new Date().toISOString().split('T')[0];
+          dateVal = formatPostgresDateOnly(new Date());
         }
         const isDraftVal = data.isDraft !== undefined ? data.isDraft : (cur?.is_draft ?? true);
 

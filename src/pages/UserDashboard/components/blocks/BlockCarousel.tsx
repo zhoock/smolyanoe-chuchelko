@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/blocks/BlockCarousel.tsx
 import React, { useState } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
+import { ArticleCoverPlaceholder } from '@entities/article';
 import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 
 interface BlockCarouselProps {
@@ -118,10 +119,11 @@ export function BlockCarousel({
     >
       <div className="uncollapse edit-article-v2__carousel-view">
         <div className="edit-article-v2__carousel-image-wrapper">
-          <img
-            src={currentImageUrl ?? '/images/album-placeholder.png'}
-            alt={`Image ${currentIndex + 1} of ${totalImages}`}
-          />
+          {currentImageUrl ? (
+            <img src={currentImageUrl} alt={`Image ${currentIndex + 1} of ${totalImages}`} />
+          ) : (
+            <ArticleCoverPlaceholder alt={`Image ${currentIndex + 1} of ${totalImages}`} />
+          )}
 
           {/* Кнопка "Редактировать карусель" и бейдж "1 из N" в правом верхнем углу */}
           <div className="edit-article-v2__carousel-top-right">

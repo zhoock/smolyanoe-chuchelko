@@ -34,6 +34,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { getAlbumsDashboardRouteScopeKey } from '@shared/lib/albumsRouteScope';
 import { formatDate } from '@shared/api/albums';
+import { toLocalYYYYMMDD } from '@shared/lib/dateCalendar';
 import { Popup } from '@shared/ui/popup';
 import { Hamburger } from '@shared/ui/hamburger';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
@@ -53,6 +54,7 @@ import {
   selectDashboardArticlesError,
   selectDashboardArticlesDataResolved,
   ArticleCoverImage,
+  ArticleCoverPlaceholder,
 } from '@entities/article';
 import { loadTrackTextFromDatabase, saveTrackText } from '@entities/track/lib';
 import { uploadFile } from '@shared/api/storage';
@@ -2721,7 +2723,7 @@ function UserDashboard() {
                                           isExpanded ? 'Collapse article' : 'Expand article'
                                         }
                                       >
-                                        <div className="user-dashboard__album-thumbnail">
+                                        <div className="user-dashboard__album-thumbnail user-dashboard__album-thumbnail--article">
                                           {article.img ? (
                                             articleOwnerId ? (
                                               <ArticleCoverImage
@@ -2734,15 +2736,17 @@ function UserDashboard() {
                                                 debugLabel={`UserDashboard:articleThumb:${article.articleId}`}
                                               />
                                             ) : (
-                                              <img
-                                                src="/images/album-placeholder.png"
+                                              <ArticleCoverPlaceholder
                                                 alt={article.nameArticle}
+                                                loading="lazy"
+                                                decoding="async"
                                               />
                                             )
                                           ) : (
-                                            <img
-                                              src="/images/album-placeholder.png"
+                                            <ArticleCoverPlaceholder
                                               alt={article.nameArticle}
+                                              loading="lazy"
+                                              decoding="async"
                                             />
                                           )}
                                         </div>
@@ -2806,8 +2810,7 @@ function UserDashboard() {
                                                           debugLabel={`UserDashboard:articleCoverPreview:${article.articleId}`}
                                                         />
                                                       ) : (
-                                                        <img
-                                                          src="/images/album-placeholder.png"
+                                                        <ArticleCoverPlaceholder
                                                           alt="Article cover preview"
                                                           className="user-dashboard__article-cover-image"
                                                         />
@@ -2953,7 +2956,7 @@ function UserDashboard() {
                                     articleId: `new-${Date.now()}`,
                                     nameArticle: '',
                                     img: '',
-                                    date: new Date().toISOString().split('T')[0],
+                                    date: toLocalYYYYMMDD(),
                                     details: [],
                                     description: '',
                                     isDraft: true,
@@ -2982,7 +2985,7 @@ function UserDashboard() {
                                     articleId: `new-${Date.now()}`,
                                     nameArticle: '',
                                     img: '',
-                                    date: new Date().toISOString().split('T')[0],
+                                    date: toLocalYYYYMMDD(),
                                     details: [],
                                     description: '',
                                     isDraft: true,
@@ -3411,7 +3414,17 @@ function UserDashboard() {
           isOpen={confirmationModal.isOpen}
           title={confirmationModal.title}
           message={confirmationModal.message}
+          irreversibleHint={
+            ui?.dashboard?.confirmActionIrreversible ?? 'This action cannot be undone.'
+          }
           variant={confirmationModal.variant}
+          cancelText={ui?.dashboard?.cancel ?? 'Cancel'}
+          confirmText={
+            confirmationModal.variant === 'danger'
+              ? (ui?.dashboard?.confirmationModalConfirmDelete ?? 'Delete')
+              : (ui?.dashboard?.confirmationModalConfirm ?? 'Confirm')
+          }
+          closeLabel={ui?.dashboard?.close ?? 'Close'}
           onConfirm={confirmationModal.onConfirm}
           onCancel={() => setConfirmationModal(null)}
         />

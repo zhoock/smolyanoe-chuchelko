@@ -5,6 +5,7 @@ import {
   isArticleCoverStorageKey,
   type ArticleCoverDisplayRole,
 } from '@shared/lib/articleCoverUrl';
+import { ArticleCoverPlaceholder } from './ArticleCoverPlaceholder';
 
 type ArticleCoverImageProps = {
   img: string;
@@ -31,16 +32,9 @@ export function ArticleCoverImage({
   decoding = 'async',
   debugLabel = 'ArticleCoverImage',
 }: ArticleCoverImageProps) {
-  const { webp, jpg } = getArticleCoverVariantUrls(img, userId, role);
-
-  if (!userId || !isArticleCoverStorageKey(img)) {
+  if (!img?.trim()) {
     return (
-      <img
-        src={optionalMediaSrc(
-          jpg ?? getImageUrl(img, '.jpg', userId ? { userId, category: 'articles' } : undefined),
-          debugLabel,
-          { hasUserId: !!userId }
-        )}
+      <ArticleCoverPlaceholder
         alt={alt}
         className={className}
         loading={loading}
@@ -49,19 +43,50 @@ export function ArticleCoverImage({
     );
   }
 
+  const { webp, jpg } = getArticleCoverVariantUrls(img, userId, role);
+
+  if (!userId || !isArticleCoverStorageKey(img)) {
+    const resolved =
+      optionalMediaSrc(
+        jpg ?? getImageUrl(img, '.jpg', userId ? { userId, category: 'articles' } : undefined),
+        debugLabel,
+        { hasUserId: !!userId }
+      ) ?? null;
+
+    if (!resolved) {
+      return (
+        <ArticleCoverPlaceholder
+          alt={alt}
+          className={className}
+          loading={loading}
+          decoding={decoding}
+        />
+      );
+    }
+
+    return (
+      <img src={resolved} alt={alt} className={className} loading={loading} decoding={decoding} />
+    );
+  }
+
   const webpSrc = webp ? optionalMediaSrc(webp, `${debugLabel}:webp`, { hasUserId: true }) : null;
   const jpgSrc = jpg ? optionalMediaSrc(jpg, `${debugLabel}:jpg`, { hasUserId: true }) : null;
 
-  return (
-    <picture>
-      {webpSrc ? <source srcSet={webpSrc} type="image/webp" /> : null}
-      <img
-        src={jpgSrc ?? ''}
+  if (!jpgSrc) {
+    return (
+      <ArticleCoverPlaceholder
         alt={alt}
         className={className}
         loading={loading}
         decoding={decoding}
       />
+    );
+  }
+
+  return (
+    <picture>
+      {webpSrc ? <source srcSet={webpSrc} type="image/webp" /> : null}
+      <img src={jpgSrc} alt={alt} className={className} loading={loading} decoding={decoding} />
     </picture>
   );
 }

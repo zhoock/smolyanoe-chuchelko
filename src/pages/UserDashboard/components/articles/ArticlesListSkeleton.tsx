@@ -12,7 +12,7 @@ export function ArticlesListSkeleton({ count = 4 }: ArticlesListSkeletonProps) {
       {Array.from({ length: count }).map((_, index) => (
         <React.Fragment key={index}>
           <div className="user-dashboard__album-item">
-            <div className="user-dashboard__album-thumbnail">
+            <div className="user-dashboard__album-thumbnail user-dashboard__album-thumbnail--article">
               <div className="skeleton skeleton--image" />
             </div>
             <div className="user-dashboard__album-info">

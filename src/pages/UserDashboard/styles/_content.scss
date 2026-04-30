@@ -190,6 +190,12 @@ dialog {
         object-fit: cover;
         transition: opacity 0.2s ease;
       }
+
+      &--article {
+        width: calc(var(--ms-1) * 2.7);
+        height: auto;
+        aspect-ratio: 3 / 2;
+      }
     }
 
     &__album-info {
@@ -293,12 +299,7 @@ dialog {
 
     &__article-cover-label {
       display: block;
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
-      font-weight: 500;
       margin-bottom: var(--ms-01);
-      text-transform: none !important;
-      letter-spacing: normal !important;
     }
 
     &__article-cover-file-input {
@@ -332,8 +333,6 @@ dialog {
 
     &__article-cover-dropzone-text {
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
-      text-align: center;
       margin-bottom: var(--ms-01);
     }
 
@@ -341,16 +340,7 @@ dialog {
       cursor: pointer;
       display: inline-block;
 
-      @include button-variant(
-        $color: var(--white),
-        $background: var(--iron-slate),
-        $hover-color: var(--white),
-        $hover-background: var(--graphite-green),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 0,
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button;
     }
 
     &__article-cover-wrap {

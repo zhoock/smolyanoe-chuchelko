@@ -1,0 +1,38 @@
+// Две картинки: видимость по html.theme-light / html.theme-dark (см. App.tsx).
+
+.article-cover-placeholder {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+
+  &__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    object-fit: cover;
+
+    &--light {
+      display: block;
+    }
+
+    &--dark {
+      display: none;
+    }
+  }
+
+  html.theme-dark & {
+    .article-cover-placeholder__img--light {
+      display: none;
+    }
+
+    .article-cover-placeholder__img--dark {
+      display: block;
+    }
+  }
+}

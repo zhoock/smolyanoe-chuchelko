@@ -1,5 +1,6 @@
 export { ArticlePreview } from './ui/ArticlePreview';
 export { ArticleCoverImage } from './ui/ArticleCoverImage';
+export { ArticleCoverPlaceholder } from './ui/ArticleCoverPlaceholder';
 export type { LocaleKey } from './lib/formatDate';
 export { formatDateInWords } from './lib/formatDate';
 export { resolveArticleForDisplay } from './lib/resolveArticleDisplay';

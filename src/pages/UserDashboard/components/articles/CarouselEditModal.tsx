@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getUserImageUrl } from '@shared/api/albums';
 import { optionalMediaSrc } from '@shared/lib/media/optionalMediaUrl';
+import { ArticleCoverPlaceholder } from '@entities/article';
 import { uploadFile } from '@shared/api/storage';
 import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import { Popup } from '@shared/ui/popup';
@@ -112,28 +113,30 @@ export function CarouselEditModal({
 
         <div className="edit-article-v2__carousel-edit-content">
           <div className="edit-article-v2__carousel-edit-thumbnails">
-            {imageKeys.map((imageKey, index) => (
-              <div key={imageKey} className="edit-article-v2__carousel-edit-thumbnail">
-                <img
-                  src={
-                    optionalMediaSrc(
-                      getUserImageUrl(imageKey, 'articles', '.jpg', undefined, mediaOwnerUserId),
-                      'CarouselEditModal:thumbnail',
-                      { index }
-                    ) ?? '/images/album-placeholder.png'
-                  }
-                  alt={`Image ${index + 1}`}
-                />
-                <button
-                  type="button"
-                  className="edit-article-v2__carousel-edit-remove"
-                  onClick={() => handleRemoveImage(index)}
-                  aria-label="Удалить изображение"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+            {imageKeys.map((imageKey, index) => {
+              const thumbUrl = optionalMediaSrc(
+                getUserImageUrl(imageKey, 'articles', '.jpg', undefined, mediaOwnerUserId),
+                'CarouselEditModal:thumbnail',
+                { index }
+              );
+              return (
+                <div key={imageKey} className="edit-article-v2__carousel-edit-thumbnail">
+                  {thumbUrl ? (
+                    <img src={thumbUrl} alt={`Image ${index + 1}`} />
+                  ) : (
+                    <ArticleCoverPlaceholder alt={`Image ${index + 1}`} />
+                  )}
+                  <button
+                    type="button"
+                    className="edit-article-v2__carousel-edit-remove"
+                    onClick={() => handleRemoveImage(index)}
+                    aria-label="Удалить изображение"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
             <button
               type="button"
               className="edit-article-v2__carousel-edit-add"

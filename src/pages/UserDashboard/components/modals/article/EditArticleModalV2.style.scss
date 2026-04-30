@@ -240,11 +240,13 @@ dialog {
 
     &__button {
       &--cancel,
+      &--draft,
       &--publish {
         @include dashboard-button;
       }
 
-      &--cancel:disabled {
+      &--cancel:disabled,
+      &--draft:disabled {
         opacity: 0.6;
         cursor: not-allowed;
       }

@@ -1,3 +1,5 @@
+import { parseISODateOnlyParts } from '@shared/lib/dateCalendar';
+
 export const formatDateInWords = {
   ru: {
     formatDate: (dateRelease: string): string => {
@@ -16,11 +18,17 @@ export const formatDateInWords = {
         'декабря',
       ];
 
+      const parts = parseISODateOnlyParts(dateRelease);
+      if (parts) {
+        const { day: dd, monthIndex, year: yy } = parts;
+        const mm = months[monthIndex];
+        return `${dd} ${mm} ${yy}`;
+      }
+
       const date = new Date(dateRelease);
       const dd = date.getDate();
       const mm = months[date.getMonth()];
       const yy = date.getFullYear();
-
       return `${dd} ${mm} ${yy}`;
     },
   },
@@ -42,11 +50,17 @@ export const formatDateInWords = {
         'December',
       ];
 
+      const parts = parseISODateOnlyParts(dateRelease);
+      if (parts) {
+        const { day: dd, monthIndex, year: yy } = parts;
+        const mm = months[monthIndex];
+        return `${mm} ${dd}, ${yy}`;
+      }
+
       const date = new Date(dateRelease);
       const dd = date.getDate();
       const mm = months[date.getMonth()];
       const yy = date.getFullYear();
-
       return `${mm} ${dd}, ${yy}`;
     },
   },

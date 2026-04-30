@@ -35,6 +35,7 @@ import { ArticleEditSkeleton } from '../../articles/ArticleEditSkeleton';
 import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
 import { uniqueUploadFileSuffix } from '@shared/lib/uniqueUploadFileSuffix';
 import { sanitizeFileName } from '@shared/lib/sanitizeFileName';
+import { toLocalYYYYMMDD } from '@shared/lib/dateCalendar';
 import '@shared/ui/dashboard-save/dashboard-save.scss';
 import './EditArticleModalV2.style.scss';
 
@@ -61,6 +62,9 @@ const LANG_TEXTS = {
     articleNotFound: 'Статья не найдена',
     articleSaved: 'Статья успешно сохранена',
     articlePublished: 'Статья успешно опубликована',
+    savingDraft: 'Сохранить черновик',
+    savingDraftProgress: 'Сохранение черновика...',
+    leaveWithoutSavingPrompt: 'У вас есть несохранённые изменения. Выйти без сохранения черновика?',
     savingError: 'Ошибка при сохранении',
     addBlock: 'Добавить блок',
     close: 'Закрыть',
@@ -79,11 +83,50 @@ const LANG_TEXTS = {
     articleNotFound: 'Article not found',
     articleSaved: 'Article saved successfully',
     articlePublished: 'Article published successfully',
+    savingDraft: 'Save draft',
+    savingDraftProgress: 'Saving draft...',
+    leaveWithoutSavingPrompt: 'You have unsaved changes. Leave without saving the draft?',
     savingError: 'Error saving article',
     addBlock: 'Add Block',
     close: 'Close',
   },
 };
+
+function normalizeArticlePayloadItem(raw: unknown): IArticles | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const articleIdRaw = r.articleId;
+  if (articleIdRaw == null || String(articleIdRaw).trim() === '') return null;
+  const details = Array.isArray(r.details) ? r.details : [];
+
+  return {
+    id: r.id != null ? String(r.id) : undefined,
+    userId: r.userId != null ? String(r.userId) : undefined,
+    articleId: String(articleIdRaw),
+    nameArticle: typeof r.nameArticle === 'string' ? r.nameArticle : '',
+    img: typeof r.img === 'string' ? r.img : '',
+    date: typeof r.date === 'string' ? r.date : '',
+    details: details as IArticles['details'],
+    description: typeof r.description === 'string' ? r.description : '',
+    isDraft: r.isDraft === true,
+    translations: r.translations as IArticles['translations'],
+    lang: r.lang as IArticles['lang'],
+  };
+}
+
+function extractFirstArticleFromApiJson(json: unknown): IArticles | null {
+  if (!json || typeof json !== 'object') return null;
+  const root = json as Record<string, unknown>;
+  const list = Array.isArray(json)
+    ? json
+    : Array.isArray(root.data)
+      ? root.data
+      : Array.isArray(root.articles)
+        ? root.articles
+        : null;
+  if (!list || list.length === 0) return null;
+  return normalizeArticlePayloadItem(list[0]);
+}
 
 export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModalV2Props) {
   const { lang } = useLang();
@@ -163,6 +206,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [originalIsDraft, setOriginalIsDraft] = useState<boolean>(true);
 
   // Refs для управления автосохранением
@@ -284,8 +328,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const autoSave = useCallback(async () => {
     if (!isMountedRef.current || !isOpen || !currentArticle) return;
 
-    // Для новой статьи не делаем автосохранение (только при публикации)
-    if (currentArticle.articleId.startsWith('new-')) return;
+    if (isPublishing || isSavingDraft) return;
 
     if (!currentArticle.id) return;
 
@@ -359,7 +402,19 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         }, 2000);
       }
     }
-  }, [blocks, meta, currentArticle, originalIsDraft, lang, dispatch, isOpen, article, saveStatus]);
+  }, [
+    blocks,
+    meta,
+    currentArticle,
+    originalIsDraft,
+    lang,
+    dispatch,
+    isOpen,
+    article,
+    saveStatus,
+    isPublishing,
+    isSavingDraft,
+  ]);
 
   // Debounced автосохранение
   const debouncedAutoSave = useRef(
@@ -371,9 +426,6 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   // Планирование автосохранения
   useEffect(() => {
     if (!isOpen || !currentArticle) return;
-
-    // Для новой статьи не делаем автосохранение
-    if (currentArticle.articleId.startsWith('new-')) return;
 
     if (!currentArticle.id) return;
 
@@ -448,12 +500,120 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
 
   // Обработка закрытия модального окна
   const handleClose = useCallback(() => {
-    if (saveStatus === 'saving' || isPublishing) return;
+    if (saveStatus === 'saving' || isPublishing || isSavingDraft) return;
+
+    const neverPersisted = Boolean(currentArticle && !currentArticle.id);
+    if (neverPersisted && hasChanges) {
+      if (typeof window !== 'undefined' && !window.confirm(texts.leaveWithoutSavingPrompt)) {
+        return;
+      }
+    }
+
     if (hasChanges) {
       handleCancel();
     }
     onClose();
-  }, [saveStatus, isPublishing, hasChanges, handleCancel, onClose]);
+  }, [
+    saveStatus,
+    isPublishing,
+    isSavingDraft,
+    hasChanges,
+    handleCancel,
+    onClose,
+    currentArticle,
+    texts.leaveWithoutSavingPrompt,
+  ]);
+
+  const handleSaveDraft = useCallback(async () => {
+    if (!currentArticle) return;
+
+    setIsSavingDraft(true);
+    setSaveStatus('saving');
+
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const details = blocksToDetails(blocks);
+
+      let articleId = currentArticle.articleId.startsWith('new-')
+        ? currentArticle.articleId.replace('new-', '')
+        : currentArticle.articleId;
+
+      if (!articleId || articleId.startsWith('new-')) {
+        articleId = `article-${Date.now()}`;
+      }
+
+      const requestBody = {
+        articleId,
+        lang,
+        translations: {
+          [lang]: {
+            nameArticle: meta.title.trim() || 'Untitled',
+            description: meta.description || '',
+            details,
+          },
+        },
+        img: currentArticle.img || article.img || '',
+        date: currentArticle.date || article.date || toLocalYYYYMMDD(),
+        isDraft: true,
+      };
+
+      const isNewArticle = !currentArticle.id;
+      const url = isNewArticle
+        ? '/api/articles-api'
+        : `/api/articles-api?id=${encodeURIComponent(currentArticle.id || '')}`;
+      const method = isNewArticle ? 'POST' : 'PUT';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        setSaveStatus('saved');
+        setLastSaved(new Date());
+        setOriginalIsDraft(true);
+
+        if (isNewArticle) {
+          const json: unknown = await response.json();
+          const saved = extractFirstArticleFromApiJson(json);
+          if (saved) {
+            setCurrentArticle((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    ...saved,
+                    img: saved.img || prev.img || article.img || '',
+                    date: saved.date || prev.date || article.date || '',
+                  }
+                : saved
+            );
+          }
+        }
+
+        setInitialBlocks(JSON.parse(JSON.stringify(blocks)));
+        setInitialMeta({ ...meta });
+
+        try {
+          await dispatch(fetchArticles({ force: true })).unwrap();
+        } catch (error) {
+          console.warn('Failed to update Redux store:', error);
+        }
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (error) {
+      console.error('Save draft error:', error);
+      setSaveStatus('error');
+    } finally {
+      setIsSavingDraft(false);
+    }
+  }, [blocks, meta, currentArticle, lang, dispatch, article]);
 
   // Публикация
   const handlePublish = useCallback(async () => {
@@ -490,12 +650,12 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           },
         },
         img: currentArticle.img || article.img || '',
-        date: currentArticle.date || article.date || new Date().toISOString().split('T')[0],
+        date: currentArticle.date || article.date || toLocalYYYYMMDD(),
         isDraft: false, // Публикуем
       };
 
-      // Для новой статьи используем POST, для существующей - PUT
-      const isNewArticle = currentArticle.articleId.startsWith('new-') || !currentArticle.id;
+      // До первого сохранения в БД нет id — POST; далее PUT
+      const isNewArticle = !currentArticle.id;
       const url = isNewArticle
         ? '/api/articles-api'
         : `/api/articles-api?id=${encodeURIComponent(currentArticle.id || '')}`;
@@ -1800,7 +1960,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     );
   };
 
-  const isArticleSaveBusy = saveStatus === 'saving' || isPublishing;
+  const isArticleSaveBusy = saveStatus === 'saving' || isPublishing || isSavingDraft;
 
   return (
     <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isArticleSaveBusy}>
@@ -1810,7 +1970,9 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       ) : (
         <div className="edit-article-v2">
           <div
-            className={`edit-article-v2__container${isPublishing ? ' edit-article-v2__container--saving' : ''}`}
+            className={`edit-article-v2__container${
+              isPublishing || isSavingDraft ? ' edit-article-v2__container--saving' : ''
+            }`}
             aria-busy={isArticleSaveBusy}
           >
             {/* Sticky Header */}
@@ -1997,11 +2159,28 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                 </button>
                 <button
                   type="button"
+                  className={`edit-article-v2__button edit-article-v2__button--draft${
+                    isSavingDraft ? ' edit-article-v2__button--publish-loading' : ''
+                  }`}
+                  onClick={handleSaveDraft}
+                  disabled={isPublishing || saveStatus === 'saving' || isSavingDraft}
+                >
+                  {isSavingDraft ? (
+                    <>
+                      <DashboardSaveSpinner />
+                      {texts.savingDraftProgress}
+                    </>
+                  ) : (
+                    texts.savingDraft
+                  )}
+                </button>
+                <button
+                  type="button"
                   className={`edit-article-v2__button edit-article-v2__button--publish${
                     isPublishing ? ' edit-article-v2__button--publish-loading' : ''
                   }`}
                   onClick={handlePublish}
-                  disabled={isPublishing || saveStatus === 'saving'}
+                  disabled={isPublishing || saveStatus === 'saving' || isSavingDraft}
                 >
                   {isPublishing ? (
                     <>

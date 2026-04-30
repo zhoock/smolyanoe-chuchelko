@@ -311,6 +311,12 @@ export interface IInterface {
     pleaseSelectImageFile: string;
     failedToUploadCover: string;
     confirmAction: string;
+    /** Пояснение в модалке подтверждения удаления и др. необратимых действий */
+    confirmActionIrreversible?: string;
+    /** Текст кнопки подтверждения для info / warning в модалке подтверждения */
+    confirmationModalConfirm?: string;
+    /** Текст кнопки подтверждения для необратимого (danger) действия — обычно «Удалить» */
+    confirmationModalConfirmDelete?: string;
     error: string;
     success?: string;
     /** Префикс сообщения «загружено N трек(ов)»; слово «трек» подставляется в коде с учётом числа. */
