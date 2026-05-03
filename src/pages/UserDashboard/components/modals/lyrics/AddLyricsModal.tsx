@@ -7,6 +7,11 @@ import { useLang } from '@app/providers/lang';
 import { useDashboardSaveLock } from '@shared/lib/hooks/useDashboardSaveLock';
 import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
 import '@shared/ui/dashboard-save/dashboard-save.scss';
+import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
+import {
+  InlineEditDiscardDialog,
+  getCloseDiscardConfirmLabels,
+} from '../../shared/EditableCardField';
 import './AddLyricsModal.style.scss';
 
 interface AddLyricsModalProps {
@@ -30,7 +35,25 @@ export function AddLyricsModal({
   const [authorship, setAuthorship] = useState('');
   const { isSaving, withSaving } = useDashboardSaveLock();
 
+  const hasLyricsBody = lyricsText.trim().length > 0;
+
+  const hasUnsavedContent = lyricsText.trim().length > 0 || authorship.trim().length > 0;
+
+  const finalizeModalClose = useCallback(() => {
+    setLyricsText('');
+    setAuthorship('');
+    onClose();
+  }, [onClose]);
+
+  const lyricsAddCloseGuard = useCloseWithUnsavedConfirmation({
+    isOpen,
+    isBusy: isSaving,
+    hasUnsavedChanges: hasUnsavedContent,
+    onClose: finalizeModalClose,
+  });
+
   const handleSave = () => {
+    if (!lyricsText.trim()) return;
     void withSaving(async () => {
       await Promise.resolve(onSave(lyricsText, authorship.trim() || undefined));
       setLyricsText('');
@@ -38,39 +61,46 @@ export function AddLyricsModal({
     });
   };
 
-  const handleClose = useCallback(() => {
-    if (isSaving) return;
-    setLyricsText('');
-    setAuthorship('');
-    onClose();
-  }, [isSaving, onClose]);
-
   return (
-    <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isSaving}>
+    <Popup
+      isActive={isOpen}
+      onClose={() => lyricsAddCloseGuard.requestClose()}
+      closeBlocked={isSaving || lyricsAddCloseGuard.discardDialogOpen}
+    >
       <div className="add-lyrics-modal">
         <div
           className={`add-lyrics-modal__card${isSaving ? ' dashboard-save-card--busy' : ''}`}
           aria-busy={isSaving}
         >
           <div className="add-lyrics-modal__header">
-            <div className="add-lyrics-modal__header-content">
+            <div className="add-lyrics-modal__header-main">
               <h2 className="add-lyrics-modal__title">
                 {ui?.dashboard?.addLyrics ?? 'Add Lyrics'}
               </h2>
-              <h3 className="add-lyrics-modal__subtitle">{trackTitle}</h3>
+              <p className="add-lyrics-modal__subtitle">{trackTitle}</p>
             </div>
-            {onPreview && (
+            <div className="add-lyrics-modal__header-trailing">
+              {onPreview ? (
+                <button
+                  type="button"
+                  className="add-lyrics-modal__preview-button"
+                  onClick={onPreview}
+                  disabled={isSaving}
+                >
+                  {ui?.dashboard?.preview ?? 'Preview'}
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="add-lyrics-modal__preview-button"
-                onClick={onPreview}
+                className="add-lyrics-modal__close"
+                onClick={() => lyricsAddCloseGuard.requestClose()}
                 disabled={isSaving}
+                aria-label={ui?.dashboard?.close ?? 'Close'}
               >
-                {ui?.dashboard?.preview ?? 'Preview'}
+                ×
               </button>
-            )}
+            </div>
           </div>
-          <div className="add-lyrics-modal__divider"></div>
           <textarea
             className="add-lyrics-modal__textarea"
             placeholder={ui?.dashboard?.insertLyricsHere ?? 'Insert lyrics here…'}
@@ -115,7 +145,7 @@ export function AddLyricsModal({
             <button
               type="button"
               className="add-lyrics-modal__button add-lyrics-modal__button--cancel"
-              onClick={handleClose}
+              onClick={() => lyricsAddCloseGuard.requestClose()}
               disabled={isSaving}
             >
               {ui?.dashboard?.cancel ?? 'Cancel'}
@@ -126,7 +156,7 @@ export function AddLyricsModal({
                 isSaving ? ' add-lyrics-modal__button--primary-loading' : ''
               }`}
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasLyricsBody}
             >
               {isSaving ? (
                 <>
@@ -140,6 +170,13 @@ export function AddLyricsModal({
           </div>
         </div>
       </div>
+      <InlineEditDiscardDialog
+        open={lyricsAddCloseGuard.discardDialogOpen}
+        labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+        titleId={lyricsAddCloseGuard.discardTitleDomId}
+        onStay={lyricsAddCloseGuard.dismissDiscardDialog}
+        onDiscard={lyricsAddCloseGuard.finalizeCloseWithoutSaving}
+      />
     </Popup>
   );
 }

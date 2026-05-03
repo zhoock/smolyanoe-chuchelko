@@ -317,6 +317,12 @@ export interface IInterface {
     confirmationModalConfirm?: string;
     /** Текст кнопки подтверждения для необратимого (danger) действия — обычно «Удалить» */
     confirmationModalConfirmDelete?: string;
+    /** Закрытие модалки с несохранённым вводом (общий паттерн кабинета) */
+    closeDiscardConfirm?: {
+      message?: string;
+      stay?: string;
+      discard?: string;
+    };
     error: string;
     success?: string;
     /** Префикс сообщения «загружено N трек(ов)»; слово «трек» подставляется в коде с учётом числа. */

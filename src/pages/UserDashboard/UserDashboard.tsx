@@ -87,6 +87,11 @@ import { useAvatar } from '@shared/lib/hooks/useAvatar';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
+import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
+import {
+  InlineEditDiscardDialog,
+  getCloseDiscardConfirmLabels,
+} from './components/shared/EditableCardField';
 import type { SupportedLang } from '@shared/model/lang';
 import './UserDashboard.style.scss';
 
@@ -756,6 +761,7 @@ function UserDashboard() {
     trackId: string;
     trackTitle: string;
   } | null>(null);
+  const [editTrackTitleDraft, setEditTrackTitleDraft] = useState('');
   const [editLyricsModal, setEditLyricsModal] = useState<{
     isOpen: boolean;
     albumId: string;
@@ -855,6 +861,17 @@ function UserDashboard() {
       { replace: true, state: location.state }
     );
   }, [searchParams, navigate, location.pathname, location.state]);
+
+  useEffect(() => {
+    if (editTrackModal?.isOpen) {
+      setEditTrackTitleDraft(editTrackModal.trackTitle);
+    }
+  }, [
+    editTrackModal?.isOpen,
+    editTrackModal?.albumId,
+    editTrackModal?.trackId,
+    editTrackModal?.trackTitle,
+  ]);
 
   // Функции для загрузки обложки статьи
   const handleArticleCoverDrag = (articleId: string, e: React.DragEvent) => {
@@ -1978,6 +1995,7 @@ function UserDashboard() {
 
   const handleAddLyrics = async (lyrics: string, authorship?: string) => {
     if (!addLyricsModal) return;
+    if (!lyrics.trim()) return;
 
     // Сохраняем текст и авторство в БД
     const album = albumsData.find((a) => a.id === addLyricsModal.albumId);
@@ -2202,6 +2220,19 @@ function UserDashboard() {
       });
     }
   };
+
+  const editTrackTitleDirty =
+    !!editTrackModal?.isOpen && editTrackTitleDraft.trim() !== editTrackModal.trackTitle.trim();
+
+  const finalizeEditTrackModalClose = useCallback(() => {
+    setEditTrackModal(null);
+  }, []);
+
+  const editTrackCloseGuard = useCloseWithUnsavedConfirmation({
+    isOpen: !!editTrackModal?.isOpen,
+    hasUnsavedChanges: editTrackTitleDirty,
+    onClose: finalizeEditTrackModalClose,
+  });
 
   if (tabInvalid) {
     return <Navigate to="/dashboard-new/albums" replace state={location.state} />;
@@ -3244,68 +3275,79 @@ function UserDashboard() {
 
       {/* Edit Track Modal */}
       {editTrackModal && (
-        <Popup isActive={editTrackModal.isOpen} onClose={() => setEditTrackModal(null)}>
-          <div className="edit-track-modal">
-            <div className="edit-track-modal__card">
-              <div className="edit-track-modal__header">
-                <button
-                  type="button"
-                  className="edit-track-modal__close"
-                  onClick={() => setEditTrackModal(null)}
-                  aria-label={ui?.dashboard?.close ?? 'Close'}
-                >
-                  ×
-                </button>
-                <h2 className="edit-track-modal__title">
-                  {ui?.dashboard?.editTrack ?? 'Edit Track'}
-                </h2>
-              </div>
-              <div className="edit-track-modal__content">
-                <div className="edit-track-modal__field">
-                  <label className="edit-track-modal__label">
-                    {ui?.dashboard?.trackTitle ?? 'Track Title'}
-                  </label>
-                  <input
-                    type="text"
-                    className="edit-track-modal__input"
-                    defaultValue={editTrackModal.trackTitle}
-                    id="edit-track-title-input"
-                    autoFocus
-                  />
+        <>
+          <Popup
+            isActive={editTrackModal.isOpen}
+            onClose={() => editTrackCloseGuard.requestClose()}
+            closeBlocked={editTrackCloseGuard.discardDialogOpen}
+          >
+            <div className="edit-track-modal">
+              <div className="edit-track-modal__card">
+                <div className="edit-track-modal__header">
+                  <button
+                    type="button"
+                    className="edit-track-modal__close"
+                    onClick={() => editTrackCloseGuard.requestClose()}
+                    aria-label={ui?.dashboard?.close ?? 'Close'}
+                  >
+                    ×
+                  </button>
+                  <h2 className="edit-track-modal__title">
+                    {ui?.dashboard?.editTrack ?? 'Edit Track'}
+                  </h2>
+                </div>
+                <div className="edit-track-modal__content">
+                  <div className="edit-track-modal__field">
+                    <label className="edit-track-modal__label" htmlFor="edit-track-title-input">
+                      {ui?.dashboard?.trackTitle ?? 'Track Title'}
+                    </label>
+                    <input
+                      type="text"
+                      className="edit-track-modal__input"
+                      value={editTrackTitleDraft}
+                      onChange={(e) => setEditTrackTitleDraft(e.target.value)}
+                      id="edit-track-title-input"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="edit-track-modal__footer">
+                  <button
+                    type="button"
+                    className="edit-track-modal__cancel"
+                    onClick={() => editTrackCloseGuard.requestClose()}
+                  >
+                    {ui?.dashboard?.cancel ?? 'Cancel'}
+                  </button>
+                  <button
+                    type="button"
+                    className="edit-track-modal__save"
+                    onClick={async () => {
+                      const newTitle = editTrackTitleDraft.trim();
+                      if (newTitle && newTitle !== editTrackModal.trackTitle) {
+                        await handleTrackTitleChange(
+                          editTrackModal.albumId,
+                          editTrackModal.trackId,
+                          newTitle
+                        );
+                      }
+                      setEditTrackModal(null);
+                    }}
+                  >
+                    {ui?.dashboard?.save ?? 'Save'}
+                  </button>
                 </div>
               </div>
-              <div className="edit-track-modal__footer">
-                <button
-                  type="button"
-                  className="edit-track-modal__cancel"
-                  onClick={() => setEditTrackModal(null)}
-                >
-                  {ui?.dashboard?.cancel ?? 'Cancel'}
-                </button>
-                <button
-                  type="button"
-                  className="edit-track-modal__save"
-                  onClick={async () => {
-                    const input = document.getElementById(
-                      'edit-track-title-input'
-                    ) as HTMLInputElement;
-                    const newTitle = input?.value.trim();
-                    if (newTitle && newTitle !== editTrackModal.trackTitle) {
-                      await handleTrackTitleChange(
-                        editTrackModal.albumId,
-                        editTrackModal.trackId,
-                        newTitle
-                      );
-                    }
-                    setEditTrackModal(null);
-                  }}
-                >
-                  {ui?.dashboard?.save ?? 'Save'}
-                </button>
-              </div>
             </div>
-          </div>
-        </Popup>
+            <InlineEditDiscardDialog
+              open={editTrackCloseGuard.discardDialogOpen}
+              labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+              titleId={editTrackCloseGuard.discardTitleDomId}
+              onStay={editTrackCloseGuard.dismissDiscardDialog}
+              onDiscard={editTrackCloseGuard.finalizeCloseWithoutSaving}
+            />
+          </Popup>
+        </>
       )}
 
       {/* Edit Album Modal */}

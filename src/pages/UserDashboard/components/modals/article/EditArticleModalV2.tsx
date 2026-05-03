@@ -18,6 +18,13 @@ import {
 import { Popup } from '@shared/ui/popup';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
+import {
+  InlineEditDiscardDialog,
+  getCloseDiscardConfirmLabels,
+} from '../../shared/EditableCardField';
 import { getToken } from '@shared/lib/auth';
 import { fetchArticles, resolveArticleForDisplay } from '@entities/article';
 import type { IArticles } from '@models';
@@ -64,7 +71,6 @@ const LANG_TEXTS = {
     articlePublished: 'Статья успешно опубликована',
     savingDraft: 'Сохранить черновик',
     savingDraftProgress: 'Сохранение черновика...',
-    leaveWithoutSavingPrompt: 'У вас есть несохранённые изменения. Выйти без сохранения черновика?',
     savingError: 'Ошибка при сохранении',
     addBlock: 'Добавить блок',
     close: 'Закрыть',
@@ -85,7 +91,6 @@ const LANG_TEXTS = {
     articlePublished: 'Article published successfully',
     savingDraft: 'Save draft',
     savingDraftProgress: 'Saving draft...',
-    leaveWithoutSavingPrompt: 'You have unsaved changes. Leave without saving the draft?',
     savingError: 'Error saving article',
     addBlock: 'Add Block',
     close: 'Close',
@@ -132,6 +137,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
   const { lang } = useLang();
   const dispatch = useAppDispatch();
   const texts = LANG_TEXTS[lang];
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   // Состояние редактора
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -498,31 +504,19 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     setMeta({ ...initialMeta });
   }, [initialBlocks, initialMeta]);
 
-  // Обработка закрытия модального окна
-  const handleClose = useCallback(() => {
-    if (saveStatus === 'saving' || isPublishing || isSavingDraft) return;
-
-    const neverPersisted = Boolean(currentArticle && !currentArticle.id);
-    if (neverPersisted && hasChanges) {
-      if (typeof window !== 'undefined' && !window.confirm(texts.leaveWithoutSavingPrompt)) {
-        return;
-      }
-    }
-
-    if (hasChanges) {
-      handleCancel();
-    }
+  const finalizeArticleModalClose = useCallback(() => {
+    if (hasChanges) handleCancel();
     onClose();
-  }, [
-    saveStatus,
-    isPublishing,
-    isSavingDraft,
-    hasChanges,
-    handleCancel,
-    onClose,
-    currentArticle,
-    texts.leaveWithoutSavingPrompt,
-  ]);
+  }, [hasChanges, handleCancel, onClose]);
+
+  const isArticleSaveBusy = saveStatus === 'saving' || isPublishing || isSavingDraft;
+
+  const articleCloseGuard = useCloseWithUnsavedConfirmation({
+    isOpen,
+    isBusy: isArticleSaveBusy,
+    hasUnsavedChanges: hasChanges,
+    onClose: finalizeArticleModalClose,
+  });
 
   const handleSaveDraft = useCallback(async () => {
     if (!currentArticle) return;
@@ -1960,263 +1954,275 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
     );
   };
 
-  const isArticleSaveBusy = saveStatus === 'saving' || isPublishing || isSavingDraft;
-
   return (
-    <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isArticleSaveBusy}>
-      {isLoading ? (
-        //   {true ? (
-        <ArticleEditSkeleton />
-      ) : (
-        <div className="edit-article-v2">
-          <div
-            className={`edit-article-v2__container${
-              isPublishing || isSavingDraft ? ' edit-article-v2__container--saving' : ''
-            }`}
-            aria-busy={isArticleSaveBusy}
-          >
-            {/* Sticky Header */}
-            <div className="edit-article-v2__header">
-              <div className="edit-article-v2__header-content">
-                <input
-                  type="text"
-                  className="edit-article-v2__title-input"
-                  value={meta.title}
-                  onChange={(e) => setMeta((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder={texts.title}
-                />
-                <div className="edit-article-v2__status">{getStatusText()}</div>
-              </div>
-              <button
-                type="button"
-                className="edit-article-v2__close"
-                onClick={handleClose}
-                disabled={isArticleSaveBusy}
-                aria-label={texts.close}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="edit-article-v2__content article">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={blocks.map((b) => b.id)}
-                  strategy={verticalListSortingStrategy}
+    <>
+      <Popup
+        isActive={isOpen}
+        onClose={() => articleCloseGuard.requestClose()}
+        closeBlocked={isArticleSaveBusy || articleCloseGuard.discardDialogOpen}
+      >
+        {isLoading ? (
+          //   {true ? (
+          <ArticleEditSkeleton />
+        ) : (
+          <div className="edit-article-v2">
+            <div
+              className={`edit-article-v2__container${
+                isPublishing || isSavingDraft ? ' edit-article-v2__container--saving' : ''
+              }`}
+              aria-busy={isArticleSaveBusy}
+            >
+              {/* Sticky Header */}
+              <div className="edit-article-v2__header">
+                <div className="edit-article-v2__header-content">
+                  <input
+                    type="text"
+                    className="edit-article-v2__title-input"
+                    value={meta.title}
+                    onChange={(e) => setMeta((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder={texts.title}
+                  />
+                  <div className="edit-article-v2__status">{getStatusText()}</div>
+                </div>
+                <button
+                  type="button"
+                  className="edit-article-v2__close"
+                  onClick={() => articleCloseGuard.requestClose()}
+                  disabled={isArticleSaveBusy}
+                  aria-label={texts.close}
                 >
-                  <div className="edit-article-v2__blocks">
-                    {blocks.map((block, index) => (
-                      <React.Fragment key={block.id}>
-                        <SortableBlock
-                          articleOwnerUserId={article.userId ?? undefined}
-                          block={block}
-                          index={index}
-                          isFocused={focusBlockId === block.id}
-                          isSelected={selectedBlockId === block.id}
-                          showVkPlus={
-                            (vkInserter?.afterBlockId === block.id || focusBlockId === block.id) &&
-                            (((block.type === 'paragraph' ||
-                              block.type === 'title' ||
-                              block.type === 'subtitle' ||
-                              block.type === 'quote') &&
-                              block.text.trim() === '') ||
-                              (block.type === 'list' &&
-                                block.items.every((item) => item.trim() === '')))
-                          }
-                          onUpdate={updateBlock}
-                          onDelete={deleteBlock}
-                          onFocus={() => {
-                            setFocusBlockId(block.id);
-                            // Если блок пустой и vkInserter не установлен, устанавливаем его
-                            const isBlockEmpty =
-                              ((block.type === 'paragraph' ||
+                  ×
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="edit-article-v2__content article">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={blocks.map((b) => b.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="edit-article-v2__blocks">
+                      {blocks.map((block, index) => (
+                        <React.Fragment key={block.id}>
+                          <SortableBlock
+                            articleOwnerUserId={article.userId ?? undefined}
+                            block={block}
+                            index={index}
+                            isFocused={focusBlockId === block.id}
+                            isSelected={selectedBlockId === block.id}
+                            showVkPlus={
+                              (vkInserter?.afterBlockId === block.id ||
+                                focusBlockId === block.id) &&
+                              (((block.type === 'paragraph' ||
                                 block.type === 'title' ||
                                 block.type === 'subtitle' ||
                                 block.type === 'quote') &&
                                 block.text.trim() === '') ||
-                              (block.type === 'list' &&
-                                block.items.every((item) => item.trim() === ''));
-                            if (isBlockEmpty && vkInserter?.afterBlockId !== block.id) {
-                              setVkInserter({ afterBlockId: block.id });
+                                (block.type === 'list' &&
+                                  block.items.every((item) => item.trim() === '')))
                             }
-                          }}
-                          onBlur={() => {
-                            // Используем setTimeout, чтобы проверить, куда перешел фокус
-                            // Если фокус перешел на плюс или внутри того же блока, не скрываем плюс
-                            setTimeout(() => {
-                              const activeElement = document.activeElement;
+                            onUpdate={updateBlock}
+                            onDelete={deleteBlock}
+                            onFocus={() => {
+                              setFocusBlockId(block.id);
+                              // Если блок пустой и vkInserter не установлен, устанавливаем его
+                              const isBlockEmpty =
+                                ((block.type === 'paragraph' ||
+                                  block.type === 'title' ||
+                                  block.type === 'subtitle' ||
+                                  block.type === 'quote') &&
+                                  block.text.trim() === '') ||
+                                (block.type === 'list' &&
+                                  block.items.every((item) => item.trim() === ''));
+                              if (isBlockEmpty && vkInserter?.afterBlockId !== block.id) {
+                                setVkInserter({ afterBlockId: block.id });
+                              }
+                            }}
+                            onBlur={() => {
+                              // Используем setTimeout, чтобы проверить, куда перешел фокус
+                              // Если фокус перешел на плюс или внутри того же блока, не скрываем плюс
+                              setTimeout(() => {
+                                const activeElement = document.activeElement;
 
-                              // Проверяем, находится ли фокус на плюсе
-                              const isClickingOnVkPlus =
-                                activeElement?.closest('.edit-article-v2__vk-plus') !== null;
+                                // Проверяем, находится ли фокус на плюсе
+                                const isClickingOnVkPlus =
+                                  activeElement?.closest('.edit-article-v2__vk-plus') !== null;
 
-                              // Проверяем, находится ли фокус на textarea этого блока
-                              const blockTextarea = document.querySelector(
-                                `[data-block-id="${block.id}"] textarea`
-                              ) as HTMLTextAreaElement;
-                              const isFocusOnBlockTextarea = activeElement === blockTextarea;
+                                // Проверяем, находится ли фокус на textarea этого блока
+                                const blockTextarea = document.querySelector(
+                                  `[data-block-id="${block.id}"] textarea`
+                                ) as HTMLTextAreaElement;
+                                const isFocusOnBlockTextarea = activeElement === blockTextarea;
 
-                              // Проверяем, находится ли активный элемент в том же блоке
-                              const blockElement = activeElement?.closest(
-                                `.edit-article-v2__block-wrapper[data-block-id="${block.id}"]`
-                              );
-                              const isFocusInSameBlock = blockElement !== null;
+                                // Проверяем, находится ли активный элемент в том же блоке
+                                const blockElement = activeElement?.closest(
+                                  `.edit-article-v2__block-wrapper[data-block-id="${block.id}"]`
+                                );
+                                const isFocusInSameBlock = blockElement !== null;
 
-                              // Проверяем, не перешел ли фокус на другой блок редактора
-                              const isFocusOnAnotherBlock =
-                                activeElement?.tagName === 'TEXTAREA' &&
-                                activeElement?.getAttribute('data-block-id') !== null &&
-                                activeElement?.getAttribute('data-block-id') !== block.id;
+                                // Проверяем, не перешел ли фокус на другой блок редактора
+                                const isFocusOnAnotherBlock =
+                                  activeElement?.tagName === 'TEXTAREA' &&
+                                  activeElement?.getAttribute('data-block-id') !== null &&
+                                  activeElement?.getAttribute('data-block-id') !== block.id;
 
-                              // Если фокус не на плюсе, не на textarea этого блока, не в том же блоке
-                              // и не перешел на другой блок редактора, скрываем плюс
-                              if (
-                                !isClickingOnVkPlus &&
-                                !isFocusOnBlockTextarea &&
-                                !isFocusInSameBlock &&
-                                !isFocusOnAnotherBlock
-                              ) {
-                                setFocusBlockId(null);
-                                // Скрываем плюс при потере фокуса, если блок не пустой
-                                if (vkInserter?.afterBlockId === block.id) {
-                                  const isBlockEmpty =
-                                    (block.type === 'paragraph' ||
-                                      block.type === 'title' ||
-                                      block.type === 'subtitle' ||
-                                      block.type === 'quote') &&
-                                    block.text.trim() === '';
-                                  const isListEmpty =
-                                    block.type === 'list' &&
-                                    block.items.every((item) => item.trim() === '');
-                                  if (!isBlockEmpty && !isListEmpty) {
-                                    setVkInserter(null);
+                                // Если фокус не на плюсе, не на textarea этого блока, не в том же блоке
+                                // и не перешел на другой блок редактора, скрываем плюс
+                                if (
+                                  !isClickingOnVkPlus &&
+                                  !isFocusOnBlockTextarea &&
+                                  !isFocusInSameBlock &&
+                                  !isFocusOnAnotherBlock
+                                ) {
+                                  setFocusBlockId(null);
+                                  // Скрываем плюс при потере фокуса, если блок не пустой
+                                  if (vkInserter?.afterBlockId === block.id) {
+                                    const isBlockEmpty =
+                                      (block.type === 'paragraph' ||
+                                        block.type === 'title' ||
+                                        block.type === 'subtitle' ||
+                                        block.type === 'quote') &&
+                                      block.text.trim() === '';
+                                    const isListEmpty =
+                                      block.type === 'list' &&
+                                      block.items.every((item) => item.trim() === '');
+                                    if (!isBlockEmpty && !isListEmpty) {
+                                      setVkInserter(null);
+                                    }
                                   }
                                 }
-                              }
-                            }, 0);
-                          }}
-                          onSelect={setSelectedBlockId}
-                          onEnter={handleBlockEnter}
-                          onBackspace={(isEmpty: boolean, atStart?: boolean) =>
-                            handleBlockBackspace(block.id, isEmpty, atStart ?? false)
-                          }
-                          onInsertAfter={insertBlockAfter}
-                          onDuplicate={duplicateBlock}
-                          onMoveUp={moveBlockUp}
-                          onMoveDown={moveBlockDown}
-                          onSlash={handleSlash}
-                          onFormat={handleFormat}
-                          onPaste={handlePaste}
-                          onConvertToCarousel={convertImageToCarousel}
-                          onVkPlusSelect={(type) => {
-                            convertBlockType(block.id, type as BlockType);
-                            setVkInserter(null);
-                          }}
-                          onVkPlusClose={() => setVkInserter(null)}
-                          onEditCarousel={(blockId) => {
-                            const carouselBlock = blocks.find((b) => b.id === blockId);
-                            if (carouselBlock && carouselBlock.type === 'carousel') {
-                              setCarouselEditModal({
-                                blockId: carouselBlock.id,
-                                imageKeys: carouselBlock.imageKeys,
-                                caption: carouselBlock.caption,
-                              });
+                              }, 0);
+                            }}
+                            onSelect={setSelectedBlockId}
+                            onEnter={handleBlockEnter}
+                            onBackspace={(isEmpty: boolean, atStart?: boolean) =>
+                              handleBlockBackspace(block.id, isEmpty, atStart ?? false)
                             }
-                          }}
-                        />
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                            onInsertAfter={insertBlockAfter}
+                            onDuplicate={duplicateBlock}
+                            onMoveUp={moveBlockUp}
+                            onMoveDown={moveBlockDown}
+                            onSlash={handleSlash}
+                            onFormat={handleFormat}
+                            onPaste={handlePaste}
+                            onConvertToCarousel={convertImageToCarousel}
+                            onVkPlusSelect={(type) => {
+                              convertBlockType(block.id, type as BlockType);
+                              setVkInserter(null);
+                            }}
+                            onVkPlusClose={() => setVkInserter(null)}
+                            onEditCarousel={(blockId) => {
+                              const carouselBlock = blocks.find((b) => b.id === blockId);
+                              if (carouselBlock && carouselBlock.type === 'carousel') {
+                                setCarouselEditModal({
+                                  blockId: carouselBlock.id,
+                                  imageKeys: carouselBlock.imageKeys,
+                                  caption: carouselBlock.caption,
+                                });
+                              }
+                            }}
+                          />
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
 
-              {/* Slash menu */}
-              {slashMenu && (
-                <SlashMenu
-                  position={slashMenu!.position}
-                  onSelect={handleSlashSelect}
-                  onClose={() => setSlashMenu(null)}
-                  selectedIndex={slashMenuSelectedIndex}
-                />
+                {/* Slash menu */}
+                {slashMenu && (
+                  <SlashMenu
+                    position={slashMenu!.position}
+                    onSelect={handleSlashSelect}
+                    onClose={() => setSlashMenu(null)}
+                    selectedIndex={slashMenuSelectedIndex}
+                  />
+                )}
+              </div>
+
+              {/* Footer с кнопками - показывается только при наличии изменений */}
+              {hasChanges && (
+                <div className="edit-article-v2__footer">
+                  <button
+                    type="button"
+                    className="edit-article-v2__button edit-article-v2__button--cancel"
+                    onClick={handleCancel}
+                    disabled={isArticleSaveBusy}
+                  >
+                    {texts.cancel}
+                  </button>
+                  <button
+                    type="button"
+                    className={`edit-article-v2__button edit-article-v2__button--draft${
+                      isSavingDraft ? ' edit-article-v2__button--publish-loading' : ''
+                    }`}
+                    onClick={handleSaveDraft}
+                    disabled={isPublishing || saveStatus === 'saving' || isSavingDraft}
+                  >
+                    {isSavingDraft ? (
+                      <>
+                        <DashboardSaveSpinner />
+                        {texts.savingDraftProgress}
+                      </>
+                    ) : (
+                      texts.savingDraft
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className={`edit-article-v2__button edit-article-v2__button--publish${
+                      isPublishing ? ' edit-article-v2__button--publish-loading' : ''
+                    }`}
+                    onClick={handlePublish}
+                    disabled={isPublishing || saveStatus === 'saving' || isSavingDraft}
+                  >
+                    {isPublishing ? (
+                      <>
+                        <DashboardSaveSpinner />
+                        {texts.publishing}
+                      </>
+                    ) : (
+                      texts.publish
+                    )}
+                  </button>
+                </div>
               )}
             </div>
 
-            {/* Footer с кнопками - показывается только при наличии изменений */}
-            {hasChanges && (
-              <div className="edit-article-v2__footer">
-                <button
-                  type="button"
-                  className="edit-article-v2__button edit-article-v2__button--cancel"
-                  onClick={handleCancel}
-                  disabled={isArticleSaveBusy}
-                >
-                  {texts.cancel}
-                </button>
-                <button
-                  type="button"
-                  className={`edit-article-v2__button edit-article-v2__button--draft${
-                    isSavingDraft ? ' edit-article-v2__button--publish-loading' : ''
-                  }`}
-                  onClick={handleSaveDraft}
-                  disabled={isPublishing || saveStatus === 'saving' || isSavingDraft}
-                >
-                  {isSavingDraft ? (
-                    <>
-                      <DashboardSaveSpinner />
-                      {texts.savingDraftProgress}
-                    </>
-                  ) : (
-                    texts.savingDraft
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className={`edit-article-v2__button edit-article-v2__button--publish${
-                    isPublishing ? ' edit-article-v2__button--publish-loading' : ''
-                  }`}
-                  onClick={handlePublish}
-                  disabled={isPublishing || saveStatus === 'saving' || isSavingDraft}
-                >
-                  {isPublishing ? (
-                    <>
-                      <DashboardSaveSpinner />
-                      {texts.publishing}
-                    </>
-                  ) : (
-                    texts.publish
-                  )}
-                </button>
-              </div>
+            {/* Модал редактирования карусели */}
+            {carouselEditModal && (
+              <CarouselEditModal
+                mediaOwnerUserId={article.userId ?? undefined}
+                blockId={carouselEditModal!.blockId}
+                initialImageKeys={carouselEditModal!.imageKeys}
+                initialCaption={carouselEditModal!.caption}
+                onSave={(imageKeys, caption) => {
+                  // Сохраняем снимок перед изменением карусели
+                  saveSnapshot();
+                  updateBlock(
+                    carouselEditModal!.blockId,
+                    { imageKeys, caption } as Partial<Block>,
+                    true
+                  );
+                  setCarouselEditModal(null);
+                }}
+                onCancel={() => setCarouselEditModal(null)}
+              />
             )}
           </div>
-
-          {/* Модал редактирования карусели */}
-          {carouselEditModal && (
-            <CarouselEditModal
-              mediaOwnerUserId={article.userId ?? undefined}
-              blockId={carouselEditModal!.blockId}
-              initialImageKeys={carouselEditModal!.imageKeys}
-              initialCaption={carouselEditModal!.caption}
-              onSave={(imageKeys, caption) => {
-                // Сохраняем снимок перед изменением карусели
-                saveSnapshot();
-                updateBlock(
-                  carouselEditModal!.blockId,
-                  { imageKeys, caption } as Partial<Block>,
-                  true
-                );
-                setCarouselEditModal(null);
-              }}
-              onCancel={() => setCarouselEditModal(null)}
-            />
-          )}
-        </div>
-      )}
-    </Popup>
+        )}
+        <InlineEditDiscardDialog
+          open={articleCloseGuard.discardDialogOpen}
+          labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+          titleId={articleCloseGuard.discardTitleDomId}
+          onStay={articleCloseGuard.dismissDiscardDialog}
+          onDiscard={articleCloseGuard.finalizeCloseWithoutSaving}
+        />
+      </Popup>
+    </>
   );
 }

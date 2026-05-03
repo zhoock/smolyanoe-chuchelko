@@ -7,6 +7,11 @@ import { useLang } from '@app/providers/lang';
 import { useDashboardSaveLock } from '@shared/lib/hooks/useDashboardSaveLock';
 import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
 import '@shared/ui/dashboard-save/dashboard-save.scss';
+import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
+import {
+  InlineEditDiscardDialog,
+  getCloseDiscardConfirmLabels,
+} from '../../shared/EditableCardField';
 import './EditLyricsModal.style.scss';
 
 interface EditLyricsModalProps {
@@ -80,17 +85,24 @@ export function EditLyricsModal({
     });
   };
 
-  // Обработка закрытия модального окна
-  const handleClose = useCallback(() => {
-    if (isSaving) return;
-    if (hasChanges) {
-      handleCancel();
-    }
+  const finalizeLyricsModalClose = useCallback(() => {
+    if (hasChanges) handleCancel();
     onClose();
-  }, [isSaving, hasChanges, handleCancel, onClose]);
+  }, [hasChanges, handleCancel, onClose]);
+
+  const lyricsCloseGuard = useCloseWithUnsavedConfirmation({
+    isOpen,
+    isBusy: isSaving,
+    hasUnsavedChanges: hasChanges,
+    onClose: finalizeLyricsModalClose,
+  });
 
   return (
-    <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isSaving}>
+    <Popup
+      isActive={isOpen}
+      onClose={() => lyricsCloseGuard.requestClose()}
+      closeBlocked={isSaving || lyricsCloseGuard.discardDialogOpen}
+    >
       <div className="edit-lyrics-modal">
         <div
           className={`edit-lyrics-modal__card${isSaving ? ' dashboard-save-card--busy' : ''}`}
@@ -103,7 +115,7 @@ export function EditLyricsModal({
             <button
               type="button"
               className="edit-lyrics-modal__close"
-              onClick={handleClose}
+              onClick={() => lyricsCloseGuard.requestClose()}
               disabled={isSaving}
               aria-label={ui?.dashboard?.close ?? 'Close'}
             >
@@ -201,6 +213,13 @@ export function EditLyricsModal({
           )}
         </div>
       </div>
+      <InlineEditDiscardDialog
+        open={lyricsCloseGuard.discardDialogOpen}
+        labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+        titleId={lyricsCloseGuard.discardTitleDomId}
+        onStay={lyricsCloseGuard.dismissDiscardDialog}
+        onDiscard={lyricsCloseGuard.finalizeCloseWithoutSaving}
+      />
     </Popup>
   );
 }

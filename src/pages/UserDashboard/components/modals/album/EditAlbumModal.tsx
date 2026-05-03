@@ -57,11 +57,15 @@ import {
   emptyRecordingFormDraft,
   recordingFormDraftIsDirty,
   recordingFormDraftCanSave,
+  buildAlbumDiscardFingerprint,
+  makeEmptyDiscardAuxBaseline,
 } from './EditAlbumModal.utils';
+import type { AlbumDiscardAuxState } from './EditAlbumModal.utils';
 import { recordingEntryEditHasChanges } from './recordingEntryEditHasChanges';
 import {
   InlineEditDiscardDialog,
   getSwitchEditConfirmLabels,
+  getCloseDiscardConfirmLabels,
 } from '../../shared/EditableCardField';
 import { EditAlbumModalStep2 } from '../../steps/EditAlbumModalStep2';
 import { EditAlbumModalStep3 } from '../../steps/EditAlbumModalStep3';
@@ -164,6 +168,8 @@ export function EditAlbumModal({
   const [blockSwitchDialog, setBlockSwitchDialog] = useState<{ onDiscard: () => void } | null>(
     null
   );
+  const discardCloseFingerprintRef = useRef<string | null>(null);
+  const [discardCloseDialogOpen, setDiscardCloseDialogOpen] = useState(false);
 
   const [editingPurchaseLink, setEditingPurchaseLink] = useState<number | null>(null);
   const [purchaseLinkService, setPurchaseLinkService] = useState('');
@@ -628,6 +634,7 @@ export function EditAlbumModal({
     }
 
     // Заполняем поля из данных альбома (только при первой инициализации)
+    let mergedDiscardBaselineForm: AlbumFormData | undefined;
     setFormData((prevForm) => {
       const release = album.release && typeof album.release === 'object' ? album.release : {};
       // Конвертируем дату из ISO формата (YYYY-MM-DD) в формат для отображения (DD/MM/YYYY)
@@ -685,7 +692,7 @@ export function EditAlbumModal({
         return links;
       })();
 
-      return {
+      const next: AlbumFormData = {
         ...prevForm,
         title: titleResolved.value || prevForm.title,
         releaseDate: releaseDate || prevForm.releaseDate,
@@ -729,7 +736,14 @@ export function EditAlbumModal({
             ? album.isPublic
             : (prevForm.visibleOnAlbumPage ?? true),
       };
+
+      mergedDiscardBaselineForm = next;
+      return next;
     });
+
+    discardCloseFingerprintRef.current = mergedDiscardBaselineForm
+      ? buildAlbumDiscardFingerprint(mergedDiscardBaselineForm, 1, makeEmptyDiscardAuxBaseline())
+      : null;
 
     // Показываем существующую обложку
     const coverName =
@@ -759,6 +773,15 @@ export function EditAlbumModal({
   }, [isOpen, albumId, lang, albumsFromStore]);
 
   useEffect(() => {
+    if (!isOpen || albumId) return;
+    discardCloseFingerprintRef.current = buildAlbumDiscardFingerprint(
+      makeEmptyForm(),
+      1,
+      makeEmptyDiscardAuxBaseline()
+    );
+  }, [isOpen, albumId]);
+
+  useEffect(() => {
     if (isOpen && !albumId) {
       albumTitleAtOpenRef.current = '';
       canonicalAlbumIdRef.current = '';
@@ -770,6 +793,8 @@ export function EditAlbumModal({
     if (isOpen) return;
 
     setFormData(makeEmptyForm());
+    discardCloseFingerprintRef.current = null;
+    setDiscardCloseDialogOpen(false);
 
     albumTitleAtOpenRef.current = '';
     canonicalAlbumIdRef.current = '';
@@ -2621,13 +2646,64 @@ export function EditAlbumModal({
     }
   };
 
-  const handleClose = (opts?: { force?: boolean }) => {
-    if (isSaving && !opts?.force) return;
+  const snapshotDiscardAux = (): AlbumDiscardAuxState => ({
+    tagInput,
+    coverDraftKey,
+    uploadStatus,
+    bandMemberName,
+    bandMemberRole,
+    bandMemberURL,
+    editingBandMemberIndex,
+    addBandMemberName,
+    addBandMemberRole,
+    addBandMemberURL,
+    sessionMusicianName,
+    sessionMusicianRole,
+    sessionMusicianURL,
+    editingSessionMusicianIndex,
+    addSessionMusicianName,
+    addSessionMusicianRole,
+    addSessionMusicianURL,
+    producerName,
+    producerRole,
+    producerURL,
+    editingProducerIndex,
+    addProducerName,
+    addProducerRole,
+    addProducerURL,
+    addRecordedAtDraft,
+    addMixedAtDraft,
+    addMasteringDraft,
+    editingPurchaseLink,
+    purchaseLinkService,
+    purchaseLinkUrl,
+    editingStreamingLink,
+    streamingLinkService,
+    streamingLinkUrl,
+  });
+
+  const hasPendingDiscardCloseRisk = (): boolean => {
+    const baseline = discardCloseFingerprintRef.current;
+    if (baseline === null) return false;
+    return buildAlbumDiscardFingerprint(formData, currentStep, snapshotDiscardAux()) !== baseline;
+  };
+
+  const finalizeModalClose = () => {
+    setDiscardCloseDialogOpen(false);
     if (localPreviewUrlRef.current) {
       URL.revokeObjectURL(localPreviewUrlRef.current);
       localPreviewUrlRef.current = null;
     }
     onClose();
+  };
+
+  const handleClose = (opts?: { force?: boolean }) => {
+    if (isSaving && !opts?.force) return;
+    if (!opts?.force && hasPendingDiscardCloseRisk()) {
+      setDiscardCloseDialogOpen(true);
+      return;
+    }
+    finalizeModalClose();
   };
 
   const renderStepContent = () => {
@@ -3197,7 +3273,11 @@ export function EditAlbumModal({
 
   return (
     <>
-      <Popup isActive={isOpen} onClose={handleClose} closeBlocked={isSaving}>
+      <Popup
+        isActive={isOpen}
+        onClose={handleClose}
+        closeBlocked={isSaving || discardCloseDialogOpen}
+      >
         <div className="edit-album-modal">
           <div
             className={`edit-album-modal__card${isSaving ? ' edit-album-modal__card--saving' : ''}`}
@@ -3226,16 +3306,7 @@ export function EditAlbumModal({
               {renderStepContent()}
 
               <div className="edit-album-modal__actions">
-                {currentStep > 1 ? (
-                  <button
-                    type="button"
-                    className="edit-album-modal__button edit-album-modal__button--secondary"
-                    onClick={handlePrevious}
-                    disabled={isSaving}
-                  >
-                    {ui?.dashboard?.editAlbumModal?.buttons?.previous ?? 'Previous'}
-                  </button>
-                ) : (
+                <div className="edit-album-modal__actions-leading">
                   <button
                     type="button"
                     className="edit-album-modal__button edit-album-modal__button--cancel"
@@ -3244,38 +3315,51 @@ export function EditAlbumModal({
                   >
                     {ui?.dashboard?.cancel ?? 'Cancel'}
                   </button>
-                )}
+                  {currentStep > 1 ? (
+                    <button
+                      type="button"
+                      className="edit-album-modal__button edit-album-modal__button--secondary"
+                      onClick={handlePrevious}
+                      disabled={isSaving}
+                    >
+                      {ui?.dashboard?.editAlbumModal?.buttons?.previous ?? 'Previous'}
+                    </button>
+                  ) : null}
+                </div>
 
-                {currentStep === 5 ? (
-                  <button
-                    type="button"
-                    className={`edit-album-modal__button edit-album-modal__button--primary${
-                      isSaving ? ' edit-album-modal__button--primary-loading' : ''
-                    }`}
-                    onClick={handlePublish}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <span className="edit-album-modal__button-spinner" aria-hidden />
-                        {ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...'}
-                      </>
-                    ) : albumId && albumsFromStore?.some((a: IAlbums) => a.albumId === albumId) ? (
-                      (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
-                    ) : (
-                      (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="edit-album-modal__button edit-album-modal__button--primary"
-                    onClick={handleNext}
-                    disabled={isSaving}
-                  >
-                    {ui?.dashboard?.editAlbumModal?.buttons?.next ?? 'Next'}
-                  </button>
-                )}
+                <div className="edit-album-modal__actions-trailing">
+                  {currentStep === 5 ? (
+                    <button
+                      type="button"
+                      className={`edit-album-modal__button edit-album-modal__button--primary${
+                        isSaving ? ' edit-album-modal__button--primary-loading' : ''
+                      }`}
+                      onClick={handlePublish}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <>
+                          <span className="edit-album-modal__button-spinner" aria-hidden />
+                          {ui?.dashboard?.editAlbumModal?.buttons?.saving ?? 'Saving...'}
+                        </>
+                      ) : albumId &&
+                        albumsFromStore?.some((a: IAlbums) => a.albumId === albumId) ? (
+                        (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
+                      ) : (
+                        (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="edit-album-modal__button edit-album-modal__button--primary"
+                      onClick={handleNext}
+                      disabled={isSaving}
+                    >
+                      {ui?.dashboard?.editAlbumModal?.buttons?.next ?? 'Next'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -3291,6 +3375,15 @@ export function EditAlbumModal({
                 setBlockSwitchDialog(null);
                 fn();
               }}
+            />
+          )}
+          {discardCloseDialogOpen && (
+            <InlineEditDiscardDialog
+              open
+              titleId="edit-album-modal-close-discard-title"
+              labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+              onStay={() => setDiscardCloseDialogOpen(false)}
+              onDiscard={finalizeModalClose}
             />
           )}
         </div>

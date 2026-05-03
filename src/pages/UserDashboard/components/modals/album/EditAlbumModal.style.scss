@@ -409,10 +409,25 @@ dialog {
     &__actions {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
       gap: var(--ms-0);
       margin-top: var(--ms-0);
       padding-top: var(--ms-1);
       border-top: 1px solid var(--dashboard-divider);
+    }
+
+    &__actions-leading,
+    &__actions-trailing {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--ms-0);
+    }
+
+    &__actions-trailing {
+      flex-shrink: 0;
+      margin-left: auto;
     }
 
     &__button {

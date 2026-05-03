@@ -138,6 +138,11 @@
       "confirmActionIrreversible": "Это действие нельзя отменить.",
       "confirmationModalConfirm": "Подтвердить",
       "confirmationModalConfirmDelete": "Удалить",
+      "closeDiscardConfirm": {
+        "message": "Вы уверены? Прогресс будет потерян.",
+        "stay": "Остаться",
+        "discard": "Выйти"
+      },
       "error": "Ошибка",
       "success": "Успешно",
       "uploadedTracksSuccessPrefix": "Успешно загружено",
@@ -372,6 +377,11 @@
           "message": "Отменить изменения?",
           "stay": "Остаться",
           "discard": "Не сохранять"
+        },
+        "switchEditConfirm": {
+          "message": "Есть несохранённые изменения. Перейти?",
+          "stay": "Нет",
+          "discard": "Да"
         },
         "albumSale": {
           "loadingPayment": "Загрузка…",

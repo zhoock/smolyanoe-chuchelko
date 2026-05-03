@@ -14,17 +14,23 @@ export interface InlineEditDiscardDialogLabels {
   stay: string;
   discard: string;
 }
-
+/**
+ * Отрендерите как потомка того же нативного `<dialog>`, что и `Popup`,
+ * чтобы оверлей был в top layer после `showModal()` и был видим.
+ */
 export function InlineEditDiscardDialog({
   open,
   labels,
   onStay,
   onDiscard,
+  titleId = 'edit-album-inline-discard-title',
 }: {
   open: boolean;
   labels: InlineEditDiscardDialogLabels;
   onStay: () => void;
   onDiscard: () => void;
+  /** Уникальный id для a11y, если несколько диалогов в одном слое. */
+  titleId?: string;
 }) {
   if (!open) return null;
   return (
@@ -32,14 +38,11 @@ export function InlineEditDiscardDialog({
       className="edit-album-modal__inline-discard-overlay"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="edit-album-inline-discard-title"
+      aria-labelledby={titleId}
       onClick={onStay}
     >
       <div className="edit-album-modal__inline-discard-panel" onClick={(e) => e.stopPropagation()}>
-        <p
-          id="edit-album-inline-discard-title"
-          className="edit-album-modal__inline-discard-message"
-        >
+        <p id={titleId} className="edit-album-modal__inline-discard-message">
           {labels.message}
         </p>
         <div className="edit-album-modal__inline-discard-actions">
@@ -62,9 +65,9 @@ export function InlineEditDiscardDialog({
 export function getInlineEditDiscardLabels(ui?: IInterface): InlineEditDiscardDialogLabels {
   const d = ui?.dashboard?.editAlbumModal?.discardInlineEdit;
   return {
-    message: d?.message ?? 'Discard changes?',
-    stay: d?.stay ?? 'Stay',
-    discard: d?.discard ?? 'Discard',
+    message: d?.message ?? '',
+    stay: d?.stay ?? '',
+    discard: d?.discard ?? '',
   };
 }
 
@@ -75,9 +78,20 @@ export function getInlineEditDiscardLabels(ui?: IInterface): InlineEditDiscardDi
 export function getSwitchEditConfirmLabels(ui?: IInterface): InlineEditDiscardDialogLabels {
   const d = ui?.dashboard?.editAlbumModal?.switchEditConfirm;
   return {
-    message: d?.message ?? 'Есть несохранённые изменения. Перейти?',
-    stay: d?.stay ?? 'Нет',
-    discard: d?.discard ?? 'Да',
+    message: d?.message ?? '',
+    stay: d?.stay ?? '',
+    discard: d?.discard ?? '',
+  };
+}
+
+export function getCloseDiscardConfirmLabels(
+  ui?: IInterface | null
+): InlineEditDiscardDialogLabels {
+  const d = ui?.dashboard?.closeDiscardConfirm;
+  return {
+    message: d?.message ?? '',
+    stay: d?.stay ?? '',
+    discard: d?.discard ?? '',
   };
 }
 
@@ -209,7 +223,7 @@ export function EditableCardField({
                 onClick={trySave}
                 disabled={saveDisabled}
               >
-                {ui?.dashboard?.editAlbumModal?.step5?.save ?? 'Save'}
+                {ui?.dashboard?.editAlbumModal?.step5?.save ?? ''}
               </button>
               {showCancel && (
                 <button
@@ -217,7 +231,7 @@ export function EditableCardField({
                   className="edit-album-modal__list-item-cancel"
                   onClick={requestCancel}
                 >
-                  {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? 'Cancel'}
+                  {ui?.dashboard?.editAlbumModal?.step5?.cancel ?? ''}
                 </button>
               )}
             </div>

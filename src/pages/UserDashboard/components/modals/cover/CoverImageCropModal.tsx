@@ -1,5 +1,5 @@
 // src/pages/UserDashboard/components/CoverImageCropModal.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Cropper, { Area, Point } from 'react-easy-crop';
 import { Popup } from '@shared/ui/popup';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -8,6 +8,11 @@ import { useLang } from '@app/providers/lang';
 import { getUser } from '@shared/lib/auth';
 import { DashboardSaveSpinner } from '@shared/ui/dashboard-save/DashboardSaveSpinner';
 import '@shared/ui/dashboard-save/dashboard-save.scss';
+import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
+import {
+  InlineEditDiscardDialog,
+  getCloseDiscardConfirmLabels,
+} from '../../shared/EditableCardField';
 import './CoverImageCropModal.style.scss';
 
 interface CoverImageCropModalProps {
@@ -100,10 +105,12 @@ export function CoverImageCropModal({
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const cropBaselineRef = useRef<{ zoom: number; crop: Point } | null>(null);
 
   // Загружаем изображение при изменении файла
   useEffect(() => {
     if (!imageFile || !isOpen) {
+      cropBaselineRef.current = null;
       setImageSrc(null);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
@@ -121,13 +128,11 @@ export function CoverImageCropModal({
 
       // Загружаем сохраненные данные обрезки
       const savedCropData = loadCropData();
-      if (savedCropData) {
-        setCrop(savedCropData.position);
-        setZoom(savedCropData.zoom);
-      } else {
-        setCrop({ x: 0, y: 0 });
-        setZoom(1);
-      }
+      const nextZoom = savedCropData?.zoom ?? 1;
+      const nextCrop = savedCropData?.position ?? { x: 0, y: 0 };
+      cropBaselineRef.current = { zoom: nextZoom, crop: nextCrop };
+      setCrop(nextCrop);
+      setZoom(nextZoom);
     };
     reader.onerror = () => {
       setError(
@@ -212,15 +217,34 @@ export function CoverImageCropModal({
     }
   }, [imageSrc, croppedAreaPixels, onSave, onClose, ui]);
 
-  const handleCancel = useCallback(() => {
+  const hasCropUnsavedChanges = useMemo(() => {
+    const b = cropBaselineRef.current;
+    if (!b || !imageSrc || isPreviewMode) return false;
+    return zoom !== b.zoom || crop.x !== b.crop.x || crop.y !== b.crop.y;
+  }, [zoom, crop, imageSrc, isPreviewMode]);
+
+  const finalizeCropModalClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const cropCloseGuard = useCloseWithUnsavedConfirmation({
+    isOpen,
+    isBusy: isSaving,
+    hasUnsavedChanges: hasCropUnsavedChanges,
+    onClose: finalizeCropModalClose,
+  });
+
+  const { requestClose: requestCropModalClose } = cropCloseGuard;
+
+  const attemptCropClose = useCallback(() => {
     if (isSaving) return;
     if (isPreviewMode) {
       setIsPreviewMode(false);
       setPreviewBlob(null);
-    } else {
-      onClose();
+      return;
     }
-  }, [isSaving, isPreviewMode, onClose]);
+    requestCropModalClose();
+  }, [isSaving, isPreviewMode, requestCropModalClose]);
 
   // Функции для работы с localStorage (временное решение)
   function loadCropData(): CropData | null {
@@ -263,7 +287,11 @@ export function CoverImageCropModal({
   if (!isOpen) return null;
 
   return (
-    <Popup isActive={isOpen} onClose={handleCancel} closeBlocked={isSaving}>
+    <Popup
+      isActive={isOpen}
+      onClose={attemptCropClose}
+      closeBlocked={isSaving || cropCloseGuard.discardDialogOpen}
+    >
       <div className={`cover-image-crop-modal${isSaving ? ' dashboard-save-card--busy' : ''}`}>
         <div className="cover-image-crop-modal__header">
           <h2 className="cover-image-crop-modal__title">
@@ -273,7 +301,7 @@ export function CoverImageCropModal({
           <button
             type="button"
             className="cover-image-crop-modal__close"
-            onClick={handleCancel}
+            onClick={attemptCropClose}
             disabled={isSaving}
             aria-label={ui?.dashboard?.close ?? 'Закрыть'}
           >
@@ -378,7 +406,7 @@ export function CoverImageCropModal({
               <button
                 type="button"
                 className="cover-image-crop-modal__button"
-                onClick={handleCancel}
+                onClick={attemptCropClose}
                 disabled={isSaving}
               >
                 {ui?.dashboard?.cancel ?? 'Отмена'}
@@ -414,7 +442,7 @@ export function CoverImageCropModal({
               <button
                 type="button"
                 className="cover-image-crop-modal__button"
-                onClick={handleCancel}
+                onClick={attemptCropClose}
                 disabled={isSaving}
               >
                 {ui?.dashboard?.cancel ?? 'Отмена'}
@@ -440,6 +468,13 @@ export function CoverImageCropModal({
           )}
         </div>
       </div>
+      <InlineEditDiscardDialog
+        open={cropCloseGuard.discardDialogOpen}
+        labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+        titleId={cropCloseGuard.discardTitleDomId}
+        onStay={cropCloseGuard.dismissDiscardDialog}
+        onDiscard={cropCloseGuard.finalizeCloseWithoutSaving}
+      />
     </Popup>
   );
 }

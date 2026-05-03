@@ -828,3 +828,96 @@ export const transformFormDataToAlbumFormat = (
 
   return { release, buttons, details };
 };
+
+/** Снимок побочных полей модалки (не всё есть в AlbumFormData) для сравнения «есть ли введённые данные». */
+export type AlbumDiscardAuxState = {
+  tagInput: string;
+  coverDraftKey: string | null;
+  uploadStatus: 'idle' | 'uploading' | 'uploaded' | 'error';
+  bandMemberName: string;
+  bandMemberRole: string;
+  bandMemberURL: string;
+  editingBandMemberIndex: number | null;
+  addBandMemberName: string;
+  addBandMemberRole: string;
+  addBandMemberURL: string;
+  sessionMusicianName: string;
+  sessionMusicianRole: string;
+  sessionMusicianURL: string;
+  editingSessionMusicianIndex: number | null;
+  addSessionMusicianName: string;
+  addSessionMusicianRole: string;
+  addSessionMusicianURL: string;
+  producerName: string;
+  producerRole: string;
+  producerURL: string;
+  editingProducerIndex: number | null;
+  addProducerName: string;
+  addProducerRole: string;
+  addProducerURL: string;
+  addRecordedAtDraft: RecordingFormDraft;
+  addMixedAtDraft: RecordingFormDraft;
+  addMasteringDraft: RecordingFormDraft;
+  editingPurchaseLink: number | null;
+  purchaseLinkService: string;
+  purchaseLinkUrl: string;
+  editingStreamingLink: number | null;
+  streamingLinkService: string;
+  streamingLinkUrl: string;
+};
+
+export function makeEmptyDiscardAuxBaseline(): AlbumDiscardAuxState {
+  const blank = (): RecordingFormDraft => ({ ...emptyRecordingFormDraft() });
+  return {
+    tagInput: '',
+    coverDraftKey: null,
+    uploadStatus: 'idle',
+    bandMemberName: '',
+    bandMemberRole: '',
+    bandMemberURL: '',
+    editingBandMemberIndex: null,
+    addBandMemberName: '',
+    addBandMemberRole: '',
+    addBandMemberURL: '',
+    sessionMusicianName: '',
+    sessionMusicianRole: '',
+    sessionMusicianURL: '',
+    editingSessionMusicianIndex: null,
+    addSessionMusicianName: '',
+    addSessionMusicianRole: '',
+    addSessionMusicianURL: '',
+    producerName: '',
+    producerRole: '',
+    producerURL: '',
+    editingProducerIndex: null,
+    addProducerName: '',
+    addProducerRole: '',
+    addProducerURL: '',
+    addRecordedAtDraft: blank(),
+    addMixedAtDraft: blank(),
+    addMasteringDraft: blank(),
+    editingPurchaseLink: null,
+    purchaseLinkService: '',
+    purchaseLinkUrl: '',
+    editingStreamingLink: null,
+    streamingLinkService: '',
+    streamingLinkUrl: '',
+  };
+}
+
+/** Стабильная строка для сравнения «форма + шаг как при открытии». File в albumArt заменён на маркер. */
+export function buildAlbumDiscardFingerprint(
+  formData: AlbumFormData,
+  currentStep: number,
+  aux: AlbumDiscardAuxState
+): string {
+  const { albumArt, ...rest } = formData;
+  return JSON.stringify({
+    step: currentStep,
+    form: {
+      ...rest,
+      albumArtPresence: albumArt instanceof File ? '__NEW_FILE__' : null,
+    },
+    aux,
+  });
+}

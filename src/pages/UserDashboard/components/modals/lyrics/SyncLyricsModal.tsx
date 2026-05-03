@@ -22,6 +22,11 @@ import {
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
 import { getUserAudioUrl } from '@shared/api/albums';
+import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
+import {
+  InlineEditDiscardDialog,
+  getCloseDiscardConfirmLabels,
+} from '../../shared/EditableCardField';
 import './SyncLyricsModal.style.scss';
 
 interface SyncLyricsModalProps {
@@ -608,14 +613,30 @@ export function SyncLyricsModal({
 
   const progress = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
 
-  const handleRequestClose = useCallback(() => {
-    if (isSaving) return;
+  const finalizeSyncLyricsClose = useCallback(() => {
     onClose();
-  }, [isSaving, onClose]);
+  }, [onClose]);
+
+  const syncLyricsCloseGuard = useCloseWithUnsavedConfirmation({
+    isOpen,
+    isBusy: isSaving,
+    hasUnsavedChanges: isDirty,
+    onClose: finalizeSyncLyricsClose,
+  });
+
+  const { requestClose: requestSyncLyricsClose } = syncLyricsCloseGuard;
+
+  const handleRequestClose = useCallback(() => {
+    requestSyncLyricsClose();
+  }, [requestSyncLyricsClose]);
 
   return (
     <>
-      <Popup isActive={isOpen} onClose={handleRequestClose} closeBlocked={isSaving}>
+      <Popup
+        isActive={isOpen}
+        onClose={handleRequestClose}
+        closeBlocked={isSaving || syncLyricsCloseGuard.discardDialogOpen}
+      >
         <div className="sync-lyrics-modal">
           <div
             className={`sync-lyrics-modal__card${isSaving ? ' sync-lyrics-modal__card--saving' : ''}`}
@@ -847,6 +868,13 @@ export function SyncLyricsModal({
             )}
           </div>
         </div>
+        <InlineEditDiscardDialog
+          open={syncLyricsCloseGuard.discardDialogOpen}
+          labels={getCloseDiscardConfirmLabels(ui ?? undefined)}
+          titleId={syncLyricsCloseGuard.discardTitleDomId}
+          onStay={syncLyricsCloseGuard.dismissDiscardDialog}
+          onDiscard={syncLyricsCloseGuard.finalizeCloseWithoutSaving}
+        />
       </Popup>
 
       {alertModal && (

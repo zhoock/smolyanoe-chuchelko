@@ -138,6 +138,11 @@
       "confirmActionIrreversible": "This action cannot be undone.",
       "confirmationModalConfirm": "Confirm",
       "confirmationModalConfirmDelete": "Delete",
+      "closeDiscardConfirm": {
+        "message": "Are you sure? Your progress will be lost.",
+        "stay": "Stay",
+        "discard": "Leave"
+      },
       "error": "Error",
       "success": "Success",
       "uploadedTracksSuccessPrefix": "Successfully uploaded",
@@ -372,6 +377,11 @@
           "message": "Discard changes?",
           "stay": "Stay",
           "discard": "Discard"
+        },
+        "switchEditConfirm": {
+          "message": "You have unsaved changes. Switch anyway?",
+          "stay": "No",
+          "discard": "Yes"
         },
         "albumSale": {
           "loadingPayment": "Loading…",

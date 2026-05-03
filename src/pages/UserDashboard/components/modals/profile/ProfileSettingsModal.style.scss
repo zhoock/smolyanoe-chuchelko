@@ -9,6 +9,10 @@ dialog {
     @include dashboard-modal-shell;
 
     &__card {
+      // Иначе flex-дети получают min-height: auto и растянут модалку ниже высоты карточки —
+      // внутренний scroll на __content не срабатывает (заметно на вкладке «Профиль»).
+      min-height: 0;
+
       @include dashboard-modal-panel(
         $padding: 0,
         $gap: null,
@@ -18,33 +22,37 @@ dialog {
     }
 
     &__header {
+      flex-shrink: 0;
+
       @include dashboard-modal-header(
-        $justify-content: flex-start,
-        $gap: var(--ms-1),
         $padding: var(--ms-1) var(--ms-2),
-        $border-bottom: var(--dashboard-card-border)
+        $border-bottom: var(--dashboard-divider),
+        $background: var(--dashboard-card-bg)
       );
     }
 
     &__title {
-      @include dashboard-modal-title(
-        $margin: 0,
-        $padding: 0,
-        $font-weight: 700,
-        $line-height: 1.2,
-        $reset-text: true
-      );
+      flex: 1;
+      min-width: 0;
+
+      @include dashboard-modal-title;
     }
 
     &__close {
-      @include dashboard-modal-close($focus-visible: true, $reset-text: true);
+      @include dashboard-modal-close(
+        $font-size: var(--dashboard-heading-font-size),
+        $focus-visible: true,
+        $reset-text: true,
+        $flex-shrink: 0
+      );
     }
 
     &__tabs {
+      flex-shrink: 0;
       display: flex;
       gap: var(--ms-01);
       padding: 0 var(--ms-2);
-      border-bottom: 1px solid var(--dashboard-card-border);
+      border-bottom: 1px solid var(--dashboard-divider);
       background: var(--dashboard-card-bg);
     }
 
@@ -85,30 +93,24 @@ dialog {
     &__body {
       display: flex;
       flex-direction: column;
-      flex: 1;
+      flex: 1 1 0%;
+      min-height: 0;
       overflow: hidden;
     }
 
     &__content {
       display: flex;
       flex-direction: column;
-      flex: 1;
+      flex: 1 1 0%;
+      min-height: 0;
       gap: var(--ms-1);
       padding: var(--ms-2);
-      overflow-y: auto;
-
-      @extend %hide-scrollbar;
+      overflow: hidden auto;
     }
 
     &__section-title {
-      margin: 0 0 var(--ms-1) 0;
-      padding: 0;
       color: var(--dashboard-text-primary);
-      font-size: var(--ms-1);
-      font-weight: 700;
-      line-height: 1.2;
-      text-transform: none !important;
-      letter-spacing: normal !important;
+      font-size: var(--dashboard-heading-font-size);
     }
 
     &__general-tab,

@@ -152,9 +152,7 @@
 }
 
 .edit-album-modal__inline-discard-message {
-  margin: 0 0 var(--ms-0);
-  font-size: var(--ms-0);
-  line-height: 1.4;
+  font-size: var(--dashboard-font-size);
 }
 
 .edit-album-modal__inline-discard-actions {
@@ -165,27 +163,9 @@
 }
 
 .edit-album-modal__inline-discard-stay {
-  @include button-variant(
-    $color: var(--white),
-    $background: var(--iron-slate),
-    $hover-color: var(--white),
-    $hover-background: var(--graphite-green),
-    $margin: 0,
-    $padding: var(--ms-01) var(--ms-0),
-    $border: 1px solid var(--iron-slate),
-    $border-radius: var(--ms-01)
-  );
+  @include dashboard-button;
 }
 
 .edit-album-modal__inline-discard-discard {
-  @include button-variant(
-    $color: var(--white),
-    $background: transparent,
-    $hover-color: var(--white),
-    $hover-background: var(--graphite-green),
-    $margin: 0,
-    $padding: var(--ms-01) var(--ms-0),
-    $border: 1px solid var(--iron-slate),
-    $border-radius: var(--ms-01)
-  );
+  @include dashboard-button;
 }

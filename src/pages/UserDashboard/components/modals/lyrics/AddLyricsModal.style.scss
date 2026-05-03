@@ -13,34 +13,53 @@ dialog {
     }
 
     &__header {
-      @include dashboard-modal-header($align-items: flex-start, $gap: var(--ms-0));
+      flex-shrink: 0;
+
+      @include dashboard-modal-header(
+        $gap: var(--ms-0),
+        $padding: var(--ms-1) var(--ms-2),
+        $border-bottom: var(--dashboard-divider),
+        $background: var(--dashboard-card-bg)
+      );
     }
 
-    &__header-content {
+    &__header-main {
+      flex: 1;
       display: flex;
+      min-width: 0;
       flex-direction: column;
       gap: var(--ms-01);
     }
 
+    &__header-trailing {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: var(--ms-0);
+    }
+
     &__title {
-      @include dashboard-modal-title(
-        $margin: 0,
-        $padding: 0,
-        $font-weight: 700,
-        $line-height: 1.2,
-        $reset-text: true
-      );
+      @include dashboard-modal-title($margin: 0, $padding: 0, $font-weight: 700);
     }
 
     &__subtitle {
       margin: 0;
       padding: 0;
-      color: var(--dashboard-text-primary);
-      font-size: var(--ms-0);
+      color: var(--dashboard-text-secondary);
+      font-size: var(--dashboard-font-size);
       font-weight: 400;
-      line-height: 1.2;
+      line-height: 1.35;
       text-transform: none !important;
       letter-spacing: normal !important;
+    }
+
+    &__close {
+      @include dashboard-modal-close(
+        $font-size: var(--dashboard-heading-font-size),
+        $focus-visible: true,
+        $reset-text: true,
+        $flex-shrink: 0
+      );
     }
 
     &__preview-button {
@@ -105,7 +124,7 @@ dialog {
       }
 
       &--primary {
-        @include dashboard-modal-primary-button;
+        @include dashboard-modal-primary-button($disabled-opacity: 0.45);
       }
 
       &--primary-loading {

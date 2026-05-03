@@ -322,12 +322,10 @@ dialog {
 
       &:hover {
         border-color: var(--dark-greenish-yellow);
-        background: var(--dashboard-hover-bg);
       }
 
       &--active {
         border-color: var(--dark-greenish-yellow);
-        background: var(--dashboard-button-primary-bg);
       }
     }
 
