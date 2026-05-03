@@ -9,6 +9,7 @@ interface EditAlbumModalStep2Props {
   formData: AlbumFormData;
   lang: SupportedLang;
   genreDropdownOpen: boolean;
+  genreRequired?: boolean;
   tagInput: string;
   tagError: string;
   genreDropdownRef: React.RefObject<HTMLDivElement>;
@@ -27,6 +28,7 @@ export function EditAlbumModalStep2({
   formData,
   lang,
   genreDropdownOpen,
+  genreRequired = false,
   tagInput,
   tagError,
   genreDropdownRef,
@@ -55,7 +57,20 @@ export function EditAlbumModalStep2({
         <label className="edit-album-modal__label">{step2Ui?.genre ?? 'Genre'}</label>
 
         <div className="edit-album-modal__multiselect" ref={genreDropdownRef}>
-          <div className="edit-album-modal__multiselect-input" onClick={onGenreDropdownToggle}>
+          <div
+            className="edit-album-modal__multiselect-input"
+            onClick={onGenreDropdownToggle}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onGenreDropdownToggle();
+              }
+            }}
+            aria-invalid={genreRequired}
+            aria-describedby={genreRequired ? 'album-genre-required-error' : undefined}
+          >
             {formData.genreCodes.length > 0 ? (
               <div className="edit-album-modal__tags-container">
                 {formData.genreCodes.map((genreCode) => (
@@ -101,6 +116,11 @@ export function EditAlbumModalStep2({
             </div>
           )}
         </div>
+        {genreRequired ? (
+          <p id="album-genre-required-error" className="edit-album-modal__field-error" role="alert">
+            {ui?.dashboard?.editAlbumModal?.step2?.requiredGenre}
+          </p>
+        ) : null}
       </div>
 
       <div className="edit-album-modal__field">

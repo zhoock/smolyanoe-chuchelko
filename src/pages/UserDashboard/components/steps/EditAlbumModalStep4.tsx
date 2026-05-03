@@ -1,6 +1,7 @@
 // src/pages/UserDashboard/components/steps/EditAlbumModalStep4.tsx
 import React from 'react';
 import type { AlbumFormData } from '../modals/album/EditAlbumModal.types';
+import type { AlbumStep4InvalidField } from '../modals/album/EditAlbumModal.utils';
 import type { IInterface } from '@models';
 import { MAX_BAND_MEMBERS } from '../modals/album/EditAlbumModal.constants';
 import { bandMemberEditHasChanges, EMPTY_BAND_MEMBER } from '../modals/album/EditAlbumModal.utils';
@@ -61,6 +62,7 @@ interface EditAlbumModalStep4Props {
   onEditProducer: (index: number) => void;
   onRemoveProducer: (index: number) => void;
   onCancelEditProducer: () => void;
+  step4InvalidFields?: AlbumStep4InvalidField[];
   ui?: IInterface;
 }
 
@@ -118,8 +120,12 @@ export function EditAlbumModalStep4({
   onEditProducer,
   onRemoveProducer,
   onCancelEditProducer,
+  step4InvalidFields = [],
   ui,
 }: EditAlbumModalStep4Props) {
+  const s4inv = ui?.dashboard?.editAlbumModal?.step4Validation;
+  const step4Err = (f: AlbumStep4InvalidField) => step4InvalidFields.includes(f);
+
   return (
     <>
       <div className="edit-album-modal__divider" />
@@ -162,6 +168,10 @@ export function EditAlbumModalStep4({
               className="edit-album-modal__input"
               placeholder={ui?.dashboard?.editAlbumModal?.step4?.designer ?? 'Designer'}
               required
+              aria-invalid={step4Err('albumCoverDesigner')}
+              aria-describedby={
+                step4Err('albumCoverDesigner') ? 'step4-cover-designer-error' : undefined
+              }
               value={formData.albumCoverDesigner}
               onChange={(e) => onFormDataChange('albumCoverDesigner', e.target.value)}
             />
@@ -178,6 +188,11 @@ export function EditAlbumModalStep4({
             />
           </div>
         </div>
+        {step4Err('albumCoverDesigner') ? (
+          <p id="step4-cover-designer-error" className="edit-album-modal__field-error" role="alert">
+            {s4inv?.requiredDesigner}
+          </p>
+        ) : null}
       </div>
 
       <div className="edit-album-modal__field">
@@ -268,6 +283,11 @@ export function EditAlbumModalStep4({
             {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
           </button>
         )}
+        {step4Err('bandMembers') ? (
+          <p id="step4-band-error" className="edit-album-modal__field-error" role="alert">
+            {s4inv?.requiredBandMembers}
+          </p>
+        ) : null}
       </div>
 
       <div className="edit-album-modal__field">
@@ -458,6 +478,11 @@ export function EditAlbumModalStep4({
             {ui?.dashboard?.editAlbumModal?.step4?.addButton ?? '+ Add'}
           </button>
         )}
+        {step4Err('producer') ? (
+          <p id="step4-producer-error" className="edit-album-modal__field-error" role="alert">
+            {s4inv?.requiredProducer}
+          </p>
+        ) : null}
       </div>
     </>
   );

@@ -139,8 +139,7 @@ dialog {
 
     &__dropzone-text {
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
-      text-align: center;
+      font-size: var(--dashboard-font-size);
     }
 
     &__file-input {
@@ -256,6 +255,13 @@ dialog {
       font-style: italic;
     }
 
+    &__field-error {
+      margin: var(--ms-02) 0 0;
+      color: var(--pink-terracotta);
+      font-size: var(--ms-01);
+      line-height: 1.35;
+    }
+
     &__field--album-sale {
       margin-top: var(--ms-0);
     }
@@ -268,10 +274,7 @@ dialog {
     }
 
     &__album-sale-title {
-      margin: 0 0 var(--ms-01);
-      color: var(--dashboard-text-primary);
       font-size: var(--dashboard-font-size);
-      font-weight: 600;
     }
 
     &__album-sale-desc {

@@ -307,7 +307,7 @@
           "upcEan": "UPC / EAN",
           "releaseDate": "ДД/ММ/ГГГГ",
           "preorderDate": "ДД/ММ/ГГГГ",
-          "description": "Краткая история об альбоме, основные кредиты, настроение и т.д.",
+          "description": "Добавьте краткое описание альбома",
           "dragImageHere": "Перетащите изображение сюда",
           "chooseFile": "Выберите файл"
         },
@@ -335,8 +335,17 @@
           "yes": "Продавать",
           "acceptPreorders": "Предзаказ"
         },
+        "step1Validation": {
+          "requiredTitle": "Укажите название альбома",
+          "requiredReleaseDate": "Укажите дату релиза",
+          "requiredUpcEan": "Укажите UPC / EAN",
+          "requiredDescription": "Укажите описание",
+          "requiredRegularPrice": "Укажите обычную цену",
+          "requiredPreorderReleaseDate": "Укажите дату релиза предзаказа"
+        },
         "step2": {
           "genre": "Жанр",
+          "requiredGenre": "Выберите хотя бы один жанр",
           "tags": "Теги",
           "selectGenres": "Выберите жанры...",
           "addTagPlaceholder": "Добавить тег...",
@@ -363,6 +372,11 @@
           "name": "Имя",
           "role": "Роль",
           "urlOptional": "URL (необязательно)"
+        },
+        "step4Validation": {
+          "requiredDesigner": "Укажите дизайнера обложки",
+          "requiredBandMembers": "Добавьте хотя бы одного участника группы",
+          "requiredProducer": "Добавьте хотя бы одного продюсера"
         },
         "step5": {
           "purchase": "Покупка",

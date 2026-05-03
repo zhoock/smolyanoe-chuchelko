@@ -40,10 +40,13 @@ import {
   PURCHASE_SERVICES,
   STREAMING_SERVICES,
 } from './EditAlbumModal.constants';
+import type { AlbumStep1InvalidField, AlbumStep4InvalidField } from './EditAlbumModal.utils';
 import {
   dedupeSemanticAlbumDetailBlocks,
   makeEmptyForm,
-  validateStep,
+  getAlbumStep1InvalidFields,
+  getAlbumStep4InvalidFields,
+  isAlbumStep2GenreValid,
   transformFormDataToAlbumFormat,
   formatDateFromISO,
   formatDateToISO,
@@ -105,6 +108,10 @@ export function EditAlbumModal({
   const canonicalAlbumIdRef = useRef('');
 
   const [currentStep, setCurrentStep] = useState(1);
+  /** Ошибки шага 1 — показ подполями вместо alert */
+  const [step1InvalidFields, setStep1InvalidFields] = useState<AlbumStep1InvalidField[]>([]);
+  const [step2GenreRequired, setStep2GenreRequired] = useState(false);
+  const [step4InvalidFields, setStep4InvalidFields] = useState<AlbumStep4InvalidField[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Данные формы
@@ -232,7 +239,26 @@ export function EditAlbumModal({
       return;
     }
     setFormData((prev) => ({ ...prev, [field]: value as never }));
+    if (field === 'albumCoverDesigner') {
+      setStep4InvalidFields((p) => p.filter((x) => x !== 'albumCoverDesigner'));
+    }
+    if (field === 'bandMembers') {
+      setStep4InvalidFields((p) => p.filter((x) => x !== 'bandMembers'));
+    }
+    if (field === 'producer') {
+      setStep4InvalidFields((p) => p.filter((x) => x !== 'producer'));
+    }
   };
+
+  useEffect(() => {
+    setStep1InvalidFields((prev) =>
+      prev.filter((f) => {
+        if (f === 'regularPrice' && saleModeForValidation === 'no') return false;
+        if (f === 'preorderReleaseDate' && saleModeForValidation !== 'preorder') return false;
+        return true;
+      })
+    );
+  }, [saleModeForValidation]);
 
   // Загружаем данные альбома при открытии модального окна
   useEffect(() => {
@@ -801,6 +827,10 @@ export function EditAlbumModal({
 
     setCurrentStep(1);
 
+    setStep1InvalidFields([]);
+    setStep2GenreRequired(false);
+    setStep4InvalidFields([]);
+
     setAlbumArtPreview(null);
     setCoverDraftKey(null);
     setUploadProgress(0);
@@ -967,6 +997,7 @@ export function EditAlbumModal({
   }, [genreDropdownOpen]);
 
   const handleGenreToggle = (genreCode: string) => {
+    setStep2GenreRequired(false);
     setFormData((prev) => {
       const currentGenreCodes = prev.genreCodes || [];
       if (currentGenreCodes.includes(genreCode)) {
@@ -977,6 +1008,7 @@ export function EditAlbumModal({
   };
 
   const handleRemoveGenre = (genreCode: string) => {
+    setStep2GenreRequired(false);
     setFormData((prev) => ({
       ...prev,
       genreCodes: (prev.genreCodes || []).filter((c) => c !== genreCode),
@@ -1102,6 +1134,7 @@ export function EditAlbumModal({
           role: bandMemberRole.trim(),
           url,
         };
+        if (updated.length > 0) setStep4InvalidFields((p) => p.filter((x) => x !== 'bandMembers'));
         return { ...prev, bandMembers: updated };
       });
       setEditingBandMemberIndex(null);
@@ -1123,6 +1156,7 @@ export function EditAlbumModal({
       ],
       showAddBandMemberInputs: false,
     }));
+    setStep4InvalidFields((p) => p.filter((x) => x !== 'bandMembers'));
     setAddBandMemberName('');
     setAddBandMemberRole('');
     setAddBandMemberURL('');
@@ -1143,10 +1177,12 @@ export function EditAlbumModal({
   };
 
   const handleRemoveBandMember = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      bandMembers: (prev.bandMembers || []).filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const bandMembers = (prev.bandMembers || []).filter((_, i) => i !== index);
+      if (bandMembers.length > 0)
+        setStep4InvalidFields((p) => p.filter((x) => x !== 'bandMembers'));
+      return { ...prev, bandMembers };
+    });
     if (editingBandMemberIndex === index) handleCancelEditBandMember();
   };
 
@@ -1215,6 +1251,7 @@ export function EditAlbumModal({
           role: producerRole.trim(),
           url,
         };
+        if (updated.length > 0) setStep4InvalidFields((p) => p.filter((x) => x !== 'producer'));
         return { ...prev, producer: updated };
       });
       setEditingProducerIndex(null);
@@ -1236,6 +1273,7 @@ export function EditAlbumModal({
       ],
       showAddProducerInputs: false,
     }));
+    setStep4InvalidFields((p) => p.filter((x) => x !== 'producer'));
     setAddProducerName('');
     setAddProducerRole('');
     setAddProducerURL('');
@@ -1256,10 +1294,11 @@ export function EditAlbumModal({
   };
 
   const handleRemoveProducer = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      producer: (prev.producer || []).filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const producer = (prev.producer || []).filter((_, i) => i !== index);
+      if (producer.length > 0) setStep4InvalidFields((p) => p.filter((x) => x !== 'producer'));
+      return { ...prev, producer };
+    });
     if (editingProducerIndex === index) handleCancelEditProducer();
   };
 
@@ -1894,11 +1933,23 @@ export function EditAlbumModal({
 
   const handleNext = () => {
     if (isSaving) return;
-    // Валидируем текущий шаг перед переходом
-    if (
-      !validateStep(currentStep, formData, { effectiveAllowDownloadSale: saleModeForValidation })
-    ) {
-      return; // Останавливаем переход, если валидация не прошла
+
+    if (currentStep === 1) {
+      const invalid = getAlbumStep1InvalidFields(formData, {
+        effectiveAllowDownloadSale: saleModeForValidation,
+      });
+      setStep1InvalidFields(invalid);
+      if (invalid.length > 0) return;
+    } else if (currentStep === 2) {
+      if (!isAlbumStep2GenreValid(formData)) {
+        setStep2GenreRequired(true);
+        return;
+      }
+      setStep2GenreRequired(false);
+    } else if (currentStep === 4) {
+      const invalid = getAlbumStep4InvalidFields(formData);
+      setStep4InvalidFields(invalid);
+      if (invalid.length > 0) return;
     }
 
     if (currentStep < 5) {
@@ -2708,6 +2759,8 @@ export function EditAlbumModal({
 
   const renderStepContent = () => {
     if (currentStep === 1) {
+      const step1ValUi = ui?.dashboard?.editAlbumModal?.step1Validation;
+      const step1HasErr = (f: AlbumStep1InvalidField) => step1InvalidFields.includes(f);
       return (
         <>
           <div className="edit-album-modal__divider" />
@@ -2723,9 +2776,21 @@ export function EditAlbumModal({
               autoComplete="off"
               className="edit-album-modal__input"
               required
+              aria-invalid={step1HasErr('title')}
+              aria-describedby={step1HasErr('title') ? 'album-title-error' : undefined}
               value={formData.title ?? ''}
-              onChange={(e) => setFormData((s) => ({ ...s, title: e.target.value }))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFormData((s) => ({ ...s, title: v }));
+                if (step1HasErr('title'))
+                  setStep1InvalidFields((p) => p.filter((x) => x !== 'title'));
+              }}
             />
+            {step1HasErr('title') ? (
+              <p id="album-title-error" className="edit-album-modal__field-error" role="alert">
+                {step1ValUi?.requiredTitle}
+              </p>
+            ) : null}
           </div>
 
           <div className="edit-album-modal__field">
@@ -2741,10 +2806,14 @@ export function EditAlbumModal({
               placeholder={ui?.dashboard?.editAlbumModal?.placeholders?.releaseDate ?? 'DD/MM/YYYY'}
               maxLength={10}
               required
+              aria-invalid={step1HasErr('releaseDate')}
+              aria-describedby={step1HasErr('releaseDate') ? 'release-date-error' : undefined}
               value={formData.releaseDate ?? ''}
               onChange={(e) => {
                 const formatted = formatDateInput(e.target.value);
                 setFormData((s) => ({ ...s, releaseDate: formatted }));
+                if (step1HasErr('releaseDate'))
+                  setStep1InvalidFields((p) => p.filter((x) => x !== 'releaseDate'));
               }}
               onBlur={(e) => {
                 // При потере фокуса валидируем дату
@@ -2775,6 +2844,11 @@ export function EditAlbumModal({
                 }
               }}
             />
+            {step1HasErr('releaseDate') ? (
+              <p id="release-date-error" className="edit-album-modal__field-error" role="alert">
+                {step1ValUi?.requiredReleaseDate}
+              </p>
+            ) : null}
           </div>
 
           <div className="edit-album-modal__field">
@@ -2789,9 +2863,21 @@ export function EditAlbumModal({
               className="edit-album-modal__input"
               placeholder={ui?.dashboard?.editAlbumModal?.placeholders?.upcEan ?? 'UPC / EAN'}
               required
+              aria-invalid={step1HasErr('upcEan')}
+              aria-describedby={step1HasErr('upcEan') ? 'upc-ean-error' : undefined}
               value={formData.upcEan ?? ''}
-              onChange={(e) => setFormData((s) => ({ ...s, upcEan: e.target.value }))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFormData((s) => ({ ...s, upcEan: v }));
+                if (step1HasErr('upcEan'))
+                  setStep1InvalidFields((p) => p.filter((x) => x !== 'upcEan'));
+              }}
             />
+            {step1HasErr('upcEan') ? (
+              <p id="upc-ean-error" className="edit-album-modal__field-error" role="alert">
+                {step1ValUi?.requiredUpcEan}
+              </p>
+            ) : null}
           </div>
 
           <div className="edit-album-modal__field">
@@ -2901,9 +2987,21 @@ export function EditAlbumModal({
                 'Short story about the album, credits highlights, genres, etc.'
               }
               required
+              aria-invalid={step1HasErr('description')}
+              aria-describedby={step1HasErr('description') ? 'description-error' : undefined}
               value={formData.description ?? ''}
-              onChange={(e) => setFormData((s) => ({ ...s, description: e.target.value }))}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFormData((s) => ({ ...s, description: v }));
+                if (step1HasErr('description'))
+                  setStep1InvalidFields((p) => p.filter((x) => x !== 'description'));
+              }}
             />
+            {step1HasErr('description') ? (
+              <p id="description-error" className="edit-album-modal__field-error" role="alert">
+                {step1ValUi?.requiredDescription}
+              </p>
+            ) : null}
           </div>
 
           <div className="edit-album-modal__field">
@@ -3043,14 +3141,26 @@ export function EditAlbumModal({
                 </select>
 
                 <input
+                  id="regular-price"
                   name="regular-price"
                   type="text"
                   autoComplete="off"
                   className="edit-album-modal__input edit-album-modal__input--price"
+                  aria-invalid={step1HasErr('regularPrice')}
+                  aria-describedby={step1HasErr('regularPrice') ? 'regular-price-error' : undefined}
                   value={formData.regularPrice}
-                  onChange={(e) => handleInputChange('regularPrice', e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange('regularPrice', e.target.value);
+                    if (step1HasErr('regularPrice'))
+                      setStep1InvalidFields((p) => p.filter((x) => x !== 'regularPrice'));
+                  }}
                 />
               </div>
+              {step1HasErr('regularPrice') ? (
+                <p id="regular-price-error" className="edit-album-modal__field-error" role="alert">
+                  {step1ValUi?.requiredRegularPrice}
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -3070,10 +3180,16 @@ export function EditAlbumModal({
                   ui?.dashboard?.editAlbumModal?.placeholders?.preorderDate ?? 'DD/MM/YYYY'
                 }
                 maxLength={10}
+                aria-invalid={step1HasErr('preorderReleaseDate')}
+                aria-describedby={
+                  step1HasErr('preorderReleaseDate') ? 'preorder-date-error' : undefined
+                }
                 value={formData.preorderReleaseDate}
                 onChange={(e) => {
                   const formatted = formatDateInput(e.target.value);
                   handleInputChange('preorderReleaseDate', formatted);
+                  if (step1HasErr('preorderReleaseDate'))
+                    setStep1InvalidFields((p) => p.filter((x) => x !== 'preorderReleaseDate'));
                 }}
                 onBlur={(e) => {
                   // При потере фокуса валидируем дату
@@ -3104,6 +3220,11 @@ export function EditAlbumModal({
                   }
                 }}
               />
+              {step1HasErr('preorderReleaseDate') ? (
+                <p id="preorder-date-error" className="edit-album-modal__field-error" role="alert">
+                  {step1ValUi?.requiredPreorderReleaseDate}
+                </p>
+              ) : null}
             </div>
           )}
         </>
@@ -3116,6 +3237,7 @@ export function EditAlbumModal({
           formData={formData}
           lang={lang}
           genreDropdownOpen={genreDropdownOpen}
+          genreRequired={step2GenreRequired}
           tagInput={tagInput}
           tagError={tagError}
           genreDropdownRef={genreDropdownRef}
@@ -3217,6 +3339,7 @@ export function EditAlbumModal({
           onEditProducer={handleEditProducer}
           onRemoveProducer={handleRemoveProducer}
           onCancelEditProducer={handleCancelEditProducer}
+          step4InvalidFields={step4InvalidFields}
           ui={ui ?? undefined}
         />
       );

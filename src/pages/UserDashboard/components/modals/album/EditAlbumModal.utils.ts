@@ -510,84 +510,46 @@ export const makeEmptyForm = (): AlbumFormData => ({
   streamingLinks: [],
 });
 
-export const validateStep = (
-  step: number,
+/** Поля шага 1 для привязки подписи ошибки к конкретному инпуту */
+export type AlbumStep1InvalidField =
+  | 'title'
+  | 'releaseDate'
+  | 'upcEan'
+  | 'description'
+  | 'regularPrice'
+  | 'preorderReleaseDate';
+
+/** Поля шага 4 (кредиты) с обязательной проверкой */
+export type AlbumStep4InvalidField = 'albumCoverDesigner' | 'bandMembers' | 'producer';
+
+/** Список пустых/незаполненных полей шага 1 (без alert — текст под полями в UI). */
+export function getAlbumStep1InvalidFields(
   formData: AlbumFormData,
   opts?: { effectiveAllowDownloadSale?: 'no' | 'yes' | 'preorder' }
-): boolean => {
+): AlbumStep1InvalidField[] {
   const saleMode = opts?.effectiveAllowDownloadSale ?? formData.allowDownloadSale;
+  const out: AlbumStep1InvalidField[] = [];
+  if (!formData.title?.trim()) out.push('title');
+  if (!formData.releaseDate?.trim()) out.push('releaseDate');
+  if (!formData.upcEan?.trim()) out.push('upcEan');
+  if (!formData.description?.trim()) out.push('description');
+  if (saleMode !== 'no' && !formData.regularPrice?.trim()) out.push('regularPrice');
+  if (saleMode === 'preorder' && !formData.preorderReleaseDate?.trim())
+    out.push('preorderReleaseDate');
+  return out;
+}
 
-  if (step === 1) {
-    // Шаг 1: Basic Info
-    const errors: string[] = [];
-    if (!formData.title || !formData.title.trim()) {
-      errors.push('Album title');
-    }
-    if (!formData.releaseDate || !formData.releaseDate.trim()) {
-      errors.push('Release date');
-    }
-    if (!formData.upcEan || !formData.upcEan.trim()) {
-      errors.push('UPC / EAN');
-    }
-    if (!formData.description || !formData.description.trim()) {
-      errors.push('Description');
-    }
-    // Regular price обязателен только если продажа включена
-    if (saleMode !== 'no' && (!formData.regularPrice || !formData.regularPrice.trim())) {
-      errors.push('Regular price');
-    }
-    // Pre-order release date обязателен только если pre-order включен
-    if (
-      saleMode === 'preorder' &&
-      (!formData.preorderReleaseDate || !formData.preorderReleaseDate.trim())
-    ) {
-      errors.push('Pre-order release date');
-    }
-    if (errors.length > 0) {
-      alert(`Пожалуйста, заполните обязательные поля:\n${errors.join('\n')}`);
-      return false;
-    }
-    return true;
-  }
+export function isAlbumStep2GenreValid(formData: AlbumFormData): boolean {
+  return (formData.genreCodes?.length ?? 0) > 0;
+}
 
-  if (step === 2) {
-    // Шаг 2: Music Details - Genre обязателен
-    if (!formData.genreCodes || formData.genreCodes.length === 0) {
-      alert('Пожалуйста, выберите хотя бы один жанр (Genre).');
-      return false;
-    }
-    return true;
-  }
-
-  if (step === 3) {
-    // Шаг 3: Recorded/Mixed/Mastered - нет обязательных полей
-    return true;
-  }
-
-  if (step === 4) {
-    // Шаг 4: Album Cover, Band Members, Session Musicians, Producer
-    const errors: string[] = [];
-    // albumCoverPhotographer и albumCoverDesigner теперь необязательные поля
-    if (!formData.albumCoverDesigner || !formData.albumCoverDesigner.trim()) {
-      errors.push('Album Cover Designer');
-    }
-    if (!formData.bandMembers || formData.bandMembers.length === 0) {
-      errors.push('Band Members (хотя бы один участник)');
-    }
-    // Проверяем, что есть хотя бы один Producer
-    if (!formData.producer || formData.producer.length === 0) {
-      errors.push('Producer (хотя бы один продюсер)');
-    }
-    if (errors.length > 0) {
-      alert(`Пожалуйста, заполните обязательные поля:\n${errors.join('\n')}`);
-      return false;
-    }
-    return true;
-  }
-
-  // Шаг 5 (Links) - нет обязательных полей
-  return true;
-};
+export function getAlbumStep4InvalidFields(formData: AlbumFormData): AlbumStep4InvalidField[] {
+  const out: AlbumStep4InvalidField[] = [];
+  if (!formData.albumCoverDesigner?.trim()) out.push('albumCoverDesigner');
+  if (!formData.bandMembers || formData.bandMembers.length === 0) out.push('bandMembers');
+  if (!formData.producer || formData.producer.length === 0) out.push('producer');
+  return out;
+}
 
 export const transformFormDataToAlbumFormat = (
   formData: AlbumFormData,

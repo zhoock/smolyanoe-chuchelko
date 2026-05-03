@@ -521,6 +521,14 @@ export interface IInterface {
         yes: string;
         acceptPreorders: string;
       };
+      step1Validation?: {
+        requiredTitle?: string;
+        requiredReleaseDate?: string;
+        requiredUpcEan?: string;
+        requiredDescription?: string;
+        requiredRegularPrice?: string;
+        requiredPreorderReleaseDate?: string;
+      };
       step2?: {
         genre: string;
         tags: string;
@@ -529,6 +537,8 @@ export interface IInterface {
         addTagButton: string;
         maxTagsReached: string;
         removeTag: string;
+        /** Подпись под полем жанров при переходе на следующий шаг без выбора */
+        requiredGenre?: string;
       };
       step3?: {
         recordedAt: string;
@@ -549,6 +559,12 @@ export interface IInterface {
         name: string;
         role: string;
         urlOptional: string;
+      };
+      /** Ошибки навигации шага «Кредиты» — текст под конкретным блоком формы */
+      step4Validation?: {
+        requiredDesigner?: string;
+        requiredBandMembers?: string;
+        requiredProducer?: string;
       };
       step5?: {
         purchase: string;

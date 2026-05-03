@@ -335,8 +335,17 @@
           "yes": "Sell",
           "acceptPreorders": "Pre-order"
         },
+        "step1Validation": {
+          "requiredTitle": "Enter the album title",
+          "requiredReleaseDate": "Enter the release date",
+          "requiredUpcEan": "Enter UPC / EAN",
+          "requiredDescription": "Enter a description",
+          "requiredRegularPrice": "Enter the regular price",
+          "requiredPreorderReleaseDate": "Enter the pre-order release date"
+        },
         "step2": {
           "genre": "Genre",
+          "requiredGenre": "Select at least one genre",
           "tags": "Tags",
           "selectGenres": "Select genres...",
           "addTagPlaceholder": "Add a tag...",
@@ -363,6 +372,11 @@
           "name": "Name",
           "role": "Role",
           "urlOptional": "URL (optional)"
+        },
+        "step4Validation": {
+          "requiredDesigner": "Enter the cover designer name",
+          "requiredBandMembers": "Add at least one band member",
+          "requiredProducer": "Add at least one producer"
         },
         "step5": {
           "purchase": "Purchase",
