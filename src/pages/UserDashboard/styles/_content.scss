@@ -351,13 +351,15 @@ dialog {
       display: flex;
       align-items: center;
       justify-content: center;
-      inline-size: 160px;
-      aspect-ratio: 1 / 1;
+      block-size: 160px;
+      inline-size: auto;
+      aspect-ratio: 3 / 2;
       background: var(--dashboard-hover-bg);
       border-radius: var(--ms-01);
       overflow: hidden;
       box-shadow: 0 4px 16px rgb(var(--black-rgb) / 10%);
       flex-shrink: 0;
+      max-inline-size: 100%;
 
       picture {
         display: block;

@@ -24,18 +24,33 @@
   object-fit: cover;
 }
 
+// Редактор статьи — на всю ширину (и высоту) окна; инset dialog мешает full-bleed
+dialog.popup:has(.edit-article-v2) {
+  padding: 0;
+
+  @include breakpoint(tablet) {
+    padding: 0;
+  }
+}
+
 dialog {
   @include dashboard-modal-dialog-buttons;
 
   .edit-article-v2 {
-    @include dashboard-modal-shell;
+    @include dashboard-modal-shell($padding: 0);
+
+    box-sizing: border-box;
+    width: 100%;
+    min-block-size: 100dvb;
 
     &__container {
       @include dashboard-modal-panel(
         $padding: null,
         $gap: null,
         $overflow-y: null,
-        $desktop-width: 1000px
+        $mobile-max-height: 100dvb,
+        $desktop-width: 100%,
+        $desktop-height: 100dvb
       );
     }
 
