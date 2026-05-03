@@ -250,12 +250,12 @@ export interface IInterface {
     [key: string]: string;
   };
   dashboard?: {
-    title: string;
     tabs: {
       albums: string;
       posts: string;
       paymentSettings: string;
       myPurchases?: string;
+      mixer?: string;
     };
     profile: string;
     profileSettings: string;

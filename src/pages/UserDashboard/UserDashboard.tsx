@@ -688,6 +688,28 @@ function dashboardTabFromRouteParam(tab: string | undefined): DashboardTab {
   return 'albums';
 }
 
+function dashboardHeadingForTab(tab: DashboardTab, ui: IInterface | null): string {
+  const d = ui?.dashboard;
+  switch (tab) {
+    case 'profile':
+      return d?.profile ?? 'Profile';
+    case 'albums':
+      return d?.tabs?.albums ?? 'Albums';
+    case 'posts':
+      return d?.tabs?.posts ?? 'Articles';
+    case 'mixer':
+      return d?.tabs?.mixer ?? 'Mixer';
+    case 'payment-settings':
+      return d?.tabs?.paymentSettings ?? 'Payment Settings';
+    case 'my-purchases':
+      return d?.tabs?.myPurchases ?? 'My Purchases';
+    default: {
+      const _exhaustive: never = tab;
+      return _exhaustive;
+    }
+  }
+}
+
 function UserDashboard() {
   const { lang, setLang } = useLang();
   const { displayName: siteArtistDisplayName } = useSiteArtistDisplayName(lang, {
@@ -2242,10 +2264,12 @@ function UserDashboard() {
     (albumsStatus === 'loading' || albumsStatus === 'idle') && albumsData.length === 0;
   const albumsLoadFailed = albumsStatus === 'failed';
 
+  const dashboardHeading = dashboardHeadingForTab(activeTab, ui);
+
   return (
     <>
       <Helmet>
-        <title>{ui?.dashboard?.title ?? 'User Dashboard'} — Смоляное Чучелко</title>
+        <title>{dashboardHeading} — Смоляное Чучелко</title>
       </Helmet>
 
       <Popup isActive={true} onClose={closeDashboard}>
@@ -2254,7 +2278,7 @@ function UserDashboard() {
           <div className="user-dashboard__card">
             {/* Header with controls */}
             <div className="user-dashboard__header">
-              <h2 className="user-dashboard__title">{ui?.dashboard?.title ?? 'Dashboard'}</h2>
+              <h2 className="user-dashboard__title">{dashboardHeading}</h2>
               <Hamburger isActive={true} onToggle={closeDashboard} />
             </div>
 
@@ -2296,7 +2320,7 @@ function UserDashboard() {
                   }`}
                   onClick={() => goDashboard('/dashboard-new/mixer')}
                 >
-                  {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
+                  {ui?.dashboard?.tabs?.mixer ?? 'Миксер'}
                 </button>
                 <button
                   type="button"
@@ -2361,9 +2385,6 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'mixer'}
                     >
                       <>
-                        <h3 className="user-dashboard__section-title">
-                          {(ui as any)?.dashboard?.tabs?.mixer ?? 'Миксер'}
-                        </h3>
                         <div className="user-dashboard__section">
                           <MixerAdmin
                             ui={ui || undefined}
@@ -2379,9 +2400,6 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'albums'}
                     >
                       <>
-                        <h3 className="user-dashboard__section-title">
-                          {ui?.dashboard?.tabs?.albums ?? 'Albums'}
-                        </h3>
                         <div className="user-dashboard__section">
                           {albumsInitialLoading ? (
                             <ArticlesListSkeleton count={4} />
@@ -2708,9 +2726,6 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'posts'}
                     >
                       <>
-                        <h3 className="user-dashboard__section-title">
-                          {ui?.dashboard?.tabs?.posts ?? 'Articles'}
-                        </h3>
                         <div className="user-dashboard__section">
                           {articlesStatus === 'loading' ? (
                             <ArticlesListSkeleton count={4} />
@@ -3040,9 +3055,6 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'profile'}
                     >
                       <div className="user-dashboard__profile-tab">
-                        <h3 className="user-dashboard__section-title">
-                          {ui?.dashboard?.profile ?? 'Profile'}
-                        </h3>
                         <div className="user-dashboard__section">
                           <div className="user-dashboard__profile-content">
                             <div className="user-dashboard__avatar">

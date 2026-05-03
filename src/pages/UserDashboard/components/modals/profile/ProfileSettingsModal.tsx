@@ -1267,35 +1267,37 @@ export function ProfileSettingsModal({
               </div>
             </div>
 
-            {hasChanges && (
-              <div className="profile-settings-modal__footer">
-                <button
-                  type="button"
-                  className="profile-settings-modal__button profile-settings-modal__button--cancel"
-                  onClick={() => profileCloseGuard.requestClose()}
-                  disabled={isDashboardBusy}
-                >
-                  {ui?.dashboard?.cancel ?? 'Отмена'}
-                </button>
-                <button
-                  type="button"
-                  className={`profile-settings-modal__button profile-settings-modal__button--save${
-                    isDashboardBusy ? ' profile-settings-modal__button--save-loading' : ''
-                  }`}
-                  onClick={handleSave}
-                  disabled={isDashboardBusy || (activeTab === 'security' && !isPasswordFormValid)}
-                >
-                  {isDashboardBusy ? (
-                    <>
-                      <DashboardSaveSpinner />
-                      {ui?.dashboard?.saving ?? ui?.dashboard?.uploading ?? 'Сохранение...'}
-                    </>
-                  ) : (
-                    (ui?.dashboard?.save ?? 'Сохранить')
-                  )}
-                </button>
-              </div>
-            )}
+            <div className="profile-settings-modal__footer">
+              <button
+                type="button"
+                className="profile-settings-modal__button profile-settings-modal__button--cancel"
+                onClick={() => profileCloseGuard.requestClose()}
+                disabled={isDashboardBusy}
+              >
+                {ui?.dashboard?.cancel ?? 'Отмена'}
+              </button>
+              <button
+                type="button"
+                className={`profile-settings-modal__button profile-settings-modal__button--save${
+                  isDashboardBusy ? ' profile-settings-modal__button--save-loading' : ''
+                }`}
+                onClick={handleSave}
+                disabled={
+                  isDashboardBusy ||
+                  !hasChanges ||
+                  (activeTab === 'security' && !isPasswordFormValid)
+                }
+              >
+                {isDashboardBusy ? (
+                  <>
+                    <DashboardSaveSpinner />
+                    {ui?.dashboard?.saving ?? ui?.dashboard?.uploading ?? 'Сохранение...'}
+                  </>
+                ) : (
+                  (ui?.dashboard?.save ?? 'Сохранить')
+                )}
+              </button>
+            </div>
           </div>
         </div>
         <InlineEditDiscardDialog

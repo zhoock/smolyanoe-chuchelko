@@ -60,7 +60,6 @@
       "notice": "For now, I don't have access to the original stems, so I'm temporarily using tracks extracted from the master with AI. This is solely for testing and demonstrating the mixer, so the audio quality may differ from the final version. Once the original stems are available, I'll update the audio."
     },
     "dashboard": {
-      "title": "User Dashboard",
       "tabs": {
         "albums": "Albums",
         "posts": "Posts",
