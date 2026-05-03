@@ -7,6 +7,8 @@ export interface SaveTrackTextRequest {
   trackId: string | number;
   lang: string;
   translations: Partial<Record<'en' | 'ru', { content: string; authorship?: string }>>;
+  /** Отображаемое имя трека (для INSERT в БД, когда title ещё не в канонической строке `tracks`). */
+  trackTitle?: string;
 }
 
 export interface SaveTrackTextResponse {

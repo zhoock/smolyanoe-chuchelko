@@ -36,7 +36,6 @@ import { getAlbumsDashboardRouteScopeKey } from '@shared/lib/albumsRouteScope';
 import { formatDate } from '@shared/api/albums';
 import { toLocalYYYYMMDD } from '@shared/lib/dateCalendar';
 import { Popup } from '@shared/ui/popup';
-import { Hamburger } from '@shared/ui/hamburger';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import { AlertModal } from '@shared/ui/alertModal';
 import { logout, isAuthenticated, getToken } from '@shared/lib/auth';
@@ -2027,6 +2026,7 @@ function UserDashboard() {
         trackId: addLyricsModal.trackId,
         lang,
         translations: { [lang]: { content: lyrics, authorship } },
+        trackTitle: addLyricsModal.trackTitle,
       });
 
       if (result.success) {
@@ -2076,6 +2076,7 @@ function UserDashboard() {
         trackId: editLyricsModal.trackId,
         lang,
         translations: { [lang]: { content: lyrics, authorship } },
+        trackTitle: editLyricsModal.trackTitle,
       });
 
       if (result.success) {
@@ -2279,7 +2280,14 @@ function UserDashboard() {
             {/* Header with controls */}
             <div className="user-dashboard__header">
               <h2 className="user-dashboard__title">{dashboardHeading}</h2>
-              <Hamburger isActive={true} onToggle={closeDashboard} />
+              <button
+                type="button"
+                className="user-dashboard__close"
+                onClick={closeDashboard}
+                aria-label={ui?.dashboard?.close ?? 'Close'}
+              >
+                ×
+              </button>
             </div>
 
             {/* Main body with sidebar and content */}

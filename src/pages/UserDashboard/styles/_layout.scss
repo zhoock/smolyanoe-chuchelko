@@ -2,6 +2,7 @@
 // Header, sidebar, navigation, profile
 
 @use '../../../scss/abstracts/mixins' as *;
+@use '../../../scss/components/modal' as *;
 
 dialog {
   .user-dashboard {
@@ -16,13 +17,22 @@ dialog {
       @include breakpoint(tablet) {
         padding: var(--ms-1) var(--ms-2);
       }
+    }
 
-      .hamburger {
-        position: static;
-      }
+    &__close {
+      flex-shrink: 0;
+
+      @include dashboard-modal-close(
+        $font-size: var(--dashboard-heading-font-size),
+        $focus-visible: true,
+        $reset-text: true,
+        $flex-shrink: 0
+      );
     }
 
     &__title {
+      flex: 1;
+      min-width: 0;
       margin: 0;
       color: var(--dashboard-text-primary);
       font-size: var(--dashboard-heading-font-size);

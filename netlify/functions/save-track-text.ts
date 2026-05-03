@@ -15,6 +15,8 @@ interface SaveTrackTextRequest {
   /** Локаль UI для поля authorship; текст песни сохраняется в канонический альбом (ru, иначе en). */
   lang: string;
   translations: Partial<Record<'en' | 'ru', { content: string; authorship?: string }>>;
+  /** Если строки ещё нет в канонической таблице `tracks`, подставляется вместо обязательного `title`. */
+  trackTitle?: string;
 }
 
 interface SaveTrackTextResponse {
@@ -184,13 +186,15 @@ export const handler: Handler = async (
         contentLength: content.length,
       });
 
-      const existingCanonResult = await query<{
+      type TrackMetaRow = {
         title: string | null;
         duration: number | null;
         src: string | null;
         order_index: number | null;
         authorship: string | null;
-      }>(
+      };
+
+      const existingCanonResult = await query<TrackMetaRow>(
         `SELECT title, duration, src, order_index, authorship
          FROM tracks
          WHERE album_id = $1 AND track_id = $2
@@ -199,6 +203,34 @@ export const handler: Handler = async (
         0
       );
       const existingCanon = existingCanonResult.rows[0];
+
+      let existingLocale: TrackMetaRow | undefined;
+      if (!sameAlbumRow) {
+        const localeRows = await query<TrackMetaRow>(
+          `SELECT title, duration, src, order_index, authorship
+           FROM tracks
+           WHERE album_id = $1 AND track_id = $2
+           LIMIT 1`,
+          [localeDbId, String(data.trackId)],
+          0
+        );
+        existingLocale = localeRows.rows[0];
+      }
+
+      const requestTitleHint =
+        typeof data.trackTitle === 'string' && data.trackTitle.trim().length > 0
+          ? data.trackTitle.trim()
+          : null;
+
+      const nonNullTitle =
+        existingCanon?.title?.trim() ||
+        existingLocale?.title?.trim() ||
+        requestTitleHint ||
+        `Track ${String(data.trackId)}`;
+
+      const mergedDuration = existingCanon?.duration ?? existingLocale?.duration ?? null;
+      const mergedSrc = existingCanon?.src ?? existingLocale?.src ?? null;
+      const mergedOrderIndex = existingCanon?.order_index ?? existingLocale?.order_index ?? 0;
 
       const upsertAuthorshipOnCanon = sameAlbumRow
         ? authorshipVal
@@ -228,12 +260,12 @@ export const handler: Handler = async (
         [
           canonicalDbId,
           String(data.trackId),
-          existingCanon?.title || null,
-          existingCanon?.duration || null,
-          existingCanon?.src || null,
+          nonNullTitle,
+          mergedDuration,
+          mergedSrc,
           content,
           upsertAuthorshipOnCanon,
-          existingCanon?.order_index || 0,
+          mergedOrderIndex,
         ],
         0
       );
@@ -269,6 +301,11 @@ export const handler: Handler = async (
         );
         const cm = canonMeta.rows[0];
         const rowContent = cm?.content ?? content ?? '';
+        const localeRowTitle =
+          cm?.title?.trim() ||
+          existingLocale?.title?.trim() ||
+          requestTitleHint ||
+          `Track ${String(data.trackId)}`;
         await query(
           `INSERT INTO tracks (album_id, track_id, title, duration, src, content, authorship, order_index, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 0), NOW())
@@ -277,12 +314,12 @@ export const handler: Handler = async (
           [
             localeDbId,
             String(data.trackId),
-            cm?.title ?? null,
-            cm?.duration ?? null,
-            cm?.src ?? null,
+            localeRowTitle,
+            cm?.duration ?? existingLocale?.duration ?? null,
+            cm?.src ?? existingLocale?.src ?? null,
             rowContent,
             authorshipVal,
-            cm?.order_index ?? 0,
+            cm?.order_index ?? existingLocale?.order_index ?? 0,
           ],
           0
         );

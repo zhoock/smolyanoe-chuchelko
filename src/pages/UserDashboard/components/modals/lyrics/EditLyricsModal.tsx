@@ -179,38 +179,35 @@ export function EditLyricsModal({
             />
           </div>
 
-          {hasChanges && (
-            <>
-              <div className="edit-lyrics-modal__divider" />
-              <div className="edit-lyrics-modal__actions">
-                <button
-                  type="button"
-                  className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                >
-                  {ui?.dashboard?.cancel ?? 'Cancel'}
-                </button>
-                <button
-                  type="button"
-                  className={`edit-lyrics-modal__button edit-lyrics-modal__button--primary${
-                    isSaving ? ' edit-lyrics-modal__button--primary-loading' : ''
-                  }`}
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <DashboardSaveSpinner />
-                      {ui?.dashboard?.saving ?? 'Saving...'}
-                    </>
-                  ) : (
-                    (ui?.dashboard?.save ?? 'Save')
-                  )}
-                </button>
-              </div>
-            </>
-          )}
+          <div className="edit-lyrics-modal__divider" />
+
+          <div className="edit-lyrics-modal__actions">
+            <button
+              type="button"
+              className="edit-lyrics-modal__button edit-lyrics-modal__button--cancel"
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
+              {ui?.dashboard?.cancel ?? 'Cancel'}
+            </button>
+            <button
+              type="button"
+              className={`edit-lyrics-modal__button edit-lyrics-modal__button--primary${
+                isSaving ? ' edit-lyrics-modal__button--primary-loading' : ''
+              }`}
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges}
+            >
+              {isSaving ? (
+                <>
+                  <DashboardSaveSpinner />
+                  {ui?.dashboard?.saving ?? 'Saving...'}
+                </>
+              ) : (
+                (ui?.dashboard?.save ?? 'Save')
+              )}
+            </button>
+          </div>
         </div>
       </div>
       <InlineEditDiscardDialog

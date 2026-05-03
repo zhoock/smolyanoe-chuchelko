@@ -130,6 +130,14 @@ export default function EditTrackText({
       return;
     }
 
+    if (!album) {
+      alert('Альбом не загружен');
+      return;
+    }
+
+    const track = album.tracks.find((t) => String(t.id) === trackId);
+    const titleForDb = typeof track?.title === 'string' ? track.title : undefined;
+
     const trimmedAuthorship = authorship.trim();
     const result = await saveTrackText({
       albumId,
@@ -141,6 +149,7 @@ export default function EditTrackText({
           authorship: trimmedAuthorship || undefined,
         },
       },
+      ...(titleForDb?.trim() ? { trackTitle: titleForDb.trim() } : {}),
     });
 
     if (result.success) {
@@ -151,7 +160,7 @@ export default function EditTrackText({
     } else {
       alert(`Ошибка сохранения: ${result.message || 'Неизвестная ошибка'}`);
     }
-  }, [albumId, trackId, lang, formattedText, authorship, text]);
+  }, [album, albumId, trackId, lang, formattedText, authorship, text]);
 
   // Данные загружаются через loader
 

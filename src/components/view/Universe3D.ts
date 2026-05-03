@@ -1157,18 +1157,14 @@ export class Universe3D {
   }
 
   /**
-   * showModal()‑плеер рендерится в dialog.popup; глобальный wheel с preventDefault
-   * отменяет нативную прокрутку синхронизированного текста — пропускаем событие.
+   * Любой `dialog.popup` (дашборд, модалки, плеер) должен получать нативный скролл.
+   * Иначе глобальный `wheel` ниже делает preventDefault и ломает прокрутку текста в формах.
    */
-  private isWheelOverFullscreenPlayer(e: WheelEvent): boolean {
+  private isWheelInsideOpenPopupDialog(e: WheelEvent): boolean {
     const t = e.target;
     if (!t || !(t instanceof Element)) return false;
-    const dialog = t.closest('dialog');
-    return (
-      dialog != null &&
-      dialog.classList.contains('popup') &&
-      dialog.querySelector('.player') != null
-    );
+    const dialogEl = t.closest('dialog.popup');
+    return dialogEl instanceof HTMLDialogElement && dialogEl.open;
   }
 
   private handleWheel = (e: WheelEvent) => {
@@ -1177,7 +1173,7 @@ export class Universe3D {
       return;
     }
 
-    if (this.isWheelOverFullscreenPlayer(e)) {
+    if (this.isWheelInsideOpenPopupDialog(e)) {
       return;
     }
 
