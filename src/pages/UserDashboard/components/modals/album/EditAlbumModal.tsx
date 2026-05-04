@@ -2774,7 +2774,7 @@ export function EditAlbumModal({
               name="album-title"
               type="text"
               autoComplete="off"
-              className="edit-album-modal__input"
+              className={`edit-album-modal__input${step1HasErr('title') ? ' edit-album-modal__input--invalid' : ''}`}
               required
               aria-invalid={step1HasErr('title')}
               aria-describedby={step1HasErr('title') ? 'album-title-error' : undefined}
@@ -2802,7 +2802,7 @@ export function EditAlbumModal({
               name="release-date"
               type="text"
               autoComplete="off"
-              className="edit-album-modal__input"
+              className={`edit-album-modal__input${step1HasErr('releaseDate') ? ' edit-album-modal__input--invalid' : ''}`}
               placeholder={ui?.dashboard?.editAlbumModal?.placeholders?.releaseDate ?? 'DD/MM/YYYY'}
               maxLength={10}
               required
@@ -2860,7 +2860,7 @@ export function EditAlbumModal({
               name="upc-ean"
               type="text"
               autoComplete="off"
-              className="edit-album-modal__input"
+              className={`edit-album-modal__input${step1HasErr('upcEan') ? ' edit-album-modal__input--invalid' : ''}`}
               placeholder={ui?.dashboard?.editAlbumModal?.placeholders?.upcEan ?? 'UPC / EAN'}
               required
               aria-invalid={step1HasErr('upcEan')}
@@ -2981,7 +2981,7 @@ export function EditAlbumModal({
               id="description"
               name="description"
               autoComplete="off"
-              className="edit-album-modal__textarea"
+              className={`edit-album-modal__textarea${step1HasErr('description') ? ' edit-album-modal__textarea--invalid' : ''}`}
               placeholder={
                 ui?.dashboard?.editAlbumModal?.placeholders?.description ??
                 'Short story about the album, credits highlights, genres, etc.'
@@ -3145,7 +3145,7 @@ export function EditAlbumModal({
                   name="regular-price"
                   type="text"
                   autoComplete="off"
-                  className="edit-album-modal__input edit-album-modal__input--price"
+                  className={`edit-album-modal__input edit-album-modal__input--price${step1HasErr('regularPrice') ? ' edit-album-modal__input--invalid' : ''}`}
                   aria-invalid={step1HasErr('regularPrice')}
                   aria-describedby={step1HasErr('regularPrice') ? 'regular-price-error' : undefined}
                   value={formData.regularPrice}
@@ -3175,7 +3175,7 @@ export function EditAlbumModal({
                 name="preorder-date"
                 type="text"
                 autoComplete="off"
-                className="edit-album-modal__input"
+                className={`edit-album-modal__input${step1HasErr('preorderReleaseDate') ? ' edit-album-modal__input--invalid' : ''}`}
                 placeholder={
                   ui?.dashboard?.editAlbumModal?.placeholders?.preorderDate ?? 'DD/MM/YYYY'
                 }

@@ -125,6 +125,8 @@ export function EditAlbumModalStep4({
 }: EditAlbumModalStep4Props) {
   const s4inv = ui?.dashboard?.editAlbumModal?.step4Validation;
   const step4Err = (f: AlbumStep4InvalidField) => step4InvalidFields.includes(f);
+  const bandListInvalid = step4Err('bandMembers');
+  const producerListInvalid = step4Err('producer');
 
   return (
     <>
@@ -165,7 +167,7 @@ export function EditAlbumModalStep4({
               name="album-cover-designer"
               type="text"
               autoComplete="name"
-              className="edit-album-modal__input"
+              className={`edit-album-modal__input${step4Err('albumCoverDesigner') ? ' edit-album-modal__input--invalid' : ''}`}
               placeholder={ui?.dashboard?.editAlbumModal?.step4?.designer ?? 'Designer'}
               required
               aria-invalid={step4Err('albumCoverDesigner')}
@@ -201,7 +203,9 @@ export function EditAlbumModalStep4({
         </label>
 
         {formData.bandMembers.length > 0 && (
-          <div className="edit-album-modal__list">
+          <div
+            className={`edit-album-modal__list${bandListInvalid ? ' edit-album-modal__list--invalid' : ''}`}
+          >
             {formData.bandMembers.map((member, index) => (
               <EditableCardField
                 key={index}
@@ -242,7 +246,9 @@ export function EditAlbumModalStep4({
 
         {(formData.bandMembers.length === 0 || formData.showAddBandMemberInputs === true) &&
           formData.bandMembers.length < MAX_BAND_MEMBERS && (
-            <div className="edit-album-modal__list">
+            <div
+              className={`edit-album-modal__list${bandListInvalid ? ' edit-album-modal__list--invalid' : ''}`}
+            >
               <EditableCardField
                 data={{ title: '', description: '', url: '' }}
                 isEditing={true}
@@ -396,7 +402,9 @@ export function EditAlbumModalStep4({
         </label>
 
         {formData.producer.length > 0 && (
-          <div className="edit-album-modal__list">
+          <div
+            className={`edit-album-modal__list${producerListInvalid ? ' edit-album-modal__list--invalid' : ''}`}
+          >
             {formData.producer.map((member, index) => (
               <EditableCardField
                 key={index}
@@ -437,7 +445,9 @@ export function EditAlbumModalStep4({
 
         {(formData.producer.length === 0 || formData.showAddProducerInputs === true) &&
           formData.producer.length < MAX_BAND_MEMBERS && (
-            <div className="edit-album-modal__list">
+            <div
+              className={`edit-album-modal__list${producerListInvalid ? ' edit-album-modal__list--invalid' : ''}`}
+            >
               <EditableCardField
                 data={{ title: '', description: '', url: '' }}
                 isEditing={true}

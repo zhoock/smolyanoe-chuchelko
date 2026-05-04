@@ -58,7 +58,7 @@ export function EditAlbumModalStep2({
 
         <div className="edit-album-modal__multiselect" ref={genreDropdownRef}>
           <div
-            className="edit-album-modal__multiselect-input"
+            className={`edit-album-modal__multiselect-input${genreRequired ? ' edit-album-modal__multiselect-input--invalid' : ''}`}
             onClick={onGenreDropdownToggle}
             role="button"
             tabIndex={0}

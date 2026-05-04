@@ -111,10 +111,28 @@ dialog {
       &--price {
         flex: 1;
       }
+
+      &--invalid {
+        border-color: var(--pink-terracotta);
+
+        &:focus {
+          border-color: var(--pink-terracotta);
+          box-shadow: 0 0 0 2px rgb(207 128 125 / 28%);
+        }
+      }
     }
 
     &__textarea {
       @include dashboard-form-textarea($min-height: 120px);
+
+      &--invalid {
+        border-color: var(--pink-terracotta);
+
+        &:focus {
+          border-color: var(--pink-terracotta);
+          box-shadow: 0 0 0 2px rgb(207 128 125 / 28%);
+        }
+      }
     }
 
     &__dropzone {
@@ -483,6 +501,15 @@ dialog {
         outline: none !important;
         border-color: var(--dark-greenish-yellow) !important;
       }
+
+      &--invalid {
+        border-color: var(--pink-terracotta) !important;
+
+        &:focus {
+          border-color: var(--pink-terracotta) !important;
+          box-shadow: 0 0 0 2px rgb(207 128 125 / 28%) !important;
+        }
+      }
     }
 
     &__multiselect-placeholder {
@@ -698,6 +725,13 @@ dialog {
       flex-direction: column;
       gap: var(--ms-01);
       margin-bottom: var(--ms-0);
+
+      // border, не inset-shadow: дочерние list-item с opaque background закрывают inset-тень
+      &--invalid {
+        border: 1px solid var(--pink-terracotta);
+        border-radius: var(--ms-01);
+        box-sizing: border-box;
+      }
     }
 
     &__list-item {
