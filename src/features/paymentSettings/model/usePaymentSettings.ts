@@ -73,7 +73,7 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
     try {
       const providers: PaymentProvider[] = ['yookassa'];
       const results = await Promise.all(
-        providers.map((provider) => getPaymentSettings({ userId, provider }))
+        providers.map((provider) => getPaymentSettings({ provider }))
       );
 
       const newSettingsMap: Record<PaymentProvider, UserPaymentSettings | null> = {
@@ -129,7 +129,6 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
 
     try {
       const result = await savePaymentSettings({
-        userId,
         provider,
         shopId: sid,
         secretKey: sec,
@@ -176,7 +175,7 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
     setSuccess(null);
 
     try {
-      const result = await disconnectPaymentProvider(userId, provider);
+      const result = await disconnectPaymentProvider(provider);
 
       if (result.success) {
         setSuccess(`${providerName} успешно отключен`);

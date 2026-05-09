@@ -1,5 +1,7 @@
 @use '../../scss/abstracts/mixins' as *;
 
+$payment-success-button-padding: var(--ms-01) var(--ms-0);
+
 // ============================================
 // PaymentSuccess Component Styles
 // ============================================
@@ -92,9 +94,7 @@
 
     @include dashboard-heading-font-size;
 
-    font-weight: 700;
     margin-bottom: var(--ms-1);
-    line-height: 1.2;
   }
 
   &__message {
@@ -142,17 +142,15 @@
     }
   }
 
-  &__polling {
-    // Блок проверки статуса - стили dashboard
-    padding: var(--ms-01);
+  &__muted-note {
+    margin-top: var(--ms-1);
+    margin-bottom: 0;
     color: var(--dashboard-text-secondary);
 
     @include dashboard-font-size;
 
-    background: var(--dashboard-hover-bg);
-    border: 1px solid var(--dashboard-card-border);
-    border-radius: var(--ms-01);
-    margin-top: var(--ms-1);
+    line-height: 1.45;
+    font-style: italic;
   }
 
   &__error {
@@ -181,29 +179,41 @@
   }
 
   &__button {
-    // Кнопка "Вернуться сейчас" и другие кнопки - используем миксин dashboard-button
     margin-top: var(--ms-1);
+    box-sizing: border-box;
     text-decoration: none;
+    text-align: center;
 
-    @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+    @include dashboard-button($margin: 0, $padding: $payment-success-button-padding);
 
     &--primary {
-      // Основная кнопка - используем button-variant с параметрами primary (переопределяем базовые стили)
-      margin-top: var(--ms-1);
-      text-decoration: none;
-      font-size: var(--dashboard-font-size);
-      line-height: 16px;
-
       @include button-variant(
         $color: var(--dashboard-button-primary-text),
         $background: var(--dashboard-button-primary-bg),
         $hover-color: var(--dashboard-button-primary-text),
         $hover-background: var(--dashboard-button-primary-bg-hover),
         $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
+        $padding: $payment-success-button-padding,
         $border: 0,
-        $border-radius: var(--ms-01)
+        $border-radius: var(--ms-01),
+        $font-size: var(--dashboard-font-size)
       );
+    }
+  }
+
+  /** Незавершённый платёж: колонка; стиль кнопок только из миксинов. */
+  &__pending-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-01);
+    margin-top: var(--ms-1);
+    margin-inline: auto;
+    width: 100%;
+    max-width: 22rem;
+
+    > :is(a, button).payment-success__button {
+      width: 100%;
+      margin-top: 0;
     }
   }
 
@@ -214,8 +224,13 @@
     gap: var(--ms-01);
     margin-top: var(--ms-1);
 
+    > :is(a, button).payment-success__button {
+      margin-top: 0;
+    }
+
     @media (width >= 480px) {
-      flex-direction: row;
+      flex-flow: row wrap;
+      align-items: center;
       justify-content: center;
     }
   }

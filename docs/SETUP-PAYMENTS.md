@@ -60,13 +60,13 @@ npm run test-db
 
 ## 📋 Переменные окружения для Netlify
 
-| Переменная            | Обязательно     | Пример                                         | Описание                                |
-| --------------------- | --------------- | ---------------------------------------------- | --------------------------------------- |
-| `DATABASE_URL`        | ✅ Да           | `postgresql://user:pass@host:port/db`          | Строка подключения к PostgreSQL         |
-| `ENCRYPTION_KEY`      | ✅ Да           | `Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0=` | Ключ шифрования (из шага 1)             |
-| `YOOKASSA_SHOP_ID`    | ⚠️ Для fallback | `123456`                                       | ID магазина (для аккаунта платформы)    |
-| `YOOKASSA_SECRET_KEY` | ⚠️ Для fallback | `test_xxx`                                     | Секретный ключ (для аккаунта платформы) |
-| `YOOKASSA_API_URL`    | ❌ Нет          | `https://api.yookassa.ru/v3/payments`          | URL API (по умолчанию)                  |
+| Переменная         | Обязательно | Пример                                         | Описание                                    |
+| ------------------ | ----------- | ---------------------------------------------- | ------------------------------------------- |
+| `DATABASE_URL`     | ✅ Да       | `postgresql://user:pass@host:port/db`          | Строка подключения к PostgreSQL             |
+| `ENCRYPTION_KEY`   | ✅ Да       | `Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0=` | Ключ шифрования (из шага 1)                 |
+| `YOOKASSA_API_URL` | ❌ Нет      | `https://api.yookassa.ru/v3/payments`          | URL API (по умолчанию совпадает с примером) |
+
+ЮKassa **shopId / secret продавца** — в ЛК сайта → БД, **не** в Netlify ENV. Переменные **`YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY`** приложение **не использует** (можно полностью не задавать).
 
 **📖 Подробная инструкция:** [NETLIFY-ENV-SETUP.md](./NETLIFY-ENV-SETUP.md)
 
@@ -79,6 +79,7 @@ npm run test-db
 - [ ] Миграции выполнены (`npm run migrate`)
 - [ ] Тест подключения успешен (`npm run test-db`)
 - [ ] Webhook URL настроен в ЮKassa Dashboard
+- [ ] Артист с тестом оплаты подключил ЮKassa в разделе настроек сайта (креды попали в `user_payment_settings`)
 - [ ] Тестовый платеж проходит успешно
 
 ## 📚 Подробная документация

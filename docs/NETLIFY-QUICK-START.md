@@ -35,10 +35,9 @@
 
 3. Нажмите **"Save"** или **"Add variable"**
 
-4. **Повторите** для каждой переменной:
-   - `ENCRYPTION_KEY`
-   - `YOOKASSA_SHOP_ID` (если нужен)
-   - `YOOKASSA_SECRET_KEY` (если нужен)
+4. **Повторите** для `ENCRYPTION_KEY` и при необходимости `YOOKASSA_API_URL`.
+
+   **Не нужно добавлять** `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` для оплаты: креды хранятся в БД у каждого артиста (legacy ключи можно оставить пустыми или удалить).
 
 ### Шаг 4: Передеплойте проект
 
@@ -65,19 +64,15 @@ Value: Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0= (ваш ключ из npm ru
 Scope: Production (или все)
 ```
 
-### Опциональные (если используете fallback аккаунт платформы):
+### Опциональные (общие параметры API)
 
 ```
-Key: YOOKASSA_SHOP_ID
-Value: ваш_shop_id
+Key: YOOKASSA_API_URL
+Value: https://api.yookassa.ru/v3/payments
 Scope: Production
 ```
 
-```
-Key: YOOKASSA_SECRET_KEY
-Value: ваш_secret_key
-Scope: Production
-```
+**Legacy:** переменные `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY` кодом платежей **не используются** и не нужны для tenant-only режима.
 
 ## 🎯 Визуальный путь
 

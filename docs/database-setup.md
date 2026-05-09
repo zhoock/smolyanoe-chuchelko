@@ -85,12 +85,17 @@ openssl rand -base64 32
 
 ## Использование
 
+### Безопасность
+
+Эндпоинт знает только **текущего пользователя из JWT**. Параметр `userId` в GET/DELETE и поле в POST **не задают аккаунт**: при несовпадении с JWT возвращается **403 Forbidden**. Ответ содержит `shopId` и статус подключения (secret в ответ не отдаётся).
+
 ### Сохранение настроек
+
+Требуется заголовок `Authorization: Bearer <JWT>` из сессии ЛК:
 
 ```typescript
 // POST /api/payment-settings
 {
-  "userId": "user-123",
   "provider": "yookassa",
   "shopId": "123456",
   "secretKey": "your-secret-key",
@@ -101,13 +106,13 @@ openssl rand -base64 32
 ### Получение настроек
 
 ```typescript
-// GET /api/payment-settings?userId=user-123&provider=yookassa
+// GET /api/payment-settings?provider=yookassa
 ```
 
 ### Отключение платежной системы
 
 ```typescript
-// DELETE /api/payment-settings?userId=user-123&provider=yookassa
+// DELETE /api/payment-settings?provider=yookassa
 ```
 
 ## Миграции

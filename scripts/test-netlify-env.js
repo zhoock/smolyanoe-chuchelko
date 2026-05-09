@@ -10,6 +10,7 @@
  *
  * Проверяет:
  *   - Наличие обязательных переменных окружения
+ *   - ЮKassa: глобальные SHOP_ID/SECRET для оплаты не требуются (tenant-only из БД)
  *   - Формат DATABASE_URL
  *   - Формат ENCRYPTION_KEY
  *   - Подключение к базе данных
@@ -242,10 +243,12 @@ async function main() {
   if (!checkEnvVar('DATABASE_URL', true)) allChecksPassed = false;
   if (!checkEnvVar('ENCRYPTION_KEY', true)) allChecksPassed = false;
 
-  // Проверка опциональных переменных
-  log('\n📋 Проверка опциональных переменных:', 'blue');
-  checkEnvVar('YOOKASSA_SHOP_ID', false);
-  checkEnvVar('YOOKASSA_SECRET_KEY', false);
+  // YooKassa: shopId/secret продавцов в БД; глобальные YOOKASSA_SHOP_ID/YOOKASSA_SECRET_KEY не проверяем
+  log('\n📋 ЮKassa (multi-tenant):', 'blue');
+  log(
+    'ℹ️  YOOKASSA_SHOP_ID / YOOKASSA_SECRET_KEY не обязательны — функции платежей их не используют.',
+    'blue'
+  );
 
   // Проверка формата
   log('\n📋 Проверка формата переменных:', 'blue');

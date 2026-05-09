@@ -76,15 +76,16 @@
 
 #### 4.1. Проверка endpoint `/api/payment-settings`
 
-**Способ 1: Через браузер (GET запрос)**
+**Требуется JWT** заголовка `Authorization: Bearer <token>` (как после входа в ЛК).
 
-1. Откройте ваш сайт: `https://smolyanoechuchelko.ru`
-2. В консоли браузера (F12) выполните:
+**Способ 1: браузер (вы уже авторизованы на сайте)**
 
 ```javascript
-fetch('/api/payment-settings?userId=test-user&provider=yookassa', {
+const token = localStorage.getItem('auth_token');
+fetch('/api/payment-settings?provider=yookassa', {
   method: 'GET',
   headers: {
+    Authorization: token ? `Bearer ${token}` : '',
     'Content-Type': 'application/json',
   },
 })
@@ -93,39 +94,29 @@ fetch('/api/payment-settings?userId=test-user&provider=yookassa', {
   .catch((err) => console.error('❌ Ошибка:', err));
 ```
 
-**Ожидаемый результат:**
+Без входа ожидайте **401**. Подстановка чужого `userId` в query больше не даёт доступа — **403 Forbidden**.
 
-```json
-{
-  "success": true,
-  "settings": null
-}
-```
-
-**Если ошибка:**
-
-- Проверьте логи функции `payment-settings` в Netlify
-- Убедитесь, что функция задеплоена
-
-**Способ 2: Через curl (в терминале)**
+**Способ 2: curl**
 
 ```bash
-curl -X GET "https://smolyanoechuchelko.ru/api/payment-settings?userId=test-user&provider=yookassa" \
+curl -X GET "https://YOUR_SITE/api/payment-settings?provider=yookassa" \
+  -H "Authorization: Bearer YOUR_JWT" \
   -H "Content-Type: application/json"
 ```
 
 #### 4.2. Проверка подключения к базе данных
 
-**Создайте тестовый запрос на сохранение настроек:**
+**Создайте тестовый запрос на сохранение (владелец записи берётся из JWT, без `userId` в теле):**
 
 ```javascript
+const token = localStorage.getItem('auth_token');
 fetch('/api/payment-settings', {
   method: 'POST',
   headers: {
+    Authorization: token ? `Bearer ${token}` : '',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    userId: 'test-user-123',
     provider: 'yookassa',
     shopId: 'test-shop-id',
     secretKey: 'test-secret-key-123',
@@ -150,7 +141,7 @@ fetch('/api/payment-settings', {
 {
   "success": true,
   "settings": {
-    "userId": "test-user-123",
+    "userId": "<совпадает с userId в вашем JWT>",
     "provider": "yookassa",
     "shopId": "test-shop-id",
     "isActive": true,
@@ -181,7 +172,7 @@ SELECT
   secret_key_encrypted,
   is_active
 FROM user_payment_settings
-WHERE user_id = 'test-user-123';
+WHERE user_id = '<your_user_id_from_jwt>';
 ```
 
 **Проверьте:**
@@ -195,7 +186,7 @@ WHERE user_id = 'test-user-123';
 После проверки удалите тестовые данные:
 
 ```sql
-DELETE FROM user_payment_settings WHERE user_id = 'test-user-123';
+DELETE FROM user_payment_settings WHERE user_id = '<your_user_id_from_jwt>' AND provider = 'yookassa';
 ```
 
 ### ✅ Шаг 6: Тестирование создания платежа
@@ -242,8 +233,8 @@ fetch('/api/create-payment', {
 **Если ошибка:**
 
 - Проверьте логи функции `create-payment`
-- Убедитесь, что `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY` добавлены (если используете fallback)
-- Или убедитесь, что пользователь настроил свой аккаунт ЮKassa
+- Убедитесь, что владелец альбома подключил ЮKassa через настройки сайта (`user_payment_settings` в БД)
+- Проверьте `DATABASE_URL`, `ENCRYPTION_KEY` и логи функции `create-payment`
 
 ## 🔍 Детальная проверка через Netlify CLI
 
@@ -291,15 +282,15 @@ netlify dev
 
 ## 📊 Итоговая таблица проверки
 
-| Проверка                              | Статус | Комментарий                             |
-| ------------------------------------- | ------ | --------------------------------------- |
-| Переменные в Dashboard                | ⬜     | `DATABASE_URL` и `ENCRYPTION_KEY` видны |
-| Деплой успешен                        | ⬜     | Статус "Published"                      |
-| Логи функций без ошибок               | ⬜     | Нет ошибок подключения                  |
-| GET `/api/payment-settings` работает  | ⬜     | Возвращает `{"success": true}`          |
-| POST `/api/payment-settings` работает | ⬜     | Сохраняет в БД                          |
-| Шифрование работает                   | ⬜     | `secret_key_encrypted` зашифрован       |
-| POST `/api/create-payment` работает   | ⬜     | Создаёт платеж в ЮKassa                 |
+| Проверка                              | Статус | Комментарий                                             |
+| ------------------------------------- | ------ | ------------------------------------------------------- |
+| Переменные в Dashboard                | ⬜     | `DATABASE_URL` и `ENCRYPTION_KEY` видны                 |
+| Деплой успешен                        | ⬜     | Статус "Published"                                      |
+| Логи функций без ошибок               | ⬜     | Нет ошибок подключения                                  |
+| GET `/api/payment-settings` работает  | ⬜     | С `Authorization: Bearer` после входа → `success: true` |
+| POST `/api/payment-settings` работает | ⬜     | С Bearer; без чужого `userId`; сохранение в БД          |
+| Шифрование работает                   | ⬜     | `secret_key_encrypted` зашифрован                       |
+| POST `/api/create-payment` работает   | ⬜     | Создаёт платеж в ЮKassa                                 |
 
 ## 🆘 Решение проблем
 

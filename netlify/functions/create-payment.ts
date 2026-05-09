@@ -2,22 +2,19 @@
 /**
  * Netlify Serverless Function для создания платежа через ЮKassa API.
  *
- * ВАЖНО: Для работы этой функции нужно:
- * 1. Зарегистрироваться в ЮKassa (https://yookassa.ru/)
- * 2. Получить shopId и secretKey
- * 3. Настроить переменные окружения в Netlify:
- *    - YOOKASSA_SHOP_ID - ID магазина
- *    - YOOKASSA_SECRET_KEY - Секретный ключ
- *    - YOOKASSA_RETURN_URL - URL возврата после оплаты (опционально)
+ * Учётные данные продавца (shopId + secret) хранятся в БД (`user_payment_settings`), не в ENV.
+ *
+ * Опциональные переменные окружения:
+ * - YOOKASSA_RETURN_URL — URL возврата после оплаты
+ * - YOOKASSA_API_URL — endpoint API (по умолчанию production v3)
+ * - YOOKASSA_TEST_MODE — флаг для документации/логов (тело test в запросе может быть отключено)
  *
  * Локальная разработка:
- * - Netlify Dev автоматически читает .env файл из корня проекта
- * - Запуск: netlify dev (без дополнительных опций)
- * - Убедитесь, что .env содержит YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY
+ * - Netlify Dev читает .env из корня; нужны DATABASE_URL, ENCRYPTION_KEY и креды артиста в БД
  *
  * Диагностика:
- * - POST /api/create-payment с {"diagnose": true} - проверка credentials без создания платежа
- * - GET /api/yookassa-health - health check endpoint для диагностики
+ * - POST /api/create-payment с {"diagnose": true} — инфраструктура и доступность API (без глобального shop/secret)
+ * - GET /api/yookassa-health — multi-tenant health (БД, API host, ENCRYPTION_KEY; см. функцию)
  * - См. docs/YOOKASSA-DIAGNOSTICS.md для подробной инструкции
  *
  * Пример использования:
@@ -48,7 +45,7 @@ interface CreatePaymentRequest {
   albumId: string;
   customerEmail: string;
   returnUrl?: string;
-  userId?: string; // ID музыканта-продавца (опционально, если нет - используется аккаунт платформы)
+  userId?: string; // опционально; сверяется с владельцем альбома/заказа из БД (креды только у продавца в БД)
   orderId?: string; // ID существующего заказа (для повторной оплаты)
   paymentToken?: string; // Токен от Checkout.js для оплаты на сайте
   billingData?: {
@@ -163,6 +160,9 @@ interface YooKassaPaymentRequest {
         currency: string;
       };
       vat_code?: number;
+      /** https://yookassa.ru/developers/payment-acceptance/receipts/54fz/yoomoney/items */
+      payment_subject?: string;
+      payment_mode?: string;
     }>;
   };
 }
@@ -186,68 +186,51 @@ interface YooKassaPaymentResponse {
 }
 
 /**
- * Режим диагностики: проверяет наличие и валидность credentials без создания платежа
+ * Режим диагностики без создания платежа: окружение и доступность host API YooKassa.
+ * Проверки с shopId/secret конкретного продавца здесь нет (они только в БД; полный тест — оплата или save settings).
  */
 async function handleDiagnosticMode(
-  event: HandlerEvent,
   headers: Record<string, string>
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
   try {
-    // Получаем credentials из env
-    const shopId = process.env.YOOKASSA_SHOP_ID?.trim();
-    const secretKey = process.env.YOOKASSA_SECRET_KEY?.trim();
-    const hasValidShopId = shopId && shopId.length > 0;
-    const hasValidSecretKey = secretKey && secretKey.length > 0;
+    const apiUrl = process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments';
 
     const diagnosticInfo = {
       env: {
-        hasShopId: hasValidShopId,
-        hasSecret: hasValidSecretKey,
-        shopIdLength: shopId?.length || 0,
-        secretKeyLength: secretKey?.length || 0,
-        secretKeyPrefix: secretKey?.substring(0, 6) + '***' || 'not set',
         nodeEnv: process.env.NODE_ENV,
         netlifyDev: process.env.NETLIFY_DEV,
         hasDatabaseUrl: !!process.env.DATABASE_URL,
       },
       yookassa: {
-        apiUrl: process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments',
-        testMode: false, // Можно добавить проверку test mode
+        apiUrl,
+        credentialsScope: 'per_seller_database' as const,
       },
     };
 
-    // Если credentials есть, делаем тестовый запрос к YooKassa
-    let yookassaTest: { success: boolean; error?: string; status?: number } = {
-      success: false,
-      error: 'Credentials not available',
+    let yookassaReachable: { ok: boolean; httpStatus?: number; error?: string } = {
+      ok: false,
+      error: 'not tested',
     };
 
-    if (hasValidShopId && hasValidSecretKey) {
-      try {
-        const apiUrl = process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments';
-        const authHeader = Buffer.from(`${shopId}:${secretKey}`).toString('base64');
-
-        // Делаем лёгкий запрос: список платежей с limit=1
-        const testUrl = `${apiUrl}?limit=1`;
-        const testResponse = await fetch(testUrl, {
-          method: 'GET',
-          headers: {
-            Authorization: `Basic ${authHeader}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        yookassaTest = {
-          success: testResponse.ok,
-          status: testResponse.status,
-          error: testResponse.ok ? undefined : `HTTP ${testResponse.status}`,
-        };
-      } catch (testError: any) {
-        yookassaTest = {
-          success: false,
-          error: testError?.message || 'Unknown error',
-        };
-      }
+    try {
+      const testUrl = `${apiUrl}?limit=1`;
+      const testResponse = await fetch(testUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      yookassaReachable = {
+        ok: Number.isFinite(testResponse.status) && testResponse.status > 0,
+        httpStatus: testResponse.status,
+        error:
+          testResponse.status === 401 || testResponse.status === 403
+            ? undefined
+            : `HTTP ${testResponse.status} (unauthenticated probe)`,
+      };
+    } catch (testError: any) {
+      yookassaReachable = {
+        ok: false,
+        error: testError?.message || 'Unknown error',
+      };
     }
 
     return {
@@ -257,7 +240,7 @@ async function handleDiagnosticMode(
         success: true,
         diagnostic: {
           ...diagnosticInfo,
-          yookassaTest,
+          yookassaApiReachable: yookassaReachable,
         },
       }),
     };
@@ -277,16 +260,10 @@ export const handler: Handler = async (
   event: HandlerEvent,
   context: HandlerContext
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
-  // Диагностика переменных окружения
-  console.log('🔍 ENV check:', {
-    hasShopId: !!process.env.YOOKASSA_SHOP_ID,
-    hasSecret: !!process.env.YOOKASSA_SECRET_KEY,
+  console.log('🔍 create-payment:', {
     hasDb: !!process.env.DATABASE_URL,
     nodeEnv: process.env.NODE_ENV,
     netlifyDev: process.env.NETLIFY_DEV,
-    shopIdLength: process.env.YOOKASSA_SHOP_ID?.length || 0,
-    secretKeyLength: process.env.YOOKASSA_SECRET_KEY?.length || 0,
-    secretKeyPrefix: process.env.YOOKASSA_SECRET_KEY?.substring(0, 10) || 'not set',
   });
 
   // CORS headers для работы с фронтенда
@@ -324,7 +301,7 @@ export const handler: Handler = async (
 
     // Режим диагностики: если передан {"diagnose": true}, возвращаем статус без создания платежа
     if ((data as any).diagnose === true) {
-      return await handleDiagnosticMode(event, headers);
+      return await handleDiagnosticMode(headers);
     }
 
     // Валидация полей до доступа к БД / ключам
@@ -612,12 +589,12 @@ export const handler: Handler = async (
     // Если используете production креды, test нужно отключить
     const isTestMode = process.env.YOOKASSA_TEST_MODE === 'true';
 
-    console.log('🔧 YooKassa mode:', {
+    console.log('🔧 YooKassa mode (seller shop from DB):', {
       isTestMode,
       YOOKASSA_TEST_MODE: process.env.YOOKASSA_TEST_MODE,
       NODE_ENV: process.env.NODE_ENV,
       NETLIFY_DEV: process.env.NETLIFY_DEV,
-      shopIdPrefix: (process.env.YOOKASSA_SHOP_ID || '').substring(0, 6) + '...',
+      sellerShopIdPrefix: `${shopId.slice(0, 6)}...`,
     });
 
     // Формируем запрос: если есть paymentToken (Checkout.js), используем payment_token в корне,

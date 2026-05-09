@@ -66,50 +66,18 @@ Value: Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0=
 
 **⚠️ ВАЖНО:** Используйте разные ключи для разных окружений (Production, Deploy previews, Branch deploys)!
 
-#### 3. YOOKASSA_SHOP_ID (опционально, для fallback)
+#### 3. ЮKassa — только общие переменные (без глобального shop/secret)
 
-```
-Key: YOOKASSA_SHOP_ID
-Value: ваш_shop_id
-```
+Креды магазина продавцы сохраняют в ЛК сайта → БД (`user_payment_settings`). В Netlify **не обязательны** `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY`; код их **не читает** для создания платежей.
 
-**Где взять значение:**
-
-- Откройте https://yookassa.ru/
-- Войдите в личный кабинет
-- Найдите ваш **Shop ID** (ID магазина)
-
-**Когда нужна:**
-
-- Если пользователи используют индивидуальные аккаунты — **НЕ нужна**
-- Если все платежи идут через аккаунт платформы — **нужна**
-
-#### 4. YOOKASSA_SECRET_KEY (опционально, для fallback)
-
-```
-Key: YOOKASSA_SECRET_KEY
-Value: ваш_secret_key
-```
-
-**Где взять значение:**
-
-- Откройте https://yookassa.ru/
-- Войдите в личный кабинет
-- Найдите **Secret Key** (Секретный ключ)
-
-**Когда нужна:**
-
-- Если пользователи используют индивидуальные аккаунты — **НЕ нужна**
-- Если все платежи идут через аккаунт платформы — **нужна**
-
-#### 5. YOOKASSA_API_URL (опционально)
+При необходимости задайте:
 
 ```
 Key: YOOKASSA_API_URL
 Value: https://api.yookassa.ru/v3/payments
 ```
 
-**По умолчанию:** Если не указана, используется `https://api.yookassa.ru/v3/payments`
+**Legacy (не использовать для новых проектов):** если переменные `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` уже есть в Netlify со старых инструкций, их наличие **не требуется** и может быть удалено без вреда tenant-only платежам.
 
 ### Шаг 4: Выберите контекст (Scope)
 
@@ -121,8 +89,8 @@ Value: https://api.yookassa.ru/v3/payments
 
 **Рекомендация:**
 
-- Для `DATABASE_URL` и `ENCRYPTION_KEY` — включите все контексты
-- Для `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY` — только Production
+- Для `DATABASE_URL` и `ENCRYPTION_KEY` — включите все нужные контексты
+- Для `YOOKASSA_API_URL`, `YOOKASSA_RETURN_URL` — по необходимости тех же контекстов
 
 ### Шаг 5: Сохраните и передеплойте
 

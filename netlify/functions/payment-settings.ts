@@ -1,16 +1,20 @@
 // netlify/functions/payment-settings.ts
 /**
- * Netlify Serverless Function для работы с настройками платежей пользователей.
+ * Netlify Serverless Function: настройки платежей **только** для аутентифицированного пользователя.
  *
- * GET /api/payment-settings?userId=xxx - получить настройки платежей пользователя
- * POST /api/payment-settings - сохранить настройки платежей
- * DELETE /api/payment-settings?userId=xxx&provider=yookassa - отключить платежную систему
+ * Идентификатор аккаунта берётся из JWT (`Authorization: Bearer`), не из query/body.
+ * Лишний `userId` в теле POST, если не совпадает с JWT, → 403.
+ *
+ * GET /api/payment-settings?provider=yookassa
+ * POST /api/payment-settings
+ * DELETE /api/payment-settings?provider=yookassa
  */
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query, type PaymentSettingsRow } from './lib/db';
 import { encrypt, decrypt } from './lib/crypto';
 import { validateYooKassaCredentials } from './lib/yookassa-validator';
+import { getUserIdFromEvent } from './lib/api-helpers';
 
 interface PaymentSettingsRequest {
   userId: string;
@@ -197,6 +201,12 @@ export const handler: Handler = async (
     'Content-Type': 'application/json',
   };
 
+  const json = (statusCode: number, body: PaymentSettingsResponse) => ({
+    statusCode,
+    headers,
+    body: JSON.stringify(body),
+  });
+
   // Обработка preflight запроса
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -207,23 +217,28 @@ export const handler: Handler = async (
   }
 
   try {
+    const authenticatedUserId = getUserIdFromEvent(event);
+    if (!authenticatedUserId) {
+      return json(401, { success: false, error: 'Unauthorized' });
+    }
+
+    /** Любой явный чужой userId в запросе — 403 */
+    const rejectForeignUserId = (claimed?: string | null): boolean => {
+      if (claimed === undefined || claimed === null) return false;
+      const t = String(claimed).trim();
+      if (!t) return false;
+      return t !== authenticatedUserId;
+    };
+
     // GET - получить настройки платежей
     if (event.httpMethod === 'GET') {
-      const userId = event.queryStringParameters?.userId;
+      const queryUserId = event.queryStringParameters?.userId;
+      if (rejectForeignUserId(queryUserId)) {
+        return json(403, { success: false, error: 'Forbidden' });
+      }
       const provider = event.queryStringParameters?.provider || 'yookassa';
 
-      if (!userId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'userId is required',
-          } as PaymentSettingsResponse),
-        };
-      }
-
-      const settings = await getPaymentSettings(userId, provider);
+      const settings = await getPaymentSettings(authenticatedUserId, provider);
 
       if (!settings) {
         return {
@@ -252,30 +267,28 @@ export const handler: Handler = async (
 
     // POST - сохранить настройки платежей
     if (event.httpMethod === 'POST') {
-      const data: PaymentSettingsRequest = JSON.parse(event.body || '{}');
+      let data: PaymentSettingsRequest;
+      try {
+        data = JSON.parse(event.body || '{}') as PaymentSettingsRequest;
+      } catch {
+        return json(400, { success: false, error: 'Invalid JSON body' });
+      }
+
+      if (rejectForeignUserId(data.userId)) {
+        return json(403, { success: false, error: 'Forbidden' });
+      }
 
       console.log('📥 Payment settings save request:', {
-        userId: data.userId,
         provider: data.provider,
         hasShopId: !!data.shopId,
         hasSecretKey: !!data.secretKey,
-        shopIdLength: data.shopId?.length || 0,
-        secretKeyLength: data.secretKey?.length || 0,
       });
 
-      if (!data.userId || !data.provider) {
-        console.error('❌ Missing required fields:', {
-          userId: data.userId,
-          provider: data.provider,
+      if (!data.provider) {
+        return json(400, {
+          success: false,
+          error: 'provider is required',
         });
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'userId and provider are required',
-          } as PaymentSettingsResponse),
-        };
       }
 
       // Для ЮKassa требуются shopId и secretKey
@@ -357,6 +370,7 @@ export const handler: Handler = async (
 
       const settings = await savePaymentSettings({
         ...data,
+        userId: authenticatedUserId,
         isActive: data.isActive ?? true,
       });
 
@@ -377,21 +391,13 @@ export const handler: Handler = async (
 
     // DELETE - отключить платежную систему
     if (event.httpMethod === 'DELETE') {
-      const userId = event.queryStringParameters?.userId;
+      const queryUserId = event.queryStringParameters?.userId;
+      if (rejectForeignUserId(queryUserId)) {
+        return json(403, { success: false, error: 'Forbidden' });
+      }
       const provider = event.queryStringParameters?.provider || 'yookassa';
 
-      if (!userId) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'userId is required',
-          } as PaymentSettingsResponse),
-        };
-      }
-
-      await disconnectPaymentProvider(userId, provider);
+      await disconnectPaymentProvider(authenticatedUserId, provider);
 
       return {
         statusCode: 200,

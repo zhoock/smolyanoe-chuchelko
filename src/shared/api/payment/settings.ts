@@ -1,35 +1,50 @@
 /**
  * API для работы с настройками платежей пользователей.
+ * Владелец определяется по JWT (`Authorization: Bearer`), не по userId в URL/body.
  */
+
+import { getAuthHeader } from '@shared/lib/auth';
 
 import type { PaymentSettingsResponse, UserPaymentSettings, PaymentProvider } from './types';
 
 export interface GetPaymentSettingsRequest {
-  userId: string;
+  /** @deprecated игнорируется сервером; оставлено для совместимости вызовов */
+  userId?: string;
   provider?: PaymentProvider;
 }
 
 export interface SavePaymentSettingsRequest {
-  userId: string;
+  /** @deprecated игнорируется сервером; оставлено для совместимости */
+  userId?: string;
   provider: PaymentProvider;
   shopId?: string;
   secretKey?: string;
   isActive?: boolean;
 }
 
+function authFetch(path: string, init: RequestInit): Promise<Response> {
+  const auth = getAuthHeader();
+  return fetch(path, {
+    ...init,
+    headers: {
+      ...init.headers,
+      ...auth,
+    },
+  });
+}
+
 /**
- * Получить настройки платежей пользователя.
+ * Получить настройки платежей текущего пользователя (JWT).
  */
 export async function getPaymentSettings(
-  request: GetPaymentSettingsRequest
+  request: GetPaymentSettingsRequest = {}
 ): Promise<PaymentSettingsResponse> {
   try {
     const params = new URLSearchParams({
-      userId: request.userId,
       ...(request.provider && { provider: request.provider }),
     });
 
-    const response = await fetch(`/api/payment-settings?${params.toString()}`, {
+    const response = await authFetch(`/api/payment-settings?${params.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -76,25 +91,25 @@ export async function getPaymentSettings(
 }
 
 /**
- * Сохранить настройки платежей пользователя.
+ * Сохранить настройки платежей текущего пользователя (JWT).
  */
 export async function savePaymentSettings(
   data: SavePaymentSettingsRequest
 ): Promise<PaymentSettingsResponse> {
   try {
     console.log('📤 Saving payment settings:', {
-      userId: data.userId,
       provider: data.provider,
       hasShopId: !!data.shopId,
       hasSecretKey: !!data.secretKey,
     });
 
-    const response = await fetch('/api/payment-settings', {
+    const { provider, shopId, secretKey, isActive } = data;
+    const response = await authFetch('/api/payment-settings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ provider, shopId, secretKey, isActive }),
     });
 
     if (!response.ok) {
@@ -151,19 +166,17 @@ export async function savePaymentSettings(
 }
 
 /**
- * Отключить платежную систему.
+ * Отключить платежную систему для текущего пользователя (JWT).
  */
 export async function disconnectPaymentProvider(
-  userId: string,
   provider: PaymentProvider
 ): Promise<PaymentSettingsResponse> {
   try {
     const params = new URLSearchParams({
-      userId,
       provider,
     });
 
-    const response = await fetch(`/api/payment-settings?${params.toString()}`, {
+    const response = await authFetch(`/api/payment-settings?${params.toString()}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

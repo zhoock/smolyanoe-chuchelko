@@ -252,6 +252,26 @@ export async function closePool(): Promise<void> {
 }
 
 /**
+ * Минимальный ping БД для health-check (без verbose-логики {@link query}).
+ */
+export async function pingDatabase(): Promise<{
+  ok: boolean;
+  error?: string;
+  skippedReason?: 'DATABASE_URL_not_set';
+}> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return { ok: false, skippedReason: 'DATABASE_URL_not_set', error: 'DATABASE_URL is not set' };
+  }
+  try {
+    const p = getPool();
+    await p.query('SELECT 1');
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Database ping failed' };
+  }
+}
+
+/**
  * Типы для настроек платежей в БД
  */
 export interface PaymentSettingsRow {

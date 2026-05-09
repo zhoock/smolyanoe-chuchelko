@@ -141,16 +141,9 @@ interface UserPaymentSettings {
 **Обновление функции создания платежа:**
 
 ```typescript
-// В create-payment.ts
-// Вместо:
-const shopId = process.env.YOOKASSA_SHOP_ID;
-const secretKey = process.env.YOOKASSA_SECRET_KEY;
-
-// Нужно:
-const userId = request.body.userId; // ID музыканта
-const userPaymentSettings = await getUserPaymentSettings(userId);
-const shopId = userPaymentSettings.shopId;
-const secretKey = decrypt(userPaymentSettings.secretKey);
+// В create-payment.ts (фактическая реализация):
+// Продавец определяется из БД по альбому/заказу; креды — getDecryptedSecretKey(sellerUserId, 'yookassa`).
+// Глобальные YOOKASSA_SHOP_ID / YOOKASSA_SECRET_KEY не используются для создания платежа.
 ```
 
 ## Что нужно сделать сейчас для будущей интеграции

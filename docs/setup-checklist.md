@@ -71,13 +71,13 @@ npm run migrate
 
 2. Добавьте следующие переменные:
 
-| Переменная            | Значение                              | Описание                             |
-| --------------------- | ------------------------------------- | ------------------------------------ |
-| `DATABASE_URL`        | `postgresql://...`                    | Строка подключения к PostgreSQL      |
-| `ENCRYPTION_KEY`      | `xxx...` (из шага 1)                  | Ключ шифрования для secretKey        |
-| `YOOKASSA_SHOP_ID`    | Ваш shopId                            | ID магазина ЮKassa (для fallback)    |
-| `YOOKASSA_SECRET_KEY` | Ваш secretKey                         | Секретный ключ ЮKassa (для fallback) |
-| `YOOKASSA_API_URL`    | `https://api.yookassa.ru/v3/payments` | URL API ЮKassa (опционально)         |
+| Переменная         | Значение                              | Описание                                        |
+| ------------------ | ------------------------------------- | ----------------------------------------------- |
+| `DATABASE_URL`     | `postgresql://...`                    | Строка подключения к PostgreSQL                 |
+| `ENCRYPTION_KEY`   | `xxx...` (из шага 1)                  | Ключ шифрования для `secret_key_encrypted` в БД |
+| `YOOKASSA_API_URL` | `https://api.yookassa.ru/v3/payments` | URL API ЮKassa (опционально)                    |
+
+ЮKassa **shopId и secret продавца** задаются через UI настройки платежей и сохраняются в БД. Глобальные **`YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY`** для этого приложения не нужны (legacy).
 
 3. Нажмите **Save**
 

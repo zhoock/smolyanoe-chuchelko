@@ -18,7 +18,7 @@ export function useYooKassaPaymentConnected(userId: string | undefined | null) {
     let cancelled = false;
     setLoading(true);
 
-    void getPaymentSettings({ userId, provider: 'yookassa' }).then((res) => {
+    void getPaymentSettings({ provider: 'yookassa' }).then((res) => {
       if (cancelled) return;
       const ok = res.success && !!res.settings?.isActive && !!res.settings?.shopId?.trim();
       setHasYooKassa(ok);

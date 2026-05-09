@@ -1,26 +1,32 @@
-// netlify/functions/payment-webhook.ts
 /**
- * Netlify Serverless Function для обработки webhook от ЮKassa.
+ * Netlify Serverless Function: webhook ЮKassa (multi-tenant).
  *
- * ВАЖНО: Для работы этой функции нужно:
- * 1. Настроить webhook URL в личном кабинете ЮKassa:
- *    https://yookassa.ru/my -> Настройки -> HTTP-уведомления
- * 2. Добавить URL: https://your-site.netlify.app/.netlify/functions/payment-webhook
+ * Verification flow (см. «Notification authentication» в документации YooKassa):
+ * 1. Принимаем только type=notification, валидный object.id.
+ * 2. Опционально проверка IP источника (диапазоны YooMoney), если не включён SKIP_YOOKASSA_WEBHOOK_IP_CHECK.
+ * 3. По provider_payment_id (и метаданным) резолвим заказ и seller user_id → креды из БД (Basic Auth только этого магазина).
+ * 4. GET /v3/payments/{id}: источник правды — статус, сумма, валюта, metadata заказа; сверка с нашим заказом.
+ * 5. После успешной верификации — INSERT idempotency (webhook_events) с ON CONFLICT; при ошибке обработки — DELETE слот и 503 для ретраев.
  *
- * ЮKassa будет отправлять уведомления о смене статуса платежа:
- * - payment.succeeded - платеж успешно завершен
- * - payment.canceled - платеж отменен
- * - payment.waiting_for_capture - платеж ожидает подтверждения
- *
- * Пример использования:
- * POST /.netlify/functions/payment-webhook
- * Body: { event: string, object: PaymentObject }
+ * Переменные окружения:
+ * - SKIP_YOOKASSA_WEBHOOK_IP_CHECK=true — только отладка/особые прокси (в prod не рекомендуется).
+ * - NETLIFY_DEV=true — локально можно разрешить отсутствие client IP (наряду с IP skip при необходимости).
  */
 
-import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
+import { getDecryptedSecretKey } from './payment-settings';
+import {
+  amountsEqual,
+  expectedStatusForEvent,
+  fetchPaymentFromYooKassaApi,
+  getClientIpFromEvent,
+  isNotificationIpAllowed,
+  metaString,
+  type YooKassaPaymentApiShape,
+} from './lib/yookassa-webhook-verify';
 
-interface PaymentWebhookRequest {
+interface PaymentWebhookBody {
   type: string;
   event: string;
   object: {
@@ -30,461 +36,542 @@ interface PaymentWebhookRequest {
       value: string;
       currency: string;
     };
-    metadata?: {
-      orderId?: string;
-      albumId?: string;
-      customerEmail?: string;
-      [key: string]: string | undefined;
-    };
-    created_at: string;
-    description: string;
+    metadata?: Record<string, string | undefined>;
+    created_at?: string;
+    description?: string;
     paid?: boolean;
     cancelled_at?: string;
+    canceled_at?: string;
     captured_at?: string;
   };
 }
 
 interface PaymentWebhookResponse {
   success: boolean;
+  processed?: boolean;
+  duplicate?: boolean;
   message?: string;
 }
 
-export const handler: Handler = async (
-  event: HandlerEvent,
-  context: HandlerContext
-): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
-  const headers = {
+type OrderCtx = {
+  id: string;
+  user_id: string;
+  album_id: string;
+  amount: string;
+  currency: string;
+  payment_id: string | null;
+};
+
+const PROCESSED_EVENTS = new Set([
+  'payment.succeeded',
+  'payment.canceled',
+  'payment.waiting_for_capture',
+]);
+
+/** Без последних октетов / короткий префикс для безопасных логов */
+function maskClientIp(raw: string | null): string {
+  if (!raw) return 'none';
+  const ip = raw.trim();
+  if (ip.includes('.')) {
+    const parts = ip.split('.');
+    if (parts.length === 4) return `${parts[0]}.${parts[1]}.*.*`;
+  }
+  const short = ip.replace(/^::ffff:/i, '');
+  if (short.length > 24) return `${short.slice(0, 24)}…`;
+  return short;
+}
+
+function currenciesMatch(api: string, db: string): boolean {
+  return api.trim().toUpperCase() === db.trim().toUpperCase();
+}
+
+function buildSyntheticEventId(data: PaymentWebhookBody): string {
+  return `${data.type}-${data.event}-${data.object.id}`;
+}
+
+async function resolveOrderContext(
+  providerPaymentId: string,
+  metadata: Record<string, unknown> | undefined
+): Promise<{ ok: true; order: OrderCtx } | { ok: false; reason: string }> {
+  const metaOrderId = metaString(metadata, 'orderId');
+
+  const joined = await query<OrderCtx>(
+    `SELECT o.id, o.user_id::text AS user_id, o.album_id, o.amount::text AS amount, o.currency, o.payment_id
+     FROM payments p
+     INNER JOIN orders o ON o.id = p.order_id
+     WHERE p.provider = 'yookassa' AND p.provider_payment_id = $1
+     LIMIT 1`,
+    [providerPaymentId]
+  );
+
+  if (joined.rows.length > 0) {
+    const row = joined.rows[0];
+    if (!row.user_id) return { ok: false, reason: 'missing_seller_on_order' };
+    if (metaOrderId && metaOrderId !== row.id) {
+      return { ok: false, reason: 'metadata_order_mismatch_with_payment_row' };
+    }
+    return { ok: true, order: row };
+  }
+
+  if (!metaOrderId) return { ok: false, reason: 'payment_and_order_unknown' };
+
+  const byOrder = await query<OrderCtx>(
+    `SELECT id, user_id::text AS user_id, album_id, amount::text AS amount, currency, payment_id
+     FROM orders
+     WHERE id = $1 AND payment_provider = 'yookassa'`,
+    [metaOrderId]
+  );
+
+  if (byOrder.rows.length === 0) return { ok: false, reason: 'order_not_found' };
+  const o = byOrder.rows[0];
+  if (!o.user_id) return { ok: false, reason: 'missing_seller_on_order' };
+  if (o.payment_id && o.payment_id !== providerPaymentId) {
+    return { ok: false, reason: 'order_payment_id_mismatch' };
+  }
+
+  return { ok: true, order: o };
+}
+
+async function reserveWebhookEvent(
+  eventId: string,
+  eventType: string,
+  paymentId: string
+): Promise<boolean> {
+  const ins = await query<{ id: string }>(
+    `INSERT INTO webhook_events (provider, event_id, event_type, payment_id)
+     VALUES ('yookassa', $1, $2, $3)
+     ON CONFLICT (provider, event_id) DO NOTHING
+     RETURNING id`,
+    [eventId, eventType, paymentId]
+  );
+  return ins.rows.length > 0;
+}
+
+async function releaseWebhookEvent(eventId: string): Promise<void> {
+  await query(`DELETE FROM webhook_events WHERE provider = 'yookassa' AND event_id = $1`, [
+    eventId,
+  ]);
+}
+
+function jsonResponse(
+  statusCode: number,
+  body: PaymentWebhookResponse,
+  headers: Record<string, string>
+) {
+  return {
+    statusCode,
+    headers,
+    body: JSON.stringify(body),
+  };
+}
+
+export const handler: Handler = async (event: HandlerEvent) => {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  // Проверяем метод запроса
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        message: 'Method not allowed. Use POST.',
-      } as PaymentWebhookResponse),
-    };
+    return jsonResponse(
+      405,
+      { success: false, processed: false, message: 'Method not allowed. Use POST.' },
+      headers
+    );
+  }
+
+  let data: PaymentWebhookBody;
+  try {
+    data = JSON.parse(event.body || '{}') as PaymentWebhookBody;
+  } catch {
+    return jsonResponse(
+      400,
+      { success: false, processed: false, message: 'Invalid JSON' },
+      headers
+    );
+  }
+
+  const clientIp = getClientIpFromEvent(event);
+  const skipIpCheck = process.env.SKIP_YOOKASSA_WEBHOOK_IP_CHECK === 'true';
+  const allowUnknownIp = process.env.NETLIFY_DEV === 'true';
+
+  console.log('yookassa_webhook.received', {
+    type: data.type,
+    event: data.event,
+    paymentIdSuffix: data.object?.id ? `…${String(data.object.id).slice(-6)}` : 'none',
+    clientIpMasked: maskClientIp(clientIp),
+    ipCheckSkipped: skipIpCheck,
+  });
+
+  if (data.type !== 'notification') {
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Ignored: not a notification' },
+      headers
+    );
+  }
+
+  if (!data.object?.id) {
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Ignored: missing payment id' },
+      headers
+    );
+  }
+
+  if (!PROCESSED_EVENTS.has(data.event)) {
+    console.log('yookassa_webhook.unhandled_event', { event: data.event });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Event type not handled' },
+      headers
+    );
+  }
+
+  if (!isNotificationIpAllowed(clientIp, { skip: skipIpCheck, allowUnknownIp })) {
+    console.warn('yookassa_webhook.ip_rejected', { clientIpMasked: maskClientIp(clientIp) });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: client IP' },
+      headers
+    );
+  }
+
+  const expected = expectedStatusForEvent(data.event);
+  if (!expected) {
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'No expected status mapping' },
+      headers
+    );
+  }
+
+  const resolved = await resolveOrderContext(data.object.id, data.object.metadata);
+  if (!resolved.ok) {
+    console.warn('yookassa_webhook.tenant_resolve_failed', {
+      reason: resolved.reason,
+      paymentIdSuffix: `…${data.object.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: order resolution' },
+      headers
+    );
+  }
+
+  const { order } = resolved;
+  const creds = await getDecryptedSecretKey(order.user_id, 'yookassa');
+  if (!creds?.shopId || !creds.secretKey) {
+    console.error('yookassa_webhook.missing_seller_credentials', {
+      sellerHint: `…${order.user_id.slice(-6)}`,
+      orderIdSuffix: `…${order.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: seller credentials' },
+      headers
+    );
+  }
+
+  const apiResult = await fetchPaymentFromYooKassaApi(
+    data.object.id,
+    creds.shopId,
+    creds.secretKey
+  );
+  if (!apiResult.ok) {
+    const retryable = apiResult.status === 0 || apiResult.status >= 500 || apiResult.status === 429;
+    console.error('yookassa_webhook.api_fetch_failed', {
+      httpStatus: apiResult.status,
+      retryable,
+      paymentIdSuffix: `…${data.object.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      retryable ? 503 : 200,
+      {
+        success: !retryable,
+        processed: false,
+        message: retryable ? 'YooKassa API temporarily unavailable' : 'API verification failed',
+      },
+      headers
+    );
+  }
+
+  const api = apiResult.payment;
+  if (api.status !== expected) {
+    console.warn('yookassa_webhook.status_mismatch', {
+      event: data.event,
+      expected,
+      actual: api.status,
+      paymentIdSuffix: `…${api.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: payment status mismatch' },
+      headers
+    );
+  }
+
+  const apiOrderId = metaString(api.metadata, 'orderId');
+  if (!apiOrderId || apiOrderId !== order.id) {
+    console.warn('yookassa_webhook.order_metadata_mismatch', {
+      paymentIdSuffix: `…${api.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: metadata orderId' },
+      headers
+    );
+  }
+
+  if (
+    !amountsEqual(api.amount.value, order.amount) ||
+    !currenciesMatch(api.amount.currency, order.currency)
+  ) {
+    console.warn('yookassa_webhook.amount_mismatch', {
+      paymentIdSuffix: `…${api.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: amount or currency' },
+      headers
+    );
+  }
+
+  const apiAlbum = metaString(api.metadata, 'albumId');
+  if (apiAlbum && apiAlbum !== order.album_id) {
+    console.warn('yookassa_webhook.album_metadata_mismatch', {
+      paymentIdSuffix: `…${api.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, message: 'Verification failed: album metadata' },
+      headers
+    );
+  }
+
+  const syntheticId = buildSyntheticEventId(data);
+  const reserved = await reserveWebhookEvent(syntheticId, data.event, data.object.id);
+  if (!reserved) {
+    console.log('yookassa_webhook.duplicate', {
+      event: data.event,
+      paymentIdSuffix: `…${data.object.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      200,
+      { success: true, processed: false, duplicate: true, message: 'Event already processed' },
+      headers
+    );
+  }
+
+  const rawForDb = JSON.stringify(api);
+
+  try {
+    if (data.event === 'payment.succeeded') {
+      await handlePaymentSucceeded(api, order, rawForDb);
+    } else if (data.event === 'payment.canceled') {
+      await handlePaymentCanceled(api, order, rawForDb);
+    } else if (data.event === 'payment.waiting_for_capture') {
+      await handleWaitingForCapture(api, rawForDb);
+    }
+
+    console.log('yookassa_webhook.processed', {
+      event: data.event,
+      orderIdSuffix: `…${order.id.slice(-6)}`,
+      paymentIdSuffix: `…${api.id.slice(-6)}`,
+    });
+
+    return jsonResponse(
+      200,
+      { success: true, processed: true, message: 'Webhook processed' },
+      headers
+    );
+  } catch (e) {
+    await releaseWebhookEvent(syntheticId);
+    console.error('yookassa_webhook.processing_error', {
+      event: data.event,
+      err: e instanceof Error ? e.message : String(e),
+      orderIdSuffix: `…${order.id.slice(-6)}`,
+    });
+    return jsonResponse(
+      503,
+      { success: false, processed: false, message: 'Processing error; will retry' },
+      headers
+    );
+  }
+};
+
+async function handlePaymentSucceeded(
+  api: YooKassaPaymentApiShape,
+  order: OrderCtx,
+  rawForDb: string
+): Promise<void> {
+  const payUp = await query(
+    `UPDATE payments
+     SET status = 'succeeded',
+         updated_at = CURRENT_TIMESTAMP,
+         raw_last_event = $1::jsonb
+     WHERE provider = 'yookassa' AND provider_payment_id = $2`,
+    [rawForDb, api.id]
+  );
+  if ((payUp.rowCount ?? 0) === 0) {
+    throw new Error('payment_row_missing_for_webhook');
+  }
+
+  await query(
+    `UPDATE orders
+     SET status = 'paid',
+         paid_at = COALESCE($1::timestamp, CURRENT_TIMESTAMP),
+         payment_id = COALESCE(payment_id, $3),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [api.captured_at ?? null, order.id, api.id]
+  );
+
+  await tryPurchaseSideEffects(order.id, api);
+}
+
+async function handlePaymentCanceled(
+  api: YooKassaPaymentApiShape,
+  order: OrderCtx,
+  rawForDb: string
+): Promise<void> {
+  const payUp = await query(
+    `UPDATE payments
+     SET status = 'canceled',
+         updated_at = CURRENT_TIMESTAMP,
+         raw_last_event = $1::jsonb
+     WHERE provider = 'yookassa' AND provider_payment_id = $2`,
+    [rawForDb, api.id]
+  );
+  if ((payUp.rowCount ?? 0) === 0) {
+    throw new Error('payment_row_missing_for_webhook');
+  }
+
+  await query(
+    `UPDATE orders SET status = 'canceled', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    [order.id]
+  );
+}
+
+async function handleWaitingForCapture(
+  api: YooKassaPaymentApiShape,
+  rawForDb: string
+): Promise<void> {
+  const payUp = await query(
+    `UPDATE payments
+     SET status = 'waiting_for_capture',
+         updated_at = CURRENT_TIMESTAMP,
+         raw_last_event = $1::jsonb
+     WHERE provider = 'yookassa' AND provider_payment_id = $2`,
+    [rawForDb, api.id]
+  );
+  if ((payUp.rowCount ?? 0) === 0) {
+    throw new Error('payment_row_missing_for_webhook');
+  }
+}
+
+async function tryPurchaseSideEffects(
+  orderId: string,
+  api: YooKassaPaymentApiShape
+): Promise<void> {
+  const albumIdMeta = metaString(api.metadata, 'albumId');
+  const customerEmailMeta = metaString(api.metadata, 'customerEmail');
+  if (!albumIdMeta || !customerEmailMeta) {
+    return;
   }
 
   try {
-    // Парсим тело запроса от ЮKassa
-    const data: PaymentWebhookRequest = JSON.parse(event.body || '{}');
+    const orderResult = await query<{
+      album_id: string;
+      customer_email: string;
+      customer_first_name: string | null;
+      customer_last_name: string | null;
+    }>(
+      `SELECT album_id, customer_email, customer_first_name, customer_last_name
+       FROM orders WHERE id = $1`,
+      [orderId]
+    );
 
-    console.log('📥 Payment webhook received:', {
-      type: data.type,
-      event: data.event,
-      paymentId: data.object?.id,
-      status: data.object?.status,
-      albumId: data.object?.metadata?.albumId,
+    if (orderResult.rows.length === 0) return;
+
+    const row = orderResult.rows[0];
+    const albumId = row.album_id || albumIdMeta;
+    const customerEmail = row.customer_email || customerEmailMeta;
+
+    console.log('yookassa_webhook.purchase_upsert', {
+      orderIdSuffix: `…${orderId.slice(-6)}`,
+      albumIdSuffix: albumId.length > 8 ? `…${albumId.slice(-8)}` : albumId,
     });
 
-    // Проверяем тип события
-    if (data.type !== 'notification') {
-      console.warn('⚠️ Unknown webhook type:', data.type);
-      return {
-        statusCode: 200, // Возвращаем 200, чтобы ЮKassa не повторял запрос
-        headers,
-        body: JSON.stringify({
-          success: true,
-          message: 'Webhook type not processed',
-        } as PaymentWebhookResponse),
-      };
-    }
-
-    // Проверяем идемпотентность: не обрабатываем одно событие дважды
-    const eventId = `${data.type}-${data.event}-${data.object.id}`;
-    const existingEvent = await query<{ id: string }>(
-      'SELECT id FROM webhook_events WHERE provider = $1 AND event_id = $2',
-      ['yookassa', eventId]
+    const purchaseResult = await query<{ id: string; purchase_token: string }>(
+      `INSERT INTO purchases (order_id, customer_email, album_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (customer_email, album_id)
+       DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
+       RETURNING id, purchase_token`,
+      [orderId, customerEmail, albumId]
     );
 
-    if (existingEvent.rows.length > 0) {
-      console.log('ℹ️ Webhook event already processed:', eventId);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          message: 'Event already processed',
-        } as PaymentWebhookResponse),
-      };
-    }
+    if (purchaseResult.rows.length === 0) return;
+    const purchase = purchaseResult.rows[0];
 
-    // Сохраняем событие для идемпотентности
-    await query(
-      `INSERT INTO webhook_events (provider, event_id, event_type, payment_id)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (provider, event_id) DO NOTHING`,
-      ['yookassa', eventId, data.event, data.object.id]
+    const albumRow = await query<{ artist: string; album: string; lang: string }>(
+      `SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`,
+      [albumId]
     );
 
-    // Обрабатываем события платежа
-    if (data.event === 'payment.succeeded') {
-      const payment = data.object;
-      const orderId = payment.metadata?.orderId;
-
-      console.log('✅ Payment succeeded:', {
-        paymentId: payment.id,
-        orderId,
-        amount: payment.amount.value,
-        currency: payment.amount.currency,
-        albumId: payment.metadata?.albumId,
-        customerEmail: payment.metadata?.customerEmail,
+    if (albumRow.rows.length === 0) {
+      console.error('yookassa_webhook.album_missing_for_email', {
+        albumIdSuffix: albumId.slice(-8),
       });
-
-      try {
-        // Обновляем платеж в БД
-        await query(
-          `UPDATE payments 
-           SET status = 'succeeded', 
-               updated_at = CURRENT_TIMESTAMP,
-               raw_last_event = $1
-           WHERE provider = 'yookassa' AND provider_payment_id = $2`,
-          [JSON.stringify(data.object), payment.id]
-        );
-
-        // Обновляем заказ, если есть orderId
-        if (orderId) {
-          await query(
-            `UPDATE orders 
-             SET status = 'paid', 
-                 paid_at = COALESCE($1::timestamp, CURRENT_TIMESTAMP),
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2`,
-            [payment.captured_at || null, orderId]
-          );
-
-          console.log('✅ Order updated to paid:', { orderId });
-        } else {
-          // Если нет orderId, пытаемся найти по payment_id
-          await query(
-            `UPDATE orders 
-             SET status = 'paid', 
-                 paid_at = COALESCE($1::timestamp, CURRENT_TIMESTAMP),
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE payment_id = $2`,
-            [payment.captured_at || null, payment.id]
-          );
-        }
-
-        // Создаем покупку и отправляем email
-        if (orderId && payment.metadata?.albumId && payment.metadata?.customerEmail) {
-          try {
-            // Получаем информацию о заказе
-            const orderResult = await query<{
-              album_id: string;
-              customer_email: string;
-              customer_first_name: string | null;
-              customer_last_name: string | null;
-            }>(
-              `SELECT album_id, customer_email, customer_first_name, customer_last_name 
-               FROM orders 
-               WHERE id = $1`,
-              [orderId]
-            );
-
-            if (orderResult.rows.length > 0) {
-              const order = orderResult.rows[0];
-              const albumId = order.album_id || payment.metadata.albumId;
-              const customerEmail = order.customer_email || payment.metadata.customerEmail;
-
-              // Создаем запись о покупке (или получаем существующую)
-              const purchaseResult = await query<{
-                id: string;
-                purchase_token: string;
-              }>(
-                `INSERT INTO purchases (order_id, customer_email, album_id)
-                 VALUES ($1, $2, $3)
-                 ON CONFLICT (customer_email, album_id) 
-                 DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
-                 RETURNING id, purchase_token`,
-                [orderId, customerEmail, albumId]
-              );
-
-              if (purchaseResult.rows.length > 0) {
-                const purchase = purchaseResult.rows[0];
-                console.log('✅ Purchase created/updated:', {
-                  purchaseId: purchase.id,
-                  purchaseToken: purchase.purchase_token,
-                  orderId,
-                  albumId,
-                  customerEmail,
-                });
-
-                // Получаем информацию об альбоме и треках
-                console.log('🔍 Fetching album info for email:', { albumId });
-                const albumResult = await query<{
-                  artist: string;
-                  album: string;
-                  lang: string;
-                }>(`SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`, [albumId]);
-
-                console.log('📦 Album query result:', {
-                  albumId,
-                  found: albumResult.rows.length > 0,
-                  album: albumResult.rows[0] || null,
-                });
-
-                if (albumResult.rows.length > 0) {
-                  const album = albumResult.rows[0];
-                  console.log('✅ Album found:', {
-                    albumId,
-                    artist: album.artist,
-                    albumName: album.album,
-                    lang: album.lang,
-                  });
-
-                  // Получаем треки альбома
-                  console.log('🔍 Fetching tracks for email:', { albumId, lang: album.lang });
-                  const tracksResult = await query<{
-                    track_id: string;
-                    title: string;
-                  }>(
-                    `SELECT t.track_id, t.title 
-                     FROM tracks t
-                     INNER JOIN albums a ON t.album_id = a.id
-                     WHERE a.album_id = $1 AND a.lang = $2
-                     ORDER BY t.order_index ASC`,
-                    [albumId, album.lang]
-                  );
-
-                  console.log('📦 Tracks query result:', {
-                    albumId,
-                    lang: album.lang,
-                    tracksCount: tracksResult.rows.length,
-                  });
-
-                  const tracks = tracksResult.rows.map((row) => ({
-                    trackId: row.track_id,
-                    title: row.title,
-                  }));
-
-                  // Отправляем email и дожидаемся результата
-                  try {
-                    const { sendPurchaseEmail } = await import('./lib/email');
-
-                    const customerName =
-                      order.customer_first_name && order.customer_last_name
-                        ? `${order.customer_first_name} ${order.customer_last_name}`
-                        : order.customer_first_name || undefined;
-
-                    console.log('📧 Attempting to send purchase email:', {
-                      to: customerEmail,
-                      customerName,
-                      albumName: album.album,
-                      artistName: album.artist,
-                      orderId,
-                      tracksCount: tracks.length,
-                      hasResendKey: !!process.env.RESEND_API_KEY,
-                    });
-
-                    const emailResult = await sendPurchaseEmail({
-                      to: customerEmail,
-                      customerName,
-                      albumName: album.album,
-                      artistName: album.artist,
-                      orderId,
-                      purchaseToken: purchase.purchase_token,
-                      tracks,
-                      siteUrl: process.env.NETLIFY_SITE_URL || undefined,
-                    });
-
-                    if (emailResult.success) {
-                      console.log('✅ Purchase email sent successfully:', {
-                        to: customerEmail,
-                        orderId,
-                      });
-                    } else {
-                      console.error('❌ Failed to send purchase email:', {
-                        to: customerEmail,
-                        orderId,
-                        error: emailResult.error,
-                      });
-                    }
-                  } catch (emailError) {
-                    console.error('❌ Error sending purchase email:', {
-                      to: customerEmail,
-                      orderId,
-                      error: emailError instanceof Error ? emailError.message : String(emailError),
-                      stack: emailError instanceof Error ? emailError.stack : undefined,
-                    });
-                    // Не выбрасываем ошибку, чтобы не блокировать webhook
-                  }
-                } else {
-                  console.error('❌ Album not found for purchase email:', {
-                    albumId,
-                    orderId,
-                    customerEmail,
-                    purchaseId: purchase.id,
-                  });
-                }
-              }
-            }
-          } catch (purchaseError) {
-            console.error('❌ Error creating purchase or sending email:', {
-              error: purchaseError instanceof Error ? purchaseError.message : String(purchaseError),
-              stack: purchaseError instanceof Error ? purchaseError.stack : undefined,
-              orderId,
-              albumId: payment.metadata?.albumId,
-              customerEmail: payment.metadata?.customerEmail,
-            });
-            // Не блокируем webhook, продолжаем выполнение
-          }
-        }
-
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: true,
-            message: 'Payment processed successfully',
-          } as PaymentWebhookResponse),
-        };
-      } catch (dbError) {
-        console.error('❌ Error processing payment.succeeded:', dbError);
-        // Возвращаем 200, чтобы ЮKassa не повторял запрос
-        // Но логируем ошибку для отладки
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            message: 'Error processing payment, but acknowledged',
-          } as PaymentWebhookResponse),
-        };
-      }
+      return;
     }
 
-    if (data.event === 'payment.canceled') {
-      const payment = data.object;
-      const orderId = payment.metadata?.orderId;
+    const album = albumRow.rows[0];
 
-      console.log('❌ Payment canceled:', {
-        paymentId: payment.id,
+    const tracksResult = await query<{ track_id: string; title: string }>(
+      `SELECT t.track_id, t.title
+       FROM tracks t
+       INNER JOIN albums a ON t.album_id = a.id
+       WHERE a.album_id = $1 AND a.lang = $2
+       ORDER BY t.order_index ASC`,
+      [albumId, album.lang]
+    );
+
+    const tracks = tracksResult.rows.map((r) => ({ trackId: r.track_id, title: r.title }));
+
+    try {
+      const { sendPurchaseEmail } = await import('./lib/email');
+      const customerName =
+        row.customer_first_name && row.customer_last_name
+          ? `${row.customer_first_name} ${row.customer_last_name}`
+          : row.customer_first_name || undefined;
+
+      const emailResult = await sendPurchaseEmail({
+        to: customerEmail,
+        customerName,
+        albumName: album.album,
+        artistName: album.artist,
         orderId,
-        albumId: payment.metadata?.albumId,
-        cancelledAt: payment.cancelled_at,
+        purchaseToken: purchase.purchase_token,
+        tracks,
+        siteUrl: process.env.NETLIFY_SITE_URL || undefined,
       });
 
-      try {
-        // Обновляем платеж в БД
-        await query(
-          `UPDATE payments 
-           SET status = 'canceled', 
-               updated_at = CURRENT_TIMESTAMP,
-               raw_last_event = $1
-           WHERE provider = 'yookassa' AND provider_payment_id = $2`,
-          [JSON.stringify(data.object), payment.id]
-        );
-
-        // Обновляем заказ
-        if (orderId) {
-          await query(
-            `UPDATE orders 
-             SET status = 'canceled', 
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $1`,
-            [orderId]
-          );
-        } else {
-          await query(
-            `UPDATE orders 
-             SET status = 'canceled', 
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE payment_id = $1`,
-            [payment.id]
-          );
-        }
-
-        console.log('✅ Order updated to canceled:', { orderId: orderId || payment.id });
-
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: true,
-            message: 'Payment cancellation processed',
-          } as PaymentWebhookResponse),
-        };
-      } catch (dbError) {
-        console.error('❌ Error processing payment.canceled:', dbError);
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            message: 'Error processing cancellation, but acknowledged',
-          } as PaymentWebhookResponse),
-        };
+      if (!emailResult.success) {
+        console.error('yookassa_webhook.email_failed', {
+          orderIdSuffix: `…${orderId.slice(-6)}`,
+          err: emailResult.error,
+        });
       }
-    }
-
-    // Обработка других статусов
-    if (data.event === 'payment.waiting_for_capture') {
-      const payment = data.object;
-      const orderId = payment.metadata?.orderId;
-
-      console.log('⏳ Payment waiting for capture:', {
-        paymentId: payment.id,
-        orderId,
+    } catch (emailErr) {
+      console.error('yookassa_webhook.email_exception', {
+        orderIdSuffix: `…${orderId.slice(-6)}`,
+        err: emailErr instanceof Error ? emailErr.message : String(emailErr),
       });
-
-      try {
-        await query(
-          `UPDATE payments 
-           SET status = 'waiting_for_capture', 
-               updated_at = CURRENT_TIMESTAMP,
-               raw_last_event = $1
-           WHERE provider = 'yookassa' AND provider_payment_id = $2`,
-          [JSON.stringify(data.object), payment.id]
-        );
-
-        // Заказ остается в статусе pending_payment
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: true,
-            message: 'Payment waiting for capture processed',
-          } as PaymentWebhookResponse),
-        };
-      } catch (dbError) {
-        console.error('❌ Error processing payment.waiting_for_capture:', dbError);
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            message: 'Error processing, but acknowledged',
-          } as PaymentWebhookResponse),
-        };
-      }
     }
-
-    // Для других событий просто подтверждаем получение
-    console.log('ℹ️ Unhandled payment event:', data.event);
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        message: 'Webhook received',
-      } as PaymentWebhookResponse),
-    };
-  } catch (error) {
-    console.error('❌ Error processing payment webhook:', error);
-    // Возвращаем 200, чтобы ЮKassa не повторял запрос при ошибке парсинга
-    // Но можно вернуть 500 для критических ошибок, чтобы ЮKassa повторил запрос позже
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
-      } as PaymentWebhookResponse),
-    };
+  } catch (e) {
+    console.error('yookassa_webhook.purchase_side_effect_error', {
+      orderIdSuffix: `…${orderId.slice(-6)}`,
+      err: e instanceof Error ? e.message : String(e),
+    });
   }
-};
+}

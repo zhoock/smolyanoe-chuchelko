@@ -41,11 +41,12 @@
 
 ## Опциональные переменные
 
-### YooKassa (для платежей)
+### YooKassa (общие параметры приложения — без глобального мерчанта)
 
-- `YOOKASSA_SHOP_ID` - ID магазина в YooKassa
-- `YOOKASSA_SECRET_KEY` - Секретный ключ YooKassa
-- `YOOKASSA_API_URL` - URL API YooKassa (по умолчанию: `https://api.yookassa.ru/v3/payments`)
+- `YOOKASSA_API_URL` - URL API (по умолчанию: `https://api.yookassa.ru/v3/payments`)
+- `YOOKASSA_RETURN_URL`, `YOOKASSA_TEST_MODE`, `SKIP_YOOKASSA_VALIDATION` - см. функции платежей
+
+**Не используются кодом создания платежей (tenant-only из БД):** `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY` — **опционально / legacy**, можно не задавать.
 
 ## Как установить переменные в Netlify
 

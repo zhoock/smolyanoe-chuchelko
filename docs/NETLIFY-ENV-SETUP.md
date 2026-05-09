@@ -16,13 +16,16 @@ DATABASE_URL = postgresql://username:password@host:port/database?sslmode=require
 ENCRYPTION_KEY = Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0=
 ```
 
-#### Опциональные переменные (для fallback аккаунта платформы):
+#### ЮKassa (опционально, без глобального магазина)
+
+Креды магазина у продавца лежат в БД (`user_payment_settings`). В Netlify достаточно при необходимости:
 
 ```
-YOOKASSA_SHOP_ID = ваш_shop_id
-YOOKASSA_SECRET_KEY = ваш_secret_key
 YOOKASSA_API_URL = https://api.yookassa.ru/v3/payments
+YOOKASSA_RETURN_URL =
 ```
+
+Legacy: **`YOOKASSA_SHOP_ID`** / **`YOOKASSA_SECRET_KEY`** приложение **не использует** для оплаты; отсутствие не ломает build/deploy.
 
 5. Нажмите **Save**
 
@@ -38,8 +41,8 @@ netlify login
 # Добавьте переменные окружения
 netlify env:set DATABASE_URL "postgresql://user:pass@host:port/db" --context production
 netlify env:set ENCRYPTION_KEY "Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0=" --context production
-netlify env:set YOOKASSA_SHOP_ID "ваш_shop_id" --context production
-netlify env:set YOOKASSA_SECRET_KEY "ваш_secret_key" --context production
+# При необходимости:
+netlify env:set YOOKASSA_API_URL "https://api.yookassa.ru/v3/payments" --context production
 ```
 
 ## 🔍 Проверка переменных
@@ -97,7 +100,7 @@ Vo9TISlSpeukILKP3HgkJBvUvyFAnFP/u56rdqKzKZ0=
 
 1. **Разные окружения:** Используйте разные ключи для Production, Deploy previews и Branch deploys
 2. **Безопасность:** Никогда не коммитьте переменные окружения в Git
-3. **Fallback:** `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY` нужны только если у пользователей нет индивидуальных аккаунтов
+3. **ЮKassa:** глобальные `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` для этого репозитория **не требуются** — оплата tenant-only из БД
 4. **Обновление:** После изменения переменных окружения нужно передеплоить проект
 
 ## 🔄 После настройки

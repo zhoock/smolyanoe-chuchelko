@@ -79,6 +79,6 @@ fi
 echo ""
 echo "✅ Переменные окружения загружены!"
 echo ""
-echo "🔍 Доступные переменные:"
+echo "🔍 Доступные переменные (маскировано): DATABASE_URL / ENCRYPTION_KEY / YOOKASSA_*:"
 env | grep -E "(DATABASE_URL|ENCRYPTION_KEY|YOOKASSA_)" | sed 's/=.*/=***/' || echo "   (переменные не найдены)"
 

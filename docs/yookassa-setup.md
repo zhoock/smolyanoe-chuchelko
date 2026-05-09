@@ -1,124 +1,77 @@
 # Настройка ЮKassa для оплаты картой
 
-## Переменные окружения
+Платформа **multi-tenant**: `shopId` и секрет API ЮKassa задаются **артистом в настройках оплаты** и хранятся в БД (`user_payment_settings`), а не через глобальные `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` в Netlify.
 
-Для работы оплаты через ЮKassa необходимо настроить следующие переменные окружения в Netlify:
+## Переменные окружения (Netlify / `.env`)
 
-### Обязательные переменные
+### Обязательные для платёжного контура
 
-- `YOOKASSA_SHOP_ID` - ID магазина в ЮKassa
-- `YOOKASSA_SECRET_KEY` - Секретный ключ для доступа к API ЮKassa
+- `DATABASE_URL` — PostgreSQL
+- `ENCRYPTION_KEY` — шифрование `secret_key_encrypted` в БД
 
-### Опциональные переменные
+### Опциональные (общие настройки API / поведения)
 
-- `YOOKASSA_RETURN_URL` - URL возврата после оплаты (по умолчанию: `https://your-site.netlify.app/pay/success`)
-- `YOOKASSA_API_URL` - URL API ЮKassa (по умолчанию: `https://api.yookassa.ru/v3/payments`)
-- `YOOKASSA_TEST_MODE` - Режим тестирования (если нужно использовать тестовую среду)
+- `YOOKASSA_API_URL` — по умолчанию `https://api.yookassa.ru/v3/payments`
+- `YOOKASSA_RETURN_URL` — fallback URL возврата после оплаты
+- `YOOKASSA_TEST_MODE` — для логов/доков (см. `create-payment`)
+- `SKIP_YOOKASSA_VALIDATION` — сохранение кредов в ЛК без строгой проверки (серверная функция)
 
-### Пример настройки в Netlify
+### Legacy / не используются рантаймом оплаты
 
-1. Перейдите в настройки проекта в Netlify
-2. Откройте раздел "Environment variables"
-3. Добавьте переменные:
-   ```
-   YOOKASSA_SHOP_ID=your_shop_id
-   YOOKASSA_SECRET_KEY=your_secret_key
-   YOOKASSA_RETURN_URL=https://your-site.netlify.app/pay/success
-   ```
+Переменные **`YOOKASSA_SHOP_ID`** и **`YOOKASSA_SECRET_KEY`** в Netlify **не читаются** функциями создания платежа и health-check. Их можно **не задавать**. Оставшиеся в окружении значения ни на build, ни на deploy не влияют на tenant-only поток.
+
+### Пример блока в Netlify (без глобального магазина)
+
+```
+DATABASE_URL=postgresql://...
+ENCRYPTION_KEY=...
+YOOKASSA_API_URL=https://api.yookassa.ru/v3/payments
+```
+
+## Подключение ЮKassa артистом
+
+Креды своего магазина сохраняются через UI (dashboard) → **`POST /api/payment-settings`** в БД. См. `docs/database-setup.md`, раздел платежные настройки.
 
 ## Настройка webhook
 
-1. Перейдите в личный кабинет ЮKassa: https://yookassa.ru/my
-2. Откройте раздел "Настройки" -> "HTTP-уведомления"
-3. Добавьте URL webhook: `https://your-site.netlify.app/.netlify/functions/payment-webhook`
-4. Выберите события для уведомлений:
-   - `payment.succeeded` - платеж успешно завершен
-   - `payment.canceled` - платеж отменен
-   - `payment.waiting_for_capture` - платеж ожидает подтверждения
+У **каждого** продавца в личном кабинете ЮKassa задаётся тот же URL вашего приложения (если используете webhook):
+
+1. https://yookassa.ru/my → **Настройки** → **HTTP-уведомления**
+2. URL: `https://your-site.netlify.app/.netlify/functions/payment-webhook` (или ваш `/api/payment-webhook` при проксировании)
+3. События: `payment.succeeded`, `payment.canceled`, при необходимости `payment.waiting_for_capture`
+
+_(Проверка подписи webhook в коде желательна усилить под multi-tenant — см. отдельные задачи по безопасности.)_
 
 ## Миграция базы данных
 
-Перед использованием оплаты необходимо выполнить миграцию базы данных:
+Перед использованием оплаты выполните миграции (в т.ч. `user_payment_settings`, заказы):
 
 ```sql
--- Выполните миграцию из файла:
-database/migrations/020_create_orders_and_payments.sql
+-- См. database/migrations/
+-- 001_create_payment_settings.sql, 020_create_orders_and_payments.sql
 ```
-
-Эта миграция создаст таблицы:
-
-- `orders` - заказы пользователей
-- `payments` - детальная история платежей
-- `webhook_events` - обработанные webhook события для идемпотентности
 
 ## Тестирование
 
-### Тестовый режим
-
-Для тестирования можно использовать тестовые данные ЮKassa:
-
 - Тестовые карты: https://yookassa.ru/developers/payment-acceptance/testing-and-going-live/testing
-- Тестовый shop_id и secret_key из личного кабинета
+- Тестовый `shop_id` / секрет берутся из кабинета **тестового** магазина и сохраняются через настройки артиста в БД.
 
 ### Проверка работы
 
-1. Создайте тестовый заказ на сайте
-2. Нажмите "Оплатить"
-3. Должен произойти редирект на страницу оплаты ЮKassa
-4. После оплаты (или отмены) вы вернетесь на `/pay/success?orderId=xxx`
-5. Статус заказа должен обновиться через webhook
+1. Артист подключает ЮKassa в ЛК сайта
+2. Создайте заказ на сайте → «Оплатить»
+3. Редирект на ЮKassa, возврат на `/pay/success?orderId=...`
 
-## Архитектура
+## Архитектура (кратко)
 
-### Создание платежа
-
-1. Клиент вызывает `POST /api/create-payment`
-2. Сервер создает заказ в БД (таблица `orders`)
-3. Сервер создает платеж в ЮKassa API
-4. Сервер сохраняет платеж в БД (таблица `payments`)
-5. Сервер возвращает `confirmationUrl` клиенту
-6. Клиент перенаправляет пользователя на `confirmationUrl`
-
-### Обработка webhook
-
-1. ЮKassa отправляет webhook на `/api/payment-webhook`
-2. Сервер проверяет идемпотентность (таблица `webhook_events`)
-3. Сервер обновляет статус платежа в БД (таблица `payments`)
-4. Сервер обновляет статус заказа в БД (таблица `orders`)
-5. Сервер возвращает 200 OK
-
-### Страница возврата
-
-1. Пользователь возвращается на `/pay/success?orderId=xxx`
-2. Страница запрашивает статус заказа через `GET /api/get-order-status?orderId=xxx`
-3. Если статус `pending_payment`, страница опрашивает статус каждые 5 секунд (до 2 минут)
-4. Когда статус становится `paid`, `canceled` или `failed`, polling прекращается
+1. `POST /api/create-payment` → продавец из БД по альбому → `getDecryptedSecretKey` → API ЮKassa
+2. Webhook обновляет `payments` / `orders`
 
 ## Безопасность
 
-- Секретные ключи хранятся только в переменных окружения Netlify
-- Секретные ключи никогда не передаются на клиент
-- Webhook события обрабатываются с идемпотентностью для предотвращения дублей
-- Все операции с БД используют транзакции где необходимо
+- Секрет продавца в БД в зашифрованном виде; мастер-ключ только `ENCRYPTION_KEY` в окружении
+- Полный секрет через API клиенту не отдаётся
 
 ## Отладка
 
-### Логи
-
-Все операции логируются в консоль Netlify Functions:
-
-- Создание платежа: `✅ Payment created`
-- Webhook события: `📥 Payment webhook received`
-- Ошибки: `❌ Error...`
-
-### Проверка статуса заказа
-
-Можно проверить статус заказа напрямую через API:
-
-```bash
-GET /api/get-order-status?orderId=xxx
-```
-
-### Проверка webhook
-
-В личном кабинете ЮKassa можно посмотреть историю отправленных webhook'ов и их статусы.
+Логи Netlify Functions (`create-payment`, `payment-webhook`). См. `docs/YOOKASSA-DIAGNOSTICS.md` и `GET /api/yookassa-health`.

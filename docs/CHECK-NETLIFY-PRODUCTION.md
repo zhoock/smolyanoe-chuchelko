@@ -60,7 +60,12 @@
 Откройте ваш production сайт и в консоли браузера (F12) выполните:
 
 ```javascript
-fetch('/api/payment-settings?userId=test&provider=yookassa')
+const token = localStorage.getItem('auth_token');
+fetch('/api/payment-settings?provider=yookassa', {
+  headers: {
+    Authorization: token ? `Bearer ${token}` : '',
+  },
+})
   .then((r) => r.json())
   .then((d) => {
     console.log('✅ Ответ:', d);
@@ -73,13 +78,7 @@ fetch('/api/payment-settings?userId=test&provider=yookassa')
   .catch((err) => console.error('❌ Ошибка:', err));
 ```
 
-**Ожидаемый результат:**
-
-```json
-{ "success": true, "settings": null }
-```
-
-Если видите этот ответ — всё работает! ✅
+Без авторизации вернётся **`401`**. После входа в ЛК должно быть `success: true` (или пустые `settings`).
 
 ## 🔍 Детальная проверка
 
@@ -113,7 +112,7 @@ netlify dev
 **Если есть ошибки:**
 
 - Проверьте логи функции `create-payment` в Netlify
-- Убедитесь, что `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY` добавлены (если используете fallback)
+- Убедитесь, что у артиста в БД подключены настройки ЮKassa (**Dashboard → платежи**), а у сайта есть `DATABASE_URL`, `ENCRYPTION_KEY`
 
 ## 🆘 Решение проблем
 
@@ -149,7 +148,7 @@ netlify dev
 - [ ] Последний деплой был **после** добавления переменных
 - [ ] Статус деплоя: **Published** ✅
 - [ ] Логи функций не содержат ошибок
-- [ ] API `/api/payment-settings` возвращает `{"success": true}`
+- [ ] На сайте авторизуйтесь, затем проверка `GET /api/payment-settings` с `Authorization: Bearer` возвращает `{"success": true}`
 - [ ] Тестовый платеж создаётся успешно
 
 ## 🎉 Готово!
