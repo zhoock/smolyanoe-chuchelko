@@ -21,6 +21,10 @@ import { MiniPlayer } from './MiniPlayer';
 import AudioPlayer from '@features/player/ui/AudioPlayer/AudioPlayer';
 import type { RootState } from '@shared/model/appStore/types';
 import { loadPlayerState, savePlayerState } from '@features/player/model/lib/playerPersist';
+import {
+  isTrackPlaybackBlocked,
+  resolveFirstPlayableIndex,
+} from '@shared/lib/tracks/trackPlayback';
 
 const DEFAULT_BG = 'rgba(var(--extra-background-color-rgb) / 80%)';
 
@@ -197,6 +201,9 @@ export const PlayerShell: React.FC = () => {
         ? savedState.originalPlaylist
         : playlist;
     const safeIndex = Math.max(0, Math.min(savedState.currentTrackIndex ?? 0, playlist.length - 1));
+    const playableIdx = resolveFirstPlayableIndex(playlist, safeIndex);
+    const resolvedIndex = playableIdx !== -1 ? playableIdx : safeIndex;
+    const canResumePlayback = playableIdx !== -1;
 
     hasHydratedFromStorageRef.current = true;
 
@@ -211,7 +218,7 @@ export const PlayerShell: React.FC = () => {
       playerActions.hydrateFromPersistedState({
         playlist,
         originalPlaylist,
-        currentTrackIndex: safeIndex,
+        currentTrackIndex: resolvedIndex,
         albumId: savedState.albumId ?? null,
         albumTitle:
           savedState.albumTitle ??
@@ -221,7 +228,7 @@ export const PlayerShell: React.FC = () => {
         albumMeta: savedState.albumMeta ?? null,
         sourceLocation: savedState.sourceLocation ?? fallbackSourceLocation,
         volume: savedState.volume ?? 50,
-        isPlaying: savedState.isPlaying ?? false,
+        isPlaying: canResumePlayback ? (savedState.isPlaying ?? false) : false,
         shuffle: savedState.shuffle ?? false,
         repeat: savedState.repeat ?? 'none',
         time: playbackTime,
@@ -234,8 +241,8 @@ export const PlayerShell: React.FC = () => {
 
     // ВАЖНО: hydrateFromPersistedState не вызывает listener для setCurrentTrackIndex,
     // поэтому нужно явно установить источник аудио после восстановления состояния
-    const track = playlist[safeIndex];
-    if (track?.src) {
+    const track = playlist[resolvedIndex];
+    if (track?.src && !isTrackPlaybackBlocked(track)) {
       // Устанавливаем источник, но не запускаем автоплей (isPlaying будет обработан отдельно)
       audioController.setSource(track.src, false);
 
@@ -267,7 +274,7 @@ export const PlayerShell: React.FC = () => {
       }
     }
 
-    if (savedState.isPlaying) {
+    if (canResumePlayback && savedState.isPlaying) {
       // Используем requestPlay вместо play, чтобы убедиться, что метаданные загружены
       dispatch(playerActions.requestPlay());
     } else {

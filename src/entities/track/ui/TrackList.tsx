@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import type { TracksProps, IAlbums } from '@models';
+import { normalizeTrackVisibility } from '@shared/lib/tracks/trackVisibility';
+import { isTrackPlaybackBlocked } from '@shared/lib/tracks/trackPlayback';
 import type { AppStore, RootState } from '@shared/model/appStore/types';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 
@@ -118,6 +120,12 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
           isCurrentAlbum && (shuffle ? rowMatchesCurrentTrack : activeIndex === index);
         const isPlayingNow = isCurrentAlbum && isPlaying && rowMatchesCurrentTrack;
 
+        const visibility = normalizeTrackVisibility(track.visibility);
+        const isSubscribersOnly = visibility === 'subscribers_only';
+        const playbackLocked = isTrackPlaybackBlocked(track);
+        /** Иконка в строке названия: только «открытый только подписчикам» в кабинете/превью; у заблокированного замок слева в колонке номера. */
+        const showSubscriberLockInTitle = isSubscribersOnly && !playbackLocked;
+
         // Логируем для отладки, если duration отсутствует
         if (track.duration == null && index === 0) {
           console.warn(
@@ -130,9 +138,12 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
           <button
             key={track.id}
             type="button"
+            disabled={playbackLocked}
             className={clsx('tracks__btn', {
               active: isActive,
               'tracks__btn--playing': isPlayingNow,
+              'tracks__btn--locked': playbackLocked,
+              'tracks__btn--subscribers-only': isSubscribersOnly && !playbackLocked,
             })}
             style={
               isPlayingNow
@@ -141,25 +152,73 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
                   }
                 : undefined
             }
-            aria-label="Кнопка с названием песни"
+            aria-label={playbackLocked ? `Недоступно: ${track.title}` : 'Кнопка с названием песни'}
             aria-description={
-              isPlayingNow
-                ? `Остановить воспроизведение: ${track.title}`
-                : `Воспроизвести: ${track.title}`
+              playbackLocked
+                ? `Трек недоступен без покупки: ${track.title}`
+                : isSubscribersOnly
+                  ? `Для гостей — после покупки альбома. ${track.title}`
+                  : isPlayingNow
+                    ? `Остановить воспроизведение: ${track.title}`
+                    : `Воспроизвести: ${track.title}`
             }
             onClick={() => onSelectTrack({ index, track, isActive, isPlayingNow })}
           >
             <span className="tracks__symbol">
-              <span className="tracks__symbol-index">{index + 1}</span>
-              <span className="tracks__symbol-play icon-controller-play" aria-hidden></span>
-              <span className="tracks__symbol-pause icon-controller-pause" aria-hidden></span>
-              <span className="tracks__symbol-equalizer" aria-hidden>
-                <span></span>
-                <span></span>
-                <span></span>
-              </span>
+              {playbackLocked ? (
+                <span className="tracks__symbol-lock" aria-hidden>
+                  <svg
+                    className="tracks__lock-icon tracks__lock-icon--lead"
+                    width={18}
+                    height={18}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M7 11V8a5 5 0 0110 0v3M6 11h12a1 1 0 011 1v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a1 1 0 011-1z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              ) : (
+                <>
+                  <span className="tracks__symbol-index">{index + 1}</span>
+                  <span className="tracks__symbol-play icon-controller-play" aria-hidden></span>
+                  <span className="tracks__symbol-pause icon-controller-pause" aria-hidden></span>
+                  <span className="tracks__symbol-equalizer" aria-hidden>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </span>
+                </>
+              )}
             </span>
-            <span className="tracks__title">{track.title}</span>
+            <span className="tracks__title">
+              {showSubscriberLockInTitle && (
+                <svg
+                  className="tracks__lock-icon"
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
+                >
+                  <path
+                    d="M7 11V8a5 5 0 0110 0v3M6 11h12a1 1 0 011 1v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a1 1 0 011-1z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+              <span className="tracks__title-text">{track.title}</span>
+            </span>
             <span className="tracks__duration">{formatDuration(track.duration)}</span>
           </button>
         );

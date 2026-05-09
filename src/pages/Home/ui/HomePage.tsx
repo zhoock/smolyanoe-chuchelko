@@ -24,6 +24,10 @@ import {
   siteArtistUiLabel,
 } from '@shared/lib/profileDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
+import {
+  isTrackPlaybackBlocked,
+  resolveFirstPlayableIndex,
+} from '@shared/lib/tracks/trackPlayback';
 import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { isAuthenticated } from '@shared/lib/auth';
 import { ProfileAvatarMenu } from '@widgets/header';
@@ -149,17 +153,27 @@ export function HomePage() {
 
           const resolvedAlbum = resolveAlbumForDisplay(firstAlbum as IAlbums, lang);
 
-          const playlist: TracksProps[] = resolvedAlbum.tracks.map((track) => ({
-            ...track,
-            src: emptyStringMediaSrc(
-              getUserAudioUrl(track.src, undefined, resolvedAlbum.userId),
-              'HomePage:heroPlaylist',
-              { trackId: track.id, albumUserId: resolvedAlbum.userId }
-            ),
-          }));
+          const playlist: TracksProps[] = resolvedAlbum.tracks.map((track) => {
+            if (isTrackPlaybackBlocked(track)) {
+              return { ...track, src: '' };
+            }
+            return {
+              ...track,
+              src: emptyStringMediaSrc(
+                getUserAudioUrl(track.src, undefined, resolvedAlbum.userId),
+                'HomePage:heroPlaylist',
+                { trackId: track.id, albumUserId: resolvedAlbum.userId }
+              ),
+            };
+          });
+
+          const startIdx = resolveFirstPlayableIndex(playlist, 0);
+          if (startIdx === -1) {
+            return false;
+          }
 
           dispatch(playerActions.setPlaylist(playlist));
-          dispatch(playerActions.setCurrentTrackIndex(0));
+          dispatch(playerActions.setCurrentTrackIndex(startIdx));
 
           const albumId = fallbackAlbumClientId(resolvedAlbum);
 

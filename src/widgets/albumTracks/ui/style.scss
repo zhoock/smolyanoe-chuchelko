@@ -151,9 +151,22 @@
       }
 
       .tracks__title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .tracks__title-text {
         flex: 1 1 auto;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .tracks__lock-icon {
+        flex-shrink: 0;
+        color: var(--link-subtitle-color);
       }
 
       .tracks__duration {
@@ -163,8 +176,8 @@
       }
 
       @media (hover: hover) and (pointer: fine) {
-        &:hover,
-        &:focus-visible {
+        &:enabled:hover,
+        &:enabled:focus-visible {
           color: var(--button-color-hover, #373633);
           background: var(--button-background-color-hover, #998238);
           border-radius: var(--ms-01);
@@ -192,6 +205,69 @@
         }
       }
 
+      &--locked {
+        cursor: not-allowed;
+        margin-block: 0.45rem;
+        padding-block: 0.55rem;
+        padding-inline: var(--ms-01);
+        border-block-start: none;
+        border-block-end: none;
+        color: var(--time-color);
+        background: var(--link-button-background-color) !important;
+        border-radius: var(--ms-01);
+
+        &:first-child {
+          margin-block-start: 0;
+        }
+
+        &:last-child {
+          border-block-end: none;
+        }
+
+        .tracks__symbol-lock {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--link-subtitle-color);
+        }
+
+        .tracks__lock-icon--lead {
+          flex-shrink: 0;
+        }
+
+        .tracks__title-text,
+        .tracks__duration {
+          color: var(--link-subtitle-color);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          &:hover,
+          &:focus-visible {
+            color: var(--time-color);
+            background: var(--extra-background-color);
+            border-radius: var(--ms-01);
+
+            .tracks__title-text,
+            .tracks__duration {
+              color: var(--time-color);
+            }
+          }
+        }
+      }
+
+      &:disabled:not(.tracks__btn--locked) {
+        cursor: not-allowed;
+      }
+
+      &--subscribers-only {
+        cursor: pointer;
+
+        .tracks__lock-icon {
+          opacity: 0.58;
+          color: var(--accent-color);
+        }
+      }
+
       &--playing {
         position: relative;
         overflow: hidden;
@@ -214,6 +290,7 @@
         // Контент должен быть поверх прогресс-бара
         .tracks__symbol,
         .tracks__title,
+        .tracks__title-text,
         .tracks__duration {
           position: relative;
           z-index: 1;

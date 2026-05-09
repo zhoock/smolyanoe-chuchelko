@@ -9,4 +9,8 @@ export type Track = {
   title: string;
   src: string;
   order_index: number;
+  /** См. `TracksProps.visibility`; для данных с API / дашборда. */
+  visibility?: 'public' | 'subscribers_only' | 'hidden';
+  /** Публичный ответ: воспроизведение недоступно без покупки */
+  playbackLocked?: boolean;
 };

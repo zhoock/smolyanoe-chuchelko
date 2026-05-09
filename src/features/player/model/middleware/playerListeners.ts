@@ -14,6 +14,10 @@ import { audioController } from '@features/player/model/lib/audioController';
 import { playerActions } from '@features/player/model/slice/playerSlice';
 import type { RootState, AppDispatch } from '@shared/model/appStore/types';
 import { gaEvent } from '@shared/lib/analytics';
+import {
+  findAdjacentPlayableIndex,
+  isTrackPlaybackBlocked,
+} from '@shared/lib/tracks/trackPlayback';
 
 const isUsableMediaDuration = (d: number): boolean => Number.isFinite(d) && d > 0 && d !== Infinity;
 
@@ -73,6 +77,12 @@ playerListenerMiddleware.startListening({
   actionCreator: playerActions.play,
   effect: async (_action, api: PlayerListenerApi) => {
     const state = api.getState();
+    const track = state.player.playlist?.[state.player.currentTrackIndex];
+    if (isTrackPlaybackBlocked(track) || !String(track?.src ?? '').trim()) {
+      api.dispatch(playerActions.pause());
+      audioController.pause();
+      return;
+    }
     const played = await tryPlayWithVolume(state.player.volume);
     if (!played) {
       api.dispatch(playerActions.pause());
@@ -146,6 +156,15 @@ playerListenerMiddleware.startListening({
 
     resetProgress(api);
 
+    if (isTrackPlaybackBlocked(track) || !src) {
+      audioController.pause();
+      audioController.setSource('', false);
+      if (state.player.isPlaying) {
+        api.dispatch(playerActions.pause());
+      }
+      return;
+    }
+
     // setSource сам проверит, нужно ли загружать файл
     // Для пустого плейлиста всё равно вызываем, чтобы сбросить источник
     audioController.setSource(src, !!src && state.player.isPlaying);
@@ -162,10 +181,30 @@ playerListenerMiddleware.startListening({
   matcher: isAnyOf(playerActions.nextTrack, playerActions.prevTrack),
   effect: async (action, api: PlayerListenerApi) => {
     const state = api.getState();
-    const { playlist = [], currentTrackIndex, isPlaying: wasPlaying, volume } = state.player;
+    let { playlist = [], currentTrackIndex, isPlaying: wasPlaying, volume } = state.player;
+    const delta: 1 | -1 = playerActions.nextTrack.match(action) ? 1 : -1;
+
+    const current = playlist[currentTrackIndex];
+    if (isTrackPlaybackBlocked(current)) {
+      const nextIdx = findAdjacentPlayableIndex(playlist, currentTrackIndex, delta);
+      if (nextIdx === -1) {
+        resetProgress(api);
+        audioController.pause();
+        audioController.setSource('', false);
+        api.dispatch(playerActions.pause());
+        return;
+      }
+      api.dispatch(playerActions.setCurrentTrackIndex(nextIdx));
+      return;
+    }
+
     const trackSrc = playlist[currentTrackIndex]?.src;
 
-    if (!trackSrc) {
+    if (!trackSrc || isTrackPlaybackBlocked(playlist[currentTrackIndex])) {
+      resetProgress(api);
+      audioController.pause();
+      audioController.setSource('', false);
+      api.dispatch(playerActions.pause());
       return;
     }
 
@@ -203,7 +242,7 @@ playerListenerMiddleware.startListening({
     const state = api.getState();
     const track = state.player.playlist?.[state.player.currentTrackIndex];
 
-    if (!track?.src) return;
+    if (!track?.src || isTrackPlaybackBlocked(track)) return;
 
     const el = audioController.element;
 

@@ -27,6 +27,7 @@ import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { migrateUserAlbumAudioFolderAfterRename } from './lib/migrate-storage-album-folder';
 import { normalizeTrackIdString } from '../../src/shared/lib/tracks/normalizeTrackIdString';
 import { rankToOrderIndex } from '../../src/shared/lib/tracks/trackOrderIndex';
+import { normalizeTrackVisibility } from '../../src/shared/lib/tracks/trackVisibility';
 import { hydrateMissingRuTranslationsOnAlbum } from '../../src/entities/album/lib/hydrateMissingRuTranslations';
 import type { IAlbums } from '../../src/models';
 
@@ -63,6 +64,7 @@ interface TrackRow {
   authorship: string | null;
   synced_lyrics: unknown | null;
   order_index: number;
+  visibility?: string | null;
 }
 
 interface AlbumLocalePayload {
@@ -118,10 +120,65 @@ interface TrackData {
   authorship?: string;
   syncedLyrics?: unknown;
   translations?: Partial<Record<SupportedLang, TrackLocalePayload>>;
+  /** Доступ на публичной странице (после GET с `?artist=` применяется policy). */
+  visibility?: 'public' | 'subscribers_only' | 'hidden';
+  /** Только в публичном ответе: нельзя воспроизвести без покупки */
+  playbackLocked?: boolean;
 }
 
 interface AlbumOwnerSlugRow {
   public_slug: string;
+}
+
+/** Кэш: есть ли колонка tracks.visibility (миграция 032). */
+let cachedTracksHasVisibilityColumn: boolean | null = null;
+
+async function tracksTableHasVisibilityColumn(): Promise<boolean> {
+  if (cachedTracksHasVisibilityColumn !== null) {
+    return cachedTracksHasVisibilityColumn;
+  }
+  try {
+    const r = await query<{ exists: boolean }>(
+      `SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'tracks'
+          AND column_name = 'visibility'
+      ) AS exists`
+    );
+    cachedTracksHasVisibilityColumn = Boolean(r.rows[0]?.exists);
+    if (!cachedTracksHasVisibilityColumn) {
+      console.warn(
+        '[albums] Колонка tracks.visibility отсутствует; ответ без неё (всем трекам считается public). Выполните database/migrations/032_add_track_visibility.sql'
+      );
+    }
+  } catch (checkErr) {
+    console.warn('[albums] Не удалось проверить наличие tracks.visibility:', checkErr);
+    cachedTracksHasVisibilityColumn = false;
+  }
+  return cachedTracksHasVisibilityColumn;
+}
+
+/** Загрузка строк треков; без миграции 032 столбец visibility не читается. */
+async function fetchTracksRowsForAlbumPk(albumPk: string): Promise<TrackRow[]> {
+  const hasVis = await tracksTableHasVisibilityColumn();
+  const visibilityCol = hasVis ? ',\n                t.visibility' : '';
+  const res = await query<TrackRow>(
+    `SELECT 
+                t.track_id,
+                t.title,
+                t.duration,
+                t.src,
+                t.content,
+                t.authorship,
+                t.synced_lyrics,
+                t.order_index${visibilityCol}
+              FROM tracks t
+              WHERE t.album_id = $1
+              ORDER BY t.order_index ASC`,
+    [albumPk]
+  );
+  return res.rows;
 }
 
 /** Переводимые поля альбома — только внутри translations[lang] (не дублировать в корне запроса). */
@@ -375,6 +432,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
         content: track.content || undefined,
         authorship: track.authorship || undefined,
         syncedLyrics: syncedLyrics || undefined,
+        visibility: normalizeTrackVisibility(track.visibility),
       };
     }),
     isPublic: album.is_public,
@@ -677,43 +735,96 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
   };
 }
 
+async function getViewerEmailLower(userId: string): Promise<string | null> {
+  const r = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1::uuid LIMIT 1`, [
+    userId,
+  ]);
+  const e = r.rows[0]?.email?.trim().toLowerCase();
+  return e || null;
+}
+
+async function viewerPurchasedAlbum(
+  albumSlug: string,
+  emailLower: string | null
+): Promise<boolean> {
+  if (!emailLower || !albumSlug) return false;
+  const r = await query<{ one: number }>(
+    `SELECT 1 AS one FROM purchases WHERE album_id = $1 AND LOWER(TRIM(customer_email)) = $2 LIMIT 1`,
+    [albumSlug, emailLower]
+  );
+  return r.rows.length > 0;
+}
+
+/**
+ * Публичный каталог (?artist=…): скрытые треки не отдаём никому;
+ * полный список с аудио — только GET /api/albums из кабинета без ?artist=.
+ * subscribers_only без покупки — без src и playbackLocked (в т.ч. для владельца на витрине).
+ */
+function applyPublicTrackAccessPolicy(
+  album: AlbumData,
+  ctx: { viewerIsOwner: boolean; hasPurchase: boolean }
+): AlbumData {
+  /** Скрытые треки не показываем на публичной витрине даже владельцу (кабинет без ?artist= отдаёт полный список). */
+  const withoutHidden = album.tracks.filter(
+    (t) => normalizeTrackVisibility(t.visibility) !== 'hidden'
+  );
+
+  if (ctx.viewerIsOwner) {
+    return {
+      ...album,
+      tracks: withoutHidden.map((t) => {
+        const visibility = normalizeTrackVisibility(t.visibility);
+        /** Как у гостя: без записи в purchases — не отдаём аудио (превью витрины = для подписчиков). */
+        const needLock = visibility === 'subscribers_only' && !ctx.hasPurchase;
+        if (needLock) {
+          return {
+            ...t,
+            visibility,
+            src: '',
+            playbackLocked: true,
+          };
+        }
+        return { ...t, visibility, playbackLocked: false };
+      }),
+    };
+  }
+  const nextTracks = withoutHidden.map((t) => {
+    const visibility = normalizeTrackVisibility(t.visibility);
+    const needLock = visibility === 'subscribers_only' && !ctx.hasPurchase;
+    if (needLock) {
+      return {
+        ...t,
+        visibility,
+        src: '',
+        playbackLocked: true,
+      };
+    }
+    return { ...t, visibility, playbackLocked: false };
+  });
+  return { ...album, tracks: nextTracks };
+}
+
 /** Загрузка одной языковой версии альбома (как раньше один ряд albums + треки). */
 async function loadAlbumDataFromRow(album: AlbumRow): Promise<AlbumData> {
   const rowLang = album.lang;
 
-  const tracksResult = await query<TrackRow>(
-    `SELECT 
-                t.track_id,
-                t.title,
-                t.duration,
-                t.src,
-                t.content,
-                t.authorship,
-                t.synced_lyrics,
-                t.order_index
-              FROM tracks t
-              WHERE t.album_id = $1
-              ORDER BY t.order_index ASC`,
-    [album.id]
-  );
+  const tracksRows = await fetchTracksRowsForAlbumPk(album.id);
 
   if (album.album_id === '23-remastered') {
     console.log(`[albums.ts GET] 🔍 DEBUG tracks query for 23-remastered:`, {
       albumId: album.album_id,
       albumUUID: album.id,
       lang: album.lang,
-      tracksCount: tracksResult.rows.length,
-      tracks: tracksResult.rows.map((t) => ({
+      tracksCount: tracksRows.length,
+      tracks: tracksRows.map((t) => ({
         trackId: t.track_id,
         title: t.title,
         orderIndex: t.order_index,
       })),
     });
 
-    if (tracksResult.rows.length > 3) {
-      console.log(
-        `[albums.ts GET] ⚠️ ПРОБЛЕМА: Найдено ${tracksResult.rows.length} треков вместо 3!`
-      );
+    if (tracksRows.length > 3) {
+      console.log(`[albums.ts GET] ⚠️ ПРОБЛЕМА: Найдено ${tracksRows.length} треков вместо 3!`);
       const allTracksCheck = await query<{
         track_id: string;
         title: string;
@@ -732,26 +843,26 @@ async function loadAlbumDataFromRow(album: AlbumRow): Promise<AlbumData> {
         totalTracksInDB: allTracksCheck.rows.length,
         uniqueAlbumUUIDs: Array.from(new Set(allTracksCheck.rows.map((r) => r.album_uuid))),
         currentAlbumUUID: album.id,
-        tracksForCurrentAlbum: tracksResult.rows.length,
+        tracksForCurrentAlbum: tracksRows.length,
       });
     }
   }
 
   console.log(`[albums.ts GET] Tracks loaded for album ${album.album_id} (${album.lang}):`, {
-    tracksCount: tracksResult.rows.length,
-    tracksWithDuration: tracksResult.rows.filter((t) => t.duration != null).length,
-    tracksWithoutDuration: tracksResult.rows.filter((t) => t.duration == null).length,
-    sampleTrack: tracksResult.rows[0]
+    tracksCount: tracksRows.length,
+    tracksWithDuration: tracksRows.filter((t) => t.duration != null).length,
+    tracksWithoutDuration: tracksRows.filter((t) => t.duration == null).length,
+    sampleTrack: tracksRows[0]
       ? {
-          trackId: tracksResult.rows[0].track_id,
-          title: tracksResult.rows[0].title,
-          duration: tracksResult.rows[0].duration,
-          durationType: typeof tracksResult.rows[0].duration,
+          trackId: tracksRows[0].track_id,
+          title: tracksRows[0].title,
+          duration: tracksRows[0].duration,
+          durationType: typeof tracksRows[0].duration,
         }
       : null,
   });
 
-  const trackIds = tracksResult.rows.map((t) => t.track_id);
+  const trackIds = tracksRows.map((t) => t.track_id);
   let syncedLyricsMap = new Map<string, { synced_lyrics: unknown; authorship: string | null }>();
 
   if (trackIds.length > 0) {
@@ -780,7 +891,7 @@ async function loadAlbumDataFromRow(album: AlbumRow): Promise<AlbumData> {
     }
   }
 
-  const tracksWithSyncedLyrics = tracksResult.rows.map((track) => {
+  const tracksWithSyncedLyrics = tracksRows.map((track) => {
     const syncedData = syncedLyricsMap.get(track.track_id);
     if (syncedData) {
       return {
@@ -926,12 +1037,37 @@ export const handler: Handler = async (
         byAlbumId.get(row.album_id)!.push(row);
       }
 
+      const artistParam = artist?.trim();
+      const isPublicCatalogRequest = Boolean(artistParam);
+
+      let viewerEmailLower: string | null = null;
+      if (isPublicCatalogRequest && authUserId) {
+        viewerEmailLower = await getViewerEmailLower(authUserId);
+      }
+
       const albumsWithTracks: AlbumData[] = [];
       for (const albumKey of albumIdsOrdered) {
         const group = byAlbumId.get(albumKey)!;
         const sorted = sortAlbumRowsForMerge(group);
         const payloads = await Promise.all(sorted.map((r) => loadAlbumDataFromRow(r)));
-        const merged = mergeAlbumDataPayloads(payloads);
+        let merged = mergeAlbumDataPayloads(payloads);
+
+        if (isPublicCatalogRequest) {
+          const viewerIsOwner = Boolean(authUserId && authUserId === targetUserId);
+          const hasPurchase = viewerIsOwner
+            ? true
+            : await viewerPurchasedAlbum(merged.albumId, viewerEmailLower);
+          merged = applyPublicTrackAccessPolicy(merged, { viewerIsOwner, hasPurchase });
+        } else {
+          merged = {
+            ...merged,
+            tracks: merged.tracks.map((t) => ({
+              ...t,
+              visibility: normalizeTrackVisibility(t.visibility),
+            })),
+          };
+        }
+
         albumsWithTracks.push(
           hydrateMissingRuTranslationsOnAlbum(merged as IAlbums) as unknown as AlbumData
         );
@@ -1260,14 +1396,27 @@ export const handler: Handler = async (
                 ]
               );
               const newAlbumPk = insertRes.rows[0].id;
-              await client.query(
-                `INSERT INTO tracks (
+              const hasVis = await tracksTableHasVisibilityColumn();
+              if (hasVis) {
+                await client.query(
+                  `INSERT INTO tracks (
+                  album_id, track_id, title, duration, src, content, authorship, synced_lyrics, order_index, visibility, updated_at
+                )
+                SELECT $1::uuid, track_id, title, duration, src, content, authorship, synced_lyrics, order_index,
+                       COALESCE(visibility, 'public'), NOW()
+                FROM tracks WHERE album_id = $2::uuid`,
+                  [newAlbumPk, sibling.id]
+                );
+              } else {
+                await client.query(
+                  `INSERT INTO tracks (
                   album_id, track_id, title, duration, src, content, authorship, synced_lyrics, order_index, updated_at
                 )
                 SELECT $1::uuid, track_id, title, duration, src, content, authorship, synced_lyrics, order_index, NOW()
                 FROM tracks WHERE album_id = $2::uuid`,
-                [newAlbumPk, sibling.id]
-              );
+                  [newAlbumPk, sibling.id]
+                );
+              }
               await client.query('COMMIT');
               existingAlbum = insertRes.rows[0];
               console.log('[albums.ts PUT] Created missing locale row and copied tracks', {
@@ -1500,25 +1649,9 @@ export const handler: Handler = async (
         });
 
         // Загружаем треки для обновлённого альбома
-        let tracksResult;
+        let tracksResult: { rows: TrackRow[] };
         try {
-          // Загружаем треки по конкретному UUID альбома
-          // Важно: фильтруем по конкретному альбому (UUID), чтобы не получить треки из других альбомов
-          tracksResult = await query<TrackRow>(
-            `SELECT 
-              t.track_id,
-              t.title,
-              t.duration,
-              t.src,
-              t.content,
-              t.authorship,
-              t.synced_lyrics,
-              t.order_index
-            FROM tracks t
-            WHERE t.album_id = $1
-            ORDER BY t.order_index ASC`,
-            [updatedAlbum.id]
-          );
+          tracksResult = { rows: await fetchTracksRowsForAlbumPk(updatedAlbum.id) };
           console.log('[albums.ts PUT] Tracks loaded:', {
             count: tracksResult.rows.length,
           });
@@ -1565,23 +1698,8 @@ export const handler: Handler = async (
             allAlbumsResult.rows.map(async (album) => {
               // Загружаем треки по конкретному UUID альбома
               // Важно: фильтруем по конкретному альбому (UUID), чтобы не получить треки из других альбомов
-              const tracksResult = await query<TrackRow>(
-                `SELECT 
-                  t.track_id,
-                  t.title,
-                  t.duration,
-                  t.src,
-                  t.content,
-                  t.authorship,
-                  t.synced_lyrics,
-                  t.order_index
-                FROM tracks t
-                WHERE t.album_id = $1
-                ORDER BY t.order_index ASC`,
-                [album.id]
-              );
-
-              return mapAlbumToApiFormat(album, tracksResult.rows);
+              const tr = await fetchTracksRowsForAlbumPk(album.id);
+              return mapAlbumToApiFormat(album, tr);
             })
           );
 
@@ -1605,6 +1723,7 @@ export const handler: Handler = async (
                 content: track.content || '',
                 authorship: track.authorship || undefined,
                 syncedLyrics: track.syncedLyrics || undefined,
+                visibility: track.visibility || 'public',
               };
             }),
           }));

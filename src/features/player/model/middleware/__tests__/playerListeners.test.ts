@@ -52,6 +52,12 @@ describe('playerListeners middleware', () => {
     { id: '3', title: 'Track 3', order_index: 2, content: '', duration: 220, src: 'track3.mp3' },
   ];
 
+  const stateWithPlaylistAt0 = {
+    ...initialPlayerState,
+    playlist: mockTracks,
+    currentTrackIndex: 0,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     // Сбрасываем состояние audio элемента
@@ -115,7 +121,9 @@ describe('playerListeners middleware', () => {
 
   describe('play action listener', () => {
     test('должен вызвать audioController.play() при действии play', async () => {
-      const store = createTestStore();
+      const store = createTestStore({
+        player: stateWithPlaylistAt0,
+      });
 
       store.dispatch(playerActions.play());
 
@@ -126,7 +134,9 @@ describe('playerListeners middleware', () => {
     });
 
     test('должен установить громкость перед воспроизведением', async () => {
-      const store = createTestStore();
+      const store = createTestStore({
+        player: stateWithPlaylistAt0,
+      });
 
       store.dispatch(playerActions.setVolume(75));
       store.dispatch(playerActions.play());
@@ -138,7 +148,9 @@ describe('playerListeners middleware', () => {
     });
 
     test('должен диспатчить pause если play() отклонился', async () => {
-      const store = createTestStore();
+      const store = createTestStore({
+        player: stateWithPlaylistAt0,
+      });
       mockAudioController.play.mockRejectedValueOnce(new Error('Autoplay blocked'));
 
       store.dispatch(playerActions.play());
@@ -172,7 +184,9 @@ describe('playerListeners middleware', () => {
 
   describe('toggle action listener', () => {
     test('должен вызвать play если isPlaying false', async () => {
-      const store = createTestStore();
+      const store = createTestStore({
+        player: stateWithPlaylistAt0,
+      });
 
       store.dispatch(playerActions.toggle());
 
@@ -284,7 +298,7 @@ describe('playerListeners middleware', () => {
 
       store.dispatch(playerActions.setCurrentTrackIndex(0));
 
-      expect(mockAudioController.setSource).toHaveBeenCalledWith(undefined, false);
+      expect(mockAudioController.setSource).toHaveBeenCalledWith('', false);
     });
   });
 
@@ -358,7 +372,8 @@ describe('playerListeners middleware', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      expect(mockAudioController.setSource).not.toHaveBeenCalled();
+      expect(mockAudioController.setSource).toHaveBeenCalledWith('', false);
+      expect(mockAudioController.pause).toHaveBeenCalled();
     });
   });
 
@@ -455,7 +470,9 @@ describe('playerListeners middleware', () => {
 
   describe('edge cases', () => {
     test('должен обработать последовательные вызовы play/pause', async () => {
-      const store = createTestStore();
+      const store = createTestStore({
+        player: stateWithPlaylistAt0,
+      });
 
       store.dispatch(playerActions.play());
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -469,7 +486,9 @@ describe('playerListeners middleware', () => {
     });
 
     test('должен обработать множественные вызовы toggle', async () => {
-      const store = createTestStore();
+      const store = createTestStore({
+        player: stateWithPlaylistAt0,
+      });
 
       store.dispatch(playerActions.toggle());
       await new Promise((resolve) => setTimeout(resolve, 10));

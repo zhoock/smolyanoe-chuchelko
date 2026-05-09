@@ -151,6 +151,10 @@ export interface TracksProps extends Track {
   duration: number;
   /** Переводы названия и текстов трека (`translations.ru` / `translations.en`). */
   translations?: IAlbumTrackTranslations;
+  /** Уровень доступа на сайте (после сохранения в БД и в ответах GET). */
+  visibility?: 'public' | 'subscribers_only' | 'hidden';
+  /** Плеер не должен играть трек без покупки (публичный API). */
+  playbackLocked?: boolean;
 }
 
 export interface CoverProps {

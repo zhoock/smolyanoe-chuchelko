@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/UserDashboard.tsx
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   useNavigate,
   useSearchParams,
@@ -93,6 +93,13 @@ import {
 } from './components/shared/EditableCardField';
 import type { SupportedLang } from '@shared/model/lang';
 import './UserDashboard.style.scss';
+import { createPortal } from 'react-dom';
+import {
+  TRACK_VISIBILITY_OPTIONS,
+  visibilityIcon,
+  normalizeTrackVisibility,
+  type TrackVisibility,
+} from '@shared/lib/tracks/trackVisibility';
 
 /** Сообщение об успешной загрузке треков: RU — формы 1 трек / 2 трека / 5 треков. */
 function formatUploadedTracksSuccessMessage(
@@ -139,6 +146,11 @@ interface SortableTrackItemProps {
   onDelete: (albumId: string, trackId: string, trackTitle: string) => void;
   onEdit?: (albumId: string, trackId: string, trackTitle: string) => void;
   onTitleChange?: (albumId: string, trackId: string, newTitle: string) => Promise<void>;
+  onVisibilityChange: (
+    albumId: string,
+    trackId: string,
+    visibility: TrackVisibility
+  ) => Promise<void>;
   ui?: IInterface;
   swipedTrackId: string | null;
   onSwipeChange: (trackId: string | null) => void;
@@ -240,6 +252,7 @@ function SortableTrackItem({
   onDelete,
   onEdit,
   onTitleChange,
+  onVisibilityChange,
   ui,
   swipedTrackId,
   onSwipeChange,
@@ -260,11 +273,19 @@ function SortableTrackItem({
   const startYRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [accessMenuOpen, setAccessMenuOpen] = useState(false);
+  const accessBtnRef = useRef<HTMLButtonElement>(null);
+  const accessMenuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const trackVisibility = normalizeTrackVisibility(track.visibility);
+
   const EDIT_BUTTON_WIDTH = 80;
+  const ACCESS_BUTTON_WIDTH = 80;
   const DELETE_BUTTON_WIDTH = 80;
   const BUTTON_GAP = 8; // Gap между кнопками
   const DURATION_WIDTH = 50; // Примерная ширина длительности трека (например, "3:19")
-  const SWIPE_MENU_WIDTH = EDIT_BUTTON_WIDTH + DELETE_BUTTON_WIDTH + BUTTON_GAP + DURATION_WIDTH;
+  const SWIPE_MENU_WIDTH =
+    EDIT_BUTTON_WIDTH + ACCESS_BUTTON_WIDTH + DELETE_BUTTON_WIDTH + 2 * BUTTON_GAP + DURATION_WIDTH;
 
   const isSwiped = swipedTrackId === track.id;
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
@@ -282,6 +303,13 @@ function SortableTrackItem({
       setSwipeX(0);
     }
   }, [isSwiped, swipeX]);
+
+  useEffect(() => {
+    if (!isSwiped) {
+      setAccessMenuOpen(false);
+      setMenuPos(null);
+    }
+  }, [isSwiped]);
 
   // Обработчики swipe (только на мобильных)
   const handlePointerDown = useCallback(
@@ -440,6 +468,109 @@ function SortableTrackItem({
     [albumId, track.id, track.title, onDelete, onSwipeChange]
   );
 
+  const updateAccessMenuPosition = useCallback(() => {
+    const el = accessBtnRef.current;
+    if (!el || !accessMenuOpen) return;
+    const r = el.getBoundingClientRect();
+    const menuWidth = 268;
+    setMenuPos({
+      top: r.bottom + 4,
+      left: Math.min(r.left, window.innerWidth - menuWidth - 8),
+    });
+  }, [accessMenuOpen]);
+
+  const closeAccessMenu = useCallback(() => {
+    setAccessMenuOpen(false);
+    setMenuPos(null);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!accessMenuOpen) return;
+    updateAccessMenuPosition();
+  }, [accessMenuOpen, updateAccessMenuPosition]);
+
+  useEffect(() => {
+    if (!accessMenuOpen) return;
+    window.addEventListener('scroll', updateAccessMenuPosition, true);
+    window.addEventListener('resize', updateAccessMenuPosition);
+    return () => {
+      window.removeEventListener('scroll', updateAccessMenuPosition, true);
+      window.removeEventListener('resize', updateAccessMenuPosition);
+    };
+  }, [accessMenuOpen, updateAccessMenuPosition]);
+
+  useEffect(() => {
+    if (!accessMenuOpen) return;
+    let detached: (() => void) | null = null;
+    let cancelled = false;
+
+    const scheduleId = window.setTimeout(() => {
+      if (cancelled) return;
+      const onDown = (e: MouseEvent | TouchEvent) => {
+        const target = e.target as Node;
+        if (accessBtnRef.current?.contains(target)) return;
+        if (accessMenuRef.current?.contains(target)) return;
+        closeAccessMenu();
+      };
+      document.addEventListener('mousedown', onDown);
+      document.addEventListener('touchstart', onDown);
+      detached = () => {
+        document.removeEventListener('mousedown', onDown);
+        document.removeEventListener('touchstart', onDown);
+      };
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(scheduleId);
+      detached?.();
+    };
+  }, [accessMenuOpen, closeAccessMenu]);
+
+  useEffect(() => {
+    if (!accessMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeAccessMenu();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [accessMenuOpen, closeAccessMenu]);
+
+  const toggleAccessMenu = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    setAccessMenuOpen((wasOpen) => {
+      if (wasOpen) {
+        setMenuPos(null);
+        return false;
+      }
+      const el = accessBtnRef.current;
+      const menuWidth = 268;
+      const pos =
+        el != null
+          ? {
+              top: el.getBoundingClientRect().bottom + 4,
+              left: Math.min(el.getBoundingClientRect().left, window.innerWidth - menuWidth - 8),
+            }
+          : { top: 120, left: 24 };
+      setMenuPos(pos);
+      return true;
+    });
+  }, []);
+
+  const pickVisibility = useCallback(
+    async (v: TrackVisibility) => {
+      if (v === trackVisibility) {
+        closeAccessMenu();
+        return;
+      }
+      await onVisibilityChange(albumId, track.id, v);
+      closeAccessMenu();
+    },
+    [albumId, track.id, trackVisibility, onVisibilityChange, closeAccessMenu]
+  );
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -461,208 +592,297 @@ function SortableTrackItem({
     [setNodeRef]
   );
 
+  let trackAccessPortalMount: HTMLElement | null = null;
+  if (typeof document !== 'undefined') {
+    trackAccessPortalMount =
+      (containerRef.current?.closest?.('dialog.popup') as HTMLElement | null) ??
+      (containerRef.current?.closest?.('dialog') as HTMLElement | null) ??
+      document.body;
+  }
+
   return (
-    <div
-      ref={combinedRef}
-      style={style}
-      className={clsx('user-dashboard__track-item-wrapper', {
-        'user-dashboard__track-item-wrapper--dragging': isDragging,
-      })}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-    >
-      <div ref={contentRef} style={contentStyle} className="user-dashboard__track-item-content">
-        <div
-          className={clsx('user-dashboard__track-item', {
-            'user-dashboard__track-item--dragging': isDragging,
-          })}
-        >
+    <>
+      <div
+        ref={combinedRef}
+        style={style}
+        className={clsx('user-dashboard__track-item-wrapper', {
+          'user-dashboard__track-item-wrapper--dragging': isDragging,
+        })}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
+        <div ref={contentRef} style={contentStyle} className="user-dashboard__track-item-content">
           <div
-            {...attributes}
-            {...listeners}
-            className="user-dashboard__track-drag-handle"
-            title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
-            aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+            className={clsx('user-dashboard__track-item', {
+              'user-dashboard__track-item--dragging': isDragging,
+            })}
           >
-            <span className="user-dashboard__track-drag-icon">⋮⋮</span>
-          </div>
-          <div className="user-dashboard__track-number" aria-hidden>
-            {displayIndex}.
-          </div>
-          {isEditing ? (
-            <input
-              key={`edit-${track.id}-${isEditing}`}
-              ref={inputRef}
-              type="text"
-              className="user-dashboard__track-title-input"
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              onBlur={handleTitleBlur}
-              onKeyDown={handleTitleKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <div className="user-dashboard__track-title">
-              {track.title}
-              {!isMobile && (
-                <div className="user-dashboard__track-actions">
-                  <button
-                    type="button"
-                    className="user-dashboard__track-edit-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(e);
-                    }}
-                    aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M14.5 1.5L18.5 5.5"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="user-dashboard__track-delete-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(albumId, track.id, track.title);
-                    }}
-                    aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M8.5 9.5V14.5"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M11.5 9.5V14.5"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
+            <div
+              {...attributes}
+              {...listeners}
+              className="user-dashboard__track-drag-handle"
+              title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+              aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+            >
+              <span className="user-dashboard__track-drag-icon">⋮⋮</span>
             </div>
-          )}
-          <div className="user-dashboard__track-duration-container">
-            <div className="user-dashboard__track-duration">{track.duration}</div>
+            <div className="user-dashboard__track-number" aria-hidden>
+              {displayIndex}.
+            </div>
+            {isEditing ? (
+              <input
+                key={`edit-${track.id}-${isEditing}`}
+                ref={inputRef}
+                type="text"
+                className="user-dashboard__track-title-input"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={handleTitleBlur}
+                onKeyDown={handleTitleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <div className="user-dashboard__track-title">
+                {track.title}
+                {!isMobile && (
+                  <div className="user-dashboard__track-actions">
+                    <button
+                      type="button"
+                      className="user-dashboard__track-edit-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(e);
+                      }}
+                      aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M14.5 1.5L18.5 5.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      ref={accessBtnRef}
+                      type="button"
+                      className="user-dashboard__track-access-button"
+                      onClick={toggleAccessMenu}
+                      aria-expanded={accessMenuOpen}
+                      aria-haspopup="menu"
+                      aria-label="Доступ к треку"
+                    >
+                      <span className="user-dashboard__track-access-button-icon" aria-hidden>
+                        {visibilityIcon(trackVisibility)}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="user-dashboard__track-delete-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(albumId, track.id, track.title);
+                      }}
+                      aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+                    >
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M8.5 9.5V14.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M11.5 9.5V14.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="user-dashboard__track-duration-container">
+              <div className="user-dashboard__track-duration">{track.duration}</div>
+            </div>
           </div>
         </div>
+        {isMobile && (
+          <>
+            <button
+              type="button"
+              className={clsx('user-dashboard__track-edit-button-swipe', {
+                'user-dashboard__track-edit-button-swipe--visible': isSwiped,
+              })}
+              onPointerDown={handleEdit}
+              onClick={handleEdit}
+              aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M14.5 1.5L18.5 5.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <button
+              ref={accessBtnRef}
+              type="button"
+              className={clsx('user-dashboard__track-access-button-swipe', {
+                'user-dashboard__track-access-button-swipe--visible': isSwiped,
+              })}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleAccessMenu(e);
+              }}
+              aria-expanded={accessMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Доступ к треку"
+            >
+              <span className="user-dashboard__track-access-button-icon" aria-hidden>
+                {visibilityIcon(trackVisibility)}
+              </span>
+            </button>
+            <button
+              type="button"
+              className={clsx('user-dashboard__track-delete-button-swipe', {
+                'user-dashboard__track-delete-button-swipe--visible': isSwiped,
+              })}
+              onClick={handleDelete}
+              aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M8.5 9.5V14.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M11.5 9.5V14.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
-      {isMobile && (
-        <>
-          <button
-            type="button"
-            className={clsx('user-dashboard__track-edit-button-swipe', {
-              'user-dashboard__track-edit-button-swipe--visible': isSwiped,
-            })}
-            onPointerDown={handleEdit}
-            onClick={handleEdit}
-            aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
+      {accessMenuOpen &&
+        typeof document !== 'undefined' &&
+        trackAccessPortalMount != null &&
+        createPortal(
+          <div
+            ref={accessMenuRef}
+            className="user-dashboard__track-access-menu"
+            style={{
+              position: 'fixed',
+              top: (menuPos ?? { top: 120, left: 24 }).top,
+              left: (menuPos ?? { top: 120, left: 24 }).left,
+              zIndex: 10050,
+              minWidth: 240,
+              maxWidth: 280,
+            }}
+            role="menu"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M14.5 1.5L18.5 5.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className={clsx('user-dashboard__track-delete-button-swipe', {
-              'user-dashboard__track-delete-button-swipe--visible': isSwiped,
-            })}
-            onClick={handleDelete}
-            aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M8.5 9.5V14.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M11.5 9.5V14.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </>
-      )}
-    </div>
+            {TRACK_VISIBILITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                role="menuitem"
+                className={clsx('user-dashboard__track-access-menu-item', {
+                  'user-dashboard__track-access-menu-item--active': opt.value === trackVisibility,
+                })}
+                onClick={() => void pickVisibility(opt.value)}
+              >
+                <span className="user-dashboard__track-access-menu-item-icon" aria-hidden>
+                  {opt.icon}
+                </span>
+                <span className="user-dashboard__track-access-menu-item-text">
+                  <span className="user-dashboard__track-access-menu-item-title">{opt.label}</span>
+                  <span className="user-dashboard__track-access-menu-item-desc">
+                    {opt.description}
+                  </span>
+                </span>
+                {opt.value === trackVisibility ? (
+                  <span className="user-dashboard__track-access-menu-check" aria-hidden>
+                    ✓
+                  </span>
+                ) : (
+                  <span className="user-dashboard__track-access-menu-check-spacer" aria-hidden />
+                )}
+              </button>
+            ))}
+          </div>,
+          trackAccessPortalMount
+        )}
+    </>
   );
 }
 
@@ -1486,6 +1706,60 @@ function UserDashboard() {
         variant: 'error',
       });
       // Откатываем изменения в локальном состоянии
+      await dispatch(fetchAlbums({ force: true })).unwrap();
+    }
+  };
+
+  const handleTrackVisibilityChange = async (
+    albumId: string,
+    trackId: string,
+    visibility: TrackVisibility
+  ) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        setAlertModal({
+          isOpen: true,
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      const response = await fetch('/api/update-track-visibility', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ albumId, trackId, visibility }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as any)?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      setAlbumsData((prev) =>
+        prev.map((album) =>
+          album.albumId === albumId || album.id === albumId
+            ? {
+                ...album,
+                tracks: album.tracks.map((t) => (t.id === trackId ? { ...t, visibility } : t)),
+              }
+            : album
+        )
+      );
+    } catch (error) {
+      console.error('❌ Error updating track visibility:', error);
+      setAlertModal({
+        isOpen: true,
+        title: ui?.dashboard?.error ?? 'Error',
+        message: `Ошибка при изменении доступа к треку: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
       await dispatch(fetchAlbums({ force: true })).unwrap();
     }
   };
@@ -2590,6 +2864,7 @@ function UserDashboard() {
                                                     albumId={album.albumId}
                                                     onDelete={handleDeleteTrack}
                                                     onTitleChange={handleTrackTitleChange}
+                                                    onVisibilityChange={handleTrackVisibilityChange}
                                                     ui={ui ?? undefined}
                                                     swipedTrackId={swipedTrackId}
                                                     onSwipeChange={setSwipedTrackId}
