@@ -1008,6 +1008,8 @@ export const handler: Handler = async (
         });
       }
 
+      const authUserId = authVerdict.kind === 'valid' ? authVerdict.userId : null;
+
       // Возвращаем альбомы только выбранного артиста (owner user_id), все lang → merge
       const albumsResult = await query<AlbumRow>(
         `SELECT
