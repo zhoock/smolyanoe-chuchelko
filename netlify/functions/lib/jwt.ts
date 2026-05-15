@@ -65,23 +65,49 @@ function parseBearerToken(authHeader: string | undefined): string | null {
   return parts[1];
 }
 
+/** Результат разбора заголовка Authorization (без маскировки истекшего токена под «нет artist»). */
+export type AuthHeaderVerdict =
+  | { kind: 'none' }
+  | { kind: 'valid'; userId: string }
+  | { kind: 'expired' }
+  | { kind: 'invalid'; reason?: string };
+
+/**
+ * Проверяет JWT из Authorization: классифицирует отсутствие заголовка / истёкший / невалидный / ок.
+ */
+export function classifyAuthorizationHeader(authHeader: string | undefined): AuthHeaderVerdict {
+  const token = parseBearerToken(authHeader);
+  if (!token) {
+    if (authHeader != null && authHeader.trim().length > 0) {
+      return { kind: 'invalid', reason: 'malformed_authorization_header' };
+    }
+    return { kind: 'none' };
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    if (!decoded.userId) {
+      return { kind: 'invalid', reason: 'missing_user_id' };
+    }
+    return { kind: 'valid', userId: decoded.userId };
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      return { kind: 'expired' };
+    }
+    return {
+      kind: 'invalid',
+      reason: error instanceof Error ? error.message : 'verification_failed',
+    };
+  }
+}
+
 /**
  * Извлекает user_id из JWT токена из Authorization header
  * @param authHeader - Значение заголовка Authorization (например, "Bearer <token>")
  * @returns user_id или null, если токен невалиден или отсутствует
  */
 export function extractUserIdFromToken(authHeader: string | undefined): string | null {
-  const token = parseBearerToken(authHeader);
-  if (!token) {
-    return null;
-  }
-  const payload = verifyToken(token);
-
-  if (!payload || !payload.userId) {
-    return null;
-  }
-
-  return payload.userId;
+  const verdict = classifyAuthorizationHeader(authHeader);
+  return verdict.kind === 'valid' ? verdict.userId : null;
 }
 
 /**

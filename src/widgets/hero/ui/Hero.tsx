@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
@@ -161,7 +162,7 @@ export function Hero() {
           return;
         }
         try {
-          const response = await fetch(
+          const response = await fetchWithAuthSession(
             buildApiUrl(
               '/api/user-profile',
               {},
@@ -204,7 +205,7 @@ export function Hero() {
           return;
         }
 
-        const response = await fetch(
+        const response = await fetchWithAuthSession(
           buildApiUrl('/api/user-profile', {}, { includeArtist: false }),
           {
             headers: {
@@ -409,7 +410,7 @@ export function Hero() {
       let allPublicArtists: SceneArtist[] = [];
 
       try {
-        const response = await fetch('/api/public-artists');
+        const response = await fetchWithAuthSession('/api/public-artists');
         const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
         if (response.ok && payload.success && Array.isArray(payload.data)) {
           allPublicArtists = payload.data;

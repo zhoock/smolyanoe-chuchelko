@@ -3,6 +3,7 @@
  */
 
 import { getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildStorageAudioFileName } from '@shared/lib/tracks/buildStorageAudioFileName';
 import type { SupportedLang } from '@shared/model/lang';
 
@@ -85,7 +86,7 @@ export async function uploadTracks(
       return { success: false, error: 'User is not authenticated. Please log in.' };
     }
 
-    const response = await fetch('/api/tracks/upload', {
+    const response = await fetchWithAuthSession('/api/tracks/upload', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -204,7 +205,7 @@ export async function prepareAndUploadTrack(
 
   // Получаем signed URL для загрузки через Netlify Function
   // Это обходит проблему с кастомным токеном (не Supabase JWT)
-  const signedUrlResponse = await fetch('/api/tracks/upload-url', {
+  const signedUrlResponse = await fetchWithAuthSession('/api/tracks/upload-url', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

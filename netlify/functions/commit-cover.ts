@@ -28,6 +28,7 @@ import {
   createErrorResponse,
   createSuccessResponse,
   requireAuth,
+  unauthorizedFromAuthHeader,
   parseJsonBody,
 } from './lib/api-helpers';
 import { query } from './lib/db';
@@ -172,7 +173,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     // Проверяем авторизацию
     const userId = requireAuth(event);
     if (!userId) {
-      return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
+      return unauthorizedFromAuthHeader(event);
     }
 
     // Парсим JSON body

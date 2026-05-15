@@ -8,7 +8,13 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { isCanonicalGenreCode } from '../../src/shared/constants/canonicalGenres';
 import { query } from './lib/db';
-import { getUserIdFromEvent, requireAuth } from './lib/api-helpers';
+import {
+  getUserIdFromEvent,
+  requireAuth,
+  unauthorizedFromAuthHeader,
+  getAuthorizationHeaderFromEvent,
+} from './lib/api-helpers';
+import { classifyAuthorizationHeader } from './lib/jwt';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
 interface UserProfileRow {
@@ -93,6 +99,10 @@ export const handler: Handler = async (
           throw error;
         }
       } else if (!targetUserId) {
+        const verdict = classifyAuthorizationHeader(getAuthorizationHeaderFromEvent(event));
+        if (verdict.kind === 'expired' || verdict.kind === 'invalid') {
+          return unauthorizedFromAuthHeader(event);
+        }
         return {
           statusCode: 400,
           headers,
@@ -218,14 +228,7 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'POST') {
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Unauthorized. Please provide a valid authentication token.',
-          } as SaveUserProfileResponse),
-        };
+        return unauthorizedFromAuthHeader(event);
       }
 
       const data: SaveUserProfileRequest = JSON.parse(event.body || '{}');

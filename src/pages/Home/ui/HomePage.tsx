@@ -17,6 +17,7 @@ import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay'
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
 import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import {
   fetchPublicProfileForDisplay,
   formatAlbumDisplayFullName,
@@ -90,7 +91,9 @@ export function HomePage() {
       const [publicArtistsResult, profileRow] = await Promise.all([
         (async () => {
           try {
-            const response = await fetch('/api/public-artists', { cache: 'no-store' });
+            const response = await fetchWithAuthSession('/api/public-artists', {
+              cache: 'no-store',
+            });
             const payload = (await response.json()) as { success?: boolean; data?: SceneArtist[] };
             if (response.ok && payload.success && Array.isArray(payload.data)) {
               return payload.data;
@@ -134,7 +137,7 @@ export function HomePage() {
           if (!artist?.publicSlug) return false;
 
           const url = `/api/albums?artist=${encodeURIComponent(artist.publicSlug)}`;
-          const response = await fetch(url);
+          const response = await fetchWithAuthSession(url);
           const payload = (await response.json()) as { success?: boolean; data?: IAlbums[] };
 
           if (

@@ -13,6 +13,7 @@ import {
   createOptionsResponse,
   createErrorResponse,
   createSuccessResponse,
+  CORS_HEADERS,
   parseJsonBody,
   handleError,
 } from './lib/api-helpers';
@@ -265,7 +266,9 @@ export const handler: Handler = async (
       );
 
       if (result.rows.length === 0) {
-        return createErrorResponse(401, 'Invalid email or password');
+        return createErrorResponse(401, 'Invalid email or password', CORS_HEADERS, {
+          code: 'INVALID_CREDENTIALS',
+        });
       }
 
       const user = result.rows[0];
@@ -278,7 +281,9 @@ export const handler: Handler = async (
       const isPasswordValid = await bcrypt.compare(data.password, user.password_hash);
 
       if (!isPasswordValid) {
-        return createErrorResponse(401, 'Invalid email or password');
+        return createErrorResponse(401, 'Invalid email or password', CORS_HEADERS, {
+          code: 'INVALID_CREDENTIALS',
+        });
       }
 
       // Генерируем JWT токен

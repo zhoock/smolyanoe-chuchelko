@@ -17,9 +17,12 @@ import {
   validateLang,
   getUserIdFromEvent,
   requireAuth,
+  unauthorizedFromAuthHeader,
+  getAuthorizationHeaderFromEvent,
   parseJsonBody,
   handleError,
 } from './lib/api-helpers';
+import { classifyAuthorizationHeader } from './lib/jwt';
 import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
@@ -974,7 +977,7 @@ export const handler: Handler = async (
         return createSuccessResponse({ artistSlug: ownerResult.rows[0].public_slug });
       }
 
-      const authUserId = getUserIdFromEvent(event);
+      const authVerdict = classifyAuthorizationHeader(getAuthorizationHeaderFromEvent(event));
       let targetUserId: string;
 
       if (artist) {
@@ -986,14 +989,23 @@ export const handler: Handler = async (
           }
           throw error;
         }
-      } else if (authUserId) {
-        // Приватный режим для админки: если есть JWT и artist не указан, берем владельца токена.
-        targetUserId = authUserId;
-      } else {
+      } else if (authVerdict.kind === 'valid') {
+        // Приватный режим для админки: JWT без ?artist= — владелец по токену.
+        targetUserId = authVerdict.userId;
+      } else if (authVerdict.kind === 'none') {
         return createErrorResponse(
           400,
           'Missing required query parameter: artist (public requests must specify an artist)'
         );
+      } else if (authVerdict.kind === 'expired') {
+        return createErrorResponse(401, 'Session expired. Please sign in again.', CORS_HEADERS, {
+          code: 'SESSION_EXPIRED',
+        });
+      } else {
+        return createErrorResponse(401, 'Invalid session. Please sign in again.', CORS_HEADERS, {
+          code: 'INVALID_SESSION',
+          details: authVerdict.kind === 'invalid' ? authVerdict.reason : undefined,
+        });
       }
 
       // Возвращаем альбомы только выбранного артиста (owner user_id), все lang → merge
@@ -1081,7 +1093,7 @@ export const handler: Handler = async (
       const userId = requireAuth(event);
 
       if (!userId) {
-        return createErrorResponse(401, 'Unauthorized. Authentication required.');
+        return unauthorizedFromAuthHeader(event);
       }
 
       let data: CreateAlbumRequest;
@@ -1198,7 +1210,7 @@ export const handler: Handler = async (
         const userId = requireAuth(event);
 
         if (!userId) {
-          return createErrorResponse(401, 'Unauthorized. Authentication required.');
+          return unauthorizedFromAuthHeader(event);
         }
 
         let data: UpdateAlbumRequest;
@@ -1757,7 +1769,7 @@ export const handler: Handler = async (
       try {
         const userId = requireAuth(event);
         if (!userId) {
-          return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
+          return unauthorizedFromAuthHeader(event);
         }
 
         const data = parseJsonBody<{
@@ -1862,7 +1874,7 @@ export const handler: Handler = async (
         const userId = requireAuth(event);
 
         if (!userId) {
-          return createErrorResponse(401, 'Unauthorized. Authentication required.');
+          return unauthorizedFromAuthHeader(event);
         }
 
         // Проверяем query параметры для удаления трека

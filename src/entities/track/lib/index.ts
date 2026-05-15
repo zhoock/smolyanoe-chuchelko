@@ -1,4 +1,5 @@
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 
 export { getTrackById } from './getTrackById';
 
@@ -26,7 +27,7 @@ export async function saveTrackText(data: SaveTrackTextRequest): Promise<SaveTra
     const { getAuthHeader } = await import('@shared/lib/auth');
     const authHeader = getAuthHeader();
 
-    const response = await fetch('/api/save-track-text', {
+    const response = await fetchWithAuthSession('/api/save-track-text', {
       method: 'POST',
       cache: 'no-cache',
       headers: {
@@ -148,7 +149,7 @@ export async function loadTrackTextFromDatabase(
       { includeArtist: true, artistSlugOverride: resolvedSlug }
     );
 
-    const response = await fetch(url, {
+    const response = await fetchWithAuthSession(url, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',

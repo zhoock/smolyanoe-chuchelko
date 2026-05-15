@@ -5,12 +5,81 @@
 const TOKEN_STORAGE_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'auth_user';
 
+/** Сообщение после редиректа на /auth при 401 (читается на странице входа). */
+export const AUTH_EXPIRED_BANNER_SESSION_KEY = 'sc-auth-session-expired-msg';
+
+/** Допуск по часам клиента/серверу при проверке exp */
+const JWT_EXP_LEEWAY_MS = 60_000;
+
 /** Синхронизация UI после login/logout (localStorage `auth_user` в той же вкладке storage-событие не шлёт). */
 export const AUTH_SESSION_CHANGED_EVENT = 'auth-session-changed';
 
 function dispatchAuthSessionChanged() {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
+}
+
+/** Декодирует payload JWT без проверки подписи (только чтение exp). */
+function decodeJwtPayloadUnsafe(token: string): { exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    const padded = pad ? base64 + '='.repeat(4 - pad) : base64;
+    const json = decodeURIComponent(
+      atob(padded)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(json) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+function readRawTokenFromStorage(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Токен существует, парсится и не просрочен по exp (или без exp — legacy). */
+function isClientJwtStillValid(token: string): boolean {
+  const payload = decodeJwtPayloadUnsafe(token);
+  if (!payload) return false;
+  if (typeof payload.exp !== 'number') {
+    return true;
+  }
+  return payload.exp * 1000 > Date.now() - JWT_EXP_LEEWAY_MS;
+}
+
+/** Удаляет auth_user, если токена нет. */
+function removeOrphanStoredUser(): void {
+  try {
+    if (!localStorage.getItem(TOKEN_STORAGE_KEY) && localStorage.getItem(USER_STORAGE_KEY)) {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      dispatchAuthSessionChanged();
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Синхронизирует localStorage с истиной: истёкший/битый JWT и «сироты» auth_user очищаются.
+ */
+export function purgeInvalidAuthSessionFromStorage(): void {
+  removeOrphanStoredUser();
+  const raw = readRawTokenFromStorage();
+  if (!raw) return;
+  if (!isClientJwtStillValid(raw)) {
+    clearAuth();
+  }
 }
 
 /**
@@ -30,13 +99,6 @@ export function subscribeAuthSession(callback: () => void): () => void {
     window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, run);
     window.removeEventListener('storage', onStorage);
   };
-}
-
-/** Стабильный ключ сессии для сравнения в `useSyncExternalStore` (смена id/email). */
-export function getAuthSessionIdentityKey(): string {
-  const u = getUser();
-  if (!u) return '';
-  return `${u.id}\0${u.email}`;
 }
 
 export interface AuthUser {
@@ -71,11 +133,12 @@ export function saveAuth(token: string, user: AuthUser): void {
 }
 
 /**
- * Получает токен из localStorage
+ * Получает токен из localStorage (после проверки срока действия / формы JWT).
  */
 export function getToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
+    purgeInvalidAuthSessionFromStorage();
+    return readRawTokenFromStorage();
   } catch (error) {
     console.error('❌ Failed to get token:', error);
     return null;
@@ -87,6 +150,7 @@ export function getToken(): string | null {
  */
 export function getUser(): AuthUser | null {
   try {
+    purgeInvalidAuthSessionFromStorage();
     const userStr = localStorage.getItem(USER_STORAGE_KEY);
     if (!userStr) return null;
     return JSON.parse(userStr) as AuthUser;
@@ -96,12 +160,22 @@ export function getUser(): AuthUser | null {
   }
 }
 
+/** Стабильный ключ сессии для сравнения в `useSyncExternalStore` (смена id/email). */
+export function getAuthSessionIdentityKey(): string {
+  const u = getUser();
+  if (!u) return '';
+  return `${u.id}\0${u.email}`;
+}
+
 /**
  * Обновляет имя пользователя в localStorage (auth_user)
  */
 export function updateStoredUserName(name: string | null): void {
   try {
-    const user = getUser();
+    purgeInvalidAuthSessionFromStorage();
+    const userStr = localStorage.getItem(USER_STORAGE_KEY);
+    if (!userStr) return;
+    const user = JSON.parse(userStr) as AuthUser;
     if (!user) return;
     const updatedUser: AuthUser = { ...user, name };
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));

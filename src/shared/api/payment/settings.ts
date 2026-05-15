@@ -4,6 +4,7 @@
  */
 
 import { getAuthHeader } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 
 import type { PaymentSettingsResponse, UserPaymentSettings, PaymentProvider } from './types';
 
@@ -24,7 +25,7 @@ export interface SavePaymentSettingsRequest {
 
 function authFetch(path: string, init: RequestInit): Promise<Response> {
   const auth = getAuthHeader();
-  return fetch(path, {
+  return fetchWithAuthSession(path, {
     ...init,
     headers: {
       ...init.headers,

@@ -2,6 +2,8 @@
  * API для работы с платежами через ЮKassa.
  */
 
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
+
 export interface CreatePaymentRequest {
   amount: number;
   currency?: string;
@@ -49,7 +51,7 @@ export async function getYooKassaShopId(
     pending = (async (): Promise<{ shopId?: string; error?: string }> => {
       try {
         const qs = new URLSearchParams({ albumId });
-        const response = await fetch(`/api/yookassa-shop-id?${qs.toString()}`, {
+        const response = await fetchWithAuthSession(`/api/yookassa-shop-id?${qs.toString()}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -90,7 +92,7 @@ export async function getYooKassaShopId(
  */
 export async function createPayment(data: CreatePaymentRequest): Promise<CreatePaymentResponse> {
   try {
-    const response = await fetch('/api/create-payment', {
+    const response = await fetchWithAuthSession('/api/create-payment', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

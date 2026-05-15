@@ -2,6 +2,8 @@
  * API функции для работы с покупками
  */
 
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
+
 export interface PurchaseTrack {
   trackId: string;
   title: string;
@@ -32,7 +34,9 @@ export interface GetMyPurchasesResponse {
  * Получить список покупок покупателя по email
  */
 export async function getMyPurchases(email: string): Promise<Purchase[]> {
-  const response = await fetch(`/api/get-my-purchases?email=${encodeURIComponent(email)}`);
+  const response = await fetchWithAuthSession(
+    `/api/get-my-purchases?email=${encodeURIComponent(email)}`
+  );
 
   if (!response.ok) {
     const errorData = (await response.json().catch(() => ({}))) as GetMyPurchasesResponse;

@@ -11,6 +11,7 @@ import {
   STORAGE_BUCKET_NAME,
 } from '@config/supabase';
 import { getUserUserId } from '@config/user';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { Waveform } from '@shared/ui/waveform';
 
 interface MixerAdminProps {
@@ -333,7 +334,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
         }
 
         // Получаем signed URL для прямой загрузки в Supabase
-        const signedUrlResponse = await fetch('/api/stems/upload-url', {
+        const signedUrlResponse = await fetchWithAuthSession('/api/stems/upload-url', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -678,7 +679,7 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
         }
 
         // Вызываем Netlify Function для удаления файла (используем тот же endpoint, что и для стемов)
-        const deleteResponse = await fetch('/api/stems/delete', {
+        const deleteResponse = await fetchWithAuthSession('/api/stems/delete', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -922,17 +923,18 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                                                       }
 
                                                       // Вызываем Netlify Function для удаления файла
-                                                      const deleteResponse = await fetch(
-                                                        '/api/stems/delete',
-                                                        {
-                                                          method: 'DELETE',
-                                                          headers: {
-                                                            'Content-Type': 'application/json',
-                                                            Authorization: `Bearer ${token}`,
-                                                          },
-                                                          body: JSON.stringify({ storagePath }),
-                                                        }
-                                                      );
+                                                      const deleteResponse =
+                                                        await fetchWithAuthSession(
+                                                          '/api/stems/delete',
+                                                          {
+                                                            method: 'DELETE',
+                                                            headers: {
+                                                              'Content-Type': 'application/json',
+                                                              Authorization: `Bearer ${token}`,
+                                                            },
+                                                            body: JSON.stringify({ storagePath }),
+                                                          }
+                                                        );
 
                                                       if (!deleteResponse.ok) {
                                                         const errorData = await deleteResponse

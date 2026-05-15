@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { isAuthenticated } from '@shared/lib/auth';
+import { isAuthenticated, AUTH_EXPIRED_BANNER_SESSION_KEY } from '@shared/lib/auth';
 import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
 import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
@@ -17,6 +17,7 @@ export function AuthPage() {
     searchParams.get('mode') === 'register' ? 'register' : 'login'
   );
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setLang } = useLang();
 
@@ -28,6 +29,18 @@ export function AuthPage() {
       }),
     [searchParams, location.state]
   );
+
+  useEffect(() => {
+    try {
+      const msg = sessionStorage.getItem(AUTH_EXPIRED_BANNER_SESSION_KEY);
+      if (msg) {
+        setSessionExpiredMessage(msg);
+        sessionStorage.removeItem(AUTH_EXPIRED_BANNER_SESSION_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     const m = searchParams.get('mode');
@@ -78,6 +91,11 @@ export function AuthPage() {
             >
               ×
             </button>
+            {sessionExpiredMessage ? (
+              <p className="auth-page__session-notice" role="status">
+                {sessionExpiredMessage}
+              </p>
+            ) : null}
             {mode === 'login' ? (
               <LoginForm onSuccess={handleSuccess} onSwitchToRegister={() => setMode('register')} />
             ) : (

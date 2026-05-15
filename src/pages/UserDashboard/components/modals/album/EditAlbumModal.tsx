@@ -9,6 +9,7 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectDashboardAlbumsData, fetchAlbums } from '@entities/album';
 import { useLang } from '@app/providers/lang';
 import { getToken, getUser } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { getUserImageUrl } from '@shared/api/albums';
 import { getAlbumStorageBaseName } from '@shared/lib/albumCoverUrl';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
@@ -2572,7 +2573,7 @@ export function EditAlbumModal({
         tokenLength: token?.length || 0,
       });
 
-      const response = await fetch('/api/albums', {
+      const response = await fetchWithAuthSession('/api/albums', {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -2610,7 +2611,7 @@ export function EditAlbumModal({
             },
           },
         };
-        const syncRes = await fetch('/api/albums', {
+        const syncRes = await fetchWithAuthSession('/api/albums', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

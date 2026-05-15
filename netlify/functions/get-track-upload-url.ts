@@ -24,6 +24,7 @@ import {
   createErrorResponse,
   createSuccessResponse,
   getUserIdFromEvent,
+  unauthorizedFromAuthHeader,
   parseJsonBody,
 } from './lib/api-helpers';
 
@@ -83,7 +84,7 @@ export const handler: Handler = async (
   try {
     const userId = getUserIdFromEvent(event);
     if (!userId) {
-      return createErrorResponse(401, 'Unauthorized');
+      return unauthorizedFromAuthHeader(event);
     }
 
     // Парсим JSON body

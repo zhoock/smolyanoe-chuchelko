@@ -39,6 +39,7 @@ import { Popup } from '@shared/ui/popup';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import { AlertModal } from '@shared/ui/alertModal';
 import { logout, isAuthenticated, getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
@@ -1332,18 +1333,21 @@ function UserDashboard() {
         // API поддерживает id=UUID и id=article_id (без UUID в Redux — всё равно сохраняем обложку).
         const idParam = article.id ?? article.articleId;
         // Обновляем только img (shared metadata), без translations — иначе 400 при пустом nameArticle в UI-локали.
-        const response = await fetch(`/api/articles-api?id=${encodeURIComponent(idParam)}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            articleId: article.articleId,
-            lang,
-            img: finalImageKey,
-          }),
-        });
+        const response = await fetchWithAuthSession(
+          `/api/articles-api?id=${encodeURIComponent(idParam)}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              articleId: article.articleId,
+              lang,
+              img: finalImageKey,
+            }),
+          }
+        );
 
         if (!response.ok) {
           if (articleCoverLocalPreviewRefs.current[articleId]) {
@@ -1418,12 +1422,6 @@ function UserDashboard() {
       }));
     }
   };
-
-  // Без сессии админка недоступна: на главную. /auth только по клику «Войти», не автоматически.
-  useEffect(() => {
-    if (isAuthenticated()) return;
-    navigate('/', { replace: true });
-  }, [navigate]);
 
   useEffect(() => {
     if (!isAvatarMenuOpen) return;
@@ -1598,7 +1596,7 @@ function UserDashboard() {
         orderIndex: index,
       }));
 
-      const response = await fetch('/api/albums', {
+      const response = await fetchWithAuthSession('/api/albums', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1665,7 +1663,7 @@ function UserDashboard() {
       }
 
       // Вызываем API для обновления названия
-      const response = await fetch('/api/update-track-title', {
+      const response = await fetchWithAuthSession('/api/update-track-title', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1728,7 +1726,7 @@ function UserDashboard() {
         return;
       }
 
-      const response = await fetch('/api/update-track-visibility', {
+      const response = await fetchWithAuthSession('/api/update-track-visibility', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1779,7 +1777,7 @@ function UserDashboard() {
       }
 
       // Удаляем трек через API
-      const response = await fetch(
+      const response = await fetchWithAuthSession(
         `/api/albums?trackId=${encodeURIComponent(trackId)}&albumId=${encodeURIComponent(albumId)}&lang=${encodeURIComponent(lang)}`,
         {
           method: 'DELETE',
@@ -1895,13 +1893,16 @@ function UserDashboard() {
       }
 
       // Удаляем статью через API
-      const response = await fetch(`/api/articles-api?id=${encodeURIComponent(article.id)}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetchWithAuthSession(
+        `/api/articles-api?id=${encodeURIComponent(article.id)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -1943,7 +1944,7 @@ function UserDashboard() {
       }
 
       // Удаляем альбом через API
-      const response = await fetch('/api/albums', {
+      const response = await fetchWithAuthSession('/api/albums', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -2533,6 +2534,16 @@ function UserDashboard() {
 
   if (tabInvalid) {
     return <Navigate to="/dashboard-new/albums" replace state={location.state} />;
+  }
+
+  if (!isAuthenticated() || !user) {
+    return (
+      <Navigate
+        to="/auth"
+        replace
+        state={dashboardNavState ? { ...dashboardNavState, from: location } : { from: location }}
+      />
+    );
   }
 
   const albumsInitialLoading =

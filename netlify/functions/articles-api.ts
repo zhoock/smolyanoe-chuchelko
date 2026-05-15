@@ -17,6 +17,7 @@ import {
   validateLang,
   getUserIdFromEvent,
   requireAuth,
+  unauthorizedFromAuthHeader,
   parseJsonBody,
   handleError,
 } from './lib/api-helpers';
@@ -512,7 +513,7 @@ export const handler: Handler = async (
         });
       }
       if (includeDrafts && !userId) {
-        return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
+        return unauthorizedFromAuthHeader(event);
       }
 
       if (!includeDrafts) {
@@ -541,10 +542,7 @@ export const handler: Handler = async (
         let targetUserId: string;
         if (includeDrafts) {
           if (!userId) {
-            return createErrorResponse(
-              401,
-              'Unauthorized. Authentication required to view drafts.'
-            );
+            return unauthorizedFromAuthHeader(event);
           }
           targetUserId = userId;
         } else {
@@ -592,7 +590,7 @@ export const handler: Handler = async (
       let targetUserId: string;
       if (includeDrafts) {
         if (!userId) {
-          return createErrorResponse(401, 'Unauthorized. Authentication required to view drafts.');
+          return unauthorizedFromAuthHeader(event);
         }
         targetUserId = userId;
       } else {
@@ -638,7 +636,7 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'POST') {
       if (!userId) {
-        return createErrorResponse(401, 'Unauthorized');
+        return unauthorizedFromAuthHeader(event);
       }
 
       let data: CreateArticleRequest;
@@ -724,7 +722,7 @@ export const handler: Handler = async (
 
       if (!userId) {
         console.log('[articles-api PUT] Unauthorized: no userId');
-        return createErrorResponse(401, 'Unauthorized');
+        return unauthorizedFromAuthHeader(event);
       }
 
       const { id } = event.queryStringParameters || {};
@@ -904,7 +902,7 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'DELETE') {
       if (!userId) {
-        return createErrorResponse(401, 'Unauthorized');
+        return unauthorizedFromAuthHeader(event);
       }
 
       const { id } = event.queryStringParameters || {};

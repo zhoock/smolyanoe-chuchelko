@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import {
   fetchPublicProfileForDisplay,
   readStoredProfileDisplayName,
@@ -69,7 +70,7 @@ export function useSiteArtistDisplayName(
             if (!cancelled) setDisplayName('');
             return;
           }
-          const response = await fetch(
+          const response = await fetchWithAuthSession(
             buildApiUrl('/api/user-profile', {}, { includeArtist: false }),
             {
               headers: {

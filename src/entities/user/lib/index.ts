@@ -2,6 +2,7 @@
  * Утилиты для работы с профилем пользователя и данными текущего пользователя
  */
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 
 export interface UserProfile {
   theBand: string[];
@@ -62,7 +63,7 @@ export async function loadTheBandFromDatabase(
       authHeader = getAuthHeader();
     }
 
-    const response = await fetch(
+    const response = await fetchWithAuthSession(
       buildApiUrl('/api/user-profile', { lang }, { includeArtist, artistSlugOverride: slug }),
       {
         cache: 'no-cache',
@@ -148,7 +149,7 @@ export async function loadHeaderImagesFromDatabase(
       hasAuth: useAuth && 'Authorization' in authHeader && !!authHeader.Authorization,
     });
 
-    const response = await fetch(
+    const response = await fetchWithAuthSession(
       buildApiUrl('/api/user-profile', {}, { includeArtist, artistSlugOverride: slug }),
       {
         cache: 'no-cache',
@@ -334,7 +335,7 @@ export async function saveHeaderImagesToDatabase(
 
     // Не загружаем theBand при сохранении headerImages, чтобы не перезаписывать его
     // API обработает это корректно, сохранив только headerImages
-    const response = await fetch('/api/user-profile', {
+    const response = await fetchWithAuthSession('/api/user-profile', {
       method: 'POST',
       cache: 'no-cache',
       headers: {
@@ -442,7 +443,7 @@ export async function saveTheBandToDatabase(
       };
     }
 
-    const response = await fetch('/api/user-profile', {
+    const response = await fetchWithAuthSession('/api/user-profile', {
       method: 'POST',
       cache: 'no-cache',
       headers: {

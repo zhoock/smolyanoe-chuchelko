@@ -4,7 +4,7 @@
  */
 
 import type { HandlerEvent } from '@netlify/functions';
-import { extractUserIdFromToken, extractRoleFromToken, type UserRole } from './jwt';
+import { classifyAuthorizationHeader, extractRoleFromToken, type UserRole } from './jwt';
 
 /**
  * Стандартные CORS заголовки для всех API endpoints
@@ -41,7 +41,8 @@ export function createOptionsResponse() {
 export function createErrorResponse(
   statusCode: number,
   error: string,
-  headers: Record<string, string> = CORS_HEADERS
+  headers: Record<string, string> = CORS_HEADERS,
+  meta?: { code?: string; details?: string }
 ) {
   return {
     statusCode,
@@ -49,6 +50,8 @@ export function createErrorResponse(
     body: JSON.stringify({
       success: false,
       error,
+      ...(meta?.code ? { code: meta.code } : {}),
+      ...(meta?.details ? { details: meta.details } : {}),
     }),
   };
 }
@@ -97,20 +100,55 @@ export function validateLang(lang: string | undefined): lang is 'en' | 'ru' {
 }
 
 /**
+ * Значение Authorization (или эквивалент из Netlify clientContext) для verify.
+ */
+export function getAuthorizationHeaderFromEvent(event: HandlerEvent): string | undefined {
+  const raw =
+    (event.headers?.authorization as string | undefined) ||
+    (event.headers?.Authorization as string | undefined);
+  if (raw) {
+    return raw;
+  }
+  const ctxToken = (event as any).clientContext?.user?.token as string | undefined;
+  if (ctxToken && typeof ctxToken === 'string' && ctxToken.trim()) {
+    return ctxToken.startsWith('Bearer ') ? ctxToken : `Bearer ${ctxToken}`;
+  }
+  return undefined;
+}
+
+/**
+ * 401 с кодом для клиента: истёкший / невалидный JWT / нет заголовка.
+ * Вызывать, когда requireAuth/getUserIdFromEvent вернули null.
+ */
+export function unauthorizedFromAuthHeader(event: HandlerEvent) {
+  const auth = getAuthorizationHeaderFromEvent(event);
+  const verdict = classifyAuthorizationHeader(auth);
+  if (verdict.kind === 'none') {
+    return createErrorResponse(401, 'Authentication required', CORS_HEADERS, {
+      code: 'UNAUTHORIZED',
+    });
+  }
+  if (verdict.kind === 'expired') {
+    return createErrorResponse(401, 'Session expired. Please sign in again.', CORS_HEADERS, {
+      code: 'SESSION_EXPIRED',
+    });
+  }
+  return createErrorResponse(401, 'Invalid session. Please sign in again.', CORS_HEADERS, {
+    code: 'INVALID_SESSION',
+    details: verdict.kind === 'invalid' ? verdict.reason : undefined,
+  });
+}
+
+/**
  * Извлекает user_id из Authorization header
  * Netlify может передавать заголовок в разных регистрах (authorization, Authorization)
  * Также проверяем clientContext для Identity функций
  * @returns user_id или null, если токен невалиден или отсутствует
  */
 export function getUserIdFromEvent(event: HandlerEvent): string | null {
-  // Проверяем все возможные варианты регистра заголовка
-  const auth =
-    (event.headers?.authorization as string | undefined) ||
-    (event.headers?.Authorization as string | undefined) ||
-    // Проверяем clientContext для Netlify Identity функций
-    ((event as any).clientContext?.user?.token as string | undefined);
-
-  return extractUserIdFromToken(auth);
+  const auth = getAuthorizationHeaderFromEvent(event);
+  const verdict = classifyAuthorizationHeader(auth);
+  return verdict.kind === 'valid' ? verdict.userId : null;
 }
 
 /**

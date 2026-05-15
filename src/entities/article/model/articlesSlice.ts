@@ -3,6 +3,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
@@ -122,7 +123,7 @@ export const fetchArticles = createAsyncThunk<
       let apiFailure: unknown = null;
 
       try {
-        const response = await fetch(
+        const response = await fetchWithAuthSession(
           buildApiUrl(
             '/api/articles-api',
             {

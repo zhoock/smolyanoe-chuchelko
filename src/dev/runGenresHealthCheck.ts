@@ -2,6 +2,8 @@
  * Только development: запрос GET /api/health/genres и предупреждение в консоль при рассинхроне.
  */
 
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
+
 export function runGenresHealthCheck(): void {
   if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') {
     return;
@@ -9,7 +11,7 @@ export function runGenresHealthCheck(): void {
 
   void (async () => {
     try {
-      const res = await fetch('/api/health/genres', { cache: 'no-store' });
+      const res = await fetchWithAuthSession('/api/health/genres', { cache: 'no-store' });
       const data = (await res.json()) as {
         success?: boolean;
         match?: boolean;

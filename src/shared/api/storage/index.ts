@@ -9,6 +9,7 @@ import {
 } from '@config/supabase';
 import { getUserUserId, type ImageCategory } from '@config/user';
 import { sanitizeFileName } from '@shared/lib/sanitizeFileName';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 
 export interface UploadFileOptions {
   userId?: string;
@@ -205,7 +206,7 @@ export async function uploadFile(options: UploadFileOptions): Promise<string | n
     }
 
     const startFetch = Date.now();
-    const response = await fetch('/api/upload-file', {
+    const response = await fetchWithAuthSession('/api/upload-file', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -692,7 +693,7 @@ export async function deleteProfileAvatarFromServer(): Promise<boolean> {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/delete-profile-avatar', {
+    const response = await fetchWithAuthSession('/api/delete-profile-avatar', {
       method: 'POST',
       headers,
       body: JSON.stringify({}),
@@ -743,7 +744,7 @@ export async function deleteHeroImage(imageUrl: string): Promise<boolean> {
       hasAuth: !!headers.Authorization || !!headers.authorization,
     });
 
-    const response = await fetch('/api/delete-hero-image', {
+    const response = await fetchWithAuthSession('/api/delete-hero-image', {
       method: 'DELETE',
       headers,
       body: JSON.stringify({ imageUrl }),

@@ -7,7 +7,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
-import { getUserIdFromEvent } from './lib/api-helpers';
+import { getUserIdFromEvent, unauthorizedFromAuthHeader } from './lib/api-helpers';
 
 interface SaveTrackTextRequest {
   albumId: string;
@@ -129,14 +129,7 @@ export const handler: Handler = async (
       const userId = getUserIdFromEvent(event);
 
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            message: 'Unauthorized. Authentication required.',
-          } as SaveTrackTextResponse),
-        };
+        return unauthorizedFromAuthHeader(event);
       }
 
       const uiLang = data.lang as 'en' | 'ru';

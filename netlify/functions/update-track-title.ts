@@ -7,7 +7,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
-import { getUserIdFromEvent } from './lib/api-helpers';
+import { getUserIdFromEvent, unauthorizedFromAuthHeader } from './lib/api-helpers';
 
 interface UpdateTrackTitleRequest {
   albumId: string;
@@ -77,14 +77,7 @@ export const handler: Handler = async (
       const userId = getUserIdFromEvent(event);
 
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            message: 'Unauthorized. Authentication required.',
-          } as UpdateTrackTitleResponse),
-        };
+        return unauthorizedFromAuthHeader(event);
       }
 
       // Строка альбома в БД зависит от lang (ru/en); трек может жить только в «другой» локали.

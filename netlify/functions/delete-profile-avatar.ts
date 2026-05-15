@@ -12,6 +12,7 @@ import {
   createErrorResponse,
   createSuccessResponse,
   requireAuth,
+  unauthorizedFromAuthHeader,
 } from './lib/api-helpers';
 import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
 import { isProfileAvatarStorageObjectName } from '../../src/shared/lib/avatarUpload';
@@ -28,7 +29,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   try {
     const userId = requireAuth(event);
     if (!userId) {
-      return createErrorResponse(401, 'Unauthorized. Please provide a valid token.');
+      return unauthorizedFromAuthHeader(event);
     }
 
     const supabase = createSupabaseAdminClient();

@@ -5,6 +5,7 @@ import { normalizeTrackIdString } from '@shared/lib/tracks/normalizeTrackIdStrin
 import { normalizeTrackVisibility } from '@shared/lib/tracks/trackVisibility';
 import type { RootState } from '@shared/model/appStore/types';
 import { getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
@@ -242,7 +243,7 @@ export const fetchAlbums = createAsyncThunk<
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const response = await fetch(
+        const response = await fetchWithAuthSession(
           buildApiUrl(
             '/api/albums',
             {},

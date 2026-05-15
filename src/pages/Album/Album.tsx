@@ -18,6 +18,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectAlbumsStatus, selectAlbumsError, selectAlbumByIdResolved } from '@entities/album';
 import { getUser } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
@@ -97,7 +98,7 @@ export default function Album() {
 
     const resolveOwnerAndRedirect = async () => {
       try {
-        const response = await fetch(
+        const response = await fetchWithAuthSession(
           `/api/albums?resolveOwnerByAlbumId=true&albumId=${encodeURIComponent(albumId)}`
         );
         if (!response.ok) return;

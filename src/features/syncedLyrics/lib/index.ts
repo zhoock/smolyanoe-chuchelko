@@ -1,5 +1,6 @@
 import type { SyncedLyricsLine } from '@models';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import {
   resolvePublicArtistSlugForApi,
   shouldSkipUnauthenticatedPublicArtistApi,
@@ -156,7 +157,7 @@ export async function saveSyncedLyrics(
       hasAuth: !!headers.Authorization || !!headers.authorization,
     });
 
-    const response = await fetch('/api/synced-lyrics', {
+    const response = await fetchWithAuthSession('/api/synced-lyrics', {
       method: 'POST',
       cache: 'no-store',
       headers,
@@ -280,7 +281,7 @@ export async function loadSyncedLyricsFromStorage(
           return null;
         }
 
-        const response = await fetch(
+        const response = await fetchWithAuthSession(
           buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
             includeArtist: true,
             artistSlugOverride: resolvedSlug,
@@ -409,7 +410,7 @@ export async function loadAuthorshipFromStorage(
           return null;
         }
 
-        const response = await fetch(
+        const response = await fetchWithAuthSession(
           buildApiUrl('/api/synced-lyrics', Object.fromEntries(params.entries()), {
             includeArtist: true,
             artistSlugOverride: resolvedSlug,

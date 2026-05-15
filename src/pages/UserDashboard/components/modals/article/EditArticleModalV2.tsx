@@ -26,6 +26,7 @@ import {
   getCloseDiscardConfirmLabels,
 } from '../../shared/EditableCardField';
 import { getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { fetchArticles, resolveArticleForDisplay } from '@entities/article';
 import type { IArticles } from '@models';
 import type { Block, ArticleMeta, BlockType } from './EditArticleModalV2.utils';
@@ -258,7 +259,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         if (!token) return;
 
         const fetchUrl = '/api/articles-api?includeDrafts=true';
-        const response = await fetch(fetchUrl, {
+        const response = await fetchWithAuthSession(fetchUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -368,7 +369,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         isDraft: shouldBeDraft,
       };
 
-      const response = await fetch(
+      const response = await fetchWithAuthSession(
         `/api/articles-api?id=${encodeURIComponent(currentArticle.id)}`,
         {
           method: 'PUT',
@@ -559,7 +560,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         : `/api/articles-api?id=${encodeURIComponent(currentArticle.id || '')}`;
       const method = isNewArticle ? 'POST' : 'PUT';
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuthSession(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -655,7 +656,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         : `/api/articles-api?id=${encodeURIComponent(currentArticle.id || '')}`;
       const method = isNewArticle ? 'POST' : 'PUT';
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuthSession(url, {
         method,
         headers: {
           'Content-Type': 'application/json',

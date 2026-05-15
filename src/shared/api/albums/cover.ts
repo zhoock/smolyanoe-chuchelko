@@ -3,6 +3,7 @@
  */
 
 import { getToken } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 
 type ApiError = {
   success: false;
@@ -110,7 +111,7 @@ export async function uploadCoverDraft(
     onProgress?.(50);
 
     // ✅ ходим через /api, а не напрямую в /.netlify/functions
-    const response = await fetch('/api/albums/cover/draft', {
+    const response = await fetchWithAuthSession('/api/albums/cover/draft', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export async function commitCover(
   try {
     const token = getToken();
     if (!token) return { success: false, error: 'User is not authenticated. Please log in.' };
-    const response = await fetch('/api/albums/cover/commit', {
+    const response = await fetchWithAuthSession('/api/albums/cover/commit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

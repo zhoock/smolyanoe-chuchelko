@@ -6,6 +6,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { getUser, getToken, updateStoredUserName } from '@shared/lib/auth';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import {
   loadTheBandFromDatabase,
   saveTheBandToDatabase,
@@ -255,7 +256,7 @@ export function ProfileSettingsModal({
         }
 
         console.log('🔄 Sending password change request...');
-        const response = await fetch('/api/change-password', {
+        const response = await fetchWithAuthSession('/api/change-password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -292,7 +293,7 @@ export function ProfileSettingsModal({
             const token = getToken();
             if (!token) return;
 
-            const reloadResponse = await fetch('/api/user-profile', {
+            const reloadResponse = await fetchWithAuthSession('/api/user-profile', {
               headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
@@ -429,7 +430,7 @@ export function ProfileSettingsModal({
 
           console.log('📤 [ProfileSettingsModal] Отправка данных:', updateData);
 
-          const response = await fetch('/api/user-profile', {
+          const response = await fetchWithAuthSession('/api/user-profile', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -508,7 +509,7 @@ export function ProfileSettingsModal({
             return;
           }
 
-          const response = await fetch('/api/user-profile', {
+          const response = await fetchWithAuthSession('/api/user-profile', {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
@@ -656,7 +657,7 @@ export function ProfileSettingsModal({
             return;
           }
 
-          const response = await fetch('/api/user-profile', {
+          const response = await fetchWithAuthSession('/api/user-profile', {
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,

@@ -6,12 +6,12 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
-import { extractUserIdFromToken } from './lib/jwt';
-import * as bcrypt from 'bcryptjs';
 import {
   createOptionsResponse,
   createErrorResponse,
   createSuccessResponse,
+  getUserIdFromEvent,
+  unauthorizedFromAuthHeader,
   parseJsonBody,
   handleError,
 } from './lib/api-helpers';
@@ -50,10 +50,10 @@ export const handler: Handler = async (
   }
 
   try {
-    const userId = extractUserIdFromToken(event.headers.authorization);
+    const userId = getUserIdFromEvent(event);
 
     if (!userId) {
-      return createErrorResponse(401, 'Unauthorized');
+      return unauthorizedFromAuthHeader(event);
     }
 
     const data = parseJsonBody<ChangePasswordRequest>(event.body, {} as ChangePasswordRequest);
@@ -96,7 +96,9 @@ export const handler: Handler = async (
 
     if (!isPasswordValid) {
       console.log('❌ Invalid current password for user:', userId);
-      return createErrorResponse(401, 'Invalid current password');
+      return createErrorResponse(401, 'Invalid current password', headers, {
+        code: 'INVALID_CREDENTIALS',
+      });
     }
 
     console.log('✅ Current password is valid, hashing new password...');

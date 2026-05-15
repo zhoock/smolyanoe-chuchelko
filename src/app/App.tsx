@@ -26,6 +26,7 @@ import { albumsLoader } from '@routes/loaders/albumsLoader';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
+import { purgeInvalidAuthSessionFromStorage } from '@shared/lib/auth';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
@@ -139,6 +140,10 @@ function Layout() {
 
   const { lang } = useLang() as { lang: 'ru' | 'en' };
   const { revalidate } = useRevalidator();
+
+  useEffect(() => {
+    purgeInvalidAuthSessionFromStorage();
+  }, []);
 
   // Отслеживаем предыдущий путь для умных breadcrumbs
   // Сохраняем текущий путь в sessionStorage при клике на ссылку (до навигации)

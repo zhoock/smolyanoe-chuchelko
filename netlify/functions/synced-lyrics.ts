@@ -8,7 +8,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
-import { getUserIdFromEvent } from './lib/api-helpers';
+import { getUserIdFromEvent, unauthorizedFromAuthHeader } from './lib/api-helpers';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
 interface SyncedLyricsRow {
@@ -291,14 +291,7 @@ export const handler: Handler = async (
       const userId = getUserIdFromEvent(event);
 
       if (!userId) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'Unauthorized. Authentication required.',
-          } as SyncedLyricsResponse),
-        };
+        return unauthorizedFromAuthHeader(event);
       }
 
       const canonAlbum = await findCanonicalAlbumForUser(data.albumId, userId);

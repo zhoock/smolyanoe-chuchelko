@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import './PaymentSuccess.style.scss';
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
 
 /**
  * Статус платежа от YooKassa API (через get-payment-status; сверка с провайдером на бэкенде).
@@ -90,7 +91,7 @@ function PaymentSuccess() {
       return { stop: true, fatal: true };
     }
 
-    const response = await fetch(`/api/get-payment-status?${apiQuery}`);
+    const response = await fetchWithAuthSession(`/api/get-payment-status?${apiQuery}`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }

@@ -14,6 +14,7 @@ import {
   createErrorResponse,
   createSuccessResponse,
   requireAuth,
+  unauthorizedFromAuthHeader,
 } from './lib/api-helpers';
 
 interface AlbumRow {
@@ -36,7 +37,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
     // Проверяем авторизацию
     const userId = requireAuth(event);
     if (!userId) {
-      return createErrorResponse(401, 'Unauthorized. Authentication required.');
+      return unauthorizedFromAuthHeader(event);
     }
 
     console.log('🔄 Начинаем обновление имен обложек альбомов...\n');

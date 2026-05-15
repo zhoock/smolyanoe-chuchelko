@@ -1,6 +1,8 @@
 import { getStore } from '@shared/model/appStore';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
+import { fetchWithAuthSession } from '@shared/lib/authFetch';
+
 import { buildApiUrl } from './artistQuery';
 
 export const PROFILE_NAME_STORAGE_KEY = 'profile-name';
@@ -57,7 +59,9 @@ export async function fetchPublicProfileForDisplay(
       { lang },
       { includeArtist: true, artistSlugOverride: slug }
     );
-    const response = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+    const response = await fetchWithAuthSession(url, {
+      headers: { 'Content-Type': 'application/json' },
+    });
     if (!response.ok) {
       return { displayName: readStoredProfileDisplayName(), publicSlug: null };
     }
