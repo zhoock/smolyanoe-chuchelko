@@ -12,26 +12,18 @@ export function normalizeTrackVisibility(raw: unknown): TrackVisibility {
 export const TRACK_VISIBILITY_OPTIONS: readonly {
   value: TrackVisibility;
   icon: string;
-  label: string;
-  description: string;
 }[] = [
   {
     value: 'public',
     icon: '🌍',
-    label: 'Открыт для всех',
-    description: 'Трек доступен всем посетителям',
   },
   {
     value: 'subscribers_only',
     icon: '🔒',
-    label: 'Только для подписчиков',
-    description: 'Воспроизведение после покупки альбома',
   },
   {
     value: 'hidden',
     icon: '🚫',
-    label: 'Скрыт',
-    description: 'Не отображается в треклисте на сайте',
   },
 ] as const;
 

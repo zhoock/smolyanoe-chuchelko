@@ -1,6 +1,6 @@
 // src/pages/UserDashboard/UserDashboard.tsx
 
-import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import {
   useNavigate,
   useSearchParams,
@@ -76,7 +76,7 @@ import { ProfileSettingsModal } from './components/modals/profile/ProfileSetting
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
-import type { IAlbums, IArticles, IInterface } from '@models';
+import type { IAlbums, IArticles, IInterface, DashboardTrackVisibilityLabels } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
   transformAlbumsToAlbumData,
@@ -156,6 +156,13 @@ interface SortableTrackItemProps {
   swipedTrackId: string | null;
   onSwipeChange: (trackId: string | null) => void;
 }
+
+type DashboardUi = NonNullable<IInterface['dashboard']>;
+/** Расширение для полей кабинета, которые могут отсутствовать в устаревших копиях `IInterface`. */
+type DashboardUiWithTrackAccess = DashboardUi & {
+  trackVisibility?: DashboardTrackVisibilityLabels;
+  trackAccessAriaLabel?: string;
+};
 
 // Функция для извлечения первых двух строк текста из блоков статьи
 function getArticlePreviewText(article: IArticles): string {
@@ -258,6 +265,7 @@ function SortableTrackItem({
   swipedTrackId,
   onSwipeChange,
 }: SortableTrackItemProps) {
+  const { lang } = useLang();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: track.id,
   });
@@ -279,6 +287,55 @@ function SortableTrackItem({
   const accessMenuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const trackVisibility = normalizeTrackVisibility(track.visibility);
+
+  const trackVisibilityMenuOptions = useMemo(() => {
+    const d = ui?.dashboard as DashboardUiWithTrackAccess | undefined;
+    const t = d?.trackVisibility;
+    const en = lang === 'en';
+    const fallbacks = {
+      public: {
+        title: en ? 'Open to everyone' : 'Открыт для всех',
+        description: en ? 'Track is available to all visitors' : 'Трек доступен всем посетителям',
+      },
+      subscribersOnly: {
+        title: en ? 'Subscribers only' : 'Только для подписчиков',
+        description: en
+          ? 'Playback after purchasing the album'
+          : 'Воспроизведение после покупки альбома',
+      },
+      hidden: {
+        title: en ? 'Hidden' : 'Скрыт',
+        description: en
+          ? 'Not shown in the tracklist on the site'
+          : 'Не отображается в треклисте на сайте',
+      },
+    } as const;
+
+    return TRACK_VISIBILITY_OPTIONS.map((opt) => {
+      const block =
+        opt.value === 'public'
+          ? t?.public
+          : opt.value === 'hidden'
+            ? t?.hidden
+            : t?.subscribersOnly;
+      const fb =
+        opt.value === 'public'
+          ? fallbacks.public
+          : opt.value === 'hidden'
+            ? fallbacks.hidden
+            : fallbacks.subscribersOnly;
+      return {
+        value: opt.value,
+        icon: opt.icon,
+        label: block?.title ?? fb.title,
+        description: block?.description ?? fb.description,
+      };
+    });
+  }, [lang, ui?.dashboard]);
+
+  const trackAccessAria =
+    (ui?.dashboard as DashboardUiWithTrackAccess | undefined)?.trackAccessAriaLabel ??
+    (lang === 'en' ? 'Track access' : 'Доступ к треку');
 
   const EDIT_BUTTON_WIDTH = 80;
   const ACCESS_BUTTON_WIDTH = 80;
@@ -617,6 +674,7 @@ function SortableTrackItem({
           <div
             className={clsx('user-dashboard__track-item', {
               'user-dashboard__track-item--dragging': isDragging,
+              'user-dashboard__track-item--access-menu-open': accessMenuOpen,
             })}
           >
             <div
@@ -646,41 +704,9 @@ function SortableTrackItem({
               />
             ) : (
               <div className="user-dashboard__track-title">
-                {track.title}
+                <span className="user-dashboard__track-title-text">{track.title}</span>
                 {!isMobile && (
-                  <div className="user-dashboard__track-actions">
-                    <button
-                      type="button"
-                      className="user-dashboard__track-edit-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(e);
-                      }}
-                      aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
-                    >
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M14.5 1.5L18.5 5.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
+                  <>
                     <button
                       ref={accessBtnRef}
                       type="button"
@@ -688,52 +714,86 @@ function SortableTrackItem({
                       onClick={toggleAccessMenu}
                       aria-expanded={accessMenuOpen}
                       aria-haspopup="menu"
-                      aria-label="Доступ к треку"
+                      aria-label={trackAccessAria}
                     >
                       <span className="user-dashboard__track-access-button-icon" aria-hidden>
                         {visibilityIcon(trackVisibility)}
                       </span>
                     </button>
-                    <button
-                      type="button"
-                      className="user-dashboard__track-delete-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(albumId, track.id, track.title);
-                      }}
-                      aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-                    >
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
+                    <div className="user-dashboard__track-actions">
+                      <button
+                        type="button"
+                        className="user-dashboard__track-edit-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(e);
+                        }}
+                        aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
                       >
-                        <path
-                          d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M8.5 9.5V14.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M11.5 9.5V14.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M14.5 1.5L18.5 5.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="user-dashboard__track-delete-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(albumId, track.id, track.title);
+                        }}
+                        aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M8.5 9.5V14.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M11.5 9.5V14.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -788,7 +848,7 @@ function SortableTrackItem({
               }}
               aria-expanded={accessMenuOpen}
               aria-haspopup="menu"
-              aria-label="Доступ к треку"
+              aria-label={trackAccessAria}
             >
               <span className="user-dashboard__track-access-button-icon" aria-hidden>
                 {visibilityIcon(trackVisibility)}
@@ -852,7 +912,7 @@ function SortableTrackItem({
             }}
             role="menu"
           >
-            {TRACK_VISIBILITY_OPTIONS.map((opt) => (
+            {trackVisibilityMenuOptions.map((opt) => (
               <button
                 key={opt.value}
                 type="button"

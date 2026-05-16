@@ -78,16 +78,54 @@ dialog {
       background: var(--dashboard-card-bg);
     }
 
+    &__track-actions {
+      position: absolute;
+      top: 50%;
+      right: var(--ms-01);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: var(--ms-01);
+      padding: var(--ms-01);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: var(--ms-01);
+      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-50%);
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
+
+      @include breakpoint(tablet) {
+        display: flex;
+      }
+    }
+
     &__track-item {
       display: flex;
       padding: var(--ms-01);
       height: 56px;
       align-items: center;
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition:
+        opacity 0.2s ease,
+        background-color 0.2s ease;
 
       &--dragging {
         opacity: 0.5;
+      }
+
+      &--access-menu-open {
+        background: var(--dashboard-hover-bg);
+
+        .user-dashboard__track-actions {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+        }
       }
     }
 
@@ -125,7 +163,9 @@ dialog {
       position: relative;
       display: flex;
       align-items: center;
+      min-width: 0;
       padding: var(--ms-01);
+      padding-right: calc(var(--ms-01) + 32px + var(--ms-01) + 64px + var(--ms-01) * 3);
       font-size: var(--dashboard-font-size);
       border-radius: var(--ms-02);
       flex: 1;
@@ -141,27 +181,12 @@ dialog {
       }
     }
 
-    &__track-actions {
-      position: absolute;
-      right: var(--ms-01);
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
-      padding: var(--ms-01);
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s ease;
-
-      @include breakpoint(tablet) {
-        display: flex;
-      }
+    &__track-title-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     &__track-edit-button {
@@ -195,6 +220,10 @@ dialog {
     }
 
     &__track-access-button {
+      position: absolute;
+      top: 50%;
+      right: calc(64px + var(--ms-01) * 4);
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -207,6 +236,10 @@ dialog {
       border: none;
       border-radius: var(--ms-02);
       cursor: pointer;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(-50%);
       transition: background-color 0.2s ease;
 
       &-icon {

@@ -15,6 +15,46 @@
         "logOut": "Log out"
       }
     },
+    "auth": {
+      "validation": {
+        "requiredEmail": "Enter your email",
+        "requiredPassword": "Enter your password",
+        "requiredConfirmPassword": "Confirm your password",
+        "passwordsMismatch": "Passwords do not match",
+        "passwordMinLength": "Password must be at least 6 characters"
+      },
+      "login": {
+        "title": "Sign in",
+        "emailLabel": "Email",
+        "passwordLabel": "Password",
+        "submit": "Sign in",
+        "submitting": "Signing in…",
+        "noAccount": "No account?",
+        "signUp": "Register"
+      },
+      "register": {
+        "title": "Register",
+        "siteBandNameLabel": "Site / band name",
+        "siteBandNamePlaceholder": "Enter the name of your band, or some other name for this site",
+        "siteBandNameRequired": "Site / band name is required",
+        "emailLabel": "Email",
+        "passwordLabel": "Password",
+        "confirmPasswordLabel": "Confirm password",
+        "submit": "Register",
+        "submitting": "Registering…",
+        "hasAccount": "Already have an account?",
+        "signIn": "Sign in"
+      },
+      "languageSelect": {
+        "title": "Language",
+        "instruction": "Choose your interface language",
+        "description": "This is the language visitors will see when browsing your site.",
+        "continue": "Continue",
+        "close": "Close",
+        "optionRu": "Russian",
+        "optionEn": "English"
+      }
+    },
     "buttons": {
       "playButton": "play",
       "purchase": "purchase",
@@ -154,6 +194,21 @@
       "editTrack": "Edit track",
       "trackTitle": "Track Title",
       "deleteTrack": "Delete track",
+      "trackAccessAriaLabel": "Track access",
+      "trackVisibility": {
+        "public": {
+          "title": "Open to everyone",
+          "description": "Track is available to all visitors"
+        },
+        "subscribersOnly": {
+          "title": "Subscribers only",
+          "description": "Playback after purchasing the album"
+        },
+        "hidden": {
+          "title": "Hidden",
+          "description": "Not shown in the tracklist on the site"
+        }
+      },
       "deleteAlbum": "Delete album",
       "errorLoading": "Error loading:",
       "failedToLoadAlbums": "Failed to load albums",

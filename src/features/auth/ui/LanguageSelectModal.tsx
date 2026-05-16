@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './LanguageSelectModal.scss';
 
 interface LanguageSelectModalProps {
@@ -15,7 +17,36 @@ export function LanguageSelectModal({
   onLanguageSelected,
 }: LanguageSelectModalProps) {
   const { lang: currentLang } = useLang();
-  const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(currentLang || 'ru');
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));
+
+  const copy = useMemo(() => {
+    const ls = ui?.auth?.languageSelect;
+    const en = currentLang === 'en';
+    const fallback = en
+      ? {
+          title: 'Language',
+          instruction: 'Choose your interface language',
+          description: 'This is the language visitors will see when browsing your site.',
+          continue: 'Continue',
+          close: 'Close',
+          optionRu: 'Russian',
+          optionEn: 'English',
+        }
+      : {
+          title: 'Выбор языка',
+          instruction: 'Выберите язык интерфейса',
+          description: 'Язык, который увидят посетители при просмотре вашего сайта.',
+          continue: 'Продолжить',
+          close: 'Закрыть',
+          optionRu: 'Русский',
+          optionEn: 'English',
+        };
+    return { ...fallback, ...ls };
+  }, [currentLang, ui?.auth?.languageSelect]);
+
+  const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(() =>
+    currentLang === 'en' ? 'en' : 'ru'
+  );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -57,9 +88,14 @@ export function LanguageSelectModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
 
-  const languages = [
-    { value: 'ru', label: 'Русский' },
-    { value: 'en', label: 'English' },
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedLang(currentLang === 'en' ? 'en' : 'ru');
+  }, [isOpen, currentLang]);
+
+  const languages: { value: 'ru' | 'en'; label: string }[] = [
+    { value: 'ru', label: copy.optionRu },
+    { value: 'en', label: copy.optionEn },
   ];
 
   const selectedLanguage = languages.find((l) => l.value === selectedLang) || languages[0];
@@ -81,14 +117,14 @@ export function LanguageSelectModal({
             type="button"
             className="language-select-modal__close"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={copy.close}
           >
             ×
           </button>
 
-          <h2 className="language-select-modal__title">Выбор языка</h2>
+          <h2 className="language-select-modal__title">{copy.title}</h2>
 
-          <p className="language-select-modal__instruction">Выберите язык интерфейса</p>
+          <p className="language-select-modal__instruction">{copy.instruction}</p>
 
           <div className="language-select-modal__select-wrapper">
             <div
@@ -139,16 +175,14 @@ export function LanguageSelectModal({
             )}
           </div>
 
-          <p className="language-select-modal__description">
-            Язык, который увидят посетители при просмотре вашего сайта.
-          </p>
+          <p className="language-select-modal__description">{copy.description}</p>
 
           <button
             type="button"
             className="language-select-modal__continue"
             onClick={handleContinue}
           >
-            Продолжить
+            {copy.continue}
           </button>
         </div>
       </div>

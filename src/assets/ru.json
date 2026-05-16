@@ -15,6 +15,46 @@
         "logOut": "Выйти"
       }
     },
+    "auth": {
+      "validation": {
+        "requiredEmail": "Укажите email",
+        "requiredPassword": "Укажите пароль",
+        "requiredConfirmPassword": "Подтвердите пароль",
+        "passwordsMismatch": "Пароли не совпадают",
+        "passwordMinLength": "Пароль должен содержать минимум 6 символов"
+      },
+      "login": {
+        "title": "Вход",
+        "emailLabel": "Email",
+        "passwordLabel": "Пароль",
+        "submit": "Войти",
+        "submitting": "Вход…",
+        "noAccount": "Нет аккаунта?",
+        "signUp": "Зарегистрироваться"
+      },
+      "register": {
+        "title": "Регистрация",
+        "siteBandNameLabel": "Название сайта / группы",
+        "siteBandNamePlaceholder": "Укажите название группы или другое имя для этого сайта",
+        "siteBandNameRequired": "Укажите название сайта или группы",
+        "emailLabel": "Email",
+        "passwordLabel": "Пароль",
+        "confirmPasswordLabel": "Подтвердите пароль",
+        "submit": "Зарегистрироваться",
+        "submitting": "Регистрация…",
+        "hasAccount": "Уже есть аккаунт?",
+        "signIn": "Войти"
+      },
+      "languageSelect": {
+        "title": "Выбор языка",
+        "instruction": "Выберите язык интерфейса",
+        "description": "Язык, который увидят посетители при просмотре вашего сайта.",
+        "continue": "Продолжить",
+        "close": "Закрыть",
+        "optionRu": "Русский",
+        "optionEn": "English"
+      }
+    },
     "buttons": {
       "playButton": "воспроизвести",
       "purchase": "купить",
@@ -154,6 +194,21 @@
       "editTrack": "Редактировать трек",
       "trackTitle": "Название трека",
       "deleteTrack": "Удалить трек",
+      "trackAccessAriaLabel": "Доступ к треку",
+      "trackVisibility": {
+        "public": {
+          "title": "Открыт для всех",
+          "description": "Трек доступен всем посетителям"
+        },
+        "subscribersOnly": {
+          "title": "Только для подписчиков",
+          "description": "Воспроизведение после покупки альбома"
+        },
+        "hidden": {
+          "title": "Скрыт",
+          "description": "Не отображается в треклисте на сайте"
+        }
+      },
       "deleteAlbum": "Удалить альбом",
       "errorLoading": "Ошибка загрузки:",
       "failedToLoadAlbums": "Не удалось загрузить альбомы",

@@ -222,6 +222,13 @@ export interface ArticleProps {
   date: string;
 }
 
+/** Подписи меню видимости трека в списке треков альбома (кабинет). */
+export interface DashboardTrackVisibilityLabels {
+  public: { title: string; description: string };
+  subscribersOnly: { title: string; description: string };
+  hidden: { title: string; description: string };
+}
+
 export interface IInterface {
   menu: {
     [key: string]: string;
@@ -248,6 +255,48 @@ export interface IInterface {
       settings: string;
       upgradePlan: string;
       logOut: string;
+    };
+  };
+  /** Модалка регистрации / входа (публичный сайт) */
+  auth?: {
+    validation?: {
+      requiredEmail: string;
+      requiredPassword: string;
+      requiredConfirmPassword: string;
+      passwordsMismatch: string;
+      passwordMinLength: string;
+    };
+    login?: {
+      title: string;
+      emailLabel: string;
+      passwordLabel: string;
+      submit: string;
+      submitting: string;
+      noAccount: string;
+      signUp: string;
+    };
+    register: {
+      title: string;
+      siteBandNameLabel: string;
+      siteBandNamePlaceholder: string;
+      siteBandNameRequired: string;
+      emailLabel: string;
+      passwordLabel: string;
+      confirmPasswordLabel: string;
+      submit: string;
+      submitting: string;
+      hasAccount: string;
+      signIn: string;
+    };
+    /** Модалка выбора языка сайта после входа / регистрации */
+    languageSelect?: {
+      title: string;
+      instruction: string;
+      description: string;
+      continue: string;
+      close: string;
+      optionRu: string;
+      optionEn: string;
     };
   };
   errors?: {
@@ -339,6 +388,10 @@ export interface IInterface {
     editTrack?: string;
     trackTitle?: string;
     deleteTrack?: string;
+    /** aria-label кнопки меню «доступ к треку» в списке треков альбома */
+    trackAccessAriaLabel?: string;
+    /** Тексты пунктов меню видимости трека */
+    trackVisibility?: DashboardTrackVisibilityLabels;
     deleteAlbum?: string;
     errorLoading?: string;
     failedToLoadAlbums?: string;
