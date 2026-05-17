@@ -69,7 +69,10 @@
       "viewAllAlbums": "Все альбомы ({count})",
       "viewAllArticles": "Все статьи ({count})",
       "allAlbumsLoaded": "Все альбомы загружены",
-      "allArticlesLoaded": "Все статьи загружены"
+      "allArticlesLoaded": "Все статьи загружены",
+      "articleLockedViewAlbums": "К альбомам",
+      "articleLockedDialogClose": "Закрыть",
+      "archiveAccessSubscribe": "Стать Premium"
     },
     "titles": {
       "albums": "альбомы",
@@ -86,7 +89,19 @@
       "allAlbumsPageTitle": "Все альбомы",
       "allAlbumsPageDesc": "Просмотр всех альбомов и релизов",
       "allArticlesPageTitle": "Все статьи",
-      "allArticlesPageDesc": "Просмотр всех статей и публикаций"
+      "allArticlesPageDesc": "Просмотр всех статей и публикаций",
+      "articleLockedOverlayTitle": "Только для подписчиков",
+      "articleLockedOverlayHint": "Оформите подписку, чтобы читать",
+      "archiveAccessTitle": "Премиум-архив",
+      "archiveAccessDescription": "Откройте эксклюзивный контент **у любых 3 артистов** каждый месяц.",
+      "archiveAccessFeatureTracks": "Закрытые треки",
+      "archiveAccessFeatureArticles": "Статьи",
+      "archiveAccessFeatureStems": "Стемы",
+      "archiveAccessFeatureDownloads": "Скачивание альбомов",
+      "archiveAccessPriceAmount": "149",
+      "archiveAccessPriceCurrency": "₽",
+      "archiveAccessPricePeriod": "/ месяц",
+      "archiveAccessFootnote": "Отмена в любой момент"
     },
     "links": {
       "home": "главная",
@@ -207,6 +222,23 @@
         "hidden": {
           "title": "Скрыт",
           "description": "Не отображается в треклисте на сайте"
+        }
+      },
+      "articleAccessAriaLabel": "Доступ к статье",
+      "articleSubscribersOnlyOverlayTitle": "Только для подписчиков",
+      "articleSubscribersOnlyOverlayHint": "Оформите подписку, чтобы читать эксклюзивные статьи",
+      "articleVisibility": {
+        "public": {
+          "title": "Открыт для всех",
+          "description": "Статья доступна всем посетителям"
+        },
+        "subscribersOnly": {
+          "title": "Только для подписчиков",
+          "description": "Чтение после покупки альбома"
+        },
+        "hidden": {
+          "title": "Скрыт",
+          "description": "Не отображается в списке статей на сайте"
         }
       },
       "deleteAlbum": "Удалить альбом",

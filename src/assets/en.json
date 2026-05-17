@@ -69,7 +69,10 @@
       "viewAllAlbums": "View all albums ({count})",
       "viewAllArticles": "View all articles ({count})",
       "allAlbumsLoaded": "All albums loaded",
-      "allArticlesLoaded": "All articles loaded"
+      "allArticlesLoaded": "All articles loaded",
+      "articleLockedViewAlbums": "Browse albums",
+      "articleLockedDialogClose": "Close",
+      "archiveAccessSubscribe": "Start Premium"
     },
     "titles": {
       "albums": "albums",
@@ -86,7 +89,19 @@
       "allAlbumsPageTitle": "All Albums",
       "allAlbumsPageDesc": "Browse all albums and releases",
       "allArticlesPageTitle": "All Articles",
-      "allArticlesPageDesc": "Browse all articles and posts"
+      "allArticlesPageDesc": "Browse all articles and posts",
+      "articleLockedOverlayTitle": "Subscribers only",
+      "articleLockedOverlayHint": "Purchase an album to read this content.",
+      "archiveAccessTitle": "Premium Archive",
+      "archiveAccessDescription": "Unlock exclusive content from any **3 artists** every month.",
+      "archiveAccessFeatureTracks": "Locked tracks",
+      "archiveAccessFeatureArticles": "Articles",
+      "archiveAccessFeatureStems": "Stems",
+      "archiveAccessFeatureDownloads": "Album downloads",
+      "archiveAccessPriceAmount": "149",
+      "archiveAccessPriceCurrency": "₽",
+      "archiveAccessPricePeriod": "/ month",
+      "archiveAccessFootnote": "Cancel anytime"
     },
     "links": {
       "home": "home",
@@ -207,6 +222,23 @@
         "hidden": {
           "title": "Hidden",
           "description": "Not shown in the tracklist on the site"
+        }
+      },
+      "articleAccessAriaLabel": "Article access",
+      "articleSubscribersOnlyOverlayTitle": "Subscribers only",
+      "articleSubscribersOnlyOverlayHint": "Subscribe to read exclusive articles.",
+      "articleVisibility": {
+        "public": {
+          "title": "Open to everyone",
+          "description": "Article is available to all visitors"
+        },
+        "subscribersOnly": {
+          "title": "Subscribers only",
+          "description": "Reading after purchasing the album"
+        },
+        "hidden": {
+          "title": "Hidden",
+          "description": "Not shown in the article list on the site"
         }
       },
       "deleteAlbum": "Delete album",

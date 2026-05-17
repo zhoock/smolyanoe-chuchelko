@@ -19,6 +19,8 @@ import {
 } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
+import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
+import { ArticleCoverImage } from '@entities/article/ui/ArticleCoverImage';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
@@ -166,6 +168,7 @@ export function ArticlePage() {
           article={article}
           formatDate={formatDate}
           lang={locale}
+          artistSlug={artistSlug}
           renderBlock={Block}
         />
       </div>
@@ -179,6 +182,7 @@ type ArticleContentProps = {
   article: ReturnType<typeof selectArticleByIdResolved>;
   formatDate: (value: string) => string;
   lang: LocaleKey;
+  artistSlug: string | null;
   renderBlock: (details: ArticledetailsProps) => JSX.Element;
 };
 
@@ -188,8 +192,20 @@ function ArticleContent({
   article,
   formatDate,
   lang,
+  artistSlug,
   renderBlock,
 }: ArticleContentProps) {
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const albumsPath = withPublicArtistQuery('/albums', artistSlug);
+
+  const overlayTitle =
+    ui?.titles?.articleLockedOverlayTitle ??
+    (lang === 'en' ? 'Subscribers only' : 'Только для подписчиков');
+  const overlayHint =
+    ui?.titles?.articleLockedOverlayHint ??
+    (lang === 'en' ? 'Purchase an album to read this content.' : 'Оформите подписку, чтобы читать');
+  const ctaLabel =
+    ui?.buttons?.articleLockedViewAlbums ?? (lang === 'en' ? 'Browse albums' : 'К альбомам');
   if (!article) {
     if (status === 'loading' || status === 'idle') {
       return <ArticleSkeleton />;
@@ -206,6 +222,57 @@ function ArticleContent({
     }
 
     return <ErrorMessage error={lang === 'en' ? 'Article not found' : 'Статья не найдена'} />;
+  }
+
+  if (article.articleLocked) {
+    const seoTitle = article.nameArticle;
+    const canonical =
+      lang === 'en'
+        ? `https://smolyanoechuchelko.ru/en/articles/${article.articleId}`
+        : `https://smolyanoechuchelko.ru/articles/${article.articleId}`;
+
+    return (
+      <>
+        <Helmet>
+          <title>{seoTitle}</title>
+          <meta name="description" content={overlayHint} />
+          <meta property="og:title" content={seoTitle} />
+          <meta property="og:description" content={overlayHint} />
+          <meta property="og:type" content="article" />
+          <link rel="canonical" href={canonical} />
+        </Helmet>
+
+        <div className="article__locked-shell">
+          <time dateTime={article.date}>
+            <small>
+              {formatDate(article.date)} {lang === 'en' ? '' : 'г.'}
+            </small>
+          </time>
+          <div className="article__locked-cover-wrap">
+            <div className="article__locked-cover">
+              <ArticleCoverImage
+                img={article.img}
+                userId={article.userId}
+                role="public"
+                alt=""
+                loading="eager"
+                decoding="async"
+                debugLabel={`ArticlePage:locked:${article.articleId}`}
+              />
+              <div className="article__locked-overlay" aria-hidden="true">
+                <SubscriberContentLockIcon className="article__locked-icon" size={40} />
+                <p className="article__locked-overlay-title">{overlayTitle}</p>
+                <p className="article__locked-overlay-hint">{overlayHint}</p>
+              </div>
+            </div>
+          </div>
+          <h2 className="article__locked-heading">{article.nameArticle}</h2>
+          <Link className="article__locked-cta" to={albumsPath}>
+            {ctaLabel}
+          </Link>
+        </div>
+      </>
+    );
   }
 
   const seoTitle = article.nameArticle;

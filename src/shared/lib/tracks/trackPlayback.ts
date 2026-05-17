@@ -2,8 +2,8 @@ import type { TracksProps } from '@models';
 import { normalizeTrackVisibility } from './trackVisibility';
 
 /**
- * Трек нельзя воспроизводить гостю (нет покупки / только подписчики без src).
- * Владелец и покупатель получают с API непустой `src` и `playbackLocked: false`.
+ * Трек нельзя воспроизводить без premium (playbackLocked / пустой src у subscribers_only).
+ * Плеер полагается на ответ API: подписка на артиста даёт src и playbackLocked: false.
  */
 export function isTrackPlaybackBlocked(track: TracksProps | undefined): boolean {
   if (!track) return true;

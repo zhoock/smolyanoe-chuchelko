@@ -14,6 +14,7 @@ import { getUserAudioUrl } from '@shared/api/albums';
 import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
+import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 import {
   formatAlbumDisplayFullName,
   readStoredProfileDisplayName,
@@ -82,6 +83,8 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
     artistSlug: artistSlugFromUrl,
   });
+
+  const { open: openArchiveAccessModal } = useArchiveAccessModal();
 
   const resolvedSiteArtist = useMemo(
     () => siteArtistName.trim() || readStoredProfileDisplayName().trim(),
@@ -316,6 +319,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       isPlayingNow: boolean;
     }) => {
       if (isTrackPlaybackBlocked(track)) {
+        openArchiveAccessModal();
         return;
       }
 
@@ -338,7 +342,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
 
       void openPlayer(index, { openFullScreen: false });
     },
-    [album, lang, openPlayer, store]
+    [album, lang, openArchiveAccessModal, openPlayer, store]
   );
 
   const renderBlock = useCallback(

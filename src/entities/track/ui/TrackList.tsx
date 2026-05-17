@@ -138,7 +138,6 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
           <button
             key={track.id}
             type="button"
-            disabled={playbackLocked}
             className={clsx('tracks__btn', {
               active: isActive,
               'tracks__btn--playing': isPlayingNow,

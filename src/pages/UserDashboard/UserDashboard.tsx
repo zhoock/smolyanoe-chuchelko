@@ -50,6 +50,7 @@ import {
 } from '@entities/album';
 import {
   fetchArticles,
+  patchDashboardArticleVisibility,
   selectDashboardArticlesStatus,
   selectDashboardArticlesError,
   selectDashboardArticlesDataResolved,
@@ -69,6 +70,7 @@ import { PreviewLyricsModal } from './components/modals/lyrics/PreviewLyricsModa
 import { EditAlbumModal, type AlbumFormData } from './components/modals/album/EditAlbumModal';
 import { EditArticleModalV2 } from './components/modals/article/EditArticleModalV2';
 import { ArticlesListSkeleton } from './components/articles/ArticlesListSkeleton';
+import { ArticleAccessControl } from './components/articles/ArticleAccessControl';
 import { DashboardTabContentSkeleton } from './components/DashboardTabContentSkeleton';
 import { ProfileTabSkeleton } from './components/ProfileTabSkeleton';
 import { SyncLyricsModal } from './components/modals/lyrics/SyncLyricsModal';
@@ -1041,6 +1043,7 @@ function UserDashboard() {
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
+  const [articleAccessMenuArticleId, setArticleAccessMenuArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
   const [editArticleModal, setEditArticleModal] = useState<{
     isOpen: boolean;
@@ -1819,6 +1822,47 @@ function UserDashboard() {
         variant: 'error',
       });
       await dispatch(fetchAlbums({ force: true })).unwrap();
+    }
+  };
+
+  const handleArticleVisibilityChange = async (articleId: string, visibility: TrackVisibility) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        setAlertModal({
+          isOpen: true,
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      const response = await fetchWithAuthSession('/api/update-article-visibility', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ articleId, visibility }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error((errorData as { message?: string })?.message || `HTTP ${response.status}`);
+      }
+
+      dispatch(patchDashboardArticleVisibility({ articleId, visibility }));
+    } catch (error) {
+      console.error('Error updating article visibility:', error);
+      setAlertModal({
+        isOpen: true,
+        title: ui?.dashboard?.error ?? 'Error',
+        message: `${ui?.dashboard?.error ?? 'Error'}: ${error instanceof Error ? error.message : 'Unknown'}`,
+        variant: 'error',
+      });
+      await dispatch(fetchArticles({ force: true })).unwrap();
     }
   };
 
@@ -3093,6 +3137,9 @@ function UserDashboard() {
                               <div className="user-dashboard__albums-list">
                                 {articlesFromStore.map((article, index) => {
                                   const isExpanded = expandedArticleId === article.articleId;
+                                  const articleVisibility = normalizeTrackVisibility(
+                                    article.visibility
+                                  );
                                   if (article.img && !article.userId) {
                                     console.error('[BUG] article.userId missing', {
                                       articleId: article.articleId,
@@ -3103,7 +3150,12 @@ function UserDashboard() {
                                   return (
                                     <React.Fragment key={article.articleId}>
                                       <div
-                                        className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
+                                        id={`dashboard-article-row-${article.articleId}`}
+                                        className={clsx('user-dashboard__album-item', {
+                                          'user-dashboard__album-item--expanded': isExpanded,
+                                          'user-dashboard__album-item--access-menu-open':
+                                            articleAccessMenuArticleId === article.articleId,
+                                        })}
                                         onClick={() =>
                                           setExpandedArticleId(
                                             isExpanded ? null : article.articleId
@@ -3160,10 +3212,37 @@ function UserDashboard() {
                                             </div>
                                           ) : null}
                                         </div>
-                                        <div
-                                          className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
-                                        >
-                                          {isExpanded ? '⌃' : '›'}
+                                        <div className="user-dashboard__album-item-actions">
+                                          <ArticleAccessControl
+                                            articleId={article.articleId}
+                                            visibility={articleVisibility}
+                                            ui={ui ?? undefined}
+                                            lang={lang}
+                                            menuOpen={
+                                              articleAccessMenuArticleId === article.articleId
+                                            }
+                                            onMenuOpenChange={(open) =>
+                                              setArticleAccessMenuArticleId(
+                                                open ? article.articleId : null
+                                              )
+                                            }
+                                            onPickVisibility={(v) =>
+                                              void handleArticleVisibilityChange(
+                                                article.articleId,
+                                                v
+                                              )
+                                            }
+                                            getRowElement={() =>
+                                              document.getElementById(
+                                                `dashboard-article-row-${article.articleId}`
+                                              )
+                                            }
+                                          />
+                                          <div
+                                            className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
+                                          >
+                                            {isExpanded ? '⌃' : '›'}
+                                          </div>
                                         </div>
                                       </div>
 
@@ -3193,28 +3272,30 @@ function UserDashboard() {
                                               if (hasCover) {
                                                 return (
                                                   <div className="user-dashboard__article-cover-wrap">
-                                                    <div className="user-dashboard__article-cover-preview">
-                                                      {coverState?.preview ? (
-                                                        <img
-                                                          src={coverState.preview}
-                                                          alt="Article cover preview"
-                                                          className="user-dashboard__article-cover-image"
-                                                        />
-                                                      ) : article.img && articleOwnerId ? (
-                                                        <ArticleCoverImage
-                                                          img={article.img}
-                                                          userId={articleOwnerId}
-                                                          role="admin"
-                                                          alt="Article cover preview"
-                                                          className="user-dashboard__article-cover-image"
-                                                          debugLabel={`UserDashboard:articleCoverPreview:${article.articleId}`}
-                                                        />
-                                                      ) : (
-                                                        <ArticleCoverPlaceholder
-                                                          alt="Article cover preview"
-                                                          className="user-dashboard__article-cover-image"
-                                                        />
-                                                      )}
+                                                    <div className="user-dashboard__article-cover-preview-shell">
+                                                      <div className="user-dashboard__article-cover-preview">
+                                                        {coverState?.preview ? (
+                                                          <img
+                                                            src={coverState.preview}
+                                                            alt="Article cover preview"
+                                                            className="user-dashboard__article-cover-image"
+                                                          />
+                                                        ) : article.img && articleOwnerId ? (
+                                                          <ArticleCoverImage
+                                                            img={article.img}
+                                                            userId={articleOwnerId}
+                                                            role="admin"
+                                                            alt="Article cover preview"
+                                                            className="user-dashboard__article-cover-image"
+                                                            debugLabel={`UserDashboard:articleCoverPreview:${article.articleId}`}
+                                                          />
+                                                        ) : (
+                                                          <ArticleCoverPlaceholder
+                                                            alt="Article cover preview"
+                                                            className="user-dashboard__article-cover-image"
+                                                          />
+                                                        )}
+                                                      </div>
                                                     </div>
 
                                                     <div className="user-dashboard__article-cover-actions">

@@ -10,6 +10,7 @@ import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
 import { getUserIdFromEvent, unauthorizedFromAuthHeader } from './lib/api-helpers';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
+import { viewerHasActiveSubscriptionToArtist } from './lib/entitlements';
 
 interface SyncedLyricsRow {
   id: string;
@@ -171,6 +172,22 @@ export const handler: Handler = async (
       const albumDbId = albumRow.id;
       const albumUserId = albumRow.user_id;
       const canonicalLang = albumRow.lang === 'ru' ? 'ru' : 'en';
+
+      /** Публичные sync-lyrics только с premium-подпиской на артиста (не с покупкой альбома). */
+      if (artist?.trim()) {
+        const artistOwnerId = albumUserId || targetUserId;
+        const canRead = await viewerHasActiveSubscriptionToArtist(authUserId, artistOwnerId);
+        if (!canRead) {
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              data: undefined,
+            } as SyncedLyricsResponse),
+          };
+        }
+      }
 
       console.log('[synced-lyrics.ts GET] Found canonical album:', {
         albumId,

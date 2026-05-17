@@ -1,12 +1,19 @@
 /**
- * Netlify Function для скачивания треков по токену покупки
+ * Netlify Function для скачивания треков
  * GET /api/download?token={purchase_token}&track={track_id}
+ * или GET /api/download?albumId={album_slug}&track={track_id} с Authorization (покупка этого альбома или подписка).
  */
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { createSupabaseClient, STORAGE_BUCKET_NAME } from '../../src/config/supabase';
 import { getUserIdFromEvent } from './lib/api-helpers';
+import {
+  getArtistUserIdForAlbumSlug,
+  getViewerEmailLower,
+  viewerHasActiveSubscriptionToArtist,
+  viewerPurchasedAlbum,
+} from './lib/entitlements';
 
 export const handler: Handler = async (
   event: HandlerEvent
@@ -20,62 +27,86 @@ export const handler: Handler = async (
   }
 
   try {
-    const purchaseToken = event.queryStringParameters?.token;
-    const trackId = event.queryStringParameters?.track;
+    const purchaseToken = event.queryStringParameters?.token?.trim();
+    const trackId = event.queryStringParameters?.track?.trim();
+    const albumIdParam = event.queryStringParameters?.albumId?.trim();
+    const authUserId = getUserIdFromEvent(event);
 
     console.log('🔍 [download-track] Request received:', {
-      purchaseToken,
+      purchaseToken: purchaseToken ? '[set]' : null,
+      albumIdParam,
       trackId,
-      hasToken: !!purchaseToken,
-      tokenLength: purchaseToken?.length,
+      hasAuth: !!authUserId,
       queryParams: event.queryStringParameters,
     });
 
-    if (!purchaseToken || !trackId) {
+    if (!trackId) {
       return {
         statusCode: 400,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Missing required parameters: token and track' }),
+        body: JSON.stringify({
+          error: 'Missing required parameter: track',
+        }),
       };
     }
 
-    // Проверяем, что покупка существует
-    console.log('🔍 [download-track] Searching for purchase with token:', purchaseToken);
-    const purchaseResult = await query<{
-      id: string;
-      album_id: string;
-      customer_email: string;
-      user_id?: string;
-    }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1::uuid`, [
-      purchaseToken,
-    ]);
+    let purchaseRowId: string | null = null;
+    let resolvedAlbumId: string;
 
-    console.log('🔍 [download-track] Purchase query result:', {
-      rowsCount: purchaseResult.rows.length,
-      found: purchaseResult.rows.length > 0,
-      purchaseId: purchaseResult.rows[0]?.id,
-      albumId: purchaseResult.rows[0]?.album_id,
-      customerEmail: purchaseResult.rows[0]?.customer_email,
-    });
-
-    if (purchaseResult.rows.length === 0) {
-      console.error('❌ [download-track] Purchase not found:', {
+    if (purchaseToken) {
+      console.log('🔍 [download-track] Searching for purchase with token');
+      const purchaseResult = await query<{
+        id: string;
+        album_id: string;
+        customer_email: string;
+        user_id?: string;
+      }>(`SELECT id, album_id, customer_email FROM purchases WHERE purchase_token = $1::uuid`, [
         purchaseToken,
-        tokenLength: purchaseToken.length,
-        tokenFormat: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          purchaseToken
-        )
-          ? 'valid UUID format'
-          : 'invalid UUID format',
-      });
+      ]);
+
+      if (purchaseResult.rows.length === 0) {
+        console.error('❌ [download-track] Purchase not found');
+        return {
+          statusCode: 404,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Purchase not found or invalid token' }),
+        };
+      }
+
+      purchaseRowId = purchaseResult.rows[0].id;
+      resolvedAlbumId = purchaseResult.rows[0].album_id;
+    } else if (authUserId && albumIdParam) {
+      const ownerId = await getArtistUserIdForAlbumSlug(albumIdParam);
+      if (!ownerId) {
+        return {
+          statusCode: 404,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Album not found' }),
+        };
+      }
+      const emailLower = await getViewerEmailLower(authUserId);
+      const purchased = await viewerPurchasedAlbum(albumIdParam, emailLower);
+      const subscribed = await viewerHasActiveSubscriptionToArtist(authUserId, ownerId);
+      if (!purchased && !subscribed) {
+        return {
+          statusCode: 403,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            error: 'Download not allowed: purchase this album or subscribe for access',
+          }),
+        };
+      }
+      resolvedAlbumId = albumIdParam;
+    } else {
       return {
-        statusCode: 404,
+        statusCode: 400,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Purchase not found or invalid token' }),
+        body: JSON.stringify({
+          error:
+            'Provide purchase token: ?token=...&track=... or signed-in download: ?albumId=...&track=... with Authorization',
+        }),
       };
     }
-
-    const purchase = purchaseResult.rows[0];
 
     const trackResult = await query<{
       src: string | null;
@@ -88,7 +119,7 @@ export const handler: Handler = async (
        INNER JOIN albums a ON t.album_id = a.id
        WHERE a.album_id = $1 AND t.track_id = $2
        LIMIT 1`,
-      [purchase.album_id, trackId]
+      [resolvedAlbumId, trackId]
     );
 
     if (trackResult.rows.length === 0 || !trackResult.rows[0].src) {
@@ -107,7 +138,7 @@ export const handler: Handler = async (
 
     console.log('🔍 [download-track] Track info:', {
       trackId,
-      albumId: purchase.album_id,
+      albumId: resolvedAlbumId,
       src: track.src,
       title: track.title,
     });
@@ -115,17 +146,18 @@ export const handler: Handler = async (
     // Если src - это уже полный URL, используем его
     if (audioUrl && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'))) {
       console.log('✅ [download-track] Using direct URL:', audioUrl);
-      // Обновляем счетчик скачиваний (не блокируем ответ)
-      query(
-        `UPDATE purchases 
+      if (purchaseRowId) {
+        query(
+          `UPDATE purchases 
          SET download_count = download_count + 1, 
              last_downloaded_at = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1`,
-        [purchase.id]
-      ).catch((error) => {
-        console.error('❌ Failed to update download count:', error);
-      });
+          [purchaseRowId]
+        ).catch((error) => {
+          console.error('❌ Failed to update download count:', error);
+        });
+      }
 
       // Редирект на прямой URL
       return {
@@ -191,13 +223,13 @@ export const handler: Handler = async (
 
     // Варианты album_id с разными регистрами и форматами
     const albumIdVariants = [
-      purchase.album_id, // "23-remastered"
-      purchase.album_id.replace(/-remastered/i, '-Remastered'), // "23-Remastered"
-      purchase.album_id.replace(/-remastered/i, ' Remastered'), // "23 Remastered" (с пробелом)
-      purchase.album_id.replace(/-remastered/i, 'Remastered'), // "23Remastered"
-      purchase.album_id.replace(/-/g, '_'), // "23_remastered"
-      '23-Remastered', // Прямой вариант с заглавной R
-      '23 Remastered', // С пробелом
+      resolvedAlbumId,
+      resolvedAlbumId.replace(/-remastered/i, '-Remastered'),
+      resolvedAlbumId.replace(/-remastered/i, ' Remastered'),
+      resolvedAlbumId.replace(/-remastered/i, 'Remastered'),
+      resolvedAlbumId.replace(/-/g, '_'),
+      '23-Remastered',
+      '23 Remastered',
     ];
 
     // Добавляем варианты с album_id
@@ -234,17 +266,18 @@ export const handler: Handler = async (
             if (headResponse.ok) {
               console.log(`✅ [download-track] Found file at: ${storagePath}`);
 
-              // Обновляем счетчик скачиваний (не блокируем ответ)
-              query(
-                `UPDATE purchases 
+              if (purchaseRowId) {
+                query(
+                  `UPDATE purchases 
                  SET download_count = download_count + 1, 
                      last_downloaded_at = CURRENT_TIMESTAMP,
                      updated_at = CURRENT_TIMESTAMP
                  WHERE id = $1`,
-                [purchase.id]
-              ).catch((error) => {
-                console.error('❌ Failed to update download count:', error);
-              });
+                  [purchaseRowId]
+                ).catch((error) => {
+                  console.error('❌ Failed to update download count:', error);
+                });
+              }
 
               // Редирект на прямой URL из Supabase Storage (избегаем ошибки 413 для больших файлов)
               return {
@@ -269,7 +302,7 @@ export const handler: Handler = async (
     // Если не удалось получить URL, возвращаем ошибку
     console.error('❌ [download-track] Failed to get track URL:', {
       trackId,
-      albumId: purchase.album_id,
+      albumId: resolvedAlbumId,
       src: track.src,
       triedPaths: possiblePaths,
     });
@@ -281,7 +314,7 @@ export const handler: Handler = async (
         error: 'Track file not found in storage',
         details: {
           trackId,
-          albumId: purchase.album_id,
+          albumId: resolvedAlbumId,
           src: track.src,
           triedPaths: possiblePaths,
         },

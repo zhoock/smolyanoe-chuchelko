@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { IArticles } from '@models';
 import type { RootState } from '@shared/model/appStore/types';
@@ -6,6 +6,8 @@ import { buildApiUrl } from '@shared/lib/artistQuery';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import type { TrackVisibility } from '@shared/lib/tracks/trackVisibility';
+import { normalizeTrackVisibility } from '@shared/lib/tracks/trackVisibility';
 
 import { hydrateMissingRuTranslationsOnArticle } from '../lib/hydrateMissingRuTranslations';
 
@@ -86,6 +88,11 @@ export const fetchArticles = createAsyncThunk<
           details: Array.isArray(a.details) ? (a.details as IArticles['details']) : [],
           description: String(a.description ?? ''),
           isDraft: (a.isDraft as boolean | undefined) ?? false,
+          visibility: normalizeTrackVisibility(a.visibility),
+          articleLocked:
+            typeof (a as { articleLocked?: unknown }).articleLocked === 'boolean'
+              ? (a as { articleLocked: boolean }).articleLocked
+              : undefined,
           translations: a.translations as IArticles['translations'],
           updatedAt: a.updatedAt as string | undefined,
           lang: a.lang as IArticles['lang'],
@@ -234,7 +241,19 @@ export const fetchArticles = createAsyncThunk<
 const articlesSlice = createSlice({
   name: 'articles',
   initialState,
-  reducers: {},
+  reducers: {
+    patchDashboardArticleVisibility: (
+      state,
+      action: PayloadAction<{ articleId: string; visibility: TrackVisibility }>
+    ) => {
+      const { articleId, visibility } = action.payload;
+      const list = state.dashboard.data;
+      const idx = list.findIndex((x) => x.articleId === articleId);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], visibility };
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchArticles.pending, (state) => {
@@ -321,3 +340,4 @@ const articlesSlice = createSlice({
 });
 
 export const articlesReducer = articlesSlice.reducer;
+export const { patchDashboardArticleVisibility } = articlesSlice.actions;

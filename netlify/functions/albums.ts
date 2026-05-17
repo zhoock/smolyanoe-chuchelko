@@ -33,6 +33,7 @@ import { rankToOrderIndex } from '../../src/shared/lib/tracks/trackOrderIndex';
 import { normalizeTrackVisibility } from '../../src/shared/lib/tracks/trackVisibility';
 import { hydrateMissingRuTranslationsOnAlbum } from '../../src/entities/album/lib/hydrateMissingRuTranslations';
 import type { IAlbums } from '../../src/models';
+import { viewerHasActiveSubscriptionToArtist } from './lib/entitlements';
 
 interface AlbumRow {
   id: string;
@@ -738,62 +739,23 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
   };
 }
 
-async function getViewerEmailLower(userId: string): Promise<string | null> {
-  const r = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1::uuid LIMIT 1`, [
-    userId,
-  ]);
-  const e = r.rows[0]?.email?.trim().toLowerCase();
-  return e || null;
-}
-
-async function viewerPurchasedAlbum(
-  albumSlug: string,
-  emailLower: string | null
-): Promise<boolean> {
-  if (!emailLower || !albumSlug) return false;
-  const r = await query<{ one: number }>(
-    `SELECT 1 AS one FROM purchases WHERE album_id = $1 AND LOWER(TRIM(customer_email)) = $2 LIMIT 1`,
-    [albumSlug, emailLower]
-  );
-  return r.rows.length > 0;
-}
-
 /**
  * Публичный каталог (?artist=…): скрытые треки не отдаём никому;
  * полный список с аудио — только GET /api/albums из кабинета без ?artist=.
- * subscribers_only без покупки — без src и playbackLocked (в т.ч. для владельца на витрине).
+ * subscribers_only без активной подписки (или владения) — без src и playbackLocked.
  */
 function applyPublicTrackAccessPolicy(
   album: AlbumData,
-  ctx: { viewerIsOwner: boolean; hasPurchase: boolean }
+  ctx: { hasPremiumAccess: boolean }
 ): AlbumData {
   /** Скрытые треки не показываем на публичной витрине даже владельцу (кабинет без ?artist= отдаёт полный список). */
   const withoutHidden = album.tracks.filter(
     (t) => normalizeTrackVisibility(t.visibility) !== 'hidden'
   );
 
-  if (ctx.viewerIsOwner) {
-    return {
-      ...album,
-      tracks: withoutHidden.map((t) => {
-        const visibility = normalizeTrackVisibility(t.visibility);
-        /** Как у гостя: без записи в purchases — не отдаём аудио (превью витрины = для подписчиков). */
-        const needLock = visibility === 'subscribers_only' && !ctx.hasPurchase;
-        if (needLock) {
-          return {
-            ...t,
-            visibility,
-            src: '',
-            playbackLocked: true,
-          };
-        }
-        return { ...t, visibility, playbackLocked: false };
-      }),
-    };
-  }
   const nextTracks = withoutHidden.map((t) => {
     const visibility = normalizeTrackVisibility(t.visibility);
-    const needLock = visibility === 'subscribers_only' && !ctx.hasPurchase;
+    const needLock = visibility === 'subscribers_only' && !ctx.hasPremiumAccess;
     if (needLock) {
       return {
         ...t,
@@ -1054,11 +1016,6 @@ export const handler: Handler = async (
       const artistParam = artist?.trim();
       const isPublicCatalogRequest = Boolean(artistParam);
 
-      let viewerEmailLower: string | null = null;
-      if (isPublicCatalogRequest && authUserId) {
-        viewerEmailLower = await getViewerEmailLower(authUserId);
-      }
-
       const albumsWithTracks: AlbumData[] = [];
       for (const albumKey of albumIdsOrdered) {
         const group = byAlbumId.get(albumKey)!;
@@ -1067,11 +1024,11 @@ export const handler: Handler = async (
         let merged = mergeAlbumDataPayloads(payloads);
 
         if (isPublicCatalogRequest) {
-          const viewerIsOwner = Boolean(authUserId && authUserId === targetUserId);
-          const hasPurchase = viewerIsOwner
-            ? true
-            : await viewerPurchasedAlbum(merged.albumId, viewerEmailLower);
-          merged = applyPublicTrackAccessPolicy(merged, { viewerIsOwner, hasPurchase });
+          const hasPremiumAccess = await viewerHasActiveSubscriptionToArtist(
+            authUserId,
+            targetUserId
+          );
+          merged = applyPublicTrackAccessPolicy(merged, { hasPremiumAccess });
         } else {
           merged = {
             ...merged,

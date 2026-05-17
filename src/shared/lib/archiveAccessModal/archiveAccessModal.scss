@@ -1,0 +1,183 @@
+.archive-access-modal {
+  margin: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  max-width: calc(100vw - 1.5rem);
+
+  /* Центрирование: `dialog.popup[open]` в shared/ui/popup/style.scss (импорт ниже во View). */
+
+  &::backdrop {
+    background: rgb(0 0 0 / 62%);
+    backdrop-filter: blur(6px);
+  }
+
+  &__panel {
+    position: relative;
+    width: min(22.5rem, calc(100vw - 1.5rem));
+    padding: var(--ms-1) var(--ms-1) var(--ms-0);
+    color: var(--text-color, #e6e6e4);
+    background: var(--main-background-color, #141413);
+    border: 1px solid var(--dark-greenish-yellow, #c8b06d);
+    border-radius: var(--ms-01);
+    box-shadow: 0 12px 40px rgb(0 0 0 / 50%);
+  }
+
+  &__close {
+    position: absolute;
+    top: var(--ms-01);
+    right: var(--ms-01);
+    display: flex;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+    font-size: 1.35rem;
+    line-height: 1;
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 50%;
+    transition: background 0.15s ease;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      background: rgb(255 255 255 / 14%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--outline-color, #f3d69f);
+      outline-offset: 2px;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 2.25rem;
+    margin-block-end: var(--ms-01);
+  }
+
+  &__header-icon {
+    flex-shrink: 0;
+    color: var(--dark-greenish-yellow, #c8b06d);
+  }
+
+  &__title {
+    margin: 0;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: var(--ms-0);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  &__description {
+    margin: 0 0 var(--ms-1);
+    color: #ffffff;
+    font-size: var(--ms-01);
+    line-height: 1.45;
+  }
+
+  &__description-em {
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  &__features {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  &__feature {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  &__feature-icon {
+    flex-shrink: 0;
+    color: var(--dark-greenish-yellow, #c8b06d);
+  }
+
+  &__feature-label {
+    color: #ffffff;
+    font-size: var(--ms-01);
+  }
+
+  &__rule {
+    margin: var(--ms-1) 0;
+    border: none;
+    border-top: 1px solid rgb(255 255 255 / 12%);
+  }
+
+  &__pricing {
+    display: flex;
+    justify-content: center;
+    margin-block-end: var(--ms-1);
+  }
+
+  &__price-row {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.1rem 0.2rem;
+  }
+
+  &__price-num {
+    color: #ffffff;
+    font-size: clamp(1.75rem, 6vw, 2.25rem);
+    font-weight: 700;
+  }
+
+  &__price-currency {
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  &__price-period {
+    color: rgb(255 255 255 / 55%);
+    font-size: var(--ms-01);
+    margin-inline-start: 0.15rem;
+    font-weight: 400;
+  }
+
+  &__cta {
+    display: block;
+    width: 100%;
+    padding: var(--ms-01) var(--ms-1);
+    color: #ffffff;
+    font-size: var(--ms-0);
+    text-align: center;
+    background: var(--button-background-color-hover, #998238);
+    border-radius: var(--ms-01);
+    transition: filter 0.15s ease;
+    text-decoration: none;
+    font-weight: 700;
+
+    &:hover {
+      filter: brightness(1.06);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--outline-color, #f3d69f);
+      outline-offset: 2px;
+    }
+  }
+
+  &__footnote {
+    margin: var(--ms-01) 0 0;
+    color: rgb(255 255 255 / 55%);
+    font-size: clamp(0.65rem, 2.1vw, var(--ms-01));
+    line-height: 1.35;
+    text-align: center;
+  }
+}

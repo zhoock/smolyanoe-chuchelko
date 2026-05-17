@@ -29,6 +29,11 @@ import { createSupabaseAdminClient, STORAGE_BUCKET_NAME } from './lib/supabase';
 import { sanitizeUploadFileName } from './lib/sanitizeFileName';
 import { hydrateMissingRuTranslationsOnArticle } from '../../src/entities/article/lib/hydrateMissingRuTranslations';
 import { formatPostgresDateOnly } from '../../src/shared/lib/dateCalendar';
+import {
+  normalizeTrackVisibility,
+  type TrackVisibility,
+} from '../../src/shared/lib/tracks/trackVisibility';
+import { viewerHasActiveSubscriptionToArtist } from './lib/entitlements';
 
 interface ArticleRow {
   id: string;
@@ -43,6 +48,7 @@ interface ArticleRow {
   is_draft: boolean;
   created_at: Date;
   updated_at: Date;
+  visibility?: string | null;
 }
 
 interface ArticleLocalePayload {
@@ -61,6 +67,9 @@ interface ArticleData {
   details: unknown[];
   description: string;
   isDraft?: boolean;
+  visibility?: TrackVisibility;
+  /** Публичный API: тело скрыто без активной подписки на этого артиста (аналог playbackLocked). */
+  articleLocked?: boolean;
   /** Внутренняя метка для merge по свежести строки (не язык). */
   updatedAt?: string;
   /** Присутствует у одноязычного ответа (POST и т.д.). */
@@ -144,6 +153,7 @@ function mergeArticleDataPayloads(payloads: ArticleData[]): ArticleData {
     date: shared.date,
     details: textRoot.details,
     isDraft: shared.isDraft,
+    visibility: shared.visibility,
     translations,
     updatedAt: shared.updatedAt,
   };
@@ -156,6 +166,7 @@ async function syncSharedArticleMetadataAcrossLocales(
     img?: string | null;
     date?: string;
     isDraft?: boolean;
+    visibility?: TrackVisibility;
   }
 ): Promise<void> {
   const sets: string[] = [];
@@ -173,6 +184,10 @@ async function syncSharedArticleMetadataAcrossLocales(
     sets.push(`is_draft = $${i++}`);
     values.push(patch.isDraft);
   }
+  if (patch.visibility !== undefined) {
+    sets.push(`visibility = $${i++}::varchar(24)`);
+    values.push(patch.visibility);
+  }
   if (sets.length === 0) return;
   sets.push('updated_at = CURRENT_TIMESTAMP');
   values.push(userId, articleId);
@@ -189,6 +204,59 @@ function mergeArticleRowsToApiData(rows: ArticleRow[]): ArticleData {
   return hydrateMissingRuTranslationsOnArticle(
     merged as import('../../src/models').IArticles
   ) as ArticleData;
+}
+
+async function buildPublicArticlePremiumContext(
+  event: HandlerEvent,
+  artistOwnerUserId: string
+): Promise<{ hasPremiumAccess: boolean }> {
+  const authUserId = getUserIdFromEvent(event);
+  return {
+    hasPremiumAccess: await viewerHasActiveSubscriptionToArtist(authUserId, artistOwnerUserId),
+  };
+}
+
+function stripArticleBodyForPublicLock(data: ArticleData): ArticleData {
+  const stripLocale = (loc: ArticleLocalePayload | undefined): ArticleLocalePayload => ({
+    nameArticle: loc?.nameArticle ?? '',
+    description: '',
+    details: [],
+  });
+  const translations = data.translations
+    ? (Object.fromEntries(
+        Object.entries(data.translations).map(([lang, loc]) => [
+          lang,
+          stripLocale(loc as ArticleLocalePayload),
+        ])
+      ) as Partial<Record<SupportedLang, ArticleLocalePayload>>)
+    : undefined;
+  return {
+    ...data,
+    description: '',
+    details: [],
+    translations,
+    articleLocked: true,
+  };
+}
+
+/**
+ * Публичный каталог: скрытые статьи не отдаём; subscribers_only без подписки —
+ * превью с articleLocked и без тела (аналог playbackLocked и пустого src у треков).
+ */
+function applyPublicArticleAccessPolicy(
+  articles: ArticleData[],
+  ctx: { hasPremiumAccess: boolean }
+): ArticleData[] {
+  const withoutHidden = articles.filter((a) => normalizeTrackVisibility(a.visibility) !== 'hidden');
+
+  return withoutHidden.map((a) => {
+    const visibility = normalizeTrackVisibility(a.visibility);
+    const needLock = visibility === 'subscribers_only' && !ctx.hasPremiumAccess;
+    if (needLock) {
+      return stripArticleBodyForPublicLock({ ...a, visibility });
+    }
+    return { ...a, visibility, articleLocked: false };
+  });
 }
 
 /**
@@ -216,6 +284,7 @@ function mapArticleToApiFormat(article: ArticleRow): ArticleData {
     details: (details as unknown[]) || [],
     description: article.description || '',
     isDraft: article.is_draft ?? false, // Статус черновика
+    visibility: normalizeTrackVisibility(article.visibility),
     lang: article.lang,
     updatedAt:
       article.updated_at != null ? new Date(article.updated_at as Date).toISOString() : undefined,
@@ -534,6 +603,7 @@ export const handler: Handler = async (
               details,
               lang,
               is_draft,
+              visibility,
               created_at,
               updated_at`;
 
@@ -584,7 +654,17 @@ export const handler: Handler = async (
           return createSuccessResponse([]);
         }
 
-        return createSuccessResponse([mergeArticleRowsToApiData(articleResult.rows)]);
+        const mergedOne = mergeArticleRowsToApiData(articleResult.rows);
+        if (!includeDrafts) {
+          const vis = normalizeTrackVisibility(mergedOne.visibility);
+          if (vis === 'hidden') {
+            return createSuccessResponse([]);
+          }
+          const accessCtx = await buildPublicArticlePremiumContext(event, targetUserId);
+          const [out] = applyPublicArticleAccessPolicy([mergedOne], accessCtx);
+          return createSuccessResponse([out]);
+        }
+        return createSuccessResponse([mergedOne]);
       }
 
       let targetUserId: string;
@@ -630,6 +710,11 @@ export const handler: Handler = async (
       const merged = articleIdsOrdered.map((aid) =>
         mergeArticleRowsToApiData(byArticleId.get(aid)!)
       );
+
+      if (!includeDrafts) {
+        const accessCtx = await buildPublicArticlePremiumContext(event, targetUserId);
+        return createSuccessResponse(applyPublicArticleAccessPolicy(merged, accessCtx));
+      }
 
       return createSuccessResponse(merged);
     }
@@ -686,7 +771,7 @@ export const handler: Handler = async (
            details = EXCLUDED.details,
            is_draft = EXCLUDED.is_draft,
            updated_at = CURRENT_TIMESTAMP
-         RETURNING id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at`,
+         RETURNING id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, visibility, created_at, updated_at`,
         [
           userId,
           data.articleId,
@@ -782,7 +867,7 @@ export const handler: Handler = async (
 
       const patch = data.translations?.[data.lang];
       const existingLocale = await query<ArticleRow>(
-        `SELECT id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, created_at, updated_at
+        `SELECT id, user_id, article_id, name_article, description, img, date, details, lang, is_draft, visibility, created_at, updated_at
          FROM articles
          WHERE user_id = $1::uuid AND article_id = $2 AND lang = $3`,
         [userId, resolvedArticleId, data.lang]

@@ -24,6 +24,106 @@
 
   &__card {
     @extend %card;
+
+    &--subscriber-locked {
+      transition: none;
+
+      .articles__card-hit {
+        display: block;
+        inline-size: 100%;
+        margin: 0;
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        text-align: inherit;
+        background: none;
+        border: none;
+        cursor: pointer;
+
+        &:focus-visible {
+          outline: 2px solid var(--outline-color, #f3d69f);
+          outline-offset: 2px;
+        }
+      }
+    }
+  }
+
+  /* Полоса только на обложке: по центру по вертикали ~65% высоты превью (как в макете). */
+  &__subscriber-overlay {
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    block-size: 65%;
+    min-block-size: 4.25rem;
+    gap: clamp(0.2rem, 1.5vw, 0.45rem);
+    padding: var(--ms-01) var(--ms-1);
+    text-align: center;
+    background: rgb(0 0 0 / 70%);
+    transition: background 0.2s ease;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  &__subscriber-lock-icon {
+    flex-shrink: 0;
+    color: #ffffff;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 45%));
+    opacity: 0.98;
+    transition:
+      color 0.2s ease,
+      opacity 0.2s ease;
+  }
+
+  &__subscriber-overlay-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: clamp(0.7rem, 2.2vw, var(--ms-0));
+    line-height: 1.25;
+  }
+
+  &__subscriber-overlay-hint {
+    margin: 0;
+    max-width: 16rem;
+    padding-inline: var(--ms-01);
+    font-weight: 400;
+    color: #ffffff;
+    font-size: clamp(0.58rem, 1.85vw, var(--ms-01));
+    line-height: 1.35;
+    opacity: 0.95;
+    transition: opacity 0.2s ease;
+  }
+
+  &__description--locked {
+    color: #ffffff;
+
+    time,
+    time small {
+      color: #888888;
+      opacity: 1;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &__card--subscriber-locked .articles__card-hit:hover {
+      .articles__subscriber-overlay {
+        background: rgb(0 0 0 / 76%);
+      }
+
+      .articles__subscriber-lock-icon {
+        color: #ffffff;
+        opacity: 1;
+      }
+
+      .articles__subscriber-overlay-hint {
+        opacity: 1;
+      }
+    }
   }
 
   &__description {
@@ -50,5 +150,90 @@
       height: 100%;
       object-fit: cover;
     }
+  }
+
+  .article__locked-shell {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+
+  .article__locked-cover-wrap {
+    margin-block: var(--ms-1);
+  }
+
+  .article__locked-cover {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    border-radius: var(--ms-01);
+    overflow: hidden;
+
+    picture {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    > img,
+    picture img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .article__locked-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ms-01);
+    padding: var(--ms-1);
+    text-align: center;
+    background: rgb(0 0 0 / 58%);
+    backdrop-filter: blur(6px);
+  }
+
+  .article__locked-icon {
+    color: var(--link-subtitle-color, #dddddd);
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 40%));
+  }
+
+  .article__locked-overlay-title {
+    margin: 0;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: var(--ms-0);
+    line-height: 1.3;
+    font-weight: 700;
+  }
+
+  .article__locked-overlay-hint {
+    margin: 0;
+    color: var(--link-subtitle-color, #dddddd);
+    font-size: var(--ms-01);
+    line-height: 1.45;
+    max-width: 22rem;
+  }
+
+  .article__locked-heading {
+    color: var(--accent-color);
+    margin-block-start: var(--ms-01);
+  }
+
+  .article__locked-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 600;
+
+    @include button-variant(
+      $color: var(--button-color-hover, #373633),
+      $background: var(--button-background-color-hover, #998238),
+      $margin: var(--ms-1) 0 0 0
+    );
   }
 }

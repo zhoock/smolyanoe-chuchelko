@@ -3,6 +3,7 @@
 
 import type { Track } from '@entities/track/model/types';
 import type { SupportedLang } from '@shared/model/lang';
+import type { TrackVisibility } from '@shared/lib/tracks/trackVisibility';
 
 export interface NavigationProps {
   /**  Открывает/закрывает Popup */
@@ -190,6 +191,10 @@ export type IArticles = {
   details: ArticledetailsProps[];
   description: string;
   isDraft?: boolean; // Статус черновика (опционально для обратной совместимости)
+  /** Доступ к статье на сайте (как у треков). */
+  visibility?: TrackVisibility;
+  /** Публичный API: контент скрыт до покупки альбома артиста (как playbackLocked у треков). */
+  articleLocked?: boolean;
   /**
    * Переводы статьи. Создание/обновление через API — только в `translations[lang]`.
    * Плоские поля на корне — ответ БД и временный fallback для старых данных.
@@ -220,6 +225,8 @@ export interface ArticleProps {
   img: string;
   nameArticle: string;
   date: string;
+  visibility?: TrackVisibility;
+  articleLocked?: boolean;
 }
 
 /** Подписи меню видимости трека в списке треков альбома (кабинет). */
@@ -392,6 +399,13 @@ export interface IInterface {
     trackAccessAriaLabel?: string;
     /** Тексты пунктов меню видимости трека */
     trackVisibility?: DashboardTrackVisibilityLabels;
+    /** aria-label кнопки доступа к статье (список в кабинете) */
+    articleAccessAriaLabel?: string;
+    /** Оверлей обложки статьи в режиме «только подписчики» */
+    articleSubscribersOnlyOverlayTitle?: string;
+    articleSubscribersOnlyOverlayHint?: string;
+    /** Подписи меню видимости статьи (если нет — используются trackVisibility). */
+    articleVisibility?: DashboardTrackVisibilityLabels;
     deleteAlbum?: string;
     errorLoading?: string;
     failedToLoadAlbums?: string;

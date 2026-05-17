@@ -53,8 +53,15 @@ export async function getMyPurchases(email: string): Promise<Purchase[]> {
 }
 
 /**
- * Получить URL для скачивания трека
+ * Получить URL для скачивания трека по токену покупки
  */
 export function getTrackDownloadUrl(purchaseToken: string, trackId: string): string {
   return `/api/download?token=${encodeURIComponent(purchaseToken)}&track=${encodeURIComponent(trackId)}`;
+}
+
+/**
+ * Скачивание с сессией: разрешено при покупке этого альбома или активной подписке (бэкенд).
+ */
+export function getTrackDownloadUrlForAlbumWithAuth(albumId: string, trackId: string): string {
+  return `/api/download?albumId=${encodeURIComponent(albumId)}&track=${encodeURIComponent(trackId)}`;
 }

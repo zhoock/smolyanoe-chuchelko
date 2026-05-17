@@ -5,7 +5,11 @@ export type { LocaleKey } from './lib/formatDate';
 export { formatDateInWords } from './lib/formatDate';
 export { resolveArticleForDisplay } from './lib/resolveArticleDisplay';
 
-export { articlesReducer, fetchArticles } from './model/articlesSlice';
+export {
+  articlesReducer,
+  fetchArticles,
+  patchDashboardArticleVisibility,
+} from './model/articlesSlice';
 export type { ArticlesState, RequestStatus } from './model/types';
 export type { FetchArticlesArg, FetchArticlesResult } from './model/articlesSlice';
 export {
