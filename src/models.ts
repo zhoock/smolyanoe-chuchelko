@@ -261,6 +261,8 @@ export interface IInterface {
     avatarMenu?: {
       settings: string;
       upgradePlan: string;
+      premiumActive?: string;
+      manageSubscription?: string;
       logOut: string;
     };
   };

@@ -25,6 +25,7 @@ import {
   metaString,
   type YooKassaPaymentApiShape,
 } from './lib/yookassa-webhook-verify';
+import { handlePremiumSubscriptionWebhookIfApplicable } from './lib/subscription-webhook';
 
 interface PaymentWebhookBody {
   type: string;
@@ -224,6 +225,11 @@ export const handler: Handler = async (event: HandlerEvent) => {
       { success: true, processed: false, message: 'Event type not handled' },
       headers
     );
+  }
+
+  const premiumHandled = await handlePremiumSubscriptionWebhookIfApplicable(event, data, headers);
+  if (premiumHandled !== null) {
+    return premiumHandled;
   }
 
   if (!isNotificationIpAllowed(clientIp, { skip: skipIpCheck, allowUnknownIp })) {

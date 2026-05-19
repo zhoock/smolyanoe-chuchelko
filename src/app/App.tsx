@@ -42,6 +42,10 @@ import { PlayerShell } from '@features/player';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
 import { FloatingCart } from '@entities/service/ui/FloatingCart';
 import { ArchiveAccessModalProvider } from '@shared/lib/archiveAccessModal';
+import {
+  PremiumSubscriptionProvider,
+  PremiumSuccessModalController,
+} from '@features/premiumSubscription';
 
 // Lazy loading для страниц - загружаются только при необходимости
 const Album = lazy(() => import('@pages/Album/Album'));
@@ -55,6 +59,9 @@ const OfferPage = lazy(() => import('@pages/Offer'));
 const UserDashboard = lazy(() => import('@pages/UserDashboard/UserDashboard'));
 const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
 const PaymentSuccess = lazy(() => import('@pages/PaymentSuccess/PaymentSuccess'));
+const SubscriptionPaymentSuccess = lazy(
+  () => import('@pages/SubscriptionPaymentSuccess/SubscriptionPaymentSuccess')
+);
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -267,8 +274,8 @@ function Layout() {
     matchPath({ path: pattern, end: true }, location.pathname)
   );
 
-  const isPaymentRoute = ['/pay/success', '/pay/fail'].some((pattern) =>
-    matchPath({ path: pattern, end: true }, location.pathname)
+  const isPaymentRoute = ['/pay/success', '/pay/fail', '/pay/subscription-success'].some(
+    (pattern) => matchPath({ path: pattern, end: true }, location.pathname)
   );
 
   const shouldHideChrome = !isKnownRoute;
@@ -488,84 +495,99 @@ function Layout() {
           </Suspense>
         }
       />
+      <Route
+        path="/pay/subscription-success"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <SubscriptionPaymentSuccess />
+          </Suspense>
+        }
+      />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 
   return (
     <ArchiveAccessModalProvider>
-      <DashboardModalShellContext.Provider value={dashboardModalShell}>
-        <CurrentArtistSync />
-        {/* БАЗОВЫЙ Helmet для всех страниц без собственного */}
-        <Helmet>
-          {/* динамический заголовок и описание */}
-          <title>{seo[lang].title}</title>
-          <meta name="description" content={seo[lang].desc} />
-          <meta name="color-scheme" content="dark light" />
-          <link rel="canonical" href={seo[lang].url} />
+      <PremiumSubscriptionProvider>
+        <DashboardModalShellContext.Provider value={dashboardModalShell}>
+          <CurrentArtistSync />
+          {/* БАЗОВЫЙ Helmet для всех страниц без собственного */}
+          <Helmet>
+            {/* динамический заголовок и описание */}
+            <title>{seo[lang].title}</title>
+            <meta name="description" content={seo[lang].desc} />
+            <meta name="color-scheme" content="dark light" />
+            <link rel="canonical" href={seo[lang].url} />
 
-          {/* hreflang для Google */}
-          <link rel="alternate" href="https://smolyanoechuchelko.ru/" hrefLang="ru" />
-          <link rel="alternate" href="https://smolyanoechuchelko.ru/en" hrefLang="en" />
-          <link rel="alternate" href="https://smolyanoechuchelko.ru/" hrefLang="x-default" />
+            {/* hreflang для Google */}
+            <link rel="alternate" href="https://smolyanoechuchelko.ru/" hrefLang="ru" />
+            <link rel="alternate" href="https://smolyanoechuchelko.ru/en" hrefLang="en" />
+            <link rel="alternate" href="https://smolyanoechuchelko.ru/" hrefLang="x-default" />
 
-          {/* Open Graph / Twitter */}
-          <meta property="og:type" content="website" />
-          <meta property="og:title" content={seo[lang].title} />
-          <meta property="og:description" content={seo[lang].desc} />
-          <meta property="og:url" content={seo[lang].url} />
-          <meta property="og:image" content={seo[lang].ogImage} />
-          <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={seo[lang].title} />
-          <meta name="twitter:description" content={seo[lang].desc} />
-          <meta name="twitter:image" content={seo[lang].ogImage} />
-        </Helmet>
+            {/* Open Graph / Twitter */}
+            <meta property="og:type" content="website" />
+            <meta property="og:title" content={seo[lang].title} />
+            <meta property="og:description" content={seo[lang].desc} />
+            <meta property="og:url" content={seo[lang].url} />
+            <meta property="og:image" content={seo[lang].ogImage} />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={seo[lang].title} />
+            <meta name="twitter:description" content={seo[lang].desc} />
+            <meta name="twitter:image" content={seo[lang].ogImage} />
+          </Helmet>
 
-        {isPaymentRoute ? (
-          <ErrorBoundary>
-            <main>{paymentRoutes}</main>
-          </ErrorBoundary>
-        ) : shouldHideChrome ? (
-          <ErrorBoundary>
-            <main>{notFoundRoutes}</main>
-          </ErrorBoundary>
-        ) : isHomeSceneRoute ? (
-          <ErrorBoundary>
-            <main>
-              <ErrorBoundary>{standardRoutes}</ErrorBoundary>
-            </main>
-            <PlayerShell />
-          </ErrorBoundary>
-        ) : (
-          <ErrorBoundary>
-            <Header
-              theme={theme}
-              onToggleTheme={toggleTheme}
-              navMenuOpen={popup}
-              onNavMenuToggle={() => {
-                if (popup) dispatch(closePopup());
-                else dispatch(openPopup());
-              }}
-            />
-            <main>
-              {!isHomeSceneRoute && <Hero />}
+          {isPaymentRoute ? (
+            <ErrorBoundary>
+              <main>{paymentRoutes}</main>
+            </ErrorBoundary>
+          ) : shouldHideChrome ? (
+            <ErrorBoundary>
+              <main>{notFoundRoutes}</main>
+            </ErrorBoundary>
+          ) : isHomeSceneRoute ? (
+            <ErrorBoundary>
+              <main>
+                <ErrorBoundary>{standardRoutes}</ErrorBoundary>
+              </main>
+              <PlayerShell />
+            </ErrorBoundary>
+          ) : (
+            <ErrorBoundary>
+              <Header
+                theme={theme}
+                onToggleTheme={toggleTheme}
+                navMenuOpen={popup}
+                onNavMenuToggle={() => {
+                  if (popup) dispatch(closePopup());
+                  else dispatch(openPopup());
+                }}
+              />
+              <main>
+                {!isHomeSceneRoute && <Hero />}
 
-              {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
+                {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
-              <Popup isActive={popup} onClose={() => dispatch(closePopup())}>
-                {/* Гамбургер внутри native dialog — в top layer, кликабелен; инлайн в шапке при открытом меню скрыт через behindDialogOverlap */}
-                <Hamburger isActive={popup} onToggle={() => dispatch(closePopup())} zIndex="1500" />
-                <Navigation onToggle={() => dispatch(closePopup())} />
-              </Popup>
+                <Popup isActive={popup} onClose={() => dispatch(closePopup())}>
+                  {/* Гамбургер внутри native dialog — в top layer, кликабелен; инлайн в шапке при открытом меню скрыт через behindDialogOverlap */}
+                  <Hamburger
+                    isActive={popup}
+                    onToggle={() => dispatch(closePopup())}
+                    zIndex="1500"
+                  />
+                  <Navigation onToggle={() => dispatch(closePopup())} />
+                </Popup>
 
-              <ErrorBoundary>{standardRoutes}</ErrorBoundary>
-            </main>
-            <Footer />
-            <PlayerShell />
-            <FloatingCart />
-          </ErrorBoundary>
-        )}
-      </DashboardModalShellContext.Provider>
+                <ErrorBoundary>{standardRoutes}</ErrorBoundary>
+              </main>
+              <Footer />
+              <PlayerShell />
+              <FloatingCart />
+            </ErrorBoundary>
+          )}
+          <PremiumSuccessModalController />
+        </DashboardModalShellContext.Provider>
+      </PremiumSubscriptionProvider>
     </ArchiveAccessModalProvider>
   );
 }

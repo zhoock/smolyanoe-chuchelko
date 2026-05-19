@@ -1,11 +1,15 @@
-import { useSearchParams, Link } from 'react-router-dom';
-import type { ReactNode, RefObject } from 'react';
+import { useState, useCallback, type ReactNode, type RefObject } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
+import { createSubscriptionPayment } from '@shared/api/subscription';
+import { savePremiumCheckoutArtistSlug } from '@features/premiumSubscription';
+import { getToken } from '@shared/lib/auth';
+import { getPremiumSubscriptionPriceDisplayAmount } from '@shared/lib/payment/premiumSubscriptionPricing';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 
 import '@shared/ui/popup/style.scss';
 import './archiveAccessModal.scss';
@@ -99,8 +103,10 @@ function formatDescriptionWithBoldSegments(text: string): ReactNode {
 
 export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   const { lang } = useLang() as { lang: 'ru' | 'en' };
-  const [searchParams] = useSearchParams();
-  const artistSlug = searchParams.get('artist');
+  const navigate = useNavigate();
+  const viewer = useAuthSessionUser();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
   const title =
@@ -120,7 +126,7 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
     ui?.titles?.archiveAccessFeatureDownloads ??
     (lang === 'en' ? 'Album downloads' : 'Скачивание альбомов');
 
-  const priceAmount = ui?.titles?.archiveAccessPriceAmount ?? '149';
+  const priceAmount = getPremiumSubscriptionPriceDisplayAmount();
   const priceCurrency = ui?.titles?.archiveAccessPriceCurrency ?? '₽';
   const pricePeriod =
     ui?.titles?.archiveAccessPricePeriod ?? (lang === 'en' ? '/ month' : '/ месяц');
@@ -131,7 +137,52 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
     ui?.titles?.archiveAccessFootnote ??
     (lang === 'en' ? 'Cancel anytime' : 'Отмена в любой момент');
 
-  const subscribeTo = withPublicArtistQuery('/albums', artistSlug);
+  const handleStartPremium = useCallback(async () => {
+    if (!getToken() && !viewer?.id) {
+      const returnPath =
+        typeof window !== 'undefined'
+          ? `${window.location.pathname}${window.location.search}`
+          : '/';
+      navigate(`/auth?returnTo=${encodeURIComponent(returnPath)}`);
+      onClose();
+      return;
+    }
+
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+
+    try {
+      const returnPath =
+        typeof window !== 'undefined'
+          ? `${window.location.pathname}${window.location.search}`
+          : '/';
+      const returnUrl =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/pay/subscription-success?returnTo=${encodeURIComponent(returnPath)}`
+          : undefined;
+
+      const result = await createSubscriptionPayment({ returnUrl });
+
+      if (!result.success || !result.data) {
+        setCheckoutError(result.error || 'Could not start checkout');
+        setCheckoutLoading(false);
+        return;
+      }
+
+      if (result.data.confirmationUrl) {
+        savePremiumCheckoutArtistSlug();
+        onClose();
+        window.location.href = result.data.confirmationUrl;
+        return;
+      }
+
+      setCheckoutError('Payment provider did not return a checkout URL');
+      setCheckoutLoading(false);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'Checkout failed');
+      setCheckoutLoading(false);
+    }
+  }, [navigate, onClose, viewer?.id]);
 
   const features: { Icon: typeof FeatureIconMusic; label: string }[] = [
     { Icon: FeatureIconMusic, label: fTracks },
@@ -194,9 +245,23 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
           </span>
         </div>
 
-        <Link className="archive-access-modal__cta" to={subscribeTo} onClick={onClose}>
-          {subscribeLabel}
-        </Link>
+        <button
+          type="button"
+          className="archive-access-modal__cta"
+          disabled={checkoutLoading}
+          onClick={handleStartPremium}
+        >
+          {checkoutLoading
+            ? lang === 'en'
+              ? 'Redirecting…'
+              : 'Переход к оплате…'
+            : subscribeLabel}
+        </button>
+        {checkoutError ? (
+          <p className="archive-access-modal__checkout-error" role="alert">
+            {checkoutError}
+          </p>
+        ) : null}
         <p className="archive-access-modal__footnote">{footnote}</p>
       </div>
     </dialog>

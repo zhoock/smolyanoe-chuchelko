@@ -70,10 +70,12 @@ export function useArtistArchiveStatus(artistUserId: string | null | undefined) 
     window.addEventListener('archive:changed', onArchiveChanged);
     window.addEventListener('archive:artist-added', onArchiveChanged);
     window.addEventListener('archive:artist-removed', onArchiveChanged);
+    window.addEventListener('subscription:activated', onArchiveChanged);
     return () => {
       window.removeEventListener('archive:changed', onArchiveChanged);
       window.removeEventListener('archive:artist-added', onArchiveChanged);
       window.removeEventListener('archive:artist-removed', onArchiveChanged);
+      window.removeEventListener('subscription:activated', onArchiveChanged);
     };
   }, [refetch, viewer?.id]);
 

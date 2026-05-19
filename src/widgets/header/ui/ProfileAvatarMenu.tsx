@@ -4,8 +4,15 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { clearAuth } from '@shared/lib/auth';
+import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 import { useStoredProfileAvatarUrl } from '@shared/lib/hooks/useAvatar';
-import { IconLogOut, IconSettings, IconUpgradeSparkle } from './headerProfileMenuIcons';
+import {
+  IconLogOut,
+  IconPremiumBadge,
+  IconSettings,
+  IconUpgradeSparkle,
+} from './headerProfileMenuIcons';
+import { usePremiumSubscription } from '@features/premiumSubscription';
 import './profileAvatarMenu.scss';
 
 export type ProfileAvatarMenuProps = {
@@ -26,6 +33,8 @@ function ProfileAvatarMenuComponent({
   const navigate = useNavigate();
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const { isPremium } = usePremiumSubscription();
+  const { open: openPremiumModal } = useArchiveAccessModal();
   const [menuOpen, setMenuOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const avatarSrc = useStoredProfileAvatarUrl();
@@ -109,16 +118,40 @@ function ProfileAvatarMenuComponent({
             <IconSettings className="header__profile-menu-icon" />
             <span>{avatarLabels?.settings ?? 'Settings'}</span>
           </Link>
-          <Link
-            className="header__profile-menu-item"
-            role="menuitem"
-            to="/dashboard-new/payment-settings"
-            state={dashboardLinkState}
-            onClick={() => updateOpen(false)}
-          >
-            <IconUpgradeSparkle className="header__profile-menu-icon" />
-            <span>{avatarLabels?.upgradePlan ?? 'Upgrade plan'}</span>
-          </Link>
+          {isPremium ? (
+            <Link
+              className="header__profile-menu-item header__profile-menu-item--premium"
+              role="menuitem"
+              to="/dashboard-new/archive"
+              state={dashboardLinkState}
+              onClick={() => updateOpen(false)}
+            >
+              <IconPremiumBadge className="header__profile-menu-icon header__profile-menu-icon--premium" />
+              <span className="header__profile-menu-item-text">
+                <span className="header__profile-menu-item-title header__profile-menu-item-title--premium">
+                  {avatarLabels?.premiumActive ?? 'Premium Active'}
+                </span>
+                <span className="header__profile-menu-item-subtitle">
+                  {avatarLabels?.manageSubscription ?? 'Manage subscription'}
+                </span>
+              </span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="header__profile-menu-item header__profile-menu-item--upgrade"
+              role="menuitem"
+              onClick={() => {
+                updateOpen(false);
+                openPremiumModal();
+              }}
+            >
+              <IconUpgradeSparkle className="header__profile-menu-icon header__profile-menu-icon--upgrade" />
+              <span className="header__profile-menu-item-title header__profile-menu-item-title--upgrade">
+                {avatarLabels?.upgradePlan ?? 'Upgrade plan'}
+              </span>
+            </button>
+          )}
           <button
             type="button"
             className="header__profile-menu-item header__profile-menu-item--danger"

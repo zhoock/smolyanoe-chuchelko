@@ -87,6 +87,45 @@
 .header__profile-menu-icon {
   flex-shrink: 0;
   opacity: 0.9;
+
+  &--upgrade {
+    color: var(--dark-greenish-yellow, #c8b06d);
+  }
+
+  &--premium {
+    color: #5cb87a;
+  }
+}
+
+.header__profile-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.header__profile-menu-item-title {
+  &--upgrade {
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-weight: 600;
+  }
+
+  &--premium {
+    color: #5cb87a;
+    font-weight: 600;
+  }
+}
+
+.header__profile-menu-item-subtitle {
+  color: rgb(255 255 255 / 55%);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.header__profile-menu-item--premium:hover {
+  .header__profile-menu-item-title--premium {
+    color: #72d492;
+  }
 }
 
 .header__profile-avatar {

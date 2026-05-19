@@ -23,7 +23,7 @@ export interface Subscription {
   updatedAt: Date;
 }
 
-interface SubscriptionRow {
+export interface SubscriptionRow {
   id: string;
   user_id: string;
   status: SubscriptionStatus;
@@ -37,7 +37,7 @@ interface SubscriptionRow {
   updated_at: Date;
 }
 
-function mapSubscriptionRow(row: SubscriptionRow): Subscription {
+export function mapSubscriptionRow(row: SubscriptionRow): Subscription {
   return {
     id: row.id,
     userId: row.user_id,

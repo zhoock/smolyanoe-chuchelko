@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from 'react';
 
 import { ArchiveAccessModalView } from './ArchiveAccessModalView';
 
@@ -15,6 +23,12 @@ export function ArchiveAccessModalProvider({ children }: { children: ReactNode }
   const close = useCallback(() => {
     dialogRef.current?.close();
   }, []);
+
+  useEffect(() => {
+    const onActivated = () => close();
+    window.addEventListener('subscription:activated', onActivated);
+    return () => window.removeEventListener('subscription:activated', onActivated);
+  }, [close]);
 
   const open = useCallback(() => {
     dialogRef.current?.showModal();

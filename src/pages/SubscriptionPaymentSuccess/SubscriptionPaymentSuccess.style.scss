@@ -1,0 +1,22 @@
+.subscription-payment-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  padding: var(--ms-2);
+  text-align: center;
+
+  &__text {
+    margin: 0;
+    color: var(--text-color, inherit);
+    font-size: var(--fs-1);
+
+    &--ok {
+      color: var(--success-color, #3d9a5c);
+    }
+
+    &--warn {
+      color: var(--warning-color, #c9a227);
+    }
+  }
+}

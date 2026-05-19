@@ -12,6 +12,8 @@
       "avatarMenu": {
         "settings": "Settings",
         "upgradePlan": "Upgrade plan",
+        "premiumActive": "Premium Active",
+        "manageSubscription": "Manage subscription",
         "logOut": "Log out"
       }
     },
@@ -76,7 +78,10 @@
       "artistArchiveAdd": "Add to Archive",
       "artistArchiveInArchive": "In Archive",
       "artistArchiveFull": "Archive Full",
-      "artistArchiveAdding": "Adding…"
+      "artistArchiveAdding": "Adding…",
+      "premiumSuccessAdd": "Add",
+      "premiumSuccessGoToArchive": "Go to Archive",
+      "premiumSuccessMaybeLater": "Maybe later"
     },
     "titles": {
       "albums": "albums",
@@ -109,7 +114,12 @@
       "artistArchiveSlotsLeft": "{count} slot left",
       "artistArchiveSlotsLeftPlural": "{count} slots left",
       "artistArchiveFullTitle": "Archive full",
-      "artistArchiveFullMessage": "You have used all archive slots. Replacing an artist will be available later."
+      "artistArchiveFullMessage": "You have used all archive slots. Replacing an artist will be available later.",
+      "premiumSuccessTitle": "You're Premium!",
+      "premiumSuccessSubtitle": "Add this artist to your archive and unlock exclusive content.",
+      "premiumSuccessSlotsHint": "You can have {count} artists in your archive.",
+      "premiumSuccessArchiveFull": "Archive is full",
+      "premiumSuccessAddError": "Could not add artist"
     },
     "links": {
       "home": "home",

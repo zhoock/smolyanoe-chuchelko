@@ -52,6 +52,34 @@ export function IconUpgradeSparkle(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconPremiumBadge(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+      {...props}
+    >
+      <path
+        stroke="currentColor"
+        strokeWidth={1.5}
+        d="M12 2.5l2.2 4.46 4.92.72-3.56 3.47.84 4.9L12 14.77l-4.4 2.28.84-4.9-3.56-3.47 4.92-.72L12 2.5Z"
+      />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth={1.5} />
+      <path
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8.5 12.2l2.2 2.2 4.8-5"
+      />
+    </svg>
+  );
+}
+
 export function IconLogOut(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

@@ -1,0 +1,203 @@
+.premium-success-modal {
+  margin: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  max-width: calc(100vw - 1.5rem);
+
+  &::backdrop {
+    background: rgb(0 0 0 / 62%);
+    backdrop-filter: blur(8px);
+  }
+
+  &__panel {
+    position: relative;
+    width: min(24rem, calc(100vw - 1.5rem));
+    padding: var(--ms-1) var(--ms-1) var(--ms-0);
+    color: var(--text-color, #e6e6e4);
+    text-align: center;
+    background: var(--main-background-color, #141413);
+    border: 1px solid var(--dark-greenish-yellow, #c8b06d);
+    border-radius: var(--ms-01);
+    box-shadow: 0 12px 40px rgb(0 0 0 / 50%);
+  }
+
+  &__close {
+    position: absolute;
+    top: var(--ms-01);
+    right: var(--ms-01);
+    display: flex;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+    font-size: 1.35rem;
+    line-height: 1;
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      background: rgb(255 255 255 / 14%);
+    }
+  }
+
+  &__icon-wrap {
+    display: flex;
+    justify-content: center;
+    margin-block-end: var(--ms-01);
+  }
+
+  &__icon {
+    color: var(--dark-greenish-yellow, #c8b06d);
+  }
+
+  &__title {
+    margin: 0 0 var(--ms-01);
+    color: #ffffff;
+    font-size: var(--ms-0);
+    font-weight: 700;
+  }
+
+  &__subtitle {
+    margin: 0 0 var(--ms-1);
+    color: rgb(255 255 255 / 72%);
+    font-size: var(--ms-01);
+    line-height: 1.45;
+  }
+
+  &__artist {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--ms-01);
+    align-items: center;
+    margin-block-end: var(--ms-01);
+    padding: var(--ms-01);
+    text-align: start;
+    background: rgb(255 255 255 / 4%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: var(--ms-01);
+  }
+
+  &__artist-cover {
+    overflow: hidden;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--ms-01);
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__artist-cover-fallback {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: var(--ms-0);
+    font-weight: 700;
+    background: rgb(255 255 255 / 8%);
+    place-items: center;
+  }
+
+  &__artist-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  &__artist-name {
+    overflow: hidden;
+    color: #ffffff;
+    font-size: var(--ms-01);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__artist-genre {
+    color: rgb(255 255 255 / 55%);
+    font-size: clamp(0.65rem, 2.1vw, var(--ms-01));
+  }
+
+  &__artist-add {
+    padding: 0.35rem 0.65rem;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: var(--ms-01);
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--dark-greenish-yellow, #c8b06d);
+    border-radius: var(--ms-01);
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+  }
+
+  &__artist-added {
+    color: #5cb87a;
+    font-size: var(--ms-0);
+    font-weight: 700;
+  }
+
+  &__error {
+    margin: 0 0 var(--ms-01);
+    color: #e8a0a0;
+    font-size: var(--ms-01);
+  }
+
+  &__slots-hint {
+    margin: 0 0 var(--ms-1);
+    color: rgb(255 255 255 / 55%);
+    font-size: clamp(0.65rem, 2.1vw, var(--ms-01));
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-01);
+  }
+
+  &__cta {
+    width: 100%;
+    padding: var(--ms-01) var(--ms-1);
+    color: #ffffff;
+    font-size: var(--ms-0);
+    font-weight: 700;
+    background: var(--button-background-color-hover, #998238);
+    border: none;
+    border-radius: var(--ms-01);
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(1.06);
+    }
+  }
+
+  &__secondary {
+    width: 100%;
+    padding: var(--ms-01) var(--ms-1);
+    color: rgb(255 255 255 / 78%);
+    font-size: var(--ms-01);
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: var(--ms-01);
+    cursor: pointer;
+
+    &:hover {
+      background: rgb(255 255 255 / 10%);
+    }
+  }
+}

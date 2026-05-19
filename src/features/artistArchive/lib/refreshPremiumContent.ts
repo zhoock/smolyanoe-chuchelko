@@ -45,3 +45,13 @@ export function dispatchArchiveArtistRemoved(
     new CustomEvent(ARCHIVE_CHANGED_EVENT, { detail: { ...detail, type: 'removed' } })
   );
 }
+
+export const SUBSCRIPTION_ACTIVATED_EVENT = 'subscription:activated';
+
+export function dispatchSubscriptionActivated(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(SUBSCRIPTION_ACTIVATED_EVENT));
+  window.dispatchEvent(
+    new CustomEvent(ARCHIVE_CHANGED_EVENT, { detail: { type: 'subscription' } })
+  );
+}

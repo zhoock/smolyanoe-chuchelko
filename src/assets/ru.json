@@ -12,6 +12,8 @@
       "avatarMenu": {
         "settings": "Настройки",
         "upgradePlan": "Тариф / подписка",
+        "premiumActive": "Premium Active",
+        "manageSubscription": "Управление подпиской",
         "logOut": "Выйти"
       }
     },
@@ -76,7 +78,10 @@
       "artistArchiveAdd": "Добавить в архив",
       "artistArchiveInArchive": "В архиве",
       "artistArchiveFull": "Архив заполнен",
-      "artistArchiveAdding": "Добавляем…"
+      "artistArchiveAdding": "Добавляем…",
+      "premiumSuccessAdd": "Добавить",
+      "premiumSuccessGoToArchive": "Перейти в архив",
+      "premiumSuccessMaybeLater": "Позже"
     },
     "titles": {
       "albums": "альбомы",
@@ -109,7 +114,12 @@
       "artistArchiveSlotsLeft": "Остался {count} слот",
       "artistArchiveSlotsLeftPlural": "Осталось {count} слота",
       "artistArchiveFullTitle": "Архив заполнен",
-      "artistArchiveFullMessage": "Все слоты архива заняты. Замена артиста будет доступна позже."
+      "artistArchiveFullMessage": "Все слоты архива заняты. Замена артиста будет доступна позже.",
+      "premiumSuccessTitle": "Вы Premium!",
+      "premiumSuccessSubtitle": "Добавьте артиста в архив и откройте эксклюзивный контент.",
+      "premiumSuccessSlotsHint": "В архиве может быть {count} артиста.",
+      "premiumSuccessArchiveFull": "Архив заполнен",
+      "premiumSuccessAddError": "Не удалось добавить артиста"
     },
     "links": {
       "home": "главная",
