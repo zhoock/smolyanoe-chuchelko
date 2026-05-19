@@ -33,7 +33,7 @@ import { rankToOrderIndex } from '../../src/shared/lib/tracks/trackOrderIndex';
 import { normalizeTrackVisibility } from '../../src/shared/lib/tracks/trackVisibility';
 import { hydrateMissingRuTranslationsOnAlbum } from '../../src/entities/album/lib/hydrateMissingRuTranslations';
 import type { IAlbums } from '../../src/models';
-import { viewerHasActiveSubscriptionToArtist } from './lib/entitlements';
+import { viewerHasPremiumAccessToArtist } from './lib/entitlements';
 
 interface AlbumRow {
   id: string;
@@ -1024,10 +1024,7 @@ export const handler: Handler = async (
         let merged = mergeAlbumDataPayloads(payloads);
 
         if (isPublicCatalogRequest) {
-          const hasPremiumAccess = await viewerHasActiveSubscriptionToArtist(
-            authUserId,
-            targetUserId
-          );
+          const hasPremiumAccess = await viewerHasPremiumAccessToArtist(authUserId, targetUserId);
           merged = applyPublicTrackAccessPolicy(merged, { hasPremiumAccess });
         } else {
           merged = {

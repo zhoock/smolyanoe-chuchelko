@@ -316,6 +316,7 @@ export interface IInterface {
       paymentSettings: string;
       myPurchases?: string;
       mixer?: string;
+      archive?: string;
     };
     profile: string;
     profileSettings: string;
@@ -455,6 +456,25 @@ export interface IInterface {
     dragImageHereOr: string;
     loading?: string;
     saving?: string;
+    archive?: {
+      title: string;
+      subtitle: string;
+      slotsUsed: string;
+      inArchiveSince: string;
+      remove: string;
+      removing: string;
+      slotAvailable: string;
+      slotsAvailablePlural: string;
+      emptySlotHint: string;
+      discoverArtists: string;
+      archiveFull: string;
+      cooldownInfo: string;
+      cooldownNext: string;
+      cooldownDays: string;
+      loading: string;
+      loadError: string;
+      removeError: string;
+    };
     myPurchases?: {
       title: string;
       purchasesFor: string;

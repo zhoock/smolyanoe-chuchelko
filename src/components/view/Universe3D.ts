@@ -152,6 +152,7 @@ function sampleCloudLabelPositionsWithMinSep(
 export const UNIVERSE_FOCUS_ARTIST_STORAGE_KEY = 'focusArtist';
 
 export type SceneArtist = {
+  userId?: string;
   name: string;
   publicSlug: string;
   genreCode: string;

@@ -251,6 +251,12 @@ export async function closePool(): Promise<void> {
   }
 }
 
+/** PostgreSQL: relation/table does not exist (migration not applied yet). */
+export function isMissingRelationError(error: unknown): boolean {
+  const code = (error as { code?: string })?.code;
+  return code === '42P01';
+}
+
 /**
  * Минимальный ping БД для health-check (без verbose-логики {@link query}).
  */

@@ -9,6 +9,7 @@ import { ArticleSkeleton } from './ArticleSkeleton';
 import { ErrorMessage } from '@shared/ui/error-message';
 import { ImageCarousel } from '@shared/ui/image-carousel';
 import { useLang } from '@app/providers/lang';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { formatDateInWords, type LocaleKey } from '@entities/article/lib/formatDate';
 import {
@@ -21,9 +22,13 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
 import { ArticleCoverImage } from '@entities/article/ui/ArticleCoverImage';
+import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
+import { refreshPremiumContentForArchiveChange } from '@features/artistArchive';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
+  const dispatch = useAppDispatch();
+
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
@@ -33,6 +38,14 @@ export function ArticlePage() {
   const { articleId = '' } = useParams<{ articleId: string }>();
   const [searchParams] = useSearchParams();
   const artistSlug = searchParams.get('artist');
+
+  useEffect(() => {
+    const onArchiveChanged = () => {
+      refreshPremiumContentForArchiveChange(dispatch, artistSlug);
+    };
+    window.addEventListener('archive:changed', onArchiveChanged);
+    return () => window.removeEventListener('archive:changed', onArchiveChanged);
+  }, [artistSlug, dispatch]);
   const homePath = withPublicArtistQuery('/', artistSlug);
   const articlesListPath = withPublicArtistQuery('/articles', artistSlug);
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
@@ -196,7 +209,7 @@ function ArticleContent({
   renderBlock,
 }: ArticleContentProps) {
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const albumsPath = withPublicArtistQuery('/albums', artistSlug);
+  const { open: openArchiveAccessModal } = useArchiveAccessModal();
 
   const overlayTitle =
     ui?.titles?.articleLockedOverlayTitle ??
@@ -205,7 +218,7 @@ function ArticleContent({
     ui?.titles?.articleLockedOverlayHint ??
     (lang === 'en' ? 'Purchase an album to read this content.' : 'Оформите подписку, чтобы читать');
   const ctaLabel =
-    ui?.buttons?.articleLockedViewAlbums ?? (lang === 'en' ? 'Browse albums' : 'К альбомам');
+    ui?.buttons?.archiveAccessSubscribe ?? (lang === 'en' ? 'Start Premium' : 'Стать Premium');
   if (!article) {
     if (status === 'loading' || status === 'idle') {
       return <ArticleSkeleton />;
@@ -267,9 +280,9 @@ function ArticleContent({
             </div>
           </div>
           <h2 className="article__locked-heading">{article.nameArticle}</h2>
-          <Link className="article__locked-cta" to={albumsPath}>
+          <button type="button" className="article__locked-cta" onClick={openArchiveAccessModal}>
             {ctaLabel}
-          </Link>
+          </button>
         </div>
       </>
     );

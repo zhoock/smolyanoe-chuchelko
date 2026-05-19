@@ -18,6 +18,8 @@ import {
 } from '@/components/view/Universe3D';
 import '@/components/view/Universe3D.style.scss';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
+import { ArtistArchiveButton } from '@features/artistArchive';
+import { useLang } from '@app/providers/lang';
 import './style.scss';
 
 const HERO_CLUSTER_PALETTE = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5] as const;
@@ -64,10 +66,15 @@ export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [headerImages, setHeaderImages] = useState<string[]>([]);
   const [profileName, setProfileName] = useState<string>(() => readStoredProfileDisplayName());
+  const [artistPageMeta, setArtistPageMeta] = useState<{
+    userId: string;
+    genreLabel: string;
+  } | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isImagesLoading, setIsImagesLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { lang } = useLang() as { lang: 'ru' | 'en' };
   const publicArtistSlug = useAppSelector(selectPublicArtistSlug);
   const heroCanvasRef = useRef<HTMLDivElement | null>(null);
   const lastPathRef = useRef<string>('');
@@ -147,6 +154,50 @@ export function Hero() {
     };
     loadImages();
   }, [heroSearchString, publicArtistSlug]);
+
+  useEffect(() => {
+    if (!hasArtistParam || !artistParamKey) {
+      setArtistPageMeta(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadArtistMeta = async () => {
+      try {
+        const response = await fetchWithAuthSession('/api/public-artists');
+        const payload = (await response.json()) as {
+          success?: boolean;
+          data?: SceneArtist[];
+        };
+        if (!response.ok || !payload.success || !Array.isArray(payload.data)) {
+          if (!cancelled) setArtistPageMeta(null);
+          return;
+        }
+
+        const match =
+          payload.data.find((artist) => artist.publicSlug?.trim() === artistParamKey) ?? null;
+        if (!cancelled) {
+          if (match?.userId) {
+            setArtistPageMeta({
+              userId: match.userId,
+              genreLabel: match.genreLabel?.[lang] ?? match.genreCode ?? '',
+            });
+          } else {
+            setArtistPageMeta(null);
+          }
+        }
+      } catch {
+        if (!cancelled) setArtistPageMeta(null);
+      }
+    };
+
+    void loadArtistMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [artistParamKey, hasArtistParam, lang]);
 
   // Загружаем название группы:
   // - public (/ и /?artist=...): всегда из API public профиля, без JWT
@@ -495,7 +546,15 @@ export function Hero() {
       }
     >
       {hasArtistParam && <div ref={heroCanvasRef} className="hero__canvas" />}
-      <h1 className="hero__title">{displayName}</h1>
+      <div className="hero__content">
+        {artistPageMeta?.genreLabel ? (
+          <p className="hero__genre">{artistPageMeta.genreLabel}</p>
+        ) : null}
+        <h1 className="hero__title">{displayName}</h1>
+        {hasArtistParam ? (
+          <ArtistArchiveButton artistUserId={artistPageMeta?.userId ?? null} />
+        ) : null}
+      </div>
     </section>
   );
 }

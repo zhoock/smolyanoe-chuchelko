@@ -15,6 +15,7 @@ import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
+import { refreshPremiumContentForArchiveChange } from '@features/artistArchive';
 import {
   formatAlbumDisplayFullName,
   readStoredProfileDisplayName,
@@ -117,6 +118,14 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
   useEffect(() => {
     playlistLengthRef.current = store.getState().player.playlist.length;
   }, [store]);
+
+  useEffect(() => {
+    const onArchiveChanged = () => {
+      refreshPremiumContentForArchiveChange(dispatch, artistSlugFromUrl);
+    };
+    window.addEventListener('archive:changed', onArchiveChanged);
+    return () => window.removeEventListener('archive:changed', onArchiveChanged);
+  }, [artistSlugFromUrl, dispatch]);
 
   useEffect(() => {
     const shouldBeOpen = location.hash === '#player';

@@ -18,6 +18,7 @@ interface PublicArtistRow {
 }
 
 interface PublicArtistDto {
+  userId: string;
   name: string;
   publicSlug: string;
   genreCode: string;
@@ -90,6 +91,7 @@ export const handler: Handler = async (
         .filter(Boolean);
 
       return {
+        userId: row.id,
         name: displayName,
         publicSlug: row.public_slug || '',
         genreCode,

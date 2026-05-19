@@ -32,8 +32,9 @@ function resolveRequestUrl(input: RequestInfo | URL): string {
 }
 
 /**
- * fetch + обработка 401 от кастомного JWT API: очистка сессии и переход на /auth
- * (кроме логина/регистрации и ответов с code INVALID_CREDENTIALS).
+ * fetch + обработка 401 от кастомного JWT API.
+ * Logout/redirect только если в запросе был Bearer и сервер отклонил сессию
+ * (истёкший/невалидный JWT). 401 без токена — обычный unauthorized, сессию не трогаем.
  */
 export async function fetchWithAuthSession(
   input: RequestInfo | URL,
@@ -64,11 +65,13 @@ export async function fetchWithAuthSession(
 
   const hadBearer = requestInitSentBearerToken(init);
 
+  /** Session invalidation only when we sent a token and the server rejected it. */
   const isSessionFailure =
-    code === 'SESSION_EXPIRED' ||
-    code === 'INVALID_SESSION' ||
-    code === 'UNAUTHORIZED' ||
-    (hadBearer && code === undefined);
+    hadBearer &&
+    (code === 'SESSION_EXPIRED' ||
+      code === 'INVALID_SESSION' ||
+      code === 'UNAUTHORIZED' ||
+      code === undefined);
 
   if (!isSessionFailure) {
     return response;

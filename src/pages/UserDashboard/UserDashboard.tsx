@@ -38,6 +38,7 @@ import { toLocalYYYYMMDD } from '@shared/lib/dateCalendar';
 import { Popup } from '@shared/ui/popup';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import { AlertModal } from '@shared/ui/alertModal';
+import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
 import { logout, isAuthenticated, getToken } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
@@ -78,6 +79,7 @@ import { ProfileSettingsModal } from './components/modals/profile/ProfileSetting
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
+import { MyArchiveContent } from './components/archive/MyArchiveContent';
 import type { IAlbums, IArticles, IInterface, DashboardTrackVisibilityLabels } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
@@ -957,6 +959,7 @@ const DASHBOARD_TAB_SLUGS = [
   'my-purchases',
   'profile',
   'mixer',
+  'archive',
 ] as const;
 
 export type DashboardTab = (typeof DASHBOARD_TAB_SLUGS)[number];
@@ -981,6 +984,8 @@ function dashboardHeadingForTab(tab: DashboardTab, ui: IInterface | null): strin
       return d?.tabs?.posts ?? 'Articles';
     case 'mixer':
       return d?.tabs?.mixer ?? 'Mixer';
+    case 'archive':
+      return d?.archive?.title ?? d?.tabs?.archive ?? 'Archive';
     case 'payment-settings':
       return d?.tabs?.paymentSettings ?? 'Payment Settings';
     case 'my-purchases':
@@ -2722,6 +2727,16 @@ function UserDashboard() {
                 <button
                   type="button"
                   className={`user-dashboard__nav-item ${
+                    activeTab === 'archive' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
+                  onClick={() => goDashboard('/dashboard-new/archive')}
+                >
+                  <SubscriberContentLockIcon className="user-dashboard__nav-item-icon" size={14} />
+                  {ui?.dashboard?.tabs?.archive ?? 'Archive'}
+                </button>
+                <button
+                  type="button"
+                  className={`user-dashboard__nav-item ${
                     activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
                   }`}
                   onClick={() => goDashboard('/dashboard-new/payment-settings')}
@@ -2790,6 +2805,13 @@ function UserDashboard() {
                           />
                         </div>
                       </>
+                    </div>
+                    <div
+                      className="user-dashboard__tab-panel"
+                      hidden={activeTab !== 'archive'}
+                      aria-hidden={activeTab !== 'archive'}
+                    >
+                      <MyArchiveContent active={activeTab === 'archive'} />
                     </div>
                     <div
                       className="user-dashboard__tab-panel"

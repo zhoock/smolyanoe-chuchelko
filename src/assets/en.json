@@ -72,7 +72,11 @@
       "allArticlesLoaded": "All articles loaded",
       "articleLockedViewAlbums": "Browse albums",
       "articleLockedDialogClose": "Close",
-      "archiveAccessSubscribe": "Start Premium"
+      "archiveAccessSubscribe": "Start Premium",
+      "artistArchiveAdd": "Add to Archive",
+      "artistArchiveInArchive": "In Archive",
+      "artistArchiveFull": "Archive Full",
+      "artistArchiveAdding": "Adding…"
     },
     "titles": {
       "albums": "albums",
@@ -101,7 +105,11 @@
       "archiveAccessPriceAmount": "149",
       "archiveAccessPriceCurrency": "₽",
       "archiveAccessPricePeriod": "/ month",
-      "archiveAccessFootnote": "Cancel anytime"
+      "archiveAccessFootnote": "Cancel anytime",
+      "artistArchiveSlotsLeft": "{count} slot left",
+      "artistArchiveSlotsLeftPlural": "{count} slots left",
+      "artistArchiveFullTitle": "Archive full",
+      "artistArchiveFullMessage": "You have used all archive slots. Replacing an artist will be available later."
     },
     "links": {
       "home": "home",
@@ -120,7 +128,27 @@
         "posts": "Posts",
         "paymentSettings": "Payment Settings",
         "myPurchases": "My Purchases",
-        "mixer": "Mixer"
+        "mixer": "Mixer",
+        "archive": "Archive"
+      },
+      "archive": {
+        "title": "Your Archive",
+        "subtitle": "Artists in your archive are unlocked across the platform: tracks, articles, stems and album downloads.",
+        "slotsUsed": "slots used",
+        "inArchiveSince": "In Archive since",
+        "remove": "Remove",
+        "removing": "Removing…",
+        "slotAvailable": "{count} slot available",
+        "slotsAvailablePlural": "{count} slots available",
+        "emptySlotHint": "Add another artist to unlock their exclusive content.",
+        "discoverArtists": "Discover Artists",
+        "archiveFull": "Archive Full",
+        "cooldownInfo": "You can change your archived artists once per month.",
+        "cooldownNext": "Next change will be available on {date}.",
+        "cooldownDays": "Change available in 31 days",
+        "loading": "Loading archive…",
+        "loadError": "Failed to load archive",
+        "removeError": "Failed to remove artist"
       },
       "mixer": {
         "title": "Mixer",

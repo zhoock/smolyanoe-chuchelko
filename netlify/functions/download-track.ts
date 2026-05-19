@@ -11,7 +11,7 @@ import { getUserIdFromEvent } from './lib/api-helpers';
 import {
   getArtistUserIdForAlbumSlug,
   getViewerEmailLower,
-  viewerHasActiveSubscriptionToArtist,
+  viewerHasPremiumAccessToArtist,
   viewerPurchasedAlbum,
 } from './lib/entitlements';
 
@@ -86,7 +86,7 @@ export const handler: Handler = async (
       }
       const emailLower = await getViewerEmailLower(authUserId);
       const purchased = await viewerPurchasedAlbum(albumIdParam, emailLower);
-      const subscribed = await viewerHasActiveSubscriptionToArtist(authUserId, ownerId);
+      const subscribed = await viewerHasPremiumAccessToArtist(authUserId, ownerId);
       if (!purchased && !subscribed) {
         return {
           statusCode: 403,

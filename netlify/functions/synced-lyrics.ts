@@ -10,7 +10,7 @@ import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
 import { getUserIdFromEvent, unauthorizedFromAuthHeader } from './lib/api-helpers';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
-import { viewerHasActiveSubscriptionToArtist } from './lib/entitlements';
+import { viewerHasPremiumAccessToArtist } from './lib/entitlements';
 
 interface SyncedLyricsRow {
   id: string;
@@ -176,7 +176,7 @@ export const handler: Handler = async (
       /** Публичные sync-lyrics только с premium-подпиской на артиста (не с покупкой альбома). */
       if (artist?.trim()) {
         const artistOwnerId = albumUserId || targetUserId;
-        const canRead = await viewerHasActiveSubscriptionToArtist(authUserId, artistOwnerId);
+        const canRead = await viewerHasPremiumAccessToArtist(authUserId, artistOwnerId);
         if (!canRead) {
           return {
             statusCode: 200,

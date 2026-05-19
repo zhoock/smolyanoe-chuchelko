@@ -1,10 +1,35 @@
 /**
- * Права на контент артиста: покупка альбома vs premium-подписка.
- * Подписка — источник доступа к subscribers_only (треки/статьи), sync lyrics, и т.д.;
- * покупка альбома — только владение этим релизом и скачивание его треков (без premium).
+ * Единый слой проверки прав на контент артиста.
+ *
+ * Покупка альбома — владение релизом и скачивание его треков (без premium).
+ * Premium — subscribers_only (треки/статьи), sync lyrics и т.д.
+ *
+ * Формула доступа:
+ *   subscription.active && artist in user_archive
+ * (владелец артиста и dev mock — override).
  */
 
 import { query } from './db';
+import { userHasArtistInArchive } from './archive';
+import { viewerHasActiveSubscription } from './subscriptions';
+
+export {
+  getViewerSubscription,
+  isSubscriptionActive,
+  viewerHasActiveSubscription,
+} from './subscriptions';
+export type { Subscription, SubscriptionStatus } from './subscriptions';
+export {
+  addArtistToArchive,
+  countUserArchiveSlots,
+  getArchiveStatusForArtist,
+  getUserArchiveArtists,
+  removeArtistFromArchive,
+  userHasArtistInArchive,
+  ArchiveSlotsLimitError,
+  ArchiveSubscriptionRequiredError,
+} from './archive';
+export type { ArchiveStatus, UserArchiveEntry } from './archive';
 
 export async function getViewerEmailLower(userId: string): Promise<string | null> {
   const r = await query<{ email: string }>(`SELECT email FROM users WHERE id = $1::uuid LIMIT 1`, [
@@ -35,21 +60,33 @@ export async function getArtistUserIdForAlbumSlug(albumSlug: string): Promise<st
 }
 
 /**
- * Активная premium-подписка на артиста (заглушка до таблицы subscriptions).
+ * Premium-доступ к контенту артиста.
  *
- * MOCK_ACTIVE_SUBSCRIPTION_USER_IDS — список UUID через запятую; эти пользователи считаются
- * подписанными на любого артиста (удобно для dev).
- *
- * MOCK_SUBSCRIPTION_USER_ARTIST_PAIRS — пары `subscriberUserId:artistUserId` через запятую.
+ * Владелец артиста всегда имеет доступ.
+ * Dev mock: MOCK_ACTIVE_SUBSCRIPTION_USER_IDS, MOCK_SUBSCRIPTION_USER_ARTIST_PAIRS.
  */
-export async function viewerHasActiveSubscriptionToArtist(
+export async function viewerHasPremiumAccessToArtist(
   viewerUserId: string | null,
-  artistOwnerUserId: string
+  artistUserId: string | null | undefined
 ): Promise<boolean> {
-  if (!viewerUserId) return false;
-  if (viewerUserId === artistOwnerUserId) return true;
-  return Promise.resolve(mockActiveSubscriptionForArtist(viewerUserId, artistOwnerUserId));
+  const artistId = artistUserId?.trim();
+  if (!viewerUserId || !artistId) return false;
+  if (viewerUserId === artistId) return true;
+
+  if (mockActiveSubscriptionForArtist(viewerUserId, artistId)) {
+    return true;
+  }
+
+  const [hasSubscription, inArchive] = await Promise.all([
+    viewerHasActiveSubscription(viewerUserId),
+    userHasArtistInArchive(viewerUserId, artistId),
+  ]);
+
+  return hasSubscription && inArchive;
 }
+
+/** @deprecated Use viewerHasPremiumAccessToArtist — kept for stale bundles / gradual migration. */
+export const viewerHasActiveSubscriptionToArtist = viewerHasPremiumAccessToArtist;
 
 function mockActiveSubscriptionForArtist(viewerUserId: string, artistOwnerUserId: string): boolean {
   const envAll = process.env.MOCK_ACTIVE_SUBSCRIPTION_USER_IDS?.trim();

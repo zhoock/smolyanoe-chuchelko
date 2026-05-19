@@ -70,13 +70,30 @@
     min-height: 120px;
   }
 
-  &__title {
+  &__content {
     position: relative;
     z-index: 2;
-    inset-block-start: -2vi;
     inline-size: min(100vi, 1000px);
     margin: 0 auto;
     padding: 0 $ms-1;
+    pointer-events: none;
+  }
+
+  &__genre {
+    margin: 0 0 0.15em;
+    color: var(--link-color, #4d80ff);
+    font-family: var(--base-font-family);
+    font-size: clamp(0.875rem, 0.82rem + 0.2vw, 1rem);
+    font-weight: var(--regular, 400);
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+  }
+
+  &__title {
+    position: relative;
+    inset-block-start: -2vi;
+    margin: 0;
+    padding: 0;
     color: var(--white);
     font-family: var(--base-font-family);
     font-weight: var(--semibold);

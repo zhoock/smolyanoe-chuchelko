@@ -205,6 +205,34 @@
   status = 200
   force = true
 
+# Archive status
+[[redirects]]
+  from = "/api/archive-status*"
+  to = "/.netlify/functions/archive-status"
+  status = 200
+  force = true
+
+# Add to archive
+[[redirects]]
+  from = "/api/add-to-archive*"
+  to = "/.netlify/functions/add-to-archive"
+  status = 200
+  force = true
+
+# My archive
+[[redirects]]
+  from = "/api/my-archive*"
+  to = "/.netlify/functions/my-archive"
+  status = 200
+  force = true
+
+# Remove from archive
+[[redirects]]
+  from = "/api/remove-from-archive*"
+  to = "/.netlify/functions/remove-from-archive"
+  status = 200
+  force = true
+
 # Test email (для тестирования отправки email)
 [[redirects]]
   from = "/api/test-email*"

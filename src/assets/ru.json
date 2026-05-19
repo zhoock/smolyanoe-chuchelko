@@ -72,7 +72,11 @@
       "allArticlesLoaded": "Все статьи загружены",
       "articleLockedViewAlbums": "К альбомам",
       "articleLockedDialogClose": "Закрыть",
-      "archiveAccessSubscribe": "Стать Premium"
+      "archiveAccessSubscribe": "Стать Premium",
+      "artistArchiveAdd": "Добавить в архив",
+      "artistArchiveInArchive": "В архиве",
+      "artistArchiveFull": "Архив заполнен",
+      "artistArchiveAdding": "Добавляем…"
     },
     "titles": {
       "albums": "альбомы",
@@ -101,7 +105,11 @@
       "archiveAccessPriceAmount": "149",
       "archiveAccessPriceCurrency": "₽",
       "archiveAccessPricePeriod": "/ месяц",
-      "archiveAccessFootnote": "Отмена в любой момент"
+      "archiveAccessFootnote": "Отмена в любой момент",
+      "artistArchiveSlotsLeft": "Остался {count} слот",
+      "artistArchiveSlotsLeftPlural": "Осталось {count} слота",
+      "artistArchiveFullTitle": "Архив заполнен",
+      "artistArchiveFullMessage": "Все слоты архива заняты. Замена артиста будет доступна позже."
     },
     "links": {
       "home": "главная",
@@ -120,7 +128,27 @@
         "posts": "Статьи",
         "paymentSettings": "Настройки оплаты",
         "myPurchases": "Мои покупки",
-        "mixer": "Миксер"
+        "mixer": "Миксер",
+        "archive": "Архив"
+      },
+      "archive": {
+        "title": "Ваш архив",
+        "subtitle": "Артисты в архиве открывают контент на всей платформе: треки, статьи, стемы и скачивание альбомов.",
+        "slotsUsed": "слотов занято",
+        "inArchiveSince": "В архиве с",
+        "remove": "Удалить",
+        "removing": "Удаляем…",
+        "slotAvailable": "Доступен {count} слот",
+        "slotsAvailablePlural": "Доступно {count} слота",
+        "emptySlotHint": "Добавьте артиста, чтобы открыть эксклюзивный контент.",
+        "discoverArtists": "Найти артистов",
+        "archiveFull": "Архив заполнен",
+        "cooldownInfo": "Менять артистов в архиве можно раз в месяц.",
+        "cooldownNext": "Следующая смена будет доступна {date}.",
+        "cooldownDays": "Смена через 31 день",
+        "loading": "Загрузка архива…",
+        "loadError": "Не удалось загрузить архив",
+        "removeError": "Не удалось удалить артиста"
       },
       "mixer": {
         "title": "Миксер",

@@ -33,7 +33,7 @@ import {
   normalizeTrackVisibility,
   type TrackVisibility,
 } from '../../src/shared/lib/tracks/trackVisibility';
-import { viewerHasActiveSubscriptionToArtist } from './lib/entitlements';
+import { viewerHasPremiumAccessToArtist } from './lib/entitlements';
 
 interface ArticleRow {
   id: string;
@@ -208,11 +208,15 @@ function mergeArticleRowsToApiData(rows: ArticleRow[]): ArticleData {
 
 async function buildPublicArticlePremiumContext(
   event: HandlerEvent,
-  artistOwnerUserId: string
+  artistOwnerUserId: string | null | undefined
 ): Promise<{ hasPremiumAccess: boolean }> {
   const authUserId = getUserIdFromEvent(event);
+  const artistId = artistOwnerUserId?.trim();
+  if (!artistId) {
+    return { hasPremiumAccess: false };
+  }
   return {
-    hasPremiumAccess: await viewerHasActiveSubscriptionToArtist(authUserId, artistOwnerUserId),
+    hasPremiumAccess: await viewerHasPremiumAccessToArtist(authUserId, artistId),
   };
 }
 

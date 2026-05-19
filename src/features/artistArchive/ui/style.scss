@@ -1,0 +1,80 @@
+@use '../../../scss/abstracts/mixins' as *;
+
+.artist-archive-button {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $ms-0;
+  margin-block-start: $ms-0;
+  pointer-events: auto;
+
+  &__btn {
+    display: inline-flex;
+    padding: 0.35em 0.85em;
+    color: var(--amber, #e6b422);
+    font-size: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+    line-height: 1.2;
+    background: transparent;
+    border: 1px solid var(--amber, #e6b422);
+    border-radius: 999px;
+    transition:
+      opacity 0.15s ease,
+      background-color 0.15s ease;
+    align-items: center;
+    gap: 0.35em;
+    font-family: inherit;
+    font-weight: var(--semibold, 600);
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.92;
+    }
+
+    &:hover:not(:disabled) {
+      background: rgb(230 180 34 / 12%);
+    }
+
+    &--loading,
+    &--adding {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    &--in_archive {
+      border-color: rgb(230 180 34 / 55%);
+      color: rgb(230 180 34 / 85%);
+    }
+
+    &--archive_full {
+      cursor: pointer;
+    }
+  }
+
+  &__plus,
+  &__check,
+  &__lock {
+    font-size: 0.95em;
+    line-height: 1;
+  }
+
+  &__slots {
+    color: rgb(255 255 255 / 72%);
+    font-size: clamp(0.65rem, 0.62rem + 0.15vw, 0.75rem);
+    white-space: nowrap;
+  }
+
+  &__error {
+    padding: 0;
+    color: #ffb4b4;
+    font-size: 0.75rem;
+    line-height: 1;
+    background: rgb(255 60 60 / 15%);
+    border: 1px solid rgb(255 100 100 / 60%);
+    border-radius: 50%;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
