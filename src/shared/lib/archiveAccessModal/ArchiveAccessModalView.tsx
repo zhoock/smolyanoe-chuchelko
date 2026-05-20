@@ -8,8 +8,14 @@ import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLoc
 import { createSubscriptionPayment } from '@shared/api/subscription';
 import { savePremiumCheckoutArtistSlug } from '@features/premiumSubscription';
 import { getToken } from '@shared/lib/auth';
+import {
+  beginPremiumCheckoutAuthIntent,
+  clearPremiumCheckoutAuthIntent,
+} from '@shared/lib/authIntent';
 import { getPremiumSubscriptionPriceDisplayAmount } from '@shared/lib/payment/premiumSubscriptionPricing';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
+
+import type { CloseArchiveAccessModalOptions } from './archiveAccessModalContext';
 
 import '@shared/ui/popup/style.scss';
 import './archiveAccessModal.scss';
@@ -82,7 +88,7 @@ function FeatureIconDownload({ className }: { className?: string }) {
 
 type Props = {
   dialogRef: RefObject<HTMLDialogElement | null>;
-  onClose: () => void;
+  onClose: (options?: CloseArchiveAccessModalOptions) => void;
 };
 
 /** Фрагменты `**выделение**` в строке из словаря → `<strong>`. */
@@ -129,22 +135,20 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   const priceAmount = getPremiumSubscriptionPriceDisplayAmount();
   const priceCurrency = ui?.titles?.archiveAccessPriceCurrency ?? '₽';
   const pricePeriod =
-    ui?.titles?.archiveAccessPricePeriod ?? (lang === 'en' ? '/ month' : '/ месяц');
+    ui?.titles?.archiveAccessPricePeriod ?? (lang === 'en' ? '/ 30 days' : '/ 30 дней');
   const subscribeLabel =
     ui?.buttons?.archiveAccessSubscribe ?? (lang === 'en' ? 'Start Premium' : 'Стать Premium');
   const closeLabel = ui?.buttons?.articleLockedDialogClose ?? (lang === 'en' ? 'Close' : 'Закрыть');
-  const footnote =
-    ui?.titles?.archiveAccessFootnote ??
-    (lang === 'en' ? 'Cancel anytime' : 'Отмена в любой момент');
+  const footnote = ui?.titles?.archiveAccessFootnote?.trim() ?? '';
 
   const handleStartPremium = useCallback(async () => {
+    const returnPath =
+      typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/';
+
     if (!getToken() && !viewer?.id) {
-      const returnPath =
-        typeof window !== 'undefined'
-          ? `${window.location.pathname}${window.location.search}`
-          : '/';
+      beginPremiumCheckoutAuthIntent({ returnTo: returnPath });
       navigate(`/auth?returnTo=${encodeURIComponent(returnPath)}`);
-      onClose();
+      onClose({ preserveCheckoutIntent: true });
       return;
     }
 
@@ -152,10 +156,6 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
     setCheckoutError(null);
 
     try {
-      const returnPath =
-        typeof window !== 'undefined'
-          ? `${window.location.pathname}${window.location.search}`
-          : '/';
       const returnUrl =
         typeof window !== 'undefined'
           ? `${window.location.origin}/pay/subscription-success?returnTo=${encodeURIComponent(returnPath)}`
@@ -170,8 +170,9 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
       }
 
       if (result.data.confirmationUrl) {
+        clearPremiumCheckoutAuthIntent();
         savePremiumCheckoutArtistSlug();
-        onClose();
+        onClose({ preserveCheckoutIntent: true });
         window.location.href = result.data.confirmationUrl;
         return;
       }
@@ -207,7 +208,7 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
           type="button"
           className="archive-access-modal__close"
           aria-label={closeLabel}
-          onClick={onClose}
+          onClick={() => onClose()}
         >
           <span aria-hidden>×</span>
         </button>
@@ -262,7 +263,7 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
             {checkoutError}
           </p>
         ) : null}
-        <p className="archive-access-modal__footnote">{footnote}</p>
+        {footnote ? <p className="archive-access-modal__footnote">{footnote}</p> : null}
       </div>
     </dialog>
   );

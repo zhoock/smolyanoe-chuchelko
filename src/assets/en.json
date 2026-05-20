@@ -13,7 +13,7 @@
         "settings": "Settings",
         "upgradePlan": "Upgrade plan",
         "premiumActive": "Premium Active",
-        "manageSubscription": "Manage subscription",
+        "manageSubscription": "Open Archive",
         "logOut": "Log out"
       }
     },
@@ -59,8 +59,11 @@
     },
     "buttons": {
       "playButton": "play",
-      "purchase": "purchase",
-      "stream": "stream",
+      "purchase": "Purchase",
+      "stream": "Stream",
+      "buyAlbum": "Buy Album",
+      "buyAlbumPermanentAccess": "Permanent access",
+      "buyAlbumInCart": "Album already in cart",
       "show": "show more",
       "less": "less",
       "pause": "pause",
@@ -109,8 +112,7 @@
       "archiveAccessFeatureDownloads": "Album downloads",
       "archiveAccessPriceAmount": "149",
       "archiveAccessPriceCurrency": "₽",
-      "archiveAccessPricePeriod": "/ month",
-      "archiveAccessFootnote": "Cancel anytime",
+      "archiveAccessPricePeriod": "/ 30 days",
       "artistArchiveSlotsLeft": "{count} slot left",
       "artistArchiveSlotsLeftPlural": "{count} slots left",
       "artistArchiveFullTitle": "Archive full",

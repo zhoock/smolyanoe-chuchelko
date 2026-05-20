@@ -210,6 +210,12 @@ function ArticleContent({
 }: ArticleContentProps) {
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { open: openArchiveAccessModal } = useArchiveAccessModal();
+  const openPremiumPaywall = () => {
+    openArchiveAccessModal({
+      artistUserId: article?.userId,
+      artistSlug,
+    });
+  };
 
   const overlayTitle =
     ui?.titles?.articleLockedOverlayTitle ??
@@ -280,7 +286,7 @@ function ArticleContent({
             </div>
           </div>
           <h2 className="article__locked-heading">{article.nameArticle}</h2>
-          <button type="button" className="article__locked-cta" onClick={openArchiveAccessModal}>
+          <button type="button" className="article__locked-cta" onClick={openPremiumPaywall}>
             {ctaLabel}
           </button>
         </div>

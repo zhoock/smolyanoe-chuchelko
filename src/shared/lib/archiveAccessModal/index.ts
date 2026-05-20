@@ -1,1 +1,5 @@
-export { ArchiveAccessModalProvider, useArchiveAccessModal } from './archiveAccessModalContext';
+export {
+  ArchiveAccessModalProvider,
+  useArchiveAccessModal,
+  type OpenArchiveAccessModalOptions,
+} from './archiveAccessModalContext';

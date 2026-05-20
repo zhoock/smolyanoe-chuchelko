@@ -328,7 +328,10 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       isPlayingNow: boolean;
     }) => {
       if (isTrackPlaybackBlocked(track)) {
-        openArchiveAccessModal();
+        openArchiveAccessModal({
+          artistUserId: album.userId,
+          artistSlug: artistSlugFromUrl,
+        });
         return;
       }
 
@@ -351,7 +354,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
 
       void openPlayer(index, { openFullScreen: false });
     },
-    [album, lang, openArchiveAccessModal, openPlayer, store]
+    [album, album.userId, artistSlugFromUrl, lang, openArchiveAccessModal, openPlayer, store]
   );
 
   const renderBlock = useCallback(

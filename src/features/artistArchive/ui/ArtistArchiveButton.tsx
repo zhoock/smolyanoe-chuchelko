@@ -77,7 +77,10 @@ export function ArtistArchiveButton({ artistUserId }: Props) {
       event.stopPropagation();
 
       if (buttonState === 'not_premium') {
-        openPremiumModal();
+        openPremiumModal({
+          artistUserId: artistUserId ?? undefined,
+          artistSlug: publicArtistSlug?.trim() || undefined,
+        });
         return;
       }
 

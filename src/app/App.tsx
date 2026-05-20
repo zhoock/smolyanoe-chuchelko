@@ -42,6 +42,7 @@ import { PlayerShell } from '@features/player';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
 import { FloatingCart } from '@entities/service/ui/FloatingCart';
 import { ArchiveAccessModalProvider } from '@shared/lib/archiveAccessModal';
+import { PremiumCheckoutIntentResumeController } from '@shared/lib/authIntent';
 import {
   PremiumSubscriptionProvider,
   PremiumSuccessModalController,
@@ -587,6 +588,7 @@ function Layout() {
             </ErrorBoundary>
           )}
           <PremiumEntitlementRefreshController />
+          <PremiumCheckoutIntentResumeController />
           <PremiumSuccessModalController />
         </DashboardModalShellContext.Provider>
       </PremiumSubscriptionProvider>

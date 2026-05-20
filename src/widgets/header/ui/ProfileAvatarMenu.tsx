@@ -132,7 +132,8 @@ function ProfileAvatarMenuComponent({
                   {avatarLabels?.premiumActive ?? 'Premium Active'}
                 </span>
                 <span className="header__profile-menu-item-subtitle">
-                  {avatarLabels?.manageSubscription ?? 'Manage subscription'}
+                  {avatarLabels?.manageSubscription ??
+                    (lang === 'en' ? 'Open Archive' : 'Открыть архив')}
                 </span>
               </span>
             </Link>

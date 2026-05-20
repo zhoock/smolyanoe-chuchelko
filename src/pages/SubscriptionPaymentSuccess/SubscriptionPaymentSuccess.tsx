@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 
 import { getSubscriptionPaymentStatus } from '@shared/api/subscription';
 import { dispatchSubscriptionActivated } from '@features/artistArchive';
+import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import {
   markPremiumCheckoutPending,
   savePremiumCheckoutArtistSlug,
@@ -34,6 +35,7 @@ export default function SubscriptionPaymentSuccess() {
     finishedRef.current = true;
 
     markPremiumCheckoutPending();
+    clearPremiumCheckoutAuthIntent();
 
     const target = returnTo?.trim();
     let resolvedArtistSlug = artistSlug?.trim() || '';

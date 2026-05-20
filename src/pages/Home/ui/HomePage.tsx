@@ -29,6 +29,7 @@ import {
   isTrackPlaybackBlocked,
   resolveFirstPlayableIndex,
 } from '@shared/lib/tracks/trackPlayback';
+import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { isAuthenticated } from '@shared/lib/auth';
 import { ProfileAvatarMenu } from '@widgets/header';
@@ -296,6 +297,7 @@ export function HomePage() {
           <button
             type="button"
             onClick={() => {
+              clearPremiumCheckoutAuthIntent();
               const authParams = new URLSearchParams({ mode: 'register' });
               appendReturnTo(authParams, location);
               navigate(

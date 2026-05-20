@@ -13,42 +13,9 @@ import './PurchasePopup.style.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
+import { getAlbumPrice } from '../lib/getAlbumPrice';
 
 type Step = 'cart' | 'checkout';
-
-// Утилита для получения цены и валюты из альбома
-const getAlbumPrice = (album: IAlbums): { price: string; currency: string; formatted: string } => {
-  const release = album.release && typeof album.release === 'object' ? album.release : {};
-  const regularPrice = (release as any).regularPrice || '0.99';
-  const currency = (release as any).currency || 'USD';
-
-  // Форматируем цену с символом валюты
-  const priceNum = parseFloat(regularPrice) || 0;
-  const formattedPrice = priceNum.toFixed(2);
-
-  // Определяем символ валюты и форматируем цену
-  let formatted = '';
-  switch (currency.toUpperCase()) {
-    case 'RUB':
-      // Для рубля символ ставится после цены
-      formatted = `${formattedPrice} ₽`;
-      break;
-    case 'EUR':
-      formatted = `€${formattedPrice}`;
-      break;
-    case 'USD':
-      formatted = `$${formattedPrice}`;
-      break;
-    default:
-      formatted = `${currency.toUpperCase()}${formattedPrice}`;
-  }
-
-  return {
-    price: regularPrice,
-    currency: currency,
-    formatted: formatted,
-  };
-};
 
 // Валидация
 interface ValidationErrors {

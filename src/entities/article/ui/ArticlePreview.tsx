@@ -27,6 +27,12 @@ export function ArticlePreview({
   const articlePath = withPublicArtistQuery(`/articles/${articleId}`, artistSlug);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const { open: openArchiveAccessModal } = useArchiveAccessModal();
+  const openPremiumPaywall = () => {
+    openArchiveAccessModal({
+      artistUserId: userId,
+      artistSlug,
+    });
+  };
 
   const overlayTitle =
     ui?.titles?.articleLockedOverlayTitle ??
@@ -72,7 +78,7 @@ export function ArticlePreview({
       className="articles__card articles__card--subscriber-locked"
       aria-label={`${overlayTitle}. ${nameArticle}`}
     >
-      <button type="button" className="articles__card-hit" onClick={openArchiveAccessModal}>
+      <button type="button" className="articles__card-hit" onClick={openPremiumPaywall}>
         <div className="articles__picture">
           <ArticleCoverImage
             img={img}

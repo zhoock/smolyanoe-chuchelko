@@ -3,6 +3,7 @@ import { memo, useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
+import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { useLang } from '@app/providers/lang'; // берём из контекста
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -130,7 +131,10 @@ const HeaderComponent = ({
               className="header__sign-in"
               to={{ pathname: '/auth', search: `?${authParams.toString()}` }}
               state={{ backgroundLocation: location }}
-              onClick={() => setLangOpen(false)}
+              onClick={() => {
+                clearPremiumCheckoutAuthIntent();
+                setLangOpen(false);
+              }}
             >
               {ui?.header?.signIn ?? 'Sign in'}
             </Link>

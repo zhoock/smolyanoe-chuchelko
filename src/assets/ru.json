@@ -13,7 +13,7 @@
         "settings": "Настройки",
         "upgradePlan": "Тариф / подписка",
         "premiumActive": "Premium Active",
-        "manageSubscription": "Управление подпиской",
+        "manageSubscription": "Открыть архив",
         "logOut": "Выйти"
       }
     },
@@ -61,6 +61,9 @@
       "playButton": "воспроизвести",
       "purchase": "купить",
       "stream": "слушать",
+      "buyAlbum": "Купить альбом",
+      "buyAlbumPermanentAccess": "Постоянный доступ",
+      "buyAlbumInCart": "Альбом уже в корзине",
       "show": "показать ещё",
       "less": "меньше",
       "pause": "пауза",
@@ -109,8 +112,7 @@
       "archiveAccessFeatureDownloads": "Скачивание альбомов",
       "archiveAccessPriceAmount": "149",
       "archiveAccessPriceCurrency": "₽",
-      "archiveAccessPricePeriod": "/ месяц",
-      "archiveAccessFootnote": "Отмена в любой момент",
+      "archiveAccessPricePeriod": "/ 30 дней",
       "artistArchiveSlotsLeft": "Остался {count} слот",
       "artistArchiveSlotsLeftPlural": "Осталось {count} слота",
       "artistArchiveFullTitle": "Архив заполнен",

@@ -2,6 +2,8 @@
  * Клиентские утилиты для работы с аутентификацией
  */
 
+import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
+
 const TOKEN_STORAGE_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'auth_user';
 
@@ -191,6 +193,7 @@ export function clearAuth(): void {
   try {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
+    clearPremiumCheckoutAuthIntent();
     dispatchAuthSessionChanged();
   } catch (error) {
     console.error('❌ Failed to clear auth data:', error);

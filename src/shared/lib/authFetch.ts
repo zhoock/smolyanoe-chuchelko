@@ -1,6 +1,7 @@
 /**
  * Обёртка над fetch для защищённых /api/*: синхронизация UI с 401 (истёкший JWT и т.д.).
  */
+import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { clearAuth, AUTH_EXPIRED_BANNER_SESSION_KEY } from './auth';
 
 const AUTH_PATH_SUBSTRINGS = ['/api/auth/login', '/api/auth/register'];
@@ -100,6 +101,7 @@ export async function fetchWithAuthSession(
     }
   }
 
+  clearPremiumCheckoutAuthIntent();
   clearAuth();
   window.location.assign('/auth');
   return response;

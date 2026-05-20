@@ -11,6 +11,7 @@ import {
   isAlbumPaidSaleEnabled,
 } from '../lib/albumPurchaseUtils';
 import { useYooKassaShopAvailableForAlbum } from '../lib/useYooKassaShopAvailableForAlbum';
+import { getAlbumPrice } from '../lib/getAlbumPrice';
 import './style.scss';
 
 type ServiceButtonsProps = {
@@ -31,7 +32,13 @@ function ServiceButtonsContent({
 }: {
   album: IAlbums;
   section: string;
-  labels: { purchase: string; stream: string };
+  labels: {
+    purchase: string;
+    stream: string;
+    buyAlbum: string;
+    buyAlbumPermanentAccess: string;
+    buyAlbumInCart: string;
+  };
 }) {
   const { addToCart, cartAlbums } = useCart();
   const buttons = album?.buttons as String;
@@ -70,6 +77,7 @@ function ServiceButtonsContent({
 
   const showDownloadButton =
     isPaidSaleEnabled && !yookassaLoading && yookassaAvailable && section === 'Купить';
+  const albumPrice = showDownloadButton ? getAlbumPrice(album).formatted : '';
 
   return (
     <div className="service-buttons">
@@ -81,33 +89,45 @@ function ServiceButtonsContent({
             aria-label="Блок со ссылками на платные музыкальные агрегаторы"
           >
             {showDownloadButton && (
-              <li className="service-buttons__list-item">
+              <li className="service-buttons__list-item service-buttons__list-item--buy-album">
                 <a
                   href="#"
                   className={`service-buttons__link service-buttons__link--download${
                     isInCart ? ' service-buttons__link--in-cart' : ''
                   }`}
-                  aria-label={isInCart ? 'Альбом уже в корзине' : 'Скачать альбом'}
+                  aria-label={
+                    isInCart
+                      ? labels.buyAlbumInCart
+                      : `${labels.buyAlbum}, ${albumPrice}, ${labels.buyAlbumPermanentAccess}`
+                  }
                   aria-disabled={isInCart}
                   tabIndex={isInCart ? -1 : 0}
                   onClick={handleDownloadClick}
                 >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  <span className="visually-hidden">Скачать альбом</span>
+                  <span className="service-buttons__download-icon" aria-hidden="true">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                  </span>
+                  <span className="service-buttons__download-copy">
+                    <span className="service-buttons__download-title">{labels.buyAlbum}</span>
+                    <span className="service-buttons__download-subtitle">
+                      {labels.buyAlbumPermanentAccess}
+                    </span>
+                  </span>
+                  <span className="service-buttons__download-divider" aria-hidden="true" />
+                  <span className="service-buttons__download-price">{albumPrice}</span>
                 </a>
               </li>
             )}
@@ -163,13 +183,30 @@ export function ServiceButtons({ album, section }: ServiceButtonsProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  // UI словарь загружается через loader
-
-  const fallbackLabels = { purchase: 'Купить', stream: 'Слушать' };
+  const fallbackLabels =
+    lang === 'en'
+      ? {
+          purchase: 'Purchase',
+          stream: 'Stream',
+          buyAlbum: 'Buy Album',
+          buyAlbumPermanentAccess: 'Permanent access',
+          buyAlbumInCart: 'Album already in cart',
+        }
+      : {
+          purchase: 'Купить',
+          stream: 'Слушать',
+          buyAlbum: 'Купить альбом',
+          buyAlbumPermanentAccess: 'Постоянный доступ',
+          buyAlbumInCart: 'Альбом уже в корзине',
+        };
   const buttons = ui?.buttons ?? {};
   const labels = {
     purchase: buttons.purchase ?? fallbackLabels.purchase,
     stream: buttons.stream ?? fallbackLabels.stream,
+    buyAlbum: buttons.buyAlbum ?? fallbackLabels.buyAlbum,
+    buyAlbumPermanentAccess:
+      buttons.buyAlbumPermanentAccess ?? fallbackLabels.buyAlbumPermanentAccess,
+    buyAlbumInCart: buttons.buyAlbumInCart ?? fallbackLabels.buyAlbumInCart,
   };
 
   return <ServiceButtonsContent album={album} section={section} labels={labels} />;
