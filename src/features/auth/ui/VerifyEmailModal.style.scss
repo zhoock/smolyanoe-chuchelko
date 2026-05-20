@@ -1,0 +1,205 @@
+@use '../../../scss/abstracts/mixins' as *;
+@use '../../../scss/components/modal' as dashboard-modal;
+
+.verify-email-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ms-0);
+    width: 100%;
+    max-width: 500px;
+    padding: 24px;
+    color: var(--dashboard-text-primary);
+    background: var(--dashboard-card-bg);
+    border: 1px solid var(--dashboard-card-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 30%);
+    box-sizing: border-box;
+
+    &--standalone {
+      margin: 0 auto;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--ms-01);
+    margin-bottom: var(--ms-01);
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ms-01);
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__icon {
+    display: flex;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    color: var(--dark-greenish-yellow, #c9b458);
+
+    &--success {
+      color: #2ecc71;
+    }
+
+    &--error {
+      color: var(--error-color, #cf807d);
+    }
+  }
+
+  &__title {
+    margin: 0;
+    padding: 0;
+    color: var(--dark-greenish-yellow, #c9b458);
+    font-size: var(--dashboard-heading-font-size);
+    font-weight: 700;
+    line-height: 1.25;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  &__close {
+    @include dashboard-modal.dashboard-modal-close(
+      $focus-visible: true,
+      $reset-text: true,
+      $flex-shrink: 0
+    );
+  }
+
+  &__message {
+    margin: 0 0 var(--ms-01);
+    color: var(--dashboard-text-secondary);
+    font-size: var(--dashboard-font-size);
+    line-height: 1.5;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  &__email {
+    margin: 0 0 var(--ms-0);
+    color: var(--dashboard-text-primary);
+    font-size: var(--dashboard-font-size);
+    font-weight: 600;
+    line-height: 1.4;
+    word-break: break-all;
+  }
+
+  &__error {
+    margin-bottom: var(--ms-01);
+    padding: 0.75rem;
+    color: var(--error-color, #cf807d);
+    font-size: var(--ms-01);
+    background: rgb(207 128 125 / 10%);
+    border: 1px solid color-mix(in srgb, var(--error-color, #cf807d) 55%, transparent);
+    border-radius: 8px;
+  }
+
+  &__field {
+    @include dashboard-form-field;
+
+    margin-bottom: 0;
+  }
+
+  &__label {
+    @include dashboard-form-label;
+  }
+
+  &__input {
+    @include dashboard-form-input;
+  }
+
+  &__actions {
+    @include dashboard-modal.dashboard-modal-dialog-buttons(
+      $font-size: var(--dashboard-font-size),
+      $line-height: 1.35
+    );
+
+    display: flex;
+    gap: var(--ms-01);
+    margin-top: 0.15rem;
+  }
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 2.75rem;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+
+    &:focus-visible {
+      outline: 2px solid var(--dark-greenish-yellow);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+  }
+
+  &__button--secondary {
+    @include dashboard-button($margin: 0);
+  }
+
+  &__button--primary {
+    @include button-variant(
+      $color: var(--dashboard-button-primary-text),
+      $background: var(--dashboard-button-primary-bg),
+      $hover-color: var(--dashboard-button-primary-text),
+      $hover-background: var(--dashboard-button-primary-bg-hover),
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $border: 0,
+      $border-radius: var(--ms-01),
+      $font-size: var(--dashboard-font-size)
+    );
+  }
+
+  &__footer-link {
+    align-self: center;
+    margin: var(--ms-02) 0 0;
+    padding: var(--ms-02) 0;
+    color: var(--dashboard-text-secondary);
+    font-size: var(--ms-01);
+    line-height: 1.4;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+
+    &:hover {
+      color: var(--dashboard-text-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--dark-greenish-yellow);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.email-verify-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: var(--ms-2) var(--ms-1);
+  box-sizing: border-box;
+}

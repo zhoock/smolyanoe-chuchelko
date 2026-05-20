@@ -317,6 +317,9 @@ export interface IInterface {
       successTitle: string;
       successBody: string;
       continue: string;
+      continueToHome?: string;
+      openDashboardPrefix?: string;
+      openDashboardLink?: string;
       expiredTitle: string;
       expiredBody: string;
       sendNewLink: string;

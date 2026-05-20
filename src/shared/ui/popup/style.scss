@@ -41,7 +41,9 @@ dialog {
   }
 
   // Центрирование только для попапов с классом .popup, но не для дашборда и confirmation-modal
-  &.popup[open]:not(:has(.user-dashboard, .confirmation-modal, .delete-account-modal)) {
+  &.popup[open]:not(
+      :has(.user-dashboard, .confirmation-modal, .delete-account-modal, .verify-email-modal)
+    ) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -51,7 +53,14 @@ dialog {
   // Используем селектор, который проверяет наличие .user-dashboard в body
   body:has(.user-dashboard)
     &.popup[open]:not(
-      :has(.user-dashboard, .player, .alert-modal, .confirmation-modal, .delete-account-modal)
+      :has(
+        .user-dashboard,
+        .player,
+        .alert-modal,
+        .confirmation-modal,
+        .delete-account-modal,
+        .verify-email-modal
+      )
     ) {
     display: flex;
     align-items: center;
@@ -67,6 +76,7 @@ dialog {
         .alert-modal,
         .confirmation-modal,
         .delete-account-modal,
+        .verify-email-modal,
         .edit-article-v2,
         .archive-access-modal__panel
       ) {

@@ -329,6 +329,7 @@ function Layout() {
   const isHomeRoute = activeLocation.pathname === '/' || activeLocation.pathname === '/en';
   const hasArtistParam = new URLSearchParams(activeLocation.search).has('artist');
   const isHomeSceneRoute = isHomeRoute && !hasArtistParam;
+  const isEmailVerifiedRoute = matchPath({ path: '/email-verified', end: true }, location.pathname);
 
   useLayoutEffect(() => {
     if (isHomeSceneRoute) {
@@ -340,6 +341,17 @@ function Layout() {
       document.body.classList.remove('page--home-scene');
     };
   }, [isHomeSceneRoute]);
+
+  useLayoutEffect(() => {
+    if (isEmailVerifiedRoute) {
+      document.body.classList.add('page--email-verified');
+    } else {
+      document.body.classList.remove('page--email-verified');
+    }
+    return () => {
+      document.body.classList.remove('page--email-verified');
+    };
+  }, [isEmailVerifiedRoute]);
 
   const mainRoutes = (
     <Routes location={activeLocation}>
@@ -593,10 +605,10 @@ function Layout() {
                   else dispatch(openPopup());
                 }}
               />
-              <EmailVerificationBanner />
+              {!isEmailVerifiedRoute && <EmailVerificationBanner />}
               <AccountDeletedToast />
               <main>
-                {!isHomeSceneRoute && <Hero />}
+                {!isHomeSceneRoute && !isEmailVerifiedRoute && <Hero />}
 
                 {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}
 
@@ -612,7 +624,7 @@ function Layout() {
 
                 <ErrorBoundary>{standardRoutes}</ErrorBoundary>
               </main>
-              <Footer />
+              {!isEmailVerifiedRoute && <Footer />}
               <PlayerShell />
               <FloatingCart />
             </ErrorBoundary>

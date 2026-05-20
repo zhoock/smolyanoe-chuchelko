@@ -3,12 +3,27 @@ import { Popup } from '@shared/ui/popup';
 import { changeVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
-import '@shared/lib/emailVerification/style.scss';
+import './VerifyEmailModal.style.scss';
 
 interface ChangeEmailModalProps {
   isOpen: boolean;
   onBack: () => void;
   onClose: () => void;
+}
+
+function MailIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="m3 7 9 6 9-6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalProps) {
@@ -41,38 +56,70 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
   };
 
   return (
-    <Popup isActive={isOpen} onClose={onClose} bgColor="rgba(var(--deep-black-rgb) / 95%)">
-      <form className="email-verify-modal" onSubmit={handleSubmit} noValidate>
-        <button type="button" className="email-verify-modal__back" onClick={onBack}>
-          ← {copy.back}
-        </button>
-        <h2 className="email-verify-modal__title">{copy.changeEmailTitle}</h2>
-        <p className="email-verify-modal__body">{copy.changeEmailBody}</p>
-        {error ? <div className="email-verify-modal__error">{error}</div> : null}
-        <div className="email-verify-modal__field">
-          <label htmlFor="change-verification-email" className="email-verify-modal__label">
-            {copy.newEmailLabel}
-          </label>
-          <input
-            id="change-verification-email"
-            type="email"
-            className="email-verify-modal__input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={copy.newEmailPlaceholder}
-            autoComplete="email"
-            disabled={loading}
-          />
-        </div>
-        <div className="email-verify-modal__actions">
-          <button type="submit" className="email-verify-modal__primary" disabled={loading}>
-            {loading ? '…' : copy.sendVerificationEmail}
-          </button>
-          <button type="button" className="email-verify-modal__secondary" onClick={onClose}>
-            {copy.cancel}
-          </button>
-        </div>
-      </form>
+    <Popup
+      isActive={isOpen}
+      onClose={onClose}
+      closeBlocked={loading}
+      bgColor="rgba(var(--deep-black-rgb) / 95%)"
+    >
+      <div className="verify-email-modal">
+        <form className="verify-email-modal__container" onSubmit={handleSubmit} noValidate>
+          <div className="verify-email-modal__header">
+            <div className="verify-email-modal__title-row">
+              <span className="verify-email-modal__icon" aria-hidden="true">
+                <MailIcon />
+              </span>
+              <h2 className="verify-email-modal__title">{copy.changeEmailTitle}</h2>
+            </div>
+            <button
+              type="button"
+              className="verify-email-modal__close"
+              onClick={onClose}
+              disabled={loading}
+              aria-label={copy.close}
+            >
+              ×
+            </button>
+          </div>
+
+          <p className="verify-email-modal__message">{copy.changeEmailBody}</p>
+          {error ? <div className="verify-email-modal__error">{error}</div> : null}
+
+          <div className="verify-email-modal__field">
+            <label htmlFor="change-verification-email" className="verify-email-modal__label">
+              {copy.newEmailLabel}
+            </label>
+            <input
+              id="change-verification-email"
+              type="email"
+              className="verify-email-modal__input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={copy.newEmailPlaceholder}
+              autoComplete="email"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="verify-email-modal__actions">
+            <button
+              type="button"
+              className="verify-email-modal__button verify-email-modal__button--secondary"
+              onClick={onBack}
+              disabled={loading}
+            >
+              {copy.back}
+            </button>
+            <button
+              type="submit"
+              className="verify-email-modal__button verify-email-modal__button--primary"
+              disabled={loading}
+            >
+              {loading ? '…' : copy.sendVerificationEmail}
+            </button>
+          </div>
+        </form>
+      </div>
     </Popup>
   );
 }
