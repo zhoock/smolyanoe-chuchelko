@@ -8,6 +8,7 @@ import { getToken } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
+import { shouldUsePublicArtistCatalogInRedux } from '@shared/lib/dashboardModalBackground';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import type { AlbumsState, FetchAlbumsFulfilledPayload } from './types';
@@ -196,18 +197,19 @@ export const fetchAlbums = createAsyncThunk<
     };
 
     try {
-      const isDashboardRoute = isDashboardPathname();
+      const usePublicCatalog = shouldUsePublicArtistCatalogInRedux();
+      const isFullscreenDashboard = isDashboardPathname() && !usePublicCatalog;
       const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
-      const requestWasDashboard = isDashboardRoute;
-      const requestFetchKey = requestWasDashboard
-        ? 'dashboard'
-        : getCatalogAlbumsFetchContextKey(getState);
-      const writeTarget: 'catalog' | 'dashboard' = requestWasDashboard ? 'dashboard' : 'catalog';
+      const requestFetchKey = usePublicCatalog
+        ? getCatalogAlbumsFetchContextKey(getState)
+        : 'dashboard';
+      const writeTarget: 'catalog' | 'dashboard' = usePublicCatalog ? 'catalog' : 'dashboard';
 
       const catalogStale = (): boolean =>
         getCatalogAlbumsFetchContextKey(getState) !== requestFetchKey;
 
-      const dashboardStale = (): boolean => !isDashboardPathname();
+      const dashboardStale = (): boolean =>
+        !isDashboardPathname() || shouldUsePublicArtistCatalogInRedux();
 
       try {
         const controller = new AbortController();
@@ -224,7 +226,7 @@ export const fetchAlbums = createAsyncThunk<
         const token = getToken();
 
         // Кабинет без JWT: иначе GET /api/albums без ?artist= → 400 на бэкенде.
-        if (isDashboardRoute && !token) {
+        if (isFullscreenDashboard && !token) {
           if (dashboardStale()) {
             return staleSnapshotPayload(getState, 'dashboard');
           }
@@ -232,7 +234,7 @@ export const fetchAlbums = createAsyncThunk<
         }
 
         // Публичный каталог: без public slug API не вызываем (нужен контекст артиста).
-        if (!isDashboardRoute && !publicSlug) {
+        if (usePublicCatalog && !publicSlug) {
           if (catalogStale()) {
             return staleSnapshotPayload(getState, 'catalog');
           }
@@ -251,8 +253,8 @@ export const fetchAlbums = createAsyncThunk<
             '/api/albums',
             {},
             {
-              includeArtist: !isDashboardRoute,
-              artistSlugOverride: isDashboardRoute ? null : publicSlug,
+              includeArtist: usePublicCatalog,
+              artistSlugOverride: usePublicCatalog ? publicSlug : null,
             }
           ),
           {
@@ -267,7 +269,7 @@ export const fetchAlbums = createAsyncThunk<
           const result = await response.json();
           if (result.success && result.data && Array.isArray(result.data)) {
             if (result.data.length === 0) {
-              if (requestWasDashboard) {
+              if (isFullscreenDashboard) {
                 if (dashboardStale()) {
                   return staleSnapshotPayload(getState, 'dashboard');
                 }
@@ -294,7 +296,7 @@ export const fetchAlbums = createAsyncThunk<
                 : null,
             });
 
-            if (requestWasDashboard) {
+            if (isFullscreenDashboard) {
               if (dashboardStale()) {
                 return staleSnapshotPayload(getState, 'dashboard');
               }
@@ -307,7 +309,7 @@ export const fetchAlbums = createAsyncThunk<
         }
         throw new Error(`Failed to fetch albums. Status: ${response.status}`);
       } catch (apiError) {
-        if (isDashboardRoute) {
+        if (isFullscreenDashboard) {
           console.error('❌ [albumsSlice] albums API failed in /dashboard', apiError);
         } else if (apiError instanceof Error && apiError.name === 'AbortError') {
           console.warn('⚠️ [albumsSlice] API request timeout (8s)', apiError);
@@ -326,9 +328,9 @@ export const fetchAlbums = createAsyncThunk<
   {
     condition: ({ force }, { getState }) => {
       const albums = getState().albums;
-      const onDashboard = isDashboardPathname();
+      const isFullscreenDashboard = isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
 
-      if (onDashboard) {
+      if (isFullscreenDashboard) {
         const { status } = albums.dashboard;
         if (status === 'loading' && !force) return false;
         if (status === 'succeeded' && !force) return false;
@@ -353,8 +355,9 @@ const albumsSlice = createSlice({
         if (action.meta.arg.force) {
           latestForceAlbumsRequestId = action.meta.requestId;
         }
-        const onDashboard = isDashboardPathname();
-        if (onDashboard) {
+        const isFullscreenDashboard =
+          isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+        if (isFullscreenDashboard) {
           state.dashboard.status = 'loading';
           state.dashboard.error = null;
           state.dashboard.inFlightFetchContextKey = 'dashboard';

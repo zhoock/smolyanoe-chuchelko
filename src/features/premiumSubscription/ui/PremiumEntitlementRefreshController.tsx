@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
+import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
+
 import {
   ARCHIVE_CHANGED_EVENT,
   refreshPremiumContentForArchiveChange,
@@ -28,9 +30,15 @@ export function PremiumEntitlementRefreshController() {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { overlayOpen, surfaceLocation } = useDashboardModalShell();
 
-  const resolveSlug = (): string | undefined =>
-    searchParams.get('artist')?.trim() || readPremiumCheckoutArtistSlug() || undefined;
+  const resolveSlug = (): string | undefined => {
+    if (overlayOpen && surfaceLocation?.search) {
+      const fromSurface = new URLSearchParams(surfaceLocation.search).get('artist')?.trim();
+      if (fromSurface) return fromSurface;
+    }
+    return searchParams.get('artist')?.trim() || readPremiumCheckoutArtistSlug() || undefined;
+  };
 
   useEffect(() => {
     const refresh = (event: Event | null, immediate: boolean) => {
@@ -49,7 +57,7 @@ export function PremiumEntitlementRefreshController() {
       window.removeEventListener(ARCHIVE_CHANGED_EVENT, onEntitlementChanged);
       window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthSessionChanged);
     };
-  }, [dispatch, searchParams]);
+  }, [dispatch, overlayOpen, searchParams, surfaceLocation?.search]);
 
   useEffect(() => {
     if (!isPremiumCheckoutPending()) return;

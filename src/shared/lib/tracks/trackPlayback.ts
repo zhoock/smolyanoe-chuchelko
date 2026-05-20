@@ -7,9 +7,12 @@ import { normalizeTrackVisibility } from './trackVisibility';
  */
 export function isTrackPlaybackBlocked(track: TracksProps | undefined): boolean {
   if (!track) return true;
-  if (track.playbackLocked) return true;
   const vis = normalizeTrackVisibility(track.visibility);
-  if (vis === 'subscribers_only' && !String(track.src ?? '').trim()) return true;
+  const hasSrc = Boolean(String(track.src ?? '').trim());
+  if (vis === 'subscribers_only') {
+    return !hasSrc;
+  }
+  if (track.playbackLocked) return true;
   return false;
 }
 

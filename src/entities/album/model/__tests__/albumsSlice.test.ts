@@ -22,6 +22,16 @@ const mockSuccessResponse = (data: unknown) =>
     json: async () => ({ success: true, data }),
   }) as Response;
 
+/** JWT с валидным exp — иначе purgeInvalidAuthSessionFromStorage очистит localStorage в getToken(). */
+const TEST_AUTH_TOKEN = (() => {
+  const exp = Math.floor(Date.now() / 1000) + 86_400;
+  const payload = btoa(JSON.stringify({ exp }))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  return `test.${payload}.sig`;
+})();
+
 // Вспомогательная функция для создания тестового store
 const createTestStore = () => {
   const store = configureStore({
@@ -129,10 +139,39 @@ describe('albumsSlice', () => {
       expect(selectAlbumsData(state)[0].albumId).toBe('album-1');
     });
 
-    test('на dashboard должен загружать альбомы владельца, игнорируя публичный artist context', async () => {
-      window.history.pushState({}, '', '/dashboard-new/albums');
-      window.localStorage.setItem('auth_token', 'owner-token');
+    test('при оверлее дашборда обновляет публичный каталог с ?artist=', async () => {
+      window.history.pushState({}, '', '/dashboard-new/archive');
+      window.localStorage.setItem('auth_token', TEST_AUTH_TOKEN);
       syncDashboardAlbumsPublicCatalogOverlay(true);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+      const store = createTestStore();
+      store.dispatch(setPublicArtistSlug('artist-a'));
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toEqual({
+        albums: mockAlbums,
+        fetchContextKey: 'public:artist-a',
+        writeTarget: 'catalog',
+      });
+      expect(selectAlbumsData(store.getState())).toEqual(mockAlbums);
+      expect(selectDashboardAlbumsData(store.getState())).toEqual([]);
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/albums?artist=artist-a',
+        expect.objectContaining({
+          cache: 'no-store',
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${TEST_AUTH_TOKEN}`,
+          }),
+        })
+      );
+    });
+
+    test('на полноэкранном dashboard загружает альбомы владельца в dashboard bucket', async () => {
+      window.history.pushState({}, '', '/dashboard-new/albums');
+      window.localStorage.setItem('auth_token', TEST_AUTH_TOKEN);
+      syncDashboardAlbumsPublicCatalogOverlay(false);
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
 
       const store = createTestStore();
@@ -152,7 +191,7 @@ describe('albumsSlice', () => {
         expect.objectContaining({
           cache: 'no-store',
           headers: expect.objectContaining({
-            Authorization: 'Bearer owner-token',
+            Authorization: `Bearer ${TEST_AUTH_TOKEN}`,
           }),
         })
       );
@@ -176,7 +215,7 @@ describe('albumsSlice', () => {
     });
 
     test('на публичной странице с токеном передаёт Authorization (бэкенд принимает JWT без ?artist=)', async () => {
-      window.localStorage.setItem('auth_token', 'session-token');
+      window.localStorage.setItem('auth_token', TEST_AUTH_TOKEN);
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
 
       const store = createTestStore();
@@ -186,7 +225,7 @@ describe('albumsSlice', () => {
         '/api/albums?artist=test-artist',
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: 'Bearer session-token',
+            Authorization: `Bearer ${TEST_AUTH_TOKEN}`,
           }),
         })
       );
@@ -277,7 +316,7 @@ describe('albumsSlice', () => {
       const pPublic = (store.dispatch as AppDispatch)(fetchAlbums({}));
 
       window.history.pushState({}, '', '/dashboard-new');
-      window.localStorage.setItem('auth_token', 'owner-token');
+      window.localStorage.setItem('auth_token', TEST_AUTH_TOKEN);
       const pDash = (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
 
       // Сначала завершается dashboard (второй mock), в store — альбомы владельца.

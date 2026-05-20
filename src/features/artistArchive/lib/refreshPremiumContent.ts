@@ -12,6 +12,7 @@ import { fallbackAlbumClientId } from '@shared/lib/albumClientId';
 import { isTrackPlaybackBlocked } from '@shared/lib/tracks/trackPlayback';
 import { clearSyncedLyricsCache } from '@features/syncedLyrics/lib';
 import { setPublicArtistSlug, selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { readPublicArtistSlugFromDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
 import { readPremiumCheckoutArtistSlug } from '@features/premiumSubscription/lib/premiumSuccessModalStorage';
 
 const REFRESH_DEBOUNCE_MS = 50;
@@ -37,6 +38,9 @@ function resolveRefreshArtistSlug(explicit?: string | null): string | undefined 
   if (trimmed) return trimmed;
 
   if (typeof window !== 'undefined') {
+    const fromModalBg = readPublicArtistSlugFromDashboardModalBackground();
+    if (fromModalBg) return fromModalBg;
+
     const params = new URLSearchParams(window.location.search);
     const fromArtist = params.get('artist')?.trim();
     if (fromArtist) return fromArtist;

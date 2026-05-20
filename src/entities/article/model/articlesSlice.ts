@@ -5,6 +5,7 @@ import type { RootState } from '@shared/model/appStore/types';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
+import { shouldUsePublicArtistCatalogInRedux } from '@shared/lib/dashboardModalBackground';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import type { TrackVisibility } from '@shared/lib/tracks/trackVisibility';
 import { normalizeTrackVisibility } from '@shared/lib/tracks/trackVisibility';
@@ -106,20 +107,21 @@ export const fetchArticles = createAsyncThunk<
     try {
       const { getAuthHeader } = await import('@shared/lib/auth');
       const authHeader = getAuthHeader();
-      const isDashboardRoute = isDashboardPathname();
+      const usePublicCatalog = shouldUsePublicArtistCatalogInRedux();
+      const isFullscreenDashboard = isDashboardPathname() && !usePublicCatalog;
 
-      const resolvedSlug = !isDashboardRoute ? resolvePublicArtistSlugForFetch(_arg, getState) : '';
+      const resolvedSlug = usePublicCatalog ? resolvePublicArtistSlugForFetch(_arg, getState) : '';
 
       const fallbackLang: 'en' | 'ru' = getState().lang.current === 'ru' ? 'ru' : 'en';
 
       const slugMeta = (rows: IArticles[]): FetchArticlesResult => ({
         articles: rows,
-        lastPublicArtistSlug: isDashboardRoute ? null : resolvedSlug,
-        writeTarget: isDashboardRoute ? 'dashboard' : 'catalog',
+        lastPublicArtistSlug: usePublicCatalog ? resolvedSlug : null,
+        writeTarget: usePublicCatalog ? 'catalog' : 'dashboard',
       });
 
       // Публичный каталог: без artist не дергаем API (инвариант), только статический fallback.
-      if (!isDashboardRoute && !resolvedSlug) {
+      if (usePublicCatalog && !resolvedSlug) {
         try {
           const data = await readStaticArticlesFallback(fallbackLang, signal);
           return slugMeta(normalize(data));
@@ -137,11 +139,11 @@ export const fetchArticles = createAsyncThunk<
           buildApiUrl(
             '/api/articles-api',
             {
-              includeDrafts: isDashboardRoute ? true : undefined,
+              includeDrafts: isFullscreenDashboard ? true : undefined,
             },
             {
-              includeArtist: !isDashboardRoute,
-              artistSlugOverride: isDashboardRoute ? null : resolvedSlug,
+              includeArtist: usePublicCatalog,
+              artistSlugOverride: usePublicCatalog ? resolvedSlug : null,
             }
           ),
           {
@@ -177,7 +179,7 @@ export const fetchArticles = createAsyncThunk<
       } catch (apiError) {
         apiFailure = apiError;
         const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-        if (isDashboardRoute) {
+        if (isFullscreenDashboard) {
           console.warn(
             '❌ [articlesSlice] articles API failed in /dashboard; static JSON fallback is disabled',
             apiError
@@ -187,7 +189,7 @@ export const fetchArticles = createAsyncThunk<
         }
       }
 
-      if (isDashboardRoute) {
+      if (isFullscreenDashboard) {
         if (apiFailure instanceof Error) {
           throw apiFailure;
         }
@@ -216,8 +218,8 @@ export const fetchArticles = createAsyncThunk<
         return true;
       }
       const state = getState();
-      const isDashboard = isDashboardPathname();
-      if (isDashboard) {
+      const isFullscreenDashboard = isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+      if (isFullscreenDashboard) {
         const d = state.articles.dashboard;
         if (d.status === 'loading') return false;
         if (d.status === 'succeeded') return false;
@@ -263,8 +265,9 @@ const articlesSlice = createSlice({
         if (action.meta.arg.force) {
           latestForceArticlesRequestId = action.meta.requestId;
         }
-        const onDashboard = isDashboardPathname();
-        if (onDashboard) {
+        const isFullscreenDashboard =
+          isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+        if (isFullscreenDashboard) {
           state.dashboard.status = 'loading';
           state.dashboard.error = null;
           state.dashboard.inFlightFetchContextKey = 'dashboard';

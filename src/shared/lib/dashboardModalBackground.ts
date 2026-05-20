@@ -1,5 +1,7 @@
 import type { Location } from 'react-router-dom';
 
+import { isDashboardPathname } from '@shared/lib/publicArtistContext';
+
 const STORAGE_KEY = 'sc-dashboard-modal-bg';
 
 /**
@@ -15,6 +17,25 @@ export function syncDashboardAlbumsPublicCatalogOverlay(active: boolean): void {
 
 export function isDashboardAlbumsPublicCatalogOverlay(): boolean {
   return dashboardAlbumsPublicCatalogOverlay;
+}
+
+/**
+ * Публичный каталог (альбомы/статьи с ?artist=) в Redux — на витрине и под модальным дашбордом.
+ * Полноэкранный /dashboard* без фона — отдельный dashboard bucket владельца.
+ */
+export function shouldUsePublicArtistCatalogInRedux(): boolean {
+  if (typeof window === 'undefined') return true;
+  return !isDashboardPathname() || isDashboardAlbumsPublicCatalogOverlay();
+}
+
+/** Slug артиста из фоновой страницы под модальным дашбордом (?artist= в sessionStorage). */
+export function readPublicArtistSlugFromDashboardModalBackground(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  if (!window.location.pathname.startsWith('/dashboard')) return undefined;
+  const bg = readDashboardModalBackground();
+  if (!bg || bg.pathname.startsWith('/dashboard')) return undefined;
+  const slug = new URLSearchParams(bg.search).get('artist')?.trim();
+  return slug || undefined;
 }
 
 export type DashboardModalBackground = {

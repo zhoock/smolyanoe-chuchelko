@@ -123,8 +123,6 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
         const visibility = normalizeTrackVisibility(track.visibility);
         const isSubscribersOnly = visibility === 'subscribers_only';
         const playbackLocked = isTrackPlaybackBlocked(track);
-        /** Иконка в строке названия: только «открытый только подписчикам» в кабинете/превью; у заблокированного замок слева в колонке номера. */
-        const showSubscriberLockInTitle = isSubscribersOnly && !playbackLocked;
 
         // Логируем для отладки, если duration отсутствует
         if (track.duration == null && index === 0) {
@@ -142,7 +140,6 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
               active: isActive,
               'tracks__btn--playing': isPlayingNow,
               'tracks__btn--locked': playbackLocked,
-              'tracks__btn--subscribers-only': isSubscribersOnly && !playbackLocked,
             })}
             style={
               isPlayingNow
@@ -197,25 +194,6 @@ export function TrackList({ tracks, album, store, onSelectTrack }: TrackListProp
               )}
             </span>
             <span className="tracks__title">
-              {showSubscriberLockInTitle && (
-                <svg
-                  className="tracks__lock-icon"
-                  width={14}
-                  height={14}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden
-                >
-                  <path
-                    d="M7 11V8a5 5 0 0110 0v3M6 11h12a1 1 0 011 1v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a1 1 0 011-1z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
               <span className="tracks__title-text">{track.title}</span>
             </span>
             <span className="tracks__duration">{formatDuration(track.duration)}</span>

@@ -259,15 +259,6 @@
         cursor: not-allowed;
       }
 
-      &--subscribers-only {
-        cursor: pointer;
-
-        .tracks__lock-icon {
-          opacity: 0.58;
-          color: var(--accent-color);
-        }
-      }
-
       &--playing {
         position: relative;
         overflow: hidden;
