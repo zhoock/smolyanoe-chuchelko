@@ -4,74 +4,107 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: $ms-0;
+  gap: $ms-01;
   margin-block-start: $ms-0;
   pointer-events: auto;
 
+  &--layout-placeholder {
+    visibility: hidden;
+    margin-block-start: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
   &__btn {
     display: inline-flex;
-    padding: 0.35em 0.85em;
-    color: var(--amber, #e6b422);
+    margin: 0;
+    padding: var(--ms-01) var(--ms-0);
+    color: var(--accent-color, var(--dark-greenish-yellow, #998238));
     font-size: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
     line-height: 1.2;
     background: transparent;
-    border: 1px solid var(--amber, #e6b422);
-    border-radius: 999px;
+    border: 1px solid var(--accent-color, var(--dark-greenish-yellow, #998238));
+    border-radius: var(--ms-01);
     transition:
-      opacity 0.15s ease,
-      background-color 0.15s ease;
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
     align-items: center;
     gap: 0.35em;
     font-family: inherit;
     font-weight: var(--semibold, 600);
     cursor: pointer;
+    appearance: none;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        background: rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 12%);
+      }
+    }
 
     &:disabled {
       cursor: default;
       opacity: 0.92;
+      pointer-events: none;
     }
 
-    &:hover:not(:disabled) {
-      background: rgb(230 180 34 / 12%);
+    &:focus-visible {
+      outline: 2px solid var(--outline-color, #f3d69f);
+      outline-offset: 2px;
     }
 
     &--loading,
     &--adding {
-      opacity: 0.7;
+      opacity: 0.75;
       cursor: wait;
     }
 
     &--in_archive {
-      border-color: rgb(230 180 34 / 55%);
-      color: rgb(230 180 34 / 85%);
+      border-color: rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 55%);
+      color: rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 85%);
+
+      &[disabled] {
+        cursor: default;
+        opacity: 0.92;
+        background: transparent;
+
+        // Keep hit-testing so hero's cursor:pointer does not show through.
+        pointer-events: auto;
+      }
     }
 
     &--archive_full {
       cursor: pointer;
+      pointer-events: auto;
     }
   }
 
   &__plus,
-  &__check,
-  &__lock {
+  &__check {
     font-size: 0.95em;
     line-height: 1;
   }
 
+  &__lock-icon {
+    flex-shrink: 0;
+    color: currentcolor;
+  }
+
   &__slots {
-    color: rgb(255 255 255 / 72%);
+    color: var(--text-color, rgb(255 255 255 / 72%));
     font-size: clamp(0.65rem, 0.62rem + 0.15vw, 0.75rem);
     white-space: nowrap;
+    opacity: 0.85;
   }
 
   &__error {
     padding: 0;
-    color: #ffb4b4;
+    color: var(--error-color, #ffb4b4);
     font-size: 0.75rem;
     line-height: 1;
     background: rgb(255 60 60 / 15%);
     border: 1px solid rgb(255 100 100 / 60%);
-    border-radius: 50%;
+    border-radius: var(--ms-01);
     inline-size: 1.25rem;
     block-size: 1.25rem;
     font-weight: 700;

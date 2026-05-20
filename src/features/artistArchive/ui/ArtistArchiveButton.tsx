@@ -7,6 +7,7 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 import { AlertModal } from '@shared/ui/alertModal';
+import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
 import { ArchiveApiError } from '@shared/api/archive';
 
 import {
@@ -20,6 +21,18 @@ import './style.scss';
 type Props = {
   artistUserId: string | null;
 };
+
+/** Invisible twin of the archive CTA — reserves space before artist meta loads. */
+function ArchiveButtonLayoutPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="artist-archive-button artist-archive-button--layout-placeholder" aria-hidden>
+      <span className="artist-archive-button__btn">
+        <SubscriberContentLockIcon className="artist-archive-button__lock-icon" size={14} />
+        <span>{label}</span>
+      </span>
+    </div>
+  );
+}
 
 export function ArtistArchiveButton({ artistUserId }: Props) {
   const { lang } = useLang() as { lang: 'ru' | 'en' };
@@ -88,6 +101,10 @@ export function ArtistArchiveButton({ artistUserId }: Props) {
     [addToArchive, artistUserId, buttonState, dispatch, openPremiumModal, publicArtistSlug]
   );
 
+  if (!artistUserId) {
+    return <ArchiveButtonLayoutPlaceholder label={labelAdd} />;
+  }
+
   if (buttonState === 'hidden') {
     return null;
   }
@@ -123,19 +140,17 @@ export function ArtistArchiveButton({ artistUserId }: Props) {
           aria-busy={buttonState === 'loading' || buttonState === 'adding'}
           onClick={handleClick}
         >
-          {buttonState === 'can_add' || buttonState === 'not_premium' ? (
+          {buttonState === 'can_add' ? (
             <span className="artist-archive-button__plus" aria-hidden>
               +
             </span>
           ) : null}
+          {buttonState === 'not_premium' || buttonState === 'archive_full' ? (
+            <SubscriberContentLockIcon className="artist-archive-button__lock-icon" size={14} />
+          ) : null}
           {buttonState === 'in_archive' ? (
             <span className="artist-archive-button__check" aria-hidden>
               ✓
-            </span>
-          ) : null}
-          {buttonState === 'archive_full' ? (
-            <span className="artist-archive-button__lock" aria-hidden>
-              🔒
             </span>
           ) : null}
           <span>{buttonLabel}</span>

@@ -68,7 +68,6 @@ export function Hero() {
   const [profileName, setProfileName] = useState<string>(() => readStoredProfileDisplayName());
   const [artistPageMeta, setArtistPageMeta] = useState<{
     userId: string;
-    genreLabel: string;
   } | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isImagesLoading, setIsImagesLoading] = useState(false);
@@ -181,7 +180,6 @@ export function Hero() {
           if (match?.userId) {
             setArtistPageMeta({
               userId: match.userId,
-              genreLabel: match.genreLabel?.[lang] ?? match.genreCode ?? '',
             });
           } else {
             setArtistPageMeta(null);
@@ -197,7 +195,7 @@ export function Hero() {
     return () => {
       cancelled = true;
     };
-  }, [artistParamKey, hasArtistParam, lang]);
+  }, [artistParamKey, hasArtistParam]);
 
   // Загружаем название группы:
   // - public (/ и /?artist=...): всегда из API public профиля, без JWT
@@ -547,13 +545,14 @@ export function Hero() {
     >
       {hasArtistParam && <div ref={heroCanvasRef} className="hero__canvas" />}
       <div className="hero__content">
-        {artistPageMeta?.genreLabel ? (
-          <p className="hero__genre">{artistPageMeta.genreLabel}</p>
-        ) : null}
-        <h1 className="hero__title">{displayName}</h1>
-        {hasArtistParam ? (
-          <ArtistArchiveButton artistUserId={artistPageMeta?.userId ?? null} />
-        ) : null}
+        <div className="hero__headline">
+          <h1 className="hero__title">{displayName}</h1>
+          {hasArtistParam ? (
+            <div className="hero__archive-slot">
+              <ArtistArchiveButton artistUserId={artistPageMeta?.userId ?? null} />
+            </div>
+          ) : null}
+        </div>
       </div>
     </section>
   );
