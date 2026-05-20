@@ -3,6 +3,7 @@ export {
   usePremiumSubscription,
 } from './lib/PremiumSubscriptionContext';
 export { PremiumSuccessModalController } from './ui/PremiumSuccessModal';
+export { PremiumEntitlementRefreshController } from './ui/PremiumEntitlementRefreshController';
 export {
   markPremiumCheckoutPending,
   savePremiumCheckoutArtistSlug,

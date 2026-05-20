@@ -3,16 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
 import { getSubscriptionPaymentStatus } from '@shared/api/subscription';
-import {
-  dispatchSubscriptionActivated,
-  refreshPremiumContentForArchiveChange,
-} from '@features/artistArchive';
+import { dispatchSubscriptionActivated } from '@features/artistArchive';
 import {
   markPremiumCheckoutPending,
   savePremiumCheckoutArtistSlug,
   PREMIUM_CHECKOUT_ARTIST_SLUG_KEY,
 } from '@features/premiumSubscription';
-import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 
 import './SubscriptionPaymentSuccess.style.scss';
 
@@ -22,7 +18,6 @@ const POLL_INTERVAL_MS = 3000;
 export default function SubscriptionPaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   const subscriptionPaymentId = searchParams.get('subscriptionPaymentId');
   const returnTo = searchParams.get('returnTo');
@@ -41,28 +36,32 @@ export default function SubscriptionPaymentSuccess() {
     markPremiumCheckoutPending();
 
     const target = returnTo?.trim();
+    let resolvedArtistSlug = artistSlug?.trim() || '';
     if (target?.startsWith('/')) {
       try {
         const artist = new URL(target, window.location.origin).searchParams.get('artist')?.trim();
         if (artist) {
+          resolvedArtistSlug = artist;
           sessionStorage.setItem(PREMIUM_CHECKOUT_ARTIST_SLUG_KEY, artist);
         } else {
           savePremiumCheckoutArtistSlug();
+          resolvedArtistSlug =
+            sessionStorage.getItem(PREMIUM_CHECKOUT_ARTIST_SLUG_KEY)?.trim() || '';
         }
       } catch {
         savePremiumCheckoutArtistSlug();
+        resolvedArtistSlug = sessionStorage.getItem(PREMIUM_CHECKOUT_ARTIST_SLUG_KEY)?.trim() || '';
       }
     }
 
-    dispatchSubscriptionActivated();
-    refreshPremiumContentForArchiveChange(dispatch, artistSlug || undefined);
+    dispatchSubscriptionActivated(resolvedArtistSlug || undefined);
 
     setStatus('success');
 
     if (target && target.startsWith('/')) {
       window.setTimeout(() => navigate(target, { replace: true }), 800);
     }
-  }, [artistSlug, dispatch, navigate, returnTo]);
+  }, [artistSlug, navigate, returnTo]);
 
   useEffect(() => {
     if (!subscriptionPaymentId) {

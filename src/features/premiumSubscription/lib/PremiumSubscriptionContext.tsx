@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import { getMyArchive } from '@shared/api/archive';
-import { getToken } from '@shared/lib/auth';
+import { AUTH_SESSION_CHANGED_EVENT, getToken } from '@shared/lib/auth';
 import { ARCHIVE_CHANGED_EVENT, SUBSCRIPTION_ACTIVATED_EVENT } from '@features/artistArchive';
 
 export type PremiumSubscriptionContextValue = {
@@ -54,9 +54,11 @@ export function PremiumSubscriptionProvider({ children }: { children: ReactNode 
 
     window.addEventListener(SUBSCRIPTION_ACTIVATED_EVENT, onChanged);
     window.addEventListener(ARCHIVE_CHANGED_EVENT, onChanged);
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onChanged);
     return () => {
       window.removeEventListener(SUBSCRIPTION_ACTIVATED_EVENT, onChanged);
       window.removeEventListener(ARCHIVE_CHANGED_EVENT, onChanged);
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onChanged);
     };
   }, [refetch]);
 

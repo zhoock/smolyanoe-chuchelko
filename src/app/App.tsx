@@ -45,6 +45,7 @@ import { ArchiveAccessModalProvider } from '@shared/lib/archiveAccessModal';
 import {
   PremiumSubscriptionProvider,
   PremiumSuccessModalController,
+  PremiumEntitlementRefreshController,
 } from '@features/premiumSubscription';
 
 // Lazy loading для страниц - загружаются только при необходимости
@@ -585,6 +586,7 @@ function Layout() {
               <FloatingCart />
             </ErrorBoundary>
           )}
+          <PremiumEntitlementRefreshController />
           <PremiumSuccessModalController />
         </DashboardModalShellContext.Provider>
       </PremiumSubscriptionProvider>

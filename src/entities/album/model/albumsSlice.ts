@@ -12,6 +12,9 @@ import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import type { AlbumsState, FetchAlbumsFulfilledPayload } from './types';
 
+/** Ignore stale `force` responses when a newer entitlement refresh is in flight. */
+let latestForceAlbumsRequestId = '';
+
 const initialState: AlbumsState = {
   status: 'idle',
   error: null,
@@ -346,7 +349,10 @@ const albumsSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchAlbums.pending, (state) => {
+      .addCase(fetchAlbums.pending, (state, action) => {
+        if (action.meta.arg.force) {
+          latestForceAlbumsRequestId = action.meta.requestId;
+        }
         const onDashboard = isDashboardPathname();
         if (onDashboard) {
           state.dashboard.status = 'loading';
@@ -360,6 +366,24 @@ const albumsSlice = createSlice({
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {
         const target = action.payload.writeTarget ?? 'catalog';
+        if (
+          action.meta.arg.force &&
+          action.meta.requestId !== latestForceAlbumsRequestId &&
+          !action.payload.staleAbort
+        ) {
+          if (target === 'dashboard') {
+            state.dashboard.inFlightFetchContextKey = null;
+            if (state.dashboard.data.length > 0) {
+              state.dashboard.status = 'succeeded';
+            }
+          } else {
+            state.inFlightFetchContextKey = null;
+            if (state.data.length > 0) {
+              state.status = 'succeeded';
+            }
+          }
+          return;
+        }
         if (action.payload.staleAbort) {
           if (target === 'dashboard') {
             state.dashboard.inFlightFetchContextKey = null;

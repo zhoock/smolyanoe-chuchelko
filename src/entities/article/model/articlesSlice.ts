@@ -13,6 +13,9 @@ import { hydrateMissingRuTranslationsOnArticle } from '../lib/hydrateMissingRuTr
 
 import type { ArticlesState } from './types';
 
+/** Ignore stale `force` responses when a newer entitlement refresh is in flight. */
+let latestForceArticlesRequestId = '';
+
 const initialState: ArticlesState = {
   status: 'idle',
   error: null,
@@ -256,7 +259,10 @@ const articlesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchArticles.pending, (state) => {
+      .addCase(fetchArticles.pending, (state, action) => {
+        if (action.meta.arg.force) {
+          latestForceArticlesRequestId = action.meta.requestId;
+        }
         const onDashboard = isDashboardPathname();
         if (onDashboard) {
           state.dashboard.status = 'loading';
@@ -269,6 +275,25 @@ const articlesSlice = createSlice({
         }
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
+        if (
+          action.meta.arg.force &&
+          action.meta.requestId !== latestForceArticlesRequestId &&
+          !action.payload.staleAbort
+        ) {
+          if (state.inFlightFetchContextKey === 'public') {
+            state.inFlightFetchContextKey = null;
+            if (state.data.length > 0) {
+              state.status = 'succeeded';
+            }
+          }
+          if (state.dashboard.inFlightFetchContextKey === 'dashboard') {
+            state.dashboard.inFlightFetchContextKey = null;
+            if (state.dashboard.data.length > 0) {
+              state.dashboard.status = 'succeeded';
+            }
+          }
+          return;
+        }
         if (action.payload.staleAbort) {
           const target = action.payload.writeTarget ?? 'catalog';
           if (target === 'dashboard') {

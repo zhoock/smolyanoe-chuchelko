@@ -10,4 +10,6 @@ export {
   ARCHIVE_CHANGED_EVENT,
   SUBSCRIPTION_ACTIVATED_EVENT,
   dispatchSubscriptionActivated,
+  type EntitlementChangeDetail,
+  type RefreshPremiumEntitlementsOptions,
 } from './lib/refreshPremiumContent';

@@ -6,6 +6,7 @@ import {
   clearSyncedLyricsCache,
 } from '@features/syncedLyrics/lib';
 import { loadTrackTextFromDatabase } from '@entities/track/lib';
+import { ARCHIVE_CHANGED_EVENT } from '@features/artistArchive';
 import { debugLog } from '../utils/debug';
 
 interface UseLyricsContentParams {
@@ -44,6 +45,7 @@ export function useLyricsContent({
 }: UseLyricsContentParams) {
   // Актуальный ключ трека: по нему валидируем async-результаты
   const trackKeyRef = useRef<string | null>(null);
+  const [entitlementReloadNonce, setEntitlementReloadNonce] = useState(0);
 
   const getTrackKey = () => {
     if (!currentTrack) return null;
@@ -104,6 +106,20 @@ export function useLyricsContent({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [currentTrack, albumId, lang]);
+
+  useEffect(() => {
+    const onEntitlementChanged = () => {
+      if (currentTrack) {
+        clearSyncedLyricsCache(albumId, currentTrack.id, lang);
+      } else {
+        clearSyncedLyricsCache();
+      }
+      setEntitlementReloadNonce((value) => value + 1);
+    };
+
+    window.addEventListener(ARCHIVE_CHANGED_EVENT, onEntitlementChanged);
+    return () => window.removeEventListener(ARCHIVE_CHANGED_EVENT, onEntitlementChanged);
+  }, [albumId, currentTrack, lang]);
 
   // 2) Загрузка SYNCED lyrics (karaoke)
   useEffect(() => {
@@ -205,6 +221,7 @@ export function useLyricsContent({
     lang,
     artistSlugForPublicApi,
     duration,
+    entitlementReloadNonce,
     setSyncedLyrics,
     setAuthorshipText,
     setCurrentLineIndex,
@@ -269,5 +286,12 @@ export function useLyricsContent({
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, albumId, lang, artistSlugForPublicApi, setPlainLyricsContent]);
+  }, [
+    currentTrack,
+    albumId,
+    lang,
+    artistSlugForPublicApi,
+    entitlementReloadNonce,
+    setPlainLyricsContent,
+  ]);
 }

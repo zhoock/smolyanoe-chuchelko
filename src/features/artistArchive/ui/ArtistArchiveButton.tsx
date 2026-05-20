@@ -78,7 +78,7 @@ export function ArtistArchiveButton({ artistUserId }: Props) {
       try {
         await addToArchive();
         refreshPremiumContentForArchiveChange(dispatch, publicArtistSlug?.trim() ?? '');
-        dispatchArchiveArtistAdded(artistUserId);
+        dispatchArchiveArtistAdded(artistUserId, publicArtistSlug?.trim() ?? undefined);
       } catch (err) {
         if (err instanceof ArchiveApiError && err.code === 'ARCHIVE_SLOTS_LIMIT') {
           setArchiveFullOpen(true);

@@ -1,0 +1,64 @@
+import { useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+
+import {
+  ARCHIVE_CHANGED_EVENT,
+  refreshPremiumContentForArchiveChange,
+  SUBSCRIPTION_ACTIVATED_EVENT,
+  type EntitlementChangeDetail,
+} from '@features/artistArchive';
+import { AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+
+import {
+  isPremiumCheckoutPending,
+  readPremiumCheckoutArtistSlug,
+} from '../lib/premiumSuccessModalStorage';
+
+function resolveSlugFromEvent(event: Event): string | undefined {
+  const detail = (event as CustomEvent<EntitlementChangeDetail>).detail;
+  return detail?.publicArtistSlug?.trim() || undefined;
+}
+
+/**
+ * Global entitlement refresh: albums, articles, synced-lyrics cache, player playlist.
+ * Runs after login/logout, subscription activation, archive add/remove, checkout return.
+ */
+export function PremiumEntitlementRefreshController() {
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const resolveSlug = (): string | undefined =>
+    searchParams.get('artist')?.trim() || readPremiumCheckoutArtistSlug() || undefined;
+
+  useEffect(() => {
+    const refresh = (event: Event | null, immediate: boolean) => {
+      const slug = (event ? resolveSlugFromEvent(event) : undefined) || resolveSlug();
+      refreshPremiumContentForArchiveChange(dispatch, slug, { immediate });
+    };
+
+    const onEntitlementChanged = (event: Event) => refresh(event, true);
+    const onAuthSessionChanged = () => refresh(null, true);
+
+    window.addEventListener(SUBSCRIPTION_ACTIVATED_EVENT, onEntitlementChanged);
+    window.addEventListener(ARCHIVE_CHANGED_EVENT, onEntitlementChanged);
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthSessionChanged);
+    return () => {
+      window.removeEventListener(SUBSCRIPTION_ACTIVATED_EVENT, onEntitlementChanged);
+      window.removeEventListener(ARCHIVE_CHANGED_EVENT, onEntitlementChanged);
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthSessionChanged);
+    };
+  }, [dispatch, searchParams]);
+
+  useEffect(() => {
+    if (!isPremiumCheckoutPending()) return;
+
+    const slug = resolveSlug();
+    if (!slug) return;
+
+    refreshPremiumContentForArchiveChange(dispatch, slug, { immediate: true });
+  }, [dispatch, location.pathname, location.search, searchParams]);
+
+  return null;
+}
