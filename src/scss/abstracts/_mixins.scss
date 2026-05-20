@@ -90,6 +90,21 @@ $ms-4: 123.363px; // 6.854rem;
   );
 }
 
+// Outline danger — вторичное деструктивное действие (удаление аккаунта и т.п.)
+@mixin dashboard-danger-outline-button() {
+  @include button-variant(
+    $color: var(--error-color, #cf807d),
+    $background: transparent,
+    $hover-color: var(--error-color, #cf807d),
+    $hover-background: rgb(207 128 125 / 12%),
+    $margin: 0,
+    $padding: var(--ms-01) var(--ms-0),
+    $border: 1px solid color-mix(in srgb, var(--error-color, #cf807d) 70%, transparent),
+    $border-radius: var(--ms-01),
+    $font-size: var(--dashboard-font-size)
+  );
+}
+
 // Dashboard modal card - единый стиль для всех попапов
 @mixin dashboard-modal-card(
   $mobile-max-height: 90vh,

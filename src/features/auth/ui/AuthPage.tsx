@@ -1,11 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { isAuthenticated, AUTH_EXPIRED_BANNER_SESSION_KEY } from '@shared/lib/auth';
+import {
+  isAuthenticated,
+  isEmailVerified,
+  getUser,
+  AUTH_EXPIRED_BANNER_SESSION_KEY,
+} from '@shared/lib/auth';
 import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
+import {
+  clearAccountDeletedSession,
+  clearAccountDeletedSkipReturn,
+  shouldLeaveDeletedArtistPage,
+} from '@shared/lib/accountDeletedSession';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { LanguageSelectModal } from './LanguageSelectModal';
+import { VerifyEmailModal } from './VerifyEmailModal';
 import './AuthPage.scss';
 
 type AuthMode = 'login' | 'register';
@@ -13,13 +25,20 @@ type AuthMode = 'login' | 'register';
 export function AuthPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const user = useAuthSessionUser();
   const [mode, setMode] = useState<AuthMode>(() =>
     searchParams.get('mode') === 'register' ? 'register' : 'login'
   );
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showVerifyEmailModal, setShowVerifyEmailModal] = useState(() =>
+    Boolean((location.state as { showVerifyEmail?: boolean } | null)?.showVerifyEmail)
+  );
+  const [pendingPostRegister, setPendingPostRegister] = useState(false);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setLang } = useLang();
+
+  const needsVerification = Boolean(user && !isEmailVerified(user));
 
   const postAuthPath = useMemo(
     () =>
@@ -49,37 +68,77 @@ export function AuthPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    // Не делаем автоматический редирект, если показывается модалка выбора языка
-    if (isAuthenticated() && !showLanguageModal) {
+    if (isAuthenticated() && !showLanguageModal && !showVerifyEmailModal && !needsVerification) {
+      clearAccountDeletedSkipReturn();
       navigate(postAuthPath, { replace: true });
     }
-  }, [navigate, showLanguageModal, postAuthPath]);
+  }, [navigate, showLanguageModal, showVerifyEmailModal, needsVerification, postAuthPath]);
 
-  // Если уже авторизован и модалка не показывается, ничего не рендерим
-  if (isAuthenticated() && !showLanguageModal) {
+  if (isAuthenticated() && !showLanguageModal && !showVerifyEmailModal && !needsVerification) {
     return null;
   }
 
-  const handleSuccess = () => {
-    // Показываем модалку выбора языка вместо прямого перехода
+  const handleRegisterSuccess = () => {
+    setPendingPostRegister(true);
+    setShowVerifyEmailModal(true);
+  };
+
+  const handleLoginSuccess = () => {
+    const current = getUser();
+    if (current && !isEmailVerified(current)) {
+      setShowVerifyEmailModal(true);
+      return;
+    }
     setShowLanguageModal(true);
+  };
+
+  const finishPostAuthNavigation = () => {
+    clearAccountDeletedSkipReturn();
+    navigate(postAuthPath, { replace: true });
+  };
+
+  const handleVerifyContinueLater = () => {
+    setShowVerifyEmailModal(false);
+    if (pendingPostRegister) {
+      setShowLanguageModal(true);
+    } else {
+      finishPostAuthNavigation();
+    }
   };
 
   const handleLanguageSelected = (lang: 'ru' | 'en') => {
     setLang(lang);
     setShowLanguageModal(false);
-    navigate(postAuthPath);
+    setPendingPostRegister(false);
+    finishPostAuthNavigation();
   };
 
   const handleCloseLanguageModal = () => {
     setShowLanguageModal(false);
-    navigate(postAuthPath);
+    setPendingPostRegister(false);
+    finishPostAuthNavigation();
+  };
+
+  const showAuthForm = !showLanguageModal && !showVerifyEmailModal;
+
+  const handleCloseAuth = () => {
+    if (shouldLeaveDeletedArtistPage()) {
+      clearAccountDeletedSession();
+      navigate({ pathname: '/', search: '' }, { replace: true });
+      return;
+    }
+    navigate(-1);
   };
 
   return (
     <>
-      {/* Показываем форму авторизации только если модалка выбора языка не открыта */}
-      {!showLanguageModal && (
+      <VerifyEmailModal
+        isOpen={showVerifyEmailModal && needsVerification}
+        onContinueLater={handleVerifyContinueLater}
+        onClose={handleVerifyContinueLater}
+      />
+
+      {showAuthForm && (
         <div className="auth-page">
           <div className="auth-page__backdrop" />
           <div className="auth-page__container">
@@ -87,7 +146,7 @@ export function AuthPage() {
               type="button"
               className="auth-page__close"
               aria-label="Закрыть"
-              onClick={() => navigate(-1)}
+              onClick={handleCloseAuth}
             >
               ×
             </button>
@@ -97,9 +156,15 @@ export function AuthPage() {
               </p>
             ) : null}
             {mode === 'login' ? (
-              <LoginForm onSuccess={handleSuccess} onSwitchToRegister={() => setMode('register')} />
+              <LoginForm
+                onSuccess={handleLoginSuccess}
+                onSwitchToRegister={() => setMode('register')}
+              />
             ) : (
-              <RegisterForm onSuccess={handleSuccess} onSwitchToLogin={() => setMode('login')} />
+              <RegisterForm
+                onSuccess={handleRegisterSuccess}
+                onSwitchToLogin={() => setMode('login')}
+              />
             )}
           </div>
         </div>

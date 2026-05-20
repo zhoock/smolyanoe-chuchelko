@@ -16,7 +16,14 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { selectAlbumsStatus, selectAlbumsError, selectAlbumByIdResolved } from '@entities/album';
+import {
+  selectAlbumsStatus,
+  selectAlbumsError,
+  selectAlbumByIdResolved,
+  selectCatalogArtistMissing,
+} from '@entities/album';
+import { ArtistNotFound } from '@shared/ui/artistNotFound';
+import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { getUser } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -38,6 +45,8 @@ export default function Album() {
   const { albumId = '' } = useParams<{ albumId: string }>();
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsError = useAppSelector(selectAlbumsError);
+  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
+  const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistParam);
   const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showPurchaseSection = useShowAlbumPurchaseSection(album);
@@ -125,6 +134,14 @@ export default function Album() {
   }, [albumId]);
 
   // Данные загружаются через loader
+
+  if (hideArtistPageAfterOwnDelete) {
+    return null;
+  }
+
+  if (artistParam && catalogArtistMissing) {
+    return <ArtistNotFound />;
+  }
 
   if (showAlbumLoadingShell) {
     return <AlbumSkeleton />;

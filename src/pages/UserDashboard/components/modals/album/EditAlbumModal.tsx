@@ -2651,7 +2651,7 @@ export function EditAlbumModal({
       // ВАЖНО: Форсим обновление Redux store для языка контента ПЕРЕД вызовом onNext
       console.log('🔄 [EditAlbumModal] Forcing fetchAlbums for lang:', lang);
       try {
-        await dispatch(fetchAlbums({ force: true })).unwrap();
+        await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
         console.log('✅ [EditAlbumModal] Redux store updated for', lang);
       } catch (fetchError) {
         console.error('❌ [EditAlbumModal] Failed to update Redux store:', fetchError);

@@ -9,7 +9,10 @@ import {
   selectAlbumsStatus,
   selectAlbumsError,
   selectPublicAlbumsDataResolved,
+  selectCatalogArtistMissing,
 } from '@entities/album';
+import { ArtistNotFound } from '@shared/ui/artistNotFound';
+import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './AlbumsSection.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
@@ -28,6 +31,8 @@ export function AlbumsSection() {
   const { lang } = useLang();
   const [searchParams] = useSearchParams();
   const artistSlug = searchParams.get('artist');
+  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
+  const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistSlug);
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsError = useAppSelector(selectAlbumsError);
@@ -55,6 +60,14 @@ export function AlbumsSection() {
   const hasMore = allAlbums.length > initialCount;
 
   // Данные загружаются через loader, не нужно загружать здесь
+
+  if (hideArtistPageAfterOwnDelete) {
+    return null;
+  }
+
+  if (artistSlug && catalogArtistMissing) {
+    return <ArtistNotFound />;
+  }
 
   if (albumsStatus === 'succeeded' && allAlbums.length === 0) {
     return null;

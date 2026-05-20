@@ -13,6 +13,7 @@ import type { SupportedLang } from '@shared/model/lang';
 import type { AppDispatch } from '@shared/model/appStore/types';
 import * as publicArtistContext from '@shared/lib/publicArtistContext';
 import { currentArtistReducer, setPublicArtistSlug } from '@shared/model/currentArtist';
+import { createAlbumsTestState } from '@entities/album/model/__tests__/albumsTestState';
 
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 const mockSuccessResponse = (data: unknown) =>
@@ -29,21 +30,7 @@ const createTestStore = () => {
       lang: () => ({ current: 'en' as SupportedLang }),
       popup: () => ({ isOpen: false }),
       player: () => initialPlayerState,
-      albums: () => ({
-        status: 'idle' as const,
-        error: null,
-        data: [],
-        lastUpdated: null,
-        fetchContextKey: null,
-        inFlightFetchContextKey: null,
-        dashboard: {
-          status: 'idle' as const,
-          error: null,
-          data: [],
-          lastUpdated: null,
-          inFlightFetchContextKey: null,
-        },
-      }),
+      albums: () => createAlbumsTestState(),
       helpArticles: () => ({
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
         ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
@@ -401,21 +388,7 @@ describe('articlesSlice', () => {
       lang: { current: 'en' as SupportedLang },
       popup: { isOpen: false },
       player: initialPlayerState,
-      albums: {
-        status: 'idle' as const,
-        error: null,
-        data: [],
-        lastUpdated: null,
-        fetchContextKey: null,
-        inFlightFetchContextKey: null,
-        dashboard: {
-          status: 'idle' as const,
-          error: null,
-          data: [],
-          lastUpdated: null,
-          inFlightFetchContextKey: null,
-        },
-      },
+      albums: createAlbumsTestState(),
       helpArticles: {
         en: { status: 'idle' as const, error: null, data: [], lastUpdated: null },
         ru: { status: 'idle' as const, error: null, data: [], lastUpdated: null },

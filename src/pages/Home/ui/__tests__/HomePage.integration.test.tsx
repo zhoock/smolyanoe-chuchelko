@@ -57,6 +57,7 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -116,6 +117,7 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -184,6 +186,7 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -264,6 +267,7 @@ describe('HomePage integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,

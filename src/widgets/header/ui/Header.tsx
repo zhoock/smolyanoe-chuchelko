@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { Navigation } from '@features/navigation';
 import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { appendReturnTo } from '@shared/lib/authReturnUrl';
+import { shouldLeaveDeletedArtistPage } from '@shared/lib/accountDeletedSession';
 import { useLang } from '@app/providers/lang'; // берём из контекста
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -38,7 +39,13 @@ const HeaderComponent = ({
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const isAuthed = isAuthenticated();
   const authParams = new URLSearchParams({ mode: 'register' });
-  appendReturnTo(authParams, location);
+  const leaveDeletedArtistPage = shouldLeaveDeletedArtistPage();
+  if (!leaveDeletedArtistPage) {
+    appendReturnTo(authParams, location);
+  }
+  const authBackgroundLocation = leaveDeletedArtistPage
+    ? { pathname: '/', search: '', hash: '', state: null, key: 'default' }
+    : location;
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +137,7 @@ const HeaderComponent = ({
             <Link
               className="header__sign-in"
               to={{ pathname: '/auth', search: `?${authParams.toString()}` }}
-              state={{ backgroundLocation: location }}
+              state={{ backgroundLocation: authBackgroundLocation }}
               onClick={() => {
                 clearPremiumCheckoutAuthIntent();
                 setLangOpen(false);

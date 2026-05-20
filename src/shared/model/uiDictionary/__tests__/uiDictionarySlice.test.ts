@@ -52,6 +52,7 @@ const createTestStore = () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        catalogArtistMissing: false,
         dashboard: {
           status: 'idle' as const,
           error: null,
@@ -446,6 +447,7 @@ describe('uiDictionarySlice', () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        catalogArtistMissing: false,
         dashboard: {
           status: 'idle' as const,
           error: null,

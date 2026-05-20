@@ -48,6 +48,11 @@ import {
   PremiumSuccessModalController,
   PremiumEntitlementRefreshController,
 } from '@features/premiumSubscription';
+import {
+  EmailVerificationBanner,
+  EmailVerificationRefreshController,
+} from '@shared/lib/emailVerification';
+import { AccountDeletedToast } from '@shared/ui/accountDeletedToast/AccountDeletedToast';
 
 // Lazy loading для страниц - загружаются только при необходимости
 const Album = lazy(() => import('@pages/Album/Album'));
@@ -63,6 +68,10 @@ const AuthPage = lazy(() => import('@features/auth/ui/AuthPage'));
 const PaymentSuccess = lazy(() => import('@pages/PaymentSuccess/PaymentSuccess'));
 const SubscriptionPaymentSuccess = lazy(
   () => import('@pages/SubscriptionPaymentSuccess/SubscriptionPaymentSuccess')
+);
+const EmailVerified = lazy(() => import('@pages/EmailVerified/EmailVerified'));
+const EmailVerificationExpired = lazy(
+  () => import('@pages/EmailVerificationExpired/EmailVerificationExpired')
 );
 
 // Компонент для отображения загрузки
@@ -270,6 +279,8 @@ function Layout() {
     '/dashboard-new',
     '/dashboard-new/:tab',
     '/auth',
+    '/email-verified',
+    '/email-verification-expired',
   ];
 
   const isKnownRoute = knownRoutes.some((pattern) =>
@@ -403,6 +414,22 @@ function Layout() {
         element={
           <Suspense fallback={<PageLoader />}>
             <AuthPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/email-verified"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <EmailVerified />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/email-verification-expired"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <EmailVerificationExpired />
           </Suspense>
         }
       />
@@ -549,6 +576,7 @@ function Layout() {
             </ErrorBoundary>
           ) : isHomeSceneRoute ? (
             <ErrorBoundary>
+              <AccountDeletedToast />
               <main>
                 <ErrorBoundary>{standardRoutes}</ErrorBoundary>
               </main>
@@ -565,6 +593,8 @@ function Layout() {
                   else dispatch(openPopup());
                 }}
               />
+              <EmailVerificationBanner />
+              <AccountDeletedToast />
               <main>
                 {!isHomeSceneRoute && <Hero />}
 
@@ -587,6 +617,7 @@ function Layout() {
               <FloatingCart />
             </ErrorBoundary>
           )}
+          <EmailVerificationRefreshController />
           <PremiumEntitlementRefreshController />
           <PremiumCheckoutIntentResumeController />
           <PremiumSuccessModalController />

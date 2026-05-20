@@ -8,7 +8,13 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumsSkeleton } from '@shared/ui/skeleton/AlbumsSkeleton';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectAlbumsStatus, selectAlbumsResolvedForAllAlbumsPage } from '@entities/album';
+import {
+  selectAlbumsStatus,
+  selectAlbumsResolvedForAllAlbumsPage,
+  selectCatalogArtistMissing,
+} from '@entities/album';
+import { ArtistNotFound } from '@shared/ui/artistNotFound';
+import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/album/ui/style.scss';
 import './style.scss';
@@ -23,6 +29,8 @@ export function AllAlbumsPage() {
   const { lang } = useLang();
   const [searchParams] = useSearchParams();
   const artistSlug = searchParams.get('artist');
+  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
+  const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistSlug);
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const allAlbums = useAppSelector((state) =>
@@ -83,6 +91,14 @@ export function AllAlbumsPage() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, []);
+
+  if (hideArtistPageAfterOwnDelete) {
+    return null;
+  }
+
+  if (artistSlug && catalogArtistMissing) {
+    return <ArtistNotFound />;
+  }
 
   return (
     <section className="all-albums main-background" aria-label={seoTitle}>

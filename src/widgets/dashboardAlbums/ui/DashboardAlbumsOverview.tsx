@@ -114,7 +114,7 @@ export default function DashboardAlbumsOverview({
 
   useEffect(() => {
     if (status === 'idle' || status === 'failed') {
-      const promise = dispatch(fetchAlbums({}));
+      const promise = dispatch(fetchAlbums({ ownerDashboard: true }));
       return () => {
         promise.abort();
       };

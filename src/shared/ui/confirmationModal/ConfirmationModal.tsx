@@ -11,8 +11,8 @@ export interface ConfirmationModalProps {
   isOpen: boolean;
   title?: string;
   message: string;
-  /** Короткая подсказка под сообщением («Это действие нельзя отменить» / локализация). */
-  irreversibleHint?: string;
+  /** Подсказка под сообщением; `null` — не показывать блок. */
+  irreversibleHint?: string | null;
   confirmText?: string;
   cancelText?: string;
   /** aria-label для кнопки «×» (локализация «Закрыть»). */
@@ -42,12 +42,31 @@ export function ConfirmationModal({
     onCancel();
   };
 
+  const showIrreversibleHint = irreversibleHint !== null;
+  const irreversibleHintText =
+    irreversibleHint === undefined ? 'This action cannot be undone.' : irreversibleHint;
+
   return (
     <Popup isActive={isOpen} onClose={onCancel} bgColor="rgba(var(--deep-black-rgb) / 95%)">
       <div className="confirmation-modal">
         <div className="confirmation-modal__container">
           <div className="confirmation-modal__header">
-            {title && <h2 className="confirmation-modal__title">{title}</h2>}
+            <div className="confirmation-modal__title-row">
+              {variant === 'danger' && (
+                <span className="confirmation-modal__icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              )}
+              {title && <h2 className="confirmation-modal__title">{title}</h2>}
+            </div>
             <button
               type="button"
               className="confirmation-modal__close"
@@ -57,10 +76,10 @@ export function ConfirmationModal({
               ×
             </button>
           </div>
-          <p className="confirmation-modal__message">{message}</p>
-          <p className="confirmation-modal__warning">
-            {irreversibleHint ?? 'This action cannot be undone.'}
-          </p>
+          {message ? <p className="confirmation-modal__message">{message}</p> : null}
+          {showIrreversibleHint && irreversibleHintText ? (
+            <p className="confirmation-modal__warning">{irreversibleHintText}</p>
+          ) : null}
           <div className="confirmation-modal__actions">
             <button
               type="button"

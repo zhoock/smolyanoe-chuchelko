@@ -19,6 +19,8 @@ export interface AlbumsState {
    * чтобы фон не мигал, пока грузится только ветка кабинета.
    */
   inFlightFetchContextKey: 'dashboard' | 'public' | null;
+  /** Публичный ?artist= не найден (удалён / неверный slug). */
+  catalogArtistMissing: boolean;
   /**
    * Альбомы владельца для `/dashboard*`: не пересекаются с публичным каталогом в `data`
    * (модальный кабинет поверх страницы артиста).
@@ -32,6 +34,12 @@ export interface AlbumsState {
   };
 }
 
+export type FetchAlbumsArg = {
+  force?: boolean;
+  /** Явная загрузка альбомов владельца в dashboard bucket (модальный кабинет). */
+  ownerDashboard?: boolean;
+};
+
 export interface FetchAlbumsFulfilledPayload {
   albums: IAlbums[];
   fetchContextKey: string;
@@ -39,4 +47,5 @@ export interface FetchAlbumsFulfilledPayload {
   staleAbort?: boolean;
   /** Куда писать результат: публичный каталог или кабинет. */
   writeTarget?: 'catalog' | 'dashboard';
+  catalogArtistMissing?: boolean;
 }

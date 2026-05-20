@@ -3,6 +3,8 @@
  */
 
 import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
+import { getStore } from '@shared/model/appStore';
+import { resetCatalogAfterAuthEnd } from '@shared/lib/resetCatalogAfterAuthEnd';
 
 const TOKEN_STORAGE_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'auth_user';
@@ -109,6 +111,8 @@ export interface AuthUser {
   name: string | null;
   /** Роль с бэкенда; старые сессии могут не иметь поля */
   role?: 'user' | 'admin';
+  /** Подтверждён ли email; старые сессии без поля считаются неподтверждёнными */
+  isEmailVerified?: boolean;
 }
 
 export interface AuthResponse {
@@ -194,6 +198,11 @@ export function clearAuth(): void {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     clearPremiumCheckoutAuthIntent();
+    try {
+      resetCatalogAfterAuthEnd(getStore().dispatch);
+    } catch {
+      /* store may be unavailable in tests */
+    }
     dispatchAuthSessionChanged();
   } catch (error) {
     console.error('❌ Failed to clear auth data:', error);
@@ -274,6 +283,139 @@ export async function login(email: string, password: string): Promise<AuthRespon
  */
 export function logout(): void {
   clearAuth();
+}
+
+/** Обновляет поля пользователя в localStorage (без смены токена). */
+export function updateStoredUser(partial: Partial<AuthUser>): void {
+  try {
+    purgeInvalidAuthSessionFromStorage();
+    const userStr = localStorage.getItem(USER_STORAGE_KEY);
+    if (!userStr) return;
+    const user = JSON.parse(userStr) as AuthUser;
+    const updatedUser: AuthUser = { ...user, ...partial };
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+    dispatchAuthSessionChanged();
+  } catch (error) {
+    console.error('❌ Failed to update stored user:', error);
+  }
+}
+
+export function isEmailVerified(user?: AuthUser | null): boolean {
+  if (!user) return false;
+  return user.isEmailVerified === true;
+}
+
+/**
+ * Загружает актуальный профиль с бэкенда и обновляет localStorage.
+ */
+export async function refreshAuthSession(): Promise<AuthUser | null> {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const response = await fetch('/api/auth/me', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const result = await response.json();
+    if (result.success && result.data?.user) {
+      const user = result.data.user as AuthUser;
+      updateStoredUser(user);
+      return user;
+    }
+  } catch (error) {
+    console.error('❌ Failed to refresh auth session:', error);
+  }
+  return getUser();
+}
+
+export async function resendVerificationEmail(): Promise<{
+  success: boolean;
+  error?: string;
+  code?: string;
+}> {
+  try {
+    const response = await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+    });
+    const result = await response.json();
+    return {
+      success: Boolean(result.success),
+      error: result.error,
+      code: result.code,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+export async function changeVerificationEmail(
+  email: string
+): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
+  try {
+    const response = await fetch('/api/auth/change-verification-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ email }),
+    });
+    const result = await response.json();
+    if (result.success && result.data?.user) {
+      if (result.data.token) {
+        saveAuth(result.data.token, result.data.user);
+      } else {
+        updateStoredUser(result.data.user);
+      }
+      return { success: true, user: result.data.user };
+    }
+    return { success: false, error: result.error };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Безвозвратно удаляет аккаунт текущего пользователя.
+ */
+export async function deleteAccount(
+  currentPassword: string
+): Promise<{ success: boolean; error?: string; code?: string }> {
+  try {
+    const response = await fetch('/api/auth/delete-account', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ currentPassword }),
+    });
+
+    const result = await response.json();
+    return {
+      success: Boolean(result.success),
+      error: result.error,
+      code: result.code,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 /**

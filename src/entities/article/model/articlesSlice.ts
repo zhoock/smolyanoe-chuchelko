@@ -35,9 +35,16 @@ const initialState: ArticlesState = {
 
 export type FetchArticlesArg = {
   force?: boolean;
+  /** Явная загрузка статей владельца в dashboard bucket (модальный кабинет). */
+  ownerDashboard?: boolean;
   /** Явный slug из loader URL; иначе берётся из `currentArtist` в store */
   publicArtistSlug?: string | null;
 };
+
+function isOwnerDashboardArticlesFetch(arg: FetchArticlesArg): boolean {
+  if (arg.ownerDashboard) return true;
+  return isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+}
 
 export type FetchArticlesResult = {
   articles: IArticles[];
@@ -75,7 +82,7 @@ export const fetchArticles = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >(
   'articles/fetchMerged',
-  async (_arg, { signal, rejectWithValue, getState }) => {
+  async (arg, { signal, rejectWithValue, getState }) => {
     const normalize = (data: unknown[]): IArticles[] =>
       data.map((article: unknown) => {
         const a = article as Record<string, unknown>;
@@ -107,10 +114,11 @@ export const fetchArticles = createAsyncThunk<
     try {
       const { getAuthHeader } = await import('@shared/lib/auth');
       const authHeader = getAuthHeader();
-      const usePublicCatalog = shouldUsePublicArtistCatalogInRedux();
-      const isFullscreenDashboard = isDashboardPathname() && !usePublicCatalog;
+      const ownerDashboard = isOwnerDashboardArticlesFetch(arg);
+      const usePublicCatalog = ownerDashboard ? false : shouldUsePublicArtistCatalogInRedux();
+      const isFullscreenDashboard = ownerDashboard;
 
-      const resolvedSlug = usePublicCatalog ? resolvePublicArtistSlugForFetch(_arg, getState) : '';
+      const resolvedSlug = usePublicCatalog ? resolvePublicArtistSlugForFetch(arg, getState) : '';
 
       const fallbackLang: 'en' | 'ru' = getState().lang.current === 'ru' ? 'ru' : 'en';
 
@@ -169,6 +177,8 @@ export const fetchArticles = createAsyncThunk<
           }
 
           return slugMeta(normalize(list));
+        } else if (response?.status === 404 && usePublicCatalog) {
+          return slugMeta([]);
         } else {
           apiFailure = new Error(
             response
@@ -218,7 +228,7 @@ export const fetchArticles = createAsyncThunk<
         return true;
       }
       const state = getState();
-      const isFullscreenDashboard = isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+      const isFullscreenDashboard = isOwnerDashboardArticlesFetch(arg);
       if (isFullscreenDashboard) {
         const d = state.articles.dashboard;
         if (d.status === 'loading') return false;
@@ -247,6 +257,7 @@ const articlesSlice = createSlice({
   name: 'articles',
   initialState,
   reducers: {
+    resetArticlesState: () => initialState,
     patchDashboardArticleVisibility: (
       state,
       action: PayloadAction<{ articleId: string; visibility: TrackVisibility }>
@@ -265,8 +276,7 @@ const articlesSlice = createSlice({
         if (action.meta.arg.force) {
           latestForceArticlesRequestId = action.meta.requestId;
         }
-        const isFullscreenDashboard =
-          isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+        const isFullscreenDashboard = isOwnerDashboardArticlesFetch(action.meta.arg);
         if (isFullscreenDashboard) {
           state.dashboard.status = 'loading';
           state.dashboard.error = null;
@@ -368,4 +378,4 @@ const articlesSlice = createSlice({
 });
 
 export const articlesReducer = articlesSlice.reducer;
-export const { patchDashboardArticleVisibility } = articlesSlice.actions;
+export const { patchDashboardArticleVisibility, resetArticlesState } = articlesSlice.actions;

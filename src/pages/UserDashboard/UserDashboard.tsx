@@ -39,7 +39,10 @@ import { Popup } from '@shared/ui/popup';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import { AlertModal } from '@shared/ui/alertModal';
 import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
-import { logout, isAuthenticated, getToken } from '@shared/lib/auth';
+import { isAuthenticated, getToken, isEmailVerified, clearAuth } from '@shared/lib/auth';
+import { clearAccountDeletedSkipReturn } from '@shared/lib/accountDeletedSession';
+import { clearDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
+import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
@@ -76,10 +79,15 @@ import { DashboardTabContentSkeleton } from './components/DashboardTabContentSke
 import { ProfileTabSkeleton } from './components/ProfileTabSkeleton';
 import { SyncLyricsModal } from './components/modals/lyrics/SyncLyricsModal';
 import { ProfileSettingsModal } from './components/modals/profile/ProfileSettingsModal';
+import {
+  DeleteAccountModal,
+  type DeleteAccountModalCopy,
+} from './components/modals/profile/DeleteAccountModal';
 import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
 import { MyArchiveContent } from './components/archive/MyArchiveContent';
+import { EmailVerificationLockedNotice } from './components/EmailVerificationLockedNotice';
 import type { IAlbums, IArticles, IInterface, DashboardTrackVisibilityLabels } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
@@ -1038,12 +1046,15 @@ function UserDashboard() {
   const articlesFromStore = useAppSelector((state) => selectDashboardArticlesDataResolved(state));
   const user = useAuthSessionUser();
   const userId = user?.id ?? null;
+  const emailVerified = isEmailVerified(user);
+  const emailCopy = useEmailVerificationCopy();
 
   const tabInvalid =
     tabFromRoute !== undefined && tabFromRoute !== '' && !isDashboardTabSlug(tabFromRoute);
   const activeTab: DashboardTab = tabInvalid ? 'albums' : dashboardTabFromRouteParam(tabFromRoute);
 
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
@@ -1112,6 +1123,8 @@ function UserDashboard() {
     message: string;
     onConfirm: () => void;
     variant?: 'danger' | 'warning' | 'info';
+    confirmText?: string;
+    irreversibleHint?: string | null;
   } | null>(null);
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
@@ -1127,6 +1140,92 @@ function UserDashboard() {
       variant: 'warning',
     });
   }, []);
+
+  const deleteAccountCopy = useMemo((): DeleteAccountModalCopy => {
+    const d = ui?.dashboard;
+    const en = lang !== 'ru';
+    return {
+      title: d?.deleteAccountConfirmTitle ?? (en ? 'Delete account?' : 'Удалить аккаунт?'),
+      warningDescription:
+        d?.deleteAccountWarningDescription ??
+        (en
+          ? 'This action cannot be undone. All your data will be permanently deleted.'
+          : 'Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно.'),
+      impactTitle: (() => {
+        const fromApi = d?.deleteAccountWarningIntro?.trim();
+        const short = en ? 'This will permanently delete:' : 'Будут удалены безвозвратно:';
+        if (!fromApi) return short;
+        if (
+          fromApi.includes('не подлежат восстановлению') ||
+          fromApi.includes('cannot be recovered') ||
+          fromApi.length > 48
+        ) {
+          return short;
+        }
+        return fromApi;
+      })(),
+      warningItems: [
+        d?.deleteAccountWarningProfile ?? (en ? 'Profile' : 'Профиль'),
+        d?.deleteAccountWarningAlbums ?? (en ? 'Albums' : 'Альбомы'),
+        d?.deleteAccountWarningTracks ?? (en ? 'Tracks' : 'Треки'),
+        d?.deleteAccountWarningArticles ?? (en ? 'Articles' : 'Статьи'),
+        d?.deleteAccountWarningPurchases ?? (en ? 'Purchases' : 'Покупки'),
+        d?.deleteAccountWarningArchive ?? (en ? 'Archive' : 'Архив'),
+        d?.deleteAccountWarningPremium ?? (en ? 'Premium access' : 'Premium-доступ'),
+      ],
+      passwordLabel: d?.deleteAccountPasswordLabel ?? (en ? 'Current password' : 'Текущий пароль'),
+      passwordPlaceholder:
+        d?.deleteAccountPasswordPlaceholder ??
+        (en ? 'Enter current password' : 'Введите текущий пароль'),
+      passwordHelper:
+        d?.deleteAccountPasswordHelper ??
+        (en
+          ? 'For your security, please enter your current password to continue.'
+          : 'Для безопасности введите текущий пароль, чтобы продолжить.'),
+      finalWarning:
+        d?.deleteAccountFinalWarning ??
+        (en ? 'This action cannot be undone.' : 'Это действие нельзя отменить.'),
+      deleteButton: d?.deleteAccount ?? (en ? 'Delete account' : 'Удалить аккаунт'),
+      cancel: d?.cancel ?? (en ? 'Cancel' : 'Отмена'),
+      close: d?.close ?? (en ? 'Close' : 'Закрыть'),
+      deleting: d?.deleteAccountDeleting ?? (en ? 'Deleting account…' : 'Удаление аккаунта…'),
+      passwordRequired: en ? 'Enter your password' : 'Укажите пароль',
+      deleteFailed:
+        d?.deleteAccountFailed ??
+        (en ? 'Could not delete account. Please try again.' : 'Не удалось удалить аккаунт.'),
+    };
+  }, [lang, ui?.dashboard]);
+
+  const handleAccountDeleted = useCallback(() => {
+    setIsDeleteAccountModalOpen(false);
+    setIsProfileSettingsModalOpen(false);
+    setConfirmationModal(null);
+    setAlertModal(null);
+    setEditAlbumModal(null);
+    setEditArticleModal(null);
+    clearDashboardModalBackground();
+    clearAuth();
+    clearAccountDeletedSkipReturn();
+    if (typeof window !== 'undefined') {
+      window.location.replace('/');
+      return;
+    }
+    navigate({ pathname: '/', search: '' }, { replace: true });
+  }, [navigate]);
+
+  const guardEmailVerified = useCallback((): boolean => {
+    if (emailVerified) return true;
+    setAlertModal({
+      isOpen: true,
+      title: emailCopy.verifyTitle,
+      message:
+        emailCopy.restrictedUpload ??
+        emailCopy.restrictedHint ??
+        'Verify your email to unlock this feature',
+      variant: 'warning',
+    });
+    return false;
+  }, [emailVerified, emailCopy.verifyTitle, emailCopy.restrictedUpload, emailCopy.restrictedHint]);
 
   const {
     avatarSrc,
@@ -1254,6 +1353,7 @@ function UserDashboard() {
   };
 
   const handleArticleCoverFileUpload = async (articleId: string, file: File) => {
+    if (!guardEmailVerified()) return;
     if (!file.type.startsWith('image/')) {
       setArticleCoverUpload((prev) => ({
         ...prev,
@@ -1439,7 +1539,7 @@ function UserDashboard() {
           return;
         }
 
-        await dispatch(fetchArticles({ force: true }));
+        await dispatch(fetchArticles({ force: true, ownerDashboard: true }));
 
         if (articleCoverLocalPreviewRefs.current[articleId]) {
           URL.revokeObjectURL(articleCoverLocalPreviewRefs.current[articleId]!);
@@ -1521,7 +1621,7 @@ function UserDashboard() {
   // спокойным для фоновой страницы под модалкой.
   const albumsRouteScopeKey = getAlbumsDashboardRouteScopeKey(location.pathname);
   useEffect(() => {
-    dispatch(fetchAlbums({ force: true })).catch((error: any) => {
+    dispatch(fetchAlbums({ force: true, ownerDashboard: true })).catch((error: any) => {
       // ConditionError - это нормально, condition отменил запрос
       if (error?.name === 'ConditionError') {
         return;
@@ -1538,7 +1638,7 @@ function UserDashboard() {
       return;
     }
 
-    dispatch(fetchArticles({ force: true })).catch((error: any) => {
+    dispatch(fetchArticles({ force: true, ownerDashboard: true })).catch((error: any) => {
       if (error?.name === 'ConditionError') {
         return;
       }
@@ -1683,7 +1783,7 @@ function UserDashboard() {
       }
 
       // Обновляем данные из БД для синхронизации
-      await dispatch(fetchAlbums({ force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
       console.log('✅ Tracks reordered successfully');
     } catch (error) {
       console.error('❌ Error reordering tracks:', error);
@@ -1772,7 +1872,7 @@ function UserDashboard() {
         variant: 'error',
       });
       // Откатываем изменения в локальном состоянии
-      await dispatch(fetchAlbums({ force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
     }
   };
 
@@ -1826,7 +1926,7 @@ function UserDashboard() {
         message: `Ошибка при изменении доступа к треку: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'error',
       });
-      await dispatch(fetchAlbums({ force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
     }
   };
 
@@ -1867,7 +1967,7 @@ function UserDashboard() {
         message: `${ui?.dashboard?.error ?? 'Error'}: ${error instanceof Error ? error.message : 'Unknown'}`,
         variant: 'error',
       });
-      await dispatch(fetchArticles({ force: true })).unwrap();
+      await dispatch(fetchArticles({ force: true, ownerDashboard: true })).unwrap();
     }
   };
 
@@ -1916,7 +2016,7 @@ function UserDashboard() {
       );
 
       try {
-        await dispatch(fetchAlbums({ force: true })).unwrap();
+        await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
       } catch (refetchErr: unknown) {
         const name =
           refetchErr && typeof refetchErr === 'object' && 'name' in refetchErr
@@ -2019,7 +2119,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchArticles({ force: true })).unwrap();
+      await dispatch(fetchArticles({ force: true, ownerDashboard: true })).unwrap();
 
       // Закрываем расширенный вид, если удаленная статья была открыта
       if (expandedArticleId === article.articleId) {
@@ -2071,7 +2171,7 @@ function UserDashboard() {
       }
 
       // Обновляем Redux store
-      await dispatch(fetchAlbums({ force: true })).unwrap();
+      await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
 
       // Удаляем альбом из локального состояния
       setAlbumsData((prev) => prev.filter((a) => a.id !== albumId));
@@ -2095,6 +2195,7 @@ function UserDashboard() {
 
   // Обработка загрузки треков
   const handleTrackUpload = async (albumId: string, files: FileList) => {
+    if (!guardEmailVerified()) return;
     if (isUploadingTracks[albumId]) {
       return;
     }
@@ -2196,7 +2297,7 @@ function UserDashboard() {
         try {
           // Небольшая задержка для гарантии обновления БД
           await new Promise((resolve) => setTimeout(resolve, 300));
-          await dispatch(fetchAlbums({ force: true })).unwrap();
+          await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
           console.log('✅ [handleTrackUpload] Albums refreshed from database');
         } catch (fetchError: any) {
           // ConditionError - это нормально, condition отменил запрос
@@ -2415,7 +2516,7 @@ function UserDashboard() {
 
       if (result.success) {
         setCachedAuthorship(addLyricsModal.albumId, addLyricsModal.trackId, lang, authorship);
-        void dispatch(fetchAlbums({ force: true }));
+        void dispatch(fetchAlbums({ force: true, ownerDashboard: true }));
         setAlbumsData((prev) =>
           prev.map((a) => {
             if (a.id === addLyricsModal.albumId) {
@@ -2533,7 +2634,7 @@ function UserDashboard() {
             : null
         );
 
-        void dispatch(fetchAlbums({ force: true }));
+        void dispatch(fetchAlbums({ force: true, ownerDashboard: true }));
 
         console.log('✅ Lyrics saved and albumsData updated:', {
           albumId: editLyricsModal.albumId,
@@ -2776,7 +2877,19 @@ function UserDashboard() {
                       hidden={activeTab !== 'payment-settings'}
                       aria-hidden={activeTab !== 'payment-settings'}
                     >
-                      {user?.id ? (
+                      {!emailVerified ? (
+                        <EmailVerificationLockedNotice
+                          title={
+                            emailCopy.restrictedPaymentSettings ??
+                            (lang === 'en' ? 'Payment Settings' : 'Настройки оплаты')
+                          }
+                          hint={
+                            emailCopy.restrictedPaymentSettingsHint ??
+                            emailCopy.restrictedHint ??
+                            ''
+                          }
+                        />
+                      ) : user?.id ? (
                         <PaymentSettings userId={user.id} />
                       ) : (
                         <p className="user-dashboard__tab-placeholder">
@@ -2796,7 +2909,12 @@ function UserDashboard() {
                       hidden={activeTab !== 'mixer'}
                       aria-hidden={activeTab !== 'mixer'}
                     >
-                      <>
+                      {!emailVerified ? (
+                        <EmailVerificationLockedNotice
+                          title={emailCopy.restrictedMixer ?? (lang === 'en' ? 'Mixer' : 'Миксер')}
+                          hint={emailCopy.restrictedMixerHint ?? emailCopy.restrictedHint ?? ''}
+                        />
+                      ) : (
                         <div className="user-dashboard__section">
                           <MixerAdmin
                             ui={ui || undefined}
@@ -2804,7 +2922,7 @@ function UserDashboard() {
                             albums={albumsData}
                           />
                         </div>
-                      </>
+                      )}
                     </div>
                     <div
                       className="user-dashboard__tab-panel"
@@ -3117,7 +3235,10 @@ function UserDashboard() {
                               <button
                                 type="button"
                                 className="user-dashboard__upload-button"
-                                onClick={() => setEditAlbumModal({ isOpen: true })}
+                                onClick={() => {
+                                  if (!guardEmailVerified()) return;
+                                  setEditAlbumModal({ isOpen: true });
+                                }}
                               >
                                 {ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}
                               </button>
@@ -3131,7 +3252,10 @@ function UserDashboard() {
                               <button
                                 type="button"
                                 className="user-dashboard__new-album-button"
-                                onClick={() => setEditAlbumModal({ isOpen: true })}
+                                onClick={() => {
+                                  if (!guardEmailVerified()) return;
+                                  setEditAlbumModal({ isOpen: true });
+                                }}
                               >
                                 {ui?.dashboard?.newAlbum ?? 'New Album'}
                               </button>
@@ -3454,6 +3578,7 @@ function UserDashboard() {
                                 type="button"
                                 className="user-dashboard__upload-button"
                                 onClick={() => {
+                                  if (!guardEmailVerified()) return;
                                   // Создаем новую пустую статью
                                   const newArticle: IArticles = {
                                     articleId: `new-${Date.now()}`,
@@ -3483,6 +3608,7 @@ function UserDashboard() {
                                 type="button"
                                 className="user-dashboard__new-post-button"
                                 onClick={() => {
+                                  if (!guardEmailVerified()) return;
                                   // Создаем новую пустую статью
                                   const newArticle: IArticles = {
                                     articleId: `new-${Date.now()}`,
@@ -3657,13 +3783,10 @@ function UserDashboard() {
                               </button>
                               <button
                                 type="button"
-                                className="user-dashboard__logout-button"
-                                onClick={() => {
-                                  logout();
-                                  navigate('/', { replace: true });
-                                }}
+                                className="user-dashboard__delete-account-button"
+                                onClick={() => setIsDeleteAccountModalOpen(true)}
                               >
-                                {ui?.dashboard?.logout ?? 'Logout'}
+                                {ui?.dashboard?.deleteAccount ?? 'Delete account'}
                               </button>
                             </div>
                           </div>
@@ -3734,7 +3857,7 @@ function UserDashboard() {
           onSave={async () => {
             // Перезагружаем альбомы из БД, чтобы получить актуальные синхронизированные тексты
             try {
-              await dispatch(fetchAlbums({ force: true })).unwrap();
+              await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
             } catch (error) {
               console.error('❌ Error reloading albums after sync save:', error);
             }
@@ -3839,7 +3962,9 @@ function UserDashboard() {
                 updatedAlbumId: updatedAlbum?.albumId,
                 isNewAlbum: !editAlbumModal.albumId,
               });
-              const fetchPayload = await dispatch(fetchAlbums({ force: true })).unwrap();
+              const fetchPayload = await dispatch(
+                fetchAlbums({ force: true, ownerDashboard: true })
+              ).unwrap();
               const result = fetchPayload.albums;
               console.log('✅ [UserDashboard] Albums fetched:', {
                 count: result?.length || 0,
@@ -3926,14 +4051,17 @@ function UserDashboard() {
           title={confirmationModal.title}
           message={confirmationModal.message}
           irreversibleHint={
-            ui?.dashboard?.confirmActionIrreversible ?? 'This action cannot be undone.'
+            confirmationModal.irreversibleHint !== undefined
+              ? confirmationModal.irreversibleHint
+              : (ui?.dashboard?.confirmActionIrreversible ?? 'This action cannot be undone.')
           }
           variant={confirmationModal.variant}
           cancelText={ui?.dashboard?.cancel ?? 'Cancel'}
           confirmText={
-            confirmationModal.variant === 'danger'
+            confirmationModal.confirmText ??
+            (confirmationModal.variant === 'danger'
               ? (ui?.dashboard?.confirmationModalConfirmDelete ?? 'Delete')
-              : (ui?.dashboard?.confirmationModalConfirm ?? 'Confirm')
+              : (ui?.dashboard?.confirmationModalConfirm ?? 'Confirm'))
           }
           closeLabel={ui?.dashboard?.close ?? 'Close'}
           onConfirm={confirmationModal.onConfirm}
@@ -3967,6 +4095,13 @@ function UserDashboard() {
         onClose={() => setIsProfileSettingsModalOpen(false)}
         userName={user?.name ?? undefined}
         userEmail={user?.email}
+      />
+
+      <DeleteAccountModal
+        isOpen={isDeleteAccountModalOpen}
+        onClose={() => setIsDeleteAccountModalOpen(false)}
+        onDeleted={handleAccountDeleted}
+        copy={deleteAccountCopy}
       />
     </>
   );

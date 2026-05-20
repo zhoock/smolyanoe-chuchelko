@@ -222,6 +222,15 @@ export const handler: Handler = async (
       return json(401, { success: false, error: 'Unauthorized' });
     }
 
+    const { isUserEmailVerified } = await import('./lib/email-verification');
+    if (!(await isUserEmailVerified(authenticatedUserId))) {
+      return json(403, {
+        success: false,
+        error: 'Email verification required',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
     /** Любой явный чужой userId в запросе — 403 */
     const rejectForeignUserId = (claimed?: string | null): boolean => {
       if (claimed === undefined || claimed === null) return false;

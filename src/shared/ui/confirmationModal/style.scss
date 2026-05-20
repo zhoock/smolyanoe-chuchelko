@@ -19,9 +19,22 @@
 
   &__header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 16px;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ms-01);
+    min-width: 0;
+  }
+
+  &__icon {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--error-color, #cf807d);
   }
 
   &__title {
@@ -138,7 +151,7 @@
   &__button--confirm.confirmation-modal__button--danger {
     font-size: var(--dashboard-font-size);
 
-    @include dashboard-delete-button;
+    @include dashboard-danger-outline-button;
 
     &:disabled {
       opacity: 0.7;

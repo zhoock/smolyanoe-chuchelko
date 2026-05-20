@@ -52,8 +52,14 @@ dialog {
       }
     }
 
-    &__logout-button {
-      @include dashboard-delete-button;
+    &__delete-account-button {
+      width: 100%;
+
+      @include dashboard-danger-outline-button;
+
+      @include breakpoint(tablet) {
+        width: auto;
+      }
     }
 
     // Body with sidebar and content

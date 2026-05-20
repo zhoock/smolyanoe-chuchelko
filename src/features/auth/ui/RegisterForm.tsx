@@ -110,11 +110,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       const result = await register(email, password, name.trim());
 
       if (result.success) {
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          window.location.reload();
-        }
+        onSuccess?.();
       } else {
         setError(result.error || (lang !== 'ru' ? 'Registration error' : 'Ошибка регистрации'));
       }

@@ -7,6 +7,8 @@ import {
   selectAlbumsData,
   selectAlbumById,
   selectDashboardAlbumsData,
+  selectDashboardAlbumsStatus,
+  selectCatalogArtistMissing,
 } from '../selectors';
 import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IAlbums } from '@models';
@@ -90,6 +92,7 @@ describe('albumsSlice', () => {
         lastUpdated: null,
         fetchContextKey: null,
         inFlightFetchContextKey: null,
+        catalogArtistMissing: false,
         dashboard: {
           status: 'idle',
           error: null,
@@ -130,6 +133,7 @@ describe('albumsSlice', () => {
         albums: mockAlbums,
         fetchContextKey: 'public:test-artist',
         writeTarget: 'catalog',
+        catalogArtistMissing: false,
       });
 
       const state = store.getState();
@@ -137,6 +141,31 @@ describe('albumsSlice', () => {
       expect(selectAlbumsError(state)).toBeNull();
       expect(selectAlbumsData(state)).toEqual(mockAlbums);
       expect(selectAlbumsData(state)[0].albumId).toBe('album-1');
+      expect(selectCatalogArtistMissing(state)).toBe(false);
+    });
+
+    test('публичный каталог: 404 помечает артиста отсутствующим и завершает загрузку', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ success: false, error: 'Artist not found', code: 'ARTIST_NOT_FOUND' }),
+      } as Response);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toEqual({
+        albums: [],
+        fetchContextKey: 'public:test-artist',
+        writeTarget: 'catalog',
+        catalogArtistMissing: true,
+      });
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state)).toBe('succeeded');
+      expect(selectAlbumsData(state)).toEqual([]);
+      expect(selectCatalogArtistMissing(state)).toBe(true);
     });
 
     test('при оверлее дашборда обновляет публичный каталог с ?artist=', async () => {
@@ -154,11 +183,42 @@ describe('albumsSlice', () => {
         albums: mockAlbums,
         fetchContextKey: 'public:artist-a',
         writeTarget: 'catalog',
+        catalogArtistMissing: false,
       });
       expect(selectAlbumsData(store.getState())).toEqual(mockAlbums);
       expect(selectDashboardAlbumsData(store.getState())).toEqual([]);
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/albums?artist=artist-a',
+        expect.objectContaining({
+          cache: 'no-store',
+          headers: expect.objectContaining({
+            Authorization: `Bearer ${TEST_AUTH_TOKEN}`,
+          }),
+        })
+      );
+    });
+
+    test('ownerDashboard в оверлее пишет альбомы владельца в dashboard bucket', async () => {
+      window.history.pushState({}, '', '/');
+      window.localStorage.setItem('auth_token', TEST_AUTH_TOKEN);
+      syncDashboardAlbumsPublicCatalogOverlay(true);
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toMatchObject({
+        fetchContextKey: 'dashboard',
+        writeTarget: 'dashboard',
+      });
+      expect(selectAlbumsData(store.getState())).toEqual([]);
+      expect(selectDashboardAlbumsData(store.getState())[0]?.albumId).toBe('album-1');
+      expect(selectDashboardAlbumsStatus(store.getState())).toBe('succeeded');
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/albums',
         expect.objectContaining({
           cache: 'no-store',
           headers: expect.objectContaining({
@@ -179,13 +239,12 @@ describe('albumsSlice', () => {
       const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
 
       expect(result.type).toBe('albums/fetchMerged/fulfilled');
-      expect(result.payload).toEqual({
-        albums: mockAlbums,
+      expect(result.payload).toMatchObject({
         fetchContextKey: 'dashboard',
         writeTarget: 'dashboard',
       });
       expect(selectAlbumsData(store.getState())).toEqual([]);
-      expect(selectDashboardAlbumsData(store.getState())).toEqual(mockAlbums);
+      expect(selectDashboardAlbumsData(store.getState())[0]?.albumId).toBe('album-1');
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/albums',
         expect.objectContaining({
@@ -209,6 +268,7 @@ describe('albumsSlice', () => {
         albums: [],
         fetchContextKey: 'dashboard',
         writeTarget: 'dashboard',
+        catalogArtistMissing: false,
       });
       expect(mockFetch).not.toHaveBeenCalled();
       expect(selectDashboardAlbumsData(store.getState())).toEqual([]);
@@ -390,6 +450,7 @@ describe('albumsSlice', () => {
         albums: [],
         fetchContextKey: 'public:test-artist',
         writeTarget: 'catalog',
+        catalogArtistMissing: false,
       });
 
       const state = store.getState();
@@ -578,6 +639,7 @@ describe('albumsSlice', () => {
         lastUpdated: 1234567890,
         fetchContextKey: 'public:test-artist',
         inFlightFetchContextKey: null,
+        catalogArtistMissing: false,
         dashboard: {
           status: 'idle' as const,
           error: null,

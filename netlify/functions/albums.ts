@@ -947,7 +947,9 @@ export const handler: Handler = async (
           targetUserId = await resolvePublicArtistUserId(artist);
         } catch (error) {
           if (error instanceof PublicArtistResolverError) {
-            return createErrorResponse(error.statusCode, error.message);
+            return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
+              code: error.code,
+            });
           }
           throw error;
         }

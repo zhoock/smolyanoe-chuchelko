@@ -1,5 +1,5 @@
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { selectAlbumsInFlightFetchContextKey } from '@entities/album';
+import { selectAlbumsInFlightFetchContextKey, selectCatalogArtistMissing } from '@entities/album';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
 
 type AlbumsStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
@@ -9,7 +9,7 @@ type AlbumsStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
  * Пока в store уже есть данные для списка/альбома, не скрываем UI при loading/idle
  * (фоновый refetch из кабинета, закрытие дашборда во время загрузки и т.д.).
  */
-export function useShowAlbumsLoadingShell(
+export function shouldShowAlbumsLoadingShell(
   albumsStatus: AlbumsStatus,
   hasRenderableAlbumsData: boolean
 ): boolean {
@@ -20,7 +20,7 @@ export function useShowAlbumsLoadingShell(
 }
 
 /**
- * Как `useShowAlbumsLoadingShell`, но не показываем «загрузку» на **фоновой** surface,
+ * Как `shouldShowAlbumsLoadingShell`, но не показываем «загрузку» на **фоновой** surface,
  * пока дашборд-оверлей в полёте тянет тот же глобальный `albums` (inFlight = dashboard).
  */
 export function useShowAlbumsLoadingShellExcludingDashboardInFlight(baseShow: boolean): boolean {
@@ -37,6 +37,9 @@ export function useShowSurfaceAlbumsLoadingShell(
   albumsStatus: AlbumsStatus,
   hasRenderableAlbumsData: boolean
 ): boolean {
-  const base = useShowAlbumsLoadingShell(albumsStatus, hasRenderableAlbumsData);
-  return useShowAlbumsLoadingShellExcludingDashboardInFlight(base);
+  const artistMissing = useAppSelector(selectCatalogArtistMissing);
+  const base = shouldShowAlbumsLoadingShell(albumsStatus, hasRenderableAlbumsData);
+  const show = useShowAlbumsLoadingShellExcludingDashboardInFlight(base);
+  if (artistMissing) return false;
+  return show;
 }

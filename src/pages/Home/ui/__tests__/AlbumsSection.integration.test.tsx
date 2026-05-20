@@ -47,6 +47,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: null,
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -88,6 +89,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: null,
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -146,6 +148,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -192,6 +195,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -242,6 +246,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -289,6 +294,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,
@@ -328,6 +334,7 @@ describe('AlbumsSection integration tests', () => {
           lastUpdated: Date.now(),
           fetchContextKey: null,
           inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
           dashboard: {
             status: 'idle',
             error: null,

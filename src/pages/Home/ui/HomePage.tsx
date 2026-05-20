@@ -7,11 +7,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { fetchAlbums, selectCatalogArtistMissing } from '@entities/album';
+import { ArtistNotFound } from '@shared/ui/artistNotFound';
+import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { playerActions } from '@features/player';
 import { getUserAudioUrl } from '@shared/api/albums';
 import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { IAlbums, TracksProps } from '@models';
-import { fetchAlbums } from '@entities/album';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay';
 import { fetchArticles } from '@entities/article';
@@ -33,8 +37,6 @@ import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { isAuthenticated } from '@shared/lib/auth';
 import { ProfileAvatarMenu } from '@widgets/header';
-import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
@@ -63,6 +65,8 @@ export function HomePage() {
   const [universeRefreshToken, setUniverseRefreshToken] = useState(0);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
+  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
+  const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(hasArtistParam);
 
   useEffect(() => {
     const handler = () => setUniverseRefreshToken((n) => n + 1);
@@ -262,6 +266,14 @@ export function HomePage() {
   ]);
 
   if (hasArtistParam) {
+    if (hideArtistPageAfterOwnDelete) {
+      return null;
+    }
+
+    if (catalogArtistMissing) {
+      return <ArtistNotFound />;
+    }
+
     return (
       <>
         <AlbumsSection />

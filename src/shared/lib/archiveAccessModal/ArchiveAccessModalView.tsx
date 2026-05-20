@@ -7,7 +7,8 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
 import { createSubscriptionPayment } from '@shared/api/subscription';
 import { savePremiumCheckoutArtistSlug } from '@features/premiumSubscription';
-import { getToken } from '@shared/lib/auth';
+import { getToken, isEmailVerified } from '@shared/lib/auth';
+import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
 import {
   beginPremiumCheckoutAuthIntent,
   clearPremiumCheckoutAuthIntent,
@@ -111,9 +112,11 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   const { lang } = useLang() as { lang: 'ru' | 'en' };
   const navigate = useNavigate();
   const viewer = useAuthSessionUser();
+  const emailCopy = useEmailVerificationCopy();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const emailBlocked = Boolean(viewer && !isEmailVerified(viewer));
 
   const title =
     ui?.titles?.archiveAccessTitle ?? (lang === 'en' ? 'Premium Archive' : 'Премиум-архив');
@@ -144,6 +147,16 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   const handleStartPremium = useCallback(async () => {
     const returnPath =
       typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/';
+
+    if (viewer && !isEmailVerified(viewer)) {
+      setCheckoutError(
+        emailCopy.restrictedPremium ??
+          (lang === 'en'
+            ? 'Verify your email to purchase Premium'
+            : 'Подтвердите email, чтобы оформить Premium')
+      );
+      return;
+    }
 
     if (!getToken() && !viewer?.id) {
       beginPremiumCheckoutAuthIntent({ returnTo: returnPath });
@@ -183,7 +196,7 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
       setCheckoutError(error instanceof Error ? error.message : 'Checkout failed');
       setCheckoutLoading(false);
     }
-  }, [navigate, onClose, viewer?.id]);
+  }, [emailCopy.restrictedPremium, lang, navigate, onClose, viewer]);
 
   const features: { Icon: typeof FeatureIconMusic; label: string }[] = [
     { Icon: FeatureIconMusic, label: fTracks },

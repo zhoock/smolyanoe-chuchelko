@@ -10,6 +10,7 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import {
+  CORS_HEADERS,
   createOptionsResponse,
   createErrorResponse,
   createSuccessResponse,
@@ -625,7 +626,9 @@ export const handler: Handler = async (
             targetUserId = await resolvePublicArtistUserId(artistSlug);
           } catch (error) {
             if (error instanceof PublicArtistResolverError) {
-              return createErrorResponse(error.statusCode, error.message);
+              return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
+                code: error.code,
+              });
             }
             throw error;
           }
@@ -683,7 +686,9 @@ export const handler: Handler = async (
           targetUserId = await resolvePublicArtistUserId(artistSlug);
         } catch (error) {
           if (error instanceof PublicArtistResolverError) {
-            return createErrorResponse(error.statusCode, error.message);
+            return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
+              code: error.code,
+            });
           }
           throw error;
         }

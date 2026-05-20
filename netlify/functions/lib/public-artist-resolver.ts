@@ -6,10 +6,12 @@ interface UserIdRow {
 
 export class PublicArtistResolverError extends Error {
   statusCode: number;
+  code?: string;
 
-  constructor(statusCode: number, message: string) {
+  constructor(statusCode: number, message: string, code?: string) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
     this.name = 'PublicArtistResolverError';
   }
 }
@@ -39,7 +41,7 @@ export async function resolvePublicArtistUserId(artistSlug?: string | null): Pro
     );
 
     if (bySlug.rows.length === 0) {
-      throw new PublicArtistResolverError(404, `Artist not found: ${normalizedSlug}`);
+      throw new PublicArtistResolverError(404, 'Artist not found', 'ARTIST_NOT_FOUND');
     }
 
     return bySlug.rows[0].id;

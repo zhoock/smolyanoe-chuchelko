@@ -64,7 +64,7 @@ export default function DashboardAlbum({
     }
 
     if (status === 'idle' || status === 'failed') {
-      const promise = dispatch(fetchAlbums({}));
+      const promise = dispatch(fetchAlbums({ ownerDashboard: true }));
       return () => {
         promise.abort();
       };

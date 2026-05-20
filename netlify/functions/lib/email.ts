@@ -150,6 +150,94 @@ ${options.tracks.map((t, i) => `${i + 1}. ${t.title}\n   Скачать: ${siteU
   }
 }
 
+interface SendVerificationEmailOptions {
+  to: string;
+  verifyUrl: string;
+  userName?: string;
+}
+
+/**
+ * Sends email verification message (dark/gold template)
+ */
+export async function sendVerificationEmail(
+  options: SendVerificationEmailOptions
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY is not set');
+      return { success: false, error: 'Email service not configured: RESEND_API_KEY is missing' };
+    }
+
+    const greeting = options.userName ? `Hi ${escapeHtml(options.userName)},` : 'Hi there,';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your email</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #A1A1AA; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #1A1A1A;">
+  <div style="background-color: #1A1A1A; border: 1px solid #3f3f46; border-radius: 12px; padding: 32px;">
+    <p style="margin: 0 0 8px; color: #D4A017; font-size: 14px; font-weight: 600; letter-spacing: 0.05em;">Mixer</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background: rgba(212, 160, 23, 0.15); line-height: 64px; font-size: 28px;">✉</div>
+    </div>
+    <h1 style="color: #ffffff; margin: 0 0 16px; font-size: 24px; text-align: center;">Verify your email</h1>
+    <p style="margin: 0 0 24px; text-align: center;">${greeting}</p>
+    <p style="margin: 0 0 24px; text-align: center;">
+      Thanks for joining Mixer! Please verify your email address to activate your account and unlock all features.
+    </p>
+    <p style="text-align: center; margin: 0 0 32px;">
+      <a href="${escapeHtml(options.verifyUrl)}"
+         style="display: inline-block; background-color: #D4A017; color: #1A1A1A; text-decoration: none; font-weight: 600; padding: 14px 28px; border-radius: 8px;">
+        Verify email address
+      </a>
+    </p>
+    <p style="margin: 0; font-size: 12px; color: #71717a; word-break: break-all; text-align: center;">
+      Or copy this link:<br>
+      <a href="${escapeHtml(options.verifyUrl)}" style="color: #D4A017;">${escapeHtml(options.verifyUrl)}</a>
+    </p>
+    <hr style="border: none; border-top: 1px solid #3f3f46; margin: 32px 0 16px;">
+    <p style="margin: 0; font-size: 12px; color: #71717a; text-align: center;">© Mixer. All rights reserved.</p>
+  </div>
+</body>
+</html>`;
+
+    const text = `Verify your email
+
+${options.userName ? `Hi ${options.userName},` : 'Hi there,'}
+
+Thanks for joining Mixer! Please verify your email address to activate your account and unlock all features.
+
+Verify: ${options.verifyUrl}
+
+© Mixer. All rights reserved.`;
+
+    const result = await resend.emails.send({
+      from: 'Смоляное чучелко <noreply@smolyanoechuchelko.ru>',
+      to: options.to,
+      subject: 'Verify your email',
+      html,
+      text,
+    });
+
+    if (result.error) {
+      console.error('❌ Error sending verification email:', result.error);
+      return { success: false, error: result.error.message || 'Failed to send email' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error in sendVerificationEmail:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 /**
  * Экранирует HTML символы для безопасности
  */

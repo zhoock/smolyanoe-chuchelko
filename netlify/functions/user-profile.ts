@@ -93,6 +93,7 @@ export const handler: Handler = async (
               body: JSON.stringify({
                 success: false,
                 error: error.message,
+                ...(error.code ? { code: error.code } : {}),
               } as GetUserProfileResponse),
             };
           }

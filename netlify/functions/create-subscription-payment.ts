@@ -52,6 +52,13 @@ export const handler: Handler = async (event: HandlerEvent) => {
     return unauthorizedFromAuthHeader(event);
   }
 
+  const { isUserEmailVerified } = await import('./lib/email-verification');
+  if (!(await isUserEmailVerified(userId))) {
+    return createErrorResponse(403, 'Email verification required', undefined, {
+      code: 'EMAIL_NOT_VERIFIED',
+    });
+  }
+
   const yookassaCreds = getYooKassaEnvCredentials();
   if (!yookassaCreds) {
     return createErrorResponse(

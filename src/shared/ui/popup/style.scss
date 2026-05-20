@@ -41,7 +41,7 @@ dialog {
   }
 
   // Центрирование только для попапов с классом .popup, но не для дашборда и confirmation-modal
-  &.popup[open]:not(:has(.user-dashboard, .confirmation-modal)) {
+  &.popup[open]:not(:has(.user-dashboard, .confirmation-modal, .delete-account-modal)) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -50,7 +50,9 @@ dialog {
   // Размеры контента 600px × 680px применяем ТОЛЬКО для попапов внутри дашборда
   // Используем селектор, который проверяет наличие .user-dashboard в body
   body:has(.user-dashboard)
-    &.popup[open]:not(:has(.user-dashboard, .player, .alert-modal, .confirmation-modal)) {
+    &.popup[open]:not(
+      :has(.user-dashboard, .player, .alert-modal, .confirmation-modal, .delete-account-modal)
+    ) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -64,6 +66,7 @@ dialog {
         .cover-image-crop-modal,
         .alert-modal,
         .confirmation-modal,
+        .delete-account-modal,
         .edit-article-v2,
         .archive-access-modal__panel
       ) {

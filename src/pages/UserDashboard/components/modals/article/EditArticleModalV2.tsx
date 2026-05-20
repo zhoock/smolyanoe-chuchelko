@@ -387,7 +387,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setLastSaved(new Date());
         // Обновляем Redux store
         try {
-          await dispatch(fetchArticles({ force: true })).unwrap();
+          await dispatch(fetchArticles({ force: true, ownerDashboard: true })).unwrap();
         } catch (error) {
           console.warn('Failed to update Redux store:', error);
         }
@@ -595,7 +595,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setInitialMeta({ ...meta });
 
         try {
-          await dispatch(fetchArticles({ force: true })).unwrap();
+          await dispatch(fetchArticles({ force: true, ownerDashboard: true })).unwrap();
         } catch (error) {
           console.warn('Failed to update Redux store:', error);
         }
@@ -671,7 +671,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
         setInitialBlocks(JSON.parse(JSON.stringify(blocks))); // Deep copy
         setInitialMeta({ ...meta });
         // Обновляем Redux store
-        await dispatch(fetchArticles({ force: true })).unwrap();
+        await dispatch(fetchArticles({ force: true, ownerDashboard: true })).unwrap();
         onClose();
       } else {
         setSaveStatus('error');

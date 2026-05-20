@@ -6,6 +6,7 @@ import { getToken } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectCatalogArtistMissing } from '@entities/album';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import {
   readStoredProfileDisplayName,
@@ -436,8 +437,15 @@ export function Hero() {
   }, [heroPathname, headerImages]);
 
   // Пока грузим профиль в artist-режиме — пустой заголовок; иначе имя из API/хранилища либо пусто.
-  const isArtistLoading = hasArtistParam && (isProfileLoading || isImagesLoading);
-  const displayName = hasArtistParam && isArtistLoading ? '' : profileName || defaultArtistName;
+  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
+  const isArtistLoading =
+    hasArtistParam && !catalogArtistMissing && (isProfileLoading || isImagesLoading);
+  const displayName =
+    hasArtistParam && !catalogArtistMissing && isArtistLoading
+      ? ''
+      : catalogArtistMissing
+        ? ''
+        : profileName || defaultArtistName;
 
   /** Latest profile/header for canvas fallback without re-running Universe3D effect. */
   const profileNameForCanvasRef = useRef(profileName);

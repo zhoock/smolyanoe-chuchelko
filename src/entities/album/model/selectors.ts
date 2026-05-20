@@ -60,6 +60,11 @@ export const selectAlbumsInFlightFetchContextKey = createSelector(
   (s) => s.inFlightFetchContextKey
 );
 
+export const selectCatalogArtistMissing = createSelector(
+  [selectAlbumsState],
+  (s) => s.catalogArtistMissing
+);
+
 export const selectAlbumById = createSelector(
   [selectAlbumsData, (_state: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.albumId === albumId)

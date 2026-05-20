@@ -99,6 +99,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       return unauthorizedFromAuthHeader(event);
     }
 
+    const { isUserEmailVerified } = await import('./lib/email-verification');
+    if (!(await isUserEmailVerified(userId))) {
+      return createErrorResponse(403, 'Email verification required', undefined, {
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
     // Парсим JSON body
     const body = parseJsonBody<Partial<UploadFileRequest>>(event.body, {});
 

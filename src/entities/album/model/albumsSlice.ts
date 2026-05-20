@@ -11,7 +11,14 @@ import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { shouldUsePublicArtistCatalogInRedux } from '@shared/lib/dashboardModalBackground';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
-import type { AlbumsState, FetchAlbumsFulfilledPayload } from './types';
+import type { AlbumsState, FetchAlbumsArg, FetchAlbumsFulfilledPayload } from './types';
+
+export type { FetchAlbumsArg } from './types';
+
+function isOwnerDashboardAlbumsFetch(arg: FetchAlbumsArg): boolean {
+  if (arg.ownerDashboard) return true;
+  return isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+}
 
 /** Ignore stale `force` responses when a newer entitlement refresh is in flight. */
 let latestForceAlbumsRequestId = '';
@@ -23,6 +30,7 @@ const initialState: AlbumsState = {
   lastUpdated: null,
   fetchContextKey: null,
   inFlightFetchContextKey: null,
+  catalogArtistMissing: false,
   dashboard: {
     status: 'idle',
     error: null,
@@ -44,9 +52,10 @@ function getCatalogAlbumsFetchContextKey(getState: () => RootState): string {
 function wrapAlbumsResult(
   albums: IAlbums[],
   fetchContextKey: string,
-  writeTarget: 'catalog' | 'dashboard'
+  writeTarget: 'catalog' | 'dashboard',
+  catalogArtistMissing = false
 ): FetchAlbumsFulfilledPayload {
-  return { albums, fetchContextKey, writeTarget };
+  return { albums, fetchContextKey, writeTarget, catalogArtistMissing };
 }
 
 function staleSnapshotPayload(
@@ -83,11 +92,11 @@ function albumHasDisplayableTitle(album: {
 
 export const fetchAlbums = createAsyncThunk<
   FetchAlbumsFulfilledPayload,
-  { force?: boolean },
+  FetchAlbumsArg,
   { rejectValue: string; state: RootState }
 >(
   'albums/fetchMerged',
-  async (_arg, { signal, rejectWithValue, getState }) => {
+  async (arg, { signal, rejectWithValue, getState }) => {
     const isValidAlbum = (
       album: unknown
     ): album is {
@@ -197,8 +206,9 @@ export const fetchAlbums = createAsyncThunk<
     };
 
     try {
-      const usePublicCatalog = shouldUsePublicArtistCatalogInRedux();
-      const isFullscreenDashboard = isDashboardPathname() && !usePublicCatalog;
+      const ownerDashboard = isOwnerDashboardAlbumsFetch(arg);
+      const usePublicCatalog = ownerDashboard ? false : shouldUsePublicArtistCatalogInRedux();
+      const isFullscreenDashboard = ownerDashboard;
       const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
       const requestFetchKey = usePublicCatalog
         ? getCatalogAlbumsFetchContextKey(getState)
@@ -208,8 +218,10 @@ export const fetchAlbums = createAsyncThunk<
       const catalogStale = (): boolean =>
         getCatalogAlbumsFetchContextKey(getState) !== requestFetchKey;
 
-      const dashboardStale = (): boolean =>
-        !isDashboardPathname() || shouldUsePublicArtistCatalogInRedux();
+      const dashboardStale = (): boolean => {
+        if (ownerDashboard) return false;
+        return !isDashboardPathname() || shouldUsePublicArtistCatalogInRedux();
+      };
 
       try {
         const controller = new AbortController();
@@ -307,6 +319,12 @@ export const fetchAlbums = createAsyncThunk<
           }
           throw new Error('Failed to fetch albums. Invalid response format.');
         }
+
+        // Удалённый / несуществующий артист (?artist=) — завершаем загрузку, без throw.
+        if (response.status === 404 && usePublicCatalog) {
+          return wrapAlbumsResult([], requestFetchKey, writeTarget, true);
+        }
+
         throw new Error(`Failed to fetch albums. Status: ${response.status}`);
       } catch (apiError) {
         if (isFullscreenDashboard) {
@@ -326,9 +344,10 @@ export const fetchAlbums = createAsyncThunk<
     }
   },
   {
-    condition: ({ force }, { getState }) => {
+    condition: (arg, { getState }) => {
+      const { force } = arg;
       const albums = getState().albums;
-      const isFullscreenDashboard = isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+      const isFullscreenDashboard = isOwnerDashboardAlbumsFetch(arg);
 
       if (isFullscreenDashboard) {
         const { status } = albums.dashboard;
@@ -348,15 +367,17 @@ export const fetchAlbums = createAsyncThunk<
 const albumsSlice = createSlice({
   name: 'albums',
   initialState,
-  reducers: {},
+  reducers: {
+    /** Сброс публичного каталога и кабинета (после logout / удаления аккаунта). */
+    resetAlbumsState: () => initialState,
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchAlbums.pending, (state, action) => {
         if (action.meta.arg.force) {
           latestForceAlbumsRequestId = action.meta.requestId;
         }
-        const isFullscreenDashboard =
-          isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
+        const isFullscreenDashboard = isOwnerDashboardAlbumsFetch(action.meta.arg);
         if (isFullscreenDashboard) {
           state.dashboard.status = 'loading';
           state.dashboard.error = null;
@@ -365,6 +386,7 @@ const albumsSlice = createSlice({
           state.status = 'loading';
           state.error = null;
           state.inFlightFetchContextKey = 'public';
+          state.catalogArtistMissing = false;
         }
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {
@@ -409,6 +431,7 @@ const albumsSlice = createSlice({
         state.error = null;
         state.lastUpdated = Date.now();
         state.inFlightFetchContextKey = null;
+        state.catalogArtistMissing = Boolean(action.payload.catalogArtistMissing);
       })
       .addCase(fetchAlbums.rejected, (state, action) => {
         let errorText = 'Failed to fetch albums';
@@ -446,4 +469,5 @@ const albumsSlice = createSlice({
   },
 });
 
+export const { resetAlbumsState } = albumsSlice.actions;
 export const albumsReducer = albumsSlice.reducer;

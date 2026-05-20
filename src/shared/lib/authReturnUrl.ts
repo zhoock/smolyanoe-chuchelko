@@ -1,4 +1,5 @@
 import type { Location } from 'react-router-dom';
+import { shouldForcePostAuthHome } from '@shared/lib/accountDeletedSession';
 
 const DEFAULT_AFTER_AUTH = '/';
 
@@ -53,6 +54,10 @@ export function resolvePostAuthDestination(options: {
   returnToSearchParam: string | null;
   routerState?: BackgroundState | null;
 }): string {
+  if (shouldForcePostAuthHome()) {
+    return DEFAULT_AFTER_AUTH;
+  }
+
   const fromQuery = sanitizeReturnPath(options.returnToSearchParam ?? null);
   if (fromQuery) return fromQuery;
 

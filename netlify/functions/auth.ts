@@ -3,6 +3,10 @@
  *
  * POST /api/auth/register - регистрация нового пользователя
  * POST /api/auth/login - вход пользователя
+ * GET  /api/auth/verify-email?token=... - подтверждение email (редирект на фронт)
+ * POST /api/auth/resend-verification - повторная отправка (JWT)
+ * POST /api/auth/change-verification-email - смена email до верификации (JWT)
+ * GET  /api/auth/me - текущий пользователь (JWT)
  */
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
@@ -16,16 +20,26 @@ import {
   CORS_HEADERS,
   parseJsonBody,
   handleError,
+  requireAuth,
+  unauthorizedFromAuthHeader,
 } from './lib/api-helpers';
 import type { ApiResponse } from './lib/types';
+import {
+  assignVerificationToken,
+  mapAuthUser,
+  markEmailVerified,
+  sendUserVerificationEmail,
+  type VerificationUserRow,
+} from './lib/email-verification';
+import {
+  deleteUserAccount,
+  DeleteAccountError,
+  mapDeleteAccountError,
+} from './lib/delete-user-account';
 
-interface UserRow {
-  id: string;
-  email: string;
-  name: string | null;
+interface UserRow extends VerificationUserRow {
   password_hash: string;
   is_active: boolean;
-  role: string;
 }
 
 interface RegisterRequest {
@@ -48,14 +62,17 @@ interface LoginRequest {
   password: string;
 }
 
+interface ChangeVerificationEmailRequest {
+  email: string;
+}
+
+interface DeleteAccountRequest {
+  currentPassword: string;
+}
+
 interface AuthData {
   token: string;
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    role: 'user' | 'admin';
-  };
+  user: ReturnType<typeof mapAuthUser>;
 }
 
 type AuthResponse = ApiResponse<AuthData>;
@@ -69,6 +86,15 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 
   return normalized || 'artist';
+}
+
+function getSiteOrigin(): string {
+  return (
+    process.env.URL ||
+    process.env.NETLIFY_SITE_URL ||
+    process.env.DEPLOY_PRIME_URL ||
+    'http://localhost:8888'
+  ).replace(/\/$/, '');
 }
 
 async function generateUniquePublicSlug(
@@ -141,6 +167,212 @@ async function generateUniqueUsername(
   return `${baseUsername}-${suffix}`;
 }
 
+async function fetchUserById(userId: string): Promise<UserRow | null> {
+  const result = await query<UserRow>(
+    `SELECT id, email, name, password_hash, is_active, role, is_email_verified
+     FROM users
+     WHERE id = $1`,
+    [userId],
+    0
+  );
+  return result.rows[0] ?? null;
+}
+
+function buildAuthPayload(user: UserRow): AuthData {
+  const token = generateToken(user.id, user.email, user.role === 'admin' ? 'admin' : 'user');
+  return { token, user: mapAuthUser(user) };
+}
+
+async function handleVerifyEmailGet(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const token = event.queryStringParameters?.token?.trim();
+  const origin = getSiteOrigin();
+
+  if (!token) {
+    return {
+      statusCode: 302,
+      headers: { Location: `${origin}/email-verification-expired?reason=missing` },
+      body: '',
+    };
+  }
+
+  const result = await query<VerificationUserRow>(
+    `SELECT id, email, name, role, is_email_verified
+     FROM users
+     WHERE email_verification_token = $1`,
+    [token],
+    0
+  );
+
+  if (result.rows.length === 0) {
+    return {
+      statusCode: 302,
+      headers: { Location: `${origin}/email-verification-expired?reason=invalid` },
+      body: '',
+    };
+  }
+
+  const user = result.rows[0];
+
+  if (user.is_email_verified) {
+    return {
+      statusCode: 302,
+      headers: { Location: `${origin}/email-verified?already=1` },
+      body: '',
+    };
+  }
+
+  const expiryCheck = await query<{ email_verification_expires_at: string | null }>(
+    `SELECT email_verification_expires_at
+     FROM users
+     WHERE id = $1`,
+    [user.id],
+    0
+  );
+
+  const expiresAt = expiryCheck.rows[0]?.email_verification_expires_at;
+  if (!expiresAt || new Date(expiresAt) < new Date()) {
+    return {
+      statusCode: 302,
+      headers: { Location: `${origin}/email-verification-expired?reason=expired` },
+      body: '',
+    };
+  }
+
+  await markEmailVerified(user.id);
+
+  return {
+    statusCode: 302,
+    headers: { Location: `${origin}/email-verified` },
+    body: '',
+  };
+}
+
+async function handleResendVerification(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const userId = requireAuth(event);
+  if (!userId) {
+    return unauthorizedFromAuthHeader(event);
+  }
+
+  const user = await fetchUserById(userId);
+  if (!user) {
+    return createErrorResponse(404, 'User not found');
+  }
+
+  if (!user.is_active) {
+    return createErrorResponse(403, 'User account is disabled');
+  }
+
+  if (user.is_email_verified) {
+    return createErrorResponse(400, 'Email is already verified', CORS_HEADERS, {
+      code: 'EMAIL_ALREADY_VERIFIED',
+    });
+  }
+
+  const token = await assignVerificationToken(userId);
+  const emailResult = await sendUserVerificationEmail(user.email, token, user.name);
+
+  if (!emailResult.success) {
+    return createErrorResponse(
+      502,
+      emailResult.error || 'Failed to send verification email',
+      CORS_HEADERS,
+      {
+        code: 'EMAIL_SEND_FAILED',
+      }
+    );
+  }
+
+  return createSuccessResponse({ sent: true });
+}
+
+async function handleChangeVerificationEmail(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const userId = requireAuth(event);
+  if (!userId) {
+    return unauthorizedFromAuthHeader(event);
+  }
+
+  const data = parseJsonBody<ChangeVerificationEmailRequest>(event.body, {
+    email: '',
+  } as ChangeVerificationEmailRequest);
+
+  const newEmail = data.email?.toLowerCase().trim();
+  if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    return createErrorResponse(400, 'Valid email is required');
+  }
+
+  const user = await fetchUserById(userId);
+  if (!user) {
+    return createErrorResponse(404, 'User not found');
+  }
+
+  if (user.is_email_verified) {
+    return createErrorResponse(400, 'Email is already verified', CORS_HEADERS, {
+      code: 'EMAIL_ALREADY_VERIFIED',
+    });
+  }
+
+  if (newEmail !== user.email) {
+    const existing = await query<{ id: string }>(
+      `SELECT id FROM users WHERE email = $1 AND id != $2`,
+      [newEmail, userId],
+      0
+    );
+    if (existing.rows.length > 0) {
+      return createErrorResponse(409, 'User with this email already exists');
+    }
+
+    await query(
+      `UPDATE users SET email = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [newEmail, userId],
+      0
+    );
+    user.email = newEmail;
+  }
+
+  const token = await assignVerificationToken(userId);
+  const emailResult = await sendUserVerificationEmail(user.email, token, user.name);
+
+  if (!emailResult.success) {
+    return createErrorResponse(
+      502,
+      emailResult.error || 'Failed to send verification email',
+      CORS_HEADERS,
+      {
+        code: 'EMAIL_SEND_FAILED',
+      }
+    );
+  }
+
+  const updated = await fetchUserById(userId);
+  if (!updated) {
+    return createErrorResponse(404, 'User not found');
+  }
+
+  return createSuccessResponse(buildAuthPayload(updated));
+}
+
+async function handleMe(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const userId = requireAuth(event);
+  if (!userId) {
+    return unauthorizedFromAuthHeader(event);
+  }
+
+  const user = await fetchUserById(userId);
+  if (!user) {
+    return createErrorResponse(404, 'User not found');
+  }
+
+  return createSuccessResponse({ user: mapAuthUser(user) });
+}
+
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
@@ -148,12 +380,56 @@ export const handler: Handler = async (
     return createOptionsResponse();
   }
 
-  if (event.httpMethod !== 'POST') {
-    return createErrorResponse(405, 'Method not allowed');
-  }
-
   try {
     const path = event.path.replace('/.netlify/functions/auth', '') || '/';
+
+    if (
+      (path === '/verify-email' || path.endsWith('/verify-email')) &&
+      event.httpMethod === 'GET'
+    ) {
+      return handleVerifyEmailGet(event);
+    }
+
+    if ((path === '/me' || path.endsWith('/me')) && event.httpMethod === 'GET') {
+      return handleMe(event);
+    }
+
+    if (event.httpMethod !== 'POST') {
+      return createErrorResponse(405, 'Method not allowed');
+    }
+
+    if (path === '/resend-verification' || path.endsWith('/resend-verification')) {
+      return handleResendVerification(event);
+    }
+
+    if (path === '/change-verification-email' || path.endsWith('/change-verification-email')) {
+      return handleChangeVerificationEmail(event);
+    }
+
+    if (path === '/delete-account' || path.endsWith('/delete-account')) {
+      const userId = requireAuth(event);
+      if (!userId) {
+        return unauthorizedFromAuthHeader(event);
+      }
+
+      try {
+        const body = parseJsonBody<DeleteAccountRequest>(event.body, {
+          currentPassword: '',
+        } as DeleteAccountRequest);
+        const result = await deleteUserAccount(userId, body.currentPassword?.trim() ?? '');
+        return createSuccessResponse(result);
+      } catch (error) {
+        if (error instanceof DeleteAccountError) {
+          return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
+            code: error.code,
+          });
+        }
+        const mapped = mapDeleteAccountError(error);
+        return createErrorResponse(mapped.statusCode, mapped.message, CORS_HEADERS, {
+          code: mapped.code,
+        });
+      }
+    }
 
     // Регистрация
     if (path === '/register' || path.endsWith('/register')) {
@@ -163,7 +439,6 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Email and password are required');
       }
 
-      // Проверяем, существует ли пользователь
       const existingUser = await query<UserRow>(
         `SELECT id FROM users WHERE email = $1`,
         [data.email.toLowerCase().trim()],
@@ -174,15 +449,10 @@ export const handler: Handler = async (
         return createErrorResponse(409, 'User with this email already exists');
       }
 
-      // Хешируем пароль для проверки при входе
       const passwordHash = await bcrypt.hash(data.password, 10);
-
-      // Создаём пользователя (сохраняем пароль в открытом виде для админки и хеш для проверки)
-      // siteName берем из name, если siteName не указан явно (для обратной совместимости)
       const normalizedEmail = data.email.toLowerCase().trim();
       const siteName = data.siteName || data.name || null;
 
-      // Защита от race-condition: если сработает уникальный индекс на username/public_slug, делаем повтор.
       let result: Awaited<ReturnType<typeof query<UserRow>>> | null = null;
       let lastError: unknown = null;
 
@@ -200,9 +470,12 @@ export const handler: Handler = async (
           );
 
           result = await query<UserRow>(
-            `INSERT INTO users (email, name, username, site_name, public_slug, password, password_hash, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-             RETURNING id, email, name, role`,
+            `INSERT INTO users (
+               email, name, username, site_name, public_slug, password, password_hash,
+               is_active, is_email_verified, genre_code
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true, false, 'other')
+             RETURNING id, email, name, role, is_email_verified`,
             [
               normalizedEmail,
               data.name || null,
@@ -230,22 +503,14 @@ export const handler: Handler = async (
       }
 
       const user = result.rows[0];
+      const verificationToken = await assignVerificationToken(user.id);
+      const emailResult = await sendUserVerificationEmail(user.email, verificationToken, user.name);
 
-      // Генерируем JWT токен
-      const token = generateToken(user.id, user.email, user.role === 'admin' ? 'admin' : 'user');
+      if (!emailResult.success) {
+        console.error('⚠️ Verification email failed after register:', emailResult.error);
+      }
 
-      return createSuccessResponse(
-        {
-          token,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role === 'admin' ? 'admin' : 'user',
-          },
-        },
-        201
-      );
+      return createSuccessResponse(buildAuthPayload(user), 201);
     }
 
     // Вход
@@ -256,9 +521,8 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Email and password are required');
       }
 
-      // Ищем пользователя
       const result = await query<UserRow>(
-        `SELECT id, email, name, password_hash, is_active, role
+        `SELECT id, email, name, password_hash, is_active, role, is_email_verified
          FROM users
          WHERE email = $1`,
         [data.email.toLowerCase().trim()],
@@ -277,7 +541,6 @@ export const handler: Handler = async (
         return createErrorResponse(403, 'User account is disabled');
       }
 
-      // Проверяем пароль
       const isPasswordValid = await bcrypt.compare(data.password, user.password_hash);
 
       if (!isPasswordValid) {
@@ -286,18 +549,7 @@ export const handler: Handler = async (
         });
       }
 
-      // Генерируем JWT токен
-      const token = generateToken(user.id, user.email, user.role === 'admin' ? 'admin' : 'user');
-
-      return createSuccessResponse({
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role === 'admin' ? 'admin' : 'user',
-        },
-      });
+      return createSuccessResponse(buildAuthPayload(user));
     }
 
     return createErrorResponse(404, 'Endpoint not found');
