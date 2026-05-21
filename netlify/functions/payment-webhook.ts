@@ -546,10 +546,13 @@ async function tryPurchaseSideEffects(
 
     try {
       const { sendPurchaseEmail } = await import('./lib/email');
+      const { resolveEmailLocaleForAddress } = await import('./lib/user-preferred-language');
       const customerName =
         row.customer_first_name && row.customer_last_name
           ? `${row.customer_first_name} ${row.customer_last_name}`
           : row.customer_first_name || undefined;
+
+      const locale = await resolveEmailLocaleForAddress(customerEmail, album.lang);
 
       const emailResult = await sendPurchaseEmail({
         to: customerEmail,
@@ -560,6 +563,7 @@ async function tryPurchaseSideEffects(
         purchaseToken: purchase.purchase_token,
         tracks,
         siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+        locale,
       });
 
       if (!emailResult.success) {

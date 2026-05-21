@@ -735,6 +735,17 @@ WHERE is_default_public_site = true
   AND is_active = true;
 `;
 
+const MIGRATION_038 = `
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) NOT NULL DEFAULT 'en';
+
+COMMENT ON COLUMN users.preferred_language IS 'Preferred UI and email language: ru or en';
+
+UPDATE users
+SET preferred_language = 'en'
+WHERE preferred_language IS NULL OR preferred_language NOT IN ('ru', 'en');
+`;
+
 type MigrationSql = string | (() => string);
 
 const MIGRATIONS: Record<string, MigrationSql> = {
@@ -760,6 +771,7 @@ const MIGRATIONS: Record<string, MigrationSql> = {
   '028_backfill_public_slug_and_default_user.sql': MIGRATION_028,
   '029_album_locale_cover_credits.sql': MIGRATION_029,
   '031_add_user_role.sql': MIGRATION_031,
+  '038_add_preferred_language_to_users.sql': MIGRATION_038,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {

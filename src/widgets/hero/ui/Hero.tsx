@@ -1,17 +1,13 @@
 // src/widgets/hero/ui/Hero.tsx
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useLang } from '@app/providers/lang';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
-import { getToken } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
-import { buildApiUrl } from '@shared/lib/artistQuery';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { selectCatalogArtistMissing } from '@entities/album';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
-import {
-  readStoredProfileDisplayName,
-  type ProfileNameUpdatedDetail,
-} from '@shared/lib/profileDisplayName';
 import {
   Universe3D,
   type SceneArtist,
@@ -20,7 +16,6 @@ import {
 import '@/components/view/Universe3D.style.scss';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
 import { ArtistArchiveButton } from '@features/artistArchive';
-import { useLang } from '@app/providers/lang';
 import './style.scss';
 
 const HERO_CLUSTER_PALETTE = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5] as const;
@@ -66,12 +61,9 @@ function formatBackgroundImageUrl(imageUrl: string): string {
 export function Hero() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [headerImages, setHeaderImages] = useState<string[]>([]);
-  const [profileName, setProfileName] = useState<string>(() => readStoredProfileDisplayName());
   const [artistPageMeta, setArtistPageMeta] = useState<{
     userId: string;
   } | null>(null);
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
-  const [isImagesLoading, setIsImagesLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { lang } = useLang() as { lang: 'ru' | 'en' };
@@ -99,11 +91,18 @@ export function Hero() {
   );
   const hasArtistParam = !!heroUrlParams.get('artist');
   const artistParamKey = heroUrlParams.get('artist')?.trim() ?? '';
+  const heroPublicArtistSlug = (artistParamKey || publicArtistSlug || '').trim();
+  const { displayName: profileDisplayName, isLoading: isProfileLoading } = useSiteArtistDisplayName(
+    lang,
+    {
+      variant: isDashboardRoute ? 'authenticated' : 'public',
+      artistSlug: isDashboardRoute ? undefined : heroPublicArtistSlug || undefined,
+    }
+  );
 
   // Загружаем изображения из БД
   useEffect(() => {
     const loadImages = async () => {
-      setIsImagesLoading(true);
       imagesLoadedRef.current = false;
       setHeaderImages([]);
       setBackgroundImage('');
@@ -148,8 +147,6 @@ export function Hero() {
         setHeaderImages([]);
         setBackgroundImage('');
         imagesLoadedRef.current = true;
-      } finally {
-        setIsImagesLoading(false);
       }
     };
     loadImages();
@@ -198,134 +195,26 @@ export function Hero() {
     };
   }, [artistParamKey, hasArtistParam]);
 
-  // Загружаем название группы:
-  // - public (/ и /?artist=...): всегда из API public профиля, без JWT
-  // - admin (/dashboard): из профиля текущего JWT пользователя
   useEffect(() => {
-    const loadProfileName = async () => {
-      setIsProfileLoading(true);
-
-      if (!isDashboardRoute) {
-        if (!publicArtistSlug?.trim()) {
-          setProfileName(readStoredProfileDisplayName());
-          setIsProfileLoading(false);
-          return;
-        }
-        try {
-          const response = await fetchWithAuthSession(
-            buildApiUrl(
-              '/api/user-profile',
-              {},
-              {
-                includeArtist: true,
-                artistSlugOverride: publicArtistSlug,
-              }
-            ),
-            {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-
-          if (response.ok) {
-            const result = await response.json();
-            const next = result.success
-              ? (result.data?.siteName ?? result.data?.name ?? '').trim()
-              : '';
-            setProfileName(next || readStoredProfileDisplayName());
-          } else {
-            setProfileName(readStoredProfileDisplayName());
-          }
-        } catch (error) {
-          console.warn('⚠️ Ошибка загрузки названия группы выбранного артиста:', error);
-          setProfileName(readStoredProfileDisplayName());
-        } finally {
-          setIsProfileLoading(false);
-        }
-        return;
-      }
-
-      setProfileName('');
-
-      try {
-        const token = getToken();
-        if (!token) {
-          setProfileName('');
-          return;
-        }
-
-        const response = await fetchWithAuthSession(
-          buildApiUrl('/api/user-profile', {}, { includeArtist: false }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          const profileName = result.success
-            ? (result.data?.siteName ?? result.data?.name ?? '')
-            : '';
-          setProfileName(profileName);
-        } else {
-          setProfileName('');
-        }
-      } catch (error) {
-        console.warn('⚠️ Ошибка загрузки названия группы в админке:', error);
-        setProfileName('');
-      } finally {
-        setIsProfileLoading(false);
-      }
-    };
-
-    loadProfileName();
-
-    // Слушаем событие обновления названия группы
-    const handleProfileNameUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<ProfileNameUpdatedDetail>;
-      const name = customEvent.detail?.name?.trim();
-      if (!name) return;
-      const slug = customEvent.detail?.publicSlug?.trim();
-      if (hasArtistParam && artistParamKey) {
-        if (slug && slug !== artistParamKey) return;
-      }
-      setProfileName(name);
-    };
-
-    // Слушаем событие обновления header images
-    const handleHeaderImagesUpdate = async (event: Event) => {
+    const handleHeaderImagesUpdate = (event: Event) => {
       const customEvent = event as CustomEvent<{ images: string[] }>;
       const newImages = customEvent.detail?.images;
       if (Array.isArray(newImages)) {
         console.log('🔄 [Hero] Получено событие обновления header images:', newImages);
         setHeaderImages(newImages);
         imagesLoadedRef.current = true;
-        // Если массив пустой, сразу очищаем фон
         if (newImages.length === 0) {
           setBackgroundImage('');
         }
       }
     };
 
-    window.addEventListener('profile-name-updated', handleProfileNameUpdate);
     window.addEventListener('header-images-updated', handleHeaderImagesUpdate);
 
     return () => {
-      window.removeEventListener('profile-name-updated', handleProfileNameUpdate);
       window.removeEventListener('header-images-updated', handleHeaderImagesUpdate);
     };
-  }, [
-    artistParamKey,
-    hasArtistParam,
-    isDashboardRoute,
-    heroPathname,
-    heroSearchString,
-    publicArtistSlug,
-  ]);
+  }, []);
 
   // Выбираем случайное изображение при загрузке данных или изменении пути
   useEffect(() => {
@@ -438,19 +327,18 @@ export function Hero() {
 
   // Пока грузим профиль в artist-режиме — пустой заголовок; иначе имя из API/хранилища либо пусто.
   const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
-  const isArtistLoading =
-    hasArtistParam && !catalogArtistMissing && (isProfileLoading || isImagesLoading);
-  const displayName =
-    hasArtistParam && !catalogArtistMissing && isArtistLoading
+  const isTitlePending =
+    hasArtistParam && !catalogArtistMissing && isProfileLoading && !profileDisplayName.trim();
+  const displayName = isTitlePending
+    ? ''
+    : catalogArtistMissing
       ? ''
-      : catalogArtistMissing
-        ? ''
-        : profileName || defaultArtistName;
+      : profileDisplayName || defaultArtistName;
 
   /** Latest profile/header for canvas fallback without re-running Universe3D effect. */
-  const profileNameForCanvasRef = useRef(profileName);
+  const profileNameForCanvasRef = useRef(profileDisplayName);
   const headerImagesForCanvasRef = useRef(headerImages);
-  profileNameForCanvasRef.current = profileName;
+  profileNameForCanvasRef.current = profileDisplayName;
   headerImagesForCanvasRef.current = headerImages;
 
   useEffect(() => {

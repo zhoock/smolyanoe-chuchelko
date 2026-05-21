@@ -1,8 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { refreshAuthSession } from '@shared/lib/auth';
-import { sanitizeReturnPath } from '@shared/lib/authReturnUrl';
+import {
+  locationFromReturnPath,
+  resolveReturnPathFromSearchParam,
+} from '@shared/lib/authReturnUrl';
+import { captureDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
 import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
 import './EmailVerified.scss';
 
@@ -32,17 +36,32 @@ export default function EmailVerified() {
   const [searchParams] = useSearchParams();
   const copy = useEmailVerificationCopy();
 
+  const returnPath = useMemo(
+    () => resolveReturnPathFromSearchParam(searchParams.get('returnTo')),
+    [searchParams]
+  );
+
   useEffect(() => {
     void refreshAuthSession();
   }, []);
 
-  const handleContinue = () => {
-    const returnTo = sanitizeReturnPath(searchParams.get('returnTo'));
-    navigate(returnTo ?? '/', { replace: true });
+  const handleGoHome = () => {
+    navigate(returnPath, { replace: true });
   };
 
   const handleOpenDashboard = () => {
-    navigate(DASHBOARD_PATH, { replace: true });
+    const backgroundLocation = locationFromReturnPath(returnPath);
+
+    captureDashboardModalBackground({
+      pathname: backgroundLocation.pathname,
+      search: backgroundLocation.search,
+      hash: backgroundLocation.hash ?? '',
+    });
+
+    navigate(DASHBOARD_PATH, {
+      replace: true,
+      state: { backgroundLocation },
+    });
   };
 
   return (
@@ -65,7 +84,7 @@ export default function EmailVerified() {
 
         <p className="email-verified-page__subtitle">{copy.successBody}</p>
 
-        <button type="button" className="email-verified-page__cta" onClick={handleContinue}>
+        <button type="button" className="email-verified-page__cta" onClick={handleGoHome}>
           <span>{copy.continueToHome}</span>
           <span className="email-verified-page__cta-arrow" aria-hidden="true">
             →

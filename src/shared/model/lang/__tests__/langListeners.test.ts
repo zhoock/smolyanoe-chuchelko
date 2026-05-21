@@ -8,19 +8,30 @@ jest.mock('@shared/lib/lang', () => ({
   setLang: jest.fn<(lang: string) => void>(),
 }));
 
+jest.mock('@shared/lib/auth', () => ({
+  isAuthenticated: jest.fn<() => boolean>(),
+  syncPreferredLanguage: jest.fn<(lang: string) => Promise<void>>(),
+}));
+
 // Импортируем после мока
 import { langActions, langReducer } from '../langSlice';
 import { langListenerMiddleware } from '../listeners';
 import { getLang, setLang } from '@shared/lib/lang';
+import { isAuthenticated, syncPreferredLanguage } from '@shared/lib/auth';
 
 const mockGetLang = getLang as jest.MockedFunction<typeof getLang>;
 const mockSetLang = setLang as jest.MockedFunction<typeof setLang>;
+const mockIsAuthenticated = isAuthenticated as jest.MockedFunction<typeof isAuthenticated>;
+const mockSyncPreferredLanguage = syncPreferredLanguage as jest.MockedFunction<
+  typeof syncPreferredLanguage
+>;
 
 describe('langListeners middleware', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Устанавливаем дефолтное значение для getLang
     mockGetLang.mockReturnValue('en');
+    mockIsAuthenticated.mockReturnValue(false);
+    mockSyncPreferredLanguage.mockResolvedValue(undefined);
 
     // Устанавливаем дефолтное значение для document.documentElement.lang
     if (typeof document !== 'undefined' && document.documentElement) {
@@ -128,6 +139,24 @@ describe('langListeners middleware', () => {
       expect(mockSetLang).toHaveBeenNthCalledWith(2, 'en');
       expect(mockSetLang).toHaveBeenNthCalledWith(3, 'en');
       expect(document.documentElement.lang).toBe('en');
+    });
+
+    test('должен синхронизировать preferred language для авторизованного пользователя', () => {
+      mockIsAuthenticated.mockReturnValue(true);
+      const store = createTestStore();
+
+      store.dispatch(langActions.setLang('ru'));
+
+      expect(mockSyncPreferredLanguage).toHaveBeenCalledWith('ru');
+    });
+
+    test('не должен синхронизировать preferred language для гостя', () => {
+      mockIsAuthenticated.mockReturnValue(false);
+      const store = createTestStore();
+
+      store.dispatch(langActions.setLang('ru'));
+
+      expect(mockSyncPreferredLanguage).not.toHaveBeenCalled();
     });
   });
 

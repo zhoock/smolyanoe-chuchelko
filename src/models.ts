@@ -318,6 +318,7 @@ export interface IInterface {
       successBody: string;
       continue: string;
       continueToHome?: string;
+      openDashboard?: string;
       openDashboardPrefix?: string;
       openDashboardLink?: string;
       expiredTitle: string;
@@ -376,6 +377,7 @@ export interface IInterface {
     deleteAccountDeleting?: string;
     deleteAccountFailed?: string;
     deleteAccountSuccessToast?: string;
+    deleteAccountSuccessToastDescription?: string;
     logout: string;
     profileFields: {
       name: string;

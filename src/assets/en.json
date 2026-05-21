@@ -67,6 +67,7 @@
         "successBody": "Your email has been successfully verified. You now have full access to all features.",
         "continue": "Continue",
         "continueToHome": "Continue to Home",
+        "openDashboard": "Open dashboard",
         "openDashboardPrefix": "Or open your ",
         "openDashboardLink": "dashboard",
         "expiredTitle": "Verification link expired",
@@ -232,7 +233,8 @@
       "deleteAccountPasswordLabel": "Current password",
       "deleteAccountDeleting": "Deleting account…",
       "deleteAccountFailed": "Could not delete account. Please try again.",
-      "deleteAccountSuccessToast": "Account deleted permanently",
+      "deleteAccountSuccessToast": "Account deleted",
+      "deleteAccountSuccessToastDescription": "Account data is no longer available.",
       "logout": "Logout",
       "profileFields": {
         "name": "Name",

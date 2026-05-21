@@ -5,6 +5,8 @@
 import crypto from 'node:crypto';
 import { query } from './db';
 import { sendVerificationEmail } from './email';
+import { normalizeEmailLocale, type EmailLocale } from './email-locale';
+import { buildEmailVerificationUrl } from './public-app-url';
 
 const TOKEN_BYTES = 32;
 const TOKEN_TTL_HOURS = 24;
@@ -15,6 +17,7 @@ export interface VerificationUserRow {
   name: string | null;
   role: string;
   is_email_verified: boolean;
+  preferred_language?: string | null;
 }
 
 export function generateVerificationToken(): string {
@@ -72,20 +75,17 @@ export async function markEmailVerified(userId: string): Promise<void> {
 export async function sendUserVerificationEmail(
   email: string,
   token: string,
-  userName?: string | null
+  userName?: string | null,
+  preferredLanguage?: string | null
 ): Promise<{ success: boolean; error?: string }> {
-  const siteUrl =
-    process.env.URL ||
-    process.env.NETLIFY_SITE_URL ||
-    process.env.DEPLOY_PRIME_URL ||
-    'http://localhost:8888';
-
-  const verifyUrl = `${siteUrl.replace(/\/$/, '')}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  const verifyUrl = buildEmailVerificationUrl(token);
+  const locale = normalizeEmailLocale(preferredLanguage);
 
   return sendVerificationEmail({
     to: email,
     verifyUrl,
     userName: userName ?? undefined,
+    locale,
   });
 }
 
@@ -105,5 +105,6 @@ export function mapAuthUser(user: VerificationUserRow) {
     name: user.name,
     role: user.role === 'admin' ? ('admin' as const) : ('user' as const),
     isEmailVerified: Boolean(user.is_email_verified),
+    preferredLanguage: normalizeEmailLocale(user.preferred_language),
   };
 }

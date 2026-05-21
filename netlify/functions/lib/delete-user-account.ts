@@ -6,6 +6,8 @@ import type { PoolClient } from 'pg';
 import * as bcrypt from 'bcryptjs';
 import { withClient } from './db';
 import { deleteAllUserStorageFiles } from './delete-user-storage';
+import { sendAccountDeletedEmail } from './email';
+import { normalizeEmailLocale } from './email-locale';
 
 export class DeleteAccountError extends Error {
   constructor(
@@ -23,6 +25,7 @@ interface UserAuthRow {
   email: string;
   password_hash: string;
   is_active: boolean;
+  preferred_language?: string | null;
 }
 
 export function mapDeleteAccountError(error: unknown): DeleteAccountError {
@@ -118,12 +121,15 @@ export async function deleteUserAccount(
     throw new DeleteAccountError('Current password is required', 400, 'PASSWORD_REQUIRED');
   }
 
+  let deletedEmail: string | null = null;
+  let deletedLocale = normalizeEmailLocale(null);
+
   await withClient(async (client) => {
     await client.query('BEGIN');
 
     try {
       const userResult = await client.query<UserAuthRow>(
-        `SELECT id, email, password_hash, is_active
+        `SELECT id, email, password_hash, is_active, preferred_language
          FROM users
          WHERE id = $1::uuid
          FOR UPDATE`,
@@ -147,6 +153,8 @@ export async function deleteUserAccount(
 
       await deleteAllUserStorageFiles(userId);
       await deleteUserDataInTransaction(client, user.id, user.email);
+      deletedEmail = user.email;
+      deletedLocale = normalizeEmailLocale(user.preferred_language);
 
       await client.query('COMMIT');
     } catch (error) {
@@ -154,6 +162,13 @@ export async function deleteUserAccount(
       throw error;
     }
   });
+
+  if (deletedEmail) {
+    const emailResult = await sendAccountDeletedEmail({ to: deletedEmail, locale: deletedLocale });
+    if (!emailResult.success) {
+      console.error('❌ Account deleted but confirmation email failed:', emailResult.error);
+    }
+  }
 
   return { deleted: true };
 }

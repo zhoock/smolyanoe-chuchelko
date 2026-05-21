@@ -3,6 +3,11 @@
  */
 
 import { Resend } from 'resend';
+import { buildAccountDeletedEmailContent } from './account-deleted-email-template';
+import { buildPurchaseEmailContent } from './purchase-email-template';
+import { buildVerificationEmailContent } from './verification-email-template';
+import type { EmailLocale } from './email-locale';
+import { getSiteDisplayName } from './email-utils';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -18,113 +23,36 @@ interface SendPurchaseEmailOptions {
     title: string;
   }>;
   siteUrl?: string;
+  locale?: EmailLocale;
 }
 
-/**
- * Отправляет email покупателю с информацией о покупке и ссылками на скачивание
- */
 export async function sendPurchaseEmail(
   options: SendPurchaseEmailOptions
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!process.env.RESEND_API_KEY) {
       console.error('❌ RESEND_API_KEY is not set');
-      console.error('❌ Available env vars:', {
-        hasResendKey: !!process.env.RESEND_API_KEY,
-        hasNetlifySiteUrl: !!process.env.NETLIFY_SITE_URL,
-        nodeEnv: process.env.NODE_ENV,
-      });
       return { success: false, error: 'Email service not configured: RESEND_API_KEY is missing' };
     }
 
     const siteUrl =
       options.siteUrl || process.env.NETLIFY_SITE_URL || 'https://smolyanoechuchelko.ru';
-
-    // Формируем список треков с ссылками на скачивание
-    const tracksList = options.tracks
-      .map(
-        (track, index) => `
-        <tr style="border-bottom: 1px solid #e0e0e0;">
-          <td style="padding: 12px 0; color: #333;">${index + 1}.</td>
-          <td style="padding: 12px 0; color: #333;">${escapeHtml(track.title)}</td>
-          <td style="padding: 12px 0; text-align: right;">
-            <a href="${siteUrl}/api/download?token=${options.purchaseToken}&track=${track.trackId}" 
-               style="color: #4CAF50; text-decoration: none; font-weight: 500;">
-              Скачать
-            </a>
-          </td>
-        </tr>
-      `
-      )
-      .join('');
-
-    const customerGreeting = options.customerName
-      ? `Здравствуйте, ${escapeHtml(options.customerName)}!`
-      : 'Здравствуйте!';
-
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Спасибо за покупку!</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-  <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <h1 style="color: #4CAF50; margin-top: 0;">Спасибо за покупку! ✅</h1>
-    
-    <p>${customerGreeting}</p>
-    
-    <p>Ваш заказ <strong>#${options.orderId.slice(0, 8)}</strong> успешно оплачен.</p>
-    
-    <h2 style="color: #333; margin-top: 30px; margin-bottom: 15px;">
-      ${escapeHtml(options.artistName)} — ${escapeHtml(options.albumName)}
-    </h2>
-    
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-      <thead>
-        <tr style="border-bottom: 2px solid #4CAF50;">
-          <th style="text-align: left; padding: 10px 0; color: #666; font-weight: 600; width: 40px;">#</th>
-          <th style="text-align: left; padding: 10px 0; color: #666; font-weight: 600;">Трек</th>
-          <th style="text-align: right; padding: 10px 0; color: #666; font-weight: 600;">Скачать</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${tracksList}
-      </tbody>
-    </table>
-    
-    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-    
-    <p style="color: #666; font-size: 14px; margin: 0;">
-      Если у вас возникли вопросы, пожалуйста, свяжитесь с нами: 
-      <a href="mailto:feedback@smolyanoechuchelko.ru" style="color: #4CAF50;">feedback@smolyanoechuchelko.ru</a>
-    </p>
-  </div>
-</body>
-</html>
-    `;
-
-    const text = `
-Спасибо за покупку!
-
-${customerGreeting}
-
-Ваш заказ #${options.orderId.slice(0, 8)} успешно оплачен.
-
-${options.artistName} — ${options.albumName}
-
-Треки:
-${options.tracks.map((t, i) => `${i + 1}. ${t.title}\n   Скачать: ${siteUrl}/api/download?token=${options.purchaseToken}&track=${t.trackId}`).join('\n')}
-
-Если у вас возникли вопросы, пожалуйста, свяжитесь с нами: feedback@smolyanoechuchelko.ru
-    `;
+    const locale = options.locale ?? 'en';
+    const { html, text, subject } = buildPurchaseEmailContent({
+      locale,
+      customerName: options.customerName,
+      albumName: options.albumName,
+      artistName: options.artistName,
+      orderId: options.orderId,
+      purchaseToken: options.purchaseToken,
+      siteUrl,
+      tracks: options.tracks,
+    });
 
     const result = await resend.emails.send({
       from: 'Смоляное чучелко <noreply@smolyanoechuchelko.ru>',
       to: options.to,
-      subject: `Спасибо за покупку: ${options.artistName} — ${options.albumName}`,
+      subject,
       html,
       text,
     });
@@ -137,6 +65,7 @@ ${options.tracks.map((t, i) => `${i + 1}. ${t.title}\n   Скачать: ${siteU
     console.log('✅ Purchase email sent successfully:', {
       to: options.to,
       orderId: options.orderId,
+      locale,
       emailId: result.data?.id,
     });
 
@@ -154,11 +83,9 @@ interface SendVerificationEmailOptions {
   to: string;
   verifyUrl: string;
   userName?: string;
+  locale?: EmailLocale;
 }
 
-/**
- * Sends email verification message (dark/gold template)
- */
 export async function sendVerificationEmail(
   options: SendVerificationEmailOptions
 ): Promise<{ success: boolean; error?: string }> {
@@ -168,57 +95,18 @@ export async function sendVerificationEmail(
       return { success: false, error: 'Email service not configured: RESEND_API_KEY is missing' };
     }
 
-    const greeting = options.userName ? `Hi ${escapeHtml(options.userName)},` : 'Hi there,';
-
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify your email</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #A1A1AA; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #1A1A1A;">
-  <div style="background-color: #1A1A1A; border: 1px solid #3f3f46; border-radius: 12px; padding: 32px;">
-    <p style="margin: 0 0 8px; color: #D4A017; font-size: 14px; font-weight: 600; letter-spacing: 0.05em;">Mixer</p>
-    <div style="text-align: center; margin: 24px 0;">
-      <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background: rgba(212, 160, 23, 0.15); line-height: 64px; font-size: 28px;">✉</div>
-    </div>
-    <h1 style="color: #ffffff; margin: 0 0 16px; font-size: 24px; text-align: center;">Verify your email</h1>
-    <p style="margin: 0 0 24px; text-align: center;">${greeting}</p>
-    <p style="margin: 0 0 24px; text-align: center;">
-      Thanks for joining Mixer! Please verify your email address to activate your account and unlock all features.
-    </p>
-    <p style="text-align: center; margin: 0 0 32px;">
-      <a href="${escapeHtml(options.verifyUrl)}"
-         style="display: inline-block; background-color: #D4A017; color: #1A1A1A; text-decoration: none; font-weight: 600; padding: 14px 28px; border-radius: 8px;">
-        Verify email address
-      </a>
-    </p>
-    <p style="margin: 0; font-size: 12px; color: #71717a; word-break: break-all; text-align: center;">
-      Or copy this link:<br>
-      <a href="${escapeHtml(options.verifyUrl)}" style="color: #D4A017;">${escapeHtml(options.verifyUrl)}</a>
-    </p>
-    <hr style="border: none; border-top: 1px solid #3f3f46; margin: 32px 0 16px;">
-    <p style="margin: 0; font-size: 12px; color: #71717a; text-align: center;">© Mixer. All rights reserved.</p>
-  </div>
-</body>
-</html>`;
-
-    const text = `Verify your email
-
-${options.userName ? `Hi ${options.userName},` : 'Hi there,'}
-
-Thanks for joining Mixer! Please verify your email address to activate your account and unlock all features.
-
-Verify: ${options.verifyUrl}
-
-© Mixer. All rights reserved.`;
+    const locale = options.locale ?? 'en';
+    const { html, text, subject } = buildVerificationEmailContent({
+      locale,
+      verifyUrl: options.verifyUrl,
+      userName: options.userName,
+      siteName: getSiteDisplayName(),
+    });
 
     const result = await resend.emails.send({
       from: 'Смоляное чучелко <noreply@smolyanoechuchelko.ru>',
       to: options.to,
-      subject: 'Verify your email',
+      subject,
       html,
       text,
     });
@@ -238,16 +126,48 @@ Verify: ${options.verifyUrl}
   }
 }
 
-/**
- * Экранирует HTML символы для безопасности
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+interface SendAccountDeletedEmailOptions {
+  to: string;
+  locale?: EmailLocale;
+}
+
+export async function sendAccountDeletedEmail(
+  options: SendAccountDeletedEmailOptions
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY is not set');
+      return { success: false, error: 'Email service not configured: RESEND_API_KEY is missing' };
+    }
+
+    const locale = options.locale ?? 'en';
+    const { html, text, subject } = buildAccountDeletedEmailContent(locale);
+
+    const result = await resend.emails.send({
+      from: 'Смоляное чучелко <noreply@smolyanoechuchelko.ru>',
+      to: options.to,
+      subject,
+      html,
+      text,
+    });
+
+    if (result.error) {
+      console.error('❌ Error sending account deleted email:', result.error);
+      return { success: false, error: result.error.message || 'Failed to send email' };
+    }
+
+    console.log('✅ Account deleted email sent successfully:', {
+      to: options.to,
+      locale,
+      emailId: result.data?.id,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error in sendAccountDeletedEmail:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

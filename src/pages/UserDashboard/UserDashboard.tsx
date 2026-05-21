@@ -1022,10 +1022,18 @@ function UserDashboard() {
   const dashboardNavState = backgroundLocation ? { backgroundLocation } : undefined;
   const closeDashboard = useCallback(() => {
     if (backgroundLocation) {
-      navigate(-1);
-    } else {
-      navigate('/');
+      clearDashboardModalBackground();
+      navigate(
+        {
+          pathname: backgroundLocation.pathname,
+          search: backgroundLocation.search,
+          hash: backgroundLocation.hash ?? '',
+        },
+        { replace: true }
+      );
+      return;
     }
+    navigate('/');
   }, [backgroundLocation, navigate]);
   const goDashboard = useCallback(
     (path: string) => {

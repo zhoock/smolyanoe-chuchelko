@@ -323,16 +323,23 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
                             }
                           );
 
-                          return sendPurchaseEmail({
-                            to: customerEmail,
-                            customerName,
-                            albumName: album.album,
-                            artistName: album.artist,
-                            orderId,
-                            purchaseToken: purchase.purchase_token,
-                            tracks,
-                            siteUrl: process.env.NETLIFY_SITE_URL || undefined,
-                          });
+                          return import('./lib/user-preferred-language')
+                            .then(({ resolveEmailLocaleForAddress }) =>
+                              resolveEmailLocaleForAddress(customerEmail, album.lang)
+                            )
+                            .then((locale) =>
+                              sendPurchaseEmail({
+                                to: customerEmail,
+                                customerName,
+                                albumName: album.album,
+                                artistName: album.artist,
+                                orderId,
+                                purchaseToken: purchase.purchase_token,
+                                tracks,
+                                siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+                                locale,
+                              })
+                            );
                         });
                       }
                       return Promise.resolve({ success: false, error: 'Album not found' });

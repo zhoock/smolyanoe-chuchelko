@@ -3,7 +3,13 @@ import { buildApiUrl } from '@shared/lib/artistQuery';
 import { getToken } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import {
+  getPublicArtistDisplayName,
+  ensurePublicArtistsLoaded,
+} from '@shared/lib/publicArtistsCache';
+import {
   fetchPublicProfileForDisplay,
+  getCachedPublicProfileForDisplay,
+  invalidatePublicProfileDisplayCache,
   readStoredProfileDisplayName,
   siteArtistUiLabel,
   type ProfileNameUpdatedDetail,
@@ -18,6 +24,12 @@ export type UseSiteArtistDisplayNameResult = {
   displayLabel: string;
   isLoading: boolean;
 };
+
+function resolvePublicDisplayNameSeed(lang: string, artistSlug: string): string {
+  const cached = getCachedPublicProfileForDisplay(lang, artistSlug);
+  if (cached?.displayName.trim()) return cached.displayName.trim();
+  return getPublicArtistDisplayName(artistSlug);
+}
 
 /**
  * Единое отображаемое имя артиста (site_name профиля), без albums.artist.
@@ -37,12 +49,18 @@ export function useSiteArtistDisplayName(
   const [displayName, setDisplayName] = useState(() => {
     const v = options?.variant ?? 'public';
     const slug = options?.artistSlug?.trim() ?? '';
-    if (v === 'public' && slug.length > 0) return '';
+    if (v === 'public' && slug.length > 0) {
+      return resolvePublicDisplayNameSeed(lang, slug);
+    }
     return readStoredProfileDisplayName();
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => {
+    if (variant === 'public' && hasArtistParam) {
+      return !resolvePublicDisplayNameSeed(lang, artistSlug);
+    }
+    return false;
+  });
 
-  /** Публичный профиль: смена «цели» (?artist= / главная) — не показывать имя предыдущего артиста до ответа API. */
   const publicFetchKey = variant === 'public' ? `${hasArtistParam ? '1' : '0'}:${artistSlug}` : '';
   const publicFetchKeyRef = useRef<string | null>(null);
 
@@ -52,17 +70,35 @@ export function useSiteArtistDisplayName(
     if (variant === 'public') {
       const prev = publicFetchKeyRef.current;
       publicFetchKeyRef.current = publicFetchKey;
-      const isFirstPublicMount = prev === null;
-      const targetChanged = !isFirstPublicMount && prev !== publicFetchKey;
-      if (targetChanged || (isFirstPublicMount && hasArtistParam)) {
-        setDisplayName('');
+      const targetChanged = prev !== null && prev !== publicFetchKey;
+      if (targetChanged) {
+        setDisplayName(hasArtistParam ? resolvePublicDisplayNameSeed(lang, artistSlug) : '');
       }
     } else {
       publicFetchKeyRef.current = null;
     }
 
     (async () => {
-      setIsLoading(true);
+      const hasSeedName =
+        variant === 'public' && hasArtistParam && !!resolvePublicDisplayNameSeed(lang, artistSlug);
+      if (!hasSeedName) {
+        setIsLoading(true);
+      }
+
+      const profilePromise =
+        variant === 'public'
+          ? fetchPublicProfileForDisplay(lang, hasArtistParam ? artistSlug : null)
+          : null;
+
+      if (variant === 'public' && hasArtistParam && !hasSeedName) {
+        await ensurePublicArtistsLoaded();
+        if (cancelled) return;
+        const interimName = getPublicArtistDisplayName(artistSlug);
+        if (interimName) {
+          setDisplayName(interimName);
+        }
+      }
+
       try {
         if (variant === 'authenticated') {
           const token = getToken();
@@ -92,18 +128,21 @@ export function useSiteArtistDisplayName(
           } else {
             setDisplayName(readStoredProfileDisplayName());
           }
-        } else {
-          const { displayName: name } = await fetchPublicProfileForDisplay(
-            lang,
-            hasArtistParam ? artistSlug : null
-          );
+        } else if (profilePromise) {
+          const { displayName: name } = await profilePromise;
           if (!cancelled) {
-            setDisplayName(name.trim() || readStoredProfileDisplayName());
+            const trimmed = name.trim();
+            setDisplayName(trimmed || (hasArtistParam ? '' : readStoredProfileDisplayName()));
           }
         }
       } catch {
         if (!cancelled) {
-          setDisplayName(readStoredProfileDisplayName());
+          if (hasArtistParam) {
+            const seed = resolvePublicDisplayNameSeed(lang, artistSlug);
+            setDisplayName(seed);
+          } else {
+            setDisplayName(readStoredProfileDisplayName());
+          }
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -124,7 +163,11 @@ export function useSiteArtistDisplayName(
       if (variant === 'public' && hasArtistParam) {
         if (slug && slug !== artistSlug) return;
       }
+      if (slug) {
+        invalidatePublicProfileDisplayCache(slug);
+      }
       setDisplayName(name);
+      setIsLoading(false);
     };
 
     window.addEventListener('profile-name-updated', handleProfileNameUpdate);

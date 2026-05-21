@@ -37,21 +37,56 @@ export type PublicProfileForDisplay = {
   publicSlug: string | null;
 };
 
-/**
- * Публичный профиль: имя для UI (site_name) и public_slug владельца страницы / ?artist=.
- */
-export async function fetchPublicProfileForDisplay(
+const profileCache = new Map<string, PublicProfileForDisplay>();
+const profileInflight = new Map<string, Promise<PublicProfileForDisplay>>();
+
+function resolveArtistSlug(artistSlugOverride?: string | null): string {
+  return (artistSlugOverride?.trim() || selectPublicArtistSlug(getStore().getState()) || '').trim();
+}
+
+function profileCacheKey(lang: string, slug: string): string {
+  return `${lang}:${slug.toLowerCase()}`;
+}
+
+export function getCachedPublicProfileForDisplay(
   lang: string,
   artistSlugOverride?: string | null
-): Promise<PublicProfileForDisplay> {
-  const slug = (
-    artistSlugOverride?.trim() ||
-    selectPublicArtistSlug(getStore().getState()) ||
-    ''
-  ).trim();
-  if (!slug) {
-    return { displayName: readStoredProfileDisplayName(), publicSlug: null };
+): PublicProfileForDisplay | null {
+  const slug = resolveArtistSlug(artistSlugOverride);
+  if (!slug) return null;
+  return profileCache.get(profileCacheKey(lang, slug)) ?? null;
+}
+
+export function invalidatePublicProfileDisplayCache(slug?: string): void {
+  if (!slug?.trim()) {
+    profileCache.clear();
+    profileInflight.clear();
+    return;
   }
+  const normalized = slug.trim().toLowerCase();
+  for (const key of [...profileCache.keys()]) {
+    if (key.endsWith(`:${normalized}`)) {
+      profileCache.delete(key);
+      profileInflight.delete(key);
+    }
+  }
+}
+
+/** Стартует загрузку профиля заранее (route loader, prefetch). */
+export function prefetchPublicProfileForDisplay(
+  lang: string,
+  artistSlugOverride?: string | null
+): void {
+  const slug = resolveArtistSlug(artistSlugOverride);
+  if (!slug) return;
+  void fetchPublicProfileForDisplay(lang, slug);
+}
+
+async function fetchPublicProfileForDisplayNetwork(
+  lang: string,
+  slug: string
+): Promise<PublicProfileForDisplay> {
+  const fallbackName = '';
 
   try {
     const url = buildApiUrl(
@@ -63,7 +98,7 @@ export async function fetchPublicProfileForDisplay(
       headers: { 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
-      return { displayName: readStoredProfileDisplayName(), publicSlug: null };
+      return { displayName: fallbackName, publicSlug: null };
     }
     const result = (await response.json()) as {
       success?: boolean;
@@ -74,15 +109,49 @@ export async function fetchPublicProfileForDisplay(
       };
     };
     if (!result.success || !result.data) {
-      return { displayName: readStoredProfileDisplayName(), publicSlug: null };
+      return { displayName: fallbackName, publicSlug: null };
     }
-    const displayName =
-      (result.data.siteName ?? result.data.name ?? '').trim() || readStoredProfileDisplayName();
+    const displayName = (result.data.siteName ?? result.data.name ?? '').trim() || fallbackName;
     const publicSlug = result.data.publicSlug?.trim() || null;
     return { displayName, publicSlug };
   } catch {
+    return { displayName: fallbackName, publicSlug: null };
+  }
+}
+
+/**
+ * Публичный профиль: имя для UI (site_name) и public_slug владельца страницы / ?artist=.
+ * Кэширует ответ и дедуплицирует параллельные запросы.
+ */
+export async function fetchPublicProfileForDisplay(
+  lang: string,
+  artistSlugOverride?: string | null
+): Promise<PublicProfileForDisplay> {
+  const slug = resolveArtistSlug(artistSlugOverride);
+  if (!slug) {
     return { displayName: readStoredProfileDisplayName(), publicSlug: null };
   }
+
+  const key = profileCacheKey(lang, slug);
+  const cached = profileCache.get(key);
+  if (cached) return cached;
+
+  const pending = profileInflight.get(key);
+  if (pending) return pending;
+
+  const promise = fetchPublicProfileForDisplayNetwork(lang, slug)
+    .then((result) => {
+      profileCache.set(key, result);
+      profileInflight.delete(key);
+      return result;
+    })
+    .catch((error) => {
+      profileInflight.delete(key);
+      throw error;
+    });
+
+  profileInflight.set(key, promise);
+  return promise;
 }
 
 /**

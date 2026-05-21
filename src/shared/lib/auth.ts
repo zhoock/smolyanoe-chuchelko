@@ -3,6 +3,7 @@
  */
 
 import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
+import { getLang } from '@shared/lib/lang';
 import { getStore } from '@shared/model/appStore';
 import { resetCatalogAfterAuthEnd } from '@shared/lib/resetCatalogAfterAuthEnd';
 
@@ -113,6 +114,8 @@ export interface AuthUser {
   role?: 'user' | 'admin';
   /** Подтверждён ли email; старые сессии без поля считаются неподтверждёнными */
   isEmailVerified?: boolean;
+  /** Язык UI и email-уведомлений */
+  preferredLanguage?: 'ru' | 'en';
 }
 
 export interface AuthResponse {
@@ -222,7 +225,8 @@ export function isAuthenticated(): boolean {
 export async function register(
   email: string,
   password: string,
-  siteName: string
+  siteName: string,
+  options?: { preferredLanguage?: string }
 ): Promise<AuthResponse> {
   try {
     const response = await fetch('/api/auth/register', {
@@ -230,7 +234,13 @@ export async function register(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password, name: siteName, siteName }),
+      body: JSON.stringify({
+        email,
+        password,
+        name: siteName,
+        siteName,
+        preferredLanguage: options?.preferredLanguage ?? getLang(),
+      }),
     });
 
     const result: AuthResponse = await response.json();
@@ -253,14 +263,22 @@ export async function register(
 /**
  * Вход пользователя
  */
-export async function login(email: string, password: string): Promise<AuthResponse> {
+export async function login(
+  email: string,
+  password: string,
+  options?: { preferredLanguage?: string }
+): Promise<AuthResponse> {
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        preferredLanguage: options?.preferredLanguage ?? getLang(),
+      }),
     });
 
     const result: AuthResponse = await response.json();
@@ -305,6 +323,25 @@ export function isEmailVerified(user?: AuthUser | null): boolean {
   return user.isEmailVerified === true;
 }
 
+/** Сохраняет preferred_language на бэкенде для email-уведомлений. */
+export async function syncPreferredLanguage(lang: string): Promise<void> {
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    await fetch('/api/auth/preferred-language', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ preferredLanguage: lang }),
+    });
+  } catch (error) {
+    console.error('❌ Failed to sync preferred language:', error);
+  }
+}
+
 /**
  * Загружает актуальный профиль с бэкенда и обновляет localStorage.
  */
@@ -313,6 +350,8 @@ export async function refreshAuthSession(): Promise<AuthUser | null> {
   if (!token) return null;
 
   try {
+    void syncPreferredLanguage(getLang());
+
     const response = await fetch('/api/auth/me', {
       method: 'GET',
       headers: {

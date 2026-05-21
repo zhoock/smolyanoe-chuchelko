@@ -1,6 +1,7 @@
 import { createListenerMiddleware } from '@reduxjs/toolkit';
 
 import { setLang as persistLang } from '@shared/lib/lang';
+import { isAuthenticated, syncPreferredLanguage } from '@shared/lib/auth';
 
 import { langActions, type SupportedLang } from './langSlice';
 
@@ -18,5 +19,8 @@ langListenerMiddleware.startListening({
   actionCreator: langActions.setLang,
   effect: async (action) => {
     applyLangSideEffects(action.payload);
+    if (isAuthenticated()) {
+      void syncPreferredLanguage(action.payload);
+    }
   },
 });

@@ -1,132 +1,47 @@
 /**
- * Скрипт для автоматического применения миграций БД
+ * @deprecated Use `npm run migrate` (scripts/migrate-database.ts) instead.
  *
- * Использование:
- *   npx tsx database/scripts/apply_migrations.ts
- *
- * Или через Netlify Function:
- *   netlify functions:invoke apply-migrations
+ * This file is kept as a thin wrapper for older docs/commands.
+ * The main migrator loads `.env`, tracks schema_migrations, and applies all SQL files.
  */
 
-import { query } from '../../netlify/functions/lib/db';
-import * as fs from 'fs';
-import * as path from 'path';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 
-interface MigrationResult {
-  success: boolean;
-  migration: string;
-  error?: string;
-}
+function loadEnvFile(filePath: string): void {
+  if (!existsSync(filePath)) return;
 
-async function applyMigration(filePath: string): Promise<MigrationResult> {
-  const fileName = path.basename(filePath);
-  console.log(`📝 Применяем миграцию: ${fileName}...`);
+  readFileSync(filePath, 'utf-8')
+    .split('\n')
+    .forEach((line) => {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || trimmedLine.startsWith('#')) return;
 
-  try {
-    const sql = fs.readFileSync(filePath, 'utf-8');
+      const match = trimmedLine.match(/^([^#=]+)=(.*)$/);
+      if (!match) return;
 
-    // Разбиваем SQL на отдельные запросы (разделитель: ;)
-    // Убираем комментарии и пустые строки
-    const queries = sql
-      .split(';')
-      .map((q) => q.trim())
-      .filter((q) => q.length > 0 && !q.startsWith('--'));
-
-    // Выполняем каждый запрос
-    for (const queryText of queries) {
-      if (queryText.trim().length > 0) {
-        try {
-          await query(queryText, []);
-        } catch (error) {
-          // Игнорируем ошибки "already exists" для CREATE TABLE IF NOT EXISTS
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          if (
-            errorMessage.includes('already exists') ||
-            errorMessage.includes('duplicate key') ||
-            errorMessage.includes('relation already exists')
-          ) {
-            console.log(`  ⚠️  Пропускаем (уже существует): ${queryText.substring(0, 50)}...`);
-            continue;
-          }
-          throw error;
-        }
+      const key = match[1].trim();
+      let value = match[2].trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
       }
-    }
-
-    console.log(`  ✅ Миграция ${fileName} применена успешно`);
-    return { success: true, migration: fileName };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`  ❌ Ошибка применения миграции ${fileName}:`, errorMessage);
-    return {
-      success: false,
-      migration: fileName,
-      error: errorMessage,
-    };
-  }
-}
-
-async function applyAllMigrations(): Promise<void> {
-  console.log('🚀 Начинаем применение миграций БД...\n');
-
-  const migrationsDir = path.join(__dirname, '..', 'migrations');
-  const migrationFiles = [
-    '003_create_users_albums_tracks.sql',
-    '004_add_user_id_to_synced_lyrics.sql',
-  ];
-
-  const results: MigrationResult[] = [];
-
-  for (const migrationFile of migrationFiles) {
-    const filePath = path.join(migrationsDir, migrationFile);
-
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Файл миграции не найден: ${filePath}`);
-      results.push({
-        success: false,
-        migration: migrationFile,
-        error: 'File not found',
-      });
-      continue;
-    }
-
-    const result = await applyMigration(filePath);
-    results.push(result);
-    console.log(''); // Пустая строка для читаемости
-  }
-
-  // Итоги
-  console.log('📊 Итоги применения миграций:');
-  const successful = results.filter((r) => r.success).length;
-  const failed = results.filter((r) => !r.success).length;
-
-  console.log(`  ✅ Успешно: ${successful}`);
-  console.log(`  ❌ Ошибок: ${failed}`);
-
-  if (failed > 0) {
-    console.log('\n❌ Ошибки:');
-    results
-      .filter((r) => !r.success)
-      .forEach((r) => {
-        console.log(`  - ${r.migration}: ${r.error}`);
-      });
-    throw new Error(`Применение миграций завершилось с ошибками`);
-  }
-
-  console.log('\n🎉 Все миграции применены успешно!');
-}
-
-// Если скрипт запускается напрямую
-if (require.main === module) {
-  applyAllMigrations()
-    .then(() => {
-      console.log('✅ Скрипт завершён успешно');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('❌ Скрипт завершён с ошибкой:', error);
-      process.exit(1);
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
     });
 }
 
-export { applyAllMigrations };
+const projectRoot = join(__dirname, '..', '..');
+loadEnvFile(join(projectRoot, '.env'));
+loadEnvFile(join(projectRoot, '.env.local'));
+
+console.warn('⚠️  database/scripts/apply_migrations.ts is deprecated.');
+console.warn('   Running the main migrator: npm run migrate\n');
+
+import('../../scripts/migrate-database.ts').catch((error) => {
+  console.error('❌ Failed to run migrations:', error);
+  process.exit(1);
+});

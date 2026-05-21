@@ -7,6 +7,9 @@
   targetPort = 8080
   port = 8888
 
+[context.dev.environment]
+  PUBLIC_APP_URL = "http://localhost:8080"
+
 # ---------- Статические файлы ----------
 [[redirects]]
   from = "/robots.txt"

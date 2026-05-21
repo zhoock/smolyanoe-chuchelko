@@ -27,6 +27,8 @@ import {
   selectUiDictionaryData,
 } from '@shared/model/uiDictionary';
 import { resolveDashboardModalBackgroundForLoader } from '@shared/lib/dashboardModalBackground';
+import { prefetchPublicProfileForDisplay } from '@shared/lib/profileDisplayName';
+import { prefetchPublicArtists } from '@shared/lib/publicArtistsCache';
 
 /**
  * createAsyncThunk: при `condition` → false unwrap() отклоняет plain object
@@ -62,6 +64,11 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   store.dispatch(setPublicArtistSlug(publicArtistFromUrl || null));
   const state = store.getState();
   const lang = selectCurrentLang(state);
+
+  prefetchPublicArtists();
+  if (publicArtistFromUrl) {
+    prefetchPublicProfileForDisplay(lang, publicArtistFromUrl);
+  }
 
   // СЛОВАРЬ НУЖЕН ВЕЗДЕ: шапка, меню, футер, aboutus и т.д.
   let templateC: Promise<IInterface[]>;

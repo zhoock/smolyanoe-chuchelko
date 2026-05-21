@@ -70,3 +70,22 @@ export function resolvePostAuthDestination(options: {
 
   return DEFAULT_AFTER_AUTH;
 }
+
+/** Location для `backgroundLocation` дашборда из безопасного return path. */
+export function locationFromReturnPath(path: string): Location {
+  const safe = sanitizeReturnPath(path) ?? DEFAULT_AFTER_AUTH;
+  const url = new URL(safe, 'http://local.invalid');
+  return {
+    pathname: url.pathname,
+    search: url.search,
+    hash: url.hash,
+    state: null,
+    key: 'return-surface',
+  };
+}
+
+export function resolveReturnPathFromSearchParam(
+  returnToSearchParam: string | null | undefined
+): string {
+  return sanitizeReturnPath(returnToSearchParam ?? null) ?? DEFAULT_AFTER_AUTH;
+}

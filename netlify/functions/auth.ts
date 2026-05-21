@@ -6,6 +6,7 @@
  * GET  /api/auth/verify-email?token=... - подтверждение email (редирект на фронт)
  * POST /api/auth/resend-verification - повторная отправка (JWT)
  * POST /api/auth/change-verification-email - смена email до верификации (JWT)
+ * POST /api/auth/preferred-language - сохранить язык пользователя (JWT)
  * GET  /api/auth/me - текущий пользователь (JWT)
  */
 
@@ -36,6 +37,9 @@ import {
   DeleteAccountError,
   mapDeleteAccountError,
 } from './lib/delete-user-account';
+import { buildPublicAppPath } from './lib/public-app-url';
+import { normalizeEmailLocale } from './lib/email-locale';
+import { updateUserPreferredLanguage } from './lib/user-preferred-language';
 
 interface UserRow extends VerificationUserRow {
   password_hash: string;
@@ -47,6 +51,7 @@ interface RegisterRequest {
   password: string;
   name?: string;
   siteName?: string;
+  preferredLanguage?: string;
 }
 
 interface SlugRow {
@@ -60,6 +65,11 @@ interface UsernameRow {
 interface LoginRequest {
   email: string;
   password: string;
+  preferredLanguage?: string;
+}
+
+interface PreferredLanguageRequest {
+  preferredLanguage?: string;
 }
 
 interface ChangeVerificationEmailRequest {
@@ -86,15 +96,6 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 
   return normalized || 'artist';
-}
-
-function getSiteOrigin(): string {
-  return (
-    process.env.URL ||
-    process.env.NETLIFY_SITE_URL ||
-    process.env.DEPLOY_PRIME_URL ||
-    'http://localhost:8888'
-  ).replace(/\/$/, '');
 }
 
 async function generateUniquePublicSlug(
@@ -169,7 +170,7 @@ async function generateUniqueUsername(
 
 async function fetchUserById(userId: string): Promise<UserRow | null> {
   const result = await query<UserRow>(
-    `SELECT id, email, name, password_hash, is_active, role, is_email_verified
+    `SELECT id, email, name, password_hash, is_active, role, is_email_verified, preferred_language
      FROM users
      WHERE id = $1`,
     [userId],
@@ -187,12 +188,13 @@ async function handleVerifyEmailGet(
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
   const token = event.queryStringParameters?.token?.trim();
-  const origin = getSiteOrigin();
 
   if (!token) {
     return {
       statusCode: 302,
-      headers: { Location: `${origin}/email-verification-expired?reason=missing` },
+      headers: {
+        Location: buildPublicAppPath('/email-verification-expired?reason=missing'),
+      },
       body: '',
     };
   }
@@ -208,7 +210,9 @@ async function handleVerifyEmailGet(
   if (result.rows.length === 0) {
     return {
       statusCode: 302,
-      headers: { Location: `${origin}/email-verification-expired?reason=invalid` },
+      headers: {
+        Location: buildPublicAppPath('/email-verification-expired?reason=invalid'),
+      },
       body: '',
     };
   }
@@ -218,7 +222,7 @@ async function handleVerifyEmailGet(
   if (user.is_email_verified) {
     return {
       statusCode: 302,
-      headers: { Location: `${origin}/email-verified?already=1` },
+      headers: { Location: buildPublicAppPath('/email-verified?already=1') },
       body: '',
     };
   }
@@ -235,7 +239,9 @@ async function handleVerifyEmailGet(
   if (!expiresAt || new Date(expiresAt) < new Date()) {
     return {
       statusCode: 302,
-      headers: { Location: `${origin}/email-verification-expired?reason=expired` },
+      headers: {
+        Location: buildPublicAppPath('/email-verification-expired?reason=expired'),
+      },
       body: '',
     };
   }
@@ -244,7 +250,7 @@ async function handleVerifyEmailGet(
 
   return {
     statusCode: 302,
-    headers: { Location: `${origin}/email-verified` },
+    headers: { Location: buildPublicAppPath('/email-verified') },
     body: '',
   };
 }
@@ -273,7 +279,12 @@ async function handleResendVerification(
   }
 
   const token = await assignVerificationToken(userId);
-  const emailResult = await sendUserVerificationEmail(user.email, token, user.name);
+  const emailResult = await sendUserVerificationEmail(
+    user.email,
+    token,
+    user.name,
+    user.preferred_language
+  );
 
   if (!emailResult.success) {
     return createErrorResponse(
@@ -336,7 +347,12 @@ async function handleChangeVerificationEmail(
   }
 
   const token = await assignVerificationToken(userId);
-  const emailResult = await sendUserVerificationEmail(user.email, token, user.name);
+  const emailResult = await sendUserVerificationEmail(
+    user.email,
+    token,
+    user.name,
+    user.preferred_language
+  );
 
   if (!emailResult.success) {
     return createErrorResponse(
@@ -355,6 +371,27 @@ async function handleChangeVerificationEmail(
   }
 
   return createSuccessResponse(buildAuthPayload(updated));
+}
+
+async function handlePreferredLanguage(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const userId = requireAuth(event);
+  if (!userId) {
+    return unauthorizedFromAuthHeader(event);
+  }
+
+  const data = parseJsonBody<PreferredLanguageRequest>(event.body, {} as PreferredLanguageRequest);
+  const preferredLanguage = normalizeEmailLocale(data.preferredLanguage);
+
+  await updateUserPreferredLanguage(userId, preferredLanguage);
+
+  const user = await fetchUserById(userId);
+  if (!user) {
+    return createErrorResponse(404, 'User not found');
+  }
+
+  return createSuccessResponse({ user: mapAuthUser(user) });
 }
 
 async function handleMe(
@@ -406,6 +443,10 @@ export const handler: Handler = async (
       return handleChangeVerificationEmail(event);
     }
 
+    if (path === '/preferred-language' || path.endsWith('/preferred-language')) {
+      return handlePreferredLanguage(event);
+    }
+
     if (path === '/delete-account' || path.endsWith('/delete-account')) {
       const userId = requireAuth(event);
       if (!userId) {
@@ -452,6 +493,7 @@ export const handler: Handler = async (
       const passwordHash = await bcrypt.hash(data.password, 10);
       const normalizedEmail = data.email.toLowerCase().trim();
       const siteName = data.siteName || data.name || null;
+      const preferredLanguage = normalizeEmailLocale(data.preferredLanguage);
 
       let result: Awaited<ReturnType<typeof query<UserRow>>> | null = null;
       let lastError: unknown = null;
@@ -472,10 +514,10 @@ export const handler: Handler = async (
           result = await query<UserRow>(
             `INSERT INTO users (
                email, name, username, site_name, public_slug, password, password_hash,
-               is_active, is_email_verified, genre_code
+               is_active, is_email_verified, genre_code, preferred_language
              )
-             VALUES ($1, $2, $3, $4, $5, $6, $7, true, false, 'other')
-             RETURNING id, email, name, role, is_email_verified`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true, false, 'other', $8)
+             RETURNING id, email, name, role, is_email_verified, preferred_language`,
             [
               normalizedEmail,
               data.name || null,
@@ -484,6 +526,7 @@ export const handler: Handler = async (
               publicSlug,
               data.password,
               passwordHash,
+              preferredLanguage,
             ],
             0
           );
@@ -504,7 +547,12 @@ export const handler: Handler = async (
 
       const user = result.rows[0];
       const verificationToken = await assignVerificationToken(user.id);
-      const emailResult = await sendUserVerificationEmail(user.email, verificationToken, user.name);
+      const emailResult = await sendUserVerificationEmail(
+        user.email,
+        verificationToken,
+        user.name,
+        user.preferred_language
+      );
 
       if (!emailResult.success) {
         console.error('⚠️ Verification email failed after register:', emailResult.error);
@@ -522,7 +570,7 @@ export const handler: Handler = async (
       }
 
       const result = await query<UserRow>(
-        `SELECT id, email, name, password_hash, is_active, role, is_email_verified
+        `SELECT id, email, name, password_hash, is_active, role, is_email_verified, preferred_language
          FROM users
          WHERE email = $1`,
         [data.email.toLowerCase().trim()],
@@ -547,6 +595,14 @@ export const handler: Handler = async (
         return createErrorResponse(401, 'Invalid email or password', CORS_HEADERS, {
           code: 'INVALID_CREDENTIALS',
         });
+      }
+
+      if (data.preferredLanguage) {
+        await updateUserPreferredLanguage(user.id, normalizeEmailLocale(data.preferredLanguage));
+        const refreshed = await fetchUserById(user.id);
+        if (refreshed) {
+          return createSuccessResponse(buildAuthPayload(refreshed));
+        }
       }
 
       return createSuccessResponse(buildAuthPayload(user));

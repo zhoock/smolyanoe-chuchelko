@@ -69,7 +69,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, { preferredLanguage: lang });
 
       if (result.success) {
         if (onSuccess) {

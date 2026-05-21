@@ -67,6 +67,7 @@
         "successBody": "Ваш email успешно подтверждён. Теперь вам доступны все функции проекта.",
         "continue": "Продолжить",
         "continueToHome": "На главную",
+        "openDashboard": "Открыть дашборд",
         "openDashboardPrefix": "Или открыть ",
         "openDashboardLink": "дашборд",
         "expiredTitle": "Ссылка устарела",
@@ -232,7 +233,8 @@
       "deleteAccountPasswordLabel": "Текущий пароль",
       "deleteAccountDeleting": "Удаление аккаунта…",
       "deleteAccountFailed": "Не удалось удалить аккаунт. Попробуйте снова.",
-      "deleteAccountSuccessToast": "Аккаунт удалён навсегда",
+      "deleteAccountSuccessToast": "Аккаунт удалён",
+      "deleteAccountSuccessToastDescription": "Данные аккаунта больше недоступны.",
       "logout": "Выйти",
       "profileFields": {
         "name": "Имя",

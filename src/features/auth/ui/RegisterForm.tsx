@@ -107,7 +107,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     setLoading(true);
 
     try {
-      const result = await register(email, password, name.trim());
+      const result = await register(email, password, name.trim(), { preferredLanguage: lang });
 
       if (result.success) {
         onSuccess?.();

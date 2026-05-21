@@ -206,7 +206,7 @@
       }
 
       &--locked {
-        cursor: not-allowed;
+        cursor: pointer;
         margin-block: 0.45rem;
         padding-block: 0.55rem;
         padding-inline: var(--ms-01);
