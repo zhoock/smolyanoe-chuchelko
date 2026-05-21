@@ -61,7 +61,6 @@ export function HomePage() {
       return false;
     }
   });
-  const [cloudDamping, setCloudDamping] = useState(true);
   const [universeRefreshToken, setUniverseRefreshToken] = useState(0);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
@@ -233,7 +232,6 @@ export function HomePage() {
       });
 
       universeRef.current = universe;
-      universe.setCloudDamping(cloudDamping);
 
       const focusSlug = sessionStorage.getItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY);
       if (focusSlug) {
@@ -350,27 +348,6 @@ export function HomePage() {
           }}
         >
           {useMocks ? 'Mocks: ON' : 'Mocks: OFF'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setCloudDamping((prev) => {
-              const next = !prev;
-              universeRef.current?.setCloudDamping(next);
-              return next;
-            });
-          }}
-          style={{
-            padding: '6px 10px',
-            borderRadius: 8,
-            border: '1px solid rgba(255,255,255,0.35)',
-            background: 'rgba(12,12,14,0.72)',
-            color: '#fff',
-            fontSize: 12,
-            cursor: 'pointer',
-          }}
-        >
-          {cloudDamping ? 'Cloud: ON' : 'Cloud: OFF'}
         </button>
       </div>
       <div
