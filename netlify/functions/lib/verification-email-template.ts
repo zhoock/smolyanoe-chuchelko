@@ -8,6 +8,29 @@ export interface VerificationEmailContent {
   subject: string;
 }
 
+const COLORS = {
+  pageBg: '#f3f4f6',
+  cardBg: '#ffffff',
+  title: '#111827',
+  body: '#6b7280',
+  gold: '#c9a227',
+  goldSoft: '#f7f1e3',
+  footer: '#9ca3af',
+  divider: '#e5dcc8',
+};
+
+function envelopeIconCell(): string {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 28px auto;">
+      <tr>
+        <td align="center" valign="middle" width="72" height="72" style="width:72px;height:72px;border-radius:999px;background:${COLORS.goldSoft};border:1px solid ${COLORS.divider};font-size:28px;line-height:72px;color:${COLORS.gold};">
+          &#9993;
+        </td>
+      </tr>
+    </table>
+  `.trim();
+}
+
 export function buildVerificationEmailContent(options: {
   locale: EmailLocale;
   verifyUrl: string;
@@ -15,7 +38,6 @@ export function buildVerificationEmailContent(options: {
   siteName: string;
 }): VerificationEmailContent {
   const copy = getEmailCopy('verification', options.locale);
-  const siteName = escapeHtml(options.siteName);
   const verifyUrl = escapeHtml(options.verifyUrl);
   const greetingTemplate = options.userName ? copy.greetingNamed : copy.greetingGeneric;
   const greeting = escapeHtml(
@@ -32,30 +54,58 @@ export function buildVerificationEmailContent(options: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${escapeHtml(copy.htmlTitle)}</title>
 </head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#A1A1AA;max-width:600px;margin:0 auto;padding:24px;background-color:#1A1A1A;">
-  <div style="background-color:#1A1A1A;border:1px solid #3f3f46;border-radius:12px;padding:32px;">
-    <p style="margin:0 0 8px;color:#D4A017;font-size:14px;font-weight:600;letter-spacing:0.05em;">${siteName}</p>
-    <div style="text-align:center;margin:24px 0;">
-      <div style="display:inline-block;width:64px;height:64px;border-radius:50%;background:rgba(212,160,23,0.15);line-height:64px;font-size:28px;">✉</div>
-    </div>
-    <h1 style="color:#ffffff;margin:0 0 16px;font-size:24px;text-align:center;">${escapeHtml(copy.htmlTitle)}</h1>
-    <p style="margin:0 0 24px;text-align:center;">${greeting}</p>
-    <p style="margin:0 0 24px;text-align:center;">${body}</p>
-    <p style="text-align:center;margin:0 0 32px;">
-      <a href="${verifyUrl}"
-         style="display:inline-block;background-color:#D4A017;color:#1A1A1A;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:8px;">
-        ${escapeHtml(copy.cta)}
-      </a>
-    </p>
-    <p style="margin:0;font-size:12px;color:#71717a;word-break:break-all;text-align:center;">
-      ${escapeHtml(copy.copyLinkLabel)}<br>
-      <a href="${verifyUrl}" style="color:#D4A017;">${verifyUrl}</a>
-    </p>
-    <hr style="border:none;border-top:1px solid #3f3f46;margin:32px 0 16px;">
-    <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">${footer}</p>
-  </div>
+<body style="margin:0;padding:0;background-color:${COLORS.pageBg};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${COLORS.pageBg};">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background-color:${COLORS.cardBg};border-radius:18px;box-shadow:0 8px 32px rgba(17,24,39,0.08);">
+          <tr>
+            <td style="padding:48px 40px 40px 40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+              ${envelopeIconCell()}
+              <h1 style="margin:0 0 16px 0;padding:0;color:${COLORS.title};font-size:28px;line-height:1.25;font-weight:700;text-align:center;">
+                ${escapeHtml(copy.htmlTitle)}
+              </h1>
+              <table role="presentation" width="72" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 24px auto;">
+                <tr>
+                  <td style="height:2px;background-color:${COLORS.gold};border-radius:999px;font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+              <p style="margin:0 0 16px 0;color:${COLORS.body};font-size:16px;line-height:1.65;text-align:center;">
+                ${greeting}
+              </p>
+              <p style="margin:0 0 32px 0;color:${COLORS.body};font-size:16px;line-height:1.65;text-align:center;">
+                ${body}
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 32px auto;">
+                <tr>
+                  <td align="center" bgcolor="${COLORS.gold}" style="border-radius:12px;background-color:${COLORS.gold};">
+                    <a href="${verifyUrl}"
+                       style="display:inline-block;padding:14px 28px;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.2;font-weight:700;text-decoration:none;">
+                      ${escapeHtml(copy.cta)}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 32px 0;color:${COLORS.footer};font-size:12px;line-height:1.5;text-align:center;word-break:break-all;">
+                ${escapeHtml(copy.copyLinkLabel)}<br>
+                <a href="${verifyUrl}" style="color:${COLORS.gold};text-decoration:underline;">${verifyUrl}</a>
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #eceff3;">
+                <tr>
+                  <td style="padding-top:20px;color:${COLORS.footer};font-size:12px;line-height:1.5;text-align:center;">
+                    ${footer}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`.trim();
 

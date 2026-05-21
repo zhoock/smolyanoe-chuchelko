@@ -13,6 +13,9 @@ import {
   type MyArchiveData,
 } from '@shared/api/archive';
 import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
+import { TrashIcon } from '@shared/ui/icons/TrashIcon';
+import { CalendarIcon } from '@shared/ui/icons/CalendarIcon';
+import { InfoCircleIcon } from '@shared/ui/icons/InfoCircleIcon';
 import {
   dispatchArchiveArtistRemoved,
   refreshPremiumContentForArchiveChange,
@@ -254,9 +257,7 @@ export function MyArchiveContent({ active }: Props) {
                   aria-busy={isRemoving}
                   onClick={() => void handleRemove(artist)}
                 >
-                  <span className="user-dashboard__archive-remove-icon" aria-hidden>
-                    🗑
-                  </span>
+                  <TrashIcon className="user-dashboard__archive-remove-icon" size={14} />
                   {isRemoving
                     ? (t?.removing ?? (lang === 'en' ? 'Removing…' : 'Удаляем…'))
                     : removeLabel}
@@ -289,15 +290,11 @@ export function MyArchiveContent({ active }: Props) {
 
       <footer className="user-dashboard__archive-info">
         <p className="user-dashboard__archive-info-text">
-          <span className="user-dashboard__archive-info-icon" aria-hidden>
-            ⓘ
-          </span>
+          <InfoCircleIcon className="user-dashboard__archive-info-icon" size={14} />
           {cooldownInfo} {cooldownNext}
         </p>
         <p className="user-dashboard__archive-info-days">
-          <span className="user-dashboard__archive-info-calendar" aria-hidden>
-            📅
-          </span>
+          <CalendarIcon className="user-dashboard__archive-info-calendar" size={14} />
           {cooldownDays}
         </p>
       </footer>

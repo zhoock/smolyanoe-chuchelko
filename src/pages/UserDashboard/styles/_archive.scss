@@ -229,7 +229,7 @@ dialog {
 
     &__archive-card-genre {
       display: inline-block;
-      margin-bottom: 0.35rem;
+      margin: 0.35rem 0;
       padding: 0.1rem 0.45rem;
       color: var(--dashboard-text-secondary);
       font-size: 0.7rem;
@@ -274,8 +274,8 @@ dialog {
     }
 
     &__archive-remove-icon {
-      font-size: 0.85em;
-      line-height: 1;
+      display: inline-flex;
+      flex-shrink: 0;
     }
 
     &__archive-empty-title {
@@ -319,7 +319,7 @@ dialog {
       display: flex;
       flex-direction: column;
       gap: var(--ms-02);
-      padding: var(--ms-01);
+      padding: var(--ms-0);
       background: var(--dashboard-input-bg);
       border: 1px solid var(--dashboard-input-border);
       border-radius: var(--ms-01);
@@ -329,11 +329,13 @@ dialog {
         justify-content: space-between;
         align-items: center;
         gap: var(--ms-1);
+        padding: var(--ms-0) var(--ms-0);
       }
     }
 
-    &__archive-info-text,
-    &__archive-info-days {
+    &__archive-info-text {
+      flex: 1;
+      min-width: 0;
       margin: 0;
       color: var(--dashboard-text-secondary);
       font-size: 0.8rem;
@@ -341,12 +343,21 @@ dialog {
     }
 
     &__archive-info-days {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+      margin: 0;
       color: var(--dark-greenish-yellow);
+      font-size: 0.8rem;
+      line-height: 1.45;
       white-space: nowrap;
     }
 
     &__archive-info-icon,
     &__archive-info-calendar {
+      display: inline-flex;
+      vertical-align: middle;
+      flex-shrink: 0;
       margin-inline-end: 0.35rem;
     }
   }
