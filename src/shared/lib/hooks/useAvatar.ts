@@ -9,6 +9,8 @@ import { getUser, AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
 import {
   AVATAR_MAX_FILE_SIZE_BYTES,
   appendUrlCacheBustParam,
+  DEFAULT_PROFILE_AVATAR_URL,
+  isProfileAvatarPlaceholderUrl,
   profileAvatarRetinaUrlFrom1x,
 } from '@shared/lib/avatarUpload';
 import {
@@ -31,7 +33,14 @@ function getAvatarKeyForCurrentUser(): string | null {
   return id ? getProfileAvatarLocalStorageKey(id) : null;
 }
 
-const DEFAULT_AVATAR = '/images/avatar.png';
+const DEFAULT_AVATAR = DEFAULT_PROFILE_AVATAR_URL;
+
+function normalizeAvatarUrl(url: string | null): string {
+  if (!url || isProfileAvatarPlaceholderUrl(url)) {
+    return DEFAULT_AVATAR;
+  }
+  return url;
+}
 
 /** Событие после смены URL аватара в localStorage (для синхронизации шапки и т.п.) */
 export const PROFILE_AVATAR_CHANGED_EVENT = 'profile-avatar-changed';
@@ -50,10 +59,6 @@ function readAvatarUrlFromStorageForKey(key: string): string | null {
   }
 }
 
-/**
- * Кэш URL аватара в localStorage **по пользователю** (userId), иначе placeholder.
- * Без сессии — плейсхолдер (общий кэш не используем).
- */
 export function getStoredProfileAvatarUrl(): string {
   const key = getAvatarKeyForCurrentUser();
   if (!key) {
@@ -61,9 +66,17 @@ export function getStoredProfileAvatarUrl(): string {
   }
   const savedUrl = readAvatarUrlFromStorageForKey(key);
   if (savedUrl) {
-    return savedUrl;
+    return normalizeAvatarUrl(savedUrl);
   }
   return DEFAULT_AVATAR;
+}
+
+/** Первая буква имени или email для пустого аватара. */
+export function getProfileAvatarInitials(): string {
+  const user = getUser();
+  const source = (user?.name?.trim() || user?.email?.trim() || '').trim();
+  if (!source) return '?';
+  return [...source][0]?.toUpperCase() ?? '?';
 }
 
 /**
@@ -138,7 +151,7 @@ export function useAvatar(options?: UseAvatarOptions) {
       const savedUrl = readAvatarUrlFromStorageForKey(key);
       if (savedUrl) {
         const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        return appendUrlCacheBustParam(savedUrl, bust);
+        return appendUrlCacheBustParam(normalizeAvatarUrl(savedUrl), bust);
       }
     } catch (error) {
       console.warn('Failed to load avatar URL from localStorage:', error);
@@ -166,7 +179,7 @@ export function useAvatar(options?: UseAvatarOptions) {
       const savedUrl = readAvatarUrlFromStorageForKey(key);
       if (savedUrl) {
         const bust = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        setAvatarSrc(appendUrlCacheBustParam(savedUrl, bust));
+        setAvatarSrc(appendUrlCacheBustParam(normalizeAvatarUrl(savedUrl), bust));
       } else {
         setAvatarSrc(DEFAULT_AVATAR);
       }

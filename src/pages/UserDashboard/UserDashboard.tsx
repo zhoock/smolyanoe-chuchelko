@@ -95,7 +95,8 @@ import {
   type AlbumData,
   type TrackData,
 } from '@entities/album/lib/transformAlbumData';
-import { useAvatar } from '@shared/lib/hooks/useAvatar';
+import { useAvatar, getProfileAvatarInitials } from '@shared/lib/hooks/useAvatar';
+import { isProfileAvatarPlaceholderUrl } from '@shared/lib/avatarUpload';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
@@ -3651,25 +3652,23 @@ function UserDashboard() {
                             <div className="user-dashboard__avatar">
                               <div className="user-dashboard__avatar-block">
                                 <div className="user-dashboard__avatar-img">
-                                  <img
-                                    src={avatarSrc}
-                                    srcSet={avatarRetinaSrc ? `${avatarRetinaSrc} 2x` : undefined}
-                                    alt={ui?.dashboard?.profile ?? 'Profile'}
-                                    onError={(e) => {
-                                      const img = e.target as HTMLImageElement;
-                                      const applied = img.dataset.fallbackApplied;
-
-                                      // 1) если фолбэк ещё не пробовали — пробуем дефолтный аватар
-                                      if (!applied) {
-                                        img.dataset.fallbackApplied = 'default';
-                                        img.src = '/images/avatar.png';
-                                        return;
-                                      }
-
-                                      // 2) если и дефолтный не загрузился — скрываем
-                                      img.style.display = 'none';
-                                    }}
-                                  />
+                                  {isProfileAvatarPlaceholderUrl(avatarSrc) ? (
+                                    <span
+                                      className="user-dashboard__avatar-placeholder"
+                                      aria-hidden="true"
+                                    >
+                                      {getProfileAvatarInitials()}
+                                    </span>
+                                  ) : (
+                                    <img
+                                      src={avatarSrc}
+                                      srcSet={avatarRetinaSrc ? `${avatarRetinaSrc} 2x` : undefined}
+                                      alt={ui?.dashboard?.profile ?? 'Profile'}
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                      }}
+                                    />
+                                  )}
                                   {isUploadingAvatar && (
                                     <div
                                       className="user-dashboard__avatar-loader"

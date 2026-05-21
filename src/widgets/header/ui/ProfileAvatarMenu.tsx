@@ -5,7 +5,8 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { clearAuth } from '@shared/lib/auth';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
-import { useStoredProfileAvatarUrl } from '@shared/lib/hooks/useAvatar';
+import { useStoredProfileAvatarUrl, getProfileAvatarInitials } from '@shared/lib/hooks/useAvatar';
+import { isProfileAvatarPlaceholderUrl } from '@shared/lib/avatarUpload';
 import {
   IconLogOut,
   IconPremiumBadge,
@@ -93,14 +94,29 @@ function ProfileAvatarMenuComponent({
         aria-haspopup="menu"
         aria-expanded={menuOpen}
       >
-        <img
-          className={['header__profile-avatar', avatarImgClassName].filter(Boolean).join(' ')}
-          src={avatarSrc}
-          alt=""
-          width={36}
-          height={36}
-          decoding="async"
-        />
+        {isProfileAvatarPlaceholderUrl(avatarSrc) ? (
+          <span
+            className={[
+              'header__profile-avatar',
+              'header__profile-avatar--empty',
+              avatarImgClassName,
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden="true"
+          >
+            {getProfileAvatarInitials()}
+          </span>
+        ) : (
+          <img
+            className={['header__profile-avatar', avatarImgClassName].filter(Boolean).join(' ')}
+            src={avatarSrc}
+            alt=""
+            width={36}
+            height={36}
+            decoding="async"
+          />
+        )}
       </button>
       {menuOpen ? (
         <div

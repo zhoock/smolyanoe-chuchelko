@@ -139,6 +139,18 @@
   object-fit: cover;
 }
 
+.header__profile-avatar--empty {
+  display: inline-flex;
+  color: var(--dark-greenish-yellow, #c9a227);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
 /* Главная (облако): те же размеры, что были у инлайн-стилей */
 .header__profile-avatar--home {
   inline-size: 36px;

@@ -27,13 +27,23 @@ export function appendUrlCacheBustParam(url: string, bust: string): string {
   return `${url}${sep}t=${bust}`;
 }
 
+/** Пустой URL — нет загруженного аватара (не показываем дефолтную картинку). */
+export const DEFAULT_PROFILE_AVATAR_URL = '';
+
+/** Legacy и placeholder URL, при которых показываем пустой аватар. */
+export function isProfileAvatarPlaceholderUrl(url: string | null | undefined): boolean {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return lower.includes('/images/avatar') || lower.endsWith('/avatar.png');
+}
+
 /**
  * URL варианта 256px из URL 128px (тот же query/proxy).
  * Поддерживает `...profile-128.webp` (старый фиксированный) и `...profile-<id>-128.webp`.
  */
 export function profileAvatarRetinaUrlFrom1x(avatar1xUrl: string): string | null {
   if (typeof avatar1xUrl !== 'string' || !avatar1xUrl) return null;
-  if (avatar1xUrl.toLowerCase().includes('/images/avatar')) return null;
+  if (isProfileAvatarPlaceholderUrl(avatar1xUrl)) return null;
   if (!/-128\.(webp|jpe?g)(?=[?#]|$)/i.test(avatar1xUrl)) return null;
   return avatar1xUrl.replace(
     /-128\.(webp|jpe?g)(?=[?#]|$)/i,
