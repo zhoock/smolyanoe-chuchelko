@@ -116,6 +116,24 @@ body {
       @include breakpoint(desktops) {
         grid-template-rows: 15vw auto;
       }
+
+      &:has(> .email-verification-banner) {
+        @include breakpoint(old-phones) {
+          grid-template-rows: auto 190px auto;
+        }
+
+        @include breakpoint(phones) {
+          grid-template-rows: auto 59vw auto;
+        }
+
+        @include breakpoint(tablet) {
+          grid-template-rows: auto 22vw auto;
+        }
+
+        @include breakpoint(desktops) {
+          grid-template-rows: auto 15vw auto;
+        }
+      }
     }
   }
 

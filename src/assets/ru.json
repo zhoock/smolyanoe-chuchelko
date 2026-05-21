@@ -63,6 +63,7 @@
         "changeEmail": "Изменить email",
         "continueLater": "Продолжить позже",
         "bannerText": "Подтвердите email, чтобы открыть все функции",
+        "bannerSubtitle": "Мы отправили ссылку для подтверждения на {{email}}",
         "successTitle": "Email подтверждён",
         "successBody": "Ваш email успешно подтверждён. Теперь вам доступны все функции проекта.",
         "continue": "Продолжить",

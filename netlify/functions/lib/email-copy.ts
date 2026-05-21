@@ -172,11 +172,20 @@ const COPY = {
 
 export type EmailCopyKey = keyof typeof COPY;
 
+type EmailCopyByKey = {
+  supportSubjects: SupportSubjectsCopy;
+  verification: VerificationEmailCopy;
+  accountDeleted: AccountDeletedEmailCopy;
+  purchase: PurchaseEmailCopy;
+  passwordReset: PasswordResetEmailCopy;
+};
+
 export function getEmailCopy<K extends EmailCopyKey>(
   key: K,
   locale: EmailLocale
-): (typeof COPY)[K]['en'] {
-  return COPY[key][locale === 'ru' ? 'ru' : 'en'];
+): EmailCopyByKey[K] {
+  const resolvedLocale: EmailLocale = locale === 'ru' ? 'ru' : 'en';
+  return COPY[key][resolvedLocale] as EmailCopyByKey[K];
 }
 
 export function fillEmailTemplate(template: string, vars: Record<string, string>): string {

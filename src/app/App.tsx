@@ -588,6 +588,7 @@ function Layout() {
             </ErrorBoundary>
           ) : isHomeSceneRoute ? (
             <ErrorBoundary>
+              {!isEmailVerifiedRoute && <EmailVerificationBanner />}
               <AccountDeletedToast />
               <main>
                 <ErrorBoundary>{standardRoutes}</ErrorBoundary>
@@ -605,9 +606,9 @@ function Layout() {
                   else dispatch(openPopup());
                 }}
               />
-              {!isEmailVerifiedRoute && <EmailVerificationBanner />}
               <AccountDeletedToast />
               <main>
+                {!isEmailVerifiedRoute && <EmailVerificationBanner />}
                 {!isHomeSceneRoute && !isEmailVerifiedRoute && <Hero />}
 
                 {/* если поместим popup внурь header, то popup будет обрезаться из-за css-фильтра (filter) внури header */}

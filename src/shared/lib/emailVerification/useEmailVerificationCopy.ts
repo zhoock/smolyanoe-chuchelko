@@ -19,6 +19,7 @@ export function useEmailVerificationCopy() {
           changeEmail: 'Change email',
           continueLater: 'Continue later',
           bannerText: 'Verify your email to unlock all features',
+          bannerSubtitle: 'We sent a verification link to {{email}}',
           successTitle: 'Email verified',
           successBody:
             'Your email has been successfully verified. You now have full access to all features.',
@@ -60,6 +61,7 @@ export function useEmailVerificationCopy() {
           changeEmail: 'Изменить email',
           continueLater: 'Продолжить позже',
           bannerText: 'Подтвердите email, чтобы открыть все функции',
+          bannerSubtitle: 'Мы отправили ссылку для подтверждения на {{email}}',
           successTitle: 'Email подтверждён',
           successBody: 'Ваш email успешно подтверждён. Теперь вам доступны все функции проекта.',
           continue: 'Продолжить',

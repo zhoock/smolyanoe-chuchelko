@@ -134,3 +134,8 @@
     }
   }
 }
+
+main:has(> .email-verification-banner) .hero {
+  background-attachment: scroll;
+  background-position: right top;
+}

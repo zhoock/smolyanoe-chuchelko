@@ -314,6 +314,7 @@ export interface IInterface {
       changeEmail: string;
       continueLater: string;
       bannerText: string;
+      bannerSubtitle: string;
       successTitle: string;
       successBody: string;
       continue: string;

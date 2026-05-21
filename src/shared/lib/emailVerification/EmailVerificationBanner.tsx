@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ChangeEmailModal } from '@features/auth/ui/ChangeEmailModal';
 import { isEmailVerified, resendVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useEmailVerificationCopy } from './useEmailVerificationCopy';
@@ -6,6 +7,37 @@ import { useResendCooldown } from './useResendCooldown';
 import './style.scss';
 
 const BANNER_DISMISSED_KEY = 'email-verification-banner-dismissed';
+
+function BannerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.25" stroke="currentColor" strokeWidth="1.35" />
+      <path
+        d="M12 7.85 15.85 15.5H8.15L12 7.85Z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+      <path d="M12 10.35v2.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="14.65" r="0.55" fill="currentColor" />
+    </svg>
+  );
+}
+
+function BannerSubtitle({ template, email }: { template: string; email: string }) {
+  const parts = template.split('{{email}}');
+  if (parts.length === 1) {
+    return <p className="email-verification-banner__subtitle">{template}</p>;
+  }
+
+  return (
+    <p className="email-verification-banner__subtitle">
+      {parts[0]}
+      <span className="email-verification-banner__email">{email}</span>
+      {parts.slice(1).join('{{email}}')}
+    </p>
+  );
+}
 
 export function EmailVerificationBanner() {
   const user = useAuthSessionUser();
@@ -20,6 +52,7 @@ export function EmailVerificationBanner() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showChangeEmail, setShowChangeEmail] = useState(false);
 
   if (!user || isEmailVerified(user) || dismissed) {
     return null;
@@ -50,45 +83,61 @@ export function EmailVerificationBanner() {
   const resendLabel = isCoolingDown ? `${copy.resendEmail} (${remaining}s)` : copy.resendEmail;
 
   return (
-    <div className="email-verification-banner" role="status">
-      <span className="email-verification-banner__icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <span className="email-verification-banner__text">{copy.bannerText}</span>
-      <div className="email-verification-banner__actions">
-        <button
-          type="button"
-          className="email-verification-banner__resend"
-          onClick={handleResend}
-          disabled={loading || isCoolingDown}
-        >
-          {loading ? '…' : resendLabel}
-        </button>
-        <button
-          type="button"
-          className="email-verification-banner__close"
-          onClick={handleDismiss}
-          aria-label={copy.close}
-        >
-          ×
-        </button>
-      </div>
-      {error ? (
-        <span
-          className="email-verification-banner__text"
-          style={{ color: 'var(--pink-terracotta)' }}
-        >
-          {error}
-        </span>
-      ) : null}
-    </div>
+    <>
+      <section className="email-verification-banner" role="status" aria-live="polite">
+        <div className="email-verification-banner__inner">
+          <span className="email-verification-banner__icon" aria-hidden="true">
+            <BannerIcon />
+          </span>
+
+          <div className="email-verification-banner__copy">
+            <p className="email-verification-banner__title">{copy.bannerText}</p>
+            <BannerSubtitle template={copy.bannerSubtitle} email={user.email} />
+            {error ? (
+              <p className="email-verification-banner__error" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="email-verification-banner__actions">
+            <button
+              type="button"
+              className="email-verification-banner__resend"
+              onClick={handleResend}
+              disabled={loading || isCoolingDown}
+            >
+              {loading ? '…' : resendLabel}
+            </button>
+            <span className="email-verification-banner__actions-sep" aria-hidden="true">
+              •
+            </span>
+            <button
+              type="button"
+              className="email-verification-banner__change-email"
+              onClick={() => setShowChangeEmail(true)}
+              disabled={loading}
+            >
+              {copy.changeEmail}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="email-verification-banner__close"
+            onClick={handleDismiss}
+            aria-label={copy.close}
+          >
+            ×
+          </button>
+        </div>
+      </section>
+
+      <ChangeEmailModal
+        isOpen={showChangeEmail}
+        onBack={() => setShowChangeEmail(false)}
+        onClose={() => setShowChangeEmail(false)}
+      />
+    </>
   );
 }

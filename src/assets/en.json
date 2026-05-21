@@ -63,6 +63,7 @@
         "changeEmail": "Change email",
         "continueLater": "Continue later",
         "bannerText": "Verify your email to unlock all features",
+        "bannerSubtitle": "We sent a verification link to {{email}}",
         "successTitle": "Email verified",
         "successBody": "Your email has been successfully verified. You now have full access to all features.",
         "continue": "Continue",
