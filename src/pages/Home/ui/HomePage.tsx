@@ -3,7 +3,7 @@ import {
   type SceneArtist,
   UNIVERSE_FOCUS_ARTIST_STORAGE_KEY,
 } from '../../../components/view/Universe3D';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
@@ -37,9 +37,11 @@ import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { appendReturnTo } from '@shared/lib/authReturnUrl';
 import { isAuthenticated } from '@shared/lib/auth';
 import { ProfileAvatarMenu } from '@widgets/header';
+import { UniverseFloatingSearch } from '@features/universeSearch';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
+import { ScrollToExploreHint } from './ScrollToExploreHint';
 import '../../../components/view/Universe3D.style.scss';
 
 const HOME_USE_MOCKS_STORAGE_KEY = 'homeUseMocks';
@@ -62,6 +64,7 @@ export function HomePage() {
     }
   });
   const [universeRefreshToken, setUniverseRefreshToken] = useState(0);
+  const [sceneArtists, setSceneArtists] = useState<SceneArtist[]>([]);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
   const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
@@ -82,9 +85,19 @@ export function HomePage() {
     void dispatch(fetchArticles({ force: true, publicArtistSlug: artistSlug }));
   }, [dispatch, hasArtistParam, lang, artistSlug]);
 
+  const handleSearchMatchesChange = useCallback((matchedSlugs: string[] | null) => {
+    universeRef.current?.setSearchHighlight(matchedSlugs);
+  }, []);
+
+  const handleSearchSelectArtist = useCallback((publicSlug: string) => {
+    universeRef.current?.navigateToArtistFromSearch(publicSlug);
+  }, []);
+
   useEffect(() => {
     if (hasArtistParam) return;
     if (!sceneRef.current) return;
+
+    setSceneArtists([]);
 
     let universe: Universe3D | null = null;
     let cancelled = false;
@@ -128,6 +141,7 @@ export function HomePage() {
       }
 
       if (cancelled || !sceneRef.current) return;
+      setSceneArtists(artists);
       universe = new Universe3D(sceneRef.current, artists, {
         onNavigateToArtist: (publicSlug) => {
           sessionStorage.setItem(UNIVERSE_FOCUS_ARTIST_STORAGE_KEY, publicSlug);
@@ -246,6 +260,7 @@ export function HomePage() {
 
     return () => {
       cancelled = true;
+      setSceneArtists([]);
       universeRef.current = null;
       universe?.destroy();
       if (sceneRef.current) {
@@ -288,9 +303,16 @@ export function HomePage() {
   return (
     <section
       aria-label="Cloud scene"
+      className="home-scene"
       style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
     >
+      <UniverseFloatingSearch
+        artists={sceneArtists}
+        onSearchMatchesChange={handleSearchMatchesChange}
+        onNavigateToArtist={handleSearchSelectArtist}
+      />
       <div
+        className="home-scene__actions"
         style={{
           position: 'absolute',
           top: 12,
@@ -354,6 +376,7 @@ export function HomePage() {
         ref={sceneRef}
         style={{ width: '100%', height: '100%', minHeight: 0, position: 'relative' }}
       />
+      <ScrollToExploreHint />
     </section>
   );
 }

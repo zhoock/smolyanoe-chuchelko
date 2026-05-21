@@ -208,6 +208,12 @@ export class Universe3D {
   private clickableNodes: THREE.Object3D[] = [];
   private hoveredObject: THREE.Object3D | null = null;
   private readonly hoverLerpWhite = new THREE.Color(0xffffff);
+  private readonly searchGoldColor = new THREE.Color(0xfaab1f);
+  private searchActive = false;
+  private searchMatchedSlugSet = new Set<string>();
+  /** Search / cinematic nav: stronger highlight while card is anchored. */
+  private navigationActiveObject: THREE.Object3D | null = null;
+  private readonly navAmbientColor = new THREE.Color(0x5ec9f5);
   private uiLayer!: HTMLElement;
   private activeCard: HTMLElement | null = null;
   /** Mesh the card is tied to; position is reprojected on resize and each frame. */
@@ -388,6 +394,50 @@ export class Universe3D {
     if (!target) return;
 
     this.focusOnObject(target);
+  }
+
+  /** Live search: highlight matches, dim others; pass null to reset. */
+  setSearchHighlight(matchedSlugs: string[] | null) {
+    if (!matchedSlugs?.length) {
+      this.searchActive = false;
+      this.searchMatchedSlugSet.clear();
+      return;
+    }
+    this.searchActive = true;
+    this.searchMatchedSlugSet = new Set(matchedSlugs);
+  }
+
+  /** Cinematic in-scene navigation from search (fly-to + active node + card). */
+  navigateToArtistFromSearch(slug: string) {
+    const normalized = slug.trim();
+    if (!normalized) return;
+
+    const target = this.clickableNodes.find(
+      (obj) => (obj.userData as SceneArtist | undefined)?.publicSlug === normalized
+    );
+    if (!target) return;
+
+    this.setSearchHighlight(null);
+    this.navigationActiveObject = target;
+
+    if (this.activeCard) {
+      this.dismissCard();
+    }
+
+    const pos = new THREE.Vector3();
+    target.getWorldPosition(pos);
+    const desiredZ = THREE.MathUtils.clamp(pos.z + 1.5, this.minCameraZ, this.maxCameraZ);
+
+    this.moveTo(
+      pos.x,
+      pos.y,
+      desiredZ,
+      () => {
+        if (this.navigationActiveObject !== target) return;
+        this.showCard(target, { skipFocus: true });
+      },
+      { cinematic: true }
+    );
   }
 
   public setCloudDamping(enabled: boolean) {
@@ -770,6 +820,33 @@ export class Universe3D {
       mesh.userData.label = null;
       mesh.userData.baseColor = color.clone();
       mesh.userData.hoverProgress = 0;
+      mesh.userData.searchHighlightProgress = 0;
+      mesh.userData.searchDimProgress = 0;
+      mesh.userData.navActiveProgress = 0;
+
+      const ambientGeo = new THREE.SphereGeometry(0.16, 12, 12);
+      const ambientMat = new THREE.MeshBasicMaterial({
+        color: this.navAmbientColor,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      const ambient = new THREE.Mesh(ambientGeo, ambientMat);
+      ambient.visible = false;
+      mesh.add(ambient);
+      mesh.userData.navAmbient = ambient;
+
+      const ringGeo = new THREE.TorusGeometry(0.11, 0.007, 8, 28);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: this.searchGoldColor,
+        transparent: true,
+        opacity: 0,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.visible = false;
+      mesh.add(ring);
+      mesh.userData.searchRing = ring;
+
       if (!user.publicSlug.startsWith('__preview__')) {
         this.clickableNodes.push(mesh);
       }
@@ -847,6 +924,7 @@ export class Universe3D {
     this.activeCard?.remove();
     this.activeCard = null;
     this.cardAnchorObject = null;
+    this.navigationActiveObject = null;
   }
 
   /** Viewport Y (px): max bottom edge of the card (above mini-player or viewport). */
@@ -997,7 +1075,13 @@ export class Universe3D {
     return `/?artist=${encodeURIComponent(publicSlug)}`;
   }
 
-  private moveTo(x: number, y: number, z: number) {
+  private moveTo(
+    x: number,
+    y: number,
+    z: number,
+    onComplete?: () => void,
+    options?: { cinematic?: boolean }
+  ) {
     this.isAutoMoving = true;
 
     const startX = this.targetX;
@@ -1006,8 +1090,9 @@ export class Universe3D {
 
     const distance = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2 + (z - startZ) ** 2);
 
-    // чем дальше — тем дольше
-    const duration = THREE.MathUtils.clamp(distance * 0.25, 0.6, 1.4);
+    const duration = options?.cinematic
+      ? THREE.MathUtils.clamp(distance * 0.38, 0.95, 2.4)
+      : THREE.MathUtils.clamp(distance * 0.25, 0.6, 1.4);
     const startTime = performance.now();
 
     const step = () => {
@@ -1018,8 +1103,12 @@ export class Universe3D {
       this.targetY = startY + (y - startY) * ease;
       this.targetZ = startZ + (z - startZ) * ease;
 
-      if (t < 1) requestAnimationFrame(step);
-      else this.isAutoMoving = false;
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        this.isAutoMoving = false;
+        onComplete?.();
+      }
     };
 
     step();
@@ -1034,12 +1123,14 @@ export class Universe3D {
     this.moveTo(pos.x, pos.y, desiredZ);
   }
 
-  private showCard(obj: THREE.Object3D) {
+  private showCard(obj: THREE.Object3D, options?: { skipFocus?: boolean }) {
     if (this.activeCard) {
-      return;
+      this.dismissCard();
     }
 
-    this.focusOnObject(obj);
+    if (!options?.skipFocus) {
+      this.focusOnObject(obj);
+    }
 
     this.cardAnchorObject = obj;
 
@@ -1690,10 +1781,13 @@ export class Universe3D {
 
       const t = THREE.MathUtils.clamp((fadeStart - distance) / (fadeStart - fadeEnd), 0, 1);
 
+      const isNavActive = mesh === this.navigationActiveObject;
+
       let sprite = (mesh.userData?.label as THREE.Sprite | null) ?? null;
       const FADE_SPEED = 0.04;
       const REMOVE_THRESHOLD = 0.02;
-      if (distance < createLabelDistance) {
+      const labelDistance = isNavActive ? fadeStart : createLabelDistance;
+      if (distance < labelDistance) {
         if (!sprite) {
           const user = mesh.userData as SceneArtist;
           sprite = this.createArtistLabelSprite(user.name);
@@ -1702,9 +1796,10 @@ export class Universe3D {
         }
         sprite.position.set(temp.x, temp.y + 0.1, temp.z);
         const material = sprite.material as THREE.SpriteMaterial;
-        material.opacity += (t - material.opacity) * FADE_SPEED;
-        sprite.visible = t > 0.01;
-      } else if (sprite) {
+        const labelTarget = isNavActive ? Math.max(t, 0.92) : t;
+        material.opacity += (labelTarget - material.opacity) * (isNavActive ? 0.08 : FADE_SPEED);
+        sprite.visible = labelTarget > 0.01;
+      } else if (sprite && !isNavActive) {
         const material = sprite.material as THREE.SpriteMaterial;
         material.opacity += (0 - material.opacity) * FADE_SPEED;
         sprite.visible = material.opacity > 0.01;
@@ -1716,11 +1811,16 @@ export class Universe3D {
         }
       }
 
+      const artistData = mesh.userData as SceneArtist;
+      const isSearchMatch =
+        this.searchActive && this.searchMatchedSlugSet.has(artistData.publicSlug);
+      const isSearchDim = this.searchActive && !isSearchMatch;
+
       const isHovered = mesh === this.hoveredObject;
       const isCardActive = this.activeCard !== null;
       const isCardTarget = mesh === this.cardAnchorObject;
 
-      const target = isHovered || (isCardActive && isCardTarget) ? 1 : 0;
+      const target = isNavActive || isHovered || (isCardActive && isCardTarget) ? 1 : 0;
 
       const mat = mesh.material as THREE.MeshBasicMaterial;
 
@@ -1729,19 +1829,74 @@ export class Universe3D {
       hp += (target - hp) * 0.12;
       mesh.userData.hoverProgress = hp;
 
+      let navHp = (mesh.userData.navActiveProgress as number) || 0;
+      navHp += ((isNavActive ? 1 : 0) - navHp) * 0.1;
+      mesh.userData.navActiveProgress = navHp;
+
+      let searchHp = (mesh.userData.searchHighlightProgress as number) || 0;
+      let searchDim = (mesh.userData.searchDimProgress as number) || 0;
+      searchHp += ((isSearchMatch ? 1 : 0) - searchHp) * 0.12;
+      searchDim += ((isSearchDim ? 1 : 0) - searchDim) * 0.12;
+      mesh.userData.searchHighlightProgress = searchHp;
+      mesh.userData.searchDimProgress = searchDim;
+
       let baseScale = 0.05 + t * 0.15;
 
-      const hoverScale = 1.8;
-      const finalScale = baseScale * (1 + hp * (hoverScale - 1));
+      const hoverScale = isNavActive ? 2.15 : 1.8;
+      const searchScale = 1.28;
+      const navScale = 1.22;
+      const finalScale =
+        baseScale *
+        (1 + hp * (hoverScale - 1)) *
+        (1 + searchHp * (searchScale - 1)) *
+        (1 + navHp * (navScale - 1));
 
-      const pulse = 1 + Math.sin(performance.now() * 0.005) * 0.05 * hp;
+      const pulse =
+        1 +
+        Math.sin(performance.now() * 0.005) * 0.05 * hp +
+        Math.sin(performance.now() * 0.004) * 0.06 * searchHp +
+        Math.sin(performance.now() * 0.0035) * 0.08 * navHp;
 
       mesh.scale.setScalar(finalScale * pulse);
 
       const baseCol = mesh.userData.baseColor as THREE.Color;
-      mat.color.copy(baseCol).lerp(this.hoverLerpWhite, hp * 0.4);
+      mat.color
+        .copy(baseCol)
+        .lerp(this.hoverLerpWhite, hp * (isNavActive ? 0.55 : 0.4))
+        .lerp(this.searchGoldColor, searchHp * 0.55)
+        .lerp(this.searchGoldColor, navHp * 0.35);
 
-      mat.opacity = 0.9 + hp * 0.1;
+      let opacity = 0.9 + hp * 0.1 + searchHp * 0.05 + navHp * 0.08;
+      opacity *= 1 - searchDim * 0.58;
+      mat.opacity = opacity;
+
+      const ring = mesh.userData.searchRing as THREE.Mesh | undefined;
+      if (ring) {
+        const ringMat = ring.material as THREE.MeshBasicMaterial;
+        const targetRingOpacity = Math.max(searchHp * 0.9, navHp);
+        ringMat.opacity += (targetRingOpacity - ringMat.opacity) * 0.12;
+        ring.visible = ringMat.opacity > 0.02;
+        const ringPulse =
+          1 + Math.sin(performance.now() * 0.0045) * 0.1 * Math.max(searchHp, navHp);
+        ring.scale.setScalar(ringPulse);
+        ring.lookAt(this.camera.position);
+      }
+
+      const ambient = mesh.userData.navAmbient as THREE.Mesh | undefined;
+      if (ambient) {
+        const ambientMat = ambient.material as THREE.MeshBasicMaterial;
+        const targetAmbient = navHp * 0.22;
+        ambientMat.opacity += (targetAmbient - ambientMat.opacity) * 0.1;
+        ambient.visible = ambientMat.opacity > 0.01;
+        const ambientPulse = 1 + Math.sin(performance.now() * 0.003) * 0.12 * navHp;
+        ambient.scale.setScalar(ambientPulse);
+      }
+
+      if (sprite && searchDim > 0.01 && !isNavActive) {
+        const labelMat = sprite.material as THREE.SpriteMaterial;
+        const labelBase = t * (1 - searchDim * 0.72);
+        labelMat.opacity = Math.min(labelMat.opacity, labelBase);
+      }
     });
 
     this.clusterLabels.forEach(({ sprite, center }) => {
