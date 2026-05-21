@@ -5,6 +5,7 @@
  */
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
+import * as bcrypt from 'bcryptjs';
 import { query } from './lib/db';
 import {
   createOptionsResponse,
