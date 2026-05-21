@@ -10,7 +10,6 @@
   &__title {
     margin: 0;
     font-size: var(--ms-1);
-    font-weight: 700;
     text-align: left;
   }
 
@@ -41,7 +40,6 @@
     display: block;
     color: var(--white);
     font-size: var(--ms-0);
-    font-weight: 500;
   }
 
   &__input {
@@ -82,7 +80,6 @@
   &__submit {
     width: 100%;
     font-size: 1rem;
-    font-weight: 600;
 
     @include button-variant(
       $color: var(--white),

@@ -501,7 +501,6 @@ dialog {
 
     &__albums-prompt-text {
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
       flex: 1;
     }
 
@@ -521,21 +520,11 @@ dialog {
 
     &__posts-prompt-text {
       color: var(--dashboard-text-secondary);
-      font-size: var(--ms-0);
       flex: 1;
     }
 
     &__new-post-button {
-      @include button-variant(
-        $color: var(--graphite-green),
-        $background: var(--mango-sorbet),
-        $hover-color: var(--graphite-green),
-        $hover-background: var(--honeydew-melon),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-1),
-        $border: 1px solid var(--dashboard-card-border),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-button($margin: 0, $padding: var(--ms-01) var(--ms-1));
     }
 
     &__upload-button {

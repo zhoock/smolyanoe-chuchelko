@@ -56,10 +56,8 @@
     padding: 0;
     color: var(--dark-greenish-yellow, #c9b458);
     font-size: var(--dashboard-heading-font-size);
-    font-weight: 700;
     line-height: 1.25;
     text-transform: none;
-    letter-spacing: normal;
   }
 
   &__message {
@@ -67,8 +65,6 @@
     color: var(--dashboard-text-secondary);
     font-size: var(--dashboard-font-size);
     line-height: 1.5;
-    text-transform: none;
-    letter-spacing: normal;
   }
 
   &__close {
@@ -112,10 +108,8 @@
     margin: 0 0 0.5rem;
     color: var(--dark-greenish-yellow, #c9b458);
     font-size: var(--dashboard-font-size);
-    font-weight: 600;
     line-height: 1.35;
     text-transform: none;
-    letter-spacing: normal;
   }
 
   &__list {

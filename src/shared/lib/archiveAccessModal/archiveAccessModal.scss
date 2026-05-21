@@ -70,8 +70,6 @@
     margin: 0;
     color: var(--dark-greenish-yellow, #c8b06d);
     font-size: var(--ms-0);
-    font-weight: 700;
-    letter-spacing: 0.02em;
   }
 
   &__description {
@@ -108,7 +106,7 @@
 
   &__feature-label {
     color: #ffffff;
-    font-size: var(--ms-01);
+    font-size: var(--ms-0);
   }
 
   &__rule {
@@ -163,7 +161,6 @@
     cursor: pointer;
     transition: filter 0.15s ease;
     text-decoration: none;
-    font-weight: 700;
 
     &:disabled {
       cursor: wait;
