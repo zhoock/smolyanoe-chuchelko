@@ -5,7 +5,7 @@
   flex-direction: column;
   gap: $ms-2;
   padding-block: $ms-1 $ms-3;
-  background: var(--deep-coal);
+  background: var(--main-background-color);
   font-weight: var(--regular, 400);
 
   h1,
@@ -22,11 +22,12 @@
     position: relative;
     overflow: hidden;
     min-block-size: clamp(220px, 30vw, 340px);
-    background-color: var(--charcoal);
+    background-color: var(--extra-background-color);
+    background-image: url('/images/onboarding-banner.png');
     background-position: center right;
     background-repeat: no-repeat;
     background-size: cover;
-    border: 1px solid var(--iron-slate);
+    border: 1px solid var(--hr-color);
     border-radius: var(--ms-1);
   }
 
@@ -39,9 +40,9 @@
     padding: clamp($ms-1, 4vw, $ms-2);
     background: linear-gradient(
       90deg,
-      rgb(var(--deep-black-rgb) / 94%) 0%,
-      rgb(var(--deep-black-rgb) / 78%) 38%,
-      rgb(var(--deep-black-rgb) / 35%) 58%,
+      rgb(var(--extra-background-color-rgb, var(--deep-black-rgb)) / 94%) 0%,
+      rgb(var(--extra-background-color-rgb, var(--deep-black-rgb)) / 78%) 38%,
+      rgb(var(--extra-background-color-rgb, var(--deep-black-rgb)) / 35%) 58%,
       transparent 100%
     );
   }
@@ -49,7 +50,7 @@
   &__title {
     margin: 0;
     max-inline-size: 26ch;
-    color: var(--dark-greenish-yellow);
+    color: var(--link-color);
     font-size: var(--ms-1);
     line-height: 1.25;
     text-transform: none;
@@ -58,16 +59,29 @@
   &__text {
     margin: 0;
     max-inline-size: 44ch;
-    color: var(--white);
+    color: var(--text-color);
     font-size: var(--ms-0);
     line-height: 1.55;
   }
 }
 
+html.theme-light .artist-onboarding-welcome__banner {
+  background-image: url('/images/onboarding-banner-light.png');
+}
+
+html.theme-light .artist-onboarding-welcome__overlay {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--extra-background-color-rgb, var(--moon-ash-rgb)) / 88%) 0%,
+    rgb(var(--extra-background-color-rgb, var(--moon-ash-rgb)) / 55%) 42%,
+    transparent 68%
+  );
+}
+
 .artist-onboarding-cards {
   &__heading {
     margin: 0 0 $ms-1;
-    color: var(--dark-greenish-yellow);
+    color: var(--link-color);
     font-size: var(--ms-0);
     text-transform: none;
   }
@@ -96,8 +110,8 @@
   gap: $ms-01;
   min-block-size: 100%;
   padding: $ms-1;
-  background: var(--deep-black);
-  border: 1px solid var(--iron-slate);
+  background: var(--dashboard-card-bg);
+  border: 1px solid var(--dashboard-card-border);
   border-radius: var(--ms-0);
 
   &__icon {
@@ -108,9 +122,8 @@
     inline-size: var(--ms-2);
     block-size: var(--ms-2);
     margin-block-end: $ms-0;
-    color: var(--dark-greenish-yellow);
-    background: rgb(var(--white-rgb) / 3%);
-    border: 1px solid rgb(var(--dark-greenish-yellow-rgb) / 16%);
+    color: var(--link-color);
+    background: var(--button-background-color);
     border-radius: 50%;
 
     svg {
@@ -121,7 +134,7 @@
 
   &__title {
     margin: 0;
-    color: var(--white);
+    color: var(--dashboard-text-primary);
     font-size: var(--ms-0);
     line-height: 1.35;
     text-transform: none;
@@ -129,7 +142,7 @@
 
   &__description {
     margin: 0 0 $ms-01;
-    color: var(--warm-concrete);
+    color: var(--dashboard-text-secondary);
     font-size: var(--dashboard-font-size);
     line-height: 1.5;
   }
@@ -139,12 +152,12 @@
     margin-block-start: auto;
 
     @include button-variant(
-      $color: var(--dark-greenish-yellow),
+      $color: var(--link-color),
       $background: transparent,
-      $hover-color: var(--dark-greenish-yellow),
-      $hover-background: rgb(var(--dark-greenish-yellow-rgb) / 10%),
+      $hover-color: var(--link-color-hover),
+      $hover-background: var(--button-background-color),
       $margin: 0,
-      $border: 1px solid rgb(var(--dark-greenish-yellow-rgb) / 55%),
+      $border: 1px solid var(--link-color),
       $font-size: var(--dashboard-font-size)
     );
   }

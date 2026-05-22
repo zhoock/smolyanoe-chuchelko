@@ -5,8 +5,6 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { DashboardOpenIntent } from '@shared/lib/dashboardOpenIntent';
 import './ArtistOnboarding.scss';
 
-const ONBOARDING_BANNER_URL = '/images/onboarding-banner.png';
-
 type OnboardingCardId = 'release' | 'biography' | 'article' | 'social';
 
 function OnboardingCardIcon({ id }: { id: OnboardingCardId }) {
@@ -58,8 +56,11 @@ export function ArtistOnboarding() {
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const copy = ui?.artistOnboarding;
 
-  const openDashboard = (intent: Omit<DashboardOpenIntent, 'backgroundLocation'>) => {
-    navigate('/dashboard-new/albums', {
+  const openDashboard = (
+    tab: 'albums' | 'posts' | 'profile',
+    intent: Omit<DashboardOpenIntent, 'backgroundLocation'>
+  ) => {
+    navigate(`/dashboard-new/${tab}`, {
       state: {
         backgroundLocation: location,
         ...intent,
@@ -81,7 +82,7 @@ export function ArtistOnboarding() {
         copy?.cards?.release?.description ??
         'Добавьте альбом или сингл, чтобы ваша музыка появилась в каталоге.',
       button: copy?.cards?.release?.button ?? 'Загрузить релиз',
-      onClick: () => openDashboard({ openEditAlbumModal: true }),
+      onClick: () => openDashboard('albums', { openEditAlbumModal: true }),
     },
     {
       id: 'biography',
@@ -91,7 +92,7 @@ export function ArtistOnboarding() {
         'Расскажите о себе, вдохновении и пути. Это поможет слушателям лучше вас понять.',
       button: copy?.cards?.biography?.button ?? 'Добавить биографию',
       onClick: () =>
-        openDashboard({
+        openDashboard('profile', {
           openProfileSettingsModal: true,
           profileSettingsTab: 'profile',
         }),
@@ -103,7 +104,7 @@ export function ArtistOnboarding() {
         copy?.cards?.article?.description ??
         'Поделитесь мыслями, опытом или историями о создании музыки.',
       button: copy?.cards?.article?.button ?? 'Написать статью',
-      onClick: () => openDashboard({ openNewArticleModal: true }),
+      onClick: () => openDashboard('posts', { openNewArticleModal: true }),
     },
     {
       id: 'social',
@@ -113,7 +114,7 @@ export function ArtistOnboarding() {
         'Подключите свои социальные сети, чтобы слушатели могли следить за вами.',
       button: copy?.cards?.social?.button ?? 'Добавить ссылки',
       onClick: () =>
-        openDashboard({
+        openDashboard('profile', {
           openProfileSettingsModal: true,
           profileSettingsTab: 'profile',
         }),
@@ -121,15 +122,12 @@ export function ArtistOnboarding() {
   ];
 
   return (
-    <div className="artist-onboarding">
+    <div className="artist-onboarding main-background">
       <section
         className="artist-onboarding-welcome wrapper"
         aria-labelledby="artist-onboarding-welcome"
       >
-        <div
-          className="artist-onboarding-welcome__banner"
-          style={{ backgroundImage: `url('${ONBOARDING_BANNER_URL}')` }}
-        >
+        <div className="artist-onboarding-welcome__banner">
           <div className="artist-onboarding-welcome__overlay">
             <h1 id="artist-onboarding-welcome" className="artist-onboarding-welcome__title">
               {copy?.welcomeTitle ?? 'Добро пожаловать в вашу творческую вселенную'}
