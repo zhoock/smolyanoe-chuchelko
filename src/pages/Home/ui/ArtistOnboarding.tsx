@@ -121,7 +121,7 @@ export function ArtistOnboarding() {
   ];
 
   return (
-    <div className="artist-onboarding main-background">
+    <div className="artist-onboarding">
       <section
         className="artist-onboarding-welcome wrapper"
         aria-labelledby="artist-onboarding-welcome"
@@ -136,7 +136,7 @@ export function ArtistOnboarding() {
             </h1>
             <p className="artist-onboarding-welcome__text">
               {copy?.welcomeDescription ??
-                'Здесь будет ваша музыка и релизы. Опубликуйте первый релиз, чтобы страница стала публичной.'}
+                'Здесь будет ваша музыка, истории, статьи и всё, что вы создаёте. Заполните профиль, чтобы поделиться своим творчеством с миром.'}
             </p>
           </div>
         </div>

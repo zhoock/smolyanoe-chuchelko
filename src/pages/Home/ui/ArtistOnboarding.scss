@@ -1,15 +1,20 @@
 @use '../../../scss/abstracts/mixins' as *;
 
-$onboarding-radius: 12px;
-$onboarding-banner-radius: 16px;
-$onboarding-border: 1px solid rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 45%);
-
 .artist-onboarding {
   display: flex;
   flex-direction: column;
   gap: $ms-2;
   padding-block: $ms-1 $ms-3;
-  background: var(--main-background-color, var(--deep-coal, #20201d));
+  background: var(--deep-coal);
+  font-weight: var(--regular, 400);
+
+  h1,
+  h2,
+  h3,
+  p,
+  button {
+    font-weight: inherit;
+  }
 }
 
 .artist-onboarding-welcome {
@@ -17,12 +22,12 @@ $onboarding-border: 1px solid rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 
     position: relative;
     overflow: hidden;
     min-block-size: clamp(220px, 30vw, 340px);
-    background-color: var(--charcoal, #272727);
+    background-color: var(--charcoal);
     background-position: center right;
     background-repeat: no-repeat;
     background-size: cover;
-    border: $onboarding-border;
-    border-radius: $onboarding-banner-radius;
+    border: 1px solid var(--iron-slate);
+    border-radius: var(--ms-1);
   }
 
   &__overlay {
@@ -34,42 +39,36 @@ $onboarding-border: 1px solid rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 
     padding: clamp($ms-1, 4vw, $ms-2);
     background: linear-gradient(
       90deg,
-      rgb(var(--deep-black-rgb, 30 30 30) / 95%) 0%,
-      rgb(var(--deep-black-rgb, 30 30 30) / 82%) 40%,
-      rgb(var(--deep-black-rgb, 30 30 30) / 40%) 62%,
+      rgb(var(--deep-black-rgb) / 94%) 0%,
+      rgb(var(--deep-black-rgb) / 78%) 38%,
+      rgb(var(--deep-black-rgb) / 35%) 58%,
       transparent 100%
     );
   }
 
   &__title {
     margin: 0;
-    max-inline-size: 24ch;
-    color: var(--mango-sorbet, #fae59b);
-    font-family: var(--base-font-family);
-    font-size: clamp(1.25rem, 0.95rem + 1.2vw, 1.85rem);
-    font-weight: var(--semibold, 600);
-    line-height: 1.2;
-    letter-spacing: 0.01em;
+    max-inline-size: 26ch;
+    color: var(--dark-greenish-yellow);
+    font-size: var(--ms-1);
+    line-height: 1.25;
     text-transform: none;
   }
 
   &__text {
     margin: 0;
-    max-inline-size: 42ch;
-    color: var(--moon-ash, #e7e7e6);
-    font-size: clamp(0.875rem, 0.8rem + 0.25vw, 1rem);
-    line-height: 1.5;
+    max-inline-size: 44ch;
+    color: var(--white);
+    font-size: var(--ms-0);
+    line-height: 1.55;
   }
 }
 
 .artist-onboarding-cards {
   &__heading {
     margin: 0 0 $ms-1;
-    color: var(--mango-sorbet, #fae59b);
-    font-family: var(--base-font-family);
-    font-size: clamp(1.15rem, 1rem + 0.5vw, 1.5rem);
-    font-weight: var(--semibold, 600);
-    line-height: 1.2;
+    color: var(--dark-greenish-yellow);
+    font-size: var(--ms-0);
     text-transform: none;
   }
 
@@ -86,7 +85,7 @@ $onboarding-border: 1px solid rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 
     }
 
     @include breakpoint(desktops) {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 }
@@ -94,80 +93,59 @@ $onboarding-border: 1px solid rgb(var(--dark-greenish-yellow-rgb, 153 130 56) / 
 .artist-onboarding-card {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: $ms-01;
   min-block-size: 100%;
-  padding: clamp($ms-01, 2vw, $ms-1);
-  background: var(--charcoal, #272727);
-  border: $onboarding-border;
-  border-radius: $onboarding-radius;
+  padding: $ms-1;
+  background: var(--deep-black);
+  border: 1px solid var(--iron-slate);
+  border-radius: var(--ms-0);
 
   &__icon {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    inline-size: 2.75rem;
-    block-size: 2.75rem;
-    color: var(--mango-sorbet, #fae59b);
-    border: 1px solid var(--dark-greenish-yellow, #998238);
+    inline-size: var(--ms-2);
+    block-size: var(--ms-2);
+    margin-block-end: $ms-0;
+    color: var(--dark-greenish-yellow);
+    background: rgb(var(--white-rgb) / 3%);
+    border: 1px solid rgb(var(--dark-greenish-yellow-rgb) / 16%);
     border-radius: 50%;
 
     svg {
-      inline-size: 1.35rem;
-      block-size: 1.35rem;
+      inline-size: var(--ms-0);
+      block-size: var(--ms-0);
     }
   }
 
   &__title {
     margin: 0;
-    color: var(--mango-sorbet, #fae59b);
-    font-family: var(--base-font-family);
-    font-size: 1rem;
-    font-weight: var(--semibold, 600);
+    color: var(--white);
+    font-size: var(--ms-0);
     line-height: 1.35;
     text-transform: none;
   }
 
   &__description {
-    flex: 1;
-    margin: 0;
-    margin-block-end: $ms-01;
-    color: var(--warm-concrete, #9b9b9a);
-    font-size: 0.875rem;
-    line-height: 1.45;
+    margin: 0 0 $ms-01;
+    color: var(--warm-concrete);
+    font-size: var(--dashboard-font-size);
+    line-height: 1.5;
   }
 
   &__button {
-    align-self: stretch;
-    margin: 0;
+    align-self: flex-start;
     margin-block-start: auto;
-    padding: 0.55em 1.15em;
-    cursor: pointer;
-    color: var(--mango-sorbet, #fae59b);
-    font: inherit;
-    font-size: 0.8125rem;
-    font-weight: var(--semibold, 600);
-    letter-spacing: 0.02em;
-    text-align: center;
-    text-transform: none;
-    background: transparent;
-    border: 1px solid var(--dark-greenish-yellow, #998238);
-    border-radius: 999px;
-    transition:
-      background-color 0.2s ease,
-      color 0.2s ease,
-      border-color 0.2s ease;
 
-    &:hover {
-      color: var(--deep-coal, #20201d);
-      background: var(--dark-greenish-yellow, #998238);
-      border-color: var(--mango-sorbet, #fae59b);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--mango-sorbet, #fae59b);
-      outline-offset: 2px;
-    }
+    @include button-variant(
+      $color: var(--dark-greenish-yellow),
+      $background: transparent,
+      $hover-color: var(--dark-greenish-yellow),
+      $hover-background: rgb(var(--dark-greenish-yellow-rgb) / 10%),
+      $margin: 0,
+      $border: 1px solid rgb(var(--dark-greenish-yellow-rgb) / 55%),
+      $font-size: var(--dashboard-font-size)
+    );
   }
 }
