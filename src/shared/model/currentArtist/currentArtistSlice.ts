@@ -27,4 +27,4 @@ export const { setPublicArtistSlug } = currentArtistSlice.actions;
 export const currentArtistReducer = currentArtistSlice.reducer;
 
 export const selectPublicArtistSlug = (state: RootState): string | null =>
-  state.currentArtist.publicSlug;
+  state.currentArtist?.publicSlug ?? null;

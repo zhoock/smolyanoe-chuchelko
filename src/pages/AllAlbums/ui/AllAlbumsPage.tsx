@@ -11,6 +11,7 @@ import { useLang } from '@app/providers/lang';
 import {
   selectAlbumsStatus,
   selectAlbumsResolvedForAllAlbumsPage,
+  selectPublicAlbumsCacheIsStale,
   selectCatalogArtistMissing,
 } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
@@ -33,13 +34,16 @@ export function AllAlbumsPage() {
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistSlug);
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const allAlbums = useAppSelector((state) =>
-    selectAlbumsResolvedForAllAlbumsPage(state, !artistSlug)
-  );
+  const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
+  const allAlbums = useAppSelector((state) => {
+    if (catalogCacheStale) return [];
+    return selectAlbumsResolvedForAllAlbumsPage(state, !artistSlug);
+  });
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showAlbumsLoadingShell = useShowSurfaceAlbumsLoadingShell(
     albumsStatus,
-    allAlbums.length > 0
+    allAlbums.length > 0,
+    catalogCacheStale
   );
 
   const [displayedCount, setDisplayedCount] = useState(BATCH_SIZE);

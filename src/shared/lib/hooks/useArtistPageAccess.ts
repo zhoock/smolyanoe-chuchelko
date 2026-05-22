@@ -3,11 +3,14 @@ import { useLang } from '@app/providers/lang';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
 import {
   selectAlbumsStatus,
+  selectAlbumsFetchContextKey,
   selectCatalogArtistMissing,
-  selectPublicAlbumsDataResolved,
+  selectPublicAlbumsDataResolvedForSurface,
+  selectPublicAlbumsCacheIsStale,
 } from '@entities/album';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { buildPublicAlbumsFetchContextKey } from '@shared/lib/publicCatalogCacheKey';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { getAuthHeader, isAuthenticated } from '@shared/lib/auth';
 
@@ -22,8 +25,12 @@ export function useArtistPageAccess(artistSlug: string) {
   const { lang } = useLang();
   const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
   const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const publicAlbums = useAppSelector(selectPublicAlbumsDataResolved);
+  const albumsFetchContextKey = useAppSelector(selectAlbumsFetchContextKey);
+  const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
+  const publicAlbums = useAppSelector(selectPublicAlbumsDataResolvedForSurface);
   const hasPublicReleases = useMemo(() => hasPublishedPublicReleases(publicAlbums), [publicAlbums]);
+
+  const desiredFetchKey = useMemo(() => buildPublicAlbumsFetchContextKey(artistSlug), [artistSlug]);
 
   const [ownerResolved, setOwnerResolved] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
@@ -83,7 +90,13 @@ export function useArtistPageAccess(artistSlug: string) {
     };
   }, [artistSlug, lang]);
 
-  const isLoading = albumsStatus === 'loading' || !ownerResolved;
+  const albumsPending =
+    catalogCacheStale ||
+    albumsStatus === 'idle' ||
+    albumsStatus === 'loading' ||
+    (albumsStatus === 'succeeded' && albumsFetchContextKey !== desiredFetchKey);
+
+  const isLoading = !ownerResolved || albumsPending;
   const showOnboarding = !isLoading && !catalogArtistMissing && !hasPublicReleases && isOwner;
   const showNotFound = !isLoading && (catalogArtistMissing || (!hasPublicReleases && !isOwner));
   const showPublished = !isLoading && !catalogArtistMissing && hasPublicReleases;

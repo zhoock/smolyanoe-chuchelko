@@ -7,6 +7,7 @@ import type { RootState } from '@shared/model/appStore/types';
 import type { IArticles } from '@models';
 
 import { selectCurrentLang } from '@shared/model/lang/selectors';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 import { resolveArticleForDisplay } from '../lib/resolveArticleDisplay';
 
 import type { ArticlesState } from './types';
@@ -49,10 +50,29 @@ export const selectArticlesError = createSelector([selectArticlesState], (s) => 
 
 export const selectArticlesData = createSelector([selectArticlesState], (s): IArticles[] => s.data);
 
+export const selectArticlesLastPublicArtistSlug = createSelector(
+  [selectArticlesState],
+  (s) => s.lastPublicArtistSlug ?? ''
+);
+
+export const selectArticlesCacheIsStale = createSelector(
+  [selectArticlesLastPublicArtistSlug, selectPublicArtistSlug, selectArticlesState],
+  (cachedSlug, desiredSlug, articlesState) => {
+    const desired = desiredSlug?.trim() ?? '';
+    if (articlesState.status === 'idle' && articlesState.data.length === 0) return false;
+    return cachedSlug !== desired;
+  }
+);
+
 /** Для отображения: строки с fallback по `state.lang.current`. */
 export const selectArticlesDataResolved = createSelector(
   [selectArticlesData, selectCurrentLang],
   (articles, lang): IArticles[] => articles.map((a) => resolveArticleForDisplay(a, lang))
+);
+
+export const selectArticlesDataResolvedForSurface = createSelector(
+  [selectArticlesDataResolved, selectArticlesCacheIsStale],
+  (articles, stale) => (stale ? [] : articles)
 );
 
 export const selectArticleById = createSelector(

@@ -9,7 +9,8 @@ import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { shouldUsePublicArtistCatalogInRedux } from '@shared/lib/dashboardModalBackground';
-import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { buildPublicAlbumsFetchContextKey } from '@shared/lib/publicCatalogCacheKey';
+import { selectPublicArtistSlug, setPublicArtistSlug } from '@shared/model/currentArtist';
 
 import type { AlbumsState, FetchAlbumsArg, FetchAlbumsFulfilledPayload } from './types';
 
@@ -45,8 +46,7 @@ function getCatalogAlbumsFetchContextKey(getState: () => RootState): string {
   if (typeof window === 'undefined') {
     return 'ssr';
   }
-  const publicSlug = selectPublicArtistSlug(getState())?.trim() ?? '';
-  return publicSlug ? `public:${publicSlug}` : 'public:no-slug';
+  return buildPublicAlbumsFetchContextKey(selectPublicArtistSlug(getState()));
 }
 
 function wrapAlbumsResult(
@@ -373,6 +373,15 @@ const albumsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(setPublicArtistSlug, (state, action) => {
+        const desiredKey = buildPublicAlbumsFetchContextKey(action.payload);
+        if (state.fetchContextKey === desiredKey) return;
+        state.data = [];
+        state.status = 'idle';
+        state.error = null;
+        state.catalogArtistMissing = false;
+        state.inFlightFetchContextKey = null;
+      })
       .addCase(fetchAlbums.pending, (state, action) => {
         if (action.meta.arg.force) {
           latestForceAlbumsRequestId = action.meta.requestId;

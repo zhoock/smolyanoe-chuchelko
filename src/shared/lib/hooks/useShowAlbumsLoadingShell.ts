@@ -11,8 +11,10 @@ type AlbumsStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
  */
 export function shouldShowAlbumsLoadingShell(
   albumsStatus: AlbumsStatus,
-  hasRenderableAlbumsData: boolean
+  hasRenderableAlbumsData: boolean,
+  catalogCacheStale = false
 ): boolean {
+  if (catalogCacheStale) return true;
   const waiting = albumsStatus === 'loading' || albumsStatus === 'idle';
   if (!waiting) return false;
   if (hasRenderableAlbumsData) return false;
@@ -35,10 +37,15 @@ export function useShowAlbumsLoadingShellExcludingDashboardInFlight(baseShow: bo
 /** Всё вместе: скелетон по status + подавление на фоне при загрузке из дашборда. */
 export function useShowSurfaceAlbumsLoadingShell(
   albumsStatus: AlbumsStatus,
-  hasRenderableAlbumsData: boolean
+  hasRenderableAlbumsData: boolean,
+  catalogCacheStale = false
 ): boolean {
   const artistMissing = useAppSelector(selectCatalogArtistMissing);
-  const base = shouldShowAlbumsLoadingShell(albumsStatus, hasRenderableAlbumsData);
+  const base = shouldShowAlbumsLoadingShell(
+    albumsStatus,
+    hasRenderableAlbumsData,
+    catalogCacheStale
+  );
   const show = useShowAlbumsLoadingShellExcludingDashboardInFlight(base);
   if (artistMissing) return false;
   return show;

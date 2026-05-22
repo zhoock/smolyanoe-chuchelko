@@ -8,7 +8,8 @@ import { useLang } from '@app/providers/lang';
 import {
   selectAlbumsStatus,
   selectAlbumsError,
-  selectPublicAlbumsDataResolved,
+  selectPublicAlbumsDataResolvedForSurface,
+  selectPublicAlbumsCacheIsStale,
   selectCatalogArtistMissing,
 } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
@@ -37,11 +38,13 @@ export function AlbumsSection() {
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsError = useAppSelector(selectAlbumsError);
   /** Публичная витрина артиста: только альбомы с «Visible on page» (`isPublic !== false`). */
-  const allAlbums = useAppSelector(selectPublicAlbumsDataResolved);
+  const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
+  const allAlbums = useAppSelector(selectPublicAlbumsDataResolvedForSurface);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showAlbumsLoadingShell = useShowSurfaceAlbumsLoadingShell(
     albumsStatus,
-    allAlbums.length > 0
+    allAlbums.length > 0,
+    catalogCacheStale
   );
 
   const [initialCount, setInitialCount] = useState(getInitialCount);
@@ -65,11 +68,11 @@ export function AlbumsSection() {
     return null;
   }
 
-  if (artistSlug && catalogArtistMissing) {
+  if (artistSlug && catalogArtistMissing && !catalogCacheStale && albumsStatus === 'succeeded') {
     return <ArtistNotFound />;
   }
 
-  if (albumsStatus === 'succeeded' && allAlbums.length === 0) {
+  if (!catalogCacheStale && albumsStatus === 'succeeded' && allAlbums.length === 0) {
     return null;
   }
 

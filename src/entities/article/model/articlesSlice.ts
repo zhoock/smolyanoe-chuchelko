@@ -6,7 +6,7 @@ import { buildApiUrl } from '@shared/lib/artistQuery';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { shouldUsePublicArtistCatalogInRedux } from '@shared/lib/dashboardModalBackground';
-import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { selectPublicArtistSlug, setPublicArtistSlug } from '@shared/model/currentArtist';
 import type { TrackVisibility } from '@shared/lib/tracks/trackVisibility';
 import { normalizeTrackVisibility } from '@shared/lib/tracks/trackVisibility';
 
@@ -272,6 +272,14 @@ const articlesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(setPublicArtistSlug, (state, action) => {
+        const desiredSlug = action.payload?.trim() ?? '';
+        if ((state.lastPublicArtistSlug ?? '') === desiredSlug) return;
+        state.data = [];
+        state.status = 'idle';
+        state.error = null;
+        state.inFlightFetchContextKey = null;
+      })
       .addCase(fetchArticles.pending, (state, action) => {
         if (action.meta.arg.force) {
           latestForceArticlesRequestId = action.meta.requestId;

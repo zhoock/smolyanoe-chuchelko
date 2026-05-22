@@ -3,12 +3,14 @@ import { screen, waitFor } from '@testing-library/react';
 import { AboutSection } from '../AboutSection';
 import { renderWithProviders } from '@shared/lib/test-utils';
 
-const loadTheBandFromDatabase = jest.fn<() => Promise<string[] | null>>();
-const loadTheBandFromProfileJson = jest.fn<() => Promise<string[] | null>>();
+const loadTheBandFromDatabase =
+  jest.fn<(lang: string, options?: Record<string, unknown>) => Promise<string[] | null>>();
+const loadTheBandFromProfileJson = jest.fn<(lang: string) => Promise<string[] | null>>();
 
 jest.mock('@entities/user/lib', () => ({
-  loadTheBandFromDatabase: (...args: unknown[]) => loadTheBandFromDatabase(...args),
-  loadTheBandFromProfileJson: (...args: unknown[]) => loadTheBandFromProfileJson(...args),
+  loadTheBandFromDatabase: (lang: string, options?: Record<string, unknown>) =>
+    loadTheBandFromDatabase(lang, options),
+  loadTheBandFromProfileJson: (lang: string) => loadTheBandFromProfileJson(lang),
 }));
 
 jest.mock('@shared/lib/hooks/useSiteArtistDisplayName', () => ({

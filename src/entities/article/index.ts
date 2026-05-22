@@ -23,6 +23,8 @@ export {
   selectArticlesError,
   selectArticlesData,
   selectArticlesDataResolved,
+  selectArticlesDataResolvedForSurface,
+  selectArticlesCacheIsStale,
   selectArticleById,
   selectArticleByIdResolved,
   selectArticlesInFlightFetchContextKey,

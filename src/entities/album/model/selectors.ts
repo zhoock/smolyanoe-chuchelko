@@ -7,6 +7,8 @@ import type { RootState } from '@shared/model/appStore/types';
 import type { IAlbums } from '@models';
 
 import { selectCurrentLang } from '@shared/model/lang/selectors';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { buildPublicAlbumsFetchContextKey } from '@shared/lib/publicCatalogCacheKey';
 import { resolveAlbumForDisplay } from '../lib/resolveAlbumDisplay';
 import type { AlbumsState } from './types';
 
@@ -65,6 +67,17 @@ export const selectCatalogArtistMissing = createSelector(
   (s) => s.catalogArtistMissing
 );
 
+export const selectDesiredPublicAlbumsFetchContextKey = createSelector(
+  [selectPublicArtistSlug],
+  (slug) => buildPublicAlbumsFetchContextKey(slug)
+);
+
+/** Кэш альбомов относится к другому ?artist= — не показываем устаревшие обложки. */
+export const selectPublicAlbumsCacheIsStale = createSelector(
+  [selectAlbumsFetchContextKey, selectDesiredPublicAlbumsFetchContextKey],
+  (cachedKey, desiredKey) => cachedKey != null && cachedKey !== desiredKey
+);
+
 export const selectAlbumById = createSelector(
   [selectAlbumsData, (_state: RootState, albumId: string) => albumId],
   (albums, albumId) => albums.find((album) => album.albumId === albumId)
@@ -80,6 +93,11 @@ export const selectAlbumsDataResolved = createSelector(
 export const selectPublicAlbumsDataResolved = createSelector(
   [selectAlbumsDataResolved],
   (albums): IAlbums[] => albums.filter((a) => a.isPublic !== false)
+);
+
+export const selectPublicAlbumsDataResolvedForSurface = createSelector(
+  [selectPublicAlbumsDataResolved, selectPublicAlbumsCacheIsStale],
+  (albums, stale) => (stale ? [] : albums)
 );
 
 /**

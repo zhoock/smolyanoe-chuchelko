@@ -78,11 +78,9 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
-    const active =
-      hasArtistParam && !artistPageAccess.showPublished && !artistPageAccess.showNotFound;
-    document.body.classList.toggle('page--artist-onboarding', active);
+    document.body.classList.toggle('page--artist-onboarding', artistPageAccess.showOnboarding);
     return () => document.body.classList.remove('page--artist-onboarding');
-  }, [hasArtistParam, artistPageAccess.showPublished, artistPageAccess.showNotFound]);
+  }, [artistPageAccess.showOnboarding]);
 
   useEffect(() => {
     // Каталог грузит root albumsLoader; force здесь давал повторные loading-циклы
@@ -290,15 +288,11 @@ export function HomePage() {
       return null;
     }
 
-    if (artistPageAccess.isLoading) {
-      return null;
-    }
-
-    if (artistPageAccess.showNotFound) {
+    if (!artistPageAccess.isLoading && artistPageAccess.showNotFound) {
       return <ArtistNotFound />;
     }
 
-    if (artistPageAccess.showOnboarding) {
+    if (!artistPageAccess.isLoading && artistPageAccess.showOnboarding) {
       return <ArtistOnboarding />;
     }
 

@@ -8,7 +8,8 @@ type ArticlesStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 /**
  * Скелетон статей на главной: не мигать, пока дашборд в полёте качает тот же slice (inFlight = dashboard).
  */
-function baseShow(status: ArticlesStatus, hasRenderableData: boolean): boolean {
+function baseShow(status: ArticlesStatus, hasRenderableData: boolean, cacheStale = false): boolean {
+  if (cacheStale) return true;
   const waiting = status === 'loading' || status === 'idle';
   if (!waiting) return false;
   if (hasRenderableData) return false;
@@ -17,7 +18,8 @@ function baseShow(status: ArticlesStatus, hasRenderableData: boolean): boolean {
 
 export function useShowSurfaceArticlesLoadingShell(
   articlesStatus: ArticlesStatus,
-  hasRenderableData: boolean
+  hasRenderableData: boolean,
+  cacheStale = false
 ): boolean {
   const artistMissing = useAppSelector(selectCatalogArtistMissing);
   const inFlight = useAppSelector(selectArticlesInFlightFetchContextKey);
@@ -25,7 +27,7 @@ export function useShowSurfaceArticlesLoadingShell(
 
   if (artistMissing) return false;
 
-  const show = baseShow(articlesStatus, hasRenderableData);
+  const show = baseShow(articlesStatus, hasRenderableData, cacheStale);
   if (show && overlayOpen && inFlight === 'dashboard') {
     return false;
   }

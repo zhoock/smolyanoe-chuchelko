@@ -9,6 +9,7 @@ import {
   selectDashboardAlbumsData,
   selectDashboardAlbumsStatus,
   selectCatalogArtistMissing,
+  selectAlbumsFetchContextKey,
 } from '../selectors';
 import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IAlbums } from '@models';
@@ -102,6 +103,37 @@ describe('albumsSlice', () => {
         },
       });
     });
+  });
+
+  test('setPublicArtistSlug сбрасывает публичный каталог при смене артиста', async () => {
+    const mockAlbums: IAlbums[] = [
+      {
+        albumId: 'album-1',
+        album: 'Test Album',
+        artist: 'Test Artist',
+        fullName: 'Test Artist — Test Album',
+        description: 'Test Description',
+        release: { date: '2024-01-01' },
+        cover: 'cover',
+        tracks: [],
+        buttons: {},
+        details: [],
+      },
+    ];
+
+    mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+    const store = createTestStore();
+    store.dispatch(setPublicArtistSlug('artist-a'));
+    await (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+    expect(selectAlbumsData(store.getState())).toHaveLength(1);
+    expect(selectAlbumsFetchContextKey(store.getState())).toBe('public:artist-a');
+
+    store.dispatch(setPublicArtistSlug('artist-b'));
+
+    expect(selectAlbumsData(store.getState())).toEqual([]);
+    expect(selectAlbumsStatus(store.getState())).toBe('idle');
   });
 
   describe('fetchAlbums thunk', () => {

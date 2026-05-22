@@ -5,7 +5,11 @@ import { ArticlesSkeleton } from '@shared/ui/skeleton/ArticlesSkeleton';
 import { ArticlePreview } from '@entities/article';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useLang } from '@app/providers/lang';
-import { selectArticlesStatus, selectArticlesDataResolved } from '@entities/article';
+import {
+  selectArticlesStatus,
+  selectArticlesDataResolvedForSurface,
+  selectArticlesCacheIsStale,
+} from '@entities/article';
 import { useShowSurfaceArticlesLoadingShell } from '@shared/lib/hooks/useShowSurfaceArticlesLoadingShell';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
@@ -24,10 +28,12 @@ export function ArticlesSection() {
   const [searchParams] = useSearchParams();
   const allArticlesPath = withPublicArtistQuery('/articles', searchParams.get('artist'));
   const articlesStatus = useAppSelector((state) => selectArticlesStatus(state));
-  const allArticles = useAppSelector((state) => selectArticlesDataResolved(state));
+  const articlesCacheStale = useAppSelector(selectArticlesCacheIsStale);
+  const allArticles = useAppSelector((state) => selectArticlesDataResolvedForSurface(state));
   const showArticlesLoadingShell = useShowSurfaceArticlesLoadingShell(
     articlesStatus,
-    allArticles.length > 0
+    allArticles.length > 0,
+    articlesCacheStale
   );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
@@ -48,7 +54,7 @@ export function ArticlesSection() {
 
   // Данные загружаются через loader, не нужно загружать здесь
 
-  if (articlesStatus === 'succeeded' && allArticles.length === 0) {
+  if (!articlesCacheStale && articlesStatus === 'succeeded' && allArticles.length === 0) {
     return null;
   }
 
