@@ -124,6 +124,36 @@
       "premiumSuccessGoToArchive": "Go to Archive",
       "premiumSuccessMaybeLater": "Maybe later"
     },
+    "artistOnboarding": {
+      "heroAria": "Artist profile",
+      "heroEmptyHint": "Empty for now",
+      "roleBadge": "Artist",
+      "welcomeTitle": "Welcome to your creative universe",
+      "welcomeDescription": "Your music and releases will live here. Publish your first release to make this page public.",
+      "cardsHeading": "Where to start?",
+      "cards": {
+        "release": {
+          "title": "Upload your first release",
+          "description": "Add an album or single so your music appears in the catalog.",
+          "button": "Upload release"
+        },
+        "biography": {
+          "title": "Write your story",
+          "description": "Tell listeners about yourself, your inspiration, and your path.",
+          "button": "Add biography"
+        },
+        "social": {
+          "title": "Add social links",
+          "description": "Connect your social networks so listeners can follow you.",
+          "button": "Add links"
+        },
+        "article": {
+          "title": "Publish your first article",
+          "description": "Share thoughts, experience, or stories about making music.",
+          "button": "Write article"
+        }
+      }
+    },
     "titles": {
       "albums": "albums",
       "theBand": "about the",

@@ -88,8 +88,11 @@ export async function loadTheBandFromDatabase(
 
     const result: UserProfileResponse = await response.json();
 
-    if (result.success && result.data && result.data.theBand) {
-      return result.data.theBand;
+    if (result.success && result.data && Array.isArray(result.data.theBand)) {
+      const paragraphs = result.data.theBand.filter(
+        (paragraph) => typeof paragraph === 'string' && paragraph.trim().length > 0
+      );
+      return paragraphs.length > 0 ? paragraphs : null;
     }
 
     return null;

@@ -16,34 +16,42 @@ type AboutSectionProps = {
   onClose: () => void;
 };
 
+function hasFilledBandParagraphs(paragraphs: string[] | null | undefined): boolean {
+  return (
+    Array.isArray(paragraphs) &&
+    paragraphs.some((paragraph) => typeof paragraph === 'string' && paragraph.trim().length > 0)
+  );
+}
+
 export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSectionProps) {
   const { lang } = useLang();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const hasArtistParam = !!searchParams.get('artist');
-  const artistParamKey = searchParams.get('artist')?.trim() ?? '';
+  const artistSlug = searchParams.get('artist')?.trim() ?? '';
+  const isArtistPage = artistSlug.length > 0;
 
   const { displayLabel: bandDisplayLabel } = useSiteArtistDisplayName(lang, {
-    artistSlug: hasArtistParam ? artistParamKey || null : null,
+    artistSlug: isArtistPage ? artistSlug : null,
   });
 
-  // Состояние для theBand из БД
   const [theBandFromDb, setTheBandFromDb] = useState<string[] | null>(null);
   const [isLoadingTheBand, setIsLoadingTheBand] = useState(true);
-  // Состояние для theBand из profile.json (fallback)
   const [theBandFromProfileJson, setTheBandFromProfileJson] = useState<string[] | null>(null);
 
   const title = ui?.titles?.theBand ?? '';
 
-  // Загружаем theBand из БД (если пользователь авторизован)
   useEffect(() => {
     let cancelled = false;
 
+    setTheBandFromDb(null);
+    setIsLoadingTheBand(true);
+
     (async () => {
-      setIsLoadingTheBand(true);
       try {
-        const theBand = await loadTheBandFromDatabase(lang);
+        const theBand = await loadTheBandFromDatabase(lang, {
+          artistSlugOverride: isArtistPage ? artistSlug : null,
+        });
         if (!cancelled) {
           setTheBandFromDb(theBand);
         }
@@ -62,11 +70,10 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     return () => {
       cancelled = true;
     };
-  }, [lang, location.search]);
+  }, [lang, location.search, isArtistPage, artistSlug]);
 
-  // Загружаем theBand из profile.json (fallback только для default-режима без artist)
   useEffect(() => {
-    if (hasArtistParam) {
+    if (isArtistPage) {
       setTheBandFromProfileJson(null);
       return;
     }
@@ -90,19 +97,25 @@ export function AboutSection({ isAboutModalOpen, onOpen, onClose }: AboutSection
     return () => {
       cancelled = true;
     };
-  }, [lang, hasArtistParam]);
+  }, [lang, isArtistPage]);
 
-  // В artist-режиме показываем только данные выбранного артиста (без fallback на default content).
-  // В default-режиме сохраняем старый fallback на profile.json.
   const theBand = (
-    hasArtistParam
+    isArtistPage
       ? theBandFromDb || []
-      : theBandFromDb && theBandFromDb.length > 0
-        ? theBandFromDb
+      : hasFilledBandParagraphs(theBandFromDb)
+        ? theBandFromDb!
         : theBandFromProfileJson || []
-  ).filter(Boolean);
+  ).filter((paragraph) => typeof paragraph === 'string' && paragraph.trim().length > 0);
   const previewParagraph = theBand[0];
   const showLabel = ui?.buttons?.show ?? '';
+
+  if (isArtistPage && isLoadingTheBand) {
+    return null;
+  }
+
+  if (!hasFilledBandParagraphs(theBand)) {
+    return null;
+  }
 
   return (
     <section

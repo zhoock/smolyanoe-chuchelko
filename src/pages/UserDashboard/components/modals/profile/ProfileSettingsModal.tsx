@@ -28,6 +28,7 @@ interface ProfileSettingsModalProps {
   onClose: () => void;
   userName?: string;
   userEmail?: string;
+  initialTab?: TabType;
 }
 
 type TabType = 'general' | 'profile' | 'security';
@@ -37,10 +38,18 @@ export function ProfileSettingsModal({
   onClose,
   userName = 'Site Owner',
   userEmail = '',
+  initialTab = 'general',
 }: ProfileSettingsModalProps) {
   const { lang: currentLang, setLang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));
-  const [activeTab, setActiveTab] = useState<TabType>('general');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
+
   const [name, setName] = useState(userName);
   const [publicSlug, setPublicSlug] = useState('');
   const [selectedLang, setSelectedLang] = useState<'ru' | 'en'>(currentLang || 'ru');

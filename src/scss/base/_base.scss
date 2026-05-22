@@ -137,6 +137,23 @@ body {
     }
   }
 
+  /* Onboarding: main длиннее hero — #root с auto вместо 100vb, иначе footer «прилипает» к ~59vw */
+  &.page--artist-onboarding {
+    #root {
+      block-size: auto;
+      min-block-size: 100dvb;
+      grid-template:
+        'header' calc(1.618rem * 2)
+        'main' auto
+        'footer' auto / 1fr;
+    }
+
+    #root main {
+      min-block-size: 0;
+      overflow: visible;
+    }
+  }
+
   /* Главная с 3D-сценой: без Hero, но глобальный main всё ещё задаёт два ряда под hero + лишний ряд #root под header — убираем лишнюю высоту и скролл */
   &.page--home-scene {
     overflow: hidden;

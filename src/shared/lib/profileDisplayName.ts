@@ -2,6 +2,7 @@ import { getStore } from '@shared/model/appStore';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
 
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
+import { getAuthHeader } from '@shared/lib/auth';
 
 import { buildApiUrl } from './artistQuery';
 
@@ -95,7 +96,10 @@ async function fetchPublicProfileForDisplayNetwork(
       { includeArtist: true, artistSlugOverride: slug }
     );
     const response = await fetchWithAuthSession(url, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
     });
     if (!response.ok) {
       return { displayName: fallbackName, publicSlug: null };
@@ -134,14 +138,16 @@ export async function fetchPublicProfileForDisplay(
 
   const key = profileCacheKey(lang, slug);
   const cached = profileCache.get(key);
-  if (cached) return cached;
+  if (cached?.displayName.trim()) return cached;
 
   const pending = profileInflight.get(key);
   if (pending) return pending;
 
   const promise = fetchPublicProfileForDisplayNetwork(lang, slug)
     .then((result) => {
-      profileCache.set(key, result);
+      if (result.displayName.trim()) {
+        profileCache.set(key, result);
+      }
       profileInflight.delete(key);
       return result;
     })

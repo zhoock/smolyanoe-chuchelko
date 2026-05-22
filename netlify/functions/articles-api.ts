@@ -23,6 +23,7 @@ import {
   handleError,
 } from './lib/api-helpers';
 import type { ApiResponse, SupportedLang } from './lib/types';
+import { assertArtistVisibleToViewer } from './lib/artist-publication';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractBaseName } from './lib/image-processor';
@@ -624,6 +625,7 @@ export const handler: Handler = async (
           const artistSlug = event.queryStringParameters?.artist;
           try {
             targetUserId = await resolvePublicArtistUserId(artistSlug);
+            await assertArtistVisibleToViewer(targetUserId, userId);
           } catch (error) {
             if (error instanceof PublicArtistResolverError) {
               return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
@@ -684,6 +686,7 @@ export const handler: Handler = async (
         const artistSlug = event.queryStringParameters?.artist;
         try {
           targetUserId = await resolvePublicArtistUserId(artistSlug);
+          await assertArtistVisibleToViewer(targetUserId, userId);
         } catch (error) {
           if (error instanceof PublicArtistResolverError) {
             return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {

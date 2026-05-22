@@ -176,6 +176,17 @@ export function getAuthSessionIdentityKey(): string {
   return `${u.id}\0${u.email}`;
 }
 
+function authUserSnapshotEqual(a: AuthUser, b: AuthUser): boolean {
+  return (
+    a.id === b.id &&
+    a.email === b.email &&
+    (a.name ?? null) === (b.name ?? null) &&
+    a.role === b.role &&
+    a.isEmailVerified === b.isEmailVerified &&
+    a.preferredLanguage === b.preferredLanguage
+  );
+}
+
 /**
  * Обновляет имя пользователя в localStorage (auth_user)
  */
@@ -311,6 +322,7 @@ export function updateStoredUser(partial: Partial<AuthUser>): void {
     if (!userStr) return;
     const user = JSON.parse(userStr) as AuthUser;
     const updatedUser: AuthUser = { ...user, ...partial };
+    if (authUserSnapshotEqual(user, updatedUser)) return;
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
     dispatchAuthSessionChanged();
   } catch (error) {

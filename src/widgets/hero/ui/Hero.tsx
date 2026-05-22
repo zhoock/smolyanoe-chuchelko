@@ -16,6 +16,7 @@ import {
 import '@/components/view/Universe3D.style.scss';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
 import { ArtistArchiveButton } from '@features/artistArchive';
+import { readStoredProfileDisplayName } from '@shared/lib/profileDisplayName';
 import './style.scss';
 
 const HERO_CLUSTER_PALETTE = [0x4d80ff, 0xff8a47, 0x53d8a2, 0xb086ff, 0xf2cd5d, 0x5ec9f5] as const;
@@ -333,7 +334,9 @@ export function Hero() {
     ? ''
     : catalogArtistMissing
       ? ''
-      : profileDisplayName || defaultArtistName;
+      : profileDisplayName.trim() ||
+        (hasArtistParam ? readStoredProfileDisplayName() : '') ||
+        defaultArtistName;
 
   /** Latest profile/header for canvas fallback without re-running Universe3D effect. */
   const profileNameForCanvasRef = useRef(profileDisplayName);

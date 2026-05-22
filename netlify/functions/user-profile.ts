@@ -15,6 +15,7 @@ import {
   getAuthorizationHeaderFromEvent,
 } from './lib/api-helpers';
 import { classifyAuthorizationHeader } from './lib/jwt';
+import { assertArtistVisibleToViewer } from './lib/artist-publication';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
 interface UserProfileRow {
@@ -85,6 +86,24 @@ export const handler: Handler = async (
       if (artistSlug) {
         try {
           targetUserId = await resolvePublicArtistUserId(artistSlug);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return {
+              statusCode: error.statusCode,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: error.message,
+                ...(error.code ? { code: error.code } : {}),
+              } as GetUserProfileResponse),
+            };
+          }
+          throw error;
+        }
+
+        const viewerUserId = getUserIdFromEvent(event);
+        try {
+          await assertArtistVisibleToViewer(targetUserId, viewerUserId);
         } catch (error) {
           if (error instanceof PublicArtistResolverError) {
             return {
@@ -184,16 +203,19 @@ export const handler: Handler = async (
       const lang = (event.queryStringParameters?.lang || 'ru').toLowerCase();
       const validLang = lang === 'en' ? 'en' : 'ru';
 
-      // Извлекаем theBand в зависимости от формата данных
+      const normalizeBandParagraphs = (paragraphs: unknown): string[] => {
+        if (!Array.isArray(paragraphs)) return [];
+        return paragraphs.filter((p) => typeof p === 'string' && p.trim().length > 0);
+      };
+
+      // Только непустые параграфы текущего языка (без fallback на другой язык).
       let theBand: string[] = [];
       if (user.the_band) {
         if (Array.isArray(user.the_band)) {
-          // Старый формат (массив) - для обратной совместимости
-          theBand = user.the_band;
+          theBand = normalizeBandParagraphs(user.the_band);
         } else if (typeof user.the_band === 'object' && user.the_band !== null) {
-          // Новый формат (объект с ru/en)
           const bandObj = user.the_band as { ru?: string[]; en?: string[] };
-          theBand = bandObj[validLang] || bandObj.ru || bandObj.en || [];
+          theBand = normalizeBandParagraphs(bandObj[validLang]);
         }
       }
 

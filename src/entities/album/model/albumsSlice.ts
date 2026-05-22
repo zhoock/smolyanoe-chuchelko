@@ -425,7 +425,14 @@ const albumsSlice = createSlice({
           state.dashboard.inFlightFetchContextKey = null;
           return;
         }
-        state.data = [...action.payload.albums];
+        const incoming = action.payload.albums;
+        const hadCatalogData = state.data.length > 0;
+        const keepPreviousOnEmptyRefetch =
+          incoming.length === 0 && hadCatalogData && !action.payload.catalogArtistMissing;
+
+        if (!keepPreviousOnEmptyRefetch) {
+          state.data = [...incoming];
+        }
         state.fetchContextKey = action.payload.fetchContextKey;
         state.status = 'succeeded';
         state.error = null;

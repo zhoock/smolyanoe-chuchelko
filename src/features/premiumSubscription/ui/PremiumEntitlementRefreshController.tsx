@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
@@ -9,7 +9,7 @@ import {
   SUBSCRIPTION_ACTIVATED_EVENT,
   type EntitlementChangeDetail,
 } from '@features/artistArchive';
-import { AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
+import { AUTH_SESSION_CHANGED_EVENT, getAuthSessionIdentityKey } from '@shared/lib/auth';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 
 import {
@@ -40,6 +40,8 @@ export function PremiumEntitlementRefreshController() {
     return searchParams.get('artist')?.trim() || readPremiumCheckoutArtistSlug() || undefined;
   };
 
+  const authIdentityKeyRef = useRef(getAuthSessionIdentityKey());
+
   useEffect(() => {
     const refresh = (event: Event | null, immediate: boolean) => {
       const slug = (event ? resolveSlugFromEvent(event) : undefined) || resolveSlug();
@@ -47,7 +49,14 @@ export function PremiumEntitlementRefreshController() {
     };
 
     const onEntitlementChanged = (event: Event) => refresh(event, true);
-    const onAuthSessionChanged = () => refresh(null, true);
+    const onAuthSessionChanged = () => {
+      const nextIdentityKey = getAuthSessionIdentityKey();
+      if (nextIdentityKey === authIdentityKeyRef.current) return;
+      authIdentityKeyRef.current = nextIdentityKey;
+      refresh(null, true);
+    };
+
+    authIdentityKeyRef.current = getAuthSessionIdentityKey();
 
     window.addEventListener(SUBSCRIPTION_ACTIVATED_EVENT, onEntitlementChanged);
     window.addEventListener(ARCHIVE_CHANGED_EVENT, onEntitlementChanged);

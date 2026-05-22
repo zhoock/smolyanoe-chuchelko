@@ -9,7 +9,6 @@ import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { fetchAlbums, selectCatalogArtistMissing } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { playerActions } from '@features/player';
@@ -41,7 +40,9 @@ import { UniverseFloatingSearch } from '@features/universeSearch';
 import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
+import { ArtistOnboarding } from './ArtistOnboarding';
 import { ScrollToExploreHint } from './ScrollToExploreHint';
+import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import '../../../components/view/Universe3D.style.scss';
 
 const HOME_USE_MOCKS_STORAGE_KEY = 'homeUseMocks';
@@ -67,8 +68,8 @@ export function HomePage() {
   const [sceneArtists, setSceneArtists] = useState<SceneArtist[]>([]);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
-  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(hasArtistParam);
+  const artistPageAccess = useArtistPageAccess(artistSlug);
 
   useEffect(() => {
     const handler = () => setUniverseRefreshToken((n) => n + 1);
@@ -77,13 +78,19 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Пока в адресной строке открыт кабинет, фоновая Home с ?artist= не должна
-    // с force дёргать тот же Redux (thunk и так смотрит window → дубли и «мигание» фона).
+    const active =
+      hasArtistParam && !artistPageAccess.showPublished && !artistPageAccess.showNotFound;
+    document.body.classList.toggle('page--artist-onboarding', active);
+    return () => document.body.classList.remove('page--artist-onboarding');
+  }, [hasArtistParam, artistPageAccess.showPublished, artistPageAccess.showNotFound]);
+
+  useEffect(() => {
+    // Каталог грузит root albumsLoader; force здесь давал повторные loading-циклы
+    // (в т.ч. каждые 15s при опросе email verification → AUTH_SESSION_CHANGED).
     if (isDashboardPathname()) return;
     if (!hasArtistParam) return;
-    void dispatch(fetchAlbums({ force: true }));
-    void dispatch(fetchArticles({ force: true, publicArtistSlug: artistSlug }));
-  }, [dispatch, hasArtistParam, lang, artistSlug]);
+    void dispatch(fetchArticles({ publicArtistSlug: artistSlug }));
+  }, [dispatch, hasArtistParam, artistSlug]);
 
   const handleSearchMatchesChange = useCallback((matchedSlugs: string[] | null) => {
     universeRef.current?.setSearchHighlight(matchedSlugs);
@@ -283,8 +290,16 @@ export function HomePage() {
       return null;
     }
 
-    if (catalogArtistMissing) {
+    if (artistPageAccess.isLoading) {
+      return null;
+    }
+
+    if (artistPageAccess.showNotFound) {
       return <ArtistNotFound />;
+    }
+
+    if (artistPageAccess.showOnboarding) {
+      return <ArtistOnboarding />;
     }
 
     return (

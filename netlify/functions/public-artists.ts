@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
+import { isArtistProfilePublished } from './lib/artist-publication';
 import {
   createErrorResponse,
   createOptionsResponse,
@@ -76,7 +77,14 @@ export const handler: Handler = async (
        ORDER BY u.id ASC`
     );
 
-    const artists: PublicArtistDto[] = rows.rows.map((row) => {
+    const publishedRows = [];
+    for (const row of rows.rows) {
+      if (await isArtistProfilePublished(row.id)) {
+        publishedRows.push(row);
+      }
+    }
+
+    const artists: PublicArtistDto[] = publishedRows.map((row) => {
       const genreCode = row.genre_code || 'other';
       const genreLabel = {
         en: row.label_en || 'Other',

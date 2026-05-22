@@ -254,6 +254,20 @@ export interface IInterface {
     pageTitle: string;
     notice: string;
   };
+  artistOnboarding?: {
+    heroAria: string;
+    heroEmptyHint: string;
+    roleBadge: string;
+    welcomeTitle: string;
+    welcomeDescription: string;
+    cardsHeading: string;
+    cards: {
+      release: { title: string; description: string; button: string };
+      biography: { title: string; description: string; button: string };
+      social: { title: string; description: string; button: string };
+      article: { title: string; description: string; button: string };
+    };
+  };
   /** Кнопка входа/регистрации в шапке; ссылка в кабинет по аватару */
   header?: {
     signIn: string;

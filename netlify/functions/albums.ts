@@ -25,6 +25,7 @@ import {
 import { classifyAuthorizationHeader } from './lib/jwt';
 import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
+import { assertArtistVisibleToViewer } from './lib/artist-publication';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { migrateUserAlbumAudioFolderAfterRename } from './lib/migrate-storage-album-folder';
@@ -973,6 +974,10 @@ export const handler: Handler = async (
       }
 
       const authUserId = authVerdict.kind === 'valid' ? authVerdict.userId : null;
+
+      if (artist) {
+        await assertArtistVisibleToViewer(targetUserId, authUserId);
+      }
 
       // Возвращаем альбомы только выбранного артиста (owner user_id), все lang → merge
       const albumsResult = await query<AlbumRow>(

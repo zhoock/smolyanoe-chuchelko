@@ -42,6 +42,7 @@ import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLoc
 import { isAuthenticated, getToken, isEmailVerified, clearAuth } from '@shared/lib/auth';
 import { clearAccountDeletedSkipReturn } from '@shared/lib/accountDeletedSession';
 import { clearDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
+import { readDashboardOpenIntent, stripDashboardOpenIntent } from '@shared/lib/dashboardOpenIntent';
 import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
@@ -1063,6 +1064,9 @@ function UserDashboard() {
   const activeTab: DashboardTab = tabInvalid ? 'albums' : dashboardTabFromRouteParam(tabFromRoute);
 
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
+  const [profileSettingsInitialTab, setProfileSettingsInitialTab] = useState<
+    'general' | 'profile' | 'security'
+  >('general');
   const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1235,6 +1239,61 @@ function UserDashboard() {
     });
     return false;
   }, [emailVerified, emailCopy.verifyTitle, emailCopy.restrictedUpload, emailCopy.restrictedHint]);
+
+  const consumeDashboardOpenIntent = useCallback(() => {
+    const intent = readDashboardOpenIntent(location.state);
+    if (!intent) return;
+
+    const nextState = stripDashboardOpenIntent(intent);
+    const replaceState = Object.keys(nextState).length > 0 ? nextState : null;
+    let consumed = false;
+
+    if (intent.openEditAlbumModal && guardEmailVerified()) {
+      setEditAlbumModal({ isOpen: true });
+      consumed = true;
+    }
+
+    if (intent.openProfileSettingsModal) {
+      setProfileSettingsInitialTab(intent.profileSettingsTab ?? 'profile');
+      setIsProfileSettingsModalOpen(true);
+      consumed = true;
+    }
+
+    if (intent.openNewArticleModal && guardEmailVerified()) {
+      const newArticle: IArticles = {
+        articleId: `new-${Date.now()}`,
+        nameArticle: '',
+        img: '',
+        date: toLocalYYYYMMDD(),
+        details: [],
+        description: '',
+        isDraft: true,
+      };
+      setEditArticleModal({
+        isOpen: true,
+        article: newArticle,
+      });
+      consumed = true;
+    }
+
+    if (consumed) {
+      navigate(
+        { pathname: location.pathname, search: location.search, hash: location.hash },
+        { replace: true, state: replaceState }
+      );
+    }
+  }, [
+    guardEmailVerified,
+    location.hash,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    consumeDashboardOpenIntent();
+  }, [consumeDashboardOpenIntent]);
 
   const {
     avatarSrc,
@@ -4102,6 +4161,7 @@ function UserDashboard() {
         onClose={() => setIsProfileSettingsModalOpen(false)}
         userName={user?.name ?? undefined}
         userEmail={user?.email}
+        initialTab={profileSettingsInitialTab}
       />
 
       <DeleteAccountModal
