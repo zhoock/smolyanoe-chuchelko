@@ -41,6 +41,69 @@ function isAbortLikeOrConditionSkipError(error: unknown): boolean {
   return name === 'AbortError' || name === 'ConditionError';
 }
 
+/** Deferred loader promises are not consumed; avoid unhandled rejections after Redux settles. */
+function unwrapLoaderAlbumsPromise(
+  fetchThunkPromise: { unwrap: () => Promise<{ albums: IAlbums[] }> },
+  fallback: IAlbums[]
+): Promise<IAlbums[]> {
+  const createNeverResolvingPromise = () => new Promise<IAlbums[]>(() => {});
+
+  return fetchThunkPromise
+    .unwrap()
+    .then((payload) => payload.albums)
+    .catch((error) => {
+      if (isAbortLikeOrConditionSkipError(error)) {
+        return createNeverResolvingPromise();
+      }
+      return fallback;
+    });
+}
+
+function unwrapLoaderArticlesPromise(
+  fetchThunkPromise: { unwrap: () => Promise<{ articles: IArticles[] }> },
+  fallback: IArticles[]
+): Promise<IArticles[]> {
+  const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
+
+  return fetchThunkPromise
+    .unwrap()
+    .then((payload) => payload.articles)
+    .catch((error) => {
+      if (isAbortLikeOrConditionSkipError(error)) {
+        return createNeverResolvingPromise();
+      }
+      return fallback;
+    });
+}
+
+function unwrapLoaderDictionaryPromise(
+  fetchThunkPromise: { unwrap: () => Promise<IInterface[]> },
+  fallback: IInterface[]
+): Promise<IInterface[]> {
+  const createNeverResolvingPromise = () => new Promise<IInterface[]>(() => {});
+
+  return fetchThunkPromise.unwrap().catch((error) => {
+    if (isAbortLikeOrConditionSkipError(error)) {
+      return createNeverResolvingPromise();
+    }
+    return fallback;
+  });
+}
+
+function unwrapLoaderHelpArticlesPromise(
+  fetchThunkPromise: { unwrap: () => Promise<IArticles[]> },
+  fallback: IArticles[]
+): Promise<IArticles[]> {
+  const createNeverResolvingPromise = () => new Promise<IArticles[]>(() => {});
+
+  return fetchThunkPromise.unwrap().catch((error) => {
+    if (isAbortLikeOrConditionSkipError(error)) {
+      return createNeverResolvingPromise();
+    }
+    return fallback;
+  });
+}
+
 export type AlbumsDeferred = {
   templateA: Promise<IAlbums[]>; // альбомы
   templateB: Promise<IArticles[]>; // статьи
@@ -94,12 +157,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
       };
       signal.addEventListener('abort', abortHandler, { once: true });
 
-      templateC = fetchThunkPromise.unwrap().catch((error) => {
-        if (isAbortLikeOrConditionSkipError(error)) {
-          return createNeverResolvingPromise();
-        }
-        throw error;
-      });
+      templateC = unwrapLoaderDictionaryPromise(fetchThunkPromise, []);
     }
   }
 
@@ -138,15 +196,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
           };
           signal.addEventListener('abort', abortHandler, { once: true });
 
-          templateA = fetchThunkPromise
-            .unwrap()
-            .then((p) => p.albums)
-            .catch((error) => {
-              if (isAbortLikeOrConditionSkipError(error)) {
-                return createNeverResolvingPromise();
-              }
-              throw error;
-            });
+          templateA = unwrapLoaderAlbumsPromise(
+            fetchThunkPromise,
+            dash.data.length > 0 ? dash.data : []
+          );
         }
       }
     } else {
@@ -180,15 +233,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
           };
           signal.addEventListener('abort', abortHandler, { once: true });
 
-          templateA = fetchThunkPromise
-            .unwrap()
-            .then((p) => p.albums)
-            .catch((error) => {
-              if (isAbortLikeOrConditionSkipError(error)) {
-                return createNeverResolvingPromise();
-              }
-              throw error;
-            });
+          templateA = unwrapLoaderAlbumsPromise(
+            fetchThunkPromise,
+            selectAlbumsData(store.getState())
+          );
         }
       }
     }
@@ -227,15 +275,10 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
           };
           signal.addEventListener('abort', abortHandler, { once: true });
 
-          templateB = fetchThunkPromise
-            .unwrap()
-            .then((r) => r.articles)
-            .catch((error) => {
-              if (isAbortLikeOrConditionSkipError(error)) {
-                return createNeverResolvingPromise();
-              }
-              throw error;
-            });
+          templateB = unwrapLoaderArticlesPromise(
+            fetchThunkPromise,
+            dash.data.length > 0 ? dash.data : []
+          );
         }
       }
     } else {
@@ -265,15 +308,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
           };
           signal.addEventListener('abort', abortHandler, { once: true });
 
-          templateB = fetchThunkPromise
-            .unwrap()
-            .then((r) => r.articles)
-            .catch((error) => {
-              if (isAbortLikeOrConditionSkipError(error)) {
-                return createNeverResolvingPromise();
-              }
-              throw error;
-            });
+          templateB = unwrapLoaderArticlesPromise(fetchThunkPromise, selectArticlesData(state));
         }
       }
     }
@@ -303,12 +338,7 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
         };
         signal.addEventListener('abort', abortHandler, { once: true });
 
-        templateD = fetchThunkPromise.unwrap().catch((error) => {
-          if (isAbortLikeOrConditionSkipError(error)) {
-            return createNeverResolvingPromise();
-          }
-          throw error;
-        });
+        templateD = unwrapLoaderHelpArticlesPromise(fetchThunkPromise, []);
       }
     }
   }

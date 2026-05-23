@@ -9,6 +9,7 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
 import { getUserIdFromEvent, unauthorizedFromAuthHeader } from './lib/api-helpers';
+import { assertArtistVisibleToViewer } from './lib/artist-publication';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import { viewerHasPremiumAccessToArtist } from './lib/entitlements';
 
@@ -120,6 +121,22 @@ export const handler: Handler = async (
       if (artist) {
         try {
           targetUserId = await resolvePublicArtistUserId(artist);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return {
+              statusCode: error.statusCode,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: error.message,
+              } as SyncedLyricsResponse),
+            };
+          }
+          throw error;
+        }
+
+        try {
+          await assertArtistVisibleToViewer(targetUserId, authUserId);
         } catch (error) {
           if (error instanceof PublicArtistResolverError) {
             return {

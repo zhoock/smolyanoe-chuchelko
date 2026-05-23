@@ -11,6 +11,7 @@
       "openProfile": "My profile",
       "avatarMenu": {
         "settings": "Settings",
+        "myArtistPage": "My Artist Page",
         "upgradePlan": "Upgrade plan",
         "premiumActive": "Premium Active",
         "manageSubscription": "Open Archive",
@@ -271,7 +272,12 @@
         "name": "Name",
         "username": "Username",
         "email": "Email",
-        "location": "Location"
+        "location": "Location",
+        "emailVerification": {
+          "verified": "Verified",
+          "notVerified": "Email not verified",
+          "notVerifiedHint": "Please verify your email to unlock all features and secure your account."
+        }
       },
       "uploadNewAlbum": "Upload New Album",
       "uploadNewArticle": "Upload New Article",

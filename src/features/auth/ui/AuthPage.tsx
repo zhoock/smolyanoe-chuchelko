@@ -6,6 +6,7 @@ import {
   getUser,
   AUTH_EXPIRED_BANNER_SESSION_KEY,
 } from '@shared/lib/auth';
+import { markFirstArtistOnboardingPending } from '@shared/lib/authIntent';
 import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
 import {
   clearAccountDeletedSession,
@@ -79,6 +80,10 @@ export function AuthPage() {
   }
 
   const handleRegisterSuccess = () => {
+    const registeredUser = getUser();
+    if (registeredUser?.id) {
+      markFirstArtistOnboardingPending(registeredUser.id);
+    }
     setPendingPostRegister(true);
     setShowVerifyEmailModal(true);
   };

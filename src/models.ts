@@ -274,6 +274,7 @@ export interface IInterface {
     openProfile: string;
     avatarMenu?: {
       settings: string;
+      myArtistPage?: string;
       upgradePlan: string;
       premiumActive?: string;
       manageSubscription?: string;
@@ -399,6 +400,11 @@ export interface IInterface {
       username: string;
       email: string;
       location: string;
+      emailVerification?: {
+        verified: string;
+        notVerified: string;
+        notVerifiedHint: string;
+      };
     };
     uploadNewAlbum: string;
     uploadNewArticle: string;

@@ -16,13 +16,9 @@ import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import {
-  selectAlbumsStatus,
-  selectAlbumsError,
-  selectAlbumByIdResolved,
-  selectCatalogArtistMissing,
-} from '@entities/album';
+import { selectAlbumsStatus, selectAlbumByIdResolved } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
+import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { getUser } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
@@ -38,14 +34,14 @@ export default function Album() {
     const params = new URLSearchParams(location.search);
     return params.get('artist');
   }, [location.search]);
+  const artistSlug = artistParam ?? '';
+  const artistPageAccess = useArtistPageAccess(artistSlug);
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, {
     artistSlug: artistParam,
   });
   const navigate = useNavigate();
   const { albumId = '' } = useParams<{ albumId: string }>();
   const albumsStatus = useAppSelector(selectAlbumsStatus);
-  const albumsError = useAppSelector(selectAlbumsError);
-  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistParam);
   const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
@@ -139,7 +135,11 @@ export default function Album() {
     return null;
   }
 
-  if (artistParam && catalogArtistMissing) {
+  if (artistParam && artistPageAccess.isLoading) {
+    return <AlbumSkeleton />;
+  }
+
+  if (artistParam && artistPageAccess.showNotFound) {
     return <ArtistNotFound />;
   }
 

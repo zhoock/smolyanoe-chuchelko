@@ -419,16 +419,6 @@ dialog {
       margin-bottom: var(--ms-0);
     }
 
-    &__validation-error {
-      padding: var(--ms-01) var(--ms-0);
-      color: #ffa94d;
-      font-size: var(--ms-0);
-      background: rgb(255 169 77 / 10%);
-      border: 1px solid rgb(255 169 77 / 30%);
-      border-radius: var(--ms-01);
-      margin-bottom: var(--ms-0);
-    }
-
     &__success-message {
       padding: var(--ms-01) var(--ms-0);
       color: #51cf66;

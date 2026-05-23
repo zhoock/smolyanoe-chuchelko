@@ -320,13 +320,39 @@ export const fetchAlbums = createAsyncThunk<
           throw new Error('Failed to fetch albums. Invalid response format.');
         }
 
-        // Удалённый / несуществующий артист (?artist=) — завершаем загрузку, без throw.
+        // Удалённый / приватный артист (?artist=) — завершаем загрузку, без throw.
         if (response.status === 404 && usePublicCatalog) {
+          return wrapAlbumsResult([], requestFetchKey, writeTarget, true);
+        }
+
+        if (response.status >= 500 && usePublicCatalog && publicSlug) {
+          if (catalogStale()) {
+            return staleSnapshotPayload(getState, 'catalog');
+          }
+          const cachedAlbums = getState().albums;
+          if (cachedAlbums.data.length > 0 && cachedAlbums.fetchContextKey === requestFetchKey) {
+            throw new Error(`Failed to fetch albums. Status: ${response.status}`);
+          }
           return wrapAlbumsResult([], requestFetchKey, writeTarget, true);
         }
 
         throw new Error(`Failed to fetch albums. Status: ${response.status}`);
       } catch (apiError) {
+        if (
+          usePublicCatalog &&
+          publicSlug &&
+          !(apiError instanceof Error && apiError.name === 'AbortError')
+        ) {
+          if (catalogStale()) {
+            return staleSnapshotPayload(getState, 'catalog');
+          }
+          const cachedAlbums = getState().albums;
+          if (cachedAlbums.data.length > 0 && cachedAlbums.fetchContextKey === requestFetchKey) {
+            throw apiError instanceof Error ? apiError : new Error(String(apiError));
+          }
+          return wrapAlbumsResult([], requestFetchKey, writeTarget, true);
+        }
+
         if (isFullscreenDashboard) {
           console.error('❌ [albumsSlice] albums API failed in /dashboard', apiError);
         } else if (apiError instanceof Error && apiError.name === 'AbortError') {

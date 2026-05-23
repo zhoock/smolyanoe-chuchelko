@@ -21,6 +21,7 @@ import {
   InlineEditDiscardDialog,
   getCloseDiscardConfirmLabels,
 } from '../../shared/EditableCardField';
+import { ProfileEmailVerificationStatus } from '../../ProfileEmailVerificationStatus';
 import './ProfileSettingsModal.style.scss';
 
 interface ProfileSettingsModalProps {
@@ -28,6 +29,7 @@ interface ProfileSettingsModalProps {
   onClose: () => void;
   userName?: string;
   userEmail?: string;
+  emailVerified?: boolean;
   initialTab?: TabType;
 }
 
@@ -38,6 +40,7 @@ export function ProfileSettingsModal({
   onClose,
   userName = 'Site Owner',
   userEmail = '',
+  emailVerified = false,
   initialTab = 'general',
 }: ProfileSettingsModalProps) {
   const { lang: currentLang, setLang } = useLang();
@@ -979,6 +982,7 @@ export function ProfileSettingsModal({
                         value={userEmail}
                         disabled
                       />
+                      <ProfileEmailVerificationStatus verified={emailVerified} />
                     </div>
 
                     <div className="profile-settings-modal__field">
@@ -1046,12 +1050,6 @@ export function ProfileSettingsModal({
 
                     {passwordError && (
                       <div className="profile-settings-modal__error-message">{passwordError}</div>
-                    )}
-
-                    {passwordValidationError && !passwordError && (
-                      <div className="profile-settings-modal__validation-error">
-                        {passwordValidationError}
-                      </div>
                     )}
 
                     <div className="profile-settings-modal__field">

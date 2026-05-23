@@ -5,6 +5,7 @@
 
 import type { HandlerEvent } from '@netlify/functions';
 import { classifyAuthorizationHeader, extractRoleFromToken, type UserRole } from './jwt';
+import { PublicArtistResolverError } from './public-artist-resolver';
 
 /**
  * Стандартные CORS заголовки для всех API endpoints
@@ -245,6 +246,12 @@ export function handleError(
   context: string,
   defaultMessage: string = 'Unknown error'
 ): { statusCode: number; headers: Record<string, string>; body: string } {
+  if (error instanceof PublicArtistResolverError) {
+    return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
+      code: error.code,
+    });
+  }
+
   const errorMessage = error instanceof Error ? error.message : defaultMessage;
   console.error(`❌ Error in ${context}:`, error);
 

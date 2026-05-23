@@ -976,7 +976,16 @@ export const handler: Handler = async (
       const authUserId = authVerdict.kind === 'valid' ? authVerdict.userId : null;
 
       if (artist) {
-        await assertArtistVisibleToViewer(targetUserId, authUserId);
+        try {
+          await assertArtistVisibleToViewer(targetUserId, authUserId);
+        } catch (error) {
+          if (error instanceof PublicArtistResolverError) {
+            return createErrorResponse(error.statusCode, error.message, CORS_HEADERS, {
+              code: error.code,
+            });
+          }
+          throw error;
+        }
       }
 
       // Возвращаем альбомы только выбранного артиста (owner user_id), все lang → merge

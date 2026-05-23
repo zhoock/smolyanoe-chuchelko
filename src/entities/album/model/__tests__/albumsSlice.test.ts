@@ -8,6 +8,7 @@ import {
   selectAlbumById,
   selectDashboardAlbumsData,
   selectDashboardAlbumsStatus,
+  selectDashboardAlbumsError,
   selectCatalogArtistMissing,
   selectAlbumsFetchContextKey,
 } from '../selectors';
@@ -72,6 +73,12 @@ const createTestStore = () => {
   store.dispatch(setPublicArtistSlug('test-artist'));
   return store;
 };
+
+function setupDashboardFetchContext(store: ReturnType<typeof createTestStore>) {
+  window.history.pushState({}, '', '/dashboard-new/albums');
+  window.localStorage.setItem('auth_token', TEST_AUTH_TOKEN);
+  store.dispatch(setPublicArtistSlug(null));
+}
 
 describe('albumsSlice', () => {
   beforeEach(() => {
@@ -198,6 +205,31 @@ describe('albumsSlice', () => {
       expect(selectAlbumsStatus(state)).toBe('succeeded');
       expect(selectAlbumsData(state)).toEqual([]);
       expect(selectCatalogArtistMissing(state)).toBe(true);
+    });
+
+    test('публичный каталог: 500 на странице артиста трактуется как отсутствующий артист', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({
+          success: false,
+          error: 'Artist not found',
+          code: 'ARTIST_NOT_PUBLISHED',
+        }),
+      } as Response);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toEqual({
+        albums: [],
+        fetchContextKey: 'public:test-artist',
+        writeTarget: 'catalog',
+        catalogArtistMissing: true,
+      });
+      expect(selectAlbumsStatus(store.getState())).toBe('succeeded');
+      expect(selectCatalogArtistMissing(store.getState())).toBe(true);
     });
 
     test('при оверлее дашборда обновляет публичный каталог с ?artist=', async () => {
@@ -328,14 +360,21 @@ describe('albumsSlice', () => {
       mockFetch.mockRejectedValueOnce(new Error(errorMessage));
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      const publicResult = await (store.dispatch as AppDispatch)(fetchAlbums({}));
 
-      expect(result.type).toBe('albums/fetchMerged/rejected');
+      expect(publicResult.type).toBe('albums/fetchMerged/fulfilled');
+      expect(selectCatalogArtistMissing(store.getState())).toBe(true);
+      expect(selectAlbumsStatus(store.getState())).toBe('succeeded');
 
-      const state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe(errorMessage);
-      expect(selectAlbumsData(state)).toEqual([]);
+      mockFetch.mockRejectedValueOnce(new Error(errorMessage));
+      const dashboardStore = createTestStore();
+      setupDashboardFetchContext(dashboardStore);
+      const dashboardResult = await (dashboardStore.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
+
+      expect(dashboardResult.type).toBe('albums/fetchMerged/rejected');
+      expect(selectDashboardAlbumsStatus(dashboardStore.getState())).toBe('failed');
     });
 
     test('должен установить статус loading при начале загрузки', async () => {
@@ -495,39 +534,48 @@ describe('albumsSlice', () => {
       mockFetch.mockRejectedValueOnce(null);
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      setupDashboardFetchContext(store);
+      const result = await (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
 
       expect(result.type).toBe('albums/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('null');
+      expect(selectDashboardAlbumsStatus(state)).toBe('failed');
+      expect(selectDashboardAlbumsError(state)).toBe('null');
     });
 
     test('должен обработать ошибку без Error объекта (строка)', async () => {
       mockFetch.mockRejectedValueOnce('String error');
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      setupDashboardFetchContext(store);
+      const result = await (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
 
       expect(result.type).toBe('albums/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('String error');
+      expect(selectDashboardAlbumsStatus(state)).toBe('failed');
+      expect(selectDashboardAlbumsError(state)).toBe('String error');
     });
 
     test('должен обработать ошибку без Error объекта (undefined)', async () => {
       mockFetch.mockRejectedValueOnce(undefined);
 
       const store = createTestStore();
-      const result = await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      setupDashboardFetchContext(store);
+      const result = await (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
 
       expect(result.type).toBe('albums/fetchMerged/rejected');
 
       const state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('undefined');
+      expect(selectDashboardAlbumsStatus(state)).toBe('failed');
+      expect(selectDashboardAlbumsError(state)).toBe('undefined');
     });
 
     test('должен обработать отмену запроса (abort signal)', async () => {
@@ -548,24 +596,22 @@ describe('albumsSlice', () => {
     });
 
     test('должен позволить повторную загрузку после ошибки', async () => {
-      // Первая попытка - ошибка
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      setupDashboardFetchContext(store);
+      await (store.dispatch as AppDispatch)(fetchAlbums({ force: true, ownerDashboard: true }));
 
       let state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('Network error');
+      expect(selectDashboardAlbumsStatus(state)).toBe('failed');
 
-      // Вторая попытка - успех
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
-      await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      await (store.dispatch as AppDispatch)(fetchAlbums({ force: true, ownerDashboard: true }));
 
       state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('succeeded');
-      expect(selectAlbumsError(state)).toBeNull();
-      expect(selectAlbumsData(state)).toEqual(mockAlbums);
+      expect(selectDashboardAlbumsStatus(state)).toBe('succeeded');
+      expect(selectDashboardAlbumsError(state)).toBeNull();
+      expect(selectDashboardAlbumsData(state)).toEqual(mockAlbums);
     });
 
     test('ошибка фоновой загрузки при непустом кэше не ломает статус succeeded', async () => {
@@ -601,43 +647,46 @@ describe('albumsSlice', () => {
     });
 
     test('должен очищать ошибку при новой загрузке после ошибки', async () => {
-      // Первая попытка - ошибка
       mockFetch.mockRejectedValueOnce(new Error('First error'));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      setupDashboardFetchContext(store);
+      await (store.dispatch as AppDispatch)(fetchAlbums({ force: true, ownerDashboard: true }));
 
       let state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
-      expect(selectAlbumsError(state)).toBe('First error');
+      expect(selectDashboardAlbumsStatus(state)).toBe('failed');
 
-      // Начинаем новую загрузку - ошибка должна быть очищена
       mockFetch.mockImplementation(() => new Promise(() => {}));
-      const promise = (store.dispatch as AppDispatch)(fetchAlbums({}));
+      const promise = (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
 
       state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('loading');
-      expect(selectAlbumsError(state)).toBeNull();
+      expect(selectDashboardAlbumsStatus(state)).toBe('loading');
+      expect(selectDashboardAlbumsError(state)).toBeNull();
 
       promise.abort();
     });
 
     test('не должен запускать загрузку если статус failed, но уже выполняется другая', async () => {
-      // Сначала создаем ошибку
       mockFetch.mockRejectedValueOnce(new Error('Error'));
 
       const store = createTestStore();
-      await (store.dispatch as AppDispatch)(fetchAlbums({}));
+      setupDashboardFetchContext(store);
+      await (store.dispatch as AppDispatch)(fetchAlbums({ force: true, ownerDashboard: true }));
 
       let state = store.getState();
-      expect(selectAlbumsStatus(state)).toBe('failed');
+      expect(selectDashboardAlbumsStatus(state)).toBe('failed');
 
-      // Запускаем новую загрузку
       mockFetch.mockImplementation(() => new Promise(() => {}));
-      const promise1 = (store.dispatch as AppDispatch)(fetchAlbums({}));
+      const promise1 = (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
 
       // Пытаемся запустить еще одну параллельную загрузку
-      const promise2 = (store.dispatch as AppDispatch)(fetchAlbums({}));
+      const promise2 = (store.dispatch as AppDispatch)(
+        fetchAlbums({ force: true, ownerDashboard: true })
+      );
 
       // Проверяем, что getJSON был вызван только один раз
       expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(2);

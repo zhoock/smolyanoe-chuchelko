@@ -6,8 +6,11 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { clearAuth } from '@shared/lib/auth';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 import { useStoredProfileAvatarUrl, getProfileAvatarInitials } from '@shared/lib/hooks/useAvatar';
+import { useOwnArtistPageSummary } from '@shared/lib/hooks/useOwnArtistPageSummary';
+import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import { isProfileAvatarPlaceholderUrl } from '@shared/lib/avatarUpload';
 import {
+  IconArtistPage,
   IconLogOut,
   IconPremiumBadge,
   IconSettings,
@@ -39,6 +42,7 @@ function ProfileAvatarMenuComponent({
   const [menuOpen, setMenuOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const avatarSrc = useStoredProfileAvatarUrl();
+  const ownArtistPage = useOwnArtistPageSummary();
 
   const dashboardLinkState = { backgroundLocation: location };
 
@@ -81,6 +85,13 @@ function ProfileAvatarMenuComponent({
     clearAuth();
     navigate('/');
   }, [navigate, updateOpen]);
+
+  const handleOpenOwnArtistPage = useCallback(() => {
+    const slug = ownArtistPage.publicSlug;
+    if (!slug) return;
+    updateOpen(false);
+    openOwnArtistPage(slug, ownArtistPage.hasPublicReleases, navigate);
+  }, [navigate, ownArtistPage.hasPublicReleases, ownArtistPage.publicSlug, updateOpen]);
 
   const avatarLabels = ui?.header?.avatarMenu;
 
@@ -134,6 +145,17 @@ function ProfileAvatarMenuComponent({
             <IconSettings className="header__profile-menu-icon" />
             <span>{avatarLabels?.settings ?? 'Settings'}</span>
           </Link>
+          {ownArtistPage.publicSlug ? (
+            <button
+              type="button"
+              className="header__profile-menu-item"
+              role="menuitem"
+              onClick={handleOpenOwnArtistPage}
+            >
+              <IconArtistPage className="header__profile-menu-icon" />
+              <span>{avatarLabels?.myArtistPage ?? 'My Artist Page'}</span>
+            </button>
+          ) : null}
           {isPremium ? (
             <Link
               className="header__profile-menu-item header__profile-menu-item--premium"

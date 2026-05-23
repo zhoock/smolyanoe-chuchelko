@@ -53,6 +53,7 @@ import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
+import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
@@ -97,6 +98,7 @@ import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
 import { MyArchiveContent } from './components/archive/MyArchiveContent';
 import { EmailVerificationLockedNotice } from './components/EmailVerificationLockedNotice';
+import { ProfileEmailVerificationStatus } from './components/ProfileEmailVerificationStatus';
 import type { IAlbums, IArticles, IInterface, DashboardTrackVisibilityLabels } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
 import {
@@ -3892,11 +3894,16 @@ function UserDashboard() {
                               </p>
 
                               {profilePublicSlug ? (
-                                <a
-                                  href={`/?artist=${encodeURIComponent(profilePublicSlug)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  type="button"
                                   className="user-dashboard__profile-hero-open"
+                                  onClick={() =>
+                                    openOwnArtistPage(
+                                      profilePublicSlug,
+                                      isArtistPagePublic,
+                                      navigate
+                                    )
+                                  }
                                 >
                                   <span
                                     className="user-dashboard__profile-hero-open-icon"
@@ -3913,7 +3920,7 @@ function UserDashboard() {
                                     </svg>
                                   </span>
                                   {ui?.dashboard?.profileHero?.openArtistPage ?? 'Open artist page'}
-                                </a>
+                                </button>
                               ) : null}
 
                               <input
@@ -3956,6 +3963,7 @@ function UserDashboard() {
                                   disabled
                                   readOnly
                                 />
+                                <ProfileEmailVerificationStatus verified={emailVerified} />
                               </div>
                             </div>
 
@@ -4281,6 +4289,7 @@ function UserDashboard() {
         onClose={() => setIsProfileSettingsModalOpen(false)}
         userName={user?.name ?? undefined}
         userEmail={user?.email}
+        emailVerified={emailVerified}
         initialTab={profileSettingsInitialTab}
       />
 

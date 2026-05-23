@@ -1,0 +1,45 @@
+.profile-email-verification {
+  &--verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-top: 0.15em;
+    color: var(--dark-greenish-yellow);
+    font-size: var(--dashboard-font-size);
+    line-height: 1.3;
+  }
+
+  &--unverified {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    margin-top: 0.35em;
+  }
+
+  &__row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+
+    .profile-email-verification--verified & {
+      color: var(--dark-greenish-yellow);
+    }
+
+    .profile-email-verification--unverified & {
+      color: var(--honeydew-melon);
+    }
+  }
+
+  &__title {
+    color: var(--honeydew-melon);
+  }
+
+  &__hint {
+    margin: 0 0 0 calc(16px + 0.45em);
+    color: var(--dashboard-text-secondary);
+  }
+}

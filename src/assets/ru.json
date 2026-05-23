@@ -11,6 +11,7 @@
       "openProfile": "Мой профиль",
       "avatarMenu": {
         "settings": "Настройки",
+        "myArtistPage": "Моя страница артиста",
         "upgradePlan": "Тариф / подписка",
         "premiumActive": "Premium Active",
         "manageSubscription": "Открыть архив",
@@ -271,7 +272,12 @@
         "name": "Имя",
         "username": "Имя пользователя",
         "email": "Электронная почта",
-        "location": "Местоположение"
+        "location": "Местоположение",
+        "emailVerification": {
+          "verified": "Подтверждён",
+          "notVerified": "Email не подтверждён",
+          "notVerifiedHint": "Подтвердите email, чтобы открыть все функции и защитить аккаунт."
+        }
       },
       "uploadNewAlbum": "Загрузить новый альбом",
       "uploadNewArticle": "Загрузить новую статью",

@@ -46,6 +46,15 @@ function isOwnerDashboardArticlesFetch(arg: FetchArticlesArg): boolean {
   return isDashboardPathname() && !shouldUsePublicArtistCatalogInRedux();
 }
 
+function shouldTreatPublicArtistArticlesAsEmpty(
+  usePublicCatalog: boolean,
+  resolvedSlug: string,
+  status: number
+): boolean {
+  if (!usePublicCatalog || !resolvedSlug) return false;
+  return status === 404 || status >= 500;
+}
+
 export type FetchArticlesResult = {
   articles: IArticles[];
   lastPublicArtistSlug: string | null;
@@ -177,7 +186,10 @@ export const fetchArticles = createAsyncThunk<
           }
 
           return slugMeta(normalize(list));
-        } else if (response?.status === 404 && usePublicCatalog) {
+        } else if (
+          response &&
+          shouldTreatPublicArtistArticlesAsEmpty(usePublicCatalog, resolvedSlug, response.status)
+        ) {
           return slugMeta([]);
         } else {
           apiFailure = new Error(

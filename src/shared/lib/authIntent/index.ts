@@ -1,4 +1,10 @@
 export {
+  clearFirstArtistOnboardingPending,
+  hasFirstArtistOnboardingPending,
+  markFirstArtistOnboardingPending,
+} from './artistOnboardingRedirect';
+export { ArtistOnboardingRedirectController } from './ArtistOnboardingRedirectController';
+export {
   beginPremiumCheckoutAuthIntent,
   buildPremiumCheckoutIntentContext,
   clearPremiumCheckoutAuthIntent,

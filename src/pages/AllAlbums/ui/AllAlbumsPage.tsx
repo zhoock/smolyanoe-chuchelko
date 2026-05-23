@@ -12,9 +12,9 @@ import {
   selectAlbumsStatus,
   selectAlbumsResolvedForAllAlbumsPage,
   selectPublicAlbumsCacheIsStale,
-  selectCatalogArtistMissing,
 } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
+import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import '@entities/album/ui/style.scss';
@@ -29,8 +29,8 @@ const BATCH_SIZE = 16;
 export function AllAlbumsPage() {
   const { lang } = useLang();
   const [searchParams] = useSearchParams();
-  const artistSlug = searchParams.get('artist');
-  const catalogArtistMissing = useAppSelector(selectCatalogArtistMissing);
+  const artistSlug = searchParams.get('artist') ?? '';
+  const artistPageAccess = useArtistPageAccess(artistSlug);
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistSlug);
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
@@ -100,7 +100,17 @@ export function AllAlbumsPage() {
     return null;
   }
 
-  if (artistSlug && catalogArtistMissing) {
+  if (artistSlug && artistPageAccess.isLoading) {
+    return (
+      <section className="all-albums main-background" aria-label={seoTitle}>
+        <div className="wrapper">
+          <AlbumsSkeleton count={BATCH_SIZE} />
+        </div>
+      </section>
+    );
+  }
+
+  if (artistSlug && artistPageAccess.showNotFound) {
     return <ArtistNotFound />;
   }
 
