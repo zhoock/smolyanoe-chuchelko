@@ -325,6 +325,13 @@ export interface IInterface {
     emailVerification?: {
       verifyTitle: string;
       verifyBody: string;
+      sendConfirmationEmail?: string;
+      emailWillBeSentTo?: string;
+      onboardingBodyAlbums?: string;
+      onboardingBodyPosts?: string;
+      onboardingBodyMixer?: string;
+      onboardingBodyPaymentSettings?: string;
+      onboardingBodyContent?: string;
       resendEmail: string;
       changeEmail: string;
       continueLater: string;

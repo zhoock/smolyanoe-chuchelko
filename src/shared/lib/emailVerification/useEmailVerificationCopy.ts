@@ -14,7 +14,19 @@ export function useEmailVerificationCopy() {
       ? {
           verifyTitle: 'Verify your email',
           verifyBody:
-            'We sent a verification link to your email address. Please check your inbox and click the link to verify your email address.',
+            'We use email confirmation to protect your account and access to content publishing.',
+          sendConfirmationEmail: 'Send confirmation email',
+          emailWillBeSentTo: 'The email will be sent to {{email}}',
+          onboardingBodyAlbums:
+            'We use email confirmation to protect your account and access to music uploads.',
+          onboardingBodyPosts:
+            'We use email confirmation to protect your account and access to article publishing.',
+          onboardingBodyMixer:
+            'We use email confirmation to protect your account and access to mixer tools.',
+          onboardingBodyPaymentSettings:
+            'We use email confirmation to protect your account and access to payment settings.',
+          onboardingBodyContent:
+            'We use email confirmation to protect your account and access to content publishing.',
           resendEmail: 'Resend email',
           changeEmail: 'Change email',
           continueLater: 'Continue later',
@@ -56,7 +68,19 @@ export function useEmailVerificationCopy() {
       : {
           verifyTitle: 'Подтвердите email',
           verifyBody:
-            'Мы отправили ссылку для подтверждения на ваш email. Проверьте почту и перейдите по ссылке.',
+            'Мы используем подтверждение email для защиты вашего аккаунта и доступа к публикации контента.',
+          sendConfirmationEmail: 'Отправить письмо для подтверждения',
+          emailWillBeSentTo: 'Письмо придёт на {{email}}',
+          onboardingBodyAlbums:
+            'Мы используем подтверждение email для защиты вашего аккаунта и доступа к загрузке музыки.',
+          onboardingBodyPosts:
+            'Мы используем подтверждение email для защиты вашего аккаунта и доступа к публикации статей.',
+          onboardingBodyMixer:
+            'Мы используем подтверждение email для защиты вашего аккаунта и доступа к инструментам миксера.',
+          onboardingBodyPaymentSettings:
+            'Мы используем подтверждение email для защиты вашего аккаунта и доступа к настройке приёма платежей.',
+          onboardingBodyContent:
+            'Мы используем подтверждение email для защиты вашего аккаунта и доступа к публикации контента.',
           resendEmail: 'Отправить снова',
           changeEmail: 'Изменить email',
           continueLater: 'Продолжить позже',

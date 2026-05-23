@@ -49,7 +49,7 @@ import {
 import { clearAccountDeletedSkipReturn } from '@shared/lib/accountDeletedSession';
 import { clearDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
 import { readDashboardOpenIntent, stripDashboardOpenIntent } from '@shared/lib/dashboardOpenIntent';
-import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
+import { EmailVerificationOnboarding } from '@shared/lib/emailVerification';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
@@ -97,7 +97,6 @@ import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
 import { MyArchiveContent } from './components/archive/MyArchiveContent';
-import { EmailVerificationLockedNotice } from './components/EmailVerificationLockedNotice';
 import { ProfileEmailVerificationStatus } from './components/ProfileEmailVerificationStatus';
 import type { IAlbums, IArticles, IInterface, DashboardTrackVisibilityLabels } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
@@ -1071,7 +1070,6 @@ function UserDashboard() {
   const user = useAuthSessionUser();
   const userId = user?.id ?? null;
   const emailVerified = isEmailVerified(user);
-  const emailCopy = useEmailVerificationCopy();
 
   const tabInvalid =
     tabFromRoute !== undefined && tabFromRoute !== '' && !isDashboardTabSlug(tabFromRoute);
@@ -1241,20 +1239,6 @@ function UserDashboard() {
     navigate({ pathname: '/', search: '' }, { replace: true });
   }, [navigate]);
 
-  const guardEmailVerified = useCallback((): boolean => {
-    if (emailVerified) return true;
-    setAlertModal({
-      isOpen: true,
-      title: emailCopy.verifyTitle,
-      message:
-        emailCopy.restrictedUpload ??
-        emailCopy.restrictedHint ??
-        'Verify your email to unlock this feature',
-      variant: 'warning',
-    });
-    return false;
-  }, [emailVerified, emailCopy.verifyTitle, emailCopy.restrictedUpload, emailCopy.restrictedHint]);
-
   const consumeDashboardOpenIntent = useCallback(() => {
     const intent = readDashboardOpenIntent(location.state);
     if (!intent) return;
@@ -1263,8 +1247,10 @@ function UserDashboard() {
     const replaceState = Object.keys(nextState).length > 0 ? nextState : null;
     let consumed = false;
 
-    if (intent.openEditAlbumModal && guardEmailVerified()) {
-      setEditAlbumModal({ isOpen: true });
+    if (intent.openEditAlbumModal) {
+      if (emailVerified) {
+        setEditAlbumModal({ isOpen: true });
+      }
       consumed = true;
     }
 
@@ -1274,20 +1260,22 @@ function UserDashboard() {
       consumed = true;
     }
 
-    if (intent.openNewArticleModal && guardEmailVerified()) {
-      const newArticle: IArticles = {
-        articleId: `new-${Date.now()}`,
-        nameArticle: '',
-        img: '',
-        date: toLocalYYYYMMDD(),
-        details: [],
-        description: '',
-        isDraft: true,
-      };
-      setEditArticleModal({
-        isOpen: true,
-        article: newArticle,
-      });
+    if (intent.openNewArticleModal) {
+      if (emailVerified) {
+        const newArticle: IArticles = {
+          articleId: `new-${Date.now()}`,
+          nameArticle: '',
+          img: '',
+          date: toLocalYYYYMMDD(),
+          details: [],
+          description: '',
+          isDraft: true,
+        };
+        setEditArticleModal({
+          isOpen: true,
+          article: newArticle,
+        });
+      }
       consumed = true;
     }
 
@@ -1297,14 +1285,7 @@ function UserDashboard() {
         { replace: true, state: replaceState }
       );
     }
-  }, [
-    guardEmailVerified,
-    location.hash,
-    location.pathname,
-    location.search,
-    location.state,
-    navigate,
-  ]);
+  }, [emailVerified, location.hash, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     consumeDashboardOpenIntent();
@@ -1436,7 +1417,7 @@ function UserDashboard() {
   };
 
   const handleArticleCoverFileUpload = async (articleId: string, file: File) => {
-    if (!guardEmailVerified()) return;
+    if (!emailVerified) return;
     if (!file.type.startsWith('image/')) {
       setArticleCoverUpload((prev) => ({
         ...prev,
@@ -2327,7 +2308,7 @@ function UserDashboard() {
 
   // Обработка загрузки треков
   const handleTrackUpload = async (albumId: string, files: FileList) => {
-    if (!guardEmailVerified()) return;
+    if (!emailVerified) return;
     if (isUploadingTracks[albumId]) {
       return;
     }
@@ -2990,7 +2971,10 @@ function UserDashboard() {
               {/* Content area: стабильная оболочка; вкладки скрыты через hidden, не размонтируются */}
               <div className="user-dashboard__content user-dashboard__tab-shell">
                 {/* На первой загрузке альбомов: свой скелетон под активную вкладку */}
-                {albumsInitialLoading && !albumsLoadFailed && activeTab === 'albums' ? (
+                {albumsInitialLoading &&
+                !albumsLoadFailed &&
+                activeTab === 'albums' &&
+                emailVerified ? (
                   <DashboardTabContentSkeleton />
                 ) : albumsInitialLoading && !albumsLoadFailed && activeTab === 'profile' ? (
                   <ProfileTabSkeleton />
@@ -3010,17 +2994,7 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'payment-settings'}
                     >
                       {!emailVerified ? (
-                        <EmailVerificationLockedNotice
-                          title={
-                            emailCopy.restrictedPaymentSettings ??
-                            (lang === 'en' ? 'Payment Settings' : 'Настройки оплаты')
-                          }
-                          hint={
-                            emailCopy.restrictedPaymentSettingsHint ??
-                            emailCopy.restrictedHint ??
-                            ''
-                          }
-                        />
+                        <EmailVerificationOnboarding context="payment-settings" />
                       ) : user?.id ? (
                         <PaymentSettings userId={user.id} />
                       ) : (
@@ -3042,10 +3016,7 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'mixer'}
                     >
                       {!emailVerified ? (
-                        <EmailVerificationLockedNotice
-                          title={emailCopy.restrictedMixer ?? (lang === 'en' ? 'Mixer' : 'Миксер')}
-                          hint={emailCopy.restrictedMixerHint ?? emailCopy.restrictedHint ?? ''}
-                        />
+                        <EmailVerificationOnboarding context="mixer" />
                       ) : (
                         <div className="user-dashboard__section">
                           <MixerAdmin
@@ -3068,701 +3039,706 @@ function UserDashboard() {
                       hidden={activeTab !== 'albums'}
                       aria-hidden={activeTab !== 'albums'}
                     >
-                      <>
-                        <div className="user-dashboard__section">
-                          {albumsInitialLoading ? (
-                            <ArticlesListSkeleton count={4} />
-                          ) : albumsData.length > 0 ? (
-                            <>
-                              <div className="user-dashboard__albums-list">
-                                {albumsData.map((album, index) => {
-                                  const isExpanded = expandedAlbumId === album.id;
-                                  return (
-                                    <React.Fragment key={album.id}>
-                                      <div
-                                        className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
-                                        onClick={() => toggleAlbum(album.id)}
-                                        role="button"
-                                        tabIndex={0}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            toggleAlbum(album.id);
-                                          }
-                                        }}
-                                        aria-label={isExpanded ? 'Collapse album' : 'Expand album'}
-                                      >
-                                        <div className="user-dashboard__album-thumbnail">
-                                          {album.cover ? (
-                                            <AlbumCoverImage
-                                              cover={album.cover}
-                                              userId={album.userId ?? userId ?? undefined}
-                                              alt={album.title}
-                                              contextAlbumId={album.id}
-                                              loading="lazy"
-                                              decoding="async"
-                                            />
-                                          ) : (
-                                            <img
-                                              src="/images/album-placeholder.png"
-                                              alt={album.title}
-                                            />
-                                          )}
-                                        </div>
-                                        <div className="user-dashboard__album-info">
-                                          <div className="user-dashboard__album-title">
-                                            {album.title}
-                                          </div>
-                                          {album.releaseDate ? (
-                                            <div className="user-dashboard__album-date">
-                                              {album.releaseDate}
-                                            </div>
-                                          ) : (
-                                            <div className="user-dashboard__album-year">
-                                              {album.year}
-                                            </div>
-                                          )}
-                                        </div>
+                      {!emailVerified ? (
+                        <EmailVerificationOnboarding context="albums" />
+                      ) : (
+                        <>
+                          <div className="user-dashboard__section">
+                            {albumsInitialLoading ? (
+                              <ArticlesListSkeleton count={4} />
+                            ) : albumsData.length > 0 ? (
+                              <>
+                                <div className="user-dashboard__albums-list">
+                                  {albumsData.map((album, index) => {
+                                    const isExpanded = expandedAlbumId === album.id;
+                                    return (
+                                      <React.Fragment key={album.id}>
                                         <div
-                                          className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
+                                          className={`user-dashboard__album-item ${isExpanded ? 'user-dashboard__album-item--expanded' : ''}`}
+                                          onClick={() => toggleAlbum(album.id)}
+                                          role="button"
+                                          tabIndex={0}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                              e.preventDefault();
+                                              toggleAlbum(album.id);
+                                            }
+                                          }}
+                                          aria-label={
+                                            isExpanded ? 'Collapse album' : 'Expand album'
+                                          }
                                         >
-                                          {isExpanded ? '⌃' : '›'}
-                                        </div>
-                                      </div>
-
-                                      {isExpanded && (
-                                        <div className="user-dashboard__album-expanded">
-                                          {/* Edit Album button */}
-                                          <button
-                                            type="button"
-                                            className="user-dashboard__edit-album-button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              const fromStore = albumsFromStore.find(
-                                                (a) =>
-                                                  a.albumId === album.id ||
-                                                  a.albumId === album.albumId
-                                              );
-                                              setEditAlbumModal({
-                                                isOpen: true,
-                                                albumId:
-                                                  fromStore?.albumId ?? album.albumId ?? album.id,
-                                              });
-                                            }}
-                                          >
-                                            {ui?.dashboard?.editAlbum ?? 'Edit Album'}
-                                          </button>
-
-                                          {/* Track upload section */}
-                                          <div
-                                            className="user-dashboard__track-upload"
-                                            onDrop={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              const files = e.dataTransfer.files;
-                                              if (files.length > 0) {
-                                                handleTrackUpload(album.id, files);
-                                              }
-                                            }}
-                                            onDragOver={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                            }}
-                                            onDragEnter={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                            }}
-                                          >
-                                            {isUploadingTracks[album.id] ? (
-                                              <div className="user-dashboard__track-upload-progress">
-                                                <div className="user-dashboard__track-upload-text">
-                                                  {ui?.dashboard?.uploadingTracks ??
-                                                    'Uploading tracks…'}{' '}
-                                                  {Math.round(uploadProgress[album.id] || 0)}%
-                                                </div>
-                                                <div className="user-dashboard__track-upload-progress-bar">
-                                                  <div
-                                                    className="user-dashboard__track-upload-progress-fill"
-                                                    style={{
-                                                      width: `${uploadProgress[album.id] || 0}%`,
-                                                      transition: 'width 0.3s ease',
-                                                    }}
-                                                  />
-                                                </div>
-                                              </div>
+                                          <div className="user-dashboard__album-thumbnail">
+                                            {album.cover ? (
+                                              <AlbumCoverImage
+                                                cover={album.cover}
+                                                userId={album.userId ?? userId ?? undefined}
+                                                alt={album.title}
+                                                contextAlbumId={album.id}
+                                                loading="lazy"
+                                                decoding="async"
+                                              />
                                             ) : (
-                                              <>
-                                                <div className="user-dashboard__track-upload-text">
-                                                  {ui?.dashboard?.dropTracksHere ??
-                                                    'Drop tracks here or'}
-                                                </div>
-                                                <input
-                                                  ref={(el) => {
-                                                    fileInputRefs.current[album.id] = el;
-                                                  }}
-                                                  type="file"
-                                                  multiple
-                                                  accept="audio/*"
-                                                  style={{ display: 'none' }}
-                                                  onChange={(e) => {
-                                                    const files = e.target.files;
-                                                    if (files && files.length > 0) {
-                                                      handleTrackUpload(album.id, files);
-                                                    }
-                                                    // Сбрасываем input, чтобы можно было загрузить те же файлы снова
-                                                    if (e.target) {
-                                                      e.target.value = '';
-                                                    }
-                                                  }}
-                                                />
-                                                <button
-                                                  type="button"
-                                                  className="user-dashboard__choose-files-button"
-                                                  disabled={isUploadingTracks[album.id]}
-                                                  onClick={() => {
-                                                    const input = fileInputRefs.current[album.id];
-                                                    if (input) {
-                                                      input.click();
-                                                    }
-                                                  }}
-                                                >
-                                                  {ui?.dashboard?.chooseFiles ?? 'Choose files'}
-                                                </button>
-                                              </>
+                                              <img
+                                                src="/images/album-placeholder.png"
+                                                alt={album.title}
+                                              />
                                             )}
                                           </div>
-
-                                          {/* Tracks list with drag-and-drop */}
-                                          <DndContext
-                                            sensors={sensors}
-                                            collisionDetection={closestCenter}
-                                            onDragEnd={(event) => handleDragEnd(event, album.id)}
-                                          >
-                                            <SortableContext
-                                              items={album.tracks.map((track) => track.id)}
-                                              strategy={verticalListSortingStrategy}
-                                            >
-                                              <div className="user-dashboard__tracks-list">
-                                                {album.tracks.map((track, trackIndex) => (
-                                                  <SortableTrackItem
-                                                    key={track.id}
-                                                    track={track}
-                                                    displayIndex={trackIndex + 1}
-                                                    albumId={album.albumId}
-                                                    onDelete={handleDeleteTrack}
-                                                    onTitleChange={handleTrackTitleChange}
-                                                    onVisibilityChange={handleTrackVisibilityChange}
-                                                    ui={ui ?? undefined}
-                                                    swipedTrackId={swipedTrackId}
-                                                    onSwipeChange={setSwipedTrackId}
-                                                  />
-                                                ))}
-                                              </div>
-                                            </SortableContext>
-                                          </DndContext>
-
-                                          {/* Lyrics section */}
-                                          <div className="user-dashboard__lyrics-section">
-                                            <h4 className="user-dashboard__lyrics-title">
-                                              {ui?.dashboard?.lyrics ?? 'Lyrics'}
-                                            </h4>
-                                            <div className="user-dashboard__lyrics-table">
-                                              <div className="user-dashboard__lyrics-header">
-                                                <div className="user-dashboard__lyrics-header-cell">
-                                                  {ui?.dashboard?.track ?? 'Track'}
-                                                </div>
-                                                <div className="user-dashboard__lyrics-header-cell">
-                                                  {ui?.dashboard?.status ?? 'Status'}
-                                                </div>
-                                                <div className="user-dashboard__lyrics-header-cell">
-                                                  {ui?.dashboard?.actions ?? 'Actions'}
-                                                </div>
-                                              </div>
-                                              {album.tracks.map((track) => (
-                                                <div
-                                                  key={track.id}
-                                                  className="user-dashboard__lyrics-row"
-                                                >
-                                                  <div
-                                                    className="user-dashboard__lyrics-cell"
-                                                    data-label={ui?.dashboard?.track ?? 'Track'}
-                                                  >
-                                                    {track.title}
-                                                  </div>
-                                                  <div
-                                                    className="user-dashboard__lyrics-cell"
-                                                    data-label={ui?.dashboard?.status ?? 'Status'}
-                                                  >
-                                                    {getLyricsStatusText(track.lyricsStatus)}
-                                                  </div>
-                                                  <div
-                                                    className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions"
-                                                    data-label={ui?.dashboard?.actions ?? 'Actions'}
-                                                  >
-                                                    <div className="user-dashboard__lyrics-actions-row">
-                                                      {(() => {
-                                                        // Вычисляем hasSyncedLyrics для логирования
-                                                        const hasSyncedLyrics =
-                                                          Array.isArray(track.syncedLyrics) &&
-                                                          track.syncedLyrics.length > 0 &&
-                                                          track.syncedLyrics.some(
-                                                            (line) => line.startTime > 0
-                                                          );
-                                                        return getLyricsActions(
-                                                          track.lyricsStatus,
-                                                          hasSyncedLyrics
-                                                        );
-                                                      })().map((action, idx) => (
-                                                        <button
-                                                          key={idx}
-                                                          type="button"
-                                                          className="user-dashboard__lyrics-action-button"
-                                                          onClick={() =>
-                                                            handleLyricsAction(
-                                                              action.action,
-                                                              album.id,
-                                                              track.id,
-                                                              track.title
-                                                            )
-                                                          }
-                                                        >
-                                                          {action.label}
-                                                        </button>
-                                                      ))}
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))}
+                                          <div className="user-dashboard__album-info">
+                                            <div className="user-dashboard__album-title">
+                                              {album.title}
                                             </div>
-                                          </div>
-
-                                          {/* Delete album button - после блока Lyrics, внизу вправо */}
-                                          <div className="user-dashboard__delete-album-container">
-                                            <button
-                                              type="button"
-                                              className="user-dashboard__delete-album-button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteAlbum(album.id);
-                                              }}
-                                              title={ui?.dashboard?.deleteAlbum ?? 'Delete album'}
-                                              aria-label={
-                                                ui?.dashboard?.deleteAlbum ?? 'Delete album'
-                                              }
-                                            >
-                                              {ui?.dashboard?.deleteAlbum ?? 'Delete album'}
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {index < albumsData.length - 1 && (
-                                        <div className="user-dashboard__album-divider"></div>
-                                      )}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </div>
-
-                              <button
-                                type="button"
-                                className="user-dashboard__upload-button"
-                                onClick={() => {
-                                  if (!guardEmailVerified()) return;
-                                  setEditAlbumModal({ isOpen: true });
-                                }}
-                              >
-                                {ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}
-                              </button>
-                            </>
-                          ) : (
-                            <div className="user-dashboard__albums-prompt">
-                              <div className="user-dashboard__albums-prompt-text">
-                                {ui?.dashboard?.uploadAndPublishAlbums ??
-                                  'Upload and publish albums'}
-                              </div>
-                              <button
-                                type="button"
-                                className="user-dashboard__new-album-button"
-                                onClick={() => {
-                                  if (!guardEmailVerified()) return;
-                                  setEditAlbumModal({ isOpen: true });
-                                }}
-                              >
-                                {ui?.dashboard?.newAlbum ?? 'New Album'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    </div>
-                    <div
-                      className="user-dashboard__tab-panel"
-                      hidden={activeTab !== 'posts'}
-                      aria-hidden={activeTab !== 'posts'}
-                    >
-                      <>
-                        <div className="user-dashboard__section">
-                          {articlesStatus === 'loading' ? (
-                            <ArticlesListSkeleton count={4} />
-                          ) : articlesError ? (
-                            <div className="user-dashboard__error">
-                              {ui?.dashboard?.errorLoadingArticles ?? 'Error loading articles'}:{' '}
-                              {articlesError}
-                            </div>
-                          ) : articlesFromStore && articlesFromStore.length > 0 ? (
-                            <>
-                              <div className="user-dashboard__albums-list">
-                                {articlesFromStore.map((article, index) => {
-                                  const isExpanded = expandedArticleId === article.articleId;
-                                  const articleVisibility = normalizeTrackVisibility(
-                                    article.visibility
-                                  );
-                                  if (article.img && !article.userId) {
-                                    console.error('[BUG] article.userId missing', {
-                                      articleId: article.articleId,
-                                      context: 'articlesList',
-                                    });
-                                  }
-                                  const articleOwnerId = article.userId;
-                                  return (
-                                    <React.Fragment key={article.articleId}>
-                                      <div
-                                        id={`dashboard-article-row-${article.articleId}`}
-                                        className={clsx('user-dashboard__album-item', {
-                                          'user-dashboard__album-item--expanded': isExpanded,
-                                          'user-dashboard__album-item--access-menu-open':
-                                            articleAccessMenuArticleId === article.articleId,
-                                        })}
-                                        onClick={() =>
-                                          setExpandedArticleId(
-                                            isExpanded ? null : article.articleId
-                                          )
-                                        }
-                                        role="button"
-                                        tabIndex={0}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            setExpandedArticleId(
-                                              isExpanded ? null : article.articleId
-                                            );
-                                          }
-                                        }}
-                                        aria-label={
-                                          isExpanded ? 'Collapse article' : 'Expand article'
-                                        }
-                                      >
-                                        <div className="user-dashboard__album-thumbnail user-dashboard__album-thumbnail--article">
-                                          {article.img ? (
-                                            articleOwnerId ? (
-                                              <ArticleCoverImage
-                                                img={article.img}
-                                                userId={articleOwnerId}
-                                                role="admin"
-                                                alt={article.nameArticle}
-                                                loading="lazy"
-                                                decoding="async"
-                                                debugLabel={`UserDashboard:articleThumb:${article.articleId}`}
-                                              />
+                                            {album.releaseDate ? (
+                                              <div className="user-dashboard__album-date">
+                                                {album.releaseDate}
+                                              </div>
                                             ) : (
-                                              <ArticleCoverPlaceholder
-                                                alt={article.nameArticle}
-                                                loading="lazy"
-                                                decoding="async"
-                                              />
-                                            )
-                                          ) : (
-                                            <ArticleCoverPlaceholder
-                                              alt={article.nameArticle}
-                                              loading="lazy"
-                                              decoding="async"
-                                            />
-                                          )}
-                                        </div>
-                                        <div className="user-dashboard__album-info">
-                                          <div className="user-dashboard__album-title">
-                                            {article.nameArticle}
+                                              <div className="user-dashboard__album-year">
+                                                {album.year}
+                                              </div>
+                                            )}
                                           </div>
-                                          {article.date ? (
-                                            <div className="user-dashboard__album-date">
-                                              {formatDate(article.date)}
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                        <div className="user-dashboard__album-item-actions">
-                                          <ArticleAccessControl
-                                            articleId={article.articleId}
-                                            visibility={articleVisibility}
-                                            ui={ui ?? undefined}
-                                            lang={lang}
-                                            menuOpen={
-                                              articleAccessMenuArticleId === article.articleId
-                                            }
-                                            onMenuOpenChange={(open) =>
-                                              setArticleAccessMenuArticleId(
-                                                open ? article.articleId : null
-                                              )
-                                            }
-                                            onPickVisibility={(v) =>
-                                              void handleArticleVisibilityChange(
-                                                article.articleId,
-                                                v
-                                              )
-                                            }
-                                            getRowElement={() =>
-                                              document.getElementById(
-                                                `dashboard-article-row-${article.articleId}`
-                                              )
-                                            }
-                                          />
                                           <div
                                             className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
                                           >
                                             {isExpanded ? '⌃' : '›'}
                                           </div>
                                         </div>
-                                      </div>
 
-                                      {isExpanded && (
-                                        <div className="user-dashboard__album-expanded user-dashboard__album-expanded--article">
-                                          {/* Article Cover Upload */}
-                                          <div className="user-dashboard__article-cover-section">
-                                            <label className="user-dashboard__article-cover-label">
-                                              {ui?.dashboard?.articleCover ?? 'Article Cover'}
-                                            </label>
-
-                                            <input
-                                              type="file"
-                                              id={`article-cover-input-${article.articleId}`}
-                                              accept="image/*"
-                                              className="user-dashboard__article-cover-file-input"
-                                              onChange={(e) =>
-                                                handleArticleCoverFileInput(article.articleId, e)
-                                              }
-                                            />
-
-                                            {(() => {
-                                              const coverState =
-                                                articleCoverUpload[article.articleId];
-                                              const hasCover = article.img || coverState?.preview;
-
-                                              if (hasCover) {
-                                                return (
-                                                  <div className="user-dashboard__article-cover-wrap">
-                                                    <div className="user-dashboard__article-cover-preview-shell">
-                                                      <div className="user-dashboard__article-cover-preview">
-                                                        {coverState?.preview ? (
-                                                          <img
-                                                            src={coverState.preview}
-                                                            alt="Article cover preview"
-                                                            className="user-dashboard__article-cover-image"
-                                                          />
-                                                        ) : article.img && articleOwnerId ? (
-                                                          <ArticleCoverImage
-                                                            img={article.img}
-                                                            userId={articleOwnerId}
-                                                            role="admin"
-                                                            alt="Article cover preview"
-                                                            className="user-dashboard__article-cover-image"
-                                                            debugLabel={`UserDashboard:articleCoverPreview:${article.articleId}`}
-                                                          />
-                                                        ) : (
-                                                          <ArticleCoverPlaceholder
-                                                            alt="Article cover preview"
-                                                            className="user-dashboard__article-cover-image"
-                                                          />
-                                                        )}
-                                                      </div>
-                                                    </div>
-
-                                                    <div className="user-dashboard__article-cover-actions">
-                                                      <div className="user-dashboard__article-cover-buttons">
-                                                        <label
-                                                          htmlFor={`article-cover-input-${article.articleId}`}
-                                                          className="user-dashboard__article-cover-button"
-                                                        >
-                                                          {ui?.dashboard?.replace ?? 'Replace'}
-                                                        </label>
-                                                      </div>
-
-                                                      {coverState?.status === 'uploading' && (
-                                                        <div className="user-dashboard__article-cover-status">
-                                                          <div className="user-dashboard__article-cover-progress">
-                                                            <div
-                                                              className="user-dashboard__article-cover-progress-bar"
-                                                              style={{
-                                                                width: `${coverState.progress}%`,
-                                                              }}
-                                                            />
-                                                          </div>
-                                                          <span className="user-dashboard__article-cover-status-text">
-                                                            {ui?.dashboard?.uploading ??
-                                                              'Uploading...'}
-                                                          </span>
-                                                        </div>
-                                                      )}
-
-                                                      {coverState?.status === 'uploaded' && (
-                                                        <div className="user-dashboard__article-cover-status">
-                                                          <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--success">
-                                                            {ui?.dashboard?.uploaded ?? 'Uploaded'}
-                                                          </span>
-                                                        </div>
-                                                      )}
-
-                                                      {coverState?.status === 'error' &&
-                                                        coverState.error && (
-                                                          <div className="user-dashboard__article-cover-status">
-                                                            <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--error">
-                                                              {ui?.dashboard?.error ?? 'Error'}:{' '}
-                                                              {coverState.error}
-                                                            </span>
-                                                          </div>
-                                                        )}
-                                                    </div>
-                                                  </div>
-                                                );
-                                              }
-
-                                              return (
-                                                <div
-                                                  className={`user-dashboard__article-cover-dropzone ${coverState?.dragActive ? 'user-dashboard__article-cover-dropzone--active' : ''}`}
-                                                  onDragEnter={(e) =>
-                                                    handleArticleCoverDrag(article.articleId, e)
-                                                  }
-                                                  onDragLeave={(e) =>
-                                                    handleArticleCoverDrag(article.articleId, e)
-                                                  }
-                                                  onDragOver={(e) =>
-                                                    handleArticleCoverDrag(article.articleId, e)
-                                                  }
-                                                  onDrop={(e) =>
-                                                    handleArticleCoverDrop(article.articleId, e)
-                                                  }
-                                                >
-                                                  <div className="user-dashboard__article-cover-dropzone-text">
-                                                    {ui?.dashboard?.dragImageHereOr ??
-                                                      'Drag image here or'}
-                                                  </div>
-                                                  <label
-                                                    htmlFor={`article-cover-input-${article.articleId}`}
-                                                    className="user-dashboard__article-cover-file-label"
-                                                  >
-                                                    {ui?.dashboard?.chooseFile ?? 'Choose file'}
-                                                  </label>
-                                                </div>
-                                              );
-                                            })()}
-                                          </div>
-
-                                          {(() => {
-                                            const previewText = getArticlePreviewText(article);
-                                            return previewText ? (
-                                              <div className="user-dashboard__article-description">
-                                                {previewText}
-                                              </div>
-                                            ) : null;
-                                          })()}
-                                          <div className="user-dashboard__article-actions">
+                                        {isExpanded && (
+                                          <div className="user-dashboard__album-expanded">
+                                            {/* Edit Album button */}
                                             <button
                                               type="button"
-                                              className="user-dashboard__edit-button"
+                                              className="user-dashboard__edit-album-button"
                                               onClick={(e) => {
                                                 e.stopPropagation();
-                                                setEditArticleModal({
+                                                const fromStore = albumsFromStore.find(
+                                                  (a) =>
+                                                    a.albumId === album.id ||
+                                                    a.albumId === album.albumId
+                                                );
+                                                setEditAlbumModal({
                                                   isOpen: true,
-                                                  article: article,
+                                                  albumId:
+                                                    fromStore?.albumId ?? album.albumId ?? album.id,
                                                 });
                                               }}
                                             >
-                                              {ui?.dashboard?.editArticle ?? 'Edit Article'}
+                                              {ui?.dashboard?.editAlbum ?? 'Edit Album'}
                                             </button>
-                                            <button
-                                              type="button"
-                                              className="user-dashboard__delete-article-button"
-                                              onClick={(e) => {
+
+                                            {/* Track upload section */}
+                                            <div
+                                              className="user-dashboard__track-upload"
+                                              onDrop={(e) => {
+                                                e.preventDefault();
                                                 e.stopPropagation();
-                                                handleDeleteArticle(article);
+                                                const files = e.dataTransfer.files;
+                                                if (files.length > 0) {
+                                                  handleTrackUpload(album.id, files);
+                                                }
                                               }}
-                                              title={
-                                                ui?.dashboard?.deleteArticle ?? 'Delete article'
-                                              }
-                                              aria-label={
-                                                ui?.dashboard?.deleteArticle ?? 'Delete article'
-                                              }
+                                              onDragOver={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                              }}
+                                              onDragEnter={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                              }}
                                             >
-                                              {ui?.dashboard?.deleteArticle ?? 'Delete article'}
-                                            </button>
+                                              {isUploadingTracks[album.id] ? (
+                                                <div className="user-dashboard__track-upload-progress">
+                                                  <div className="user-dashboard__track-upload-text">
+                                                    {ui?.dashboard?.uploadingTracks ??
+                                                      'Uploading tracks…'}{' '}
+                                                    {Math.round(uploadProgress[album.id] || 0)}%
+                                                  </div>
+                                                  <div className="user-dashboard__track-upload-progress-bar">
+                                                    <div
+                                                      className="user-dashboard__track-upload-progress-fill"
+                                                      style={{
+                                                        width: `${uploadProgress[album.id] || 0}%`,
+                                                        transition: 'width 0.3s ease',
+                                                      }}
+                                                    />
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <>
+                                                  <div className="user-dashboard__track-upload-text">
+                                                    {ui?.dashboard?.dropTracksHere ??
+                                                      'Drop tracks here or'}
+                                                  </div>
+                                                  <input
+                                                    ref={(el) => {
+                                                      fileInputRefs.current[album.id] = el;
+                                                    }}
+                                                    type="file"
+                                                    multiple
+                                                    accept="audio/*"
+                                                    style={{ display: 'none' }}
+                                                    onChange={(e) => {
+                                                      const files = e.target.files;
+                                                      if (files && files.length > 0) {
+                                                        handleTrackUpload(album.id, files);
+                                                      }
+                                                      // Сбрасываем input, чтобы можно было загрузить те же файлы снова
+                                                      if (e.target) {
+                                                        e.target.value = '';
+                                                      }
+                                                    }}
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    className="user-dashboard__choose-files-button"
+                                                    disabled={isUploadingTracks[album.id]}
+                                                    onClick={() => {
+                                                      const input = fileInputRefs.current[album.id];
+                                                      if (input) {
+                                                        input.click();
+                                                      }
+                                                    }}
+                                                  >
+                                                    {ui?.dashboard?.chooseFiles ?? 'Choose files'}
+                                                  </button>
+                                                </>
+                                              )}
+                                            </div>
+
+                                            {/* Tracks list with drag-and-drop */}
+                                            <DndContext
+                                              sensors={sensors}
+                                              collisionDetection={closestCenter}
+                                              onDragEnd={(event) => handleDragEnd(event, album.id)}
+                                            >
+                                              <SortableContext
+                                                items={album.tracks.map((track) => track.id)}
+                                                strategy={verticalListSortingStrategy}
+                                              >
+                                                <div className="user-dashboard__tracks-list">
+                                                  {album.tracks.map((track, trackIndex) => (
+                                                    <SortableTrackItem
+                                                      key={track.id}
+                                                      track={track}
+                                                      displayIndex={trackIndex + 1}
+                                                      albumId={album.albumId}
+                                                      onDelete={handleDeleteTrack}
+                                                      onTitleChange={handleTrackTitleChange}
+                                                      onVisibilityChange={
+                                                        handleTrackVisibilityChange
+                                                      }
+                                                      ui={ui ?? undefined}
+                                                      swipedTrackId={swipedTrackId}
+                                                      onSwipeChange={setSwipedTrackId}
+                                                    />
+                                                  ))}
+                                                </div>
+                                              </SortableContext>
+                                            </DndContext>
+
+                                            {/* Lyrics section */}
+                                            <div className="user-dashboard__lyrics-section">
+                                              <h4 className="user-dashboard__lyrics-title">
+                                                {ui?.dashboard?.lyrics ?? 'Lyrics'}
+                                              </h4>
+                                              <div className="user-dashboard__lyrics-table">
+                                                <div className="user-dashboard__lyrics-header">
+                                                  <div className="user-dashboard__lyrics-header-cell">
+                                                    {ui?.dashboard?.track ?? 'Track'}
+                                                  </div>
+                                                  <div className="user-dashboard__lyrics-header-cell">
+                                                    {ui?.dashboard?.status ?? 'Status'}
+                                                  </div>
+                                                  <div className="user-dashboard__lyrics-header-cell">
+                                                    {ui?.dashboard?.actions ?? 'Actions'}
+                                                  </div>
+                                                </div>
+                                                {album.tracks.map((track) => (
+                                                  <div
+                                                    key={track.id}
+                                                    className="user-dashboard__lyrics-row"
+                                                  >
+                                                    <div
+                                                      className="user-dashboard__lyrics-cell"
+                                                      data-label={ui?.dashboard?.track ?? 'Track'}
+                                                    >
+                                                      {track.title}
+                                                    </div>
+                                                    <div
+                                                      className="user-dashboard__lyrics-cell"
+                                                      data-label={ui?.dashboard?.status ?? 'Status'}
+                                                    >
+                                                      {getLyricsStatusText(track.lyricsStatus)}
+                                                    </div>
+                                                    <div
+                                                      className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions"
+                                                      data-label={
+                                                        ui?.dashboard?.actions ?? 'Actions'
+                                                      }
+                                                    >
+                                                      <div className="user-dashboard__lyrics-actions-row">
+                                                        {(() => {
+                                                          // Вычисляем hasSyncedLyrics для логирования
+                                                          const hasSyncedLyrics =
+                                                            Array.isArray(track.syncedLyrics) &&
+                                                            track.syncedLyrics.length > 0 &&
+                                                            track.syncedLyrics.some(
+                                                              (line) => line.startTime > 0
+                                                            );
+                                                          return getLyricsActions(
+                                                            track.lyricsStatus,
+                                                            hasSyncedLyrics
+                                                          );
+                                                        })().map((action, idx) => (
+                                                          <button
+                                                            key={idx}
+                                                            type="button"
+                                                            className="user-dashboard__lyrics-action-button"
+                                                            onClick={() =>
+                                                              handleLyricsAction(
+                                                                action.action,
+                                                                album.id,
+                                                                track.id,
+                                                                track.title
+                                                              )
+                                                            }
+                                                          >
+                                                            {action.label}
+                                                          </button>
+                                                        ))}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {/* Delete album button - после блока Lyrics, внизу вправо */}
+                                            <div className="user-dashboard__delete-album-container">
+                                              <button
+                                                type="button"
+                                                className="user-dashboard__delete-album-button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDeleteAlbum(album.id);
+                                                }}
+                                                title={ui?.dashboard?.deleteAlbum ?? 'Delete album'}
+                                                aria-label={
+                                                  ui?.dashboard?.deleteAlbum ?? 'Delete album'
+                                                }
+                                              >
+                                                {ui?.dashboard?.deleteAlbum ?? 'Delete album'}
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {index < albumsData.length - 1 && (
+                                          <div className="user-dashboard__album-divider"></div>
+                                        )}
+                                      </React.Fragment>
+                                    );
+                                  })}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="user-dashboard__upload-button"
+                                  onClick={() => setEditAlbumModal({ isOpen: true })}
+                                >
+                                  {ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}
+                                </button>
+                              </>
+                            ) : (
+                              <div className="user-dashboard__albums-prompt">
+                                <div className="user-dashboard__albums-prompt-text">
+                                  {ui?.dashboard?.uploadAndPublishAlbums ??
+                                    'Upload and publish albums'}
+                                </div>
+                                <button
+                                  type="button"
+                                  className="user-dashboard__new-album-button"
+                                  onClick={() => setEditAlbumModal({ isOpen: true })}
+                                >
+                                  {ui?.dashboard?.newAlbum ?? 'New Album'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div
+                      className="user-dashboard__tab-panel"
+                      hidden={activeTab !== 'posts'}
+                      aria-hidden={activeTab !== 'posts'}
+                    >
+                      {!emailVerified ? (
+                        <EmailVerificationOnboarding context="posts" />
+                      ) : (
+                        <>
+                          <div className="user-dashboard__section">
+                            {articlesStatus === 'loading' ? (
+                              <ArticlesListSkeleton count={4} />
+                            ) : articlesError ? (
+                              <div className="user-dashboard__error">
+                                {ui?.dashboard?.errorLoadingArticles ?? 'Error loading articles'}:{' '}
+                                {articlesError}
+                              </div>
+                            ) : articlesFromStore && articlesFromStore.length > 0 ? (
+                              <>
+                                <div className="user-dashboard__albums-list">
+                                  {articlesFromStore.map((article, index) => {
+                                    const isExpanded = expandedArticleId === article.articleId;
+                                    const articleVisibility = normalizeTrackVisibility(
+                                      article.visibility
+                                    );
+                                    if (article.img && !article.userId) {
+                                      console.error('[BUG] article.userId missing', {
+                                        articleId: article.articleId,
+                                        context: 'articlesList',
+                                      });
+                                    }
+                                    const articleOwnerId = article.userId;
+                                    return (
+                                      <React.Fragment key={article.articleId}>
+                                        <div
+                                          id={`dashboard-article-row-${article.articleId}`}
+                                          className={clsx('user-dashboard__album-item', {
+                                            'user-dashboard__album-item--expanded': isExpanded,
+                                            'user-dashboard__album-item--access-menu-open':
+                                              articleAccessMenuArticleId === article.articleId,
+                                          })}
+                                          onClick={() =>
+                                            setExpandedArticleId(
+                                              isExpanded ? null : article.articleId
+                                            )
+                                          }
+                                          role="button"
+                                          tabIndex={0}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                              e.preventDefault();
+                                              setExpandedArticleId(
+                                                isExpanded ? null : article.articleId
+                                              );
+                                            }
+                                          }}
+                                          aria-label={
+                                            isExpanded ? 'Collapse article' : 'Expand article'
+                                          }
+                                        >
+                                          <div className="user-dashboard__album-thumbnail user-dashboard__album-thumbnail--article">
+                                            {article.img ? (
+                                              articleOwnerId ? (
+                                                <ArticleCoverImage
+                                                  img={article.img}
+                                                  userId={articleOwnerId}
+                                                  role="admin"
+                                                  alt={article.nameArticle}
+                                                  loading="lazy"
+                                                  decoding="async"
+                                                  debugLabel={`UserDashboard:articleThumb:${article.articleId}`}
+                                                />
+                                              ) : (
+                                                <ArticleCoverPlaceholder
+                                                  alt={article.nameArticle}
+                                                  loading="lazy"
+                                                  decoding="async"
+                                                />
+                                              )
+                                            ) : (
+                                              <ArticleCoverPlaceholder
+                                                alt={article.nameArticle}
+                                                loading="lazy"
+                                                decoding="async"
+                                              />
+                                            )}
+                                          </div>
+                                          <div className="user-dashboard__album-info">
+                                            <div className="user-dashboard__album-title">
+                                              {article.nameArticle}
+                                            </div>
+                                            {article.date ? (
+                                              <div className="user-dashboard__album-date">
+                                                {formatDate(article.date)}
+                                              </div>
+                                            ) : null}
+                                          </div>
+                                          <div className="user-dashboard__album-item-actions">
+                                            <ArticleAccessControl
+                                              articleId={article.articleId}
+                                              visibility={articleVisibility}
+                                              ui={ui ?? undefined}
+                                              lang={lang}
+                                              menuOpen={
+                                                articleAccessMenuArticleId === article.articleId
+                                              }
+                                              onMenuOpenChange={(open) =>
+                                                setArticleAccessMenuArticleId(
+                                                  open ? article.articleId : null
+                                                )
+                                              }
+                                              onPickVisibility={(v) =>
+                                                void handleArticleVisibilityChange(
+                                                  article.articleId,
+                                                  v
+                                                )
+                                              }
+                                              getRowElement={() =>
+                                                document.getElementById(
+                                                  `dashboard-article-row-${article.articleId}`
+                                                )
+                                              }
+                                            />
+                                            <div
+                                              className={`user-dashboard__album-arrow ${isExpanded ? 'user-dashboard__album-arrow--expanded' : ''}`}
+                                            >
+                                              {isExpanded ? '⌃' : '›'}
+                                            </div>
                                           </div>
                                         </div>
-                                      )}
 
-                                      {index < articlesFromStore.length - 1 && (
-                                        <div className="user-dashboard__album-divider"></div>
-                                      )}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </div>
+                                        {isExpanded && (
+                                          <div className="user-dashboard__album-expanded user-dashboard__album-expanded--article">
+                                            {/* Article Cover Upload */}
+                                            <div className="user-dashboard__article-cover-section">
+                                              <label className="user-dashboard__article-cover-label">
+                                                {ui?.dashboard?.articleCover ?? 'Article Cover'}
+                                              </label>
 
-                              <button
-                                type="button"
-                                className="user-dashboard__upload-button"
-                                onClick={() => {
-                                  if (!guardEmailVerified()) return;
-                                  // Создаем новую пустую статью
-                                  const newArticle: IArticles = {
-                                    articleId: `new-${Date.now()}`,
-                                    nameArticle: '',
-                                    img: '',
-                                    date: toLocalYYYYMMDD(),
-                                    details: [],
-                                    description: '',
-                                    isDraft: true,
-                                  };
-                                  setEditArticleModal({
-                                    isOpen: true,
-                                    article: newArticle,
-                                  });
-                                }}
-                              >
-                                {ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}
-                              </button>
-                            </>
-                          ) : (
-                            <div className="user-dashboard__posts-prompt">
-                              <div className="user-dashboard__posts-prompt-text">
-                                {ui?.dashboard?.writeAndPublishArticles ??
-                                  'Write and publish articles'}
+                                              <input
+                                                type="file"
+                                                id={`article-cover-input-${article.articleId}`}
+                                                accept="image/*"
+                                                className="user-dashboard__article-cover-file-input"
+                                                onChange={(e) =>
+                                                  handleArticleCoverFileInput(article.articleId, e)
+                                                }
+                                              />
+
+                                              {(() => {
+                                                const coverState =
+                                                  articleCoverUpload[article.articleId];
+                                                const hasCover = article.img || coverState?.preview;
+
+                                                if (hasCover) {
+                                                  return (
+                                                    <div className="user-dashboard__article-cover-wrap">
+                                                      <div className="user-dashboard__article-cover-preview-shell">
+                                                        <div className="user-dashboard__article-cover-preview">
+                                                          {coverState?.preview ? (
+                                                            <img
+                                                              src={coverState.preview}
+                                                              alt="Article cover preview"
+                                                              className="user-dashboard__article-cover-image"
+                                                            />
+                                                          ) : article.img && articleOwnerId ? (
+                                                            <ArticleCoverImage
+                                                              img={article.img}
+                                                              userId={articleOwnerId}
+                                                              role="admin"
+                                                              alt="Article cover preview"
+                                                              className="user-dashboard__article-cover-image"
+                                                              debugLabel={`UserDashboard:articleCoverPreview:${article.articleId}`}
+                                                            />
+                                                          ) : (
+                                                            <ArticleCoverPlaceholder
+                                                              alt="Article cover preview"
+                                                              className="user-dashboard__article-cover-image"
+                                                            />
+                                                          )}
+                                                        </div>
+                                                      </div>
+
+                                                      <div className="user-dashboard__article-cover-actions">
+                                                        <div className="user-dashboard__article-cover-buttons">
+                                                          <label
+                                                            htmlFor={`article-cover-input-${article.articleId}`}
+                                                            className="user-dashboard__article-cover-button"
+                                                          >
+                                                            {ui?.dashboard?.replace ?? 'Replace'}
+                                                          </label>
+                                                        </div>
+
+                                                        {coverState?.status === 'uploading' && (
+                                                          <div className="user-dashboard__article-cover-status">
+                                                            <div className="user-dashboard__article-cover-progress">
+                                                              <div
+                                                                className="user-dashboard__article-cover-progress-bar"
+                                                                style={{
+                                                                  width: `${coverState.progress}%`,
+                                                                }}
+                                                              />
+                                                            </div>
+                                                            <span className="user-dashboard__article-cover-status-text">
+                                                              {ui?.dashboard?.uploading ??
+                                                                'Uploading...'}
+                                                            </span>
+                                                          </div>
+                                                        )}
+
+                                                        {coverState?.status === 'uploaded' && (
+                                                          <div className="user-dashboard__article-cover-status">
+                                                            <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--success">
+                                                              {ui?.dashboard?.uploaded ??
+                                                                'Uploaded'}
+                                                            </span>
+                                                          </div>
+                                                        )}
+
+                                                        {coverState?.status === 'error' &&
+                                                          coverState.error && (
+                                                            <div className="user-dashboard__article-cover-status">
+                                                              <span className="user-dashboard__article-cover-status-text user-dashboard__article-cover-status-text--error">
+                                                                {ui?.dashboard?.error ?? 'Error'}:{' '}
+                                                                {coverState.error}
+                                                              </span>
+                                                            </div>
+                                                          )}
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                }
+
+                                                return (
+                                                  <div
+                                                    className={`user-dashboard__article-cover-dropzone ${coverState?.dragActive ? 'user-dashboard__article-cover-dropzone--active' : ''}`}
+                                                    onDragEnter={(e) =>
+                                                      handleArticleCoverDrag(article.articleId, e)
+                                                    }
+                                                    onDragLeave={(e) =>
+                                                      handleArticleCoverDrag(article.articleId, e)
+                                                    }
+                                                    onDragOver={(e) =>
+                                                      handleArticleCoverDrag(article.articleId, e)
+                                                    }
+                                                    onDrop={(e) =>
+                                                      handleArticleCoverDrop(article.articleId, e)
+                                                    }
+                                                  >
+                                                    <div className="user-dashboard__article-cover-dropzone-text">
+                                                      {ui?.dashboard?.dragImageHereOr ??
+                                                        'Drag image here or'}
+                                                    </div>
+                                                    <label
+                                                      htmlFor={`article-cover-input-${article.articleId}`}
+                                                      className="user-dashboard__article-cover-file-label"
+                                                    >
+                                                      {ui?.dashboard?.chooseFile ?? 'Choose file'}
+                                                    </label>
+                                                  </div>
+                                                );
+                                              })()}
+                                            </div>
+
+                                            {(() => {
+                                              const previewText = getArticlePreviewText(article);
+                                              return previewText ? (
+                                                <div className="user-dashboard__article-description">
+                                                  {previewText}
+                                                </div>
+                                              ) : null;
+                                            })()}
+                                            <div className="user-dashboard__article-actions">
+                                              <button
+                                                type="button"
+                                                className="user-dashboard__edit-button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditArticleModal({
+                                                    isOpen: true,
+                                                    article: article,
+                                                  });
+                                                }}
+                                              >
+                                                {ui?.dashboard?.editArticle ?? 'Edit Article'}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                className="user-dashboard__delete-article-button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDeleteArticle(article);
+                                                }}
+                                                title={
+                                                  ui?.dashboard?.deleteArticle ?? 'Delete article'
+                                                }
+                                                aria-label={
+                                                  ui?.dashboard?.deleteArticle ?? 'Delete article'
+                                                }
+                                              >
+                                                {ui?.dashboard?.deleteArticle ?? 'Delete article'}
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {index < articlesFromStore.length - 1 && (
+                                          <div className="user-dashboard__album-divider"></div>
+                                        )}
+                                      </React.Fragment>
+                                    );
+                                  })}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="user-dashboard__upload-button"
+                                  onClick={() => {
+                                    const newArticle: IArticles = {
+                                      articleId: `new-${Date.now()}`,
+                                      nameArticle: '',
+                                      img: '',
+                                      date: toLocalYYYYMMDD(),
+                                      details: [],
+                                      description: '',
+                                      isDraft: true,
+                                    };
+                                    setEditArticleModal({
+                                      isOpen: true,
+                                      article: newArticle,
+                                    });
+                                  }}
+                                >
+                                  {ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}
+                                </button>
+                              </>
+                            ) : (
+                              <div className="user-dashboard__posts-prompt">
+                                <div className="user-dashboard__posts-prompt-text">
+                                  {ui?.dashboard?.writeAndPublishArticles ??
+                                    'Write and publish articles'}
+                                </div>
+                                <button
+                                  type="button"
+                                  className="user-dashboard__new-post-button"
+                                  onClick={() => {
+                                    const newArticle: IArticles = {
+                                      articleId: `new-${Date.now()}`,
+                                      nameArticle: '',
+                                      img: '',
+                                      date: toLocalYYYYMMDD(),
+                                      details: [],
+                                      description: '',
+                                      isDraft: true,
+                                    };
+                                    setEditArticleModal({
+                                      isOpen: true,
+                                      article: newArticle,
+                                    });
+                                  }}
+                                >
+                                  {ui?.dashboard?.newPost ?? 'New Post'}
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                className="user-dashboard__new-post-button"
-                                onClick={() => {
-                                  if (!guardEmailVerified()) return;
-                                  // Создаем новую пустую статью
-                                  const newArticle: IArticles = {
-                                    articleId: `new-${Date.now()}`,
-                                    nameArticle: '',
-                                    img: '',
-                                    date: toLocalYYYYMMDD(),
-                                    details: [],
-                                    description: '',
-                                    isDraft: true,
-                                  };
-                                  setEditArticleModal({
-                                    isOpen: true,
-                                    article: newArticle,
-                                  });
-                                }}
-                              >
-                                {ui?.dashboard?.newPost ?? 'New Post'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div
                       className="user-dashboard__tab-panel"
