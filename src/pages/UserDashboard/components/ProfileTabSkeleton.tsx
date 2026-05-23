@@ -3,7 +3,7 @@ import '@shared/ui/skeleton/skeleton.scss';
 import './articles/ArticlesListSkeleton.scss';
 
 /**
- * Скелетон вкладки Profile — аватар, кнопка Edit, два поля, действия (как в реальной разметке).
+ * Скелетон вкладки Profile — hero + поля + действия.
  */
 export function ProfileTabSkeleton() {
   return (
@@ -14,11 +14,14 @@ export function ProfileTabSkeleton() {
     >
       <div className="skeleton skeleton--bar skeleton--bar-title user-dashboard__tab-skeleton-title" />
       <div className="user-dashboard__profile-skeleton-inner">
-        <div className="user-dashboard__profile-skeleton-avatar-wrap">
-          <div className="skeleton skeleton--image user-dashboard__profile-skeleton-avatar-circle" />
-        </div>
-        <div className="user-dashboard__profile-skeleton-edit">
-          <div className="skeleton skeleton--bar skeleton--bar-medium user-dashboard__profile-skeleton-edit-bar" />
+        <div className="user-dashboard__profile-skeleton-hero">
+          <div className="user-dashboard__profile-skeleton-avatar-wrap">
+            <div className="skeleton skeleton--image user-dashboard__profile-skeleton-avatar-circle" />
+          </div>
+          <div className="skeleton skeleton--bar skeleton--bar-medium user-dashboard__profile-skeleton-name" />
+          <div className="skeleton skeleton--bar skeleton--bar-short user-dashboard__profile-skeleton-status" />
+          <div className="skeleton skeleton--bar user-dashboard__profile-skeleton-description" />
+          <div className="skeleton skeleton--bar skeleton--bar-medium user-dashboard__profile-skeleton-open" />
         </div>
 
         {[0, 1].map((i) => (

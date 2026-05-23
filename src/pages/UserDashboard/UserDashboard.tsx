@@ -39,12 +39,20 @@ import { Popup } from '@shared/ui/popup';
 import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import { AlertModal } from '@shared/ui/alertModal';
 import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
-import { isAuthenticated, getToken, isEmailVerified, clearAuth } from '@shared/lib/auth';
+import {
+  isAuthenticated,
+  getToken,
+  isEmailVerified,
+  clearAuth,
+  getAuthHeader,
+} from '@shared/lib/auth';
 import { clearAccountDeletedSkipReturn } from '@shared/lib/accountDeletedSession';
 import { clearDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
 import { readDashboardOpenIntent, stripDashboardOpenIntent } from '@shared/lib/dashboardOpenIntent';
 import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
+import { buildApiUrl } from '@shared/lib/artistQuery';
+import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
@@ -1051,6 +1059,10 @@ function UserDashboard() {
   const albumsStatus = useAppSelector(selectDashboardAlbumsStatus);
   const albumsError = useAppSelector(selectDashboardAlbumsError);
   const albumsFromStore = useAppSelector(selectDashboardAlbumsData);
+  const isArtistPagePublic = useMemo(
+    () => hasPublishedPublicReleases(albumsFromStore),
+    [albumsFromStore]
+  );
   const articlesStatus = useAppSelector(selectDashboardArticlesStatus);
   const articlesError = useAppSelector(selectDashboardArticlesError);
   const articlesFromStore = useAppSelector((state) => selectDashboardArticlesDataResolved(state));
@@ -1070,6 +1082,7 @@ function UserDashboard() {
   const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
+  const [profilePublicSlug, setProfilePublicSlug] = useState<string | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [articleAccessMenuArticleId, setArticleAccessMenuArticleId] = useState<string | null>(null);
@@ -1681,6 +1694,55 @@ function UserDashboard() {
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [isAvatarMenuOpen]);
+
+  useEffect(() => {
+    if (!userId) {
+      setProfilePublicSlug(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfileSlug = async () => {
+      try {
+        const response = await fetchWithAuthSession(
+          buildApiUrl('/api/user-profile', { lang }, { includeArtist: false }),
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              ...getAuthHeader(),
+            },
+          }
+        );
+        if (cancelled || !response.ok) return;
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          data?: { publicSlug?: string | null };
+        };
+        if (result.success) {
+          setProfilePublicSlug(result.data?.publicSlug?.trim() || null);
+        }
+      } catch {
+        if (!cancelled) setProfilePublicSlug(null);
+      }
+    };
+
+    void loadProfileSlug();
+
+    const onProfileUpdated = () => {
+      void loadProfileSlug();
+    };
+    window.addEventListener('profile-name-updated', onProfileUpdated);
+    window.addEventListener('artist:updated', onProfileUpdated);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('profile-name-updated', onProfileUpdated);
+      window.removeEventListener('artist:updated', onProfileUpdated);
+    };
+  }, [userId, lang]);
 
   // Загрузка альбомов: всегда force при смене аккаунта/языка,
   // чтобы не показывать данные предыдущего пользователя из Redux-кэша.
@@ -3708,8 +3770,13 @@ function UserDashboard() {
                       <div className="user-dashboard__profile-tab">
                         <div className="user-dashboard__section">
                           <div className="user-dashboard__profile-content">
-                            <div className="user-dashboard__avatar">
-                              <div className="user-dashboard__avatar-block">
+                            <div
+                              className={clsx('user-dashboard__profile-hero', {
+                                'user-dashboard__profile-hero--public': isArtistPagePublic,
+                                'user-dashboard__profile-hero--private': !isArtistPagePublic,
+                              })}
+                            >
+                              <div className="user-dashboard__profile-hero-avatar-wrap">
                                 <div className="user-dashboard__avatar-img">
                                   {isProfileAvatarPlaceholderUrl(avatarSrc) ? (
                                     <span
@@ -3744,7 +3811,7 @@ function UserDashboard() {
                                 >
                                   <button
                                     type="button"
-                                    className="user-dashboard__avatar-edit"
+                                    className="user-dashboard__avatar-edit-floating"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setIsAvatarMenuOpen((open) => !open);
@@ -3758,7 +3825,6 @@ function UserDashboard() {
                                     <span className="user-dashboard__avatar-edit-icon" aria-hidden>
                                       ✎
                                     </span>
-                                    <span>{ui?.dashboard?.avatarEdit ?? 'Edit'}</span>
                                   </button>
                                   {isAvatarMenuOpen && (
                                     <div
@@ -3796,6 +3862,60 @@ function UserDashboard() {
                                   )}
                                 </div>
                               </div>
+
+                              <h2 className="user-dashboard__profile-hero-name">
+                                {user?.name?.trim() || '…'}
+                              </h2>
+
+                              <p
+                                className={clsx('user-dashboard__profile-hero-status', {
+                                  'user-dashboard__profile-hero-status--public': isArtistPagePublic,
+                                  'user-dashboard__profile-hero-status--private':
+                                    !isArtistPagePublic,
+                                })}
+                              >
+                                <span
+                                  className="user-dashboard__profile-hero-status-dot"
+                                  aria-hidden="true"
+                                />
+                                {isArtistPagePublic
+                                  ? (ui?.dashboard?.profileHero?.pagePublic ?? 'Page is public')
+                                  : (ui?.dashboard?.profileHero?.pagePrivate ?? 'Page is private')}
+                              </p>
+
+                              <p className="user-dashboard__profile-hero-description">
+                                {isArtistPagePublic
+                                  ? (ui?.dashboard?.profileHero?.publicDescription ??
+                                    'Your artist page is now public\nand visible to everyone.')
+                                  : (ui?.dashboard?.profileHero?.privateDescription ??
+                                    'Only you can see your artist page right now.')}
+                              </p>
+
+                              {profilePublicSlug ? (
+                                <a
+                                  href={`/?artist=${encodeURIComponent(profilePublicSlug)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="user-dashboard__profile-hero-open"
+                                >
+                                  <span
+                                    className="user-dashboard__profile-hero-open-icon"
+                                    aria-hidden
+                                  >
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+                                      <path
+                                        d="M14 3h7v7M10 14L21 3M21 14v7H3V3h7"
+                                        stroke="currentColor"
+                                        strokeWidth="1.75"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  </span>
+                                  {ui?.dashboard?.profileHero?.openArtistPage ?? 'Open artist page'}
+                                </a>
+                              ) : null}
+
                               <input
                                 ref={avatarInputRef}
                                 type="file"

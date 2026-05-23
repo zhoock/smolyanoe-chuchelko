@@ -131,23 +131,11 @@ dialog {
       }
     }
 
-    /** Строка с аватаром — на всю ширину, круг+кнопка по центру */
-    &__avatar {
+    /** Аватар в profile hero */
+    &__profile-hero-avatar-wrap {
       position: relative;
-      display: flex;
-      justify-content: center;
-      width: 100%;
-      overflow: visible;
-    }
-
-    /** Круг, под ним — кнопка Edit и меню */
-    &__avatar-block {
       display: inline-flex;
-      flex-flow: column wrap;
-      align-items: center;
-      justify-content: center;
-      gap: var(--ms-0);
-      max-width: 100%;
+      flex-shrink: 0;
     }
 
     &__avatar-img {
@@ -182,19 +170,43 @@ dialog {
     }
 
     &__avatar-actions {
-      position: relative;
+      position: absolute;
+      right: 0;
+      bottom: 0;
       z-index: 3;
-      flex-shrink: 0;
     }
 
-    &__avatar-edit {
+    &__avatar-edit-floating {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.4em;
-      min-height: 2.25rem;
+      inline-size: calc(var(--ms-1) + var(--ms-01));
+      block-size: calc(var(--ms-1) + var(--ms-01));
+      padding: 0;
+      color: var(--dashboard-text-primary);
+      background: var(--dashboard-card-bg);
+      border: 1px solid var(--dashboard-card-border);
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgb(var(--black-rgb) / 18%);
+      cursor: pointer;
+      transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 
-      @include dashboard-button;
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--mango-sorbet);
+        outline-offset: 2px;
+      }
+
+      &:hover:not(:disabled) {
+        background: var(--dashboard-hover-bg);
+        border-color: var(--dark-greenish-yellow);
+      }
     }
 
     &__avatar-edit-icon {
@@ -205,15 +217,11 @@ dialog {
       flex-shrink: 0;
     }
 
-    &__avatar-edit:focus-visible {
-      outline: 2px solid var(--mango-sorbet);
-      outline-offset: 2px;
-    }
-
     &__avatar-menu {
       position: absolute;
       top: calc(100% + 6px);
-      left: 0;
+      right: 0;
+      left: auto;
       z-index: 5;
       margin: 0;
       padding: 0.35rem 0;

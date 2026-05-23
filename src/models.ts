@@ -493,6 +493,13 @@ export interface IInterface {
     removeAvatarPhoto?: string;
     /** Файл аватара больше лимита (2 MB) */
     avatarFileTooLarge?: string;
+    profileHero?: {
+      pagePrivate?: string;
+      pagePublic?: string;
+      privateDescription?: string;
+      publicDescription?: string;
+      openArtistPage?: string;
+    };
     errorSavingText?: string;
     enterLink: string;
     addImage: string;

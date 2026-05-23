@@ -377,6 +377,13 @@
       "uploadAvatarPhoto": "Upload the photo...",
       "removeAvatarPhoto": "Remove photo",
       "avatarFileTooLarge": "The image is too large. Maximum file size is 2 MB. Choose a smaller file.",
+      "profileHero": {
+        "pagePrivate": "Page is private",
+        "pagePublic": "Page is public",
+        "privateDescription": "Only you can see your artist page right now.",
+        "publicDescription": "Your artist page is now public\nand visible to everyone.",
+        "openArtistPage": "Open artist page"
+      },
       "enterLink": "Enter link:",
       "addImage": "Add image",
       "addDivider": "Add divider",
