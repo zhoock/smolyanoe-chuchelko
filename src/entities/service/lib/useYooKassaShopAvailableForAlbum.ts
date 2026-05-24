@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { IAlbums, String } from '@models';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { getYooKassaShopId } from '@shared/api/payment';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import {
   hasAlbumPurchaseSectionContent,
   hasTruthyButtonUrl,
   isAlbumPaidSaleEnabled,
+  isAlbumViewerOwner,
 } from './albumPurchaseUtils';
 
 type YookassaState = { status: 'loading' | 'done'; available: boolean };
@@ -54,12 +56,14 @@ export function useYooKassaShopAvailableForAlbum(album: IAlbums, enabled: boolea
  * блок есть только при настроенной ЮKassa у продавца.
  */
 export function useShowAlbumPurchaseSection(album: IAlbums | undefined): boolean | null {
+  const viewer = useAuthSessionUser();
+  const isAlbumOwnerView = isAlbumViewerOwner(album, viewer?.id);
   const buttons = album?.buttons as String | undefined;
   const isDownloadAllowed = album ? isAlbumPaidSaleEnabled(album) : false;
   const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
   const { loading, available } = useYooKassaShopAvailableForAlbum(
     album ?? ({ albumId: '' } as IAlbums),
-    Boolean(album && isDownloadAllowed)
+    Boolean(album && isDownloadAllowed && !isAlbumOwnerView)
   );
 
   if (!album) {
@@ -70,6 +74,9 @@ export function useShowAlbumPurchaseSection(album: IAlbums | undefined): boolean
   }
   if (hasPurchaseLinks) {
     return true;
+  }
+  if (isAlbumOwnerView) {
+    return false;
   }
   if (loading) {
     return null;

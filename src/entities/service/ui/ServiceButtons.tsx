@@ -5,6 +5,7 @@ import type { String, IAlbums } from '@models';
 import { useState } from 'react';
 import { downloadOwnedAlbumZipByAuth } from '@shared/api/purchases';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { GetButton } from './GetButton';
 import { useCart } from '../model/CartContext';
 import {
@@ -12,6 +13,7 @@ import {
   hasAlbumStreamSectionContent,
   hasTruthyButtonUrl,
   isAlbumPaidSaleEnabled,
+  isAlbumViewerOwner,
 } from '../lib/albumPurchaseUtils';
 import { useYooKassaShopAvailableForAlbum } from '../lib/useYooKassaShopAvailableForAlbum';
 import { useAlbumOwnedByViewer } from '../lib/useAlbumOwnedByViewer';
@@ -27,6 +29,7 @@ export {
   hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
   isAlbumPaidSaleEnabled,
+  isAlbumViewerOwner,
 } from '../lib/albumPurchaseUtils';
 
 function ServiceButtonsContent({
@@ -58,16 +61,22 @@ function ServiceButtonsContent({
   const isDownloadingAlbum = albumDownloadState.active;
   const downloadProgress = albumDownloadState.percent;
   const buttons = album?.buttons as String;
+  const viewer = useAuthSessionUser();
+  const isAlbumOwnerView = isAlbumViewerOwner(album, viewer?.id);
 
   const isPaidSaleEnabled = isAlbumPaidSaleEnabled(album);
   const hasPurchaseLinks = hasTruthyButtonUrl(buttons, ['itunes', 'bandcamp', 'amazon']);
 
-  const yookassaCheckEnabled = section === 'Купить' && isPaidSaleEnabled;
+  const yookassaCheckEnabled = section === 'Купить' && isPaidSaleEnabled && !isAlbumOwnerView;
   const { loading: yookassaLoading, available: yookassaAvailable } =
     useYooKassaShopAvailableForAlbum(album, yookassaCheckEnabled);
 
   const downloadButtonEnabled =
-    section === 'Купить' && isPaidSaleEnabled && !yookassaLoading && yookassaAvailable;
+    section === 'Купить' &&
+    isPaidSaleEnabled &&
+    !yookassaLoading &&
+    yookassaAvailable &&
+    !isAlbumOwnerView;
   const { isOwned, ownedPurchase } = useAlbumOwnedByViewer(album, downloadButtonEnabled);
 
   if (section === 'Купить' && !hasAlbumPurchaseSectionContent(album)) {
@@ -77,7 +86,7 @@ function ServiceButtonsContent({
     return null;
   }
 
-  if (section === 'Купить' && !hasPurchaseLinks && isPaidSaleEnabled) {
+  if (section === 'Купить' && !hasPurchaseLinks && isPaidSaleEnabled && !isAlbumOwnerView) {
     if (yookassaLoading) {
       return null;
     }

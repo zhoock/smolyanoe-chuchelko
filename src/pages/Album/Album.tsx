@@ -10,6 +10,7 @@ import { Share } from '@features/share';
 import {
   ServiceButtons,
   hasAlbumStreamSectionContent,
+  isAlbumViewerOwner,
   useShowAlbumPurchaseSection,
 } from '@entities/service';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -20,7 +21,7 @@ import { selectAlbumsStatus, selectAlbumByIdResolved } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
 import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
-import { getUser } from '@shared/lib/auth';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
@@ -45,6 +46,7 @@ export default function Album() {
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistParam);
   const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const viewer = useAuthSessionUser();
   const showPurchaseSection = useShowAlbumPurchaseSection(album);
   const showAlbumLoadingShell = useShowSurfaceAlbumsLoadingShell(albumsStatus, Boolean(album));
 
@@ -167,8 +169,7 @@ export default function Album() {
     );
   }
 
-  const viewerId = getUser()?.id ?? null;
-  const isAlbumOwner = Boolean(album.userId && viewerId && album.userId === viewerId);
+  const isAlbumOwner = isAlbumViewerOwner(album, viewer?.id);
   const inArtistPublicContext = Boolean(artistParam?.trim());
   if (album.isPublic === false && !isAlbumOwner && !inArtistPublicContext) {
     return (

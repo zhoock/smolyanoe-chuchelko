@@ -1,5 +1,15 @@
 import type { String, IAlbums } from '@models';
 
+/** Signed-in viewer owns this album (artist dashboard context, not customer purchase). */
+export function isAlbumViewerOwner(
+  album: IAlbums | undefined,
+  viewerUserId: string | null | undefined
+): boolean {
+  const ownerId = album?.userId?.trim();
+  const viewerId = viewerUserId?.trim();
+  return Boolean(ownerId && viewerId && ownerId === viewerId);
+}
+
 export function getAllowDownloadSaleValue(album: IAlbums): string {
   return album?.release && typeof album.release === 'object' && 'allowDownloadSale' in album.release
     ? String((album.release as Record<string, unknown>).allowDownloadSale)

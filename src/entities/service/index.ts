@@ -3,5 +3,6 @@ export {
   hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
   isAlbumPaidSaleEnabled,
+  isAlbumViewerOwner,
 } from './ui/ServiceButtons';
 export { useShowAlbumPurchaseSection } from './lib/useYooKassaShopAvailableForAlbum';
