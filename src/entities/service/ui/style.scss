@@ -64,6 +64,13 @@
         color: var(--link-button-color, #dddddd);
         background: var(--link-button-background-color, #373633);
       }
+
+      &.service-buttons__link--downloading {
+        position: relative;
+        overflow: hidden;
+        cursor: wait;
+        pointer-events: none;
+      }
     }
   }
 
@@ -130,6 +137,45 @@
 
     @include adjust-font-size-to($ms-0, 0);
   }
+
+  &__download-progress {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 1;
+    inline-size: 100%;
+    block-size: 3px;
+    background: color-mix(in srgb, var(--link-color, #998238) 40%, transparent);
+    pointer-events: none;
+  }
+
+  &__download-progress-fill {
+    display: block;
+    block-size: 100%;
+    inline-size: 0;
+    width: 0;
+    background: var(--link-color, #998238);
+    transition:
+      inline-size 0.2s ease,
+      width 0.2s ease;
+  }
+}
+
+.service-buttons__link--download-preparing .service-buttons__download-progress-fill {
+  inline-size: 40%;
+  width: 40%;
+  transition: none;
+  animation: service-buttons-download-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes service-buttons-download-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(320%);
+  }
 }
 
 html.theme-light {
@@ -156,7 +202,10 @@ html.theme-light {
   }
 }
 
-.service-buttons__link--download:hover:not(.service-buttons__link--in-cart) {
+.service-buttons__link--download:hover:not(
+    .service-buttons__link--in-cart,
+    .service-buttons__link--downloading
+  ) {
   .service-buttons__download-title,
   .service-buttons__download-subtitle,
   .service-buttons__download-price {

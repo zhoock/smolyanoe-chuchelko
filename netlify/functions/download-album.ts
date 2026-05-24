@@ -201,6 +201,7 @@ export const handler: Handler = async (
       statusCode: 200,
       headers: {
         'Content-Type': 'application/zip',
+        'Content-Length': String(zipBuffer.length),
         'Content-Disposition': `attachment; filename="${zipFileName}"; filename*=UTF-8''${encodeURIComponent(zipFileName)}`,
         'Cache-Control': 'no-cache',
       },

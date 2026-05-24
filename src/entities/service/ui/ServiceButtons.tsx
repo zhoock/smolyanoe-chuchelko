@@ -2,6 +2,9 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { String, IAlbums } from '@models';
+import { useState } from 'react';
+import { downloadOwnedAlbumZipByAuth } from '@shared/api/purchases';
+import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import { GetButton } from './GetButton';
 import { useCart } from '../model/CartContext';
 import {
@@ -11,6 +14,7 @@ import {
   isAlbumPaidSaleEnabled,
 } from '../lib/albumPurchaseUtils';
 import { useYooKassaShopAvailableForAlbum } from '../lib/useYooKassaShopAvailableForAlbum';
+import { useAlbumOwnedByViewer } from '../lib/useAlbumOwnedByViewer';
 import { getAlbumPrice } from '../lib/getAlbumPrice';
 import './style.scss';
 
@@ -37,10 +41,22 @@ function ServiceButtonsContent({
     stream: string;
     buyAlbum: string;
     buyAlbumPermanentAccess: string;
+    buyAlbumPurchased: string;
+    buyAlbumOwned: string;
     buyAlbumInCart: string;
+    downloadAlbum: string;
+    downloadAlbumLoading: string;
+    downloadAlbumPreparing: string;
+    errorDownloadingAlbum: string;
   };
 }) {
   const { addToCart, cartAlbums } = useCart();
+  const [albumDownloadState, setAlbumDownloadState] = useState<{
+    active: boolean;
+    percent: number | null;
+  }>({ active: false, percent: null });
+  const isDownloadingAlbum = albumDownloadState.active;
+  const downloadProgress = albumDownloadState.percent;
   const buttons = album?.buttons as String;
 
   const isPaidSaleEnabled = isAlbumPaidSaleEnabled(album);
@@ -49,6 +65,10 @@ function ServiceButtonsContent({
   const yookassaCheckEnabled = section === 'Купить' && isPaidSaleEnabled;
   const { loading: yookassaLoading, available: yookassaAvailable } =
     useYooKassaShopAvailableForAlbum(album, yookassaCheckEnabled);
+
+  const downloadButtonEnabled =
+    section === 'Купить' && isPaidSaleEnabled && !yookassaLoading && yookassaAvailable;
+  const { isOwned, ownedPurchase } = useAlbumOwnedByViewer(album, downloadButtonEnabled);
 
   if (section === 'Купить' && !hasAlbumPurchaseSectionContent(album)) {
     return null;
@@ -68,16 +88,78 @@ function ServiceButtonsContent({
 
   const isInCart = album.albumId ? cartAlbums.some((a) => a.albumId === album.albumId) : false;
 
-  const handleDownloadClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const showDownloadButton = downloadButtonEnabled;
+  const albumKey = getAlbumKeyForPaymentApis(album);
+  const albumPrice = showDownloadButton ? getAlbumPrice(album).formatted : '';
+
+  const handlePurchaseButtonClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
+
+    if (isOwned) {
+      if (isDownloadingAlbum || !albumKey) {
+        return;
+      }
+
+      const downloadTracks =
+        album.tracks?.length > 0
+          ? album.tracks.map((track) => ({
+              trackId: String(track.id),
+              title: track.title,
+            }))
+          : (ownedPurchase?.tracks ?? []);
+
+      if (downloadTracks.length === 0) {
+        alert(labels.errorDownloadingAlbum);
+        return;
+      }
+
+      void (async () => {
+        setAlbumDownloadState({ active: true, percent: null });
+
+        try {
+          await downloadOwnedAlbumZipByAuth(
+            {
+              albumId: albumKey,
+              artist: album.artist,
+              album: album.album,
+              tracks: downloadTracks,
+            },
+            {
+              onProgress: ({ percent }) => {
+                setAlbumDownloadState({ active: true, percent });
+              },
+            }
+          );
+        } catch (error) {
+          console.error('Error downloading album:', error);
+          alert(labels.errorDownloadingAlbum);
+        } finally {
+          setAlbumDownloadState({ active: false, percent: null });
+        }
+      })();
+      return;
+    }
+
     if (!isInCart) {
       addToCart(album);
     }
   };
 
-  const showDownloadButton =
-    isPaidSaleEnabled && !yookassaLoading && yookassaAvailable && section === 'Купить';
-  const albumPrice = showDownloadButton ? getAlbumPrice(album).formatted : '';
+  const purchaseTitle = isDownloadingAlbum
+    ? labels.downloadAlbumLoading
+    : isOwned
+      ? labels.downloadAlbum
+      : labels.buyAlbum;
+  const purchaseSubtitle = isDownloadingAlbum
+    ? downloadProgress !== null
+      ? `${downloadProgress}%`
+      : labels.downloadAlbumPreparing
+    : isOwned
+      ? labels.buyAlbumPurchased
+      : labels.buyAlbumPermanentAccess;
+  const purchaseRightLabel = isOwned || isDownloadingAlbum ? labels.buyAlbumOwned : albumPrice;
+  const purchaseDisabled = !isOwned && isInCart;
+  const progressBarValue = downloadProgress ?? 0;
 
   return (
     <div className="service-buttons">
@@ -93,16 +175,25 @@ function ServiceButtonsContent({
                 <a
                   href="#"
                   className={`service-buttons__link service-buttons__link--download${
-                    isInCart ? ' service-buttons__link--in-cart' : ''
+                    purchaseDisabled ? ' service-buttons__link--in-cart' : ''
+                  }${isDownloadingAlbum ? ' service-buttons__link--downloading' : ''}${
+                    isDownloadingAlbum && downloadProgress === null
+                      ? ' service-buttons__link--download-preparing'
+                      : ''
                   }`}
                   aria-label={
-                    isInCart
-                      ? labels.buyAlbumInCart
-                      : `${labels.buyAlbum}, ${albumPrice}, ${labels.buyAlbumPermanentAccess}`
+                    isDownloadingAlbum
+                      ? `${labels.downloadAlbumLoading} ${purchaseSubtitle}, ${labels.buyAlbumOwned}`
+                      : isOwned
+                        ? `${labels.downloadAlbum}, ${labels.buyAlbumPurchased}, ${labels.buyAlbumOwned}`
+                        : isInCart
+                          ? labels.buyAlbumInCart
+                          : `${labels.buyAlbum}, ${albumPrice}, ${labels.buyAlbumPermanentAccess}`
                   }
-                  aria-disabled={isInCart}
-                  tabIndex={isInCart ? -1 : 0}
-                  onClick={handleDownloadClick}
+                  aria-disabled={purchaseDisabled || isDownloadingAlbum}
+                  aria-busy={isDownloadingAlbum}
+                  tabIndex={purchaseDisabled || isDownloadingAlbum ? -1 : 0}
+                  onClick={handlePurchaseButtonClick}
                 >
                   <span className="service-buttons__download-icon" aria-hidden="true">
                     <svg
@@ -121,13 +212,33 @@ function ServiceButtonsContent({
                     </svg>
                   </span>
                   <span className="service-buttons__download-copy">
-                    <span className="service-buttons__download-title">{labels.buyAlbum}</span>
-                    <span className="service-buttons__download-subtitle">
-                      {labels.buyAlbumPermanentAccess}
-                    </span>
+                    <span className="service-buttons__download-title">{purchaseTitle}</span>
+                    <span className="service-buttons__download-subtitle">{purchaseSubtitle}</span>
                   </span>
                   <span className="service-buttons__download-divider" aria-hidden="true" />
-                  <span className="service-buttons__download-price">{albumPrice}</span>
+                  <span className="service-buttons__download-price">{purchaseRightLabel}</span>
+                  {isDownloadingAlbum && (
+                    <span
+                      className="service-buttons__download-progress"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={downloadProgress ?? 0}
+                      aria-label={purchaseSubtitle}
+                    >
+                      <span
+                        className="service-buttons__download-progress-fill"
+                        style={
+                          downloadProgress !== null
+                            ? {
+                                inlineSize: `${progressBarValue}%`,
+                                width: `${progressBarValue}%`,
+                              }
+                            : undefined
+                        }
+                      />
+                    </span>
+                  )}
                 </a>
               </li>
             )}
@@ -190,14 +301,26 @@ export function ServiceButtons({ album, section }: ServiceButtonsProps) {
           stream: 'Stream',
           buyAlbum: 'Buy Album',
           buyAlbumPermanentAccess: 'Permanent access',
+          buyAlbumPurchased: 'Purchased',
+          buyAlbumOwned: 'Owned',
           buyAlbumInCart: 'Album already in cart',
+          downloadAlbum: 'Download Album',
+          downloadAlbumLoading: 'Downloading...',
+          downloadAlbumPreparing: 'Preparing archive...',
+          errorDownloadingAlbum: 'Error downloading album. Please try again.',
         }
       : {
           purchase: 'Купить',
           stream: 'Слушать',
           buyAlbum: 'Купить альбом',
           buyAlbumPermanentAccess: 'Постоянный доступ',
+          buyAlbumPurchased: 'Куплено',
+          buyAlbumOwned: 'Ваше',
           buyAlbumInCart: 'Альбом уже в корзине',
+          downloadAlbum: 'Скачать альбом',
+          downloadAlbumLoading: 'Скачивание...',
+          downloadAlbumPreparing: 'Подготовка архива...',
+          errorDownloadingAlbum: 'Ошибка при скачивании альбома. Попробуйте ещё раз.',
         };
   const buttons = ui?.buttons ?? {};
   const labels = {
@@ -206,7 +329,13 @@ export function ServiceButtons({ album, section }: ServiceButtonsProps) {
     buyAlbum: buttons.buyAlbum ?? fallbackLabels.buyAlbum,
     buyAlbumPermanentAccess:
       buttons.buyAlbumPermanentAccess ?? fallbackLabels.buyAlbumPermanentAccess,
+    buyAlbumPurchased: buttons.buyAlbumPurchased ?? fallbackLabels.buyAlbumPurchased,
+    buyAlbumOwned: buttons.buyAlbumOwned ?? fallbackLabels.buyAlbumOwned,
     buyAlbumInCart: buttons.buyAlbumInCart ?? fallbackLabels.buyAlbumInCart,
+    downloadAlbum: buttons.downloadAlbum ?? fallbackLabels.downloadAlbum,
+    downloadAlbumLoading: buttons.downloadAlbumLoading ?? fallbackLabels.downloadAlbumLoading,
+    downloadAlbumPreparing: buttons.downloadAlbumPreparing ?? fallbackLabels.downloadAlbumPreparing,
+    errorDownloadingAlbum: buttons.errorDownloadingAlbum ?? fallbackLabels.errorDownloadingAlbum,
   };
 
   return <ServiceButtonsContent album={album} section={section} labels={labels} />;
