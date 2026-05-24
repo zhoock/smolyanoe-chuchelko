@@ -3021,7 +3021,7 @@ function UserDashboard() {
                       hidden={activeTab !== 'my-purchases'}
                       aria-hidden={activeTab !== 'my-purchases'}
                     >
-                      <MyPurchasesContent userEmail={user?.email} />
+                      <MyPurchasesContent />
                     </div>
                     <div
                       className="user-dashboard__tab-panel"

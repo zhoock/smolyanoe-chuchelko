@@ -252,7 +252,7 @@
   }
 
   &__button--cancel {
-    @include dashboard-button($margin: 0);
+    @include dashboard-btn-ghost($margin: 0);
 
     &:disabled {
       cursor: not-allowed;
@@ -261,37 +261,10 @@
   }
 
   &__button--danger {
-    margin: 0;
-    padding: var(--ms-01) var(--ms-0);
-    color: var(--error-color, #cf807d);
-    font-size: var(--dashboard-font-size);
-    background: transparent;
-    border: 1px solid var(--error-color, #cf807d);
-    border-radius: var(--ms-01);
-    transition:
-      color 200ms ease,
-      background 200ms ease,
-      border-color 200ms ease;
-    cursor: pointer;
-    appearance: none;
-
-    @media (hover: hover) and (pointer: fine) {
-      &:hover:not(:disabled) {
-        background: rgb(207 128 125 / 14%);
-      }
-    }
+    @include dashboard-btn-destructive($margin: 0);
 
     &:disabled {
-      color: color-mix(in srgb, var(--error-color, #cf807d) 70%, var(--dashboard-text-secondary));
-      background: transparent;
-      border-color: color-mix(
-        in srgb,
-        var(--error-color, #cf807d) 45%,
-        var(--dashboard-card-border)
-      );
-      opacity: 1;
-      cursor: not-allowed;
-      pointer-events: none;
+      opacity: var(--dashboard-btn-disabled-opacity);
     }
   }
 

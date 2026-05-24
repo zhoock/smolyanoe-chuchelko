@@ -25,6 +25,8 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
+import { upsertPurchaseRecord, upsertPurchaseRecordSilent } from './lib/purchases';
+import { resolveAlbumByKey, fetchTracksForResolvedAlbum } from './lib/resolve-album-key';
 import dns from 'node:dns';
 
 // Форсируем IPv4 для избежания проблем с fetch в некоторых сетях
@@ -212,10 +214,10 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
 
         if (orderResult.rows.length > 0) {
           const order = orderResult.rows[0];
-          const albumId = order.album_id || paymentStatus.metadata?.albumId;
+          const albumKey = order.album_id || paymentStatus.metadata?.albumId;
           const customerEmail = order.customer_email || paymentStatus.metadata?.customerEmail;
 
-          if (albumId && customerEmail) {
+          if (albumKey && customerEmail) {
             // ВАЖНО: Проверяем, не было ли уже отправлено письмо через webhook
             // Проверяем наличие записи в webhook_events для payment.succeeded
             const webhookEventId = `notification-payment.succeeded-${paymentStatus.id}`;
@@ -234,117 +236,65 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
                 }
               );
               // Все равно создаем/обновляем purchase, но не отправляем email
-              await query(
-                `INSERT INTO purchases (order_id, customer_email, album_id)
-                 VALUES ($1, $2, $3)
-                 ON CONFLICT (customer_email, album_id) 
-                 DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP`,
-                [orderId, customerEmail, albumId]
-              );
+              await upsertPurchaseRecordSilent(orderId, customerEmail, albumKey);
             } else {
-              // Создаем запись о покупке (или получаем существующую)
-              const purchaseResult = await query<{
-                id: string;
-                purchase_token: string;
-              }>(
-                `INSERT INTO purchases (order_id, customer_email, album_id)
-                 VALUES ($1, $2, $3)
-                 ON CONFLICT (customer_email, album_id) 
-                 DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
-                 RETURNING id, purchase_token`,
-                [orderId, customerEmail, albumId]
-              );
+              const purchase = await upsertPurchaseRecord(orderId, customerEmail, albumKey);
 
-              if (purchaseResult.rows.length > 0) {
-                const purchase = purchaseResult.rows[0];
+              if (purchase) {
                 console.log('✅ Purchase created/updated:', {
                   purchaseId: purchase.id,
                   purchaseToken: purchase.purchase_token,
                   orderId,
-                  albumId,
+                  albumKey,
                   customerEmail,
                 });
 
                 // Отправляем email (не блокируем основной поток)
                 // Это резервный механизм на случай, если webhook не сработал
                 import('./lib/email')
-                  .then(({ sendPurchaseEmail }) => {
-                    // Получаем информацию об альбоме и треках
-                    return query<{
-                      artist: string;
-                      album: string;
-                      lang: string;
-                      customer_first_name: string | null;
-                      customer_last_name: string | null;
-                    }>(
-                      `SELECT a.artist, a.album, a.lang, o.customer_first_name, o.customer_last_name
-                     FROM albums a
-                     INNER JOIN orders o ON a.album_id = o.album_id
-                     WHERE a.album_id = $1
-                     ORDER BY CASE WHEN a.lang = 'ru' THEN 1 ELSE 2 END
-                     LIMIT 1`,
-                      [albumId]
-                    ).then((albumResult) => {
-                      if (albumResult.rows.length > 0) {
-                        const album = albumResult.rows[0];
-
-                        // Получаем треки альбома
-                        return query<{
-                          track_id: string;
-                          title: string;
-                        }>(
-                          `SELECT t.track_id, t.title 
-                         FROM tracks t
-                         INNER JOIN albums a ON t.album_id = a.id
-                         WHERE a.album_id = $1 AND a.lang = $2
-                         ORDER BY t.order_index ASC`,
-                          [albumId, album.lang]
-                        ).then((tracksResult) => {
-                          const tracks = tracksResult.rows.map((row) => ({
-                            trackId: row.track_id,
-                            title: row.title,
-                          }));
-
-                          const customerName =
-                            album.customer_first_name && album.customer_last_name
-                              ? `${album.customer_first_name} ${album.customer_last_name}`
-                              : album.customer_first_name || undefined;
-
-                          console.log(
-                            '📧 [get-payment-status] Attempting to send purchase email:',
-                            {
-                              to: customerEmail,
-                              customerName,
-                              albumName: album.album,
-                              artistName: album.artist,
-                              orderId,
-                              tracksCount: tracks.length,
-                              hasResendKey: !!process.env.RESEND_API_KEY,
-                            }
-                          );
-
-                          return import('./lib/user-preferred-language')
-                            .then(({ resolveEmailLocaleForAddress }) =>
-                              resolveEmailLocaleForAddress(customerEmail, album.lang)
-                            )
-                            .then((locale) =>
-                              sendPurchaseEmail({
-                                to: customerEmail,
-                                customerName,
-                                albumName: album.album,
-                                artistName: album.artist,
-                                orderId,
-                                purchaseToken: purchase.purchase_token,
-                                tracks,
-                                siteUrl: process.env.NETLIFY_SITE_URL || undefined,
-                                locale,
-                              })
-                            );
-                        });
+                  .then(({ sendPurchaseEmail }) =>
+                    resolveAlbumByKey(albumKey).then(async (album) => {
+                      if (!album) {
+                        return { success: false, error: 'Album not found' };
                       }
-                      return Promise.resolve({ success: false, error: 'Album not found' });
-                    });
-                  })
+
+                      const orderMetaResult = await query<{
+                        customer_first_name: string | null;
+                        customer_last_name: string | null;
+                      }>(
+                        `SELECT customer_first_name, customer_last_name
+                         FROM orders
+                         WHERE id = $1
+                         LIMIT 1`,
+                        [orderId]
+                      );
+                      const orderMeta = orderMetaResult.rows[0];
+
+                      const tracks = await fetchTracksForResolvedAlbum(album);
+
+                      const customerName =
+                        orderMeta?.customer_first_name && orderMeta?.customer_last_name
+                          ? `${orderMeta.customer_first_name} ${orderMeta.customer_last_name}`
+                          : orderMeta?.customer_first_name || undefined;
+
+                      const { resolveEmailLocaleForAddress } = await import(
+                        './lib/user-preferred-language'
+                      );
+                      const locale = await resolveEmailLocaleForAddress(customerEmail, album.lang);
+
+                      return sendPurchaseEmail({
+                        to: customerEmail,
+                        customerName,
+                        albumName: album.album,
+                        artistName: album.artist,
+                        orderId,
+                        purchaseToken: purchase.purchase_token,
+                        tracks,
+                        siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+                        locale,
+                      });
+                    })
+                  )
                   .then((result) => {
                     if (result?.success) {
                       console.log('✅ [get-payment-status] Purchase email sent successfully:', {
@@ -372,7 +322,7 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
             }
           } else {
             console.warn('⚠️ Cannot create purchase: missing albumId or customerEmail', {
-              albumId,
+              albumKey,
               customerEmail,
               orderId,
             });

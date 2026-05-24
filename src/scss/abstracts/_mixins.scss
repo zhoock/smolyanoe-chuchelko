@@ -59,50 +59,168 @@ $ms-4: 123.363px; // 6.854rem;
   }
 }
 
-// Dashboard button - единый темный стиль для всех кнопок в админке
-@mixin dashboard-button(
+// Dashboard button system — shared shell (height, radius, typography, transition)
+@mixin dashboard-btn-base(
   $margin: 0,
-  $padding: var(--ms-01) var(--ms-0),
-  $border-radius: var(--ms-01),
-  $font-size: var(--dashboard-font-size)
+  $padding: var(--dashboard-btn-padding-y) var(--dashboard-btn-padding-x),
+  $border-radius: var(--dashboard-btn-radius),
+  $font-size: var(--dashboard-btn-font-size)
 ) {
-  @include button-variant(
-    $color: var(--dashboard-button-cancel-text),
-    $background: var(--dashboard-button-cancel-bg),
-    $hover-color: var(--dashboard-button-cancel-text),
-    $hover-background: var(--dashboard-button-cancel-hover),
-    $margin: $margin,
-    $padding: $padding,
-    $border-radius: $border-radius,
-    $font-size: $font-size
-  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ms-02);
+  min-height: var(--dashboard-btn-height);
+  margin: $margin;
+  padding: $padding;
+  font-family: inherit;
+  font-size: $font-size;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  cursor: pointer;
+  appearance: none;
+  user-select: none;
+  transition:
+    color var(--dashboard-btn-transition-duration) var(--dashboard-btn-transition-easing),
+    background-color var(--dashboard-btn-transition-duration) var(--dashboard-btn-transition-easing),
+    border-color var(--dashboard-btn-transition-duration) var(--dashboard-btn-transition-easing),
+    opacity var(--dashboard-btn-transition-duration) var(--dashboard-btn-transition-easing);
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--dashboard-btn-focus-ring);
+    outline-offset: 2px;
+  }
+
+  &.disabled,
+  &[disabled] {
+    cursor: not-allowed;
+    opacity: var(--dashboard-btn-disabled-opacity);
+    pointer-events: none;
+  }
+
+  &:active:not(:disabled) {
+    scale: 0.98;
+  }
 }
 
-// Dashboard delete button - стиль для кнопок удаления
-@mixin dashboard-delete-button() {
-  @include button-variant(
-    $color: rgba(255 255 255 / 30%),
-    $background: rgb(139 69 19 / 30%),
-    $hover-color: var(--dashboard-button-cancel-text),
-    $hover-background: rgb(220 38 38 / 30%),
-    $margin: 0,
-    $font-size: var(--dashboard-font-size)
-  );
+// Primary — accent outline, tinted hover, fill on press
+@mixin dashboard-btn-primary(
+  $margin: 0,
+  $padding: var(--dashboard-btn-padding-y) var(--dashboard-btn-padding-x),
+  $border-radius: var(--dashboard-btn-radius),
+  $font-size: var(--dashboard-btn-font-size)
+) {
+  @include dashboard-btn-base($margin, $padding, $border-radius, $font-size);
+
+  color: var(--dashboard-btn-primary-text);
+  background: transparent;
+  border-color: var(--dashboard-btn-primary-border);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      color: var(--dashboard-btn-primary-text);
+      background: var(--dashboard-btn-primary-hover-bg);
+      border-color: var(--dashboard-btn-primary-border);
+    }
+  }
+
+  &:active:not(:disabled) {
+    color: var(--dashboard-btn-primary-active-text);
+    background: var(--dashboard-btn-primary-active-bg);
+    border-color: var(--dashboard-btn-primary-active-bg);
+  }
 }
 
-// Outline danger — вторичное деструктивное действие (удаление аккаунта и т.п.)
-@mixin dashboard-danger-outline-button() {
-  @include button-variant(
-    $color: var(--error-color, #cf807d),
-    $background: transparent,
-    $hover-color: var(--error-color, #cf807d),
-    $hover-background: rgb(207 128 125 / 12%),
-    $margin: 0,
-    $padding: var(--ms-01) var(--ms-0),
-    $border: 1px solid color-mix(in srgb, var(--error-color, #cf807d) 70%, transparent),
-    $border-radius: var(--ms-01),
-    $font-size: var(--dashboard-font-size)
-  );
+// Secondary — subtle neutral outline
+@mixin dashboard-btn-secondary(
+  $margin: 0,
+  $padding: var(--dashboard-btn-padding-y) var(--dashboard-btn-padding-x),
+  $border-radius: var(--dashboard-btn-radius),
+  $font-size: var(--dashboard-btn-font-size)
+) {
+  @include dashboard-btn-base($margin, $padding, $border-radius, $font-size);
+
+  color: var(--dashboard-btn-secondary-text);
+  background: transparent;
+  border-color: var(--dashboard-btn-secondary-border);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      color: var(--dashboard-btn-secondary-text);
+      background: var(--dashboard-btn-secondary-hover-bg);
+      border-color: var(--dashboard-btn-secondary-border);
+    }
+  }
+
+  &:active:not(:disabled) {
+    color: var(--dashboard-btn-secondary-active-text);
+    background: var(--dashboard-btn-secondary-active-bg);
+    border-color: var(--dashboard-btn-secondary-active-border);
+  }
+}
+
+// Destructive — red/pink outline
+@mixin dashboard-btn-destructive(
+  $margin: 0,
+  $padding: var(--dashboard-btn-padding-y) var(--dashboard-btn-padding-x),
+  $border-radius: var(--dashboard-btn-radius),
+  $font-size: var(--dashboard-btn-font-size)
+) {
+  @include dashboard-btn-base($margin, $padding, $border-radius, $font-size);
+
+  color: var(--dashboard-btn-destructive-text);
+  background: transparent;
+  border-color: var(--dashboard-btn-destructive-border);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      color: var(--dashboard-btn-destructive-text);
+      background: var(--dashboard-btn-destructive-hover-bg);
+      border-color: var(--dashboard-btn-destructive-border);
+    }
+  }
+
+  &:active:not(:disabled) {
+    color: var(--dashboard-btn-destructive-active-text);
+    background: var(--dashboard-btn-destructive-active-bg);
+    border-color: var(--dashboard-btn-destructive-active-bg);
+  }
+}
+
+// Ghost — text only (Cancel, Back, Close)
+@mixin dashboard-btn-ghost(
+  $margin: 0,
+  $padding: var(--dashboard-btn-padding-y) var(--dashboard-btn-padding-x),
+  $border-radius: var(--dashboard-btn-radius),
+  $font-size: var(--dashboard-btn-font-size)
+) {
+  @include dashboard-btn-base($margin, $padding, $border-radius, $font-size);
+
+  color: var(--dashboard-btn-ghost-text);
+  background: transparent;
+  border-color: transparent;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      color: var(--dashboard-btn-ghost-hover-text);
+      background: transparent;
+      border-color: transparent;
+    }
+  }
+
+  &:active:not(:disabled) {
+    color: var(--dashboard-btn-ghost-hover-text);
+    opacity: 0.85;
+  }
 }
 
 // Dashboard modal card - единый стиль для всех попапов
@@ -499,21 +617,39 @@ $desktops: 'width >= 1024px';
   --dashboard-text-secondary: var(--quiet-gray);
   --dashboard-input-bg: var(--white);
   --dashboard-input-border: var(--icy-mist);
-  --dashboard-button-bg: var(--icy-mist);
-  --dashboard-button-bg-hover: var(--mango-sorbet);
-  --dashboard-button-text: var(--graphite-green);
-  --dashboard-button-cancel-bg: var(--icy-mist);
-  --dashboard-button-cancel-text: var(--graphite-green);
-  --dashboard-button-cancel-hover: var(--mango-sorbet);
-  --dashboard-button-save-bg: var(--mango-sorbet);
-  --dashboard-button-save-text: var(--graphite-green);
-  --dashboard-button-save-hover: var(--honeydew-melon);
-  --dashboard-button-primary-bg: var(--mango-sorbet);
-  --dashboard-button-primary-bg-hover: var(--honeydew-melon);
-  --dashboard-button-primary-text: var(--graphite-green);
   --dashboard-divider: var(--icy-mist);
   --dashboard-hover-bg: var(--icy-mist);
   --dashboard-active-bg: var(--mango-sorbet);
   --dashboard-shadow: rgb(var(--black-rgb) / 10%);
   --dashboard-backdrop: rgb(var(--black-rgb) / 20%);
+
+  // Dashboard button system — light theme
+  --dashboard-accent-rgb: var(--dark-greenish-yellow-rgb);
+  --dashboard-btn-height: 2.25rem;
+  --dashboard-btn-radius: var(--ms-01);
+  --dashboard-btn-padding-y: var(--ms-01);
+  --dashboard-btn-padding-x: var(--ms-0);
+  --dashboard-btn-font-size: var(--dashboard-font-size);
+  --dashboard-btn-transition-duration: 160ms;
+  --dashboard-btn-transition-easing: ease;
+  --dashboard-btn-disabled-opacity: 0.45;
+  --dashboard-btn-focus-ring: var(--dark-greenish-yellow);
+  --dashboard-btn-primary-text: var(--dark-greenish-yellow);
+  --dashboard-btn-primary-border: var(--dark-greenish-yellow);
+  --dashboard-btn-primary-hover-bg: rgb(var(--dashboard-accent-rgb) / 11%);
+  --dashboard-btn-primary-active-text: var(--white);
+  --dashboard-btn-primary-active-bg: var(--dark-greenish-yellow);
+  --dashboard-btn-secondary-text: var(--graphite-green);
+  --dashboard-btn-secondary-border: rgb(0 0 0 / 10%);
+  --dashboard-btn-secondary-hover-bg: rgb(0 0 0 / 4%);
+  --dashboard-btn-secondary-active-text: var(--graphite-green);
+  --dashboard-btn-secondary-active-bg: rgb(0 0 0 / 8%);
+  --dashboard-btn-secondary-active-border: rgb(0 0 0 / 14%);
+  --dashboard-btn-destructive-text: var(--error-color);
+  --dashboard-btn-destructive-border: var(--error-color);
+  --dashboard-btn-destructive-hover-bg: rgb(var(--pink-terracotta-rgb) / 12%);
+  --dashboard-btn-destructive-active-text: var(--white);
+  --dashboard-btn-destructive-active-bg: var(--error-color);
+  --dashboard-btn-ghost-text: var(--quiet-gray);
+  --dashboard-btn-ghost-hover-text: var(--graphite-green);
 }

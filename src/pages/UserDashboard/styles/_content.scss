@@ -230,33 +230,11 @@ dialog {
     }
 
     &__profile-hero-open {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5em;
       inline-size: min(100%, 16.5rem);
       margin-block-start: var(--ms-01);
-      padding: var(--ms-01) var(--ms-0);
-      color: var(--dark-greenish-yellow);
-      font-size: var(--dashboard-font-size);
-      line-height: 1.2;
       text-decoration: none;
-      background: transparent;
-      border: 1px solid var(--dark-greenish-yellow);
-      border-radius: var(--ms-01);
-      transition:
-        background-color 0.15s ease,
-        color 0.15s ease;
 
-      &:hover {
-        color: var(--dashboard-text-primary);
-        background: rgb(var(--dark-greenish-yellow-rgb) / 12%);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--mango-sorbet);
-        outline-offset: 2px;
-      }
+      @include dashboard-btn-primary($margin: var(--ms-01) 0 0 0);
     }
 
     &__profile-hero-open-icon {
@@ -404,7 +382,7 @@ dialog {
     }
 
     &__delete-album-button {
-      @include dashboard-delete-button;
+      @include dashboard-btn-destructive;
     }
 
     &__album-item--expanded {
@@ -443,7 +421,7 @@ dialog {
     }
 
     &__edit-button {
-      @include dashboard-button(
+      @include dashboard-btn-secondary(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
         $border-radius: var(--ms-01)
@@ -451,7 +429,7 @@ dialog {
     }
 
     &__delete-article-button {
-      @include dashboard-delete-button;
+      @include dashboard-btn-destructive;
     }
 
     &__article-cover-section {
@@ -499,7 +477,7 @@ dialog {
       cursor: pointer;
       display: inline-block;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__article-cover-wrap {
@@ -561,7 +539,7 @@ dialog {
     }
 
     &__article-cover-button {
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__article-cover-status {
@@ -602,7 +580,7 @@ dialog {
     &__edit-album-button {
       margin-bottom: var(--ms-0);
 
-      @include dashboard-button($margin: 0 0 var(--ms-0) 0);
+      @include dashboard-btn-secondary($margin: 0 0 var(--ms-0) 0);
     }
 
     &__albums-prompt {
@@ -620,7 +598,7 @@ dialog {
     }
 
     &__new-album-button {
-      @include dashboard-button($margin: 0, $padding: var(--ms-01) var(--ms-1));
+      @include dashboard-btn-secondary($margin: 0, $padding: var(--ms-01) var(--ms-1));
     }
 
     // Posts section
@@ -639,7 +617,7 @@ dialog {
     }
 
     &__new-post-button {
-      @include dashboard-button($margin: 0, $padding: var(--ms-01) var(--ms-1));
+      @include dashboard-btn-secondary($margin: 0, $padding: var(--ms-01) var(--ms-1));
     }
 
     &__upload-button {
@@ -649,11 +627,7 @@ dialog {
       text-transform: none;
       letter-spacing: normal;
 
-      @include dashboard-button(
-        $margin: var(--ms-0) 0 0 0,
-        $padding: var(--ms-0) var(--ms-1),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-btn-primary($margin: var(--ms-0) 0 0 0, $padding: var(--ms-0) var(--ms-1));
     }
 
     // После всех менее специфичных `img` в этом файле (stylelint no-descending-specificity)

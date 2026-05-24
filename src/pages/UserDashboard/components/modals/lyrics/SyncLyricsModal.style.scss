@@ -220,7 +220,7 @@ dialog {
         $color: var(--dashboard-text-primary),
         $background: var(--dashboard-hover-bg),
         $hover-color: var(--dashboard-text-primary),
-        $hover-background: var(--dashboard-button-primary-bg),
+        $hover-background: var(--dashboard-btn-primary-hover-bg),
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
         $border: 1px solid var(--dashboard-card-border),
@@ -289,11 +289,11 @@ dialog {
 
     &__button {
       &--cancel {
-        @include dashboard-button;
+        @include dashboard-btn-ghost;
       }
 
       &--primary {
-        @include dashboard-modal-primary-button($disabled-opacity: 0.5);
+        @include dashboard-btn-primary;
       }
 
       &--primary-loading {

@@ -78,18 +78,8 @@
     position: absolute;
     right: var(--ms-1);
     bottom: var(--ms-1);
-    padding: var(--ms-01) var(--ms-1);
-    color: var(--dashboard-text-primary);
-    font-size: var(--ms-0);
-    background: var(--dashboard-button-bg);
-    border: 1px solid var(--dashboard-card-border);
-    border-radius: var(--ms-01);
-    transition: all 0.2s;
-    cursor: pointer;
 
-    &:hover {
-      background: var(--dashboard-button-bg-hover);
-    }
+    @include dashboard-btn-secondary($margin: 0, $padding: var(--ms-01) var(--ms-1));
   }
 
   &__error {

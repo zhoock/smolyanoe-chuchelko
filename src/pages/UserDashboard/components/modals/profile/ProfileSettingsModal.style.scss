@@ -76,7 +76,7 @@ dialog {
 
       &--active {
         color: var(--dashboard-text-primary);
-        background: var(--dashboard-button-cancel-bg);
+        background: var(--dashboard-btn-secondary-hover-bg);
         border-bottom-color: var(--dark-greenish-yellow);
       }
 
@@ -362,7 +362,7 @@ dialog {
 
       &:hover {
         color: var(--dashboard-text-primary);
-        background: var(--dashboard-button-primary-bg);
+        background: var(--dashboard-btn-primary-hover-bg);
       }
 
       &:focus {
@@ -383,7 +383,7 @@ dialog {
       cursor: pointer;
       display: inline-block;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__footer {
@@ -392,11 +392,11 @@ dialog {
 
     &__button {
       &--cancel {
-        @include dashboard-button;
+        @include dashboard-btn-ghost;
       }
 
       &--save {
-        @include dashboard-modal-primary-button($disabled-opacity: 0.6);
+        @include dashboard-btn-primary;
       }
 
       &--save-loading {

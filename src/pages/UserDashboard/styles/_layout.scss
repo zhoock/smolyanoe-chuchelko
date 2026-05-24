@@ -55,7 +55,7 @@ dialog {
     &__delete-account-button {
       width: 100%;
 
-      @include dashboard-danger-outline-button;
+      @include dashboard-btn-destructive;
 
       @include breakpoint(tablet) {
         width: auto;
@@ -117,12 +117,12 @@ dialog {
 
       &--active {
         color: var(--dashboard-text-primary);
-        background: var(--dashboard-button-cancel-bg);
+        background: var(--dashboard-btn-secondary-hover-bg);
       }
 
       &:focus {
         outline: none;
-        box-shadow: inset 0 0 0 2px var(--dashboard-button-cancel-bg);
+        box-shadow: inset 0 0 0 2px var(--dashboard-btn-secondary-border);
       }
 
       @include breakpoint(tablet) {
@@ -295,7 +295,7 @@ dialog {
     &__profile-settings-button {
       width: 100%;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
 
       @include breakpoint(tablet) {
         width: auto;

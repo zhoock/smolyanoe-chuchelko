@@ -184,20 +184,10 @@ $payment-success-button-padding: var(--ms-01) var(--ms-0);
     text-decoration: none;
     text-align: center;
 
-    @include dashboard-button($margin: 0, $padding: $payment-success-button-padding);
+    @include dashboard-btn-secondary($margin: 0, $padding: $payment-success-button-padding);
 
     &--primary {
-      @include button-variant(
-        $color: var(--dashboard-button-primary-text),
-        $background: var(--dashboard-button-primary-bg),
-        $hover-color: var(--dashboard-button-primary-text),
-        $hover-background: var(--dashboard-button-primary-bg-hover),
-        $margin: 0,
-        $padding: $payment-success-button-padding,
-        $border: 0,
-        $border-radius: var(--ms-01),
-        $font-size: var(--dashboard-font-size)
-      );
+      @include dashboard-btn-primary($margin: 0, $padding: $payment-success-button-padding);
     }
   }
 

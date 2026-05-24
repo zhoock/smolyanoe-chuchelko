@@ -63,7 +63,7 @@ dialog {
     }
 
     &__preview-button {
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
 
       &:disabled {
         cursor: not-allowed;
@@ -120,11 +120,11 @@ dialog {
 
     &__button {
       &--cancel {
-        @include dashboard-button;
+        @include dashboard-btn-ghost;
       }
 
       &--primary {
-        @include dashboard-modal-primary-button($disabled-opacity: 0.45);
+        @include dashboard-btn-primary;
       }
 
       &--primary-loading {

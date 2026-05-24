@@ -54,23 +54,11 @@ dialog {
       }
 
       &__cancel {
-        @include dashboard-button;
+        @include dashboard-btn-ghost;
       }
 
       &__save {
-        font-size: var(--dashboard-font-size);
-        line-height: 16px;
-
-        @include button-variant(
-          $color: var(--dashboard-button-primary-text),
-          $background: var(--dashboard-button-primary-bg),
-          $hover-color: var(--dashboard-button-primary-text),
-          $hover-background: var(--dashboard-button-primary-hover),
-          $margin: 0,
-          $padding: var(--ms-01) var(--ms-0),
-          $border: 0,
-          $border-radius: var(--ms-01)
-        );
+        @include dashboard-btn-primary($margin: 0);
 
         &:disabled {
           opacity: 0.7;

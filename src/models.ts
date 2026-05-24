@@ -415,22 +415,25 @@ export interface IInterface {
       connectSuccess: string;
       disconnectSuccess: string;
       disconnectConfirm: string;
-      providers: {
-        yookassa: {
-          tagline: string;
-          description: string;
-          details: string;
-          instructionsIntro: string;
-          instructionSteps: string[];
-          registerLink: string;
-          shopIdLabel: string;
-          shopIdPlaceholder: string;
-          shopIdHint: string;
-          secretKeyLabel: string;
-          secretKeyPlaceholder: string;
-          secretKeyHint: string;
-        };
-      };
+      providers: Partial<
+        Record<
+          'yookassa' | 'stripe' | 'paypal',
+          {
+            tagline: string;
+            description: string;
+            details: string;
+            instructionsIntro: string;
+            instructionSteps: string[];
+            registerLink: string;
+            shopIdLabel: string;
+            shopIdPlaceholder: string;
+            shopIdHint: string;
+            secretKeyLabel: string;
+            secretKeyPlaceholder: string;
+            secretKeyHint: string;
+          }
+        >
+      >;
     };
     profile: string;
     profileSettings: string;
@@ -622,14 +625,10 @@ export interface IInterface {
     };
     myPurchases?: {
       title: string;
-      purchasesFor: string;
-      changeEmail: string;
-      enterEmailDescription: string;
-      emailAddress: string;
-      viewPurchases: string;
+      emptyTitle: string;
+      emptyDescription: string;
+      loadFailed: string;
       loadingPurchases: string;
-      purchasesNotFound: string;
-      checkEmail: string;
       purchased: string;
       downloads: string;
       downloadAlbum: string;
@@ -639,6 +638,13 @@ export interface IInterface {
       tracks: string;
       downloadTrack: string;
       downloadFullAlbum: string;
+      downloadAll: string;
+      preparingDownload: string;
+      removePurchase: string;
+      removePurchaseConfirmTitle: string;
+      removePurchaseConfirm: string;
+      removePurchaseHint: string;
+      removePurchaseFailed: string;
       errorDownloadingTrack: string;
       errorDownloadingAlbum: string;
     };

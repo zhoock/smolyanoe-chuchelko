@@ -10,6 +10,7 @@
  */
 
 import { query } from './db';
+import { activePurchaseFilter } from './purchase-schema';
 import { userHasArtistInArchive } from './archive';
 import { viewerHasActiveSubscription } from './subscriptions';
 
@@ -44,8 +45,9 @@ export async function viewerPurchasedAlbum(
   emailLower: string | null
 ): Promise<boolean> {
   if (!emailLower || !albumSlug) return false;
+  const revokedFilter = await activePurchaseFilter();
   const r = await query<{ one: number }>(
-    `SELECT 1 AS one FROM purchases WHERE album_id = $1 AND LOWER(TRIM(customer_email)) = $2 LIMIT 1`,
+    `SELECT 1 AS one FROM purchases WHERE album_id = $1 AND LOWER(TRIM(customer_email)) = $2 ${revokedFilter} LIMIT 1`,
     [albumSlug, emailLower]
   );
   return r.rows.length > 0;

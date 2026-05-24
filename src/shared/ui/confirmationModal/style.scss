@@ -125,22 +125,12 @@
   }
 
   &__button--cancel {
-    @include dashboard-button($margin: 0);
+    @include dashboard-btn-ghost($margin: 0);
   }
 
   &__button--confirm.confirmation-modal__button--info,
   &__button--confirm.confirmation-modal__button--warning {
-    @include button-variant(
-      $color: var(--dashboard-button-primary-text),
-      $background: var(--dashboard-button-primary-bg),
-      $hover-color: var(--dashboard-button-primary-text),
-      $hover-background: var(--dashboard-button-primary-bg-hover),
-      $margin: 0,
-      $padding: var(--ms-01) var(--ms-0),
-      $border: 0,
-      $border-radius: var(--ms-01),
-      $font-size: var(--dashboard-font-size)
-    );
+    @include dashboard-btn-primary($margin: 0);
 
     &:disabled {
       opacity: 0.7;
@@ -151,7 +141,7 @@
   &__button--confirm.confirmation-modal__button--danger {
     font-size: var(--dashboard-font-size);
 
-    @include dashboard-danger-outline-button;
+    @include dashboard-btn-destructive;
 
     &:disabled {
       opacity: 0.7;

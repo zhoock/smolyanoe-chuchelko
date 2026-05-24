@@ -121,8 +121,8 @@
       appearance: none;
       background: linear-gradient(
         to right,
-        var(--dashboard-button-save-bg, var(--dashboard-text-primary)) 0%,
-        var(--dashboard-button-save-bg, var(--dashboard-text-primary)) var(--zoom-percent, 0%),
+        var(--dashboard-btn-primary-text) 0%,
+        var(--dashboard-btn-primary-text) var(--zoom-percent, 0%),
         var(--dashboard-card-border) var(--zoom-percent, 0%),
         var(--dashboard-card-border) 100%
       );
@@ -202,53 +202,22 @@
 
   &__button {
     min-width: 120px;
-    min-height: 36px;
-    padding: var(--ms-01) var(--ms-1);
-    color: var(--dashboard-text-primary);
-    font-size: var(--ms-0);
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: pointer;
-    background: var(--dashboard-button-cancel-bg);
-    border: 1px solid var(--dashboard-card-border);
-    border-radius: var(--ms-01);
-    transition: all 0.2s;
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    &:hover:not(:disabled) {
-      background: var(--dashboard-button-cancel-hover);
-    }
 
     &--preview {
       margin-right: auto;
+
+      @include dashboard-btn-secondary($margin: 0);
+    }
+
+    &:not(&--preview, &--save) {
+      @include dashboard-btn-ghost($margin: 0);
     }
 
     &--save {
-      display: flex;
-      color: var(--dashboard-card-bg);
-      background: var(--white);
-      border: 1px solid var(--dashboard-card-border);
-      align-items: center;
-      justify-content: center;
-      gap: var(--ms-01);
-
-      &:hover:not(:disabled) {
-        color: var(--dashboard-card-bg);
-        background: var(--white);
-        opacity: 0.9;
-      }
-
-      &:active:not(:disabled) {
-        opacity: 0.8;
-      }
+      @include dashboard-btn-primary($margin: 0);
 
       &--loading {
-        position: relative;
-        pointer-events: none;
+        @include dashboard-modal-inline-loading;
       }
     }
 

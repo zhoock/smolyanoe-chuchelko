@@ -52,7 +52,7 @@ dialog {
     &__choose-files-button {
       white-space: nowrap;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__tracks-list {
@@ -654,7 +654,7 @@ dialog {
     &__lyrics-action-button {
       white-space: nowrap;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
   }
 }

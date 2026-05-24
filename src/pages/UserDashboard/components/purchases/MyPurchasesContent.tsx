@@ -1,76 +1,71 @@
-// src/pages/UserDashboard/components/MyPurchasesContent.tsx
-import React, { useEffect, useState } from 'react';
+// src/pages/UserDashboard/components/purchases/MyPurchasesContent.tsx
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { getMyPurchases, getTrackDownloadUrl, type Purchase } from '@shared/api/purchases';
+import {
+  downloadAlbumZip,
+  getMyPurchases,
+  getTrackDownloadUrl,
+  revokePurchase,
+  type Purchase,
+} from '@shared/api/purchases';
 import { getUserImageUrl } from '@shared/api/albums';
+import { ConfirmationModal } from '@shared/ui/confirmationModal';
 import '../../UserDashboard.style.scss';
 
-interface MyPurchasesContentProps {
-  userEmail?: string;
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
 }
 
-export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
+export function MyPurchasesContent() {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const [email, setEmail] = useState(userEmail || '');
+  const copy = ui?.dashboard?.myPurchases;
+  const dashboardCopy = ui?.dashboard;
+
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(!!userEmail);
-  // Состояния загрузки для каждого трека
   const [downloadingTracks, setDownloadingTracks] = useState<Set<string>>(new Set());
   const [downloadedItems, setDownloadedItems] = useState<Set<string>>(new Set());
+  const [downloadingAlbums, setDownloadingAlbums] = useState<Set<string>>(new Set());
+  const [purchaseToRemove, setPurchaseToRemove] = useState<Purchase | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
-  useEffect(() => {
-    if (userEmail) {
-      setEmail(userEmail);
-      fetchPurchases(userEmail);
-    }
-  }, [userEmail]);
-
-  const fetchPurchases = async (emailToFetch: string) => {
+  const loadPurchases = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await getMyPurchases(emailToFetch);
+      const data = await getMyPurchases();
       setPurchases(data);
-      setSubmitted(true);
     } catch (err) {
       console.error('Error fetching purchases:', err);
       setError(
-        err instanceof Error
-          ? err.message
-          : (ui?.dashboard?.myPurchases?.purchasesNotFound ?? 'Failed to load purchases')
+        err instanceof Error ? err.message : (copy?.loadFailed ?? 'Failed to load purchases')
       );
       setPurchases([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [copy?.loadFailed]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setError(ui?.dashboard?.myPurchases?.emailAddress ?? 'Please enter your email address');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError(ui?.dashboard?.myPurchases?.checkEmail ?? 'Please enter a valid email address');
-      return;
-    }
-
-    fetchPurchases(email.trim());
-  };
+  useEffect(() => {
+    void loadPurchases();
+  }, [loadPurchases]);
 
   const handleDownloadTrack = async (purchaseToken: string, trackId: string) => {
     const downloadKey = `${purchaseToken}-${trackId}`;
 
-    // Если уже скачивается, не делаем ничего
     if (downloadingTracks.has(downloadKey)) {
       return;
     }
@@ -91,9 +86,6 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       }
 
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-
-      // Получаем имя файла из заголовка Content-Disposition или используем дефолтное
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = `track-${trackId}.wav`;
       if (contentDisposition) {
@@ -108,19 +100,8 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
         }
       }
 
-      // Создаем временный элемент <a> для скачивания
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      triggerBlobDownload(blob, filename);
 
-      // Освобождаем URL
-      window.URL.revokeObjectURL(downloadUrl);
-
-      // Показываем состояние "Скачано" на 2 секунды
       setDownloadedItems((prev) => new Set(prev).add(downloadKey));
       setTimeout(() => {
         setDownloadedItems((prev) => {
@@ -131,16 +112,54 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
       }, 2000);
     } catch (err) {
       console.error('Error downloading track:', err);
-      alert(
-        ui?.dashboard?.myPurchases?.errorDownloadingTrack ??
-          'Error downloading track. Please try again.'
-      );
+      alert(copy?.errorDownloadingTrack ?? 'Error downloading track. Please try again.');
     } finally {
       setDownloadingTracks((prev) => {
         const next = new Set(prev);
         next.delete(downloadKey);
         return next;
       });
+    }
+  };
+
+  const handleDownloadAlbum = async (purchase: Purchase) => {
+    if (downloadingAlbums.has(purchase.id)) {
+      return;
+    }
+
+    try {
+      setDownloadingAlbums((prev) => new Set(prev).add(purchase.id));
+      const { blob, filename } = await downloadAlbumZip(purchase);
+      triggerBlobDownload(blob, filename);
+    } catch (err) {
+      console.error('Error downloading album:', err);
+      alert(copy?.errorDownloadingAlbum ?? 'Error downloading album. Please try again.');
+    } finally {
+      setDownloadingAlbums((prev) => {
+        const next = new Set(prev);
+        next.delete(purchase.id);
+        return next;
+      });
+    }
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!purchaseToRemove || isRemoving) {
+      return;
+    }
+
+    const purchaseId = purchaseToRemove.id;
+
+    try {
+      setIsRemoving(true);
+      await revokePurchase(purchaseId);
+      setPurchases((prev) => prev.filter((purchase) => purchase.id !== purchaseId));
+      setPurchaseToRemove(null);
+    } catch (err) {
+      console.error('Error removing purchase:', err);
+      alert(copy?.removePurchaseFailed ?? 'Failed to remove purchase. Please try again.');
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -155,215 +174,230 @@ export function MyPurchasesContent({ userEmail }: MyPurchasesContentProps) {
 
   return (
     <div className="user-dashboard__my-purchases">
-      <h3 className="user-dashboard__section-title">
-        {ui?.dashboard?.myPurchases?.title ?? 'My Purchases'}
-      </h3>
+      {loading && (
+        <p className="user-dashboard__my-purchases-loading">
+          {copy?.loadingPurchases ?? 'Loading purchases...'}
+        </p>
+      )}
 
-      {!submitted ? (
-        <div className="user-dashboard__my-purchases-form">
-          <p className="user-dashboard__my-purchases-description">
-            {ui?.dashboard?.myPurchases?.enterEmailDescription ??
-              'Enter the email you used when purchasing to view all your purchases and download tracks.'}
+      {error && !loading && <div className="user-dashboard__my-purchases-error">{error}</div>}
+
+      {!loading && !error && purchases.length === 0 && (
+        <div className="user-dashboard__my-purchases-empty">
+          <p className="user-dashboard__my-purchases-empty-title">
+            {copy?.emptyTitle ?? 'No purchases yet'}
           </p>
-
-          <form className="user-dashboard__my-purchases-form-inner" onSubmit={handleSubmit}>
-            <div className="user-dashboard__my-purchases-form-group">
-              <label htmlFor="purchase-email" className="user-dashboard__my-purchases-label">
-                {ui?.dashboard?.myPurchases?.emailAddress ?? 'Email address'}
-              </label>
-              <input
-                type="email"
-                id="purchase-email"
-                className="user-dashboard__my-purchases-input"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setError(null);
-                }}
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-
-            {error && <div className="user-dashboard__my-purchases-error">{error}</div>}
-
-            <button
-              type="submit"
-              className="user-dashboard__my-purchases-submit"
-              disabled={loading}
-            >
-              {loading
-                ? (ui?.dashboard?.loading ?? 'Loading...')
-                : (ui?.dashboard?.myPurchases?.viewPurchases ?? 'View purchases')}
-            </button>
-          </form>
+          <p className="user-dashboard__my-purchases-empty-text">
+            {copy?.emptyDescription ?? 'Albums you buy will appear here for download.'}
+          </p>
         </div>
-      ) : (
-        <>
-          <div className="user-dashboard__my-purchases-email-info">
-            <p>
-              {ui?.dashboard?.myPurchases?.purchasesFor ?? 'Purchases for:'}{' '}
-              <strong>{email}</strong>
-            </p>
-            <button
-              className="user-dashboard__my-purchases-change-email"
-              onClick={() => {
-                setSubmitted(false);
-                setEmail(userEmail || '');
-                setPurchases([]);
-              }}
-            >
-              {ui?.dashboard?.myPurchases?.changeEmail ?? 'Change Email'}
-            </button>
-          </div>
+      )}
 
-          {loading && (
-            <div className="user-dashboard__my-purchases-loading">
-              {ui?.dashboard?.myPurchases?.loadingPurchases ?? 'Loading purchases...'}
-            </div>
-          )}
-
-          {error && <div className="user-dashboard__my-purchases-error">{error}</div>}
-
-          {!loading && !error && purchases.length === 0 && (
-            <div className="user-dashboard__my-purchases-empty">
-              <p>{ui?.dashboard?.myPurchases?.purchasesNotFound ?? 'Purchases not found.'}</p>
-              <p>
-                {ui?.dashboard?.myPurchases?.checkEmail ??
-                  'Make sure you entered the correct email address.'}
-              </p>
-            </div>
-          )}
-
-          {!loading && !error && purchases.length > 0 && (
-            <div className="user-dashboard__my-purchases-list">
-              {purchases.map((purchase) => (
-                <div key={purchase.id} className="user-dashboard__my-purchases-purchase">
-                  <div className="user-dashboard__my-purchases-purchase-header">
-                    {purchase.cover && (
-                      <div className="user-dashboard__my-purchases-purchase-cover">
-                        <img
-                          src={(() => {
-                            const ownerId = purchase.albumUserId ?? undefined;
-                            const imageUrl = getUserImageUrl(
-                              purchase.cover,
-                              'albums',
-                              '.jpg',
-                              true,
-                              ownerId
-                            );
-                            console.log('🖼️ [MyPurchases] Image URL:', {
-                              purchaseCover: purchase.cover,
-                              generatedUrl: imageUrl,
-                              albumId: purchase.albumId,
-                              albumUserId: purchase.albumUserId,
-                            });
-                            if (imageUrl == null) {
-                              console.error('[BUG] MyPurchasesContent: cover URL is null', {
-                                albumId: purchase.albumId,
-                                albumUserId: purchase.albumUserId,
-                              });
-                              return '/images/album-placeholder.png';
-                            }
-                            return imageUrl;
-                          })()}
-                          alt={`${purchase.artist} — ${purchase.album}`}
-                          className="user-dashboard__my-purchases-purchase-cover-image"
-                          onError={(e) => {
-                            console.error('❌ [MyPurchases] Failed to load image:', {
-                              src: e.currentTarget.src,
-                              purchaseCover: purchase.cover,
-                              albumId: purchase.albumId,
-                            });
-                          }}
-                        />
-                      </div>
-                    )}
-                    <div className="user-dashboard__my-purchases-purchase-info">
-                      <h4 className="user-dashboard__my-purchases-purchase-title">
-                        {purchase.artist} — {purchase.album}
-                      </h4>
-                      <p className="user-dashboard__my-purchases-purchase-date">
-                        {ui?.dashboard?.myPurchases?.purchased ?? 'Purchased:'}{' '}
-                        {formatDate(purchase.purchasedAt)}
-                      </p>
-                      {purchase.downloadCount > 0 && (
-                        <p className="user-dashboard__my-purchases-purchase-downloads">
-                          {ui?.dashboard?.myPurchases?.downloads ?? 'Downloads:'}{' '}
-                          {purchase.downloadCount}
-                        </p>
-                      )}
-                    </div>
+      {!loading && !error && purchases.length > 0 && (
+        <div className="user-dashboard__my-purchases-list">
+          {purchases.map((purchase) => (
+            <div key={purchase.id} className="user-dashboard__my-purchases-purchase">
+              <div className="user-dashboard__my-purchases-purchase-header">
+                {purchase.cover && (
+                  <div className="user-dashboard__my-purchases-purchase-cover">
+                    <img
+                      src={(() => {
+                        const ownerId = purchase.albumUserId ?? undefined;
+                        const imageUrl = getUserImageUrl(
+                          purchase.cover,
+                          'albums',
+                          '.jpg',
+                          true,
+                          ownerId
+                        );
+                        if (imageUrl == null) {
+                          return '/images/album-placeholder.png';
+                        }
+                        return imageUrl;
+                      })()}
+                      alt={`${purchase.artist} — ${purchase.album}`}
+                      className="user-dashboard__my-purchases-purchase-cover-image"
+                    />
                   </div>
+                )}
+                <div className="user-dashboard__my-purchases-purchase-info">
+                  <h4 className="user-dashboard__my-purchases-purchase-title">
+                    {purchase.artist} — {purchase.album}
+                  </h4>
+                  <p className="user-dashboard__my-purchases-purchase-date">
+                    {copy?.purchased ?? 'Purchased:'} {formatDate(purchase.purchasedAt)}
+                  </p>
+                  {purchase.downloadCount > 0 && (
+                    <p className="user-dashboard__my-purchases-purchase-downloads">
+                      {copy?.downloads ?? 'Downloads:'} {purchase.downloadCount}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-                  <div className="user-dashboard__my-purchases-tracks">
-                    <h5 className="user-dashboard__my-purchases-tracks-title">
-                      {ui?.dashboard?.myPurchases?.tracks ?? 'Tracks:'}
-                    </h5>
-                    <ul className="user-dashboard__my-purchases-tracks-list">
-                      {purchase.tracks.map((track, index) => (
-                        <li key={track.trackId} className="user-dashboard__my-purchases-track">
+              <div className="user-dashboard__my-purchases-tracks">
+                <div className="user-dashboard__my-purchases-tracks-grid">
+                  <h5 className="user-dashboard__my-purchases-tracks-title">
+                    {copy?.tracks ?? 'Tracks'}
+                  </h5>
+                  <button
+                    type="button"
+                    className="user-dashboard__my-purchases-download-all"
+                    aria-label={copy?.downloadAll ?? 'Download all'}
+                    disabled={downloadingAlbums.has(purchase.id) || purchase.tracks.length === 0}
+                    onClick={() => void handleDownloadAlbum(purchase)}
+                  >
+                    {downloadingAlbums.has(purchase.id) ? (
+                      <>
+                        <svg
+                          className="user-dashboard__download-spinner"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden
+                        >
+                          <circle
+                            cx="7"
+                            cy="7"
+                            r="6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeOpacity="0.3"
+                          />
+                          <path
+                            d="M 7 1 A 6 6 0 0 1 13 7"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        {copy?.preparingDownload ?? 'Preparing download...'}
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden
+                        >
+                          <path
+                            d="M7 2v7M4 6l3 3 3-3M3 11h8"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {copy?.downloadAll ?? 'Download all'}
+                      </>
+                    )}
+                  </button>
+
+                  {purchase.tracks.map((track, index) => {
+                    const downloadKey = `${purchase.purchaseToken}-${track.trackId}`;
+                    const isDownloading = downloadingTracks.has(downloadKey);
+                    const isDownloaded = downloadedItems.has(downloadKey);
+
+                    return (
+                      <React.Fragment key={track.trackId}>
+                        <div className="user-dashboard__my-purchases-track">
                           <span className="user-dashboard__my-purchases-track-number">
                             {index + 1}.
                           </span>
                           <span className="user-dashboard__my-purchases-track-title">
                             {track.title}
                           </span>
-                          <button
-                            className="user-dashboard__my-purchases-track-download"
-                            onClick={() =>
-                              handleDownloadTrack(purchase.purchaseToken, track.trackId)
-                            }
-                            title={ui?.dashboard?.myPurchases?.downloadTrack ?? 'Download track'}
-                            disabled={downloadingTracks.has(
-                              `${purchase.purchaseToken}-${track.trackId}`
-                            )}
-                          >
-                            {downloadingTracks.has(`${purchase.purchaseToken}-${track.trackId}`) ? (
-                              <>
-                                <svg
-                                  className="user-dashboard__download-spinner"
-                                  width="14"
-                                  height="14"
-                                  viewBox="0 0 14 14"
-                                  fill="none"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <circle
-                                    cx="7"
-                                    cy="7"
-                                    r="6"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeOpacity="0.3"
-                                  />
-                                  <path
-                                    d="M 7 1 A 6 6 0 0 1 13 7"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                                {ui?.dashboard?.myPurchases?.downloading ?? 'Downloading...'}
-                              </>
-                            ) : downloadedItems.has(
-                                `${purchase.purchaseToken}-${track.trackId}`
-                              ) ? (
-                              (ui?.dashboard?.myPurchases?.downloaded ?? 'Downloaded')
-                            ) : (
-                              (ui?.dashboard?.myPurchases?.download ?? 'Download')
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="user-dashboard__my-purchases-track-download"
+                          onClick={() => handleDownloadTrack(purchase.purchaseToken, track.trackId)}
+                          title={copy?.downloadTrack ?? 'Download track'}
+                          disabled={isDownloading}
+                        >
+                          {isDownloading ? (
+                            <>
+                              <svg
+                                className="user-dashboard__download-spinner"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 14 14"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden
+                              >
+                                <circle
+                                  cx="7"
+                                  cy="7"
+                                  r="6"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeOpacity="0.3"
+                                />
+                                <path
+                                  d="M 7 1 A 6 6 0 0 1 13 7"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              {copy?.downloading ?? 'Downloading...'}
+                            </>
+                          ) : isDownloaded ? (
+                            (copy?.downloaded ?? 'Downloaded')
+                          ) : (
+                            (copy?.download ?? 'Download')
+                          )}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+
+              <div className="user-dashboard__my-purchases-purchase-footer">
+                <button
+                  type="button"
+                  className="user-dashboard__my-purchases-remove"
+                  aria-label={copy?.removePurchase ?? 'Remove purchase'}
+                  disabled={isRemoving && purchaseToRemove?.id === purchase.id}
+                  onClick={() => setPurchaseToRemove(purchase)}
+                >
+                  {copy?.removePurchase ?? 'Remove purchase'}
+                </button>
+                <p className="user-dashboard__my-purchases-remove-hint">
+                  {copy?.removePurchaseHint ??
+                    'You will lose access to this album and all downloads.'}
+                </p>
+              </div>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
+
+      <ConfirmationModal
+        isOpen={purchaseToRemove !== null}
+        title={copy?.removePurchaseConfirmTitle ?? 'Remove purchase?'}
+        message={
+          copy?.removePurchaseHint ?? 'You will lose access to this album and all downloads.'
+        }
+        irreversibleHint={null}
+        variant="danger"
+        confirmText={copy?.removePurchaseConfirm ?? 'Remove'}
+        cancelText={dashboardCopy?.cancel ?? 'Cancel'}
+        closeLabel={dashboardCopy?.close ?? 'Close'}
+        onCancel={() => {
+          if (!isRemoving) {
+            setPurchaseToRemove(null);
+          }
+        }}
+        onConfirm={() => void handleConfirmRemove()}
+      />
     </div>
   );
 }

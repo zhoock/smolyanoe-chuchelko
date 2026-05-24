@@ -81,9 +81,9 @@ dialog {
       }
 
       &--active {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-button-primary-bg);
-        border-color: var(--dark-greenish-yellow);
+        color: var(--dashboard-btn-primary-text);
+        background: var(--dashboard-btn-primary-hover-bg);
+        border-color: var(--dashboard-btn-primary-border);
         font-weight: 600;
       }
     }
@@ -168,7 +168,7 @@ dialog {
       cursor: pointer;
       display: inline-block;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__file-name {
@@ -219,7 +219,7 @@ dialog {
     }
 
     &__art-button {
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__art-meta {
@@ -452,13 +452,16 @@ dialog {
     }
 
     &__button {
-      &--cancel,
+      &--cancel {
+        @include dashboard-btn-ghost;
+      }
+
       &--secondary {
-        @include dashboard-button;
+        @include dashboard-btn-secondary;
       }
 
       &--primary {
-        @include dashboard-modal-primary-button;
+        @include dashboard-btn-primary;
       }
 
       &--primary-loading {
@@ -653,7 +656,7 @@ dialog {
       white-space: nowrap;
       border: 1px solid var(--dashboard-card-border);
 
-      @include dashboard-button(
+      @include dashboard-btn-secondary(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
         $border-radius: var(--ms-01)
@@ -793,9 +796,7 @@ dialog {
     }
 
     &__add-button {
-      border: 1px solid var(--dashboard-card-border);
-
-      @include dashboard-button(
+      @include dashboard-btn-secondary(
         $margin: 0,
         $padding: var(--ms-01) var(--ms-0),
         $border-radius: var(--ms-01)
@@ -808,16 +809,7 @@ dialog {
     }
 
     &__cancel-button {
-      @include button-variant(
-        $color: var(--dashboard-text-primary),
-        $background: transparent,
-        $hover-color: var(--dashboard-text-primary),
-        $hover-background: var(--dashboard-hover-bg),
-        $margin: 0,
-        $padding: var(--ms-01) var(--ms-0),
-        $border: 1px solid var(--dashboard-card-border),
-        $border-radius: var(--ms-01)
-      );
+      @include dashboard-btn-ghost($margin: 0);
     }
 
     // Producing type sections

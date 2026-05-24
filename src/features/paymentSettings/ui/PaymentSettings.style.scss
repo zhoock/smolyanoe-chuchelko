@@ -136,7 +136,7 @@ dialog {
       &__disconnect-button {
         flex-shrink: 0;
 
-        @include dashboard-danger-outline-button;
+        @include dashboard-btn-destructive;
 
         &:disabled {
           opacity: 0.6;
@@ -215,7 +215,7 @@ dialog {
       &__connect-button {
         align-self: flex-start;
 
-        @include dashboard-modal-primary-button($disabled-opacity: 0.6);
+        @include dashboard-btn-primary;
       }
 
       &__form {
@@ -253,11 +253,11 @@ dialog {
       }
 
       &__cancel-button {
-        @include dashboard-button;
+        @include dashboard-btn-ghost;
       }
 
       &__save-button {
-        @include dashboard-modal-primary-button($disabled-opacity: 0.6);
+        @include dashboard-btn-primary;
 
         &--loading {
           @include dashboard-modal-inline-loading;

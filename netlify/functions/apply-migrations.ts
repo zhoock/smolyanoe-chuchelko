@@ -753,6 +753,50 @@ ALTER TABLE users
 COMMENT ON COLUMN users.verification_email_sent_at IS 'Timestamp of last verification email send (cooldown enforcement)';
 `;
 
+const MIGRATION_044 = `
+UPDATE orders o
+SET album_id = a.album_id
+FROM albums a
+WHERE o.album_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  AND a.id::text = o.album_id;
+
+UPDATE purchases p
+SET album_id = a.album_id
+FROM albums a
+WHERE p.album_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  AND a.id::text = p.album_id;
+`;
+
+const MIGRATION_043 = `
+ALTER TABLE purchases
+  ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+
+ALTER TABLE purchases
+  ADD COLUMN IF NOT EXISTS revoked_by_user UUID REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_purchases_active_user
+  ON purchases(user_id)
+  WHERE revoked_at IS NULL;
+
+COMMENT ON COLUMN purchases.revoked_at IS 'When set, purchase is hidden from library and access checks';
+COMMENT ON COLUMN purchases.revoked_by_user IS 'Account that revoked this purchase from their library';
+`;
+
+const MIGRATION_042 = `
+ALTER TABLE purchases
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_purchases_user_id ON purchases(user_id);
+
+COMMENT ON COLUMN purchases.user_id IS 'Account owner for session-based library. NULL until linked via checkout or claim flow';
+
+UPDATE purchases p
+SET user_id = u.id
+FROM users u
+WHERE p.user_id IS NULL
+  AND LOWER(TRIM(p.customer_email)) = LOWER(TRIM(u.email));
+`;
+
 const MIGRATION_041 = `
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS social_links JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -804,6 +848,9 @@ const MIGRATIONS: Record<string, MigrationSql> = {
   '039_add_verification_email_sent_at_to_users.sql': MIGRATION_039,
   '040_create_auth_ip_rate_limits.sql': MIGRATION_040,
   '041_add_social_links_to_users.sql': MIGRATION_041,
+  '042_add_user_id_to_purchases.sql': MIGRATION_042,
+  '043_add_revoked_at_to_purchases.sql': MIGRATION_043,
+  '044_normalize_purchase_album_id_to_slug.sql': MIGRATION_044,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {

@@ -215,8 +215,8 @@
   force = true
 
 [[redirects]]
-  from = "/api/get-my-purchases*"
-  to = "/.netlify/functions/get-my-purchases"
+  from = "/api/my-purchases*"
+  to = "/.netlify/functions/my-purchases"
   status = 200
   force = true
 
@@ -252,6 +252,13 @@
 [[redirects]]
   from = "/api/test-email*"
   to = "/.netlify/functions/test-email"
+  status = 200
+  force = true
+
+# Download album zip (must be before /api/download*)
+[[redirects]]
+  from = "/api/download-album*"
+  to = "/.netlify/functions/download-album"
   status = 200
   force = true
 

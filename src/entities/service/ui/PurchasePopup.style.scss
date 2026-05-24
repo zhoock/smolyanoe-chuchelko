@@ -237,13 +237,7 @@
     cursor: pointer;
 
     &--checkout {
-      border: 1px solid var(--dashboard-card-border);
-
-      @include dashboard-button;
-
-      &:hover {
-        background: var(--dashboard-hover-bg);
-      }
+      @include dashboard-btn-secondary;
     }
 
     &--continue {
@@ -271,26 +265,11 @@
 
     &--payment {
       display: flex;
-      color: var(--dashboard-button-primary-text);
-      background: var(--dashboard-button-primary-bg);
-      border: none;
       align-items: center;
       justify-content: center;
       gap: 8px;
 
-      &:hover {
-        background: var(--dashboard-button-primary-bg-hover);
-      }
-
-      @media (hover: none) and (pointer: coarse) {
-        &:hover {
-          background: var(--dashboard-button-primary-bg);
-        }
-
-        &:active {
-          background: var(--dashboard-button-primary-bg-hover);
-        }
-      }
+      @include dashboard-btn-primary($margin: 0, $padding: var(--ms-01) var(--ms-0));
 
       &:disabled {
         opacity: 0.7;
@@ -304,7 +283,7 @@
     inline-size: 16px;
     block-size: 16px;
     border: 2px solid rgba(255 255 255 / 30%);
-    border-top-color: var(--dashboard-button-primary-text);
+    border-top-color: var(--dashboard-btn-primary-text);
     border-radius: 50%;
     animation: purchase-popup-spin 0.8s linear infinite;
   }
@@ -469,7 +448,7 @@
 
   &__toggle-input {
     position: relative;
-    background: var(--dashboard-button-cancel-bg);
+    background: var(--dashboard-btn-secondary-hover-bg);
     border-radius: 12px;
     transition: background-color 0.2s ease;
     inline-size: 44px;
@@ -481,7 +460,7 @@
       position: absolute;
       top: 2px;
       left: 2px;
-      background: var(--dashboard-button-primary-bg);
+      background: var(--dashboard-text-primary);
       border-radius: 50%;
       transition: transform 0.2s ease;
       content: '';
@@ -663,7 +642,7 @@
   &__discount-button {
     border: 1px solid var(--dashboard-card-border);
 
-    @include dashboard-button($padding: 12px var(--ms-1));
+    @include dashboard-btn-secondary($padding: 12px var(--ms-1));
 
     &:hover {
       background: var(--dashboard-hover-bg);
@@ -824,11 +803,7 @@
     }
 
     &--card {
-      @include dashboard-button($padding: var(--ms-1) var(--ms-2));
-
-      &:hover {
-        background: var(--dashboard-button-cancel-hover);
-      }
+      @include dashboard-btn-secondary($padding: var(--ms-1) var(--ms-2));
     }
   }
 
@@ -973,7 +948,7 @@
     }
 
     .purchase-popup__toggle-input {
-      background: var(--dashboard-button-cancel-bg);
+      background: var(--dashboard-btn-secondary-hover-bg);
 
       &:checked {
         background: var(--dark-greenish-yellow);
@@ -1045,28 +1020,9 @@
   }
 
   &__payment-button--pay {
-    color: var(--dashboard-button-primary-text);
-    background: var(--dashboard-button-primary-bg);
     margin-block-start: var(--ms-1);
 
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    &:hover:not(:disabled) {
-      background: var(--dashboard-button-primary-bg-hover);
-    }
-
-    @media (hover: none) and (pointer: coarse) {
-      &:hover:not(:disabled) {
-        background: var(--dashboard-button-primary-bg);
-      }
-
-      &:active:not(:disabled) {
-        background: var(--dashboard-button-primary-bg-hover);
-      }
-    }
+    @include dashboard-btn-primary($margin: 0, $padding: var(--ms-01) var(--ms-0));
   }
 
   &__payment-error {

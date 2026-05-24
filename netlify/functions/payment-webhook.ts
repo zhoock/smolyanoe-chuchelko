@@ -15,6 +15,8 @@
 
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
+import { upsertPurchaseRecord } from './lib/purchases';
+import { resolveAlbumByKey, fetchTracksForResolvedAlbum } from './lib/resolve-album-key';
 import { getDecryptedSecretKey } from './payment-settings';
 import {
   amountsEqual,
@@ -499,50 +501,28 @@ async function tryPurchaseSideEffects(
     if (orderResult.rows.length === 0) return;
 
     const row = orderResult.rows[0];
-    const albumId = row.album_id || albumIdMeta;
+    const albumKey = row.album_id || albumIdMeta;
     const customerEmail = row.customer_email || customerEmailMeta;
 
     console.log('yookassa_webhook.purchase_upsert', {
       orderIdSuffix: `…${orderId.slice(-6)}`,
-      albumIdSuffix: albumId.length > 8 ? `…${albumId.slice(-8)}` : albumId,
+      albumKeySuffix: albumKey.length > 8 ? `…${albumKey.slice(-8)}` : albumKey,
     });
 
-    const purchaseResult = await query<{ id: string; purchase_token: string }>(
-      `INSERT INTO purchases (order_id, customer_email, album_id)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (customer_email, album_id)
-       DO UPDATE SET order_id = EXCLUDED.order_id, updated_at = CURRENT_TIMESTAMP
-       RETURNING id, purchase_token`,
-      [orderId, customerEmail, albumId]
-    );
+    const purchase = await upsertPurchaseRecord(orderId, customerEmail, albumKey);
 
-    if (purchaseResult.rows.length === 0) return;
-    const purchase = purchaseResult.rows[0];
+    if (!purchase) return;
 
-    const albumRow = await query<{ artist: string; album: string; lang: string }>(
-      `SELECT artist, album, lang FROM albums WHERE album_id = $1 LIMIT 1`,
-      [albumId]
-    );
+    const album = await resolveAlbumByKey(albumKey);
 
-    if (albumRow.rows.length === 0) {
+    if (!album) {
       console.error('yookassa_webhook.album_missing_for_email', {
-        albumIdSuffix: albumId.slice(-8),
+        albumKeySuffix: albumKey.slice(-8),
       });
       return;
     }
 
-    const album = albumRow.rows[0];
-
-    const tracksResult = await query<{ track_id: string; title: string }>(
-      `SELECT t.track_id, t.title
-       FROM tracks t
-       INNER JOIN albums a ON t.album_id = a.id
-       WHERE a.album_id = $1 AND a.lang = $2
-       ORDER BY t.order_index ASC`,
-      [albumId, album.lang]
-    );
-
-    const tracks = tracksResult.rows.map((r) => ({ trackId: r.track_id, title: r.title }));
+    const tracks = await fetchTracksForResolvedAlbum(album);
 
     try {
       const { sendPurchaseEmail } = await import('./lib/email');

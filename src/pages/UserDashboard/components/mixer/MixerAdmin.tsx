@@ -1033,7 +1033,8 @@ export function MixerAdmin({ ui, userId, albums = [] }: MixerAdminProps) {
                                                 }}
                                                 style={{
                                                   padding: '4px 8px',
-                                                  background: 'var(--dashboard-button-bg)',
+                                                  background:
+                                                    'var(--dashboard-btn-secondary-hover-bg)',
                                                   color: 'var(--dashboard-text-primary)',
                                                   border: '1px solid var(--dashboard-border)',
                                                   borderRadius: '4px',

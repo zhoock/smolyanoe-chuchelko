@@ -152,7 +152,7 @@ dialog {
 
       &--active {
         border-color: var(--dark-greenish-yellow);
-        background: var(--dashboard-button-primary-bg);
+        background: var(--dashboard-btn-primary-hover-bg);
       }
     }
 
@@ -167,7 +167,7 @@ dialog {
       cursor: pointer;
       display: inline-block;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__cover-wrap {
@@ -215,7 +215,7 @@ dialog {
       align-items: center;
       justify-content: center;
 
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     &__cover-status {
@@ -254,10 +254,16 @@ dialog {
     }
 
     &__button {
-      &--cancel,
-      &--draft,
+      &--cancel {
+        @include dashboard-btn-ghost;
+      }
+
+      &--draft {
+        @include dashboard-btn-secondary;
+      }
+
       &--publish {
-        @include dashboard-button;
+        @include dashboard-btn-primary;
       }
 
       &--cancel:disabled,
@@ -368,7 +374,7 @@ dialog {
       }
 
       &:hover {
-        background: var(--dashboard-button-primary-bg);
+        background: var(--dashboard-btn-primary-hover-bg);
         border-color: var(--dark-greenish-yellow);
       }
     }
@@ -451,7 +457,7 @@ dialog {
 
       &:hover {
         color: var(--dashboard-text-primary);
-        background: var(--dashboard-button-primary-bg);
+        background: var(--dashboard-btn-primary-hover-bg);
         border-color: var(--dark-greenish-yellow);
       }
     }
@@ -570,7 +576,7 @@ dialog {
     }
 
     &__image-upload {
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
 
       &:disabled {
         opacity: 0.6;
@@ -587,7 +593,7 @@ dialog {
       opacity: 0.9;
       transition: opacity 0.2s;
 
-      @include dashboard-button($padding: var(--ms-01) var(--ms-0));
+      @include dashboard-btn-secondary($padding: var(--ms-01) var(--ms-0));
 
       &:hover {
         opacity: 1;
@@ -703,7 +709,7 @@ dialog {
       white-space: nowrap;
 
       &:hover {
-        background: var(--dashboard-button-primary-bg);
+        background: var(--dashboard-btn-primary-hover-bg);
         border-color: var(--mango-sorbet);
       }
     }
@@ -715,7 +721,7 @@ dialog {
     }
 
     &__carousel-add-empty {
-      @include dashboard-button;
+      @include dashboard-btn-secondary;
     }
 
     // Подпись к карусели (отображение)
@@ -810,7 +816,7 @@ dialog {
       }
 
       &.is-selected {
-        background: var(--dashboard-button-primary-bg);
+        background: var(--dashboard-btn-primary-hover-bg);
       }
     }
 
@@ -864,35 +870,12 @@ dialog {
       gap: var(--ms-01);
     }
 
-    &__carousel-edit-cancel,
-    &__carousel-edit-save {
-      padding: var(--ms-01) var(--ms-0);
-      font-size: var(--ms-01);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-
     &__carousel-edit-cancel {
-      color: var(--dashboard-text-secondary);
-      background: transparent;
-
-      &:hover {
-        color: var(--dashboard-text-primary);
-        background: var(--dashboard-hover-bg);
-      }
+      @include dashboard-btn-ghost($margin: 0);
     }
 
     &__carousel-edit-save {
-      color: var(--dashboard-text-primary);
-      background: var(--dashboard-button-primary-bg);
-      border-color: var(--mango-sorbet);
-
-      &:hover {
-        background: var(--honeydew-melon);
-        border-color: var(--honeydew-melon);
-      }
+      @include dashboard-btn-primary($margin: 0);
     }
 
     &__carousel-edit-content {

@@ -67,11 +67,11 @@ dialog {
 
       &__button {
         &--cancel {
-          @include dashboard-button;
+          @include dashboard-btn-ghost;
         }
 
         &--save {
-          @include dashboard-modal-primary-button($disabled-opacity: 0.6);
+          @include dashboard-btn-primary;
         }
 
         &--save-loading {

@@ -33,6 +33,7 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
 import { resolveAlbumSellerUserId } from './lib/resolveAlbumSellerUserId';
+import { resolveAlbumByKey, resolveAlbumSlug } from './lib/resolve-album-key';
 import dns from 'node:dns';
 
 // Форсируем IPv4 для избежания проблем с fetch в некоторых сетях
@@ -85,7 +86,11 @@ async function resolveSellerUserIdForPayment(
       return { ok: false, statusCode: 404, body: { success: false, error: 'Order not found' } };
     }
     const row = r.rows[0];
-    if (row.album_id !== data.albumId) {
+    const [orderAlbumSlug, requestAlbumSlug] = await Promise.all([
+      resolveAlbumSlug(row.album_id),
+      resolveAlbumSlug(data.albumId),
+    ]);
+    if (!orderAlbumSlug || !requestAlbumSlug || orderAlbumSlug !== requestAlbumSlug) {
       return {
         ok: false,
         statusCode: 400,
@@ -327,6 +332,19 @@ export const handler: Handler = async (
         } as CreatePaymentResponse),
       };
     }
+
+    const albumSlug = await resolveAlbumSlug(data.albumId);
+    if (!albumSlug) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Album not found',
+        } as CreatePaymentResponse),
+      };
+    }
+    data.albumId = albumSlug;
 
     const sellerResolved = await resolveSellerUserIdForPayment(data);
     if (!sellerResolved.ok) {
