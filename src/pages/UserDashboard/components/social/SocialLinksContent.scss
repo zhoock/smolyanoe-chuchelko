@@ -1,0 +1,88 @@
+@use '../../../../scss/abstracts/mixins' as *;
+@use '../../../../scss/components/modal' as *;
+
+dialog {
+  .user-dashboard {
+    .social-links {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+
+      &__scroll {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        gap: var(--ms-1);
+        overflow-y: auto;
+      }
+
+      &__subtitle,
+      &__hint {
+        margin: 0;
+        color: var(--dashboard-text-secondary);
+        font-size: var(--dashboard-font-size);
+        line-height: 1.4;
+      }
+
+      &__rows {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ms-0);
+      }
+
+      &__row {
+        display: grid;
+        grid-template-columns: 1.25rem minmax(4.5rem, auto) minmax(0, 1fr);
+        gap: var(--ms-01);
+        align-items: center;
+      }
+
+      &__icon {
+        color: var(--dashboard-text-primary);
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      &__label {
+        color: var(--dashboard-text-primary);
+        font-size: var(--dashboard-font-size);
+      }
+
+      &__input {
+        @include dashboard-form-input;
+
+        margin-bottom: 0;
+      }
+
+      &__footer {
+        flex-shrink: 0;
+        margin-top: var(--ms-1);
+
+        @include dashboard-modal-footer($padding: 0);
+
+        border-top: none;
+      }
+
+      &__button {
+        &--cancel {
+          @include dashboard-button;
+        }
+
+        &--save {
+          @include dashboard-modal-primary-button($disabled-opacity: 0.6);
+        }
+
+        &--save-loading {
+          @include dashboard-modal-inline-loading;
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+}

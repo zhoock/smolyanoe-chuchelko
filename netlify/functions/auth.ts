@@ -27,6 +27,7 @@ import {
 import type { ApiResponse } from './lib/types';
 import {
   assignVerificationToken,
+  assertVerificationEmailAllowed,
   mapAuthUser,
   markEmailVerified,
   sendUserVerificationEmail,
@@ -40,6 +41,7 @@ import {
 import { buildPublicAppPath } from './lib/public-app-url';
 import { normalizeEmailLocale } from './lib/email-locale';
 import { updateUserPreferredLanguage } from './lib/user-preferred-language';
+import { enforceAuthVerificationIpRateLimit } from './lib/ip-rate-limit';
 
 interface UserRow extends VerificationUserRow {
   password_hash: string;
@@ -258,6 +260,11 @@ async function handleVerifyEmailGet(
 async function handleResendVerification(
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const rateLimited = await enforceAuthVerificationIpRateLimit(event);
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const userId = requireAuth(event);
   if (!userId) {
     return unauthorizedFromAuthHeader(event);
@@ -276,6 +283,19 @@ async function handleResendVerification(
     return createErrorResponse(400, 'Email is already verified', CORS_HEADERS, {
       code: 'EMAIL_ALREADY_VERIFIED',
     });
+  }
+
+  const cooldown = await assertVerificationEmailAllowed(userId);
+  if (!cooldown.allowed) {
+    return createErrorResponse(
+      429,
+      'Please wait before requesting another verification email',
+      CORS_HEADERS,
+      {
+        code: 'RESEND_COOLDOWN',
+        retryAfterSeconds: cooldown.retryAfterSeconds,
+      }
+    );
   }
 
   const token = await assignVerificationToken(userId);
@@ -303,6 +323,11 @@ async function handleResendVerification(
 async function handleChangeVerificationEmail(
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const rateLimited = await enforceAuthVerificationIpRateLimit(event);
+  if (rateLimited) {
+    return rateLimited;
+  }
+
   const userId = requireAuth(event);
   if (!userId) {
     return unauthorizedFromAuthHeader(event);
@@ -344,6 +369,19 @@ async function handleChangeVerificationEmail(
       0
     );
     user.email = newEmail;
+  }
+
+  const cooldown = await assertVerificationEmailAllowed(userId);
+  if (!cooldown.allowed) {
+    return createErrorResponse(
+      429,
+      'Please wait before requesting another verification email',
+      CORS_HEADERS,
+      {
+        code: 'RESEND_COOLDOWN',
+        retryAfterSeconds: cooldown.retryAfterSeconds,
+      }
+    );
   }
 
   const token = await assignVerificationToken(userId);
@@ -474,6 +512,11 @@ export const handler: Handler = async (
 
     // Регистрация
     if (path === '/register' || path.endsWith('/register')) {
+      const rateLimited = await enforceAuthVerificationIpRateLimit(event);
+      if (rateLimited) {
+        return rateLimited;
+      }
+
       const data = parseJsonBody<RegisterRequest>(event.body, {} as RegisterRequest);
 
       if (!data.email || !data.password) {
@@ -546,6 +589,19 @@ export const handler: Handler = async (
       }
 
       const user = result.rows[0];
+      const cooldown = await assertVerificationEmailAllowed(user.id);
+      if (!cooldown.allowed) {
+        return createErrorResponse(
+          429,
+          'Please wait before requesting another verification email',
+          CORS_HEADERS,
+          {
+            code: 'RESEND_COOLDOWN',
+            retryAfterSeconds: cooldown.retryAfterSeconds,
+          }
+        );
+      }
+
       const verificationToken = await assignVerificationToken(user.id);
       const emailResult = await sendUserVerificationEmail(
         user.email,

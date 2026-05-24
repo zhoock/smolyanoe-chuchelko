@@ -2,7 +2,11 @@ import { useState, FormEvent } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { changeVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
-import { useEmailVerificationCopy } from '@shared/lib/emailVerification';
+import {
+  useEmailVerificationCopy,
+  useResendCooldown,
+  resolveVerificationEmailSendError,
+} from '@shared/lib/emailVerification';
 import './VerifyEmailModal.style.scss';
 
 interface ChangeEmailModalProps {
@@ -29,6 +33,7 @@ function MailIcon() {
 export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalProps) {
   const user = useAuthSessionUser();
   const copy = useEmailVerificationCopy();
+  const { remaining, isCoolingDown, startCooldown } = useResendCooldown();
   const [email, setEmail] = useState(user?.email ?? '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,6 +41,7 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (isCoolingDown || loading) return;
     const trimmed = email.trim();
     if (!trimmed) {
       setError(copy.emailRequired);
@@ -48,12 +54,17 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
     setLoading(true);
     const result = await changeVerificationEmail(trimmed);
     setLoading(false);
-    if (result.success) {
-      onBack();
-    } else {
-      setError(result.error || copy.resendFailed);
+    const sendError = resolveVerificationEmailSendError(result, copy, startCooldown);
+    if (sendError) {
+      setError(sendError);
+      return;
     }
+    onBack();
   };
+
+  const submitLabel = isCoolingDown
+    ? `${copy.sendVerificationEmail} (${remaining}s)`
+    : copy.sendVerificationEmail;
 
   return (
     <Popup
@@ -113,9 +124,9 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
             <button
               type="submit"
               className="verify-email-modal__button verify-email-modal__button--primary"
-              disabled={loading}
+              disabled={loading || isCoolingDown}
             >
-              {loading ? '…' : copy.sendVerificationEmail}
+              {loading ? '…' : submitLabel}
             </button>
           </div>
         </form>

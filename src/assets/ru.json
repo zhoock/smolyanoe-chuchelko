@@ -100,6 +100,7 @@
         "emailRequired": "Укажите email",
         "emailInvalid": "Укажите корректный email",
         "resendFailed": "Не удалось отправить письмо. Попробуйте позже.",
+        "resendCooldown": "Подождите {{seconds}} сек. перед повторной отправкой.",
         "close": "Закрыть"
       }
     },
@@ -217,7 +218,64 @@
         "paymentSettings": "Настройки оплаты",
         "myPurchases": "Мои покупки",
         "mixer": "Миксер",
-        "archive": "Архив"
+        "archive": "Архив",
+        "socialLinks": "Соцсети"
+      },
+      "socialLinks": {
+        "title": "Соцсети",
+        "subtitle": "Добавьте свои социальные сети. Они будут отображаться на странице артиста.",
+        "hint": "Оставьте поле пустым, если ссылки нет.",
+        "platforms": {
+          "instagram": "Instagram",
+          "facebook": "Facebook",
+          "youtube": "YouTube",
+          "vk": "VK"
+        },
+        "placeholders": {
+          "instagram": "https://instagram.com/username",
+          "facebook": "https://facebook.com/username",
+          "youtube": "https://youtube.com/@username",
+          "vk": "https://vk.com/username"
+        }
+      },
+      "paymentSettings": {
+        "loading": "Загрузка...",
+        "errorLabel": "Ошибка:",
+        "connectedStatus": "Подключено",
+        "updatedAt": "Обновлено: {date}",
+        "connectedLede": "Теперь пользователи могут оплачивать покупки на вашем сайте",
+        "disconnect": "Отключить",
+        "disconnecting": "Отключение...",
+        "disconnectNote": "При отключении ЮKassa приём платежей будет недоступен. Данные о ваших платежах сохранятся.",
+        "connectButton": "Ввести Shop ID и Secret Key",
+        "connect": "Подключить",
+        "connecting": "Подключение...",
+        "fillAllFields": "Пожалуйста, заполните все поля",
+        "connectSuccess": "{provider} успешно подключен!",
+        "disconnectSuccess": "{provider} успешно отключен",
+        "disconnectConfirm": "Вы уверены, что хотите отключить {provider}? После этого вы не сможете принимать платежи через эту систему.",
+        "providers": {
+          "yookassa": {
+            "tagline": "Приём онлайн-платежей",
+            "description": "Разрешите людям оплачивать покупки на вашем сайте через ЮKassa",
+            "details": "Для получения платежей вам потребуется бизнес-счёт ЮKassa. Если у вас есть личный счёт, вы можете бесплатно обновить его. Вы можете использовать один и тот же счёт ЮKassa Business для нескольких аккаунтов для совершения продаж.",
+            "instructionsIntro": "Для подключения вам нужно:",
+            "instructionSteps": [
+              "Зарегистрироваться или войти в личный кабинет ЮKassa",
+              "Заключить договор и создать магазин",
+              "Найти Shop ID в разделе «Настройки» → «Магазин»",
+              "Выпустить Secret Key в разделе «Интеграция» → «Ключи API»",
+              "Ввести их в форму ниже"
+            ],
+            "registerLink": "Перейти на сайт ЮKassa для регистрации →",
+            "shopIdLabel": "Shop ID (ID магазина)",
+            "shopIdPlaceholder": "Введите ваш Shop ID",
+            "shopIdHint": "Shop ID находится в разделе «Настройки» → «Магазин» в личном кабинете ЮKassa",
+            "secretKeyLabel": "Secret Key (Секретный ключ)",
+            "secretKeyPlaceholder": "Введите ваш Secret Key",
+            "secretKeyHint": "Secret Key нужно выпустить в разделе «Интеграция» → «Ключи API». Важно: ключ показывается только один раз — обязательно сохраните его!"
+          }
+        }
       },
       "archive": {
         "title": "Ваш архив",

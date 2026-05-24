@@ -38,11 +38,15 @@ export function useResendCooldown(seconds = DEFAULT_SECONDS) {
     return () => window.clearInterval(id);
   }, []);
 
-  const startCooldown = useCallback(() => {
-    const until = Date.now() + seconds * 1000;
-    writeCooldownUntil(until);
-    setRemaining(seconds);
-  }, [seconds]);
+  const startCooldown = useCallback(
+    (overrideSeconds?: number) => {
+      const duration = overrideSeconds ?? seconds;
+      const until = Date.now() + duration * 1000;
+      writeCooldownUntil(until);
+      setRemaining(duration);
+    },
+    [seconds]
+  );
 
   return { remaining, isCoolingDown: remaining > 0, startCooldown };
 }

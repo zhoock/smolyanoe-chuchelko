@@ -97,6 +97,7 @@ import { PaymentSettings } from '@features/paymentSettings/ui/PaymentSettings';
 import { MyPurchasesContent } from './components/purchases/MyPurchasesContent';
 import { MixerAdmin } from './components/mixer/MixerAdmin';
 import { MyArchiveContent } from './components/archive/MyArchiveContent';
+import { SocialLinksContent } from './components/social/SocialLinksContent';
 import { ProfileEmailVerificationStatus } from './components/ProfileEmailVerificationStatus';
 import type { IAlbums, IArticles, IInterface, DashboardTrackVisibilityLabels } from '@models';
 import { getCachedAuthorship, setCachedAuthorship } from '@shared/lib/utils/authorshipCache';
@@ -977,6 +978,7 @@ const DASHBOARD_TAB_SLUGS = [
   'payment-settings',
   'my-purchases',
   'profile',
+  'social-links',
   'mixer',
   'archive',
 ] as const;
@@ -997,6 +999,8 @@ function dashboardHeadingForTab(tab: DashboardTab, ui: IInterface | null): strin
   switch (tab) {
     case 'profile':
       return d?.profile ?? 'Profile';
+    case 'social-links':
+      return d?.tabs?.socialLinks ?? d?.socialLinks?.title ?? 'Social Links';
     case 'albums':
       return d?.tabs?.albums ?? 'Albums';
     case 'posts':
@@ -2966,6 +2970,15 @@ function UserDashboard() {
                 >
                   {ui?.dashboard?.tabs?.myPurchases ?? 'My Purchases'}
                 </button>
+                <button
+                  type="button"
+                  className={`user-dashboard__nav-item ${
+                    activeTab === 'social-links' ? 'user-dashboard__nav-item--active' : ''
+                  }`}
+                  onClick={() => goDashboard('/dashboard-new/social-links')}
+                >
+                  {ui?.dashboard?.tabs?.socialLinks ?? 'Social Links'}
+                </button>
               </nav>
 
               {/* Content area: стабильная оболочка; вкладки скрыты через hidden, не размонтируются */}
@@ -3009,6 +3022,13 @@ function UserDashboard() {
                       aria-hidden={activeTab !== 'my-purchases'}
                     >
                       <MyPurchasesContent userEmail={user?.email} />
+                    </div>
+                    <div
+                      className="user-dashboard__tab-panel"
+                      hidden={activeTab !== 'social-links'}
+                      aria-hidden={activeTab !== 'social-links'}
+                    >
+                      <SocialLinksContent active={activeTab === 'social-links'} />
                     </div>
                     <div
                       className="user-dashboard__tab-panel"

@@ -4,6 +4,7 @@ import { isEmailVerified, resendVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useEmailVerificationCopy } from './useEmailVerificationCopy';
 import { useResendCooldown } from './useResendCooldown';
+import { resolveVerificationEmailSendError } from './resolveVerificationEmailSendResult';
 import './style.scss';
 
 const BANNER_DISMISSED_KEY = 'email-verification-banner-dismissed';
@@ -64,11 +65,7 @@ export function EmailVerificationBanner() {
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    if (result.success) {
-      startCooldown();
-    } else {
-      setError(result.error || copy.resendFailed);
-    }
+    setError(resolveVerificationEmailSendError(result, copy, startCooldown));
   };
 
   const handleDismiss = () => {

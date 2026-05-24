@@ -1,42 +1,71 @@
-import { memo } from 'react';
-import { Link } from 'react-router-dom';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
+import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { loadSocialLinksFromDatabase } from '@entities/user/lib';
+import { socialLinksToList } from '@shared/constants/socialLinks';
 import './style.scss';
-
-const socialNetwork = [
-  { id: 1, name: 'youtube', href: 'https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/' },
-  { id: 2, name: 'instagram', href: 'https://www.instagram.com/smolyanoechuchelko/' },
-  { id: 3, name: 'facebook', href: 'https://www.facebook.com/smolyanoechuchelko/' },
-  { id: 4, name: 'vk', href: 'https://vk.com/smolyanoechuchelko' },
-];
 
 const supportLink = (label: string) => <a href="mailto:feedback@smolyanoechuchelko.ru">{label}</a>;
 
 function FooterComponent() {
   const { lang } = useLang();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const artistSlugFromStore = useAppSelector(selectPublicArtistSlug);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
-  // UI словарь загружается через loader, не нужно загружать здесь
+  const isDashboardRoute = location.pathname.startsWith('/dashboard');
+  const artistSlug = useMemo(() => {
+    if (isDashboardRoute) return null;
+    return searchParams.get('artist')?.trim() || artistSlugFromStore || null;
+  }, [isDashboardRoute, searchParams, artistSlugFromStore]);
+
+  const [socialItems, setSocialItems] = useState<Array<{ platform: string; href: string }>>([]);
+
+  const loadLinks = useCallback(async () => {
+    if (!artistSlug) {
+      setSocialItems([]);
+      return;
+    }
+
+    const links = await loadSocialLinksFromDatabase({ artistSlugOverride: artistSlug });
+    setSocialItems(socialLinksToList(links));
+  }, [artistSlug]);
+
+  useEffect(() => {
+    void loadLinks();
+  }, [loadLinks]);
+
+  useEffect(() => {
+    const handleArtistUpdated = () => {
+      void loadLinks();
+    };
+    window.addEventListener('artist:updated', handleArtistUpdated);
+    return () => window.removeEventListener('artist:updated', handleArtistUpdated);
+  }, [loadLinks]);
 
   return (
     <footer role="contentinfo" className="footer extra-background">
       <div className="wrapper">
-        <ul className="social-networks-list">
-          {socialNetwork.map((item) => (
-            <li className="social-networks-list__item" key={item.id}>
-              <a
-                className={`social-networks__link icon-${item.name}`}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className="visually-hidden">{item.name}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
+        {socialItems.length > 0 ? (
+          <ul className="social-networks-list">
+            {socialItems.map((item) => (
+              <li className="social-networks-list__item" key={item.platform}>
+                <a
+                  className={`social-networks__link icon-${item.platform}`}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="visually-hidden">{item.platform}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <ul className="copyright-list">
           <li className="copyright-list__item">

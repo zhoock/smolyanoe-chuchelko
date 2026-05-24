@@ -746,6 +746,35 @@ SET preferred_language = 'en'
 WHERE preferred_language IS NULL OR preferred_language NOT IN ('ru', 'en');
 `;
 
+const MIGRATION_039 = `
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS verification_email_sent_at TIMESTAMPTZ;
+
+COMMENT ON COLUMN users.verification_email_sent_at IS 'Timestamp of last verification email send (cooldown enforcement)';
+`;
+
+const MIGRATION_041 = `
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS social_links JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+COMMENT ON COLUMN users.social_links IS 'Artist social profile URLs keyed by platform (instagram, facebook, youtube, vk)';
+`;
+
+const MIGRATION_040 = `
+CREATE TABLE IF NOT EXISTS auth_ip_rate_limits (
+  ip_address VARCHAR(45) NOT NULL,
+  bucket_key VARCHAR(64) NOT NULL,
+  window_hour TIMESTAMPTZ NOT NULL,
+  request_count INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (ip_address, bucket_key, window_hour)
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_ip_rate_limits_window_hour
+  ON auth_ip_rate_limits (window_hour);
+
+COMMENT ON TABLE auth_ip_rate_limits IS 'Hourly IP counters for auth abuse protection';
+`;
+
 type MigrationSql = string | (() => string);
 
 const MIGRATIONS: Record<string, MigrationSql> = {
@@ -772,6 +801,9 @@ const MIGRATIONS: Record<string, MigrationSql> = {
   '029_album_locale_cover_credits.sql': MIGRATION_029,
   '031_add_user_role.sql': MIGRATION_031,
   '038_add_preferred_language_to_users.sql': MIGRATION_038,
+  '039_add_verification_email_sent_at_to_users.sql': MIGRATION_039,
+  '040_create_auth_ip_rate_limits.sql': MIGRATION_040,
+  '041_add_social_links_to_users.sql': MIGRATION_041,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -921,6 +953,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '028_backfill_public_slug_and_default_user.sql',
       '029_album_locale_cover_credits.sql',
       '031_add_user_role.sql',
+      '038_add_preferred_language_to_users.sql',
+      '039_add_verification_email_sent_at_to_users.sql',
+      '040_create_auth_ip_rate_limits.sql',
     ];
 
     const results: MigrationResult[] = [];

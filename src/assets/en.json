@@ -100,6 +100,7 @@
         "emailRequired": "Enter your email",
         "emailInvalid": "Enter a valid email address",
         "resendFailed": "Could not send email. Try again later.",
+        "resendCooldown": "Please wait {{seconds}} seconds before requesting another email.",
         "close": "Close"
       }
     },
@@ -217,7 +218,64 @@
         "paymentSettings": "Payment Settings",
         "myPurchases": "My Purchases",
         "mixer": "Mixer",
-        "archive": "Archive"
+        "archive": "Archive",
+        "socialLinks": "Social Links"
+      },
+      "socialLinks": {
+        "title": "Social Links",
+        "subtitle": "Add your social networks. They will be displayed on your artist page.",
+        "hint": "Leave empty if you don't have a link.",
+        "platforms": {
+          "instagram": "Instagram",
+          "facebook": "Facebook",
+          "youtube": "YouTube",
+          "vk": "VK"
+        },
+        "placeholders": {
+          "instagram": "https://instagram.com/username",
+          "facebook": "https://facebook.com/username",
+          "youtube": "https://youtube.com/@username",
+          "vk": "https://vk.com/username"
+        }
+      },
+      "paymentSettings": {
+        "loading": "Loading...",
+        "errorLabel": "Error:",
+        "connectedStatus": "Connected",
+        "updatedAt": "Updated: {date}",
+        "connectedLede": "Fans can now pay for purchases on your site",
+        "disconnect": "Disconnect",
+        "disconnecting": "Disconnecting...",
+        "disconnectNote": "If you disconnect YooKassa, payment acceptance will be unavailable. Your payment data will be saved.",
+        "connectButton": "Enter Shop ID and Secret Key",
+        "connect": "Connect",
+        "connecting": "Connecting...",
+        "fillAllFields": "Please fill in all fields",
+        "connectSuccess": "{provider} connected successfully!",
+        "disconnectSuccess": "{provider} disconnected successfully",
+        "disconnectConfirm": "Are you sure you want to disconnect {provider}? You will no longer be able to accept payments through this provider.",
+        "providers": {
+          "yookassa": {
+            "tagline": "Online payment acceptance",
+            "description": "Let people pay for purchases on your site through YooKassa",
+            "details": "To receive payments you need a YooKassa business account. If you have a personal account, you can upgrade it for free. You can use the same YooKassa Business account for multiple seller accounts.",
+            "instructionsIntro": "To connect, you need to:",
+            "instructionSteps": [
+              "Sign up or log in to your YooKassa account",
+              "Sign a contract and create a store",
+              "Find Shop ID under Settings → Store",
+              "Issue a Secret Key under Integration → API keys",
+              "Enter them in the form below"
+            ],
+            "registerLink": "Go to YooKassa to sign up →",
+            "shopIdLabel": "Shop ID",
+            "shopIdPlaceholder": "Enter your Shop ID",
+            "shopIdHint": "Shop ID is located under Settings → Store in your YooKassa dashboard",
+            "secretKeyLabel": "Secret Key",
+            "secretKeyPlaceholder": "Enter your Secret Key",
+            "secretKeyHint": "Issue a Secret Key under Integration → API keys. Important: the key is shown only once — be sure to save it!"
+          }
+        }
       },
       "archive": {
         "title": "Your Archive",

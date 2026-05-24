@@ -10,6 +10,11 @@ import { buildEmailVerificationUrl } from './public-app-url';
 
 const TOKEN_BYTES = 32;
 const TOKEN_TTL_HOURS = 24;
+export const VERIFICATION_EMAIL_COOLDOWN_SECONDS = 60;
+
+export type VerificationEmailAllowResult =
+  | { allowed: true }
+  | { allowed: false; retryAfterSeconds: number };
 
 export interface VerificationUserRow {
   id: string;
@@ -28,6 +33,43 @@ export function verificationExpiresAt(): Date {
   const expires = new Date();
   expires.setHours(expires.getHours() + TOKEN_TTL_HOURS);
   return expires;
+}
+
+export async function assertVerificationEmailAllowed(
+  userId: string
+): Promise<VerificationEmailAllowResult> {
+  const result = await query<{ id: string }>(
+    `UPDATE users
+     SET verification_email_sent_at = NOW(),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1
+       AND (
+         verification_email_sent_at IS NULL
+         OR verification_email_sent_at < NOW() - INTERVAL '60 seconds'
+       )
+     RETURNING id`,
+    [userId],
+    0
+  );
+
+  if (result.rows.length > 0) {
+    return { allowed: true };
+  }
+
+  const sentAtResult = await query<{ verification_email_sent_at: Date | null }>(
+    `SELECT verification_email_sent_at FROM users WHERE id = $1`,
+    [userId],
+    0
+  );
+  const sentAt = sentAtResult.rows[0]?.verification_email_sent_at;
+  const retryAfterSeconds = sentAt
+    ? Math.max(
+        1,
+        Math.ceil(VERIFICATION_EMAIL_COOLDOWN_SECONDS - (Date.now() - sentAt.getTime()) / 1000)
+      )
+    : VERIFICATION_EMAIL_COOLDOWN_SECONDS;
+
+  return { allowed: false, retryAfterSeconds };
 }
 
 export async function assignVerificationToken(userId: string): Promise<string> {

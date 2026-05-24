@@ -8,6 +8,7 @@ import type { EmailVerificationOnboardingContext } from './EmailVerificationOnbo
 import { getEmailVerificationOnboardingBody } from './getEmailVerificationOnboardingBody';
 import { useEmailVerificationCopy } from './useEmailVerificationCopy';
 import { useResendCooldown } from './useResendCooldown';
+import { resolveVerificationEmailSendError } from './resolveVerificationEmailSendResult';
 import './EmailVerificationOnboarding.scss';
 
 type EmailVerificationOnboardingProps = {
@@ -36,11 +37,7 @@ export function EmailVerificationOnboarding({ context }: EmailVerificationOnboar
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    if (result.success) {
-      startCooldown();
-    } else {
-      setError(result.error || copy.resendFailed);
-    }
+    setError(resolveVerificationEmailSendError(result, copy, startCooldown));
   };
 
   return (

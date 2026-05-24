@@ -3,6 +3,7 @@
  */
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
+import { parseSocialLinksFromApi, type SocialLinks } from '@shared/constants/socialLinks';
 
 export interface UserProfile {
   theBand: string[];
@@ -14,6 +15,7 @@ export interface UserProfileResponse {
   data?: {
     theBand: string[];
     headerImages?: string[];
+    socialLinks?: SocialLinks;
   } | null;
   error?: string;
 }
@@ -323,6 +325,60 @@ export async function loadHeaderImagesFromDatabase(
   } catch (error) {
     console.error('❌ [loadHeaderImagesFromDatabase] Ошибка загрузки header images из БД:', error);
     return [];
+  }
+}
+
+/**
+ * Загружает ссылки на соцсети артиста из БД.
+ */
+export async function loadSocialLinksFromDatabase(
+  options: UserProfileLoadOptions = {}
+): Promise<SocialLinks> {
+  try {
+    const includeArtist = options.includeArtist ?? true;
+    const useAuth = options.useAuth ?? false;
+    const slug = await resolvePublicArtistSlugForProfile(options);
+    if (includeArtist && !useAuth && !slug?.trim()) {
+      return {};
+    }
+
+    let authHeader = {};
+    if (useAuth) {
+      const { getAuthHeader } = await import('@shared/lib/auth');
+      authHeader = getAuthHeader();
+    }
+
+    const response = await fetchWithAuthSession(
+      buildApiUrl('/api/user-profile', {}, { includeArtist, artistSlugOverride: slug }),
+      {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          ...authHeader,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return {};
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return {};
+    }
+
+    const result: UserProfileResponse = await response.json();
+    if (result.success && result.data?.socialLinks) {
+      return parseSocialLinksFromApi(result.data.socialLinks);
+    }
+
+    return {};
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Ошибка загрузки social links из БД:', error);
+    }
+    return {};
   }
 }
 

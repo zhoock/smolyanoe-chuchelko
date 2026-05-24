@@ -1,150 +1,135 @@
-import { describe, test, expect } from '@jest/globals';
-import { screen } from '@testing-library/react';
+import { describe, test, expect, jest, beforeEach } from '@jest/globals';
+import { screen, waitFor } from '@testing-library/react';
 import { Footer } from '../ui/Footer';
 import { renderWithProviders } from '@shared/lib/test-utils';
 
-describe('Footer integration tests', () => {
-  test('должен отобразить все социальные сети', () => {
-    renderWithProviders(<Footer />, {
-      preloadedState: {
-        lang: { current: 'en' },
-        uiDictionary: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [
-              {
-                menu: {},
-                buttons: {},
-                titles: {
-                  support: 'Support',
-                },
-              },
-            ],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
+const loadSocialLinksFromDatabase =
+  jest.fn<(options?: Record<string, unknown>) => Promise<Record<string, string>>>();
+
+jest.mock('@entities/user/lib', () => ({
+  loadSocialLinksFromDatabase: (options?: Record<string, unknown>) =>
+    loadSocialLinksFromDatabase(options),
+}));
+
+const uiDictionaryState = {
+  en: {
+    status: 'succeeded' as const,
+    error: null,
+    data: [
+      {
+        menu: {},
+        buttons: {},
+        titles: {
+          support: 'Support',
+        },
+        links: {
+          publicOffer: 'Public Offer',
         },
       },
+    ],
+    lastUpdated: Date.now(),
+  },
+  ru: {
+    status: 'idle' as const,
+    error: null,
+    data: [],
+    lastUpdated: null,
+  },
+};
+
+function renderFooter(initialEntries: string[] = ['/?artist=test-artist']) {
+  return renderWithProviders(<Footer />, {
+    initialEntries,
+    preloadedState: {
+      lang: { current: 'en' },
+      uiDictionary: uiDictionaryState,
+      currentArtist: { publicSlug: 'test-artist' },
+    },
+  });
+}
+
+describe('Footer integration tests', () => {
+  beforeEach(() => {
+    loadSocialLinksFromDatabase.mockReset();
+    loadSocialLinksFromDatabase.mockResolvedValue({});
+  });
+
+  test('отображает соцсети артиста из профиля', async () => {
+    loadSocialLinksFromDatabase.mockResolvedValue({
+      youtube: 'https://www.youtube.com/@test-artist',
+      instagram: 'https://www.instagram.com/test-artist/',
+      facebook: 'https://www.facebook.com/test-artist/',
+      vk: 'https://vk.com/test-artist',
     });
 
-    expect(screen.getByRole('link', { name: /youtube/i })).toBeInTheDocument();
+    renderFooter();
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /youtube/i })).toBeInTheDocument();
+    });
+
     expect(screen.getByRole('link', { name: /instagram/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /facebook/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /vk/i })).toBeInTheDocument();
-  });
-
-  test('должен отобразить ссылки с правильными href', () => {
-    renderWithProviders(<Footer />, {
-      preloadedState: {
-        lang: { current: 'en' },
-        uiDictionary: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [
-              {
-                menu: {},
-                buttons: {},
-                titles: {
-                  support: 'Support',
-                },
-              },
-            ],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-        },
-      },
-    });
 
     const youtubeLink = screen.getByRole('link', { name: /youtube/i });
-    expect(youtubeLink).toHaveAttribute(
-      'href',
-      'https://www.youtube.com/channel/UC1Ok67ewgn1Wg2PF42rDxoA/'
-    );
+    expect(youtubeLink).toHaveAttribute('href', 'https://www.youtube.com/@test-artist');
     expect(youtubeLink).toHaveAttribute('target', '_blank');
     expect(youtubeLink).toHaveAttribute('rel', 'noopener noreferrer');
+
+    expect(loadSocialLinksFromDatabase).toHaveBeenCalledWith({
+      artistSlugOverride: 'test-artist',
+    });
   });
 
-  test('должен отобразить копирайт', () => {
+  test('не отображает соцсети без контекста артиста', async () => {
     renderWithProviders(<Footer />, {
+      initialEntries: ['/'],
       preloadedState: {
         lang: { current: 'en' },
-        uiDictionary: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [
-              {
-                menu: {},
-                buttons: {},
-                titles: {
-                  support: 'Support',
-                },
-              },
-            ],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-        },
+        uiDictionary: uiDictionaryState,
+        currentArtist: { publicSlug: null },
       },
     });
 
-    expect(screen.getByText(/© 2021—2025 Смоляное чучелко/i)).toBeInTheDocument();
-  });
-
-  test('должен отобразить ссылку поддержки из UI словаря', () => {
-    renderWithProviders(<Footer />, {
-      preloadedState: {
-        lang: { current: 'en' },
-        uiDictionary: {
-          en: {
-            status: 'succeeded',
-            error: null,
-            data: [
-              {
-                menu: {},
-                buttons: {},
-                titles: {
-                  support: 'Support',
-                },
-              },
-            ],
-            lastUpdated: Date.now(),
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-        },
-      },
+    await waitFor(() => {
+      expect(loadSocialLinksFromDatabase).not.toHaveBeenCalled();
     });
 
-    const supportLink = screen.getByRole('link', { name: /support/i });
+    expect(screen.queryByRole('link', { name: /youtube/i })).not.toBeInTheDocument();
+  });
+
+  test('не отображает пустые соцсети', async () => {
+    loadSocialLinksFromDatabase.mockResolvedValue({});
+
+    renderFooter();
+
+    await waitFor(() => {
+      expect(loadSocialLinksFromDatabase).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByRole('link', { name: /youtube/i })).not.toBeInTheDocument();
+  });
+
+  test('должен отобразить копирайт', async () => {
+    renderFooter();
+
+    await waitFor(() => {
+      expect(screen.getByText(/© 2021—2025 Смоляное чучелко/i)).toBeInTheDocument();
+    });
+  });
+
+  test('должен отобразить ссылку поддержки из UI словаря', async () => {
+    renderFooter();
+
+    const supportLink = await screen.findByRole('link', { name: /support/i });
     expect(supportLink).toBeInTheDocument();
     expect(supportLink).toHaveAttribute('href', 'mailto:feedback@smolyanoechuchelko.ru');
   });
 
-  test('должен использовать fallback текст если UI словарь не загружен', () => {
+  test('должен использовать fallback текст если UI словарь не загружен', async () => {
     renderWithProviders(<Footer />, {
+      initialEntries: ['/?artist=test-artist'],
       preloadedState: {
         lang: { current: 'en' },
         uiDictionary: {
@@ -161,35 +146,19 @@ describe('Footer integration tests', () => {
             lastUpdated: null,
           },
         },
+        currentArtist: { publicSlug: 'test-artist' },
       },
     });
 
-    const supportLink = screen.getByRole('link', { name: /поддержка/i });
+    const supportLink = await screen.findByRole('link', { name: /поддержка/i });
     expect(supportLink).toBeInTheDocument();
   });
 
-  test('должен иметь role="contentinfo" для footer', () => {
-    const { container } = renderWithProviders(<Footer />, {
-      preloadedState: {
-        lang: { current: 'en' },
-        uiDictionary: {
-          en: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-          ru: {
-            status: 'idle',
-            error: null,
-            data: [],
-            lastUpdated: null,
-          },
-        },
-      },
-    });
+  test('должен иметь role="contentinfo" для footer', async () => {
+    const { container } = renderFooter();
 
-    const footer = container.querySelector('footer[role="contentinfo"]');
-    expect(footer).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.querySelector('footer[role="contentinfo"]')).toBeInTheDocument();
+    });
   });
 });

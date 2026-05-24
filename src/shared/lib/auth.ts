@@ -386,6 +386,7 @@ export async function resendVerificationEmail(): Promise<{
   success: boolean;
   error?: string;
   code?: string;
+  retryAfterSeconds?: number;
 }> {
   try {
     const response = await fetch('/api/auth/resend-verification', {
@@ -400,6 +401,8 @@ export async function resendVerificationEmail(): Promise<{
       success: Boolean(result.success),
       error: result.error,
       code: result.code,
+      retryAfterSeconds:
+        typeof result.retryAfterSeconds === 'number' ? result.retryAfterSeconds : undefined,
     };
   } catch (error) {
     return {
@@ -409,9 +412,13 @@ export async function resendVerificationEmail(): Promise<{
   }
 }
 
-export async function changeVerificationEmail(
-  email: string
-): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
+export async function changeVerificationEmail(email: string): Promise<{
+  success: boolean;
+  error?: string;
+  code?: string;
+  retryAfterSeconds?: number;
+  user?: AuthUser;
+}> {
   try {
     const response = await fetch('/api/auth/change-verification-email', {
       method: 'POST',
@@ -430,7 +437,13 @@ export async function changeVerificationEmail(
       }
       return { success: true, user: result.data.user };
     }
-    return { success: false, error: result.error };
+    return {
+      success: false,
+      error: result.error,
+      code: result.code,
+      retryAfterSeconds:
+        typeof result.retryAfterSeconds === 'number' ? result.retryAfterSeconds : undefined,
+    };
   } catch (error) {
     return {
       success: false,

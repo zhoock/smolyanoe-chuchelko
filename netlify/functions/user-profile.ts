@@ -18,12 +18,52 @@ import { classifyAuthorizationHeader } from './lib/jwt';
 import { assertArtistVisibleToViewer } from './lib/artist-publication';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 
+type SocialPlatform = 'instagram' | 'facebook' | 'youtube' | 'vk';
+
+const SOCIAL_PLATFORMS: SocialPlatform[] = ['instagram', 'facebook', 'youtube', 'vk'];
+
+type SocialLinks = Partial<Record<SocialPlatform, string>>;
+
+function parseSocialLinks(value: unknown): SocialLinks {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const parsed: SocialLinks = {};
+  for (const platform of SOCIAL_PLATFORMS) {
+    const url = (value as Record<string, unknown>)[platform];
+    if (typeof url === 'string' && url.trim()) {
+      parsed[platform] = url.trim();
+    }
+  }
+  return parsed;
+}
+
+function normalizeSocialLinksForSave(value: unknown): SocialLinks | null {
+  if (value === undefined) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const normalized: SocialLinks = {};
+  for (const platform of SOCIAL_PLATFORMS) {
+    const url = (value as Record<string, unknown>)[platform];
+    if (typeof url !== 'string') continue;
+    const trimmed = url.trim();
+    if (trimmed) {
+      normalized[platform] = trimmed;
+    }
+  }
+  return normalized;
+}
+
 interface UserProfileRow {
   id: string;
   name?: string | null;
   public_slug?: string | null;
   the_band: any; // JSONB
   header_images?: any; // JSONB
+  social_links?: any; // JSONB
   password: string | null;
   site_name?: string | null;
   genre_code?: string | null;
@@ -39,6 +79,7 @@ interface GetUserProfileResponse {
     siteName?: string | null;
     /** Canonical genre for catalog / clustering (`users.genre_code`). */
     genreCode?: string;
+    socialLinks?: SocialLinks;
   };
   error?: string;
 }
@@ -51,6 +92,7 @@ interface SaveUserProfileRequest {
   siteName?: string;
   publicSlug?: string;
   genreCode?: string;
+  socialLinks?: SocialLinks;
 }
 
 interface SaveUserProfileResponse {
@@ -140,7 +182,7 @@ export const handler: Handler = async (
 
       try {
         result = await query<UserProfileRow>(
-          `SELECT name, public_slug, the_band, header_images, password, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
+          `SELECT name, public_slug, the_band, header_images, social_links, password, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
           [targetUserId],
           0
         );
@@ -159,10 +201,11 @@ export const handler: Handler = async (
               public_slug?: string | null;
               the_band: any;
               header_images?: any;
+              social_links?: any;
               site_name?: string | null;
               genre_code?: string | null;
             }>(
-              `SELECT name, public_slug, the_band, header_images, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
+              `SELECT name, public_slug, the_band, header_images, social_links, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
               [targetUserId],
               0
             );
@@ -230,6 +273,7 @@ export const handler: Handler = async (
       const rawGenre = (user as UserProfileRow).genre_code;
       const genreCode =
         typeof rawGenre === 'string' && rawGenre.trim() ? rawGenre.trim().toLowerCase() : 'other';
+      const socialLinks = parseSocialLinks(user.social_links);
 
       return {
         statusCode: 200,
@@ -244,6 +288,7 @@ export const handler: Handler = async (
             headerImages,
             siteName,
             genreCode,
+            socialLinks,
           },
         } as GetUserProfileResponse),
       };
@@ -426,6 +471,12 @@ export const handler: Handler = async (
       if (data.headerImages !== undefined) {
         updateFields.push(`header_images = $${paramIndex++}::jsonb`);
         updateValues.push(JSON.stringify(data.headerImages || []));
+      }
+
+      const normalizedSocialLinks = normalizeSocialLinksForSave(data.socialLinks);
+      if (normalizedSocialLinks !== null) {
+        updateFields.push(`social_links = $${paramIndex++}::jsonb`);
+        updateValues.push(JSON.stringify(normalizedSocialLinks));
       }
 
       if (updateFields.length === 0) {

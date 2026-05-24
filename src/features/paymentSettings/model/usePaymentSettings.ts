@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useLang } from '@app/providers/lang';
+import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import {
   getPaymentSettings,
   savePaymentSettings,
@@ -6,6 +9,7 @@ import {
 } from '@shared/api/payment/settings';
 import type { PaymentProvider, UserPaymentSettings } from '@shared/api/payment/types';
 import { PAYMENT_PROVIDERS } from '../lib/constants';
+import { fillPaymentSettingsTemplate } from '../lib/fillPaymentSettingsTemplate';
 
 interface UsePaymentSettingsReturn {
   settingsMap: Record<PaymentProvider, UserPaymentSettings | null>;
@@ -35,6 +39,10 @@ interface UsePaymentSettingsReturn {
 }
 
 export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
+  const { lang } = useLang();
+  const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const copy = ui?.dashboard?.paymentSettings;
+
   const [settingsMap, setSettingsMap] = useState<
     Record<PaymentProvider, UserPaymentSettings | null>
   >({
@@ -91,13 +99,11 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
 
       setSettingsMap(newSettingsMap);
 
-      // Устанавливаем shopId для активного провайдера
       const activeSettings = newSettingsMap[activeProvider];
       if (activeSettings) {
         setShopId(activeSettings.shopId || '');
       }
     } catch (err) {
-      // Игнорируем ошибки загрузки, если это проблема с API
       const errorMessage = err instanceof Error ? err.message : 'Failed to load payment settings';
       if (!errorMessage.includes('netlify') && !errorMessage.includes('JSON')) {
         setError(errorMessage);
@@ -119,13 +125,15 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
     const sid = (shopIdFromForm ?? shopId).trim();
     const sec = (secretKeyFromForm ?? secretKey).trim();
     if (!sid || !sec) {
-      setError('Пожалуйста, заполните все поля');
+      setError(copy?.fillAllFields ?? 'Please fill in all fields');
       return;
     }
 
     setSaving(provider);
     setError(null);
     setSuccess(null);
+
+    const providerName = PAYMENT_PROVIDERS.find((p) => p.id === provider)?.name || provider;
 
     try {
       const result = await savePaymentSettings({
@@ -136,13 +144,20 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
       });
 
       if (result.success) {
-        setSuccess(`${PAYMENT_PROVIDERS.find((p) => p.id === provider)?.name} успешно подключен!`);
+        setSuccess(
+          fillPaymentSettingsTemplate(
+            copy?.connectSuccess ?? '{provider} connected successfully!',
+            {
+              provider: providerName,
+            }
+          )
+        );
         setSettingsMap((prev) => ({
           ...prev,
           [provider]: result.settings || null,
         }));
         setShowForm((prev) => ({ ...prev, [provider]: false }));
-        setSecretKey(''); // Очищаем секретный ключ из формы (безопасность)
+        setSecretKey('');
         await loadSettings();
       } else {
         const errorMessage = result.message || result.error || 'Failed to save payment settings';
@@ -164,7 +179,11 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
     const providerName = PAYMENT_PROVIDERS.find((p) => p.id === provider)?.name || provider;
     if (
       !confirm(
-        `Вы уверены, что хотите отключить ${providerName}? После этого вы не сможете принимать платежи через эту систему.`
+        fillPaymentSettingsTemplate(
+          copy?.disconnectConfirm ??
+            'Are you sure you want to disconnect {provider}? You will no longer be able to accept payments through this provider.',
+          { provider: providerName }
+        )
       )
     ) {
       return;
@@ -178,7 +197,12 @@ export function usePaymentSettings(userId: string): UsePaymentSettingsReturn {
       const result = await disconnectPaymentProvider(provider);
 
       if (result.success) {
-        setSuccess(`${providerName} успешно отключен`);
+        setSuccess(
+          fillPaymentSettingsTemplate(
+            copy?.disconnectSuccess ?? '{provider} disconnected successfully',
+            { provider: providerName }
+          )
+        );
         setSettingsMap((prev) => ({ ...prev, [provider]: null }));
         setShopId('');
         setSecretKey('');

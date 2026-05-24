@@ -57,7 +57,7 @@ export function ArtistOnboarding() {
   const copy = ui?.artistOnboarding;
 
   const openDashboard = (
-    tab: 'albums' | 'posts' | 'profile',
+    tab: 'albums' | 'posts' | 'profile' | 'social-links',
     intent: Omit<DashboardOpenIntent, 'backgroundLocation'>
   ) => {
     navigate(`/dashboard-new/${tab}`, {
@@ -113,11 +113,7 @@ export function ArtistOnboarding() {
         copy?.cards?.social?.description ??
         'Подключите свои социальные сети, чтобы слушатели могли следить за вами.',
       button: copy?.cards?.social?.button ?? 'Добавить ссылки',
-      onClick: () =>
-        openDashboard('profile', {
-          openProfileSettingsModal: true,
-          profileSettingsTab: 'profile',
-        }),
+      onClick: () => openDashboard('social-links', {}),
     },
   ];
 

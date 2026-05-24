@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { resendVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
-import { useEmailVerificationCopy, useResendCooldown } from '@shared/lib/emailVerification';
+import {
+  useEmailVerificationCopy,
+  useResendCooldown,
+  resolveVerificationEmailSendError,
+} from '@shared/lib/emailVerification';
 import { ChangeEmailModal } from './ChangeEmailModal';
 import './VerifyEmailModal.style.scss';
 
@@ -43,11 +47,7 @@ export function VerifyEmailModal({ isOpen, onContinueLater, onClose }: VerifyEma
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    if (result.success) {
-      startCooldown();
-    } else {
-      setError(result.error || copy.resendFailed);
-    }
+    setError(resolveVerificationEmailSendError(result, copy, startCooldown));
   };
 
   const resendLabel = isCoolingDown ? `${copy.resendEmail} (${remaining}s)` : copy.resendEmail;

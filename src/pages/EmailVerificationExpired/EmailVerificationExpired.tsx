@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { isAuthenticated, resendVerificationEmail } from '@shared/lib/auth';
-import { useEmailVerificationCopy, useResendCooldown } from '@shared/lib/emailVerification';
+import {
+  useEmailVerificationCopy,
+  useResendCooldown,
+  resolveVerificationEmailSendError,
+} from '@shared/lib/emailVerification';
 import '@features/auth/ui/VerifyEmailModal.style.scss';
 
 function WarningIcon() {
@@ -36,12 +40,12 @@ export default function EmailVerificationExpired() {
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    if (result.success) {
-      startCooldown();
-      navigate('/auth', { replace: true, state: { showVerifyEmail: true } });
-    } else {
-      setError(result.error || copy.resendFailed);
+    const sendError = resolveVerificationEmailSendError(result, copy, startCooldown);
+    if (sendError) {
+      setError(sendError);
+      return;
     }
+    navigate('/auth', { replace: true, state: { showVerifyEmail: true } });
   };
 
   const resendLabel = isCoolingDown ? `${copy.sendNewLink} (${remaining}s)` : copy.sendNewLink;

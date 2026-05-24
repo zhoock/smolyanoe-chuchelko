@@ -365,6 +365,7 @@ export interface IInterface {
       emailRequired: string;
       emailInvalid: string;
       resendFailed: string;
+      resendCooldown: string;
       close: string;
     };
   };
@@ -379,6 +380,57 @@ export interface IInterface {
       myPurchases?: string;
       mixer?: string;
       archive?: string;
+      socialLinks?: string;
+    };
+    socialLinks?: {
+      title: string;
+      subtitle: string;
+      hint: string;
+      platforms: {
+        instagram: string;
+        facebook: string;
+        youtube: string;
+        vk: string;
+      };
+      placeholders: {
+        instagram: string;
+        facebook: string;
+        youtube: string;
+        vk: string;
+      };
+    };
+    paymentSettings?: {
+      loading: string;
+      errorLabel: string;
+      connectedStatus: string;
+      updatedAt: string;
+      connectedLede: string;
+      disconnect: string;
+      disconnecting: string;
+      disconnectNote: string;
+      connectButton: string;
+      connect: string;
+      connecting: string;
+      fillAllFields: string;
+      connectSuccess: string;
+      disconnectSuccess: string;
+      disconnectConfirm: string;
+      providers: {
+        yookassa: {
+          tagline: string;
+          description: string;
+          details: string;
+          instructionsIntro: string;
+          instructionSteps: string[];
+          registerLink: string;
+          shopIdLabel: string;
+          shopIdPlaceholder: string;
+          shopIdHint: string;
+          secretKeyLabel: string;
+          secretKeyPlaceholder: string;
+          secretKeyHint: string;
+        };
+      };
     };
     profile: string;
     profileSettings: string;
