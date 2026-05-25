@@ -3,6 +3,8 @@
  *
  * POST /api/auth/register - регистрация нового пользователя
  * POST /api/auth/login - вход пользователя
+ * POST /api/auth/forgot-password - запросить ссылку для сброса пароля
+ * POST /api/auth/reset-password - установить новый пароль по токену
  * GET  /api/auth/verify-email?token=... - подтверждение email (редирект на фронт)
  * POST /api/auth/resend-verification - повторная отправка (JWT)
  * POST /api/auth/change-verification-email - смена email до верификации (JWT)
@@ -42,13 +44,27 @@ import {
 import { buildPublicAppPath } from './lib/public-app-url';
 import { normalizeEmailLocale } from './lib/email-locale';
 import { updateUserPreferredLanguage } from './lib/user-preferred-language';
-import { enforceAuthVerificationIpRateLimit } from './lib/ip-rate-limit';
+import {
+  enforceAuthVerificationIpRateLimit,
+  enforceIpRateLimit,
+  PASSWORD_RESET_CONSUME_IP_LIMIT,
+  PASSWORD_RESET_REQUEST_IP_LIMIT,
+} from './lib/ip-rate-limit';
 import {
   checkLoginRateLimit,
   recordLoginFailure,
   resetLoginRateLimitOnSuccess,
   loginRateLimitResponse,
 } from './lib/login-rate-limit';
+import {
+  applyPasswordResetForUser,
+  assertPasswordResetAllowed,
+  assignPasswordResetToken,
+  findActiveResetTokenOwner,
+  findUserByEmailForReset,
+  sendUserPasswordResetEmail,
+  validateNewPassword,
+} from './lib/password-reset';
 import { normalizeAccountType, type AccountType } from './lib/account-type';
 
 interface UserRow extends VerificationUserRow {
@@ -96,6 +112,22 @@ interface UpgradeToArtistRequest {
   siteName?: string;
   name?: string;
 }
+
+interface ForgotPasswordRequest {
+  email?: string;
+}
+
+interface ResetPasswordRequest {
+  token?: string;
+  password?: string;
+}
+
+/**
+ * Neutral copy returned by /forgot-password regardless of whether an account
+ * exists. Identical wording prevents email enumeration via response bodies.
+ */
+const FORGOT_PASSWORD_NEUTRAL_MESSAGE =
+  'If an account with this email exists, we sent a password reset link.';
 
 interface AuthData {
   token: string;
@@ -539,6 +571,120 @@ async function handleUpgradeToArtist(
   throw lastError || new Error('Failed to upgrade account after retry');
 }
 
+function neutralForgotPasswordResponse() {
+  return createSuccessResponse({ message: FORGOT_PASSWORD_NEUTRAL_MESSAGE });
+}
+
+/**
+ * POST /api/auth/forgot-password
+ *
+ * Issues a reset email for an existing, active account. To prevent email
+ * enumeration the response body and status are identical whether or not the
+ * account exists; the only externally observable difference is the IP rate
+ * limit (a generic 429) which applies to all callers equally.
+ *
+ * Failures to send the email are NOT surfaced to the client — they're logged
+ * and the same neutral success body is returned. Otherwise a third-party
+ * SMTP/Resend outage would also let attackers enumerate accounts.
+ */
+async function handleForgotPassword(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const rateLimited = await enforceIpRateLimit(event, {
+    bucketKey: 'password_reset_request',
+    limit: PASSWORD_RESET_REQUEST_IP_LIMIT,
+  });
+  if (rateLimited) {
+    return rateLimited;
+  }
+
+  const data = parseJsonBody<ForgotPasswordRequest>(event.body, {} as ForgotPasswordRequest);
+  const rawEmail = (data.email ?? '').toString();
+  const email = rawEmail.toLowerCase().trim();
+
+  // Treat missing / malformed input the same as a not-found email: same
+  // neutral response, no fast-fail that leaks anything.
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return neutralForgotPasswordResponse();
+  }
+
+  const user = await findUserByEmailForReset(email);
+
+  if (!user || !user.is_active) {
+    return neutralForgotPasswordResponse();
+  }
+
+  const cooldown = await assertPasswordResetAllowed(user.id);
+  if (!cooldown.allowed) {
+    // Hide the per-user cooldown behind the neutral message so attackers
+    // can't detect "user exists & is being probed" from a 429.
+    return neutralForgotPasswordResponse();
+  }
+
+  const token = await assignPasswordResetToken(user.id);
+  const emailResult = await sendUserPasswordResetEmail(
+    user.email,
+    token,
+    user.name,
+    user.preferred_language
+  );
+
+  if (!emailResult.success) {
+    console.error('⚠️ Password reset email failed to send:', emailResult.error);
+  }
+
+  return neutralForgotPasswordResponse();
+}
+
+/**
+ * POST /api/auth/reset-password
+ *
+ * Consumes a single-use reset token and sets a new password. Returns a single
+ * generic error code (`INVALID_OR_EXPIRED_TOKEN`) for every failure mode that
+ * concerns the token so a caller can't distinguish "expired" from "unknown"
+ * from "already used" — only the password-policy violations get their own
+ * dedicated code so the form can render a precise inline error.
+ */
+async function handleResetPassword(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const rateLimited = await enforceIpRateLimit(event, {
+    bucketKey: 'password_reset_consume',
+    limit: PASSWORD_RESET_CONSUME_IP_LIMIT,
+  });
+  if (rateLimited) {
+    return rateLimited;
+  }
+
+  const data = parseJsonBody<ResetPasswordRequest>(event.body, {} as ResetPasswordRequest);
+  const token = typeof data.token === 'string' ? data.token.trim() : '';
+  const password = typeof data.password === 'string' ? data.password : '';
+
+  if (!token) {
+    return createErrorResponse(400, 'Reset token is required', CORS_HEADERS, {
+      code: 'INVALID_OR_EXPIRED_TOKEN',
+    });
+  }
+
+  const passwordError = validateNewPassword(password);
+  if (passwordError) {
+    return createErrorResponse(400, passwordError.message, CORS_HEADERS, {
+      code: passwordError.code,
+    });
+  }
+
+  const owner = await findActiveResetTokenOwner(token);
+  if (!owner) {
+    return createErrorResponse(400, 'Reset link is invalid or has expired', CORS_HEADERS, {
+      code: 'INVALID_OR_EXPIRED_TOKEN',
+    });
+  }
+
+  await applyPasswordResetForUser(owner.id, password);
+
+  return createSuccessResponse({ message: 'Password has been updated' });
+}
+
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
@@ -578,6 +724,14 @@ export const handler: Handler = async (
 
     if (path === '/upgrade-to-artist' || path.endsWith('/upgrade-to-artist')) {
       return handleUpgradeToArtist(event);
+    }
+
+    if (path === '/forgot-password' || path.endsWith('/forgot-password')) {
+      return handleForgotPassword(event);
+    }
+
+    if (path === '/reset-password' || path.endsWith('/reset-password')) {
+      return handleResetPassword(event);
     }
 
     if (path === '/delete-account' || path.endsWith('/delete-account')) {

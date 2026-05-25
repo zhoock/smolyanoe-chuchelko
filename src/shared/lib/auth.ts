@@ -537,6 +537,78 @@ export async function deleteAccount(
 }
 
 /**
+ * Запрашивает письмо со ссылкой для сброса пароля.
+ *
+ * Бэкенд всегда возвращает одинаковый нейтральный ответ независимо от того,
+ * существует ли email в системе — это исключает email enumeration. Клиент
+ * всегда показывает один и тот же success-state «If an account with this
+ * email exists, we sent a password reset link.»
+ */
+export async function requestPasswordReset(email: string): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  code?: string;
+  retryAfterSeconds?: number;
+}> {
+  try {
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const result = await response.json();
+    return {
+      success: Boolean(result.success),
+      message: result.data?.message,
+      error: result.error,
+      code: result.code,
+      retryAfterSeconds:
+        typeof result.retryAfterSeconds === 'number' ? result.retryAfterSeconds : undefined,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Завершает сброс пароля: одноразовый токен из email + новый пароль.
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  code?: string;
+  retryAfterSeconds?: number;
+}> {
+  try {
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password: newPassword }),
+    });
+    const result = await response.json();
+    return {
+      success: Boolean(result.success),
+      error: result.error,
+      code: result.code,
+      retryAfterSeconds:
+        typeof result.retryAfterSeconds === 'number' ? result.retryAfterSeconds : undefined,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * Получает заголовок Authorization для API запросов
  */
 export function getAuthHeader(): { Authorization: string } | {} {

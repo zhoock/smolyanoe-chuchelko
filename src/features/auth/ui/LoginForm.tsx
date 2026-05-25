@@ -4,15 +4,17 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './AuthForm.scss';
+import './ForgotPasswordForm.scss';
 
 type LoginField = 'email' | 'password';
 
 interface LoginFormProps {
   onSuccess?: () => void;
   onSwitchToRegister?: () => void;
+  onForgotPassword?: (currentEmail: string) => void;
 }
 
-export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: LoginFormProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
 
@@ -28,6 +30,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
       submitting: loginUi?.submitting ?? (en ? 'Signing in…' : 'Вход…'),
       noAccount: loginUi?.noAccount ?? (en ? 'No account?' : 'Нет аккаунта?'),
       signUp: loginUi?.signUp ?? (en ? 'Register' : 'Зарегистрироваться'),
+      forgotPassword: loginUi?.forgotPassword ?? (en ? 'Forgot password?' : 'Забыли пароль?'),
       requiredEmail: val?.requiredEmail ?? (en ? 'Enter your email' : 'Укажите email'),
       requiredPassword: val?.requiredPassword ?? (en ? 'Enter your password' : 'Укажите пароль'),
       genericError: en ? 'Sign-in error' : 'Ошибка входа',
@@ -146,6 +149,19 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           </p>
         ) : null}
       </div>
+
+      {onForgotPassword ? (
+        <div className="auth-form__forgot-row">
+          <button
+            type="button"
+            className="auth-form__forgot-link"
+            onClick={() => onForgotPassword(email)}
+            disabled={loading}
+          >
+            {copy.forgotPassword}
+          </button>
+        </div>
+      ) : null}
 
       <button type="submit" className="auth-form__submit" disabled={loading}>
         {loading ? copy.submitting : copy.submit}

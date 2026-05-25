@@ -51,6 +51,15 @@ export function buildEmailVerificationUrl(token: string): string {
   return `${getPublicAppOrigin()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
 }
 
+/**
+ * Public SPA URL the password-reset email links to. The token must be the raw
+ * (un-hashed) value that ships in the email — the server hashes it to look up
+ * the user.
+ */
+export function buildPasswordResetUrl(token: string): string {
+  return `${getPublicAppOrigin()}/auth/reset-password?token=${encodeURIComponent(token)}`;
+}
+
 export function buildPublicAppPath(pathname: string): string {
   const path = pathname.startsWith('/') ? pathname : `/${pathname}`;
   return `${getPublicAppOrigin()}${path}`;

@@ -76,6 +76,7 @@ const EmailVerified = lazy(() => import('@pages/EmailVerified/EmailVerified'));
 const EmailVerificationExpired = lazy(
   () => import('@pages/EmailVerificationExpired/EmailVerificationExpired')
 );
+const ResetPassword = lazy(() => import('@pages/ResetPassword/ResetPassword'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
@@ -429,6 +430,14 @@ function Layout() {
         element={
           <Suspense fallback={<PageLoader />}>
             <AuthPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/auth/reset-password"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <ResetPassword />
           </Suspense>
         }
       />

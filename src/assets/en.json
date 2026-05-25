@@ -33,7 +33,52 @@
         "submit": "Sign in",
         "submitting": "Signing in…",
         "noAccount": "No account?",
-        "signUp": "Register"
+        "signUp": "Register",
+        "forgotPassword": "Forgot password?"
+      },
+      "forgotPassword": {
+        "title": "Reset password",
+        "body": "Enter your email and we'll send you a reset link.",
+        "emailLabel": "Email",
+        "submit": "Send reset link",
+        "submitting": "Sending…",
+        "backToLogin": "Back to sign in",
+        "sentTitle": "Check your email",
+        "sentBody": "If an account with this email exists, we sent a password reset link.",
+        "sentBackToLogin": "Back to sign in",
+        "genericError": "Could not send reset link. Please try again."
+      },
+      "resetPassword": {
+        "title": "Reset password",
+        "body": "Enter your new password below. Make sure it's strong and secure.",
+        "newPasswordLabel": "New password",
+        "newPasswordPlaceholder": "Enter new password",
+        "confirmPasswordLabel": "Confirm new password",
+        "confirmPasswordPlaceholder": "Confirm new password",
+        "submit": "Save new password",
+        "submitting": "Saving…",
+        "successTitle": "Password updated",
+        "successBody": "Your password has been updated. You can now sign in with your new password.",
+        "backToLogin": "Back to sign in",
+        "goToLogin": "Go to sign in",
+        "showPassword": "Show password",
+        "hidePassword": "Hide password",
+        "strength": {
+          "veryWeak": "Very weak",
+          "weak": "Weak",
+          "fair": "Fair",
+          "good": "Good",
+          "strong": "Strong"
+        },
+        "errors": {
+          "invalidLink": "This reset link is invalid or has expired. Please request a new one.",
+          "expiredLink": "This reset link is invalid or has expired. Please request a new one.",
+          "passwordTooShort": "Password must be at least 8 characters long.",
+          "passwordsMismatch": "Passwords do not match.",
+          "passwordRequired": "Enter a new password.",
+          "generic": "Could not update password. Please try again.",
+          "rateLimited": "Too many attempts. Please try again later."
+        }
       },
       "register": {
         "title": "Register",

@@ -43,8 +43,13 @@ export interface PurchaseEmailCopy {
 export interface PasswordResetEmailCopy {
   subject: string;
   title: string;
+  greetingNamed: string;
+  greetingGeneric: string;
   body: string;
   cta: string;
+  expiryNotice: string;
+  fallbackLabel: string;
+  ignoreNotice: string;
   footer: string;
 }
 
@@ -156,16 +161,28 @@ const COPY = {
     en: {
       subject: 'Reset your password',
       title: 'Reset your password',
-      body: 'We received a request to reset your password. Use the button below to choose a new one.',
+      greetingNamed: 'Hi {{name}},',
+      greetingGeneric: 'Hi there,',
+      body: 'We received a request to reset the password for your {{siteName}} account. Click the button below to set a new password.',
       cta: 'Reset password',
-      footer: 'If you did not request this, you can safely ignore this email.',
+      expiryNotice: 'This link will expire in {{minutes}} minutes.',
+      fallbackLabel: 'Or copy this link into your browser:',
+      ignoreNotice:
+        "If you didn't request a password reset, you can safely ignore this email. Your password will not change.",
+      footer: '© {{siteName}}. All rights reserved.',
     },
     ru: {
       subject: 'Сброс пароля',
       title: 'Сброс пароля',
-      body: 'Мы получили запрос на сброс пароля. Нажмите кнопку ниже, чтобы задать новый пароль.',
+      greetingNamed: 'Здравствуйте, {{name}}!',
+      greetingGeneric: 'Здравствуйте!',
+      body: 'Мы получили запрос на сброс пароля для вашего аккаунта на {{siteName}}. Нажмите кнопку ниже, чтобы задать новый пароль.',
       cta: 'Сбросить пароль',
-      footer: 'Если вы не запрашивали сброс, просто проигнорируйте это письмо.',
+      expiryNotice: 'Ссылка действительна {{minutes}} мин.',
+      fallbackLabel: 'Или скопируйте ссылку в браузер:',
+      ignoreNotice:
+        'Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо. Ваш пароль не изменится.',
+      footer: '© {{siteName}}. Все права защищены.',
     },
   },
 } as const;

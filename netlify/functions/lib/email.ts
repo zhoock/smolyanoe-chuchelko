@@ -4,6 +4,7 @@
 
 import { Resend } from 'resend';
 import { buildAccountDeletedEmailContent } from './account-deleted-email-template';
+import { buildPasswordResetEmailContent } from './password-reset-email-template';
 import { buildPurchaseEmailContent } from './purchase-email-template';
 import { buildVerificationEmailContent } from './verification-email-template';
 import type { EmailLocale } from './email-locale';
@@ -119,6 +120,55 @@ export async function sendVerificationEmail(
     return { success: true };
   } catch (error) {
     console.error('❌ Error in sendVerificationEmail:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+interface SendPasswordResetEmailOptions {
+  to: string;
+  resetUrl: string;
+  userName?: string | null;
+  expiresInMinutes: number;
+  locale?: EmailLocale;
+}
+
+export async function sendPasswordResetEmail(
+  options: SendPasswordResetEmailOptions
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY is not set');
+      return { success: false, error: 'Email service not configured: RESEND_API_KEY is missing' };
+    }
+
+    const locale = options.locale ?? 'en';
+    const { html, text, subject } = buildPasswordResetEmailContent({
+      locale,
+      resetUrl: options.resetUrl,
+      userName: options.userName ?? undefined,
+      siteName: getSiteDisplayName(),
+      expiresInMinutes: options.expiresInMinutes,
+    });
+
+    const result = await resend.emails.send({
+      from: 'Смоляное чучелко <noreply@smolyanoechuchelko.ru>',
+      to: options.to,
+      subject,
+      html,
+      text,
+    });
+
+    if (result.error) {
+      console.error('❌ Error sending password reset email:', result.error);
+      return { success: false, error: result.error.message || 'Failed to send email' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error in sendPasswordResetEmail:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

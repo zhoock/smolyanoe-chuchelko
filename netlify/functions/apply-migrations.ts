@@ -845,6 +845,21 @@ COMMENT ON COLUMN auth_login_rate_limits.failed_count IS 'Failed attempts within
 COMMENT ON COLUMN auth_login_rate_limits.locked_until IS 'When set and > NOW(), bucket is in temporary lockout';
 `;
 
+const MIGRATION_049 = `
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS password_reset_token_hash TEXT,
+  ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS password_reset_requested_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_users_password_reset_token_hash
+  ON users (password_reset_token_hash)
+  WHERE password_reset_token_hash IS NOT NULL;
+
+COMMENT ON COLUMN users.password_reset_token_hash IS 'SHA-256 hex digest of the active password reset token (NULL when none).';
+COMMENT ON COLUMN users.password_reset_expires_at IS 'When the active password reset token expires (NULL when none).';
+COMMENT ON COLUMN users.password_reset_requested_at IS 'When the active password reset token was issued (NULL when none).';
+`;
+
 type MigrationSql = string | (() => string);
 
 const MIGRATIONS: Record<string, MigrationSql> = {
@@ -878,6 +893,7 @@ const MIGRATIONS: Record<string, MigrationSql> = {
   '043_add_revoked_at_to_purchases.sql': MIGRATION_043,
   '044_normalize_purchase_album_id_to_slug.sql': MIGRATION_044,
   '048_create_auth_login_rate_limits.sql': MIGRATION_048,
+  '049_add_password_reset_to_users.sql': MIGRATION_049,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -1031,6 +1047,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '039_add_verification_email_sent_at_to_users.sql',
       '040_create_auth_ip_rate_limits.sql',
       '048_create_auth_login_rate_limits.sql',
+      '049_add_password_reset_to_users.sql',
     ];
 
     const results: MigrationResult[] = [];

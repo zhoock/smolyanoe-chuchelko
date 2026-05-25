@@ -21,22 +21,27 @@ import { RegisterForm } from './RegisterForm';
 import { RoleSelectionScreen } from './RoleSelectionScreen';
 import { LanguageSelectModal } from './LanguageSelectModal';
 import { VerifyEmailModal } from './VerifyEmailModal';
+import { ForgotPasswordForm } from './ForgotPasswordForm';
 import type { AccountType } from '@shared/lib/accountType';
 import './AuthPage.scss';
 import './RoleSelectionScreen.scss';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'forgot';
 type RegisterStep = 'role' | 'form';
 
 export function AuthPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const user = useAuthSessionUser();
-  const [mode, setMode] = useState<AuthMode>(() =>
-    searchParams.get('mode') === 'register' ? 'register' : 'login'
-  );
+  const [mode, setMode] = useState<AuthMode>(() => {
+    const m = searchParams.get('mode');
+    if (m === 'register') return 'register';
+    if (m === 'forgot') return 'forgot';
+    return 'login';
+  });
   const [registerStep, setRegisterStep] = useState<RegisterStep>('role');
   const [selectedAccountType, setSelectedAccountType] = useState<AccountType>('listener');
+  const [forgotInitialEmail, setForgotInitialEmail] = useState('');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showVerifyEmailModal, setShowVerifyEmailModal] = useState(() =>
     Boolean((location.state as { showVerifyEmail?: boolean } | null)?.showVerifyEmail)
@@ -76,6 +81,8 @@ export function AuthPage() {
       setRegisterStep('role');
     } else if (m === 'login') {
       setMode('login');
+    } else if (m === 'forgot') {
+      setMode('forgot');
     }
   }, [searchParams]);
 
@@ -181,6 +188,15 @@ export function AuthPage() {
                   setMode('register');
                   setRegisterStep('role');
                 }}
+                onForgotPassword={(currentEmail) => {
+                  setForgotInitialEmail(currentEmail);
+                  setMode('forgot');
+                }}
+              />
+            ) : mode === 'forgot' ? (
+              <ForgotPasswordForm
+                initialEmail={forgotInitialEmail}
+                onBackToLogin={() => setMode('login')}
               />
             ) : showRoleSelection ? (
               <RoleSelectionScreen

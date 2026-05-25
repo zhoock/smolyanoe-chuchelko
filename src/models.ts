@@ -321,6 +321,51 @@ export interface IInterface {
       submitting: string;
       noAccount: string;
       signUp: string;
+      forgotPassword?: string;
+    };
+    forgotPassword?: {
+      title: string;
+      body: string;
+      emailLabel: string;
+      submit: string;
+      submitting: string;
+      backToLogin: string;
+      sentTitle: string;
+      sentBody: string;
+      sentBackToLogin: string;
+      genericError: string;
+    };
+    resetPassword?: {
+      title: string;
+      body: string;
+      newPasswordLabel: string;
+      newPasswordPlaceholder?: string;
+      confirmPasswordLabel: string;
+      confirmPasswordPlaceholder?: string;
+      submit: string;
+      submitting: string;
+      successTitle: string;
+      successBody: string;
+      backToLogin: string;
+      goToLogin: string;
+      showPassword: string;
+      hidePassword: string;
+      strength: {
+        veryWeak: string;
+        weak: string;
+        fair: string;
+        good: string;
+        strong: string;
+      };
+      errors: {
+        invalidLink: string;
+        expiredLink: string;
+        passwordTooShort: string;
+        passwordsMismatch: string;
+        passwordRequired: string;
+        generic: string;
+        rateLimited: string;
+      };
     };
     register: {
       title: string;
