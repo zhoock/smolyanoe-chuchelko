@@ -17,12 +17,29 @@
 
 ### JWT (для аутентификации)
 
-- `JWT_SECRET` - Секретный ключ для подписи JWT токенов
+- `JWT_SECRET` - **Обязательный** секретный ключ для подписи JWT токенов.
+  - Длинная случайная строка (рекомендуется ≥ 32 символов).
+  - Сгенерировать: `openssl rand -base64 48`.
+  - Если переменная не задана, любая защищённая функция упадёт с
+    `Error: JWT_SECRET is required` — fallback-значения нет.
+  - В Netlify задавайте через **Site settings → Environment variables**
+    с флагом **Sensitive**.
 - `JWT_EXPIRES_IN` - Время жизни токена (по умолчанию: `7d`)
 
 ### Шифрование
 
-- `ENCRYPTION_KEY` - Ключ для шифрования чувствительных данных (32 байта в hex формате)
+- `ENCRYPTION_KEY` - **Обязательный** ключ для шифрования чувствительных данных
+  в БД (`user_payment_settings.secret_key_encrypted` — секреты продавцов
+  YooKassa, AES-256-GCM).
+  - Рекомендуется: 32 байта в base64 (44 символа, оканчивается на `=`) или
+    в hex (64 символа). Сгенерировать: `openssl rand -base64 48`.
+  - Если переменная не задана, любая функция, работающая с зашифрованными
+    данными (`payment-settings`, `create-payment`, …), упадёт с
+    `Error: ENCRYPTION_KEY is required` — fallback-значения нет.
+  - В Netlify задавайте через **Site settings → Environment variables**
+    с флагом **Sensitive**.
+  - ⚠️ После смены ключа уже зашифрованные значения в БД перестанут
+    расшифровываться — ротация требует re-encryption.
 
 ### Email (Resend)
 

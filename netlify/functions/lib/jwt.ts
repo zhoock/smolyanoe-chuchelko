@@ -1,13 +1,59 @@
 /**
  * Утилиты для работы с JWT токенами
+ *
+ * Конфигурация (JWT_SECRET / JWT_EXPIRES_IN) централизована в этом модуле —
+ * `getJwtSecret()` это единственная точка чтения секрета из окружения.
+ * Не считывайте `process.env.JWT_SECRET` напрямую в других модулях.
  */
 
 import * as jwt from 'jsonwebtoken';
 
-// Секретный ключ для подписи JWT (должен быть в переменных окружения)
-const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-// expiresIn может быть строкой (например, "7d", "1h") или числом (секунды)
-const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as string | number;
+/** Минимальная рекомендуемая длина секрета (HS256 ≥ 256 бит). */
+const MIN_RECOMMENDED_SECRET_LENGTH = 32;
+
+let cachedJwtSecret: string | null = null;
+
+/**
+ * Возвращает JWT-секрет из process.env.JWT_SECRET.
+ *
+ * Поведение:
+ *  - Если переменная не задана или пуста после trim — бросает Error
+ *    ('JWT_SECRET is required'). Никаких fallback-значений нет.
+ *  - В production (NODE_ENV=production) для короткого секрета
+ *    (< {@link MIN_RECOMMENDED_SECRET_LENGTH} символов) пишет warning, но
+ *    не блокирует загрузку (поведение существующих деплоев не меняется).
+ *  - Значение кэшируется, чтобы валидация и логи выполнялись один раз
+ *    на процесс (cold-start функции).
+ */
+export function getJwtSecret(): string {
+  if (cachedJwtSecret !== null) {
+    return cachedJwtSecret;
+  }
+
+  const raw = process.env.JWT_SECRET;
+  const secret = typeof raw === 'string' ? raw.trim() : '';
+
+  if (!secret) {
+    throw new Error(
+      'JWT_SECRET is required. Set the JWT_SECRET environment variable (see .env.example).'
+    );
+  }
+
+  if (process.env.NODE_ENV === 'production' && secret.length < MIN_RECOMMENDED_SECRET_LENGTH) {
+    console.warn(
+      `⚠️ JWT_SECRET is shorter than ${MIN_RECOMMENDED_SECRET_LENGTH} characters. ` +
+        'Use a long random string in production (e.g. `openssl rand -base64 48`).'
+    );
+  }
+
+  cachedJwtSecret = secret;
+  return secret;
+}
+
+/** expiresIn может быть строкой (например, "7d", "1h") или числом (секунды). */
+function getJwtExpiresIn(): string | number {
+  return (process.env.JWT_EXPIRES_IN || '7d') as string | number;
+}
 
 export type UserRole = 'user' | 'admin';
 export type AccountType = 'listener' | 'artist';
@@ -43,8 +89,8 @@ export function generateToken(
     accountType: accountType ?? 'artist',
   };
 
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
+  return jwt.sign(payload, getJwtSecret(), {
+    expiresIn: getJwtExpiresIn(),
   } as jwt.SignOptions);
 }
 
@@ -55,7 +101,7 @@ export function generateToken(
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
     return decoded;
   } catch (error) {
     console.error('❌ JWT verification failed:', error);
@@ -93,7 +139,7 @@ export function classifyAuthorizationHeader(authHeader: string | undefined): Aut
     return { kind: 'none' };
   }
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
     if (!decoded.userId) {
       return { kind: 'invalid', reason: 'missing_user_id' };
     }

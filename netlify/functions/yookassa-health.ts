@@ -16,6 +16,7 @@
 
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { pingDatabase, query } from './lib/db';
+import { isEncryptionKeyConfigured } from './lib/crypto';
 
 type CheckResult = {
   ok: boolean;
@@ -111,9 +112,7 @@ export const handler: Handler = async (
     const apiUrl = process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3/payments';
     const includeTenantStats = parseIncludeTenantStats(event);
 
-    const encryptionKeyPresent = !!(
-      process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.trim()
-    );
+    const encryptionKeyPresent = isEncryptionKeyConfigured();
     const sellerSecretsEncryption: CheckResult = encryptionKeyPresent
       ? {
           ok: true,

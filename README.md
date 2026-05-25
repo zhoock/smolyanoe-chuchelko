@@ -60,8 +60,9 @@
 
    Обязательные переменные для работы API и БД:
    - `DATABASE_URL` — строка подключения к PostgreSQL (Supabase)
-   - `JWT_SECRET` — секрет для JWT-токенов
+   - `JWT_SECRET` — секрет для JWT-токенов (длинная случайная строка, ≥ 32 символов; например `openssl rand -base64 48`). Обязателен: при пустом значении функции бросают `Error: JWT_SECRET is required`.
    - `JWT_EXPIRES_IN` — время жизни токена (например, `7d`)
+   - `ENCRYPTION_KEY` — мастер-ключ AES-256-GCM для зашифрованных секретов в БД (`secret_key_encrypted` продавцов YooKassa). Длинная случайная строка, рекомендация — `openssl rand -base64 48`. Обязателен: при пустом значении функции бросают `Error: ENCRYPTION_KEY is required`. ⚠️ Смена ключа делает уже зашифрованные значения нечитаемыми.
    - Для медиа и хранилища: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (и при необходимости `VITE_SUPABASE_*` для клиента)
 
 3. **Запуск:**

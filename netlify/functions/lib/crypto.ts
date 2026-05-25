@@ -1,45 +1,104 @@
 /**
  * Утилиты для шифрования/расшифровки sensitive данных.
  * Использует AES-256-GCM для шифрования.
+ *
+ * Конфигурация (`ENCRYPTION_KEY`) централизована в этом модуле —
+ * `getEncryptionKey()` это единственная точка чтения переменной окружения.
+ * Не считывайте `process.env.ENCRYPTION_KEY` напрямую в других модулях;
+ * для health-check'ов используйте `isEncryptionKeyConfigured()`.
+ *
+ * Формат шифротекста (backward-compatible):
+ *   base64( salt[64] || iv[16] || tag[16] || ciphertext )
+ *
+ * Деривация ключа (порядок проверки сохранён для совместимости с уже
+ * зашифрованными значениями в БД):
+ *   - 44 символа и оканчивается на `=`  → base64-декод (32 байта)
+ *   - 64 символа                        → hex-декод   (32 байта)
+ *   - иначе                              → scryptSync(value, 'encryption-salt', 32)
  */
 
 import * as crypto from 'crypto';
 
-// Длина ключа для AES-256 (32 байта = 256 бит)
 const ALGORITHM = 'aes-256-gcm';
-const IV_LENGTH = 16; // 16 байт для IV
-const SALT_LENGTH = 64; // 64 байта для соли
-const TAG_LENGTH = 16; // 16 байт для аутентификационного тега
+const IV_LENGTH = 16;
+const SALT_LENGTH = 64;
+const TAG_LENGTH = 16;
 const TAG_POSITION = SALT_LENGTH + IV_LENGTH;
 const ENCRYPTED_POSITION = TAG_POSITION + TAG_LENGTH;
 
+/** Минимальная рекомендуемая длина исходной строки ENCRYPTION_KEY. */
+const MIN_RECOMMENDED_KEY_LENGTH = 32;
+
+let cachedEncryptionKey: Buffer | null = null;
+
 /**
- * Получить ключ шифрования из переменной окружения или сгенерировать его.
- * В production ВСЕГДА используйте переменную окружения!
+ * Возвращает 32-байтовый ключ шифрования (AES-256-GCM), полученный из
+ * `process.env.ENCRYPTION_KEY`.
+ *
+ * Поведение:
+ *  - Если переменная не задана или пуста после trim — бросает Error
+ *    ('ENCRYPTION_KEY is required'). Никаких fallback-значений нет —
+ *    предсказуемый «default» ключ удалён как критическая уязвимость.
+ *  - В production (NODE_ENV=production) для короткой исходной строки
+ *    (< {@link MIN_RECOMMENDED_KEY_LENGTH} символов) пишет warning, но не
+ *    блокирует загрузку (поведение существующих деплоев не меняется).
+ *  - Кэширует результат, чтобы валидация и деривация выполнялись один раз
+ *    на процесс (cold-start функции).
+ *
+ * Backward compatibility: алгоритм выбора формата (base64 / hex / scrypt)
+ * полностью совпадает с предыдущей реализацией, поэтому ранее зашифрованные
+ * значения в БД (`user_payment_settings.secret_key_encrypted`) продолжают
+ * расшифровываться без миграции.
  */
-function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY;
+export function getEncryptionKey(): Buffer {
+  if (cachedEncryptionKey !== null) {
+    return cachedEncryptionKey;
+  }
+
+  const raw = process.env.ENCRYPTION_KEY;
+  const key = typeof raw === 'string' ? raw.trim() : '';
 
   if (!key) {
-    console.warn('⚠️ ENCRYPTION_KEY not set. Using default key (NOT SECURE FOR PRODUCTION!)');
-    // В production это НЕ должно использоваться!
-    // Используйте: openssl rand -base64 32 для генерации безопасного ключа
-    return crypto.scryptSync('default-key-change-in-production', 'salt', 32);
+    throw new Error(
+      'ENCRYPTION_KEY is required. Set the ENCRYPTION_KEY environment variable (see .env.example).'
+    );
   }
 
-  // Ключ должен быть в base64 формате или 32-байтовым
+  if (process.env.NODE_ENV === 'production' && key.length < MIN_RECOMMENDED_KEY_LENGTH) {
+    console.warn(
+      `⚠️ ENCRYPTION_KEY is shorter than ${MIN_RECOMMENDED_KEY_LENGTH} characters. ` +
+        'Use a long random value in production (e.g. `openssl rand -base64 48`).'
+    );
+  }
+
+  let derived: Buffer;
   if (key.length === 44 && key.endsWith('=')) {
-    // base64 encoded key
-    return Buffer.from(key, 'base64');
+    derived = Buffer.from(key, 'base64');
+  } else if (key.length === 64) {
+    derived = Buffer.from(key, 'hex');
+  } else {
+    derived = crypto.scryptSync(key, 'encryption-salt', 32);
   }
 
-  // Прямой 32-байтовый ключ
-  if (key.length === 64) {
-    return Buffer.from(key, 'hex');
-  }
+  cachedEncryptionKey = derived;
+  return derived;
+}
 
-  // Генерируем ключ из строки (менее безопасно)
-  return crypto.scryptSync(key, 'encryption-salt', 32);
+/**
+ * Безопасная проверка наличия `ENCRYPTION_KEY` для health-check'ов / диагностики
+ * (не бросает, не кэширует, не выполняет деривацию).
+ */
+export function isEncryptionKeyConfigured(): boolean {
+  const raw = process.env.ENCRYPTION_KEY;
+  return typeof raw === 'string' && raw.trim().length > 0;
+}
+
+/**
+ * @internal Только для тестов: сбросить кэшированный ключ, чтобы повторно
+ * валидировать `process.env.ENCRYPTION_KEY`. Не используйте в runtime-коде.
+ */
+export function __resetEncryptionKeyCacheForTests(): void {
+  cachedEncryptionKey = null;
 }
 
 /**
