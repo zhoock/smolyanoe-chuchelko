@@ -653,10 +653,10 @@ export const handler: Handler = async (
 
           result = await query<UserRow>(
             `INSERT INTO users (
-               email, name, username, site_name, public_slug, password, password_hash,
+               email, name, username, site_name, public_slug, password_hash,
                is_active, is_email_verified, genre_code, preferred_language, account_type
              )
-             VALUES ($1, $2, $3, $4, $5, $6, $7, true, false, $8, $9, $10)
+             VALUES ($1, $2, $3, $4, $5, $6, true, false, $7, $8, $9)
              RETURNING id, email, name, role, account_type, is_email_verified, preferred_language`,
             [
               normalizedEmail,
@@ -664,7 +664,6 @@ export const handler: Handler = async (
               username,
               siteName,
               publicSlug,
-              data.password,
               passwordHash,
               'other',
               preferredLanguage,

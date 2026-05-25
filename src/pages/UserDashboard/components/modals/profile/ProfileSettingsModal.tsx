@@ -271,7 +271,6 @@ export function ProfileSettingsModal({
           return;
         }
 
-        console.log('🔄 Sending password change request...');
         const response = await fetchWithAuthSession('/api/change-password', {
           method: 'POST',
           headers: {
@@ -284,66 +283,25 @@ export function ProfileSettingsModal({
           }),
         });
 
-        console.log('📥 Response status:', response.status);
         const result = await response.json();
-        console.log('📥 Response data:', result);
 
         if (!response.ok) {
-          console.error('❌ Password change failed:', result.error);
           setPasswordError(result.error || 'Ошибка при смене пароля');
           setIsChangingPassword(false);
           return;
         }
 
-        console.log('✅ Password changed successfully!');
-
-        // Успех - перезагружаем пароль из БД и обновляем состояние
         setPasswordSuccess(true);
+        setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setPasswordError(null);
 
-        // Перезагружаем пароль из БД, чтобы получить актуальное значение
-        const reloadPassword = async () => {
-          try {
-            const token = getToken();
-            if (!token) return;
-
-            const reloadResponse = await fetchWithAuthSession('/api/user-profile', {
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-            });
-
-            if (reloadResponse.ok) {
-              const reloadResult = await reloadResponse.json();
-              console.log('🔄 Reloaded password from DB:', reloadResult);
-              if (reloadResult.success && reloadResult.data?.password) {
-                setCurrentPassword(reloadResult.data.password);
-                console.log('✅ Updated currentPassword state:', reloadResult.data.password);
-              } else {
-                // Если пароль не загрузился из БД, используем новый пароль
-                setCurrentPassword(newPassword);
-                console.log('⚠️ Password not found in DB response, using new password');
-              }
-            }
-          } catch (error) {
-            console.error('Ошибка перезагрузки пароля:', error);
-            // В случае ошибки используем новый пароль
-            setCurrentPassword(newPassword);
-          }
-        };
-
-        await reloadPassword();
-
-        // Закрываем модалку через небольшую задержку, чтобы пользователь увидел сообщение об успехе
         setTimeout(() => {
           onClose();
           setPasswordSuccess(false);
         }, 1500);
       } catch (error) {
-        console.error('Ошибка при смене пароля:', error);
         setPasswordError(error instanceof Error ? error.message : 'Неизвестная ошибка');
       } finally {
         setIsChangingPassword(false);
@@ -513,39 +471,6 @@ export function ProfileSettingsModal({
       onClose();
     }
   };
-
-  // Загрузка текущего пароля при открытии вкладки "Безопасность"
-  useEffect(() => {
-    if (isOpen && activeTab === 'security') {
-      const loadPassword = async () => {
-        try {
-          const token = getToken();
-          if (!token) {
-            console.log('⚠️ Токен не найден для загрузки пароля');
-            return;
-          }
-
-          const response = await fetchWithAuthSession('/api/user-profile', {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data?.password) {
-              setCurrentPassword(result.data.password);
-            }
-          }
-        } catch (error) {
-          console.error('Ошибка загрузки пароля:', error);
-        }
-      };
-
-      loadPassword();
-    }
-  }, [isOpen, activeTab]);
 
   // Сброс состояния пароля при переключении вкладок
   useEffect(() => {
@@ -739,7 +664,7 @@ export function ProfileSettingsModal({
       const initialUserLang = currentLang || 'ru';
       setInitialLang(initialUserLang);
       setSelectedLang(initialUserLang);
-      // Сбрасываем поля пароля при открытии (кроме currentPassword - он загружается отдельно)
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setPasswordError(null);

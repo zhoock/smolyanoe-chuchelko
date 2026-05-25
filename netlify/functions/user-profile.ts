@@ -64,7 +64,6 @@ interface UserProfileRow {
   the_band: any; // JSONB
   header_images?: any; // JSONB
   social_links?: any; // JSONB
-  password: string | null;
   site_name?: string | null;
   genre_code?: string | null;
 }
@@ -175,59 +174,12 @@ export const handler: Handler = async (
         };
       }
 
-      // Пытаемся получить данные, включая password (если поле существует)
-      // Если поле password не существует, используем COALESCE для возврата NULL
-      let result;
-      let password = '';
-
-      try {
-        result = await query<UserProfileRow>(
-          `SELECT name, public_slug, the_band, header_images, social_links, password, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
-          [targetUserId],
-          0
-        );
-
-        if (result.rows.length > 0) {
-          password = result.rows[0].password || '';
-        }
-      } catch (error: any) {
-        // Если ошибка связана с отсутствием колонки, пробуем без неё
-        const errorMessage = error?.message || String(error);
-        if (errorMessage.includes('column')) {
-          console.log('⚠️ Некоторые поля еще не существуют в БД, используем только доступные');
-          try {
-            result = await query<{
-              name?: string | null;
-              public_slug?: string | null;
-              the_band: any;
-              header_images?: any;
-              social_links?: any;
-              site_name?: string | null;
-              genre_code?: string | null;
-            }>(
-              `SELECT name, public_slug, the_band, header_images, social_links, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
-              [targetUserId],
-              0
-            );
-            password = '';
-          } catch (innerError) {
-            result = await query<{
-              name?: string | null;
-              public_slug?: string | null;
-              the_band: any;
-              site_name?: string | null;
-              genre_code?: string | null;
-            }>(
-              `SELECT name, public_slug, the_band, site_name, genre_code FROM users WHERE id = $1 AND is_active = true`,
-              [targetUserId],
-              0
-            );
-            password = '';
-          }
-        } else {
-          throw error; // Перебрасываем другую ошибку
-        }
-      }
+      const result = await query<UserProfileRow>(
+        `SELECT name, public_slug, the_band, header_images, social_links, site_name, genre_code
+         FROM users WHERE id = $1 AND is_active = true`,
+        [targetUserId],
+        0
+      );
 
       if (!result || result.rows.length === 0) {
         return {
@@ -284,7 +236,6 @@ export const handler: Handler = async (
             name: profileName,
             publicSlug,
             theBand,
-            password,
             headerImages,
             siteName,
             genreCode,
