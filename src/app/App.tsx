@@ -283,6 +283,7 @@ function Layout() {
     '/dashboard-new',
     '/dashboard-new/:tab',
     '/auth',
+    '/auth/reset-password',
     '/email-verified',
     '/email-verification-expired',
   ];
