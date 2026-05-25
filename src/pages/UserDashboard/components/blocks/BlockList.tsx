@@ -1,36 +1,30 @@
 // src/pages/UserDashboard/components/blocks/BlockList.tsx
 import React, { useRef, useEffect } from 'react';
+import { createListItem, type ArticleListItem } from '../modals/article/EditArticleModalV2.utils';
 
 interface BlockListProps {
-  value: string[];
-  onChange: (items: string[]) => void;
+  value: ArticleListItem[];
+  onChange: (items: ArticleListItem[]) => void;
   onFocus?: () => void;
   onBlur?: () => void;
   onBackspace?: (isEmpty: boolean, atStart?: boolean) => void;
 }
 
-export function BlockList({
-  value,
-  onChange,
-  onFocus,
-  onBlur,
-  onBackspace,
-}: BlockListProps) {
-  const items = value.length > 0 ? value : [''];
+export function BlockList({ value, onChange, onFocus, onBlur, onBackspace }: BlockListProps) {
+  const items = value.length > 0 ? value : [createListItem('')];
 
   const handleItemChange = (index: number, text: string) => {
     const newItems = [...items];
-    newItems[index] = text;
-    onChange(newItems.filter((item) => item !== ''));
+    newItems[index] = { ...newItems[index], text };
+    onChange(newItems.filter((item) => item.text.trim() !== ''));
   };
 
   const handleItemKeyDown = (index: number, e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const newItems = [...items];
-      newItems.splice(index + 1, 0, '');
+      newItems.splice(index + 1, 0, createListItem(''));
       onChange(newItems);
-      // Фокус на новый элемент будет установлен через useEffect
       setTimeout(() => {
         const nextInput = document.querySelector(
           `.edit-article-v2__block--list-item:nth-child(${index + 2}) textarea`
@@ -43,7 +37,6 @@ export function BlockList({
         e.preventDefault();
         const newItems = items.filter((_, i) => i !== index);
         onChange(newItems);
-        // Фокус на предыдущий элемент
         if (index > 0) {
           setTimeout(() => {
             const prevInput = document.querySelector(
@@ -65,8 +58,8 @@ export function BlockList({
     <ul className="edit-article-v2__block edit-article-v2__block--list">
       {items.map((item, index) => (
         <ListItem
-          key={index}
-          value={item}
+          key={item.id}
+          value={item.text}
           onChange={(text) => handleItemChange(index, text)}
           onKeyDown={(e) => handleItemKeyDown(index, e)}
           onFocus={onFocus}
@@ -114,4 +107,3 @@ function ListItem({ value, onChange, onKeyDown, onFocus, onBlur, placeholder }: 
     </li>
   );
 }
-

@@ -63,6 +63,14 @@ import {
   recordingFormDraftCanSave,
   buildAlbumDiscardFingerprint,
   makeEmptyDiscardAuxBaseline,
+  parseBandMemberFromContentItem,
+  parseProducerFromContentItem,
+  parseRecordingEntryFromContentItem,
+  createBandMember,
+  createRecordingEntry,
+  updateBandMemberPreservingId,
+  updateRecordingEntryPreservingId,
+  buildRecordingEntryFromEditFields,
 } from './EditAlbumModal.utils';
 import type { AlbumDiscardAuxState } from './EditAlbumModal.utils';
 import { recordingEntryEditHasChanges } from './recordingEntryEditHasChanges';
@@ -337,32 +345,8 @@ export function EditAlbumModal({
 
     if (bandMembersDetail && (bandMembersDetail as any).content) {
       for (const item of (bandMembersDetail as any).content) {
-        if (typeof item === 'string' && item.trim() === '') continue;
-
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          const fullText = item.text.join('');
-          const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
-          if (match) {
-            const name = match[1].trim();
-            // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек при сохранении)
-            const role = match[2].trim().replace(/\.+$/, '');
-            const url = item.link ? String(item.link).trim() : undefined;
-            if (name && role) bandMembers.push({ name, role, url });
-          } else if (fullText.trim()) {
-            const url = item.link ? String(item.link).trim() : undefined;
-            bandMembers.push({ name: fullText.trim(), role: '', url });
-          }
-        } else if (typeof item === 'string' && item.trim()) {
-          const match = item.match(/^(.+?)\s*—\s*(.+)$/);
-          if (match) {
-            const name = match[1].trim();
-            // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек при сохранении)
-            const role = match[2].trim().replace(/\.+$/, '');
-            if (name && role) bandMembers.push({ name, role });
-          } else {
-            bandMembers.push({ name: item.trim(), role: '' });
-          }
-        }
+        const parsed = parseBandMemberFromContentItem(item);
+        if (parsed) bandMembers.push(parsed);
       }
     }
 
@@ -380,32 +364,8 @@ export function EditAlbumModal({
 
     if (sessionMusiciansDetail && (sessionMusiciansDetail as any).content) {
       for (const item of (sessionMusiciansDetail as any).content) {
-        if (typeof item === 'string' && item.trim() === '') continue;
-
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          const fullText = item.text.join('');
-          const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
-          if (match) {
-            const name = match[1].trim();
-            // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек при сохранении)
-            const role = match[2].trim().replace(/\.+$/, '');
-            const url = item.link ? String(item.link).trim() : undefined;
-            if (name && role) sessionMusicians.push({ name, role, url });
-          } else if (fullText.trim()) {
-            const url = item.link ? String(item.link).trim() : undefined;
-            sessionMusicians.push({ name: fullText.trim(), role: '', url });
-          }
-        } else if (typeof item === 'string' && item.trim()) {
-          const match = item.match(/^(.+?)\s*—\s*(.+)$/);
-          if (match) {
-            const name = match[1].trim();
-            // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек при сохранении)
-            const role = match[2].trim().replace(/\.+$/, '');
-            if (name && role) sessionMusicians.push({ name, role });
-          } else {
-            sessionMusicians.push({ name: item.trim(), role: '' });
-          }
-        }
+        const parsed = parseBandMemberFromContentItem(item);
+        if (parsed) sessionMusicians.push(parsed);
       }
     }
 
@@ -515,17 +475,8 @@ export function EditAlbumModal({
 
     if (recordedAtDetail && (recordedAtDetail as any).content) {
       for (const item of (recordedAtDetail as any).content) {
-        if (!item || typeof item !== 'object' || !item.dateFrom) continue;
-
-        // Новый формат: { dateFrom, dateTo?, studioText, city?, url }
-        recordedAt.push({
-          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, item.city, lang),
-          url: item.url || undefined,
-          dateFrom: item.dateFrom,
-          dateTo: item.dateTo,
-          studioText: item.studioText,
-          city: item.city,
-        });
+        const parsed = parseRecordingEntryFromContentItem(item, lang);
+        if (parsed) recordedAt.push(parsed);
       }
     }
 
@@ -539,17 +490,8 @@ export function EditAlbumModal({
 
     if (mixedAtDetail && (mixedAtDetail as any).content) {
       for (const item of (mixedAtDetail as any).content) {
-        if (!item || typeof item !== 'object' || !item.dateFrom) continue;
-
-        // Новый формат: { dateFrom, dateTo?, studioText, city?, url }
-        mixedAt.push({
-          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, item.city, lang),
-          url: item.url || undefined,
-          dateFrom: item.dateFrom,
-          dateTo: item.dateTo,
-          studioText: item.studioText,
-          city: item.city,
-        });
+        const parsed = parseRecordingEntryFromContentItem(item, lang);
+        if (parsed) mixedAt.push(parsed);
       }
     }
 
@@ -567,70 +509,8 @@ export function EditAlbumModal({
 
     if (producingDetail && (producingDetail as any).content) {
       for (const item of (producingDetail as any).content) {
-        if (!item) continue;
-
-        // Новый формат: объект с text: ["Имя", "роль"]
-        if (typeof item === 'object' && item?.text && Array.isArray(item.text)) {
-          const textArray = item.text;
-
-          // Формат ["Имя", "роль"]
-          if (textArray.length === 2) {
-            const name = String(textArray[0]).trim();
-            const role = String(textArray[1]).trim();
-
-            // Пропускаем записи с mastering/мастеринг (они обрабатываются в блоке Mastered By)
-            const roleLower = role.toLowerCase();
-            if (!roleLower.includes('mastering') && !roleLower.includes('мастеринг')) {
-              if (name && role) {
-                producer.push({
-                  name,
-                  role,
-                  url: item.link ? String(item.link).trim() : undefined,
-                });
-              }
-            }
-          }
-          // Старый формат ["", "Имя", " — роль"] для обратной совместимости
-          else if (
-            textArray.length === 3 &&
-            textArray[0] === '' &&
-            textArray[2].startsWith(' — ')
-          ) {
-            const name = String(textArray[1]).trim();
-            const role = String(textArray[2]).replace(/^ — /, '').trim();
-            const roleLower = role.toLowerCase();
-            if (!roleLower.includes('mastering') && !roleLower.includes('мастеринг')) {
-              if (name && role) {
-                producer.push({
-                  name,
-                  role,
-                  url: item.link ? String(item.link).trim() : undefined,
-                });
-              }
-            }
-          }
-        }
-        // Старый формат: строка (для обратной совместимости)
-        else if (typeof item === 'string' && item.trim()) {
-          const fullText = item.trim();
-          const roleTextLower = fullText.toLowerCase();
-          if (!roleTextLower.includes('mastering') && !roleTextLower.includes('мастеринг')) {
-            // Пытаемся разбить строку "Имя — роль"
-            const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
-            if (match) {
-              producer.push({
-                name: match[1].trim(),
-                role: match[2].trim(),
-              });
-            } else {
-              // Если не удалось разбить, сохраняем как роль без имени
-              producer.push({
-                name: '',
-                role: fullText,
-              });
-            }
-          }
-        }
+        const parsed = parseProducerFromContentItem(item);
+        if (parsed) producer.push(parsed);
       }
     }
 
@@ -646,17 +526,8 @@ export function EditAlbumModal({
 
     if (masteredByDetail && (masteredByDetail as any).content) {
       for (const item of (masteredByDetail as any).content) {
-        if (!item || typeof item !== 'object' || !item.dateFrom) continue;
-
-        // Новый формат: { dateFrom, dateTo?, studioText, city?, url }
-        mastering.push({
-          text: buildRecordingText(item.dateFrom, item.dateTo, item.studioText, item.city, lang),
-          url: item.url || undefined,
-          dateFrom: item.dateFrom,
-          dateTo: item.dateTo,
-          studioText: item.studioText,
-          city: item.city,
-        });
+        const parsed = parseRecordingEntryFromContentItem(item, lang);
+        if (parsed) mastering.push(parsed);
       }
     }
 
@@ -1130,11 +1001,14 @@ export function EditAlbumModal({
         bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
       setFormData((prev) => {
         const updated = [...(prev.bandMembers || [])];
-        updated[editingBandMemberIndex] = {
-          name: bandMemberName.trim(),
-          role: bandMemberRole.trim(),
-          url,
-        };
+        updated[editingBandMemberIndex] = updateBandMemberPreservingId(
+          prev.bandMembers[editingBandMemberIndex],
+          {
+            name: bandMemberName.trim(),
+            role: bandMemberRole.trim(),
+            url,
+          }
+        );
         if (updated.length > 0) setStep4InvalidFields((p) => p.filter((x) => x !== 'bandMembers'));
         return { ...prev, bandMembers: updated };
       });
@@ -1153,7 +1027,7 @@ export function EditAlbumModal({
       ...prev,
       bandMembers: [
         ...(prev.bandMembers || []),
-        { name: addBandMemberName.trim(), role: addBandMemberRole.trim(), url },
+        createBandMember({ name: addBandMemberName.trim(), role: addBandMemberRole.trim(), url }),
       ],
       showAddBandMemberInputs: false,
     }));
@@ -1247,11 +1121,14 @@ export function EditAlbumModal({
         producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
       setFormData((prev) => {
         const updated = [...(prev.producer || [])];
-        updated[editingProducerIndex] = {
-          name: producerName.trim(),
-          role: producerRole.trim(),
-          url,
-        };
+        updated[editingProducerIndex] = updateBandMemberPreservingId(
+          prev.producer[editingProducerIndex],
+          {
+            name: producerName.trim(),
+            role: producerRole.trim(),
+            url,
+          }
+        );
         if (updated.length > 0) setStep4InvalidFields((p) => p.filter((x) => x !== 'producer'));
         return { ...prev, producer: updated };
       });
@@ -1270,7 +1147,7 @@ export function EditAlbumModal({
       ...prev,
       producer: [
         ...(prev.producer || []),
-        { name: addProducerName.trim(), role: addProducerRole.trim(), url },
+        createBandMember({ name: addProducerName.trim(), role: addProducerRole.trim(), url }),
       ],
       showAddProducerInputs: false,
     }));
@@ -1372,11 +1249,14 @@ export function EditAlbumModal({
           : undefined;
       setFormData((prev) => {
         const updated = [...(prev.sessionMusicians || [])];
-        updated[editingSessionMusicianIndex] = {
-          name: sessionMusicianName.trim(),
-          role: sessionMusicianRole.trim(),
-          url,
-        };
+        updated[editingSessionMusicianIndex] = updateBandMemberPreservingId(
+          prev.sessionMusicians[editingSessionMusicianIndex],
+          {
+            name: sessionMusicianName.trim(),
+            role: sessionMusicianRole.trim(),
+            url,
+          }
+        );
         return { ...prev, sessionMusicians: updated };
       });
       setEditingSessionMusicianIndex(null);
@@ -1394,7 +1274,11 @@ export function EditAlbumModal({
       ...prev,
       sessionMusicians: [
         ...(prev.sessionMusicians || []),
-        { name: addSessionMusicianName.trim(), role: addSessionMusicianRole.trim(), url },
+        createBandMember({
+          name: addSessionMusicianName.trim(),
+          role: addSessionMusicianRole.trim(),
+          url,
+        }),
       ],
       showAddSessionMusicianInputs: false,
     }));
@@ -1490,21 +1374,7 @@ export function EditAlbumModal({
 
   const handleSaveRecordedAtAdd = () => {
     if (!recordingFormDraftCanSave(addRecordedAtDraft)) return;
-    const text = buildRecordingText(
-      addRecordedAtDraft.dateFrom,
-      addRecordedAtDraft.dateTo,
-      addRecordedAtDraft.studioText?.trim(),
-      addRecordedAtDraft.city?.trim(),
-      lang
-    );
-    const newEntry = {
-      text,
-      url: addRecordedAtDraft.url?.trim() || undefined,
-      dateFrom: addRecordedAtDraft.dateFrom,
-      dateTo: addRecordedAtDraft.dateTo,
-      studioText: addRecordedAtDraft.studioText?.trim(),
-      city: addRecordedAtDraft.city?.trim(),
-    };
+    const newEntry = buildRecordingEntryFromEditFields(addRecordedAtDraft, lang);
     setFormData((prev) => ({
       ...prev,
       recordedAt: [...prev.recordedAt, newEntry],
@@ -1587,21 +1457,7 @@ export function EditAlbumModal({
 
   const handleSaveMixedAtAdd = () => {
     if (!recordingFormDraftCanSave(addMixedAtDraft)) return;
-    const text = buildRecordingText(
-      addMixedAtDraft.dateFrom,
-      addMixedAtDraft.dateTo,
-      addMixedAtDraft.studioText?.trim(),
-      addMixedAtDraft.city?.trim(),
-      lang
-    );
-    const newEntry = {
-      text,
-      url: addMixedAtDraft.url?.trim() || undefined,
-      dateFrom: addMixedAtDraft.dateFrom,
-      dateTo: addMixedAtDraft.dateTo,
-      studioText: addMixedAtDraft.studioText?.trim(),
-      city: addMixedAtDraft.city?.trim(),
-    };
+    const newEntry = buildRecordingEntryFromEditFields(addMixedAtDraft, lang);
     setFormData((prev) => ({
       ...prev,
       mixedAt: [...prev.mixedAt, newEntry],
@@ -1684,21 +1540,7 @@ export function EditAlbumModal({
 
   const handleSaveMasteringAdd = () => {
     if (!recordingFormDraftCanSave(addMasteringDraft)) return;
-    const text = buildRecordingText(
-      addMasteringDraft.dateFrom,
-      addMasteringDraft.dateTo,
-      addMasteringDraft.studioText?.trim(),
-      addMasteringDraft.city?.trim(),
-      lang
-    );
-    const newEntry = {
-      text,
-      url: addMasteringDraft.url?.trim() || undefined,
-      dateFrom: addMasteringDraft.dateFrom,
-      dateTo: addMasteringDraft.dateTo,
-      studioText: addMasteringDraft.studioText?.trim(),
-      city: addMasteringDraft.city?.trim(),
-    };
+    const newEntry = buildRecordingEntryFromEditFields(addMasteringDraft, lang);
     setFormData((prev) => ({
       ...prev,
       mastering: [...prev.mastering, newEntry],
@@ -2083,11 +1925,14 @@ export function EditAlbumModal({
       const url =
         bandMemberURL?.trim() && bandMemberURL.trim().length > 0 ? bandMemberURL.trim() : undefined;
       const updated = [...(finalFormData.bandMembers || [])];
-      updated[editingBandMemberIndex] = {
-        name: bandMemberName.trim(),
-        role: bandMemberRole.trim(),
-        url,
-      };
+      updated[editingBandMemberIndex] = updateBandMemberPreservingId(
+        finalFormData.bandMembers[editingBandMemberIndex],
+        {
+          name: bandMemberName.trim(),
+          role: bandMemberRole.trim(),
+          url,
+        }
+      );
       finalFormData = { ...finalFormData, bandMembers: updated };
       setFormData(finalFormData);
       setEditingBandMemberIndex(null);
@@ -2107,7 +1952,11 @@ export function EditAlbumModal({
         ...finalFormData,
         bandMembers: [
           ...(finalFormData.bandMembers || []),
-          { name: addBandMemberName.trim(), role: addBandMemberRole.trim(), url },
+          createBandMember({
+            name: addBandMemberName.trim(),
+            role: addBandMemberRole.trim(),
+            url,
+          }),
         ],
       };
       setFormData(finalFormData);
@@ -2126,11 +1975,14 @@ export function EditAlbumModal({
           ? sessionMusicianURL.trim()
           : undefined;
       const updated = [...(finalFormData.sessionMusicians || [])];
-      updated[editingSessionMusicianIndex] = {
-        name: sessionMusicianName.trim(),
-        role: sessionMusicianRole.trim(),
-        url,
-      };
+      updated[editingSessionMusicianIndex] = updateBandMemberPreservingId(
+        finalFormData.sessionMusicians[editingSessionMusicianIndex],
+        {
+          name: sessionMusicianName.trim(),
+          role: sessionMusicianRole.trim(),
+          url,
+        }
+      );
       finalFormData = { ...finalFormData, sessionMusicians: updated };
       setFormData(finalFormData);
       setEditingSessionMusicianIndex(null);
@@ -2150,7 +2002,11 @@ export function EditAlbumModal({
         ...finalFormData,
         sessionMusicians: [
           ...(finalFormData.sessionMusicians || []),
-          { name: addSessionMusicianName.trim(), role: addSessionMusicianRole.trim(), url },
+          createBandMember({
+            name: addSessionMusicianName.trim(),
+            role: addSessionMusicianRole.trim(),
+            url,
+          }),
         ],
       };
       setFormData(finalFormData);
@@ -2163,11 +2019,14 @@ export function EditAlbumModal({
       const url =
         producerURL?.trim() && producerURL.trim().length > 0 ? producerURL.trim() : undefined;
       const updated = [...(finalFormData.producer || [])];
-      updated[editingProducerIndex] = {
-        name: producerName.trim(),
-        role: producerRole.trim(),
-        url,
-      };
+      updated[editingProducerIndex] = updateBandMemberPreservingId(
+        finalFormData.producer[editingProducerIndex],
+        {
+          name: producerName.trim(),
+          role: producerRole.trim(),
+          url,
+        }
+      );
       finalFormData = { ...finalFormData, producer: updated };
       setFormData(finalFormData);
       setEditingProducerIndex(null);
@@ -2183,7 +2042,11 @@ export function EditAlbumModal({
         ...finalFormData,
         producer: [
           ...(finalFormData.producer || []),
-          { name: addProducerName.trim(), role: addProducerRole.trim(), url },
+          createBandMember({
+            name: addProducerName.trim(),
+            role: addProducerRole.trim(),
+            url,
+          }),
         ],
       };
       setFormData(finalFormData);
@@ -2203,22 +2066,21 @@ export function EditAlbumModal({
       );
       if (!canSave) return finalFormData;
       const recIdx = finalFormData.editingRecordedAtIndex;
-      const text = buildRecordingText(
-        finalFormData.recordedAtDateFrom,
-        finalFormData.recordedAtDateTo,
-        finalFormData.recordedAtText?.trim(),
-        finalFormData.recordedAtCity?.trim(),
-        lang
-      );
       const updated = [...finalFormData.recordedAt];
-      updated[recIdx] = {
-        text,
+      updated[recIdx] = updateRecordingEntryPreservingId(finalFormData.recordedAt[recIdx], {
+        text: buildRecordingText(
+          finalFormData.recordedAtDateFrom,
+          finalFormData.recordedAtDateTo,
+          finalFormData.recordedAtText?.trim(),
+          finalFormData.recordedAtCity?.trim(),
+          lang
+        ),
         url: finalFormData.recordedAtURL?.trim() || undefined,
         dateFrom: finalFormData.recordedAtDateFrom,
         dateTo: finalFormData.recordedAtDateTo,
         studioText: finalFormData.recordedAtText?.trim(),
         city: finalFormData.recordedAtCity?.trim(),
-      };
+      });
       return {
         ...finalFormData,
         recordedAt: updated,
@@ -2238,21 +2100,7 @@ export function EditAlbumModal({
       ) {
         return finalFormData;
       }
-      const text = buildRecordingText(
-        addRecordedAtDraft.dateFrom,
-        addRecordedAtDraft.dateTo,
-        addRecordedAtDraft.studioText?.trim(),
-        addRecordedAtDraft.city?.trim(),
-        lang
-      );
-      const newEntry = {
-        text,
-        url: addRecordedAtDraft.url?.trim() || undefined,
-        dateFrom: addRecordedAtDraft.dateFrom,
-        dateTo: addRecordedAtDraft.dateTo,
-        studioText: addRecordedAtDraft.studioText?.trim(),
-        city: addRecordedAtDraft.city?.trim(),
-      };
+      const newEntry = buildRecordingEntryFromEditFields(addRecordedAtDraft, lang);
       return {
         ...finalFormData,
         recordedAt: [...finalFormData.recordedAt, newEntry],
@@ -2270,22 +2118,21 @@ export function EditAlbumModal({
       );
       if (!canSave) return finalFormData;
       const mixIdx = finalFormData.editingMixedAtIndex;
-      const text = buildRecordingText(
-        finalFormData.mixedAtDateFrom,
-        finalFormData.mixedAtDateTo,
-        finalFormData.mixedAtText?.trim(),
-        finalFormData.mixedAtCity?.trim(),
-        lang
-      );
       const updated = [...finalFormData.mixedAt];
-      updated[mixIdx] = {
-        text,
+      updated[mixIdx] = updateRecordingEntryPreservingId(finalFormData.mixedAt[mixIdx], {
+        text: buildRecordingText(
+          finalFormData.mixedAtDateFrom,
+          finalFormData.mixedAtDateTo,
+          finalFormData.mixedAtText?.trim(),
+          finalFormData.mixedAtCity?.trim(),
+          lang
+        ),
         url: finalFormData.mixedAtURL?.trim() || undefined,
         dateFrom: finalFormData.mixedAtDateFrom,
         dateTo: finalFormData.mixedAtDateTo,
         studioText: finalFormData.mixedAtText?.trim(),
         city: finalFormData.mixedAtCity?.trim(),
-      };
+      });
       return {
         ...finalFormData,
         mixedAt: updated,
@@ -2302,21 +2149,7 @@ export function EditAlbumModal({
       if (!finalFormData.showAddMixedAtInputs || !recordingFormDraftCanSave(addMixedAtDraft)) {
         return finalFormData;
       }
-      const text = buildRecordingText(
-        addMixedAtDraft.dateFrom,
-        addMixedAtDraft.dateTo,
-        addMixedAtDraft.studioText?.trim(),
-        addMixedAtDraft.city?.trim(),
-        lang
-      );
-      const newEntry = {
-        text,
-        url: addMixedAtDraft.url?.trim() || undefined,
-        dateFrom: addMixedAtDraft.dateFrom,
-        dateTo: addMixedAtDraft.dateTo,
-        studioText: addMixedAtDraft.studioText?.trim(),
-        city: addMixedAtDraft.city?.trim(),
-      };
+      const newEntry = buildRecordingEntryFromEditFields(addMixedAtDraft, lang);
       return {
         ...finalFormData,
         mixedAt: [...finalFormData.mixedAt, newEntry],
@@ -2334,22 +2167,21 @@ export function EditAlbumModal({
       );
       if (!canSave) return finalFormData;
       const mastIdx = finalFormData.editingMasteringIndex;
-      const text = buildRecordingText(
-        finalFormData.masteringDateFrom,
-        finalFormData.masteringDateTo,
-        finalFormData.masteringText?.trim(),
-        finalFormData.masteringCity?.trim(),
-        lang
-      );
       const updated = [...finalFormData.mastering];
-      updated[mastIdx] = {
-        text,
+      updated[mastIdx] = updateRecordingEntryPreservingId(finalFormData.mastering[mastIdx], {
+        text: buildRecordingText(
+          finalFormData.masteringDateFrom,
+          finalFormData.masteringDateTo,
+          finalFormData.masteringText?.trim(),
+          finalFormData.masteringCity?.trim(),
+          lang
+        ),
         url: finalFormData.masteringURL?.trim() || undefined,
         dateFrom: finalFormData.masteringDateFrom,
         dateTo: finalFormData.masteringDateTo,
         studioText: finalFormData.masteringText?.trim(),
         city: finalFormData.masteringCity?.trim(),
-      };
+      });
       return {
         ...finalFormData,
         mastering: updated,
@@ -2366,21 +2198,7 @@ export function EditAlbumModal({
       if (!finalFormData.showAddMasteringInputs || !recordingFormDraftCanSave(addMasteringDraft)) {
         return finalFormData;
       }
-      const text = buildRecordingText(
-        addMasteringDraft.dateFrom,
-        addMasteringDraft.dateTo,
-        addMasteringDraft.studioText?.trim(),
-        addMasteringDraft.city?.trim(),
-        lang
-      );
-      const newEntry = {
-        text,
-        url: addMasteringDraft.url?.trim() || undefined,
-        dateFrom: addMasteringDraft.dateFrom,
-        dateTo: addMasteringDraft.dateTo,
-        studioText: addMasteringDraft.studioText?.trim(),
-        city: addMasteringDraft.city?.trim(),
-      };
+      const newEntry = buildRecordingEntryFromEditFields(addMasteringDraft, lang);
       return {
         ...finalFormData,
         mastering: [...finalFormData.mastering, newEntry],

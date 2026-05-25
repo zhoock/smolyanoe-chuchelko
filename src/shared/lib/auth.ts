@@ -112,6 +112,8 @@ export interface AuthUser {
   name: string | null;
   /** Роль с бэкенда; старые сессии могут не иметь поля */
   role?: 'user' | 'admin';
+  /** listener | artist; старые сессии без поля — artist */
+  accountType?: 'listener' | 'artist';
   /** Подтверждён ли email; старые сессии без поля считаются неподтверждёнными */
   isEmailVerified?: boolean;
   /** Язык UI и email-уведомлений */
@@ -182,6 +184,7 @@ function authUserSnapshotEqual(a: AuthUser, b: AuthUser): boolean {
     a.email === b.email &&
     (a.name ?? null) === (b.name ?? null) &&
     a.role === b.role &&
+    a.accountType === b.accountType &&
     a.isEmailVerified === b.isEmailVerified &&
     a.preferredLanguage === b.preferredLanguage
   );
@@ -236,10 +239,18 @@ export function isAuthenticated(): boolean {
 export async function register(
   email: string,
   password: string,
-  siteName: string,
-  options?: { preferredLanguage?: string }
+  options?: {
+    preferredLanguage?: string;
+    accountType?: 'listener' | 'artist';
+    /** Display name at signup (listener) or artist/band name (artist). */
+    name?: string;
+    /** @deprecated Use `name` */
+    artistName?: string;
+  }
 ): Promise<AuthResponse> {
   try {
+    const accountType = options?.accountType ?? 'artist';
+    const displayName = (options?.name || options?.artistName || '').trim();
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: {
@@ -248,8 +259,13 @@ export async function register(
       body: JSON.stringify({
         email,
         password,
-        name: siteName,
-        siteName,
+        accountType,
+        ...(displayName
+          ? {
+              name: displayName,
+              ...(accountType === 'artist' ? { siteName: displayName } : {}),
+            }
+          : {}),
         preferredLanguage: options?.preferredLanguage ?? getLang(),
       }),
     });
@@ -258,8 +274,9 @@ export async function register(
 
     if (result.success && result.data) {
       saveAuth(result.data.token, result.data.user);
-      // Сохраняем siteName в localStorage для использования в Hero
-      localStorage.setItem('profile-name', siteName);
+      if (displayName) {
+        localStorage.setItem('profile-name', displayName);
+      }
     }
 
     return result;
@@ -444,6 +461,43 @@ export async function changeVerificationEmail(email: string): Promise<{
       retryAfterSeconds:
         typeof result.retryAfterSeconds === 'number' ? result.retryAfterSeconds : undefined,
     };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Upgrades listener account to artist (one-way). Returns fresh JWT and user.
+ */
+export async function upgradeToArtistAccount(artistName: string): Promise<AuthResponse> {
+  const trimmed = artistName.trim();
+  if (!trimmed) {
+    return { success: false, error: 'Artist / band name is required' };
+  }
+
+  try {
+    const response = await fetch('/api/auth/upgrade-to-artist', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ artistName: trimmed }),
+    });
+
+    const result: AuthResponse = await response.json();
+
+    if (result.success && result.data) {
+      saveAuth(result.data.token, result.data.user);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('artist:updated'));
+      }
+    }
+
+    return result;
   } catch (error) {
     return {
       success: false,

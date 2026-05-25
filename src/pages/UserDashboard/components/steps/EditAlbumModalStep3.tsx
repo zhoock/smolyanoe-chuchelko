@@ -14,6 +14,8 @@ import {
   buildRecordingText,
   recordingFormDraftIsDirty,
   recordingFormDraftCanSave,
+  buildRecordingEntryFromEditFields,
+  updateRecordingEntryPreservingId,
 } from '../modals/album/EditAlbumModal.utils';
 import { recordingEntryEditHasChanges } from '../modals/album/recordingEntryEditHasChanges';
 import { InlineEditDiscardDialog, getInlineEditDiscardLabels } from '../shared/EditableCardField';
@@ -330,21 +332,20 @@ export function EditAlbumModalStep3({
                   onEdit={() => onRequestEditRecordedAt(index)}
                   onSave={() => {
                     const updated = [...formData.recordedAt];
-                    const text = buildRecordingText(
-                      formData.recordedAtDateFrom,
-                      formData.recordedAtDateTo,
-                      formData.recordedAtText?.trim(),
-                      formData.recordedAtCity?.trim(),
-                      lang
-                    );
-                    updated[index] = {
-                      text,
+                    updated[index] = updateRecordingEntryPreservingId(entry, {
+                      text: buildRecordingText(
+                        formData.recordedAtDateFrom,
+                        formData.recordedAtDateTo,
+                        formData.recordedAtText?.trim(),
+                        formData.recordedAtCity?.trim(),
+                        lang
+                      ),
                       url: formData.recordedAtURL?.trim() || undefined,
                       dateFrom: formData.recordedAtDateFrom,
                       dateTo: formData.recordedAtDateTo,
                       studioText: formData.recordedAtText?.trim(),
                       city: formData.recordedAtCity?.trim(),
-                    };
+                    });
                     onFormDataChange('recordedAt', updated);
                     onFormDataChange('recordedAtDateFrom', '');
                     onFormDataChange('recordedAtDateTo', '');
@@ -479,21 +480,20 @@ export function EditAlbumModalStep3({
                   onEdit={() => onRequestEditMixedAt(index)}
                   onSave={() => {
                     const updated = [...formData.mixedAt];
-                    const text = buildRecordingText(
-                      formData.mixedAtDateFrom,
-                      formData.mixedAtDateTo,
-                      formData.mixedAtText?.trim(),
-                      formData.mixedAtCity?.trim(),
-                      lang
-                    );
-                    updated[index] = {
-                      text,
+                    updated[index] = updateRecordingEntryPreservingId(entry, {
+                      text: buildRecordingText(
+                        formData.mixedAtDateFrom,
+                        formData.mixedAtDateTo,
+                        formData.mixedAtText?.trim(),
+                        formData.mixedAtCity?.trim(),
+                        lang
+                      ),
                       url: formData.mixedAtURL?.trim() || undefined,
                       dateFrom: formData.mixedAtDateFrom,
                       dateTo: formData.mixedAtDateTo,
                       studioText: formData.mixedAtText?.trim(),
                       city: formData.mixedAtCity?.trim(),
-                    };
+                    });
                     onFormDataChange('mixedAt', updated);
                     onFormDataChange('mixedAtDateFrom', '');
                     onFormDataChange('mixedAtDateTo', '');
@@ -628,21 +628,20 @@ export function EditAlbumModalStep3({
                   onEdit={() => onRequestEditMastering(index)}
                   onSave={() => {
                     const updated = [...formData.mastering];
-                    const text = buildRecordingText(
-                      formData.masteringDateFrom,
-                      formData.masteringDateTo,
-                      formData.masteringText?.trim(),
-                      formData.masteringCity?.trim(),
-                      lang
-                    );
-                    updated[index] = {
-                      text,
+                    updated[index] = updateRecordingEntryPreservingId(entry, {
+                      text: buildRecordingText(
+                        formData.masteringDateFrom,
+                        formData.masteringDateTo,
+                        formData.masteringText?.trim(),
+                        formData.masteringCity?.trim(),
+                        lang
+                      ),
                       url: formData.masteringURL?.trim() || undefined,
                       dateFrom: formData.masteringDateFrom,
                       dateTo: formData.masteringDateTo,
                       studioText: formData.masteringText?.trim(),
                       city: formData.masteringCity?.trim(),
-                    };
+                    });
                     onFormDataChange('mastering', updated);
                     onFormDataChange('masteringDateFrom', '');
                     onFormDataChange('masteringDateTo', '');

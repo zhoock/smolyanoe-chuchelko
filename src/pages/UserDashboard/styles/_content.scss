@@ -181,11 +181,60 @@ dialog {
     }
 
     &__profile-hero-name {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
       margin: var(--ms-01) 0 0;
       color: var(--dashboard-text-primary);
       font-size: clamp(1.25rem, 2.5vw, 1.5rem);
       font-weight: 600;
       line-height: 1.2;
+    }
+
+    &__profile-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.12rem 0.45rem;
+      color: var(--dark-greenish-yellow);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      border: 1px solid rgb(255 255 255 / 12%);
+      border-radius: 999px;
+    }
+
+    &__profile-upgrade {
+      width: 100%;
+      margin: 0;
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    &__profile-upgrade-lead {
+      color: var(--dashboard-text-primary);
+    }
+
+    &__profile-upgrade-link {
+      margin: 0;
+      padding: 0;
+      color: var(--dark-greenish-yellow);
+      font: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      background: none;
+      border: none;
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--honeydew-melon);
+      }
     }
 
     &__profile-hero-status {

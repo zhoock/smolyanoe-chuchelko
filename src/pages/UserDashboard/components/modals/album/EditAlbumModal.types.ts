@@ -9,6 +9,7 @@ export interface EditAlbumModalProps {
 }
 
 export interface BandMember {
+  id: string;
   name: string;
   role: string;
   url?: string;
@@ -24,6 +25,7 @@ export interface RecordingFormDraft {
 }
 
 export interface RecordingEntry {
+  id: string;
   text: string; // Полный текст записи (например, "SEP. 28, 2021: Igor Matvienko's recording studio M.A.M.A, Big studio, Moscow.")
   url?: string;
   dateFrom?: string; // Дата начала в формате YYYY-MM-DD

@@ -112,7 +112,18 @@ export interface WrapperAlbumCoverProps {
 export interface detailsProps {
   id: number;
   title: string;
-  content: Array<string | { text: string[]; link: string }>;
+  content: Array<
+    | string
+    | { id?: string; text: string | string[]; link?: string }
+    | {
+        id?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        studioText?: string;
+        city?: string;
+        url?: string | null;
+      }
+  >;
 }
 
 /**
@@ -208,6 +219,18 @@ export type IArticles = {
 
 export interface ArticledetailsProps {
   id?: number; // опционально, может отсутствовать в новой структуре
+  /** Stable editor block id for list/reorder/delete sync within article details. */
+  blockId?: string;
+  /** Block type for round-trip between editor blocks and persisted details rows. */
+  blockKind?:
+    | 'paragraph'
+    | 'title'
+    | 'subtitle'
+    | 'quote'
+    | 'list'
+    | 'divider'
+    | 'image'
+    | 'carousel';
   userId?: string;
   type?: 'text' | 'image' | 'carousel'; // тип блока
   title?: string;
@@ -215,7 +238,7 @@ export interface ArticledetailsProps {
   images?: string[]; // для карусели (массив изображений)
   subtitle?: string;
   strong?: string;
-  content?: string | string[]; // union type
+  content?: string | Array<string | { id: string; text: string }>;
   alt?: string;
 }
 
@@ -567,6 +590,23 @@ export interface IInterface {
       privateDescription?: string;
       publicDescription?: string;
       openArtistPage?: string;
+    };
+    /** Listener → artist upgrade (profile / settings). */
+    becomeArtistLead?: string;
+    becomeArtist?: string;
+    accountTypeBadge?: {
+      artist?: string;
+    };
+    upgradeToArtist?: {
+      title?: string;
+      artistBandNameLabel?: string;
+      artistBandNamePlaceholder?: string;
+      artistBandNameRequired?: string;
+      cancel?: string;
+      continue?: string;
+      continuing?: string;
+      close?: string;
+      upgradeFailed?: string;
     };
     errorSavingText?: string;
     enterLink: string;

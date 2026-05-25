@@ -4,7 +4,13 @@
  */
 
 import type { HandlerEvent } from '@netlify/functions';
-import { classifyAuthorizationHeader, extractRoleFromToken, type UserRole } from './jwt';
+import {
+  classifyAuthorizationHeader,
+  extractRoleFromToken,
+  extractAccountTypeFromToken,
+  type UserRole,
+} from './jwt';
+import { isArtistAccountType } from './account-type';
 import { PublicArtistResolverError } from './public-artist-resolver';
 
 /**
@@ -220,6 +226,36 @@ export function requireAdmin(event: HandlerEvent): string | null {
     console.error('❌ Error checking admin status:', error);
     return null;
   }
+}
+
+/**
+ * Только artist-аккаунт (или admin). Listener не может создавать/редактировать релизы и статьи.
+ */
+export function requireArtistAccount(event: HandlerEvent): string | null {
+  const userId = requireAuth(event);
+  if (!userId) return null;
+
+  const auth =
+    (event.headers?.authorization as string | undefined) ||
+    (event.headers?.Authorization as string | undefined) ||
+    undefined;
+
+  const role = extractRoleFromToken(auth);
+  if (isAdminRole(role)) return userId;
+
+  const accountType = extractAccountTypeFromToken(auth);
+  if (!isArtistAccountType(accountType)) {
+    console.warn('⚠️ requireArtistAccount: listener account blocked', { userId, accountType });
+    return null;
+  }
+
+  return userId;
+}
+
+export function forbiddenArtistAccountResponse(event: HandlerEvent) {
+  return createErrorResponse(403, 'This action requires an artist account.', CORS_HEADERS, {
+    code: 'ARTIST_ACCOUNT_REQUIRED',
+  });
 }
 
 /**

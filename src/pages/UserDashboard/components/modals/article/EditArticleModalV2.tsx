@@ -35,6 +35,8 @@ import {
   blocksToDetails,
   generateId,
   debounce,
+  createListItem,
+  isListBlockEmpty,
 } from './EditArticleModalV2.utils';
 import { SortableBlock } from '../../blocks/SortableBlock';
 import { SlashMenu } from '../../blocks/SlashMenu';
@@ -696,7 +698,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
       case 'quote':
         return { id: generateId(), type: 'quote', text: '' };
       case 'list':
-        return { id: generateId(), type: 'list', items: [''] };
+        return { id: generateId(), type: 'list', items: [createListItem('')] };
       case 'divider':
         return { id: generateId(), type: 'divider' };
       case 'image':
@@ -1221,7 +1223,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
             // Для списка проверяем, что есть непустые элементы
             if (
               updatedBlock.type === 'list' &&
-              updatedBlock.items.some((item) => item.trim() !== '')
+              updatedBlock.items.some((item) => item.text.trim() !== '')
             ) {
               setVkInserter(null);
             }
@@ -1518,7 +1520,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           newBlock = { id: blockId, type: 'quote', text: '' };
           break;
         case 'list':
-          newBlock = { id: blockId, type: 'list', items: [''] };
+          newBlock = { id: blockId, type: 'list', items: [createListItem('')] };
           break;
         case 'divider':
           newBlock = { id: blockId, type: 'divider' };
@@ -1730,7 +1732,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
           const newBlock: Block = {
             id: generateId(),
             type: 'list',
-            items: lines,
+            items: lines.map((line) => createListItem(line.trim())),
           };
 
           setBlocks((prev) => {
@@ -2024,8 +2026,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                                 block.type === 'subtitle' ||
                                 block.type === 'quote') &&
                                 block.text.trim() === '') ||
-                                (block.type === 'list' &&
-                                  block.items.every((item) => item.trim() === '')))
+                                (block.type === 'list' && isListBlockEmpty(block.items)))
                             }
                             onUpdate={updateBlock}
                             onDelete={deleteBlock}
@@ -2038,8 +2039,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                                   block.type === 'subtitle' ||
                                   block.type === 'quote') &&
                                   block.text.trim() === '') ||
-                                (block.type === 'list' &&
-                                  block.items.every((item) => item.trim() === ''));
+                                (block.type === 'list' && isListBlockEmpty(block.items));
                               if (isBlockEmpty && vkInserter?.afterBlockId !== block.id) {
                                 setVkInserter({ afterBlockId: block.id });
                               }
@@ -2090,8 +2090,7 @@ export function EditArticleModalV2({ isOpen, article, onClose }: EditArticleModa
                                         block.type === 'quote') &&
                                       block.text.trim() === '';
                                     const isListEmpty =
-                                      block.type === 'list' &&
-                                      block.items.every((item) => item.trim() === '');
+                                      block.type === 'list' && isListBlockEmpty(block.items);
                                     if (!isBlockEmpty && !isListEmpty) {
                                       setVkInserter(null);
                                     }

@@ -383,9 +383,11 @@ function ArticleContent({
           </p>
         ) : (
           <ul>
-            {details.content?.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
+            {details.content?.map((item, i) => {
+              const text = typeof item === 'string' ? item : item.text;
+              const key = typeof item === 'string' ? i : item.id;
+              return <li key={key}>{text}</li>;
+            })}
           </ul>
         )}
       </>
@@ -412,8 +414,8 @@ function ArticleContent({
       </time>
 
       <div className="help-article__body">
-        {article.details.map((d) => (
-          <Fragment key={d.id}>{BlockWithAnchor(d)}</Fragment>
+        {article.details.map((d, index) => (
+          <Fragment key={d.blockId ?? d.id ?? index}>{BlockWithAnchor(d)}</Fragment>
         ))}
       </div>
     </>

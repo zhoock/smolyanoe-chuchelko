@@ -18,6 +18,8 @@ import {
   validateLang,
   getUserIdFromEvent,
   requireAuth,
+  requireArtistAccount,
+  forbiddenArtistAccountResponse,
   unauthorizedFromAuthHeader,
   parseJsonBody,
   handleError,
@@ -732,8 +734,9 @@ export const handler: Handler = async (
     }
 
     if (event.httpMethod === 'POST') {
-      if (!userId) {
-        return unauthorizedFromAuthHeader(event);
+      const artistUserId = requireArtistAccount(event);
+      if (!artistUserId) {
+        return userId ? forbiddenArtistAccountResponse(event) : unauthorizedFromAuthHeader(event);
       }
 
       let data: CreateArticleRequest;
@@ -817,9 +820,9 @@ export const handler: Handler = async (
         queryParams: event.queryStringParameters,
       });
 
-      if (!userId) {
-        console.log('[articles-api PUT] Unauthorized: no userId');
-        return unauthorizedFromAuthHeader(event);
+      const artistUserId = requireArtistAccount(event);
+      if (!artistUserId) {
+        return userId ? forbiddenArtistAccountResponse(event) : unauthorizedFromAuthHeader(event);
       }
 
       const { id } = event.queryStringParameters || {};
@@ -998,8 +1001,9 @@ export const handler: Handler = async (
     }
 
     if (event.httpMethod === 'DELETE') {
-      if (!userId) {
-        return unauthorizedFromAuthHeader(event);
+      const artistUserId = requireArtistAccount(event);
+      if (!artistUserId) {
+        return userId ? forbiddenArtistAccountResponse(event) : unauthorizedFromAuthHeader(event);
       }
 
       const { id } = event.queryStringParameters || {};

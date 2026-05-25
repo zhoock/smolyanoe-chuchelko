@@ -1,5 +1,6 @@
 import { useState, FormEvent, useMemo } from 'react';
 import { register } from '@shared/lib/auth';
+import type { AccountType } from '@shared/lib/accountType';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -8,13 +9,21 @@ import './AuthForm.scss';
 type RegisterField = 'name' | 'email' | 'password' | 'confirmPassword';
 
 interface RegisterFormProps {
+  accountType: AccountType;
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
+  onBack?: () => void;
 }
 
-export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
+export function RegisterForm({
+  accountType,
+  onSuccess,
+  onSwitchToLogin,
+  onBack,
+}: RegisterFormProps) {
   const { lang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
+  const isArtist = accountType === 'artist';
 
   const copy = useMemo(() => {
     const reg = ui?.auth?.register;
@@ -22,10 +31,14 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     const en = lang !== 'ru';
     const fallback = en
       ? {
-          title: 'Register',
-          siteBandNameLabel: 'Site / band name',
-          siteBandNamePlaceholder: 'Enter the name of your band, or some other name for this site',
-          siteBandNameRequired: 'Site / band name is required',
+          title: isArtist ? 'Artist registration' : 'Listener registration',
+          back: 'Back',
+          nameLabel: 'Name',
+          namePlaceholder: 'Enter your name',
+          nameRequired: 'Name is required',
+          artistBandNameLabel: 'Artist / band name',
+          artistBandNamePlaceholder: 'Enter your artist or band name',
+          artistBandNameRequired: 'Artist / band name is required',
           emailLabel: 'Email',
           passwordLabel: 'Password',
           confirmPasswordLabel: 'Confirm password',
@@ -40,10 +53,14 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           passwordMinLength: 'Password must be at least 6 characters',
         }
       : {
-          title: 'Регистрация',
-          siteBandNameLabel: 'Название сайта / группы',
-          siteBandNamePlaceholder: 'Укажите название группы или другое имя для этого сайта',
-          siteBandNameRequired: 'Укажите название сайта или группы',
+          title: isArtist ? 'Регистрация артиста' : 'Регистрация слушателя',
+          back: 'Назад',
+          nameLabel: 'Имя',
+          namePlaceholder: 'Укажите ваше имя',
+          nameRequired: 'Укажите имя',
+          artistBandNameLabel: 'Имя артиста / группы',
+          artistBandNamePlaceholder: 'Укажите имя артиста или группы',
+          artistBandNameRequired: 'Укажите имя артиста или группы',
           emailLabel: 'Email',
           passwordLabel: 'Пароль',
           confirmPasswordLabel: 'Подтвердите пароль',
@@ -58,7 +75,11 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           passwordMinLength: 'Пароль должен содержать минимум 6 символов',
         };
     return { ...fallback, ...reg, ...val };
-  }, [lang, ui?.auth?.register, ui?.auth?.validation]);
+  }, [isArtist, lang, ui?.auth?.register, ui?.auth?.validation]);
+
+  const nameLabel = isArtist ? copy.artistBandNameLabel : copy.nameLabel;
+  const namePlaceholder = isArtist ? copy.artistBandNamePlaceholder : copy.namePlaceholder;
+  const nameRequiredMessage = isArtist ? copy.artistBandNameRequired : copy.nameRequired;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,7 +104,7 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
     const nextErrors: Partial<Record<RegisterField, string>> = {};
     if (!name.trim()) {
-      nextErrors.name = copy.siteBandNameRequired;
+      nextErrors.name = nameRequiredMessage;
     }
     if (!email.trim()) {
       nextErrors.email = copy.requiredEmail;
@@ -107,7 +128,11 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
     setLoading(true);
 
     try {
-      const result = await register(email, password, name.trim(), { preferredLanguage: lang });
+      const result = await register(email, password, {
+        preferredLanguage: lang,
+        accountType,
+        name: name.trim(),
+      });
 
       if (result.success) {
         onSuccess?.();
@@ -125,13 +150,19 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
+      {onBack ? (
+        <button type="button" className="auth-form__link auth-form__back" onClick={onBack}>
+          ← {copy.back}
+        </button>
+      ) : null}
+
       <h2 className="auth-form__title">{copy.title}</h2>
 
       {error && <div className="auth-form__error">{error}</div>}
 
       <div className="auth-form__field">
         <label htmlFor="register-name" className="auth-form__label">
-          {copy.siteBandNameLabel}
+          {nameLabel}
         </label>
         <input
           id="register-name"
@@ -143,8 +174,8 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
             setName(e.target.value);
             clearFieldError('name');
           }}
-          placeholder={copy.siteBandNamePlaceholder}
-          autoComplete="organization"
+          placeholder={namePlaceholder}
+          autoComplete={isArtist ? 'organization' : 'name'}
           disabled={loading}
           aria-invalid={!!fieldErrors.name}
           aria-describedby={fieldErrors.name ? 'register-name-error' : undefined}

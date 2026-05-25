@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { query } from './db';
 import { sendVerificationEmail } from './email';
 import { normalizeEmailLocale, type EmailLocale } from './email-locale';
+import { normalizeAccountType } from './account-type';
 import { buildEmailVerificationUrl } from './public-app-url';
 
 const TOKEN_BYTES = 32;
@@ -21,6 +22,7 @@ export interface VerificationUserRow {
   email: string;
   name: string | null;
   role: string;
+  account_type?: string | null;
   is_email_verified: boolean;
   preferred_language?: string | null;
 }
@@ -146,6 +148,7 @@ export function mapAuthUser(user: VerificationUserRow) {
     email: user.email,
     name: user.name,
     role: user.role === 'admin' ? ('admin' as const) : ('user' as const),
+    accountType: normalizeAccountType(user.account_type),
     isEmailVerified: Boolean(user.is_email_verified),
     preferredLanguage: normalizeEmailLocale(user.preferred_language),
   };

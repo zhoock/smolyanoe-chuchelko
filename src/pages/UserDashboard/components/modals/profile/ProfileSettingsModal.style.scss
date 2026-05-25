@@ -428,6 +428,37 @@ dialog {
       border-radius: var(--ms-01);
       margin-bottom: var(--ms-0);
     }
+
+    &__upgrade {
+      margin-block-start: var(--ms-1);
+      padding-block-start: var(--ms-0);
+      color: var(--dashboard-text-primary);
+      font-size: var(--ms-0);
+      line-height: 1.45;
+      border-top: 1px solid var(--dashboard-divider);
+    }
+
+    &__upgrade-lead {
+      color: var(--dashboard-text-primary);
+    }
+
+    &__upgrade-link {
+      margin: 0;
+      padding: 0;
+      color: var(--dark-greenish-yellow);
+      font: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      background: none;
+      border: none;
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--honeydew-melon);
+      }
+    }
   }
 }
 

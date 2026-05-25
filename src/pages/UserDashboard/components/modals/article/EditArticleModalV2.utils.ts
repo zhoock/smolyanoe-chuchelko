@@ -14,12 +14,17 @@ export type BlockType =
   | 'image'
   | 'carousel';
 
+export type ArticleListItem = {
+  id: string;
+  text: string;
+};
+
 export type Block =
   | { id: string; type: 'paragraph'; text: string }
   | { id: string; type: 'title'; text: string }
   | { id: string; type: 'subtitle'; text: string }
   | { id: string; type: 'quote'; text: string }
-  | { id: string; type: 'list'; items: string[] }
+  | { id: string; type: 'list'; items: ArticleListItem[] }
   | { id: string; type: 'divider' }
   | { id: string; type: 'image'; imageKey: string; caption?: string }
   | { id: string; type: 'carousel'; imageKeys: string[]; caption?: string };
@@ -29,233 +34,294 @@ export interface ArticleMeta {
   description: string;
 }
 
-/**
- * Генерирует уникальный ID для блока
- */
 export function generateId(): string {
-  return `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `block_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
+export function generateListItemId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `list_item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
+export function createListItem(text = ''): ArticleListItem {
+  return { id: generateListItemId(), text };
+}
+
+export function isListBlockEmpty(items: ArticleListItem[]): boolean {
+  return items.every((item) => item.text.trim() === '');
+}
+
+function cleanLegacyText(text: string): string {
+  return text.replace(/^\+\++/, '');
+}
+
+export function parseListItemsFromDetailContent(content: unknown[]): ArticleListItem[] {
+  const out: ArticleListItem[] = [];
+  for (const item of content) {
+    if (typeof item === 'string') {
+      const text = cleanLegacyText(item).trim();
+      if (!text) continue;
+      out.push(createListItem(text));
+      continue;
+    }
+    if (item && typeof item === 'object' && 'text' in item) {
+      const raw = item as { id?: unknown; text?: unknown };
+      const text = cleanLegacyText(String(raw.text ?? '')).trim();
+      if (!text) continue;
+      const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : generateListItemId();
+      out.push({ id, text });
+    }
+  }
+  return out;
+}
+
+function serializeListItemsToDetailContent(
+  items: ArticleListItem[]
+): NonNullable<ArticledetailsProps['content']> {
+  return items
+    .map((item) => ({
+      id: item.id,
+      text: cleanLegacyText(item.text),
+    }))
+    .filter((item) => item.text.trim());
+}
+
+function hasPersistedBlockIds(details: ArticledetailsProps[]): boolean {
+  return details.some((detail) => typeof detail?.blockId === 'string' && detail.blockId.trim());
+}
+
+function detailWithBlockIdToBlock(detail: ArticledetailsProps): Block | null {
+  const id = detail.blockId?.trim();
+  if (!id) return null;
+
+  if (detail.type === 'image' && detail.img) {
+    const imageKey = typeof detail.img === 'string' ? detail.img : detail.img[0] || '';
+    if (!imageKey) return null;
+    return { id, type: 'image', imageKey, caption: detail.alt || undefined };
+  }
+
+  if (detail.type === 'carousel') {
+    const imageKeys = detail.images || (Array.isArray(detail.img) ? detail.img : []);
+    if (!imageKeys.length) return null;
+    return { id, type: 'carousel', imageKeys, caption: detail.alt || undefined };
+  }
+
+  if (detail.title) {
+    return { id, type: 'title', text: cleanLegacyText(detail.title) };
+  }
+
+  if (detail.subtitle) {
+    return { id, type: 'subtitle', text: cleanLegacyText(detail.subtitle) };
+  }
+
+  if (detail.content === '---') {
+    return { id, type: 'divider' };
+  }
+
+  if (typeof detail.content === 'string') {
+    if (detail.blockKind === 'quote') {
+      return { id, type: 'quote', text: cleanLegacyText(detail.content) };
+    }
+    let text = cleanLegacyText(detail.content);
+    if (detail.strong) {
+      text = `**${detail.strong}** ${text}`;
+    }
+    return { id, type: 'paragraph', text };
+  }
+
+  if (Array.isArray(detail.content)) {
+    const items = parseListItemsFromDetailContent(detail.content);
+    if (!items.length) return null;
+    return { id, type: 'list', items };
+  }
+
+  return null;
+}
+
+function legacyDetailToBlocks(detail: ArticledetailsProps): Block[] {
+  const blocks: Block[] = [];
+
+  if (detail.title) {
+    blocks.push({
+      id: detail.blockId?.trim() || generateId(),
+      type: 'title',
+      text: cleanLegacyText(detail.title),
+    });
+  }
+
+  if (detail.subtitle) {
+    blocks.push({
+      id: generateId(),
+      type: 'subtitle',
+      text: cleanLegacyText(detail.subtitle),
+    });
+  }
+
+  if (detail.type === 'image' && detail.img) {
+    const imageKey = typeof detail.img === 'string' ? detail.img : detail.img[0] || '';
+    if (imageKey) {
+      blocks.push({
+        id: detail.blockId?.trim() || generateId(),
+        type: 'image',
+        imageKey,
+        caption: detail.alt || undefined,
+      });
+    }
+  }
+
+  if (detail.type === 'carousel') {
+    const imageKeys = detail.images || (Array.isArray(detail.img) ? detail.img : []);
+    if (imageKeys.length > 0) {
+      blocks.push({
+        id: detail.blockId?.trim() || generateId(),
+        type: 'carousel',
+        imageKeys,
+        caption: detail.alt || undefined,
+      });
+    }
+  }
+
+  if (detail.content) {
+    if (typeof detail.content === 'string') {
+      if (detail.content === '---') {
+        blocks.push({ id: generateId(), type: 'divider' });
+      } else {
+        let text = cleanLegacyText(detail.content);
+        if (detail.strong) {
+          text = `**${detail.strong}** ${text}`;
+        }
+        blocks.push({ id: generateId(), type: 'paragraph', text });
+      }
+    } else if (Array.isArray(detail.content)) {
+      const items = parseListItemsFromDetailContent(detail.content);
+      if (items.length > 0) {
+        blocks.push({
+          id: detail.blockId?.trim() || generateId(),
+          type: 'list',
+          items,
+        });
+      }
+    }
+  } else if (
+    !detail.title &&
+    !detail.subtitle &&
+    detail.type !== 'image' &&
+    detail.type !== 'carousel'
+  ) {
+    blocks.push({ id: generateId(), type: 'paragraph', text: '' });
+  }
+
+  return blocks;
 }
 
 /**
  * Преобразует старую структуру details в новую структуру блоков
  */
-export function normalizeDetailsToBlocks(details: ArticledetailsProps[]): Block[] {const blocks: Block[] = [];
-
+export function normalizeDetailsToBlocks(details: ArticledetailsProps[]): Block[] {
   if (!details || !Array.isArray(details) || details.length === 0) {
-    // Если details пустой, создаем пустой paragraph
-    return [
-      {
-        id: generateId(),
-        type: 'paragraph',
-        text: '',
-      },
-    ];
+    return [{ id: generateId(), type: 'paragraph', text: '' }];
   }
 
-  for (const detail of details) {
-    if (!detail) continue;
+  const blocks: Block[] = [];
 
-    // Заголовок (title)
-    if (detail.title) {
-      // Убираем плюсы в начале текста (артефакты старого редактора)
-      const titleText = detail.title.replace(/^\+\++/, '');
-      blocks.push({
-        id: generateId(),
-        type: 'title',
-        text: titleText,
-      });
+  if (hasPersistedBlockIds(details)) {
+    for (const detail of details) {
+      if (!detail) continue;
+      const block = detailWithBlockIdToBlock(detail);
+      if (block) blocks.push(block);
     }
-
-    // Подзаголовок (subtitle)
-    if (detail.subtitle) {
-      // Убираем плюсы в начале текста (артефакты старого редактора)
-      const subtitleText = detail.subtitle.replace(/^\+\++/, '');
-      blocks.push({
-        id: generateId(),
-        type: 'subtitle',
-        text: subtitleText,
-      });
-    }
-
-    // Изображение
-    if (detail.type === 'image' && detail.img) {
-      const imageKey = typeof detail.img === 'string' ? detail.img : detail.img[0] || '';
-      if (imageKey) {
-        blocks.push({
-          id: generateId(),
-          type: 'image',
-          imageKey,
-          caption: detail.alt || undefined,
-        });
-      }
-    }
-
-    // Карусель
-    if (detail.type === 'carousel') {
-      const imageKeys = detail.images || (Array.isArray(detail.img) ? detail.img : []);
-      if (imageKeys.length > 0) {
-        blocks.push({
-          id: generateId(),
-          type: 'carousel',
-          imageKeys,
-          caption: detail.alt || undefined,
-        });
-      }
-    }
-
-    // Контент
-    if (detail.content) {
-      if (typeof detail.content === 'string') {
-        // Разделитель
-        if (detail.content === '---') {
-          blocks.push({
-            id: generateId(),
-            type: 'divider',
-          });
-        } else {
-          // Параграф
-          let text = detail.content;
-          // Убираем плюсы в начале текста (артефакты старого редактора)
-          text = text.replace(/^\+\++/, '');
-          if (detail.strong) {
-            text = `**${detail.strong}** ${text}`;
-          }
-          blocks.push({
-            id: generateId(),
-            type: 'paragraph',
-            text,
-          });
-        }
-      } else if (Array.isArray(detail.content)) {
-        // Список
-        const listItems = detail.content.filter((item) => typeof item === 'string' && item.trim()) as string[];
-        if (listItems.length > 0) {
-          blocks.push({
-            id: generateId(),
-            type: 'list',
-            items: listItems,
-          });
-        }
-      }
-    } else if (!detail.title && !detail.subtitle && detail.type !== 'image' && detail.type !== 'carousel') {
-      // Если нет ни title, ни subtitle, ни content, ни изображений - создаем пустой paragraph
-      // (только если это не специальный тип блока)
-      blocks.push({
-        id: generateId(),
-        type: 'paragraph',
-        text: '',
-      });
+  } else {
+    for (const detail of details) {
+      if (!detail) continue;
+      blocks.push(...legacyDetailToBlocks(detail));
     }
   }
 
-  // Если блоков нет, создаем пустой paragraph
   if (blocks.length === 0) {
-    blocks.push({
-      id: generateId(),
-      type: 'paragraph',
-      text: '',
-    });
-  }return blocks;
+    blocks.push({ id: generateId(), type: 'paragraph', text: '' });
+  }
+
+  return blocks;
 }
 
-/**
- * Преобразует блоки обратно в структуру details для сохранения
- */
-export function blocksToDetails(blocks: Block[]): ArticledetailsProps[] {
-  const details: ArticledetailsProps[] = [];
-  let currentDetail: Partial<ArticledetailsProps> | null = null;
-
-  for (const block of blocks) {
-    if (block.type === 'title') {
-      // Сохраняем предыдущий detail, если есть
-      if (currentDetail && hasContent(currentDetail)) {
-        details.push(currentDetail as ArticledetailsProps);
-      }
-      currentDetail = { type: 'text', title: block.text };
-    } else if (block.type === 'subtitle') {
-      if (!currentDetail) {
-        currentDetail = { type: 'text' };
-      }
-      currentDetail.subtitle = block.text;
-    } else if (block.type === 'image') {
-      // Сохраняем предыдущий detail
-      if (currentDetail && hasContent(currentDetail)) {
-        details.push(currentDetail as ArticledetailsProps);
-      }
-      details.push({
-        type: 'image',
-        img: block.imageKey,
-        alt: block.caption,
-      });
-      currentDetail = null;
-    } else if (block.type === 'carousel') {
-      // Сохраняем предыдущий detail
-      if (currentDetail && hasContent(currentDetail)) {
-        details.push(currentDetail as ArticledetailsProps);
-      }
-      details.push({
-        type: 'carousel',
-        images: block.imageKeys,
-        alt: block.caption,
-      });
-      currentDetail = null;
-    } else if (block.type === 'divider') {
-      // Сохраняем предыдущий detail
-      if (currentDetail && hasContent(currentDetail)) {
-        details.push(currentDetail as ArticledetailsProps);
-      }
-      details.push({
+function blockToDetail(block: Block): ArticledetailsProps | null {
+  switch (block.type) {
+    case 'title':
+      return { type: 'text', blockId: block.id, blockKind: 'title', title: block.text };
+    case 'subtitle':
+      return { type: 'text', blockId: block.id, blockKind: 'subtitle', subtitle: block.text };
+    case 'quote':
+      return {
         type: 'text',
-        content: '---',
-      });
-      currentDetail = null;
-    } else if (block.type === 'paragraph') {
-      if (!currentDetail) {
-        currentDetail = { type: 'text' };
-      }
-      // Парсим markdown для strong
-      let text = block.text;
-      // Убираем плюсы в начале текста (артефакты старого редактора)
-      text = text.replace(/^\+\++/, '');
+        blockId: block.id,
+        blockKind: 'quote',
+        content: cleanLegacyText(block.text) || undefined,
+      };
+    case 'paragraph': {
+      let text = cleanLegacyText(block.text);
       let strong: string | undefined;
       const strongMatch = text.match(/^\*\*(.+?)\*\*\s*(.*)$/);
       if (strongMatch) {
         strong = strongMatch[1];
         text = strongMatch[2];
       }
-      if (strong) {
-        currentDetail.strong = strong;
-      }
-      currentDetail.content = text || undefined;
-    } else if (block.type === 'list') {
-      if (!currentDetail) {
-        currentDetail = { type: 'text' };
-      }
-      // Убираем плюсы в начале каждого элемента списка (артефакты старого редактора)
-      const cleanedItems = block.items.map((item) => item.replace(/^\+\++/, ''));
-      currentDetail.content = cleanedItems;
-    } else if (block.type === 'quote') {
-      if (!currentDetail) {
-        currentDetail = { type: 'text' };
-      }
-      // Цитату сохраняем как обычный текст (можно расширить позже)
-      // Убираем плюсы в начале текста (артефакты старого редактора)
-      const quoteText = block.text ? block.text.replace(/^\+\++/, '') : undefined;
-      currentDetail.content = quoteText || undefined;
+      return {
+        type: 'text',
+        blockId: block.id,
+        blockKind: 'paragraph',
+        content: text || undefined,
+        ...(strong ? { strong } : {}),
+      };
     }
+    case 'list': {
+      const content = serializeListItemsToDetailContent(block.items);
+      if (!content.length) return null;
+      return { type: 'text', blockId: block.id, blockKind: 'list', content };
+    }
+    case 'divider':
+      return { type: 'text', blockId: block.id, blockKind: 'divider', content: '---' };
+    case 'image':
+      if (!block.imageKey.trim()) return null;
+      return {
+        type: 'image',
+        blockId: block.id,
+        blockKind: 'image',
+        img: block.imageKey,
+        alt: block.caption,
+      };
+    case 'carousel':
+      if (!block.imageKeys.length) return null;
+      return {
+        type: 'carousel',
+        blockId: block.id,
+        blockKind: 'carousel',
+        images: block.imageKeys,
+        alt: block.caption,
+      };
+    default:
+      return null;
   }
-
-  // Сохраняем последний detail
-  if (currentDetail && hasContent(currentDetail)) {
-    details.push(currentDetail as ArticledetailsProps);
-  }
-
-  return details;
 }
 
 /**
- * Проверяет, имеет ли detail контент
+ * Преобразует блоки обратно в структуру details для сохранения (один блок → одна строка details с blockId).
  */
+export function blocksToDetails(blocks: Block[]): ArticledetailsProps[] {
+  const details: ArticledetailsProps[] = [];
+  for (const block of blocks) {
+    const detail = blockToDetail(block);
+    if (detail && hasContent(detail)) {
+      details.push(detail);
+    }
+  }
+  return details;
+}
+
 function hasContent(detail: Partial<ArticledetailsProps>): boolean {
   return !!(
     detail.title ||
@@ -267,9 +333,6 @@ function hasContent(detail: Partial<ArticledetailsProps>): boolean {
   );
 }
 
-/**
- * Debounce функция
- */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -288,4 +351,3 @@ export function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(later, wait);
   };
 }
-

@@ -5,6 +5,7 @@
  */
 
 import type { IInterface, detailsProps } from '@models';
+import { mergeAlignedSemanticBlockContent } from '@entities/album/lib/albumDetailListItemId';
 import type { SupportedLang } from '@shared/model/lang';
 
 export type AlbumDetailSemanticKind =
@@ -217,21 +218,6 @@ function isSemanticBlockContentEmpty(block: detailsProps | undefined): boolean {
   const c = block.content;
   if (Array.isArray(c)) return c.length === 0;
   return c == null || c === '';
-}
-
-/** Длина как у формы; по индексу — существующая локаль, иначе слот из формы (fallback при добавлении). */
-function mergeAlignedSemanticBlockContent(
-  existingContent: detailsProps['content'],
-  sourceContent: detailsProps['content']
-): detailsProps['content'] {
-  const src = Array.isArray(sourceContent) ? sourceContent : [];
-  const ex = Array.isArray(existingContent) ? existingContent : [];
-  const n = src.length;
-  const out: unknown[] = [];
-  for (let i = 0; i < n; i++) {
-    out.push(i < ex.length ? ex[i] : src[i]);
-  }
-  return out as detailsProps['content'];
 }
 
 /**

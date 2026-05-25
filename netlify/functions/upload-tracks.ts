@@ -29,6 +29,8 @@ import {
   createErrorResponse,
   createSuccessResponse,
   requireAuth,
+  requireArtistAccount,
+  forbiddenArtistAccountResponse,
   unauthorizedFromAuthHeader,
   parseJsonBody,
 } from './lib/api-helpers';
@@ -79,9 +81,11 @@ export const handler: Handler = async (
 
   try {
     // Проверяем авторизацию
-    const userId = requireAuth(event);
+    const userId = requireArtistAccount(event);
     if (!userId) {
-      return unauthorizedFromAuthHeader(event);
+      return requireAuth(event)
+        ? forbiddenArtistAccountResponse(event)
+        : unauthorizedFromAuthHeader(event);
     }
 
     // Парсим JSON body

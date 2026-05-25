@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Block } from '../modals/article/EditArticleModalV2.utils';
+import { isListBlockEmpty } from '../modals/article/EditArticleModalV2.utils';
 import { BlockParagraph } from './BlockParagraph';
 import { BlockTitle } from './BlockTitle';
 import { BlockSubtitle } from './BlockSubtitle';
@@ -193,7 +194,7 @@ export function SortableBlock({
       return block.text.trim() === '';
     }
     if (block.type === 'list') {
-      return block.items.every((item) => item.trim() === '');
+      return isListBlockEmpty(block.items);
     }
     if (block.type === 'divider') {
       return false; // Divider всегда "не пустой"

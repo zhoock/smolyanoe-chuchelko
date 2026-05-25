@@ -114,4 +114,11 @@
       color: var(--dark-greenish-yellow);
     }
   }
+
+  &__back {
+    align-self: flex-start;
+    margin: 0 0 var(--ms-01);
+    margin-left: 0;
+    text-decoration: none;
+  }
 }

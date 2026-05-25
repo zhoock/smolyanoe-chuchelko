@@ -17,6 +17,8 @@ import {
   validateLang,
   getUserIdFromEvent,
   requireAuth,
+  requireArtistAccount,
+  forbiddenArtistAccountResponse,
   unauthorizedFromAuthHeader,
   getAuthorizationHeaderFromEvent,
   parseJsonBody,
@@ -1062,10 +1064,12 @@ export const handler: Handler = async (
 
     // POST: создание альбома (требует авторизации)
     if (event.httpMethod === 'POST') {
-      const userId = requireAuth(event);
+      const userId = requireArtistAccount(event);
 
       if (!userId) {
-        return unauthorizedFromAuthHeader(event);
+        return requireAuth(event)
+          ? forbiddenArtistAccountResponse(event)
+          : unauthorizedFromAuthHeader(event);
       }
 
       let data: CreateAlbumRequest;
@@ -1179,10 +1183,12 @@ export const handler: Handler = async (
     // PUT: обновление альбома (требует авторизации)
     if (event.httpMethod === 'PUT') {
       try {
-        const userId = requireAuth(event);
+        const userId = requireArtistAccount(event);
 
         if (!userId) {
-          return unauthorizedFromAuthHeader(event);
+          return requireAuth(event)
+            ? forbiddenArtistAccountResponse(event)
+            : unauthorizedFromAuthHeader(event);
         }
 
         let data: UpdateAlbumRequest;
@@ -1739,9 +1745,11 @@ export const handler: Handler = async (
     // PATCH: обновление порядка треков
     if (event.httpMethod === 'PATCH') {
       try {
-        const userId = requireAuth(event);
+        const userId = requireArtistAccount(event);
         if (!userId) {
-          return unauthorizedFromAuthHeader(event);
+          return requireAuth(event)
+            ? forbiddenArtistAccountResponse(event)
+            : unauthorizedFromAuthHeader(event);
         }
 
         const data = parseJsonBody<{
@@ -1764,20 +1772,20 @@ export const handler: Handler = async (
           userId,
         });
 
-        // Находим альбом пользователя
-        const albumResult = await query<AlbumRow>(
-          `SELECT id, album_id, lang, user_id FROM albums
-           WHERE album_id = $1 AND lang = $2 AND user_id = $3
-           ORDER BY created_at DESC
-           LIMIT 1`,
-          [data.albumId, data.lang, userId]
+        // Находим все языковые версии альбома пользователя
+        const albumRowsResult = await query<{ id: string; lang: string }>(
+          `SELECT id, lang FROM albums
+           WHERE album_id = $1 AND user_id = $2
+           ORDER BY CASE WHEN lang = $3 THEN 0 ELSE 1 END, created_at DESC`,
+          [data.albumId, userId, data.lang]
         );
 
-        if (albumResult.rows.length === 0) {
+        if (albumRowsResult.rows.length === 0) {
           return createErrorResponse(404, 'Album not found.');
         }
 
-        const album = albumResult.rows[0];
+        const album = albumRowsResult.rows[0];
+        const albumDbIds = albumRowsResult.rows.map((row) => row.id);
 
         const orderedIds = data.trackOrders.map(
           (row) => normalizeTrackIdString(row.trackId) || String(row.trackId)
@@ -1803,15 +1811,17 @@ export const handler: Handler = async (
         const client = await getClient();
         try {
           await client.query('BEGIN');
-          await client.query(`SELECT id FROM albums WHERE id = $1 FOR UPDATE`, [album.id]);
-          for (let i = 0; i < orderedIds.length; i++) {
-            const orderIndex = rankToOrderIndex(i);
-            await client.query(
-              `UPDATE tracks 
-               SET order_index = $1, updated_at = CURRENT_TIMESTAMP
-               WHERE album_id = $2 AND track_id = $3`,
-              [orderIndex, album.id, orderedIds[i]]
-            );
+          for (const albumDbId of albumDbIds) {
+            await client.query(`SELECT id FROM albums WHERE id = $1 FOR UPDATE`, [albumDbId]);
+            for (let i = 0; i < orderedIds.length; i++) {
+              const orderIndex = rankToOrderIndex(i);
+              await client.query(
+                `UPDATE tracks 
+                 SET order_index = $1, updated_at = CURRENT_TIMESTAMP
+                 WHERE album_id = $2 AND track_id = $3`,
+                [orderIndex, albumDbId, orderedIds[i]]
+              );
+            }
           }
           await client.query('COMMIT');
         } catch (txErr) {
@@ -1843,10 +1853,12 @@ export const handler: Handler = async (
 
     if (event.httpMethod === 'DELETE') {
       try {
-        const userId = requireAuth(event);
+        const userId = requireArtistAccount(event);
 
         if (!userId) {
-          return unauthorizedFromAuthHeader(event);
+          return requireAuth(event)
+            ? forbiddenArtistAccountResponse(event)
+            : unauthorizedFromAuthHeader(event);
         }
 
         // Проверяем query параметры для удаления трека
@@ -1893,7 +1905,6 @@ export const handler: Handler = async (
           }
 
           const trackRow = trackOwnerResult.rows[0];
-          const albumDbId = trackRow.album_pk;
 
           // Удаляем аудиофайл из Supabase Storage, если он есть
           if (trackRow.src) {
@@ -1972,12 +1983,16 @@ export const handler: Handler = async (
             }
           }
 
-          // Удаляем трек из базы данных
+          // Удаляем трек из базы данных во всех языковых версиях альбома
           const deleteTrackResult = await query(
-            `DELETE FROM tracks 
-             WHERE album_id = $1 AND track_id = $2
-             RETURNING id`,
-            [albumDbId, String(trackId)]
+            `DELETE FROM tracks t
+             USING albums a
+             WHERE t.album_id = a.id
+               AND a.user_id = $1
+               AND a.album_id = $2
+               AND t.track_id = $3
+             RETURNING t.id`,
+            [userId, albumIdFromQuery, String(trackId)]
           );
 
           if (deleteTrackResult.rows.length === 0) {

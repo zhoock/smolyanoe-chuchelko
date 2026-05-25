@@ -89,6 +89,7 @@ import { DashboardTabContentSkeleton } from './components/DashboardTabContentSke
 import { ProfileTabSkeleton } from './components/ProfileTabSkeleton';
 import { SyncLyricsModal } from './components/modals/lyrics/SyncLyricsModal';
 import { ProfileSettingsModal } from './components/modals/profile/ProfileSettingsModal';
+import { UpgradeToArtistModal } from './components/modals/profile/UpgradeToArtistModal';
 import {
   DeleteAccountModal,
   type DeleteAccountModalCopy,
@@ -109,6 +110,16 @@ import {
 import { useAvatar, getProfileAvatarInitials } from '@shared/lib/hooks/useAvatar';
 import { isProfileAvatarPlaceholderUrl } from '@shared/lib/avatarUpload';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
+import {
+  type DashboardTab,
+  isDashboardTabSlug,
+  isDashboardTabAllowed,
+  resolveDashboardTab,
+  getDefaultDashboardTab,
+  getVisibleDashboardTabs,
+  isArtistAccount,
+  isListenerAccount,
+} from '@shared/lib/accountType';
 import { parseTrackDurationToSeconds } from '@shared/lib/parseTrackDuration';
 import { useDashboardModalShell } from '@shared/lib/dashboardModalShellContext';
 import { useCloseWithUnsavedConfirmation } from '@shared/lib/hooks/useCloseWithUnsavedConfirmation';
@@ -972,27 +983,7 @@ function SortableTrackItem({
 }
 
 /** URL segment under `/dashboard-new/:tab` — источник истины для активной вкладки. */
-const DASHBOARD_TAB_SLUGS = [
-  'albums',
-  'posts',
-  'payment-settings',
-  'my-purchases',
-  'profile',
-  'social-links',
-  'mixer',
-  'archive',
-] as const;
-
-export type DashboardTab = (typeof DASHBOARD_TAB_SLUGS)[number];
-
-function isDashboardTabSlug(s: string): s is DashboardTab {
-  return (DASHBOARD_TAB_SLUGS as readonly string[]).includes(s);
-}
-
-function dashboardTabFromRouteParam(tab: string | undefined): DashboardTab {
-  if (tab && isDashboardTabSlug(tab)) return tab;
-  return 'albums';
-}
+export type { DashboardTab } from '@shared/lib/accountType';
 
 function dashboardHeadingForTab(tab: DashboardTab, ui: IInterface | null): string {
   const d = ui?.dashboard;
@@ -1077,9 +1068,18 @@ function UserDashboard() {
 
   const tabInvalid =
     tabFromRoute !== undefined && tabFromRoute !== '' && !isDashboardTabSlug(tabFromRoute);
-  const activeTab: DashboardTab = tabInvalid ? 'albums' : dashboardTabFromRouteParam(tabFromRoute);
+  const tabDisallowed =
+    tabFromRoute !== undefined &&
+    tabFromRoute !== '' &&
+    isDashboardTabSlug(tabFromRoute) &&
+    !isDashboardTabAllowed(tabFromRoute, user);
+  const activeTab: DashboardTab = resolveDashboardTab(tabFromRoute, user);
+  const visibleTabs = useMemo(() => getVisibleDashboardTabs(user), [user]);
+  const isArtist = isArtistAccount(user);
+  const isListener = isListenerAccount(user);
 
   const [isProfileSettingsModalOpen, setIsProfileSettingsModalOpen] = useState(false);
+  const [isUpgradeToArtistModalOpen, setIsUpgradeToArtistModalOpen] = useState(false);
   const [profileSettingsInitialTab, setProfileSettingsInitialTab] = useState<
     'general' | 'profile' | 'security'
   >('general');
@@ -1738,6 +1738,8 @@ function UserDashboard() {
   // спокойным для фоновой страницы под модалкой.
   const albumsRouteScopeKey = getAlbumsDashboardRouteScopeKey(location.pathname);
   useEffect(() => {
+    if (!isArtist) return;
+
     dispatch(fetchAlbums({ force: true, ownerDashboard: true })).catch((error: any) => {
       // ConditionError - это нормально, condition отменил запрос
       if (error?.name === 'ConditionError') {
@@ -1745,7 +1747,7 @@ function UserDashboard() {
       }
       console.error('Error fetching albums:', error);
     });
-  }, [dispatch, lang, userId, albumsRouteScopeKey]);
+  }, [dispatch, lang, userId, albumsRouteScopeKey, isArtist]);
 
   // Статьи для вкладки posts: всегда `force`, иначе после смены аккаунта `fetchArticles.condition`
   // держит `dashboard.status === 'succeeded'` и пропускает запрос со старыми данными в store.
@@ -2859,8 +2861,14 @@ function UserDashboard() {
     onClose: finalizeEditTrackModalClose,
   });
 
-  if (tabInvalid) {
-    return <Navigate to="/dashboard-new/albums" replace state={location.state} />;
+  if (tabInvalid || tabDisallowed) {
+    return (
+      <Navigate
+        to={`/dashboard-new/${getDefaultDashboardTab(user)}`}
+        replace
+        state={location.state}
+      />
+    );
   }
 
   if (!isAuthenticated() || !user) {
@@ -2874,7 +2882,7 @@ function UserDashboard() {
   }
 
   const albumsInitialLoading =
-    (albumsStatus === 'loading' || albumsStatus === 'idle') && albumsData.length === 0;
+    isArtist && (albumsStatus === 'loading' || albumsStatus === 'idle') && albumsData.length === 0;
   const albumsLoadFailed = albumsStatus === 'failed';
 
   const dashboardHeading = dashboardHeadingForTab(activeTab, ui);
@@ -2906,79 +2914,25 @@ function UserDashboard() {
             <div className="user-dashboard__body">
               {/* Sidebar navigation */}
               <nav className="user-dashboard__sidebar">
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'profile' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/profile')}
-                >
-                  {ui?.dashboard?.profile ?? 'Profile'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'albums' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/albums')}
-                >
-                  {ui?.dashboard?.tabs?.albums ?? 'Albums'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'posts' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/posts')}
-                >
-                  {ui?.dashboard?.tabs?.posts ?? 'Articles'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'mixer' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/mixer')}
-                >
-                  {ui?.dashboard?.tabs?.mixer ?? 'Миксер'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'archive' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/archive')}
-                >
-                  <SubscriberContentLockIcon className="user-dashboard__nav-item-icon" size={14} />
-                  {ui?.dashboard?.tabs?.archive ?? 'Archive'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'payment-settings' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/payment-settings')}
-                >
-                  {ui?.dashboard?.tabs?.paymentSettings ?? 'Payment Settings'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'my-purchases' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/my-purchases')}
-                >
-                  {ui?.dashboard?.tabs?.myPurchases ?? 'My Purchases'}
-                </button>
-                <button
-                  type="button"
-                  className={`user-dashboard__nav-item ${
-                    activeTab === 'social-links' ? 'user-dashboard__nav-item--active' : ''
-                  }`}
-                  onClick={() => goDashboard('/dashboard-new/social-links')}
-                >
-                  {ui?.dashboard?.tabs?.socialLinks ?? 'Social Links'}
-                </button>
+                {visibleTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={clsx(
+                      'user-dashboard__nav-item',
+                      activeTab === tab && 'user-dashboard__nav-item--active'
+                    )}
+                    onClick={() => goDashboard(`/dashboard-new/${tab}`)}
+                  >
+                    {tab === 'archive' ? (
+                      <SubscriberContentLockIcon
+                        className="user-dashboard__nav-item-icon"
+                        size={14}
+                      />
+                    ) : null}
+                    {dashboardHeadingForTab(tab, ui)}
+                  </button>
+                ))}
               </nav>
 
               {/* Content area: стабильная оболочка; вкладки скрыты через hidden, не размонтируются */}
@@ -3862,32 +3816,44 @@ function UserDashboard() {
                               </div>
 
                               <h2 className="user-dashboard__profile-hero-name">
-                                {user?.name?.trim() || '…'}
+                                <span>{user?.name?.trim() || '…'}</span>
+                                {isArtist ? (
+                                  <span className="user-dashboard__profile-hero-badge">
+                                    {ui?.dashboard?.accountTypeBadge?.artist ??
+                                      (lang === 'en' ? 'Artist' : 'Артист')}
+                                  </span>
+                                ) : null}
                               </h2>
 
-                              <p
-                                className={clsx('user-dashboard__profile-hero-status', {
-                                  'user-dashboard__profile-hero-status--public': isArtistPagePublic,
-                                  'user-dashboard__profile-hero-status--private':
-                                    !isArtistPagePublic,
-                                })}
-                              >
-                                <span
-                                  className="user-dashboard__profile-hero-status-dot"
-                                  aria-hidden="true"
-                                />
-                                {isArtistPagePublic
-                                  ? (ui?.dashboard?.profileHero?.pagePublic ?? 'Page is public')
-                                  : (ui?.dashboard?.profileHero?.pagePrivate ?? 'Page is private')}
-                              </p>
+                              {isArtist ? (
+                                <>
+                                  <p
+                                    className={clsx('user-dashboard__profile-hero-status', {
+                                      'user-dashboard__profile-hero-status--public':
+                                        isArtistPagePublic,
+                                      'user-dashboard__profile-hero-status--private':
+                                        !isArtistPagePublic,
+                                    })}
+                                  >
+                                    <span
+                                      className="user-dashboard__profile-hero-status-dot"
+                                      aria-hidden="true"
+                                    />
+                                    {isArtistPagePublic
+                                      ? (ui?.dashboard?.profileHero?.pagePublic ?? 'Page is public')
+                                      : (ui?.dashboard?.profileHero?.pagePrivate ??
+                                        'Page is private')}
+                                  </p>
 
-                              <p className="user-dashboard__profile-hero-description">
-                                {isArtistPagePublic
-                                  ? (ui?.dashboard?.profileHero?.publicDescription ??
-                                    'Your artist page is now public\nand visible to everyone.')
-                                  : (ui?.dashboard?.profileHero?.privateDescription ??
-                                    'Only you can see your artist page right now.')}
-                              </p>
+                                  <p className="user-dashboard__profile-hero-description">
+                                    {isArtistPagePublic
+                                      ? (ui?.dashboard?.profileHero?.publicDescription ??
+                                        'Your artist page is now public\nand visible to everyone.')
+                                      : (ui?.dashboard?.profileHero?.privateDescription ??
+                                        'Only you can see your artist page right now.')}
+                                  </p>
+                                </>
+                              ) : null}
 
                               {profilePublicSlug ? (
                                 <button
@@ -3962,6 +3928,27 @@ function UserDashboard() {
                                 <ProfileEmailVerificationStatus verified={emailVerified} />
                               </div>
                             </div>
+
+                            {isListener ? (
+                              <p className="user-dashboard__profile-upgrade">
+                                <span className="user-dashboard__profile-upgrade-lead">
+                                  {ui?.dashboard?.becomeArtistLead ??
+                                    (lang === 'en'
+                                      ? 'Want to publish music?'
+                                      : 'Хотите публиковать музыку?')}
+                                </span>{' '}
+                                <button
+                                  type="button"
+                                  className="user-dashboard__profile-upgrade-link"
+                                  onClick={() => setIsUpgradeToArtistModalOpen(true)}
+                                >
+                                  {ui?.dashboard?.becomeArtist ??
+                                    (lang === 'en'
+                                      ? 'Upgrade to artist account'
+                                      : 'Перейти на аккаунт артиста')}
+                                </button>
+                              </p>
+                            ) : null}
 
                             <div className="user-dashboard__profile-actions">
                               <button
@@ -4287,6 +4274,16 @@ function UserDashboard() {
         userEmail={user?.email}
         emailVerified={emailVerified}
         initialTab={profileSettingsInitialTab}
+        showBecomeArtist={isListener}
+        onBecomeArtist={() => {
+          setIsProfileSettingsModalOpen(false);
+          setIsUpgradeToArtistModalOpen(true);
+        }}
+      />
+
+      <UpgradeToArtistModal
+        isOpen={isUpgradeToArtistModalOpen}
+        onClose={() => setIsUpgradeToArtistModalOpen(false)}
       />
 
       <DeleteAccountModal

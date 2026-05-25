@@ -6,6 +6,7 @@ import {
   getUser,
   AUTH_EXPIRED_BANNER_SESSION_KEY,
 } from '@shared/lib/auth';
+import { isArtistAccount } from '@shared/lib/accountType';
 import { markFirstArtistOnboardingPending } from '@shared/lib/authIntent';
 import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
 import {
@@ -17,11 +18,15 @@ import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
+import { RoleSelectionScreen } from './RoleSelectionScreen';
 import { LanguageSelectModal } from './LanguageSelectModal';
 import { VerifyEmailModal } from './VerifyEmailModal';
+import type { AccountType } from '@shared/lib/accountType';
 import './AuthPage.scss';
+import './RoleSelectionScreen.scss';
 
 type AuthMode = 'login' | 'register';
+type RegisterStep = 'role' | 'form';
 
 export function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -30,6 +35,8 @@ export function AuthPage() {
   const [mode, setMode] = useState<AuthMode>(() =>
     searchParams.get('mode') === 'register' ? 'register' : 'login'
   );
+  const [registerStep, setRegisterStep] = useState<RegisterStep>('role');
+  const [selectedAccountType, setSelectedAccountType] = useState<AccountType>('listener');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showVerifyEmailModal, setShowVerifyEmailModal] = useState(() =>
     Boolean((location.state as { showVerifyEmail?: boolean } | null)?.showVerifyEmail)
@@ -64,8 +71,12 @@ export function AuthPage() {
 
   useEffect(() => {
     const m = searchParams.get('mode');
-    if (m === 'register') setMode('register');
-    else if (m === 'login') setMode('login');
+    if (m === 'register') {
+      setMode('register');
+      setRegisterStep('role');
+    } else if (m === 'login') {
+      setMode('login');
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -81,7 +92,7 @@ export function AuthPage() {
 
   const handleRegisterSuccess = () => {
     const registeredUser = getUser();
-    if (registeredUser?.id) {
+    if (registeredUser?.id && isArtistAccount(registeredUser)) {
       markFirstArtistOnboardingPending(registeredUser.id);
     }
     setPendingPostRegister(true);
@@ -125,6 +136,7 @@ export function AuthPage() {
   };
 
   const showAuthForm = !showLanguageModal && !showVerifyEmailModal;
+  const showRoleSelection = mode === 'register' && registerStep === 'role';
 
   const handleCloseAuth = () => {
     if (shouldLeaveDeletedArtistPage()) {
@@ -146,7 +158,9 @@ export function AuthPage() {
       {showAuthForm && (
         <div className="auth-page">
           <div className="auth-page__backdrop" />
-          <div className="auth-page__container">
+          <div
+            className={`auth-page__container${showRoleSelection ? ' auth-page__container--wide' : ''}`}
+          >
             <button
               type="button"
               className="auth-page__close"
@@ -163,12 +177,25 @@ export function AuthPage() {
             {mode === 'login' ? (
               <LoginForm
                 onSuccess={handleLoginSuccess}
-                onSwitchToRegister={() => setMode('register')}
+                onSwitchToRegister={() => {
+                  setMode('register');
+                  setRegisterStep('role');
+                }}
+              />
+            ) : showRoleSelection ? (
+              <RoleSelectionScreen
+                onSelect={(accountType) => {
+                  setSelectedAccountType(accountType);
+                  setRegisterStep('form');
+                }}
+                onSwitchToLogin={() => setMode('login')}
               />
             ) : (
               <RegisterForm
+                accountType={selectedAccountType}
                 onSuccess={handleRegisterSuccess}
                 onSwitchToLogin={() => setMode('login')}
+                onBack={() => setRegisterStep('role')}
               />
             )}
           </div>

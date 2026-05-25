@@ -3,6 +3,7 @@ import type {
   AlbumFormData,
   ProducingCredits,
   BandMember,
+  RecordingEntry,
   RecordingFormDraft,
 } from './EditAlbumModal.types';
 import { recordingEntryEditHasChanges } from './recordingEntryEditHasChanges';
@@ -14,8 +15,246 @@ import {
   classifyAlbumDetailSemanticKind,
   dedupeMergedAlbumDetailsForDisplay,
 } from '@entities/album/lib/albumDetailSemanticKind';
+import {
+  extractContentItemId,
+  generateAlbumDetailListItemId,
+} from '@entities/album/lib/albumDetailListItemId';
 
-export const EMPTY_BAND_MEMBER: BandMember = { name: '', role: '', url: undefined };
+export const EMPTY_BAND_MEMBER: BandMember = {
+  id: '',
+  name: '',
+  role: '',
+  url: undefined,
+};
+
+export function createBandMember(partial: Omit<BandMember, 'id'> & { id?: string }): BandMember {
+  return { ...partial, id: partial.id?.trim() || generateAlbumDetailListItemId() };
+}
+
+export function createRecordingEntry(
+  partial: Omit<RecordingEntry, 'id'> & { id?: string }
+): RecordingEntry {
+  return { ...partial, id: partial.id?.trim() || generateAlbumDetailListItemId() };
+}
+
+export function updateBandMemberPreservingId(
+  prev: BandMember,
+  updates: Omit<BandMember, 'id'>
+): BandMember {
+  return createBandMember({ ...updates, id: prev.id });
+}
+
+export function updateRecordingEntryPreservingId(
+  prev: RecordingEntry,
+  updates: Omit<RecordingEntry, 'id'>
+): RecordingEntry {
+  return createRecordingEntry({ ...updates, id: prev.id });
+}
+
+export function parseBandMemberFromContentItem(item: unknown): BandMember | null {
+  if (typeof item === 'string' && item.trim() === '') return null;
+  const id = extractContentItemId(item) ?? generateAlbumDetailListItemId();
+
+  if (typeof item === 'object' && item !== null && 'text' in item) {
+    const textValue = (item as { text?: unknown }).text;
+
+    if (typeof textValue === 'string' && textValue.trim()) {
+      const match = textValue.match(/^(.+?)\s*—\s*(.+)$/);
+      if (match) {
+        const name = match[1].trim();
+        const role = match[2].trim().replace(/\.+$/, '');
+        const url = (item as { link?: unknown }).link
+          ? String((item as { link?: unknown }).link).trim()
+          : undefined;
+        if (name && role) return createBandMember({ id, name, role, url });
+      }
+      const url = (item as { link?: unknown }).link
+        ? String((item as { link?: unknown }).link).trim()
+        : undefined;
+      return createBandMember({ id, name: textValue.trim(), role: '', url });
+    }
+
+    if (Array.isArray(textValue)) {
+      const fullText = textValue.join('');
+      const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+      const url = (item as { link?: unknown }).link
+        ? String((item as { link?: unknown }).link).trim()
+        : undefined;
+      if (match) {
+        const name = match[1].trim();
+        const role = match[2].trim().replace(/\.+$/, '');
+        if (name && role) return createBandMember({ id, name, role, url });
+      } else if (fullText.trim()) {
+        return createBandMember({ id, name: fullText.trim(), role: '', url });
+      }
+    }
+  } else if (typeof item === 'string' && item.trim()) {
+    const match = item.match(/^(.+?)\s*—\s*(.+)$/);
+    if (match) {
+      const name = match[1].trim();
+      const role = match[2].trim().replace(/\.+$/, '');
+      if (name && role) return createBandMember({ id, name, role });
+    }
+    return createBandMember({ id, name: item.trim(), role: '' });
+  }
+
+  return null;
+}
+
+export function parseProducerFromContentItem(item: unknown): BandMember | null {
+  if (!item) return null;
+  const id = extractContentItemId(item) ?? generateAlbumDetailListItemId();
+
+  if (typeof item === 'object' && item !== null && 'text' in item) {
+    const textArray = (item as { text?: unknown }).text;
+    if (Array.isArray(textArray)) {
+      if (textArray.length === 2) {
+        const name = String(textArray[0]).trim();
+        const role = String(textArray[1]).trim();
+        const roleLower = role.toLowerCase();
+        if (roleLower.includes('mastering') || roleLower.includes('мастеринг')) return null;
+        if (name && role) {
+          return createBandMember({
+            id,
+            name,
+            role,
+            url: (item as { link?: unknown }).link
+              ? String((item as { link?: unknown }).link).trim()
+              : undefined,
+          });
+        }
+      } else if (
+        textArray.length === 3 &&
+        textArray[0] === '' &&
+        String(textArray[2]).startsWith(' — ')
+      ) {
+        const name = String(textArray[1]).trim();
+        const role = String(textArray[2]).replace(/^ — /, '').trim();
+        const roleLower = role.toLowerCase();
+        if (roleLower.includes('mastering') || roleLower.includes('мастеринг')) return null;
+        if (name && role) {
+          return createBandMember({
+            id,
+            name,
+            role,
+            url: (item as { link?: unknown }).link
+              ? String((item as { link?: unknown }).link).trim()
+              : undefined,
+          });
+        }
+      }
+    }
+  } else if (typeof item === 'string' && item.trim()) {
+    const fullText = item.trim();
+    const roleTextLower = fullText.toLowerCase();
+    if (roleTextLower.includes('mastering') || roleTextLower.includes('мастеринг')) return null;
+    const match = fullText.match(/^(.+?)\s*—\s*(.+)$/);
+    if (match) {
+      return createBandMember({ id, name: match[1].trim(), role: match[2].trim() });
+    }
+    return createBandMember({ id, name: '', role: fullText });
+  }
+
+  return null;
+}
+
+export function parseRecordingEntryFromContentItem(
+  item: unknown,
+  lang: 'en' | 'ru'
+): RecordingEntry | null {
+  if (!item || typeof item !== 'object' || !('dateFrom' in item)) return null;
+  const record = item as {
+    id?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    studioText?: string;
+    city?: string;
+    url?: string | null;
+  };
+  if (!record.dateFrom) return null;
+
+  return createRecordingEntry({
+    id: record.id,
+    text: buildRecordingText(record.dateFrom, record.dateTo, record.studioText, record.city, lang),
+    url: record.url || undefined,
+    dateFrom: record.dateFrom,
+    dateTo: record.dateTo,
+    studioText: record.studioText,
+    city: record.city,
+  });
+}
+
+export function serializeBandMemberToContentItem(member: BandMember): unknown {
+  const roleClean = member.role.trim().replace(/\.+$/, '');
+  const urlTrimmed = member.url?.trim();
+  const base = { id: member.id };
+
+  if (urlTrimmed) {
+    return {
+      ...base,
+      text: ['', member.name, ` — ${roleClean}.`],
+      link: urlTrimmed,
+    };
+  }
+
+  return {
+    ...base,
+    text: `${member.name} — ${roleClean}.`,
+  };
+}
+
+export function serializeProducerToContentItem(member: BandMember): unknown {
+  const roleClean = member.role.trim().replace(/\.+$/, '');
+  const urlTrimmed = member.url?.trim();
+  const result: { id: string; text: string[]; link?: string } = {
+    id: member.id,
+    text: [member.name.trim(), roleClean],
+  };
+  if (urlTrimmed) result.link = urlTrimmed;
+  return result;
+}
+
+export function serializeRecordingEntryToContentItem(entry: RecordingEntry): unknown {
+  const result: Record<string, unknown> = { id: entry.id };
+  if (entry.dateFrom) result.dateFrom = entry.dateFrom;
+  if (entry.dateTo) result.dateTo = entry.dateTo;
+  if (entry.studioText) result.studioText = entry.studioText;
+  if (entry.city) result.city = entry.city;
+  if (entry.url && entry.url.trim()) {
+    result.url = entry.url.trim();
+  } else {
+    result.url = null;
+  }
+  return result;
+}
+
+export function buildRecordingEntryFromEditFields(
+  fields: {
+    dateFrom?: string;
+    dateTo?: string;
+    studioText?: string;
+    city?: string;
+    url?: string;
+  },
+  lang: 'en' | 'ru',
+  id?: string
+): RecordingEntry {
+  return createRecordingEntry({
+    id,
+    text: buildRecordingText(
+      fields.dateFrom,
+      fields.dateTo,
+      fields.studioText?.trim(),
+      fields.city?.trim(),
+      lang
+    ),
+    url: fields.url?.trim() || undefined,
+    dateFrom: fields.dateFrom,
+    dateTo: fields.dateTo,
+    studioText: fields.studioText?.trim(),
+    city: fields.city?.trim(),
+  });
+}
 
 /** Черновик ссылки (purchase / streaming) для сравнения с сохранённой строкой. */
 export const EMPTY_LINK = { service: '', url: '' };
@@ -54,7 +293,7 @@ export function emptyRecordingFormDraft(): RecordingFormDraft {
 
 export function recordingFormDraftIsDirty(draft: RecordingFormDraft): boolean {
   return recordingEntryEditHasChanges(
-    { text: '' },
+    createRecordingEntry({ text: '' }),
     {},
     draft.dateFrom,
     draft.dateTo,
@@ -649,30 +888,7 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: takeId('bandMembers'),
       title: lang === 'ru' ? 'Исполнители' : 'Band members',
-      content: formData.bandMembers.map((m) => {
-        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
-        const roleClean = m.role.trim().replace(/\.+$/, '');
-        const text = `${m.name} — ${roleClean}.`;
-        // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
-        const urlTrimmed = m.url?.trim();
-        if (urlTrimmed && urlTrimmed.length > 0) {
-          console.log('🔗 [transformFormDataToAlbumFormat] Saving band member with URL:', {
-            name: m.name,
-            url: urlTrimmed,
-          });
-          return {
-            text: ['', m.name, ` — ${roleClean}.`],
-            link: urlTrimmed,
-          };
-        }
-        // Иначе сохраняем как строку (без link)
-        console.log('📝 [transformFormDataToAlbumFormat] Saving band member as string:', {
-          name: m.name,
-          url: m.url,
-          urlTrimmed,
-        });
-        return text;
-      }),
+      content: formData.bandMembers.map((m) => serializeBandMemberToContentItem(m)),
     });
   }
 
@@ -680,21 +896,7 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: takeId('sessionMusicians'),
       title: lang === 'ru' ? 'Сессионные музыканты' : 'Session musicians',
-      content: formData.sessionMusicians.map((m) => {
-        // Удаляем точку в конце role, если она есть (чтобы избежать двойных точек)
-        const roleClean = m.role.trim().replace(/\.+$/, '');
-        const text = `${m.name} — ${roleClean}.`;
-        // Если есть ссылка (не undefined и не пустая строка), сохраняем в формате объекта с text и link
-        const urlTrimmed = m.url?.trim();
-        if (urlTrimmed && urlTrimmed.length > 0) {
-          return {
-            text: ['', m.name, ` — ${roleClean}.`],
-            link: urlTrimmed,
-          };
-        }
-        // Иначе сохраняем как строку (без link)
-        return text;
-      }),
+      content: formData.sessionMusicians.map((m) => serializeBandMemberToContentItem(m)),
     });
   }
 
@@ -703,22 +905,7 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: takeId('producing'),
       title: lang === 'ru' ? 'Продюсирование' : 'Producing',
-      content: formData.producer.map((member) => {
-        // Новый формат: используем BandMember с name и role
-        // Сохраняем в формате ["Имя", "роль"]
-        const roleClean = member.role.trim().replace(/\.+$/, ''); // Удаляем точку в конце, если есть
-        const urlTrimmed = member.url?.trim();
-
-        const result: { text: string[]; link?: string } = {
-          text: [member.name.trim(), roleClean],
-        };
-
-        if (urlTrimmed && urlTrimmed.length > 0) {
-          result.link = urlTrimmed;
-        }
-
-        return result;
-      }),
+      content: formData.producer.map((member) => serializeProducerToContentItem(member)),
     });
   }
 
@@ -727,20 +914,7 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: takeId('mastering'),
       title: lang === 'ru' ? 'Мастеринг' : 'Mastered By',
-      content: formData.mastering.map((entry) => {
-        // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
-        const result: any = {};
-        if (entry.dateFrom) result.dateFrom = entry.dateFrom;
-        if (entry.dateTo) result.dateTo = entry.dateTo;
-        if (entry.studioText) result.studioText = entry.studioText;
-        if (entry.city) result.city = entry.city;
-        if (entry.url && entry.url.trim()) {
-          result.url = entry.url.trim();
-        } else {
-          result.url = null;
-        }
-        return result;
-      }),
+      content: formData.mastering.map((entry) => serializeRecordingEntryToContentItem(entry)),
     });
   }
 
@@ -749,20 +923,7 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: takeId('recordedAt'),
       title: lang === 'ru' ? 'Запись' : 'Recorded At',
-      content: formData.recordedAt.map((entry) => {
-        // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
-        const result: any = {};
-        if (entry.dateFrom) result.dateFrom = entry.dateFrom;
-        if (entry.dateTo) result.dateTo = entry.dateTo;
-        if (entry.studioText) result.studioText = entry.studioText;
-        if (entry.city) result.city = entry.city;
-        if (entry.url && entry.url.trim()) {
-          result.url = entry.url.trim();
-        } else {
-          result.url = null;
-        }
-        return result;
-      }),
+      content: formData.recordedAt.map((entry) => serializeRecordingEntryToContentItem(entry)),
     });
   }
 
@@ -771,20 +932,7 @@ export const transformFormDataToAlbumFormat = (
     details.push({
       id: takeId('mixedAt'),
       title: lang === 'ru' ? 'Сведение' : 'Mixed At',
-      content: formData.mixedAt.map((entry) => {
-        // Сохраняем в новом формате с dateFrom, dateTo, studioText, city, url
-        const result: any = {};
-        if (entry.dateFrom) result.dateFrom = entry.dateFrom;
-        if (entry.dateTo) result.dateTo = entry.dateTo;
-        if (entry.studioText) result.studioText = entry.studioText;
-        if (entry.city) result.city = entry.city;
-        if (entry.url && entry.url.trim()) {
-          result.url = entry.url.trim();
-        } else {
-          result.url = null;
-        }
-        return result;
-      }),
+      content: formData.mixedAt.map((entry) => serializeRecordingEntryToContentItem(entry)),
     });
   }
 

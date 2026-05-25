@@ -7,6 +7,7 @@
  * POST /api/auth/resend-verification - повторная отправка (JWT)
  * POST /api/auth/change-verification-email - смена email до верификации (JWT)
  * POST /api/auth/preferred-language - сохранить язык пользователя (JWT)
+ * POST /api/auth/upgrade-to-artist - listener → artist (JWT)
  * GET  /api/auth/me - текущий пользователь (JWT)
  */
 
@@ -42,6 +43,7 @@ import { buildPublicAppPath } from './lib/public-app-url';
 import { normalizeEmailLocale } from './lib/email-locale';
 import { updateUserPreferredLanguage } from './lib/user-preferred-language';
 import { enforceAuthVerificationIpRateLimit } from './lib/ip-rate-limit';
+import { normalizeAccountType, type AccountType } from './lib/account-type';
 
 interface UserRow extends VerificationUserRow {
   password_hash: string;
@@ -53,6 +55,7 @@ interface RegisterRequest {
   password: string;
   name?: string;
   siteName?: string;
+  accountType?: AccountType | string;
   preferredLanguage?: string;
 }
 
@@ -80,6 +83,12 @@ interface ChangeVerificationEmailRequest {
 
 interface DeleteAccountRequest {
   currentPassword: string;
+}
+
+interface UpgradeToArtistRequest {
+  artistName?: string;
+  siteName?: string;
+  name?: string;
 }
 
 interface AuthData {
@@ -172,7 +181,7 @@ async function generateUniqueUsername(
 
 async function fetchUserById(userId: string): Promise<UserRow | null> {
   const result = await query<UserRow>(
-    `SELECT id, email, name, password_hash, is_active, role, is_email_verified, preferred_language
+    `SELECT id, email, name, password_hash, is_active, role, account_type, is_email_verified, preferred_language
      FROM users
      WHERE id = $1`,
     [userId],
@@ -182,7 +191,13 @@ async function fetchUserById(userId: string): Promise<UserRow | null> {
 }
 
 function buildAuthPayload(user: UserRow): AuthData {
-  const token = generateToken(user.id, user.email, user.role === 'admin' ? 'admin' : 'user');
+  const accountType = normalizeAccountType(user.account_type);
+  const token = generateToken(
+    user.id,
+    user.email,
+    user.role === 'admin' ? 'admin' : 'user',
+    accountType
+  );
   return { token, user: mapAuthUser(user) };
 }
 
@@ -202,7 +217,7 @@ async function handleVerifyEmailGet(
   }
 
   const result = await query<VerificationUserRow>(
-    `SELECT id, email, name, role, is_email_verified
+    `SELECT id, email, name, role, account_type, is_email_verified
      FROM users
      WHERE email_verification_token = $1`,
     [token],
@@ -448,6 +463,76 @@ async function handleMe(
   return createSuccessResponse({ user: mapAuthUser(user) });
 }
 
+async function handleUpgradeToArtist(
+  event: HandlerEvent
+): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+  const userId = requireAuth(event);
+  if (!userId) {
+    return unauthorizedFromAuthHeader(event);
+  }
+
+  const current = await fetchUserById(userId);
+  if (!current) {
+    return createErrorResponse(404, 'User not found');
+  }
+
+  if (normalizeAccountType(current.account_type) !== 'listener') {
+    return createErrorResponse(400, 'Account is already an artist account', CORS_HEADERS, {
+      code: 'ALREADY_ARTIST',
+    });
+  }
+
+  const data = parseJsonBody<UpgradeToArtistRequest>(event.body, {} as UpgradeToArtistRequest);
+  const artistName = (data.artistName || data.siteName || data.name || '').trim();
+  if (!artistName) {
+    return createErrorResponse(400, 'Artist / band name is required');
+  }
+
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const publicSlug = await generateUniquePublicSlug(artistName, artistName, current.email);
+      const username = await generateUniqueUsername(artistName, artistName, current.email);
+
+      const result = await query<VerificationUserRow>(
+        `UPDATE users
+         SET account_type = 'artist',
+             site_name = $2,
+             username = $3,
+             public_slug = $4,
+             updated_at = NOW()
+         WHERE id = $1 AND account_type = 'listener'
+         RETURNING id, email, name, role, account_type, is_email_verified, preferred_language`,
+        [userId, artistName, username, publicSlug],
+        0
+      );
+
+      if (result.rows.length === 0) {
+        return createErrorResponse(409, 'Account upgrade is not available', CORS_HEADERS, {
+          code: 'UPGRADE_NOT_AVAILABLE',
+        });
+      }
+
+      const updated = await fetchUserById(userId);
+      if (!updated) {
+        return createErrorResponse(404, 'User not found');
+      }
+
+      return createSuccessResponse(buildAuthPayload(updated));
+    } catch (error: unknown) {
+      const pgError = error as { code?: string };
+      if (pgError?.code === '23505' && attempt < 1) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to upgrade account after retry');
+}
+
 export const handler: Handler = async (
   event: HandlerEvent
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> => {
@@ -483,6 +568,10 @@ export const handler: Handler = async (
 
     if (path === '/preferred-language' || path.endsWith('/preferred-language')) {
       return handlePreferredLanguage(event);
+    }
+
+    if (path === '/upgrade-to-artist' || path.endsWith('/upgrade-to-artist')) {
+      return handleUpgradeToArtist(event);
     }
 
     if (path === '/delete-account' || path.endsWith('/delete-account')) {
@@ -523,6 +612,18 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Email and password are required');
       }
 
+      const accountType = normalizeAccountType(data.accountType);
+      const isArtist = accountType === 'artist';
+      const displayName = (data.siteName || data.name || '').trim();
+
+      if (isArtist) {
+        if (!displayName) {
+          return createErrorResponse(400, 'Artist / band name is required for artist accounts');
+        }
+      } else if (!displayName) {
+        return createErrorResponse(400, 'Name is required');
+      }
+
       const existingUser = await query<UserRow>(
         `SELECT id FROM users WHERE email = $1`,
         [data.email.toLowerCase().trim()],
@@ -535,7 +636,7 @@ export const handler: Handler = async (
 
       const passwordHash = await bcrypt.hash(data.password, 10);
       const normalizedEmail = data.email.toLowerCase().trim();
-      const siteName = data.siteName || data.name || null;
+      const siteName = isArtist ? displayName : null;
       const preferredLanguage = normalizeEmailLocale(data.preferredLanguage);
 
       let result: Awaited<ReturnType<typeof query<UserRow>>> | null = null;
@@ -543,33 +644,31 @@ export const handler: Handler = async (
 
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const publicSlug = await generateUniquePublicSlug(
-            siteName,
-            data.name || null,
-            normalizedEmail
-          );
-          const username = await generateUniqueUsername(
-            siteName,
-            data.name || null,
-            normalizedEmail
-          );
+          const publicSlug = isArtist
+            ? await generateUniquePublicSlug(siteName, displayName, normalizedEmail)
+            : null;
+          const username = isArtist
+            ? await generateUniqueUsername(siteName, displayName, normalizedEmail)
+            : null;
 
           result = await query<UserRow>(
             `INSERT INTO users (
                email, name, username, site_name, public_slug, password, password_hash,
-               is_active, is_email_verified, genre_code, preferred_language
+               is_active, is_email_verified, genre_code, preferred_language, account_type
              )
-             VALUES ($1, $2, $3, $4, $5, $6, $7, true, false, 'other', $8)
-             RETURNING id, email, name, role, is_email_verified, preferred_language`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true, false, $8, $9, $10)
+             RETURNING id, email, name, role, account_type, is_email_verified, preferred_language`,
             [
               normalizedEmail,
-              data.name || null,
+              displayName,
               username,
               siteName,
               publicSlug,
               data.password,
               passwordHash,
+              'other',
               preferredLanguage,
+              accountType,
             ],
             0
           );
@@ -626,7 +725,7 @@ export const handler: Handler = async (
       }
 
       const result = await query<UserRow>(
-        `SELECT id, email, name, password_hash, is_active, role, is_email_verified, preferred_language
+        `SELECT id, email, name, password_hash, is_active, role, account_type, is_email_verified, preferred_language
          FROM users
          WHERE email = $1`,
         [data.email.toLowerCase().trim()],

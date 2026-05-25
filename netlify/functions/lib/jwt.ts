@@ -10,12 +10,15 @@ const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as string | number;
 
 export type UserRole = 'user' | 'admin';
+export type AccountType = 'listener' | 'artist';
 
 export interface JWTPayload {
   userId: string;
   email: string;
   /** Старые токены могли выдаваться без поля — считаем user */
   role?: UserRole;
+  /** listener | artist; старые токены без поля — artist */
+  accountType?: AccountType;
   iat?: number;
   exp?: number;
 }
@@ -27,11 +30,17 @@ export interface JWTPayload {
  * @param role - Роль (user | admin)
  * @returns JWT токен
  */
-export function generateToken(userId: string, email: string, role: UserRole = 'user'): string {
+export function generateToken(
+  userId: string,
+  email: string,
+  role: UserRole = 'user',
+  accountType: AccountType = 'artist'
+): string {
   const payload: JWTPayload = {
     userId,
     email,
     role: role ?? 'user',
+    accountType: accountType ?? 'artist',
   };
 
   return jwt.sign(payload, JWT_SECRET, {
@@ -123,6 +132,19 @@ export function extractRoleFromToken(authHeader: string | undefined): UserRole {
     return 'user';
   }
   return payload.role === 'admin' ? 'admin' : 'user';
+}
+
+/** accountType из JWT (старые токены без поля — artist). */
+export function extractAccountTypeFromToken(authHeader: string | undefined): AccountType {
+  const token = parseBearerToken(authHeader);
+  if (!token) {
+    return 'artist';
+  }
+  const payload = verifyToken(token);
+  if (!payload) {
+    return 'artist';
+  }
+  return payload.accountType === 'listener' ? 'listener' : 'artist';
 }
 
 /**

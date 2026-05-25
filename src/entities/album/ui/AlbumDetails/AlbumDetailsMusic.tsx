@@ -170,7 +170,12 @@ export default function AlbumDetailsMusic({ album }: { album: IAlbums }) {
             // Объекты с text: поддерживаем и старый формат ["", "Имя", " — роль"],
             // и новый формат ["Имя", "роль"] (с link или без него)
             if (typeof item === 'object' && item !== null && 'text' in item) {
-              const textItem = item as { text: string[]; link?: string };
+              const textItem = item as { text: string | string[]; link?: string };
+              if (typeof textItem.text === 'string' && textItem.text.trim()) {
+                const finalText = ensurePeriod(textItem.text.trim());
+                return finalText ? <li key={i}>{finalText}</li> : null;
+              }
+
               const parts = Array.isArray(textItem.text) ? textItem.text : [];
 
               // Новый формат producing: ["Имя", "роль"]

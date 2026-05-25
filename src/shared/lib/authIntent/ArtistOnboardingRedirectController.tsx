@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useLang } from '@app/providers/lang';
+import { isArtistAccount } from '@shared/lib/accountType';
 import { isAuthenticated, AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { buildOwnArtistPagePath, fetchOwnArtistPageState } from '@shared/lib/ownArtistPage';
@@ -29,6 +30,7 @@ export function ArtistOnboardingRedirectController() {
 
     const viewerId = viewer?.id?.trim();
     if (!viewerId) return;
+    if (!isArtistAccount(viewer)) return;
     if (location.pathname.startsWith('/auth')) return;
     if (location.pathname.startsWith('/pay/')) return;
     if (redirectedForSessionRef.current || redirectInFlightRef.current) return;

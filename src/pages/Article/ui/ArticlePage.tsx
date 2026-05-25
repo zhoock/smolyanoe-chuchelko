@@ -145,9 +145,11 @@ export function ArticlePage() {
           </p>
         ) : (
           <ul>
-            {content?.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
+            {content?.map((item, i) => {
+              const text = typeof item === 'string' ? item : item.text;
+              const key = typeof item === 'string' ? i : item.id;
+              return <li key={key}>{text}</li>;
+            })}
           </ul>
         )}
       </>
@@ -320,7 +322,7 @@ function ArticleContent({
       <h2>{article.nameArticle}</h2>
 
       {article.details.map((d, index) => (
-        <Fragment key={d.id ?? `detail-${index}`}>
+        <Fragment key={d.blockId ?? d.id ?? `detail-${index}`}>
           {renderBlock({ ...d, userId: article.userId })}
         </Fragment>
       ))}

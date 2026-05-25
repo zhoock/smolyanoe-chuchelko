@@ -31,6 +31,8 @@ interface ProfileSettingsModalProps {
   userEmail?: string;
   emailVerified?: boolean;
   initialTab?: TabType;
+  showBecomeArtist?: boolean;
+  onBecomeArtist?: () => void;
 }
 
 type TabType = 'general' | 'profile' | 'security';
@@ -42,6 +44,8 @@ export function ProfileSettingsModal({
   userEmail = '',
   emailVerified = false,
   initialTab = 'general',
+  showBecomeArtist = false,
+  onBecomeArtist,
 }: ProfileSettingsModalProps) {
   const { lang: currentLang, setLang } = useLang();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, currentLang));
@@ -896,6 +900,27 @@ export function ProfileSettingsModal({
                         )}
                       </div>
                     </div>
+
+                    {showBecomeArtist && onBecomeArtist ? (
+                      <p className="profile-settings-modal__upgrade">
+                        <span className="profile-settings-modal__upgrade-lead">
+                          {ui?.dashboard?.becomeArtistLead ??
+                            (currentLang === 'en'
+                              ? 'Want to publish music?'
+                              : 'Хотите публиковать музыку?')}
+                        </span>{' '}
+                        <button
+                          type="button"
+                          className="profile-settings-modal__upgrade-link"
+                          onClick={onBecomeArtist}
+                        >
+                          {ui?.dashboard?.becomeArtist ??
+                            (currentLang === 'en'
+                              ? 'Upgrade to artist account'
+                              : 'Перейти на аккаунт артиста')}
+                        </button>
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
