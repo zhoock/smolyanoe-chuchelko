@@ -43,6 +43,12 @@ import { buildPublicAppPath } from './lib/public-app-url';
 import { normalizeEmailLocale } from './lib/email-locale';
 import { updateUserPreferredLanguage } from './lib/user-preferred-language';
 import { enforceAuthVerificationIpRateLimit } from './lib/ip-rate-limit';
+import {
+  checkLoginRateLimit,
+  recordLoginFailure,
+  resetLoginRateLimitOnSuccess,
+  loginRateLimitResponse,
+} from './lib/login-rate-limit';
 import { normalizeAccountType, type AccountType } from './lib/account-type';
 
 interface UserRow extends VerificationUserRow {
@@ -723,15 +729,26 @@ export const handler: Handler = async (
         return createErrorResponse(400, 'Email and password are required');
       }
 
+      const normalizedEmail = data.email.toLowerCase().trim();
+
+      // Brute-force / credential-stuffing protection. Runs BEFORE any password
+      // comparison so we don't leak account existence via timing and don't give
+      // attackers free bcrypt work to mount.
+      const preCheck = await checkLoginRateLimit(event, normalizedEmail);
+      if (!preCheck.allowed) {
+        return loginRateLimitResponse(preCheck.retryAfterSeconds);
+      }
+
       const result = await query<UserRow>(
         `SELECT id, email, name, password_hash, is_active, role, account_type, is_email_verified, preferred_language
          FROM users
          WHERE email = $1`,
-        [data.email.toLowerCase().trim()],
+        [normalizedEmail],
         0
       );
 
       if (result.rows.length === 0) {
+        await recordLoginFailure(event, normalizedEmail);
         return createErrorResponse(401, 'Invalid email or password', CORS_HEADERS, {
           code: 'INVALID_CREDENTIALS',
         });
@@ -740,16 +757,24 @@ export const handler: Handler = async (
       const user = result.rows[0];
 
       if (!user.is_active) {
+        // Admin-disabled account: not a brute-force signal. Preserve the
+        // existing generic 403 without bumping rate-limit counters.
         return createErrorResponse(403, 'User account is disabled');
       }
 
       const isPasswordValid = await bcrypt.compare(data.password, user.password_hash);
 
       if (!isPasswordValid) {
+        await recordLoginFailure(event, normalizedEmail);
         return createErrorResponse(401, 'Invalid email or password', CORS_HEADERS, {
           code: 'INVALID_CREDENTIALS',
         });
       }
+
+      // Success clears the email bucket so a legitimate user who mistyped a few
+      // times isn't stuck halfway to lockout. IP bucket is intentionally NOT
+      // reset so attackers can't unlock IP-wide brute force via one valid login.
+      await resetLoginRateLimitOnSuccess(normalizedEmail);
 
       if (data.preferredLanguage) {
         await updateUserPreferredLanguage(user.id, normalizeEmailLocale(data.preferredLanguage));

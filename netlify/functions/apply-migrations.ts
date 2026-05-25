@@ -819,6 +819,32 @@ CREATE INDEX IF NOT EXISTS idx_auth_ip_rate_limits_window_hour
 COMMENT ON TABLE auth_ip_rate_limits IS 'Hourly IP counters for auth abuse protection';
 `;
 
+const MIGRATION_048 = `
+CREATE TABLE IF NOT EXISTS auth_login_rate_limits (
+  bucket_type VARCHAR(16) NOT NULL,
+  bucket_key VARCHAR(255) NOT NULL,
+  window_start TIMESTAMPTZ NOT NULL,
+  failed_count INTEGER NOT NULL DEFAULT 0,
+  locked_until TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (bucket_type, bucket_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_login_rate_limits_locked_until
+  ON auth_login_rate_limits (locked_until)
+  WHERE locked_until IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_auth_login_rate_limits_updated_at
+  ON auth_login_rate_limits (updated_at);
+
+COMMENT ON TABLE auth_login_rate_limits IS 'Failure counters + temporary lockouts for /api/auth/login (IP and email buckets).';
+COMMENT ON COLUMN auth_login_rate_limits.bucket_type IS 'ip | email';
+COMMENT ON COLUMN auth_login_rate_limits.bucket_key IS 'Normalized IP address or lowercased email';
+COMMENT ON COLUMN auth_login_rate_limits.window_start IS 'Start of the current counting window';
+COMMENT ON COLUMN auth_login_rate_limits.failed_count IS 'Failed attempts within the current window';
+COMMENT ON COLUMN auth_login_rate_limits.locked_until IS 'When set and > NOW(), bucket is in temporary lockout';
+`;
+
 type MigrationSql = string | (() => string);
 
 const MIGRATIONS: Record<string, MigrationSql> = {
@@ -851,6 +877,7 @@ const MIGRATIONS: Record<string, MigrationSql> = {
   '042_add_user_id_to_purchases.sql': MIGRATION_042,
   '043_add_revoked_at_to_purchases.sql': MIGRATION_043,
   '044_normalize_purchase_album_id_to_slug.sql': MIGRATION_044,
+  '048_create_auth_login_rate_limits.sql': MIGRATION_048,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -1003,6 +1030,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '038_add_preferred_language_to_users.sql',
       '039_add_verification_email_sent_at_to_users.sql',
       '040_create_auth_ip_rate_limits.sql',
+      '048_create_auth_login_rate_limits.sql',
     ];
 
     const results: MigrationResult[] = [];
