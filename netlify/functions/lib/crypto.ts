@@ -33,8 +33,11 @@ function getEncryptionKey(): Buffer {
     return Buffer.from(key, 'base64');
   }
 
-  // Прямой 32-байтовый ключ
-  if (key.length === 64) {
+  // Прямой 32-байтовый ключ в hex. Только строгий hex-алфавит — иначе
+  // 64-символьный base64 (вывод `openssl rand -base64 48` содержит `+`/`/`)
+  // молча декодировался Buffer.from('hex') в обрезанный буфер и приводил к
+  // ошибке `Invalid key length` на этапе createCipheriv.
+  if (key.length === 64 && /^[0-9a-fA-F]+$/.test(key)) {
     return Buffer.from(key, 'hex');
   }
 
