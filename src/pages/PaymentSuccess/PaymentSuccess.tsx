@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import './PaymentSuccess.style.scss';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
+import { invalidateMyPurchasesCache } from '@shared/api/purchases';
 
 /**
  * Статус платежа от YooKassa API (через get-payment-status; сверка с провайдером на бэкенде).
@@ -174,7 +175,8 @@ function PaymentSuccess() {
   const handleTryAgainNavigate = () => {
     try {
       if (returnTo) {
-        window.location.href = new URL(returnTo, window.location.origin).pathname || '/';
+        const url = new URL(returnTo, window.location.origin);
+        window.location.href = `${url.pathname}${url.search}${url.hash}` || '/';
         return;
       }
     } catch {
@@ -182,6 +184,18 @@ function PaymentSuccess() {
     }
     navigate('/');
   };
+
+  // Покупка прошла — сбрасываем кэш покупок, чтобы при возврате на album page
+  // `useAlbumOwnedByViewer` сразу запросил свежие данные и показал "Owned".
+  // Это и есть настоящий ownership state: запись лежит в БД (`purchases`),
+  // мы лишь говорим клиенту перечитать список.
+  const cacheInvalidatedRef = useRef(false);
+  useEffect(() => {
+    if (payment?.status === 'succeeded' && !cacheInvalidatedRef.current) {
+      cacheInvalidatedRef.current = true;
+      invalidateMyPurchasesCache();
+    }
+  }, [payment?.status]);
 
   useEffect(() => {
     if (payment?.status === 'succeeded' && returnTo) {
@@ -191,7 +205,10 @@ function PaymentSuccess() {
             clearInterval(countdownInterval);
             try {
               const returnUrl = new URL(returnTo, window.location.origin);
-              window.location.href = returnUrl.pathname;
+              // Сохраняем search (`?artist=...`) и hash при возврате на
+              // album page — иначе на multi-tenant странице потеряется
+              // контекст артиста.
+              window.location.href = `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`;
             } catch {
               window.location.href = returnTo;
             }
@@ -410,7 +427,7 @@ function PaymentSuccess() {
                           onClick={() => {
                             try {
                               const returnUrl = new URL(returnTo, window.location.origin);
-                              window.location.href = returnUrl.pathname;
+                              window.location.href = `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`;
                             } catch {
                               window.location.href = returnTo;
                             }

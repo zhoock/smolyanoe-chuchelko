@@ -144,7 +144,8 @@
   }
 
   &__form,
-  &__owned {
+  &__owned,
+  &__auth-gate {
     display: flex;
     flex-direction: column;
     gap: var(--ms-1);
@@ -167,6 +168,99 @@
     color: var(--dashboard-text-secondary);
     font-size: var(--dashboard-font-size, 14px);
     line-height: 1.5;
+  }
+
+  &__auth-gate {
+    align-items: stretch;
+    text-align: start;
+  }
+
+  &__auth-gate-title {
+    margin: 0;
+    color: var(--dashboard-text-primary);
+    font-size: 1.0625rem;
+    font-weight: 500;
+  }
+
+  &__auth-gate-description {
+    margin: 0;
+    color: var(--dashboard-text-secondary);
+    font-size: var(--dashboard-font-size, 14px);
+    line-height: 1.5;
+  }
+
+  &__auth-gate-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: var(--ms-1);
+    list-style: none;
+    background: var(--dashboard-hover-bg);
+    border-radius: var(--ms-01);
+  }
+
+  &__auth-gate-benefit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--dashboard-text-primary);
+    font-size: var(--dashboard-font-size, 14px);
+    line-height: 1.4;
+  }
+
+  &__auth-gate-benefit-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    inline-size: 22px;
+    block-size: 22px;
+    color: var(--dark-greenish-yellow);
+    background: rgba(204 255 0 / 12%);
+    border-radius: 50%;
+  }
+
+  &__auth-gate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    inline-size: 100%;
+    padding: var(--ms-01) var(--ms-0);
+    color: var(--dashboard-text-primary);
+    font-size: var(--dashboard-font-size, 14px);
+    font-weight: 500;
+    font-family: var(--base-font-family, arial, sans-serif);
+    background: transparent;
+    border: 1px solid var(--dashboard-input-border);
+    border-radius: var(--ms-01);
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        background: var(--dashboard-hover-bg);
+        border-color: var(--dashboard-text-secondary);
+      }
+    }
+
+    &:active {
+      background: var(--dashboard-active-bg);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
   }
 
   &__row {

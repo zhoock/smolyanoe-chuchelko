@@ -788,6 +788,17 @@
         "lastNameRequired": "Last name is required",
         "agreeToOfferRequired": "You must agree to the offer",
         "agreeToPrivacyRequired": "You must agree to the privacy policy"
+      },
+      "authGate": {
+        "title": "Sign in to complete your purchase",
+        "description": "Your library is tied to an account so you can re-download this album any time, on any device.",
+        "benefitLibrary": "Album saved to your account forever",
+        "benefitDevices": "Re-download any time, on any device",
+        "benefitSecure": "Secure access — no broken email links",
+        "signIn": "Sign in",
+        "createAccount": "Create account",
+        "switchToSignIn": "Already have an account? Sign in",
+        "switchToCreateAccount": "New here? Create an account"
       }
     }
   }

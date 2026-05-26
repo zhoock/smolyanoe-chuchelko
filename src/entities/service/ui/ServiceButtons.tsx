@@ -2,10 +2,12 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { String, IAlbums } from '@models';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { downloadOwnedAlbumZipByAuth } from '@shared/api/purchases';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
+import { isAuthenticated } from '@shared/lib/auth';
+import { consumePendingAlbumCheckoutForKey } from '@shared/lib/authIntent';
 import { GetButton } from './GetButton';
 import { AlbumCheckoutModal } from './AlbumCheckoutModal';
 import {
@@ -78,6 +80,22 @@ function ServiceButtonsContent({
     !isAlbumOwnerView;
   const { isOwned, ownedPurchase } = useAlbumOwnedByViewer(album, downloadButtonEnabled);
 
+  const albumKey = getAlbumKeyForPaymentApis(album);
+
+  // Resume after auth: если гость зашёл в auth-gate, залогинился и его вернули
+  // на эту страницу, resume-контроллер положил pending-key с этим albumKey.
+  // Открываем checkout-модал автоматически, чтобы пользователь не нажимал
+  // Buy Album ещё раз. Эффект должен быть до early-return — иначе порядок
+  // хуков сломается при F5 на странице без paid sale.
+  useEffect(() => {
+    if (!downloadButtonEnabled) return;
+    if (!albumKey) return;
+    if (!isAuthenticated()) return;
+    if (consumePendingAlbumCheckoutForKey(albumKey)) {
+      setIsCheckoutOpen(true);
+    }
+  }, [albumKey, downloadButtonEnabled]);
+
   if (section === 'Купить' && !hasAlbumPurchaseSectionContent(album)) {
     return null;
   }
@@ -95,7 +113,6 @@ function ServiceButtonsContent({
   }
 
   const showDownloadButton = downloadButtonEnabled;
-  const albumKey = getAlbumKeyForPaymentApis(album);
   const albumPrice = showDownloadButton ? getAlbumPrice(album).formatted : '';
 
   const handlePurchaseButtonClick = (e: React.MouseEvent<HTMLAnchorElement>) => {

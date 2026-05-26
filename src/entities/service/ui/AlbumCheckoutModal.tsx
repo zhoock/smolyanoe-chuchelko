@@ -8,28 +8,33 @@
  * - Сам подтягивает ownership через `useAlbumOwnedByViewer` и, если альбом
  *   уже куплен (например, оплата пришла из соседней вкладки), показывает
  *   download-CTA вместо формы.
- * - Гость может оформить покупку: достаточно email; auth не обязательна.
- * - Пре-заполняет email/имя из `getUser()` если есть сессия.
+ * - **Auth-gate**: гость НЕ пускается сразу в форму. Перед checkout мы
+ *   показываем panel "Sign in / Create account" с объяснением, почему
+ *   аккаунт нужен (постоянный доступ, скачивание с любого устройства).
+ *   После auth resume-контроллер вернёт пользователя сюда и заново
+ *   откроет модал — уже на форме с заполненным email из сессии.
  * - Платёж создаёт через `createPayment` и редиректит на YooKassa
  *   confirmation_url (или сразу на `/pay/success` если 3DS не требуется) —
  *   тот же контракт, что и раньше, чтобы не ломать `PaymentSuccess` и webhook.
  */
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import type { IAlbums } from '@models';
 import AlbumCover from '@entities/album/ui/AlbumCover';
 import { Popup } from '@shared/ui/popup';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
-import { getUser } from '@shared/lib/auth';
+import { getUser, isAuthenticated } from '@shared/lib/auth';
+import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { createPayment } from '@shared/api/payment';
 import { downloadOwnedAlbumZipByAuth } from '@shared/api/purchases';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
-import { useSearchParams } from 'react-router-dom';
+import { beginAlbumCheckoutAuthIntent } from '@shared/lib/authIntent';
+import { sanitizeReturnPath } from '@shared/lib/authReturnUrl';
 import { getAlbumPrice } from '../lib/getAlbumPrice';
 import { useAlbumOwnedByViewer } from '../lib/useAlbumOwnedByViewer';
 import './AlbumCheckoutModal.style.scss';
@@ -77,8 +82,18 @@ const labelsFor = (
   agreeToOfferRequired: string;
   agreeToPrivacyRequired: string;
   paymentErrorGeneric: string;
+  authGateTitle: string;
+  authGateDescription: string;
+  authGateBenefitLibrary: string;
+  authGateBenefitDevices: string;
+  authGateBenefitSecure: string;
+  authGateSignIn: string;
+  authGateCreateAccount: string;
+  authGateSwitchToSignIn: string;
+  authGateSwitchToCreateAccount: string;
 } => {
   const checkout = ui?.checkout;
+  const authGate = checkout?.authGate;
   const buttons = ui?.buttons;
   const en = lang === 'en';
 
@@ -91,6 +106,33 @@ const labelsFor = (
     downloadCta: buttons?.downloadAlbum ?? (en ? 'Download Album' : 'Скачать альбом'),
     downloadingCta: buttons?.downloadAlbumLoading ?? (en ? 'Downloading...' : 'Скачивание...'),
     close: en ? 'Close' : 'Закрыть',
+    authGateTitle:
+      authGate?.title ??
+      (en ? 'Sign in to complete your purchase' : 'Войдите, чтобы завершить покупку'),
+    authGateDescription:
+      authGate?.description ??
+      (en
+        ? 'Your library is tied to an account so you can re-download this album any time, on any device.'
+        : 'Альбом сохранится в вашей библиотеке — вы сможете скачать его в любой момент с любого устройства.'),
+    authGateBenefitLibrary:
+      authGate?.benefitLibrary ??
+      (en ? 'Album saved to your account forever' : 'Альбом останется в вашем аккаунте навсегда'),
+    authGateBenefitDevices:
+      authGate?.benefitDevices ??
+      (en
+        ? 'Re-download any time, on any device'
+        : 'Скачивание в любое время и с любого устройства'),
+    authGateBenefitSecure:
+      authGate?.benefitSecure ??
+      (en ? 'Secure access — no broken email links' : 'Надёжный доступ — не нужны ссылки из писем'),
+    authGateSignIn: authGate?.signIn ?? (en ? 'Sign in' : 'Войти'),
+    authGateCreateAccount: authGate?.createAccount ?? (en ? 'Create account' : 'Создать аккаунт'),
+    authGateSwitchToSignIn:
+      authGate?.switchToSignIn ??
+      (en ? 'Already have an account? Sign in' : 'Уже есть аккаунт? Войдите'),
+    authGateSwitchToCreateAccount:
+      authGate?.switchToCreateAccount ??
+      (en ? 'New here? Create an account' : 'Ещё нет аккаунта? Создайте'),
     email: checkout?.checkout?.emailAddress ?? (en ? 'Email address' : 'Email'),
     firstName: checkout?.checkout?.firstName ?? (en ? 'First name' : 'Имя'),
     lastName: checkout?.checkout?.lastName ?? (en ? 'Last name' : 'Фамилия'),
@@ -147,6 +189,13 @@ export function AlbumCheckoutModal({ isOpen, album, onClose }: AlbumCheckoutModa
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const [searchParams] = useSearchParams();
   const artistSlug = searchParams.get('artist');
+  const navigate = useNavigate();
+  const location = useLocation();
+  // viewer переподписан на AUTH_SESSION_CHANGED_EVENT — модал сам перерисуется
+  // на гостевую/авторизованную ветку без перемонтирования.
+  const viewer = useAuthSessionUser();
+  const isGuest = !viewer || !isAuthenticated();
+
   const { displayName: siteArtistName, displayLabel: siteArtistLabel } = useSiteArtistDisplayName(
     lang,
     { artistSlug }
@@ -154,9 +203,12 @@ export function AlbumCheckoutModal({ isOpen, album, onClose }: AlbumCheckoutModa
 
   const labels = labelsFor(lang, ui);
 
-  // Ownership check — active only while modal is open, чтобы не дёргать API
-  // на каждой странице с не-открытым модалом.
-  const { isOwned, ownedPurchase } = useAlbumOwnedByViewer(album ?? ({} as IAlbums), isOpen);
+  // Ownership check — active only while modal is open AND viewer is auth'd,
+  // чтобы не дёргать API на каждой странице с не-открытым модалом.
+  const { isOwned, ownedPurchase } = useAlbumOwnedByViewer(
+    album ?? ({} as IAlbums),
+    isOpen && !isGuest
+  );
 
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -218,7 +270,12 @@ export function AlbumCheckoutModal({ isOpen, album, onClose }: AlbumCheckoutModa
     setPaymentError(null);
 
     try {
-      const returnTo = typeof window !== 'undefined' ? window.location.pathname : '/';
+      // FULL path+search, чтобы `?artist=` не терялся после payment redirect.
+      const rawReturnTo =
+        typeof window !== 'undefined'
+          ? `${window.location.pathname}${window.location.search}`
+          : '/';
+      const returnTo = sanitizeReturnPath(rawReturnTo) ?? '/';
       const returnUrl =
         typeof window !== 'undefined'
           ? `${window.location.origin}/pay/success?returnTo=${encodeURIComponent(returnTo)}`
@@ -259,6 +316,30 @@ export function AlbumCheckoutModal({ isOpen, album, onClose }: AlbumCheckoutModa
       setPaymentError(error instanceof Error ? error.message : labels.paymentErrorGeneric);
       setIsSubmitting(false);
     }
+  };
+
+  const handleGoToAuth = (mode: 'login' | 'register') => {
+    if (!albumKey) {
+      setPaymentError(labels.paymentErrorGeneric);
+      return;
+    }
+    const rawReturnTo = `${location.pathname}${location.search}`;
+    const returnTo = sanitizeReturnPath(rawReturnTo) ?? '/';
+
+    beginAlbumCheckoutAuthIntent({
+      albumKey,
+      dbAlbumId: album?.dbAlbumId ?? '',
+      returnTo,
+    });
+
+    const params = new URLSearchParams();
+    params.set('mode', mode);
+    params.set('returnTo', returnTo);
+
+    onClose();
+    navigate(`/auth?${params.toString()}`, {
+      state: { backgroundLocation: location },
+    });
   };
 
   const handleDownloadOwned = async () => {
@@ -371,6 +452,87 @@ export function AlbumCheckoutModal({ isOpen, album, onClose }: AlbumCheckoutModa
                   labels.downloadCta
                 )}
               </button>
+            </section>
+          ) : isGuest ? (
+            <section className="album-checkout-modal__auth-gate" aria-live="polite">
+              <h3 className="album-checkout-modal__auth-gate-title">{labels.authGateTitle}</h3>
+              <p className="album-checkout-modal__auth-gate-description">
+                {labels.authGateDescription}
+              </p>
+              <ul className="album-checkout-modal__auth-gate-benefits">
+                <li className="album-checkout-modal__auth-gate-benefit">
+                  <span className="album-checkout-modal__auth-gate-benefit-icon" aria-hidden="true">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  <span>{labels.authGateBenefitLibrary}</span>
+                </li>
+                <li className="album-checkout-modal__auth-gate-benefit">
+                  <span className="album-checkout-modal__auth-gate-benefit-icon" aria-hidden="true">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  <span>{labels.authGateBenefitDevices}</span>
+                </li>
+                <li className="album-checkout-modal__auth-gate-benefit">
+                  <span className="album-checkout-modal__auth-gate-benefit-icon" aria-hidden="true">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </span>
+                  <span>{labels.authGateBenefitSecure}</span>
+                </li>
+              </ul>
+              {paymentError && (
+                <div className="album-checkout-modal__error" role="alert">
+                  {paymentError}
+                </div>
+              )}
+              <div className="album-checkout-modal__auth-gate-actions">
+                <button
+                  type="button"
+                  className="album-checkout-modal__primary"
+                  onClick={() => handleGoToAuth('register')}
+                >
+                  {labels.authGateCreateAccount}
+                </button>
+                <button
+                  type="button"
+                  className="album-checkout-modal__secondary"
+                  onClick={() => handleGoToAuth('login')}
+                >
+                  {labels.authGateSignIn}
+                </button>
+              </div>
             </section>
           ) : (
             <form className="album-checkout-modal__form" onSubmit={handleSubmit} noValidate>

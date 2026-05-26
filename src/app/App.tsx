@@ -42,6 +42,7 @@ import { PlayerShell } from '@features/player';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
 import { ArchiveAccessModalProvider } from '@shared/lib/archiveAccessModal';
 import {
+  AlbumCheckoutIntentResumeController,
   ArtistOnboardingRedirectController,
   PremiumCheckoutIntentResumeController,
 } from '@shared/lib/authIntent';
@@ -644,6 +645,7 @@ function Layout() {
           <EmailVerificationRefreshController />
           <PremiumEntitlementRefreshController />
           <PremiumCheckoutIntentResumeController />
+          <AlbumCheckoutIntentResumeController />
           <ArtistOnboardingRedirectController />
           <PremiumSuccessModalController />
         </DashboardModalShellContext.Provider>

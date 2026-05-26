@@ -955,6 +955,21 @@ export interface IInterface {
       agreeToOfferRequired?: string;
       agreeToPrivacyRequired?: string;
     };
+    /**
+     * Auth-gate copy shown to guests before they're allowed into checkout.
+     * Гость → Sign in / Create account → возврат в checkout после auth.
+     */
+    authGate?: {
+      title?: string;
+      description?: string;
+      benefitLibrary?: string;
+      benefitDevices?: string;
+      benefitSecure?: string;
+      signIn?: string;
+      createAccount?: string;
+      switchToSignIn?: string;
+      switchToCreateAccount?: string;
+    };
   };
 }
 
