@@ -16,7 +16,7 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { query } from './lib/db';
 import { upsertPurchaseRecord } from './lib/purchases';
-import { resolveAlbumByKey, fetchTracksForResolvedAlbum } from './lib/resolve-album-key';
+import { resolveAlbumByKey } from './lib/resolve-album-key';
 import { getDecryptedSecretKey } from './payment-settings';
 import {
   amountsEqual,
@@ -522,8 +522,6 @@ async function tryPurchaseSideEffects(
       return;
     }
 
-    const tracks = await fetchTracksForResolvedAlbum(album);
-
     try {
       const { sendPurchaseEmail } = await import('./lib/email');
       const { resolveEmailLocaleForAddress } = await import('./lib/user-preferred-language');
@@ -540,13 +538,20 @@ async function tryPurchaseSideEffects(
         albumName: album.album,
         artistName: album.artist,
         orderId,
-        purchaseToken: purchase.purchase_token,
-        tracks,
-        siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+        albumSlug: album.albumSlug,
+        albumCover: album.cover,
+        albumUserId: album.userId,
+        albumLang: album.lang,
+        paymentId: api.id,
         locale,
       });
 
-      if (!emailResult.success) {
+      if (emailResult.alreadySent) {
+        console.log('yookassa_webhook.email_already_sent', {
+          orderIdSuffix: `…${orderId.slice(-6)}`,
+          paymentIdSuffix: `…${api.id.slice(-6)}`,
+        });
+      } else if (!emailResult.success) {
         console.error('yookassa_webhook.email_failed', {
           orderIdSuffix: `…${orderId.slice(-6)}`,
           err: emailResult.error,

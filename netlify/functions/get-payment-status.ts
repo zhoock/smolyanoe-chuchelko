@@ -26,7 +26,7 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { query } from './lib/db';
 import { upsertPurchaseRecord, upsertPurchaseRecordSilent } from './lib/purchases';
-import { resolveAlbumByKey, fetchTracksForResolvedAlbum } from './lib/resolve-album-key';
+import { resolveAlbumByKey } from './lib/resolve-album-key';
 import dns from 'node:dns';
 
 // Форсируем IPv4 для избежания проблем с fetch в некоторых сетях
@@ -270,8 +270,6 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
                       );
                       const orderMeta = orderMetaResult.rows[0];
 
-                      const tracks = await fetchTracksForResolvedAlbum(album);
-
                       const customerName =
                         orderMeta?.customer_first_name && orderMeta?.customer_last_name
                           ? `${orderMeta.customer_first_name} ${orderMeta.customer_last_name}`
@@ -288,15 +286,22 @@ async function updateOrderAndPaymentStatus(paymentStatus: YooKassaPaymentStatus)
                         albumName: album.album,
                         artistName: album.artist,
                         orderId,
-                        purchaseToken: purchase.purchase_token,
-                        tracks,
-                        siteUrl: process.env.NETLIFY_SITE_URL || undefined,
+                        albumSlug: album.albumSlug,
+                        albumCover: album.cover,
+                        albumUserId: album.userId,
+                        albumLang: album.lang,
+                        paymentId: paymentStatus.id,
                         locale,
                       });
                     })
                   )
                   .then((result) => {
-                    if (result?.success) {
+                    if (result?.alreadySent) {
+                      console.log(
+                        'ℹ️ [get-payment-status] Purchase email already sent (idempotency hit):',
+                        { to: customerEmail, orderId }
+                      );
+                    } else if (result?.success) {
                       console.log('✅ [get-payment-status] Purchase email sent successfully:', {
                         to: customerEmail,
                         orderId,

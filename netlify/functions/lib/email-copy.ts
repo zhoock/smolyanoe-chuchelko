@@ -27,17 +27,23 @@ export interface AccountDeletedEmailCopy {
 
 export interface PurchaseEmailCopy {
   subjectPrefix: string;
-  htmlTitle: string;
+  /** Plain-text fallback / accessible title (single line). */
+  documentTitle: string;
+  /** Hero title rendered in two lines: line 1 white, line 2 gold accent. */
+  heroTitleLine1: string;
+  heroTitleLine2: string;
   greetingNamed: string;
   greetingGeneric: string;
-  orderPaid: string;
-  trackColumn: string;
-  download: string;
-  supportPrompt: string;
+  heroSubtitle: string;
+  /** Short atmospheric paragraph describing ownership confirmation. */
+  albumDescription: string;
+  /** Primary CTA label. `{{siteName}}` is interpolated. */
+  ctaLabel: string;
+  closingLine1: string;
+  closingLine2: string;
+  /** Plain-text fallback strings. */
   textThanks: string;
-  textTracksHeader: string;
-  textDownloadLabel: string;
-  textSupportPrompt: string;
+  textCtaLabel: string;
 }
 
 export interface PasswordResetEmailCopy {
@@ -130,31 +136,35 @@ const COPY = {
   purchase: {
     en: {
       subjectPrefix: 'Thank you for your purchase',
-      htmlTitle: 'Thank you for your purchase! ✅',
+      documentTitle: 'Thank you for your purchase',
+      heroTitleLine1: 'Thank you',
+      heroTitleLine2: 'for your purchase!',
       greetingNamed: 'Hello, {{name}}!',
       greetingGeneric: 'Hello!',
-      orderPaid: 'Your order <strong>#{{orderId}}</strong> has been paid successfully.',
-      trackColumn: 'Track',
-      download: 'Download',
-      supportPrompt: 'If you have any questions, please contact us:',
-      textThanks: 'Thank you for your purchase!',
-      textTracksHeader: 'Tracks:',
-      textDownloadLabel: 'Download',
-      textSupportPrompt: 'If you have any questions, please contact us:',
+      heroSubtitle: 'Your purchase was successful.',
+      albumDescription:
+        'The album has been added to your archive. You can stream, download and enjoy it whenever you want.',
+      ctaLabel: 'Open in {{siteName}}',
+      closingLine1: 'We truly appreciate your support.',
+      closingLine2: 'Stay tuned for more music.',
+      textThanks: 'Thank you for your purchase.',
+      textCtaLabel: 'Open album',
     },
     ru: {
       subjectPrefix: 'Спасибо за покупку',
-      htmlTitle: 'Спасибо за покупку! ✅',
+      documentTitle: 'Спасибо за покупку',
+      heroTitleLine1: 'Спасибо',
+      heroTitleLine2: 'за покупку!',
       greetingNamed: 'Здравствуйте, {{name}}!',
       greetingGeneric: 'Здравствуйте!',
-      orderPaid: 'Ваш заказ <strong>#{{orderId}}</strong> успешно оплачен.',
-      trackColumn: 'Трек',
-      download: 'Скачать',
-      supportPrompt: 'Если у вас возникли вопросы, свяжитесь с нами:',
-      textThanks: 'Спасибо за покупку!',
-      textTracksHeader: 'Треки:',
-      textDownloadLabel: 'Скачать',
-      textSupportPrompt: 'Если у вас возникли вопросы, свяжитесь с нами:',
+      heroSubtitle: 'Покупка прошла успешно.',
+      albumDescription:
+        'Альбом добавлен в ваш архив. Слушайте, скачивайте и наслаждайтесь им в любое время.',
+      ctaLabel: 'Открыть в {{siteName}}',
+      closingLine1: 'Спасибо, что поддерживаете нас.',
+      closingLine2: 'До встречи в новых релизах.',
+      textThanks: 'Спасибо за покупку.',
+      textCtaLabel: 'Открыть альбом',
     },
   },
   passwordReset: {

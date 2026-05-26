@@ -58,20 +58,19 @@ export const handler: Handler = async (
 
     console.log('🧪 [test-email] Sending test purchase email to:', email);
 
-    // Отправляем тестовый email с тестовыми данными
+    // Тестовый email: namespace orderId/paymentId per request so re-clicking the test
+    // endpoint doesn't trip the new idempotency lock (each call gets a fresh row).
+    const testStamp = Date.now().toString(36).toUpperCase();
     const result = await sendPurchaseEmail({
       to: email,
       customerName: 'Тестовый Покупатель',
       albumName: 'Тестовый альбом',
       artistName: 'Тестовый артист',
-      orderId: 'TEST-' + Date.now().toString(36).toUpperCase(),
-      purchaseToken: 'test-token-' + Date.now(),
-      tracks: [
-        { trackId: '1', title: 'Тестовый трек 1' },
-        { trackId: '2', title: 'Тестовый трек 2' },
-        { trackId: '3', title: 'Тестовый трек 3' },
-      ],
-      siteUrl: process.env.NETLIFY_SITE_URL || 'https://smolyanoechuchelko.ru',
+      orderId: `TEST-${testStamp}`,
+      albumSlug: 'test-album',
+      albumCover: null,
+      albumUserId: null,
+      paymentId: `test-${testStamp}`,
     });
 
     if (!result.success) {
