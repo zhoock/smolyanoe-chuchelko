@@ -127,7 +127,10 @@ describe('getEncryptionKey', () => {
   // Buffer.from(key, 'hex'), декодировался в обрезанный буфер и валился
   // глубже как `Invalid key length` при createCipheriv.
   it('does not treat a 64-char non-hex string as hex (scrypt fallback)', async () => {
-    const base64Of48Bytes = 'G3f3Mezv+R9M6c3JK2Cw4lnfmt2ZfXfOc0h5EH4ScOjhkveEJuSzW+LHUT/iaKqS';
+    // Синтетическая фикстура с теми же свойствами, что вывод `openssl rand -base64 48`:
+    // ровно 64 символа base64, содержит `+` и `/`, не подходит под hex-алфавит.
+    // Не реальный ключ — для теста алгоритма достаточно структурных свойств.
+    const base64Of48Bytes = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////++++';
     expect(base64Of48Bytes).toHaveLength(64);
     expect(/^[0-9a-fA-F]+$/.test(base64Of48Bytes)).toBe(false);
     process.env.ENCRYPTION_KEY = base64Of48Bytes;

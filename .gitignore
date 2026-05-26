@@ -129,10 +129,8 @@ playwright-report/
 test-results/
 blob-report/
 
-# Env
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.*.local
+# Env — игнорим всё, кроме явных шаблонов (.example).
+# Catch-all защищает от случайных .env.bak / .env.backup / .env.tmp.
+.env*
+!.env.example
+!.env.local.example
