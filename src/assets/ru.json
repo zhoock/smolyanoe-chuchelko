@@ -93,15 +93,6 @@
         "hasAccount": "Уже есть аккаунт?",
         "signIn": "Войти"
       },
-      "languageSelect": {
-        "title": "Выбор языка",
-        "instruction": "Выберите язык интерфейса",
-        "description": "Язык, который увидят посетители при просмотре вашего сайта.",
-        "continue": "Продолжить",
-        "close": "Закрыть",
-        "optionRu": "Русский",
-        "optionEn": "English"
-      },
       "emailVerification": {
         "verifyTitle": "Подтвердите email",
         "verifyBody": "Мы используем подтверждение email для защиты вашего аккаунта и доступа к публикации контента.",

@@ -15,11 +15,9 @@ import {
   shouldLeaveDeletedArtistPage,
 } from '@shared/lib/accountDeletedSession';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
-import { useLang } from '@app/providers/lang';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { RoleSelectionScreen } from './RoleSelectionScreen';
-import { LanguageSelectModal } from './LanguageSelectModal';
 import { VerifyEmailModal } from './VerifyEmailModal';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import type { AccountType } from '@shared/lib/accountType';
@@ -29,6 +27,14 @@ import './RoleSelectionScreen.scss';
 type AuthMode = 'login' | 'register' | 'forgot';
 type RegisterStep = 'role' | 'form';
 
+/**
+ * После успешного login/register пользователь сразу попадает на postAuthPath
+ * (album page, checkout resume, /, …). Никакого onboarding-модала "выберите
+ * язык" больше нет: язык определяется автоматически из `navigator.language`
+ * (см. `@shared/lib/lang/detectBrowserLang`) и сохраняется при первом ручном
+ * переключении в Header/Settings. Это убирает разрыв в conversion-flow
+ * "купил → залогинился → внезапно language-modal".
+ */
 export function AuthPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -42,14 +48,11 @@ export function AuthPage() {
   const [registerStep, setRegisterStep] = useState<RegisterStep>('role');
   const [selectedAccountType, setSelectedAccountType] = useState<AccountType>('listener');
   const [forgotInitialEmail, setForgotInitialEmail] = useState('');
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showVerifyEmailModal, setShowVerifyEmailModal] = useState(() =>
     Boolean((location.state as { showVerifyEmail?: boolean } | null)?.showVerifyEmail)
   );
-  const [pendingPostRegister, setPendingPostRegister] = useState(false);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setLang } = useLang();
 
   const needsVerification = Boolean(user && !isEmailVerified(user));
 
@@ -87,13 +90,13 @@ export function AuthPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (isAuthenticated() && !showLanguageModal && !showVerifyEmailModal && !needsVerification) {
+    if (isAuthenticated() && !showVerifyEmailModal && !needsVerification) {
       clearAccountDeletedSkipReturn();
       navigate(postAuthPath, { replace: true });
     }
-  }, [navigate, showLanguageModal, showVerifyEmailModal, needsVerification, postAuthPath]);
+  }, [navigate, showVerifyEmailModal, needsVerification, postAuthPath]);
 
-  if (isAuthenticated() && !showLanguageModal && !showVerifyEmailModal && !needsVerification) {
+  if (isAuthenticated() && !showVerifyEmailModal && !needsVerification) {
     return null;
   }
 
@@ -102,8 +105,12 @@ export function AuthPage() {
     if (registeredUser?.id && isArtistAccount(registeredUser)) {
       markFirstArtistOnboardingPending(registeredUser.id);
     }
-    setPendingPostRegister(true);
     setShowVerifyEmailModal(true);
+  };
+
+  const finishPostAuthNavigation = () => {
+    clearAccountDeletedSkipReturn();
+    navigate(postAuthPath, { replace: true });
   };
 
   const handleLoginSuccess = () => {
@@ -112,37 +119,15 @@ export function AuthPage() {
       setShowVerifyEmailModal(true);
       return;
     }
-    setShowLanguageModal(true);
-  };
-
-  const finishPostAuthNavigation = () => {
-    clearAccountDeletedSkipReturn();
-    navigate(postAuthPath, { replace: true });
+    finishPostAuthNavigation();
   };
 
   const handleVerifyContinueLater = () => {
     setShowVerifyEmailModal(false);
-    if (pendingPostRegister) {
-      setShowLanguageModal(true);
-    } else {
-      finishPostAuthNavigation();
-    }
-  };
-
-  const handleLanguageSelected = (lang: 'ru' | 'en') => {
-    setLang(lang);
-    setShowLanguageModal(false);
-    setPendingPostRegister(false);
     finishPostAuthNavigation();
   };
 
-  const handleCloseLanguageModal = () => {
-    setShowLanguageModal(false);
-    setPendingPostRegister(false);
-    finishPostAuthNavigation();
-  };
-
-  const showAuthForm = !showLanguageModal && !showVerifyEmailModal;
+  const showAuthForm = !showVerifyEmailModal;
   const showRoleSelection = mode === 'register' && registerStep === 'role';
 
   const handleCloseAuth = () => {
@@ -217,12 +202,6 @@ export function AuthPage() {
           </div>
         </div>
       )}
-
-      <LanguageSelectModal
-        isOpen={showLanguageModal}
-        onClose={handleCloseLanguageModal}
-        onLanguageSelected={handleLanguageSelected}
-      />
     </>
   );
 }

@@ -380,16 +380,6 @@ export interface IInterface {
       hasAccount: string;
       signIn: string;
     };
-    /** Модалка выбора языка сайта после входа / регистрации */
-    languageSelect?: {
-      title: string;
-      instruction: string;
-      description: string;
-      continue: string;
-      close: string;
-      optionRu: string;
-      optionEn: string;
-    };
     emailVerification?: {
       verifyTitle: string;
       verifyBody: string;

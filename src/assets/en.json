@@ -93,15 +93,6 @@
         "hasAccount": "Already have an account?",
         "signIn": "Sign in"
       },
-      "languageSelect": {
-        "title": "Language",
-        "instruction": "Choose your interface language",
-        "description": "This is the language visitors will see when browsing your site.",
-        "continue": "Continue",
-        "close": "Close",
-        "optionRu": "Russian",
-        "optionEn": "English"
-      },
       "emailVerification": {
         "verifyTitle": "Verify your email",
         "verifyBody": "We use email confirmation to protect your account and access to content publishing.",
