@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { resendVerificationEmail } from '@shared/lib/auth';
+import { refreshAuthSession, resendVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 
 import { LockIcon, SendIcon } from './EmailVerificationOnboarding.icons';
@@ -8,7 +8,7 @@ import type { EmailVerificationOnboardingContext } from './EmailVerificationOnbo
 import { getEmailVerificationOnboardingBody } from './getEmailVerificationOnboardingBody';
 import { useEmailVerificationCopy } from './useEmailVerificationCopy';
 import { useResendCooldown } from './useResendCooldown';
-import { resolveVerificationEmailSendError } from './resolveVerificationEmailSendResult';
+import { resolveVerificationEmailSend } from './resolveVerificationEmailSendResult';
 import './EmailVerificationOnboarding.scss';
 
 type EmailVerificationOnboardingProps = {
@@ -19,12 +19,27 @@ function formatEmailFootnote(template: string, email: string): string {
   return template.replace('{{email}}', email);
 }
 
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="m5 12 5 5L20 7"
+        stroke="currentColor"
+        strokeWidth="1.85"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function EmailVerificationOnboarding({ context }: EmailVerificationOnboardingProps) {
   const user = useAuthSessionUser();
   const copy = useEmailVerificationCopy();
   const { remaining, isCoolingDown, startCooldown } = useResendCooldown();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const body = getEmailVerificationOnboardingBody(copy, context);
   const sendLabel = isCoolingDown
@@ -37,7 +52,19 @@ export function EmailVerificationOnboarding({ context }: EmailVerificationOnboar
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    setError(resolveVerificationEmailSendError(result, copy, startCooldown));
+    const resolution = resolveVerificationEmailSend(result, copy, startCooldown);
+    if (resolution.kind === 'success') {
+      setSuccess(true);
+      return;
+    }
+    if (resolution.kind === 'already-verified') {
+      // Refresh session — restricted onboarding screens will unblock once user
+      // is reported as verified by /api/auth/me.
+      void refreshAuthSession();
+      return;
+    }
+    setSuccess(false);
+    setError(resolution.message);
   };
 
   return (
@@ -59,7 +86,27 @@ export function EmailVerificationOnboarding({ context }: EmailVerificationOnboar
 
         <p className="email-verification-onboarding__message">{body}</p>
 
-        {error ? <div className="email-verification-onboarding__error">{error}</div> : null}
+        {success ? (
+          <div className="email-verification-onboarding__success" role="status" aria-live="polite">
+            <span className="email-verification-onboarding__success-icon" aria-hidden="true">
+              <CheckIcon />
+            </span>
+            <div className="email-verification-onboarding__success-copy">
+              <p className="email-verification-onboarding__success-title">
+                {copy.verificationSentTitle}
+              </p>
+              <p className="email-verification-onboarding__success-body">
+                {copy.verificationSentBody}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="email-verification-onboarding__error" role="alert">
+            {error}
+          </div>
+        ) : null}
 
         <button
           type="button"

@@ -1,11 +1,11 @@
 import { useState, FormEvent } from 'react';
 import { Popup } from '@shared/ui/popup';
-import { changeVerificationEmail } from '@shared/lib/auth';
+import { changeVerificationEmail, refreshAuthSession } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   useEmailVerificationCopy,
   useResendCooldown,
-  resolveVerificationEmailSendError,
+  resolveVerificationEmailSend,
 } from '@shared/lib/emailVerification';
 import './VerifyEmailModal.style.scss';
 
@@ -54,12 +54,18 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
     setLoading(true);
     const result = await changeVerificationEmail(trimmed);
     setLoading(false);
-    const sendError = resolveVerificationEmailSendError(result, copy, startCooldown);
-    if (sendError) {
-      setError(sendError);
+    const resolution = resolveVerificationEmailSend(result, copy, startCooldown);
+    if (resolution.kind === 'success') {
+      onBack();
       return;
     }
-    onBack();
+    if (resolution.kind === 'already-verified') {
+      // Nothing to change — sync session and close the modal so banner/onboarding self-hide.
+      void refreshAuthSession();
+      onBack();
+      return;
+    }
+    setError(resolution.message);
   };
 
   const submitLabel = isCoolingDown

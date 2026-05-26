@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { ChangeEmailModal } from '@features/auth/ui/ChangeEmailModal';
-import { isEmailVerified, resendVerificationEmail } from '@shared/lib/auth';
+import { isEmailVerified, refreshAuthSession, resendVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useEmailVerificationCopy } from './useEmailVerificationCopy';
 import { useResendCooldown } from './useResendCooldown';
-import { resolveVerificationEmailSendError } from './resolveVerificationEmailSendResult';
+import { resolveVerificationEmailSend } from './resolveVerificationEmailSendResult';
 import './style.scss';
 
 const BANNER_DISMISSED_KEY = 'email-verification-banner-dismissed';
@@ -53,6 +53,7 @@ export function EmailVerificationBanner() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [showChangeEmail, setShowChangeEmail] = useState(false);
 
   if (!user || isEmailVerified(user) || dismissed) {
@@ -65,7 +66,18 @@ export function EmailVerificationBanner() {
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    setError(resolveVerificationEmailSendError(result, copy, startCooldown));
+    const resolution = resolveVerificationEmailSend(result, copy, startCooldown);
+    if (resolution.kind === 'success') {
+      setSuccess(true);
+      return;
+    }
+    if (resolution.kind === 'already-verified') {
+      // Sync session — banner self-hides once isEmailVerified(user) becomes true.
+      void refreshAuthSession();
+      return;
+    }
+    setSuccess(false);
+    setError(resolution.message);
   };
 
   const handleDismiss = () => {
@@ -90,6 +102,12 @@ export function EmailVerificationBanner() {
           <div className="email-verification-banner__copy">
             <p className="email-verification-banner__title">{copy.bannerText}</p>
             <BannerSubtitle template={copy.bannerSubtitle} email={user.email} />
+            {success ? (
+              <p className="email-verification-banner__success">
+                <span className="email-verification-banner__success-dot" aria-hidden="true" />
+                {copy.verificationSentTitle}. {copy.verificationSentBody}
+              </p>
+            ) : null}
             {error ? (
               <p className="email-verification-banner__error" role="alert">
                 {error}

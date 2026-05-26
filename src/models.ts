@@ -434,6 +434,9 @@ export interface IInterface {
       emailInvalid: string;
       resendFailed: string;
       resendCooldown: string;
+      resendRateLimited: string;
+      verificationSentTitle: string;
+      verificationSentBody: string;
       close: string;
     };
   };

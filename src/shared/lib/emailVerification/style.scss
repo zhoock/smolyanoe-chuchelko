@@ -72,6 +72,26 @@
     line-height: 1.35;
   }
 
+  &__success {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.1rem 0 0;
+    color: var(--dark-greenish-yellow);
+    font-size: 0.6875rem;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+
+  &__success-dot {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 0.45rem;
+    height: 0.45rem;
+    background: var(--dark-greenish-yellow);
+    border-radius: 50%;
+  }
+
   &__actions {
     display: flex;
     grid-area: actions;
@@ -161,6 +181,10 @@
     }
 
     &__error {
+      font-size: 0.75rem;
+    }
+
+    &__success {
       font-size: 0.75rem;
     }
 

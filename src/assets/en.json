@@ -146,6 +146,9 @@
         "emailInvalid": "Enter a valid email address",
         "resendFailed": "Could not send email. Try again later.",
         "resendCooldown": "Please wait {{seconds}} seconds before requesting another email.",
+        "resendRateLimited": "Too many requests. Please try again later.",
+        "verificationSentTitle": "Verification email sent",
+        "verificationSentBody": "Check your inbox for a new verification link.",
         "close": "Close"
       }
     },

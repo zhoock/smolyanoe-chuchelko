@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Popup } from '@shared/ui/popup';
-import { resendVerificationEmail } from '@shared/lib/auth';
+import { refreshAuthSession, resendVerificationEmail } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   useEmailVerificationCopy,
   useResendCooldown,
-  resolveVerificationEmailSendError,
+  resolveVerificationEmailSend,
 } from '@shared/lib/emailVerification';
 import { ChangeEmailModal } from './ChangeEmailModal';
 import './VerifyEmailModal.style.scss';
@@ -31,12 +31,27 @@ function MailIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="m5 12 5 5L20 7"
+        stroke="currentColor"
+        strokeWidth="1.85"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function VerifyEmailModal({ isOpen, onContinueLater, onClose }: VerifyEmailModalProps) {
   const user = useAuthSessionUser();
   const copy = useEmailVerificationCopy();
   const { remaining, isCoolingDown, startCooldown } = useResendCooldown();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [showChangeEmail, setShowChangeEmail] = useState(false);
 
   const handleDismiss = onClose ?? onContinueLater;
@@ -47,7 +62,18 @@ export function VerifyEmailModal({ isOpen, onContinueLater, onClose }: VerifyEma
     setError(null);
     const result = await resendVerificationEmail();
     setLoading(false);
-    setError(resolveVerificationEmailSendError(result, copy, startCooldown));
+    const resolution = resolveVerificationEmailSend(result, copy, startCooldown);
+    if (resolution.kind === 'success') {
+      setSuccess(true);
+      return;
+    }
+    if (resolution.kind === 'already-verified') {
+      // Sync auth state — the parent will hide the modal once user.isEmailVerified flips.
+      void refreshAuthSession();
+      handleDismiss();
+      return;
+    }
+    setError(resolution.message);
   };
 
   const resendLabel = isCoolingDown ? `${copy.resendEmail} (${remaining}s)` : copy.resendEmail;
@@ -91,7 +117,22 @@ export function VerifyEmailModal({ isOpen, onContinueLater, onClose }: VerifyEma
 
           <p className="verify-email-modal__message">{copy.verifyBody}</p>
           {user?.email ? <p className="verify-email-modal__email">{user.email}</p> : null}
-          {error ? <div className="verify-email-modal__error">{error}</div> : null}
+          {success ? (
+            <div className="verify-email-modal__success" role="status" aria-live="polite">
+              <span className="verify-email-modal__success-icon" aria-hidden="true">
+                <CheckIcon />
+              </span>
+              <div className="verify-email-modal__success-copy">
+                <p className="verify-email-modal__success-title">{copy.verificationSentTitle}</p>
+                <p className="verify-email-modal__success-body">{copy.verificationSentBody}</p>
+              </div>
+            </div>
+          ) : null}
+          {error ? (
+            <div className="verify-email-modal__error" role="alert">
+              {error}
+            </div>
+          ) : null}
 
           <div className="verify-email-modal__actions">
             <button
