@@ -83,6 +83,19 @@ export function ProfileSettingsModal({
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Autofocus the first password field whenever the user lands on the
+  // Security tab (covers initialTab='security' and runtime tab switches).
+  // Popup itself focuses the first focusable element on open, which is
+  // usually the tab header — schedule slightly later so we override that.
+  const currentPasswordRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'security') return;
+    const id = window.setTimeout(() => {
+      currentPasswordRef.current?.focus();
+    }, 30);
+    return () => window.clearTimeout(id);
+  }, [isOpen, activeTab]);
+
   // Состояние для смены пароля
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -985,7 +998,17 @@ export function ProfileSettingsModal({
                 )}
 
                 {activeTab === 'security' && (
-                  <div className="profile-settings-modal__security-tab">
+                  <form
+                    className="profile-settings-modal__security-tab"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      // Mirror the footer Save button — disabled-form checks are
+                      // already applied inside handleSave (isPasswordFormValid /
+                      // isDashboardBusy guards), so we just defer to it.
+                      void handleSave();
+                    }}
+                    noValidate
+                  >
                     <h3 className="profile-settings-modal__section-title">
                       {ui?.dashboard?.profileSettingsModal?.buttons?.changePassword ??
                         'Смена пароля'}
@@ -1009,6 +1032,7 @@ export function ProfileSettingsModal({
                       </label>
                       <div className="profile-settings-modal__input-wrapper">
                         <input
+                          ref={currentPasswordRef}
                           id="current-password"
                           type={showCurrentPassword ? 'text' : 'password'}
                           className="profile-settings-modal__input"
@@ -1017,6 +1041,7 @@ export function ProfileSettingsModal({
                             setCurrentPassword(e.target.value);
                             setPasswordError(null);
                           }}
+                          autoComplete="current-password"
                           disabled={isChangingPassword}
                         />
                         <button
@@ -1089,6 +1114,7 @@ export function ProfileSettingsModal({
                             setNewPassword(e.target.value);
                             setPasswordError(null);
                           }}
+                          autoComplete="new-password"
                           disabled={isChangingPassword}
                           minLength={8}
                         />
@@ -1163,6 +1189,7 @@ export function ProfileSettingsModal({
                             setConfirmPassword(e.target.value);
                             setPasswordError(null);
                           }}
+                          autoComplete="new-password"
                           disabled={isChangingPassword}
                         />
                         <button
@@ -1220,7 +1247,20 @@ export function ProfileSettingsModal({
                         </button>
                       </div>
                     </div>
-                  </div>
+                    {/*
+                      Implicit-submit anchor so pressing Enter in any of the
+                      password inputs triggers `handleSave` via the form's
+                      onSubmit. The visible Save button stays in the footer
+                      and clicks the same handler directly.
+                    */}
+                    <button
+                      type="submit"
+                      hidden
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      disabled={isDashboardBusy || !hasChanges || !isPasswordFormValid}
+                    />
+                  </form>
                 )}
               </div>
             </div>

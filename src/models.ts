@@ -437,6 +437,7 @@ export interface IInterface {
       resendRateLimited: string;
       verificationSentTitle: string;
       verificationSentBody: string;
+      submitting: string;
       close: string;
     };
   };

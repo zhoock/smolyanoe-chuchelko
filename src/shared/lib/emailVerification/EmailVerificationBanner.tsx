@@ -122,7 +122,7 @@ export function EmailVerificationBanner() {
               onClick={handleResend}
               disabled={loading || isCoolingDown}
             >
-              {loading ? '…' : resendLabel}
+              {loading ? copy.submitting : resendLabel}
             </button>
             <span className="email-verification-banner__actions-sep" aria-hidden="true">
               •

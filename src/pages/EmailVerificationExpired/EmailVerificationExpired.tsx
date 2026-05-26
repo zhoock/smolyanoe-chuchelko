@@ -113,7 +113,7 @@ export default function EmailVerificationExpired() {
             onClick={handleSendNewLink}
             disabled={loading || isCoolingDown}
           >
-            {loading ? '…' : resendLabel}
+            {loading ? copy.submitting : resendLabel}
           </button>
         </div>
         <button

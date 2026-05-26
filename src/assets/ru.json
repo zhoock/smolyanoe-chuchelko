@@ -149,6 +149,7 @@
         "resendRateLimited": "Слишком много запросов. Попробуйте позже.",
         "verificationSentTitle": "Письмо отправлено",
         "verificationSentBody": "Проверьте почту — мы прислали новую ссылку для подтверждения.",
+        "submitting": "Отправка…",
         "close": "Закрыть"
       }
     },
@@ -568,6 +569,17 @@
         "removePurchaseFailed": "Не удалось удалить покупку. Попробуйте ещё раз.",
         "errorDownloadingTrack": "Ошибка при скачивании трека. Попробуйте еще раз.",
         "errorDownloadingAlbum": "Ошибка при скачивании альбома. Попробуйте еще раз."
+      },
+      "upgradeToArtist": {
+        "title": "Стать артистом",
+        "artistBandNameLabel": "Имя артиста / группы",
+        "artistBandNamePlaceholder": "Укажите имя артиста или группы",
+        "artistBandNameRequired": "Укажите имя артиста или группы",
+        "cancel": "Отмена",
+        "continue": "Продолжить",
+        "continuing": "Сохранение…",
+        "close": "Закрыть",
+        "upgradeFailed": "Не удалось обновить аккаунт"
       },
       "profileSettingsModal": {
         "tabs": {

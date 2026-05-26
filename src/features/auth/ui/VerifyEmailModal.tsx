@@ -149,7 +149,7 @@ export function VerifyEmailModal({ isOpen, onContinueLater, onClose }: VerifyEma
               onClick={handleResend}
               disabled={loading || isCoolingDown}
             >
-              {loading ? '…' : resendLabel}
+              {loading ? copy.submitting : resendLabel}
             </button>
           </div>
 

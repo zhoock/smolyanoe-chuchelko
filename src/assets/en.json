@@ -149,6 +149,7 @@
         "resendRateLimited": "Too many requests. Please try again later.",
         "verificationSentTitle": "Verification email sent",
         "verificationSentBody": "Check your inbox for a new verification link.",
+        "submitting": "Sending…",
         "close": "Close"
       }
     },
@@ -568,6 +569,17 @@
         "removePurchaseFailed": "Failed to remove purchase. Please try again.",
         "errorDownloadingTrack": "Error downloading track. Please try again.",
         "errorDownloadingAlbum": "Error downloading album. Please try again."
+      },
+      "upgradeToArtist": {
+        "title": "Become an artist",
+        "artistBandNameLabel": "Artist / band name",
+        "artistBandNamePlaceholder": "Enter your artist or band name",
+        "artistBandNameRequired": "Artist / band name is required",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "continuing": "Continuing…",
+        "close": "Close",
+        "upgradeFailed": "Could not upgrade account"
       },
       "profileSettingsModal": {
         "tabs": {

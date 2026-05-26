@@ -3,6 +3,7 @@ import { Popup } from '@shared/ui/popup';
 import { upgradeToArtistAccount } from '@shared/lib/auth';
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { useFocusOnOpen } from '@shared/lib/hooks/useFocusOnOpen';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import './UpgradeToArtistModal.style.scss';
 
@@ -48,6 +49,7 @@ export function UpgradeToArtistModal({ isOpen, onClose, onUpgraded }: UpgradeToA
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const nameInputRef = useFocusOnOpen<HTMLInputElement>(isOpen);
 
   const handleClose = () => {
     if (loading) return;
@@ -114,6 +116,7 @@ export function UpgradeToArtistModal({ isOpen, onClose, onUpgraded }: UpgradeToA
               {copy.artistBandNameLabel}
             </label>
             <input
+              ref={nameInputRef}
               id="upgrade-artist-name"
               type="text"
               className={`upgrade-to-artist-modal__input${

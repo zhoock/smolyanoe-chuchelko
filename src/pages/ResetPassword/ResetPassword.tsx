@@ -326,6 +326,10 @@ export default function ResetPassword() {
                 }}
                 autoComplete="new-password"
                 disabled={loading || tokenMissing}
+                // Dedicated page reached from an email link — focusing the
+                // single primary input matches the user's one job here.
+
+                autoFocus={!tokenMissing}
                 aria-invalid={!!passwordFieldError}
                 aria-describedby={
                   passwordFieldError ? 'reset-new-password-error' : 'reset-strength-label'

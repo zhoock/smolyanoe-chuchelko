@@ -113,6 +113,11 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
           autoComplete="username"
           disabled={loading}
           data-form-type="username"
+          // The login screen is the user's primary entry point — landing
+          // straight inside the email field is the expected UX and matches
+          // password managers' autofill behaviour.
+
+          autoFocus
           aria-invalid={!!fieldErrors.email}
           aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
         />

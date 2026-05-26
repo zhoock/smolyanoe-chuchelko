@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Popup } from '@shared/ui/popup';
 import { changeVerificationEmail, refreshAuthSession } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
+import { useFocusOnOpen } from '@shared/lib/hooks/useFocusOnOpen';
 import {
   useEmailVerificationCopy,
   useResendCooldown,
@@ -37,6 +38,7 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
   const [email, setEmail] = useState(user?.email ?? '');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const emailInputRef = useFocusOnOpen<HTMLInputElement>(isOpen);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -107,6 +109,7 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
               {copy.newEmailLabel}
             </label>
             <input
+              ref={emailInputRef}
               id="change-verification-email"
               type="email"
               className="verify-email-modal__input"
@@ -132,7 +135,7 @@ export function ChangeEmailModal({ isOpen, onBack, onClose }: ChangeEmailModalPr
               className="verify-email-modal__button verify-email-modal__button--primary"
               disabled={loading || isCoolingDown}
             >
-              {loading ? '…' : submitLabel}
+              {loading ? copy.submitting : submitLabel}
             </button>
           </div>
         </form>

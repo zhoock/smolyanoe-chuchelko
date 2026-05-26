@@ -177,6 +177,11 @@ export function RegisterForm({
           placeholder={namePlaceholder}
           autoComplete={isArtist ? 'organization' : 'name'}
           disabled={loading}
+          // First field on a fresh registration screen — autofocus matches
+          // the user's intent (they just chose this role) without trapping
+          // them on a page they didn't navigate to.
+
+          autoFocus
           aria-invalid={!!fieldErrors.name}
           aria-describedby={fieldErrors.name ? 'register-name-error' : undefined}
         />

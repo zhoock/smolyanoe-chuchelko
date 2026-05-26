@@ -163,6 +163,11 @@ export function ForgotPasswordForm({ onBackToLogin, initialEmail = '' }: ForgotP
           }}
           autoComplete="username"
           disabled={loading}
+          // Single-field form, no risk of stealing focus from elsewhere.
+          // Pre-filled initialEmail is fine — caret lands at the end so the
+          // user can edit or just hit Enter.
+
+          autoFocus
           aria-invalid={!!fieldError}
           aria-describedby={fieldError ? 'forgot-password-email-error' : undefined}
         />

@@ -115,7 +115,7 @@ export function EmailVerificationOnboarding({ context }: EmailVerificationOnboar
           disabled={loading || isCoolingDown}
         >
           <SendIcon />
-          <span>{loading ? '…' : sendLabel}</span>
+          <span>{loading ? copy.submitting : sendLabel}</span>
         </button>
 
         {user?.email ? (
