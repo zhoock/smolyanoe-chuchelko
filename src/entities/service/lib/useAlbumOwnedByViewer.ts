@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { IAlbums } from '@models';
-import { getMyPurchases, type Purchase } from '@shared/api/purchases';
+import { getMyPurchasesCached, type Purchase } from '@shared/api/purchases';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import {
   getAuthSessionIdentityKey,
@@ -8,44 +8,6 @@ import {
   isAuthenticated,
   subscribeAuthSession,
 } from '@shared/lib/auth';
-
-let cachedUserId: string | null = null;
-let cachedPurchases: Awaited<ReturnType<typeof getMyPurchases>> | null = null;
-let inflightPurchases: Promise<Awaited<ReturnType<typeof getMyPurchases>>> | null = null;
-
-function resetPurchaseCache() {
-  cachedUserId = null;
-  cachedPurchases = null;
-  inflightPurchases = null;
-}
-
-if (typeof window !== 'undefined') {
-  subscribeAuthSession(() => {
-    resetPurchaseCache();
-  });
-}
-
-async function loadPurchasesForUser(userId: string) {
-  if (cachedPurchases && cachedUserId === userId) {
-    return cachedPurchases;
-  }
-
-  if (inflightPurchases) {
-    return inflightPurchases;
-  }
-
-  inflightPurchases = getMyPurchases()
-    .then((purchases) => {
-      cachedUserId = userId;
-      cachedPurchases = purchases;
-      return purchases;
-    })
-    .finally(() => {
-      inflightPurchases = null;
-    });
-
-  return inflightPurchases;
-}
 
 function findOwnedPurchase(
   album: { dbAlbumId?: string },
@@ -64,7 +26,13 @@ function findOwnedPurchase(
   );
 }
 
-/** Whether the signed-in viewer owns this album (account library). */
+/**
+ * Whether the signed-in viewer owns this album (account library).
+ *
+ * Кэш покупок и его инвалидация живут в `@shared/api/purchases/cache.ts`,
+ * чтобы `revokePurchase` мог сам сбрасывать кэш и страница артиста сразу
+ * увидела, что альбом больше не куплен.
+ */
 export function useAlbumOwnedByViewer(album: IAlbums, enabled: boolean) {
   const albumKey = getAlbumKeyForPaymentApis(album);
   const sessionKey = useSyncExternalStore(
@@ -90,7 +58,7 @@ export function useAlbumOwnedByViewer(album: IAlbums, enabled: boolean) {
     let cancelled = false;
     setLoading(true);
 
-    void loadPurchasesForUser(userId)
+    void getMyPurchasesCached(userId)
       .then((purchases) => {
         if (cancelled) {
           return;

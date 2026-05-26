@@ -4,38 +4,11 @@
 
 import { getAuthHeader } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
+import { invalidateMyPurchasesCache } from './cache';
+import type { ApiMessageResponse, GetMyPurchasesResponse, Purchase, PurchaseTrack } from './types';
 
-export interface PurchaseTrack {
-  trackId: string;
-  title: string;
-}
-
-export interface Purchase {
-  id: string;
-  orderId: string;
-  albumId: string;
-  /** Album owner in Storage (cover in user bucket) */
-  albumUserId?: string | null;
-  artist: string;
-  album: string;
-  cover: string | null;
-  purchaseToken: string;
-  purchasedAt: string;
-  downloadCount: number;
-  tracks: PurchaseTrack[];
-}
-
-export interface GetMyPurchasesResponse {
-  success: boolean;
-  purchases?: Purchase[];
-  error?: string;
-}
-
-interface ApiMessageResponse {
-  success?: boolean;
-  error?: string;
-  message?: string;
-}
+export type { ApiMessageResponse, GetMyPurchasesResponse, Purchase, PurchaseTrack };
+export { getMyPurchasesCached, invalidateMyPurchasesCache } from './cache';
 
 async function parsePurchasesResponse(response: Response): Promise<Purchase[]> {
   if (!response.ok) {
@@ -78,6 +51,10 @@ export async function revokePurchase(purchaseId: string): Promise<void> {
     const errorData = (await response.json().catch(() => ({}))) as ApiMessageResponse;
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
+
+  // Без этого hook `useAlbumOwnedByViewer` продолжит видеть удалённую покупку
+  // и страница артиста не покажет Buy-кнопку до перезагрузки страницы.
+  invalidateMyPurchasesCache();
 }
 
 /** Download URL for a track by purchase token */
