@@ -7,7 +7,7 @@ import { downloadOwnedAlbumZipByAuth } from '@shared/api/purchases';
 import { getAlbumKeyForPaymentApis } from '@shared/lib/payment/albumPaymentKey';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { GetButton } from './GetButton';
-import { useCart } from '../model/CartContext';
+import { AlbumCheckoutModal } from './AlbumCheckoutModal';
 import {
   hasAlbumPurchaseSectionContent,
   hasAlbumStreamSectionContent,
@@ -46,14 +46,13 @@ function ServiceButtonsContent({
     buyAlbumPermanentAccess: string;
     buyAlbumPurchased: string;
     buyAlbumOwned: string;
-    buyAlbumInCart: string;
     downloadAlbum: string;
     downloadAlbumLoading: string;
     downloadAlbumPreparing: string;
     errorDownloadingAlbum: string;
   };
 }) {
-  const { addToCart, cartAlbums } = useCart();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [albumDownloadState, setAlbumDownloadState] = useState<{
     active: boolean;
     percent: number | null;
@@ -94,8 +93,6 @@ function ServiceButtonsContent({
       return null;
     }
   }
-
-  const isInCart = album.albumId ? cartAlbums.some((a) => a.albumId === album.albumId) : false;
 
   const showDownloadButton = downloadButtonEnabled;
   const albumKey = getAlbumKeyForPaymentApis(album);
@@ -149,9 +146,7 @@ function ServiceButtonsContent({
       return;
     }
 
-    if (!isInCart) {
-      addToCart(album);
-    }
+    setIsCheckoutOpen(true);
   };
 
   const purchaseTitle = isDownloadingAlbum
@@ -167,7 +162,6 @@ function ServiceButtonsContent({
       ? labels.buyAlbumPurchased
       : labels.buyAlbumPermanentAccess;
   const purchaseRightLabel = isOwned || isDownloadingAlbum ? labels.buyAlbumOwned : albumPrice;
-  const purchaseDisabled = !isOwned && isInCart;
   const progressBarValue = downloadProgress ?? 0;
 
   return (
@@ -184,8 +178,8 @@ function ServiceButtonsContent({
                 <a
                   href="#"
                   className={`service-buttons__link service-buttons__link--download${
-                    purchaseDisabled ? ' service-buttons__link--in-cart' : ''
-                  }${isDownloadingAlbum ? ' service-buttons__link--downloading' : ''}${
+                    isDownloadingAlbum ? ' service-buttons__link--downloading' : ''
+                  }${
                     isDownloadingAlbum && downloadProgress === null
                       ? ' service-buttons__link--download-preparing'
                       : ''
@@ -195,13 +189,11 @@ function ServiceButtonsContent({
                       ? `${labels.downloadAlbumLoading} ${purchaseSubtitle}, ${labels.buyAlbumOwned}`
                       : isOwned
                         ? `${labels.downloadAlbum}, ${labels.buyAlbumPurchased}, ${labels.buyAlbumOwned}`
-                        : isInCart
-                          ? labels.buyAlbumInCart
-                          : `${labels.buyAlbum}, ${albumPrice}, ${labels.buyAlbumPermanentAccess}`
+                        : `${labels.buyAlbum}, ${albumPrice}, ${labels.buyAlbumPermanentAccess}`
                   }
-                  aria-disabled={purchaseDisabled || isDownloadingAlbum}
+                  aria-disabled={isDownloadingAlbum}
                   aria-busy={isDownloadingAlbum}
-                  tabIndex={purchaseDisabled || isDownloadingAlbum ? -1 : 0}
+                  tabIndex={isDownloadingAlbum ? -1 : 0}
                   onClick={handlePurchaseButtonClick}
                 >
                   <span className="service-buttons__download-icon" aria-hidden="true">
@@ -295,6 +287,14 @@ function ServiceButtonsContent({
           </ul>
         </>
       )}
+
+      {section === 'Купить' && showDownloadButton && (
+        <AlbumCheckoutModal
+          isOpen={isCheckoutOpen}
+          album={album}
+          onClose={() => setIsCheckoutOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -312,7 +312,6 @@ export function ServiceButtons({ album, section }: ServiceButtonsProps) {
           buyAlbumPermanentAccess: 'Permanent access',
           buyAlbumPurchased: 'Purchased',
           buyAlbumOwned: 'Owned',
-          buyAlbumInCart: 'Album already in cart',
           downloadAlbum: 'Download Album',
           downloadAlbumLoading: 'Downloading...',
           downloadAlbumPreparing: 'Preparing archive...',
@@ -325,7 +324,6 @@ export function ServiceButtons({ album, section }: ServiceButtonsProps) {
           buyAlbumPermanentAccess: 'Постоянный доступ',
           buyAlbumPurchased: 'Куплено',
           buyAlbumOwned: 'Ваше',
-          buyAlbumInCart: 'Альбом уже в корзине',
           downloadAlbum: 'Скачать альбом',
           downloadAlbumLoading: 'Скачивание...',
           downloadAlbumPreparing: 'Подготовка архива...',
@@ -340,7 +338,6 @@ export function ServiceButtons({ album, section }: ServiceButtonsProps) {
       buttons.buyAlbumPermanentAccess ?? fallbackLabels.buyAlbumPermanentAccess,
     buyAlbumPurchased: buttons.buyAlbumPurchased ?? fallbackLabels.buyAlbumPurchased,
     buyAlbumOwned: buttons.buyAlbumOwned ?? fallbackLabels.buyAlbumOwned,
-    buyAlbumInCart: buttons.buyAlbumInCart ?? fallbackLabels.buyAlbumInCart,
     downloadAlbum: buttons.downloadAlbum ?? fallbackLabels.downloadAlbum,
     downloadAlbumLoading: buttons.downloadAlbumLoading ?? fallbackLabels.downloadAlbumLoading,
     downloadAlbumPreparing: buttons.downloadAlbumPreparing ?? fallbackLabels.downloadAlbumPreparing,

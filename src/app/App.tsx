@@ -40,7 +40,6 @@ import { Footer } from '@widgets/footer';
 import { Navigation } from '@features/navigation';
 import { PlayerShell } from '@features/player';
 import { ErrorBoundary } from '@shared/ui/error-boundary';
-import { FloatingCart } from '@entities/service/ui/FloatingCart';
 import { ArchiveAccessModalProvider } from '@shared/lib/archiveAccessModal';
 import {
   ArtistOnboardingRedirectController,
@@ -640,7 +639,6 @@ function Layout() {
               </main>
               {!isEmailVerifiedRoute && <Footer />}
               <PlayerShell />
-              <FloatingCart />
             </ErrorBoundary>
           )}
           <EmailVerificationRefreshController />

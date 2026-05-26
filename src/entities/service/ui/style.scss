@@ -57,14 +57,6 @@
       border: none;
       border-radius: var(--ms-01);
 
-      &.service-buttons__link--in-cart {
-        opacity: 0.5;
-        cursor: not-allowed;
-        pointer-events: none;
-        color: var(--link-button-color, #dddddd);
-        background: var(--link-button-background-color, #373633);
-      }
-
       &.service-buttons__link--downloading {
         position: relative;
         overflow: hidden;
@@ -202,10 +194,7 @@ html.theme-light {
   }
 }
 
-.service-buttons__link--download:hover:not(
-    .service-buttons__link--in-cart,
-    .service-buttons__link--downloading
-  ) {
+.service-buttons__link--download:hover:not(.service-buttons__link--downloading) {
   .service-buttons__download-title,
   .service-buttons__download-subtitle,
   .service-buttons__download-price {

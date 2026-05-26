@@ -928,6 +928,34 @@ export interface IInterface {
       };
     };
   };
+  /**
+   * Direct album checkout modal copy. Cart-step copy was removed when we
+   * switched from cart-based UX to direct purchase (`AlbumCheckoutModal`).
+   */
+  checkout?: {
+    checkout?: {
+      emailAddress?: string;
+      firstName?: string;
+      lastName?: string;
+      agreeToOffer?: string;
+      publicOffer?: string;
+      agreeToPrivacy?: string;
+      privacyPolicy?: string;
+    };
+    payment?: {
+      proceedToPayment?: string;
+      processing?: string;
+      securePaymentInfo?: string;
+    };
+    validation?: {
+      emailRequired?: string;
+      emailInvalid?: string;
+      firstNameRequired?: string;
+      lastNameRequired?: string;
+      agreeToOfferRequired?: string;
+      agreeToPrivacyRequired?: string;
+    };
+  };
 }
 
 export interface Tracks {
