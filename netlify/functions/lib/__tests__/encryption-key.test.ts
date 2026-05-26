@@ -121,6 +121,23 @@ describe('getEncryptionKey', () => {
     expect(derived).toBeInstanceOf(Buffer);
     expect(derived).toHaveLength(32);
   });
+
+  // Regression: `openssl rand -base64 48` отдаёт 64 символа без `=` на конце,
+  // содержащих `+` / `/` — это не hex. Раньше такой ключ молча уезжал в
+  // Buffer.from(key, 'hex'), декодировался в обрезанный буфер и валился
+  // глубже как `Invalid key length` при createCipheriv.
+  it('does not treat a 64-char non-hex string as hex (scrypt fallback)', async () => {
+    const base64Of48Bytes = 'G3f3Mezv+R9M6c3JK2Cw4lnfmt2ZfXfOc0h5EH4ScOjhkveEJuSzW+LHUT/iaKqS';
+    expect(base64Of48Bytes).toHaveLength(64);
+    expect(/^[0-9a-fA-F]+$/.test(base64Of48Bytes)).toBe(false);
+    process.env.ENCRYPTION_KEY = base64Of48Bytes;
+
+    const { getEncryptionKey } = await import('../crypto');
+    const derived = getEncryptionKey();
+
+    expect(derived).toBeInstanceOf(Buffer);
+    expect(derived).toHaveLength(32);
+  });
 });
 
 describe('isEncryptionKeyConfigured', () => {

@@ -12,9 +12,15 @@
  *
  * Деривация ключа (порядок проверки сохранён для совместимости с уже
  * зашифрованными значениями в БД):
- *   - 44 символа и оканчивается на `=`  → base64-декод (32 байта)
- *   - 64 символа                        → hex-декод   (32 байта)
- *   - иначе                              → scryptSync(value, 'encryption-salt', 32)
+ *   - 44 символа и оканчивается на `=`           → base64-декод (32 байта)
+ *   - 64 символа, состоит только из [0-9a-fA-F]  → hex-декод   (32 байта)
+ *   - иначе                                       → scryptSync(value, 'encryption-salt', 32)
+ *
+ * NB про 64-символьный случай: раньше любая 64-символьная строка считалась
+ * hex'ом, поэтому base64 от `openssl rand -base64 48` (тоже 64 символа, но с
+ * `+`/`/`) молча декодировался в обрезанный буфер и валился глубже как
+ * `Invalid key length`. Теперь hex-ветка требует строго hex-алфавит, иначе
+ * происходит fallback на scrypt.
  */
 
 import * as crypto from 'crypto';
@@ -71,17 +77,32 @@ export function getEncryptionKey(): Buffer {
     );
   }
 
-  let derived: Buffer;
-  if (key.length === 44 && key.endsWith('=')) {
-    derived = Buffer.from(key, 'base64');
-  } else if (key.length === 64) {
-    derived = Buffer.from(key, 'hex');
-  } else {
-    derived = crypto.scryptSync(key, 'encryption-salt', 32);
-  }
+  const derived = deriveKeyFromRaw(key);
 
   cachedEncryptionKey = derived;
   return derived;
+}
+
+/**
+ * Преобразует исходную строку `ENCRYPTION_KEY` в 32-байтовый ключ AES-256.
+ *
+ * Порядок проверки совпадает с предыдущей реализацией для совместимости со
+ * значениями, уже сохранёнными в `user_payment_settings.secret_key_encrypted`.
+ *
+ * Единственное отличие — hex-ветка теперь требует строгий hex-алфавит,
+ * чтобы 64-символьная base64 (например, вывод `openssl rand -base64 48`)
+ * не интерпретировалась как hex с молчаливой потерей байт.
+ */
+function deriveKeyFromRaw(key: string): Buffer {
+  if (key.length === 44 && key.endsWith('=')) {
+    return Buffer.from(key, 'base64');
+  }
+
+  if (key.length === 64 && /^[0-9a-fA-F]+$/.test(key)) {
+    return Buffer.from(key, 'hex');
+  }
+
+  return crypto.scryptSync(key, 'encryption-salt', 32);
 }
 
 /**
