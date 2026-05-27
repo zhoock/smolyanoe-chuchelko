@@ -375,7 +375,7 @@ export function AlbumCheckoutModal({ isOpen, album, onClose }: AlbumCheckoutModa
     <Popup
       isActive={isOpen}
       onClose={onClose}
-      bgColor="rgba(var(--deep-black-rgb) / 95%)"
+      publicBackdrop
       aria-labelledby="album-checkout-modal-title"
     >
       <div className="album-checkout-modal">
