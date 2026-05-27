@@ -407,6 +407,10 @@ const albumsSlice = createSlice({
         state.error = null;
         state.catalogArtistMissing = false;
         state.inFlightFetchContextKey = null;
+        // Сбрасываем ключ кэша вместе с data: иначе transient null-slug (auth overlay,
+        // ?artist= без значения) оставляет fetchContextKey от прежнего артиста →
+        // catalogCacheStale + idle/empty deadlock после возврата того же slug.
+        state.fetchContextKey = null;
       })
       .addCase(fetchAlbums.pending, (state, action) => {
         if (action.meta.arg.force) {
@@ -447,8 +451,18 @@ const albumsSlice = createSlice({
         if (action.payload.staleAbort) {
           if (target === 'dashboard') {
             state.dashboard.inFlightFetchContextKey = null;
+            if (state.dashboard.data.length > 0) {
+              state.dashboard.status = 'succeeded';
+            } else if (state.dashboard.status === 'loading') {
+              state.dashboard.status = 'idle';
+            }
           } else {
             state.inFlightFetchContextKey = null;
+            if (state.data.length > 0) {
+              state.status = 'succeeded';
+            } else if (state.status === 'loading') {
+              state.status = 'idle';
+            }
           }
           return;
         }

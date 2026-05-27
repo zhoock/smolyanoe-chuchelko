@@ -143,6 +143,44 @@ describe('albumsSlice', () => {
     expect(selectAlbumsStatus(store.getState())).toBe('idle');
   });
 
+  test('transient null slug сбрасывает fetchContextKey — повторный тот же артист снова грузится', async () => {
+    const mockAlbums: IAlbums[] = [
+      {
+        albumId: 'album-1',
+        album: 'Test Album',
+        artist: 'Test Artist',
+        fullName: 'Test Artist — Test Album',
+        description: 'Test Description',
+        release: { date: '2024-01-01' },
+        cover: 'cover',
+        tracks: [],
+        buttons: {},
+        details: [],
+      },
+    ];
+
+    mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+    const store = createTestStore();
+    store.dispatch(setPublicArtistSlug('artist-a'));
+    await (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+    expect(selectAlbumsFetchContextKey(store.getState())).toBe('public:artist-a');
+
+    store.dispatch(setPublicArtistSlug(null));
+    expect(selectAlbumsFetchContextKey(store.getState())).toBeNull();
+    expect(selectAlbumsData(store.getState())).toEqual([]);
+    expect(selectAlbumsStatus(store.getState())).toBe('idle');
+
+    mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+    store.dispatch(setPublicArtistSlug('artist-a'));
+    await (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+    expect(selectAlbumsStatus(store.getState())).toBe('succeeded');
+    expect(selectAlbumsData(store.getState())).toHaveLength(1);
+    expect(selectAlbumsFetchContextKey(store.getState())).toBe('public:artist-a');
+  });
+
   describe('fetchAlbums thunk', () => {
     const mockAlbums: IAlbums[] = [
       {

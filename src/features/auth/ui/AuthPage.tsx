@@ -83,6 +83,23 @@ export function AuthPage() {
     [searchParams, location.state]
   );
 
+  // True, когда AuthPage открыт как overlay поверх другой страницы — тогда
+  // в `location.state.backgroundLocation` лежит URL underlying-страницы.
+  const hasOverlayBackground = Boolean(
+    (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation
+  );
+
+  const finishPostAuthNavigation = useCallback(() => {
+    clearAccountDeletedSkipReturn();
+    if (hasOverlayBackground) {
+      // Overlay: history back вместо replace navigate(postAuthPath) — не перезапускаем
+      // root loader и не теряем уже загруженный каталог/hero underlying-страницы.
+      navigate(-1);
+      return;
+    }
+    navigate(postAuthPath, { replace: true });
+  }, [hasOverlayBackground, navigate, postAuthPath]);
+
   useEffect(() => {
     try {
       const msg = sessionStorage.getItem(AUTH_EXPIRED_BANNER_SESSION_KEY);
@@ -110,15 +127,13 @@ export function AuthPage() {
   useEffect(() => {
     if (isAuthenticated() && !showVerifyEmailModal && !needsVerification) {
       clearAccountDeletedSkipReturn();
+      if (hasOverlayBackground) {
+        navigate(-1);
+        return;
+      }
       navigate(postAuthPath, { replace: true });
     }
-  }, [navigate, showVerifyEmailModal, needsVerification, postAuthPath]);
-
-  // True, когда AuthPage открыт как overlay поверх другой страницы — тогда
-  // в `location.state.backgroundLocation` лежит URL underlying-страницы.
-  const hasOverlayBackground = Boolean(
-    (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation
-  );
+  }, [navigate, showVerifyEmailModal, needsVerification, postAuthPath, hasOverlayBackground]);
 
   // Что показано на экране СЕЙЧАС: auth-form vs только VerifyEmailModal.
   // Для скрытия мы используем auth-логику ниже + early return — но scroll-lock
@@ -194,11 +209,6 @@ export function AuthPage() {
       markFirstArtistOnboardingPending(registeredUser.id);
     }
     setShowVerifyEmailModal(true);
-  };
-
-  const finishPostAuthNavigation = () => {
-    clearAccountDeletedSkipReturn();
-    navigate(postAuthPath, { replace: true });
   };
 
   const handleLoginSuccess = () => {
