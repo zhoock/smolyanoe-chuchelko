@@ -1,5 +1,5 @@
 import { useState, useCallback, type ReactNode, type RefObject } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
@@ -13,6 +13,7 @@ import {
   beginPremiumCheckoutAuthIntent,
   clearPremiumCheckoutAuthIntent,
 } from '@shared/lib/authIntent';
+import { sanitizeReturnPath } from '@shared/lib/authReturnUrl';
 import { getPremiumSubscriptionPriceDisplayAmount } from '@shared/lib/payment/premiumSubscriptionPricing';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 
@@ -110,6 +111,7 @@ function formatDescriptionWithBoldSegments(text: string): ReactNode {
 
 export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   const { lang } = useLang() as { lang: 'ru' | 'en' };
+  const location = useLocation();
   const navigate = useNavigate();
   const viewer = useAuthSessionUser();
   const emailCopy = useEmailVerificationCopy();
@@ -145,8 +147,8 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   const footnote = ui?.titles?.archiveAccessFootnote?.trim() ?? '';
 
   const handleStartPremium = useCallback(async () => {
-    const returnPath =
-      typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/';
+    const rawReturnTo = `${location.pathname}${location.search}`;
+    const returnTo = sanitizeReturnPath(rawReturnTo) ?? '/';
 
     if (viewer && !isEmailVerified(viewer)) {
       setCheckoutError(
@@ -159,8 +161,10 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
     }
 
     if (!getToken() && !viewer?.id) {
-      beginPremiumCheckoutAuthIntent({ returnTo: returnPath });
-      navigate(`/auth?returnTo=${encodeURIComponent(returnPath)}`);
+      beginPremiumCheckoutAuthIntent({ returnTo });
+      navigate(`/auth?returnTo=${encodeURIComponent(returnTo)}`, {
+        state: { backgroundLocation: location },
+      });
       onClose({ preserveCheckoutIntent: true });
       return;
     }
@@ -171,7 +175,7 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
     try {
       const returnUrl =
         typeof window !== 'undefined'
-          ? `${window.location.origin}/pay/subscription-success?returnTo=${encodeURIComponent(returnPath)}`
+          ? `${window.location.origin}/pay/subscription-success?returnTo=${encodeURIComponent(returnTo)}`
           : undefined;
 
       const result = await createSubscriptionPayment({ returnUrl });
@@ -196,7 +200,7 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
       setCheckoutError(error instanceof Error ? error.message : 'Checkout failed');
       setCheckoutLoading(false);
     }
-  }, [emailCopy.restrictedPremium, lang, navigate, onClose, viewer]);
+  }, [emailCopy.restrictedPremium, lang, location, navigate, onClose, viewer]);
 
   const features: { Icon: typeof FeatureIconMusic; label: string }[] = [
     { Icon: FeatureIconMusic, label: fTracks },
