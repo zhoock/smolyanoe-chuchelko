@@ -100,6 +100,31 @@ describe('useBodyScrollLock', () => {
     expect(document.body.style.position).toBe('');
   });
 
+  test('preserves full document height while locked for modal backdrop sampling', () => {
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: 2400,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(document.body, 'scrollHeight', {
+      value: 2400,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(document.documentElement, 'clientHeight', {
+      value: 900,
+      configurable: true,
+      writable: true,
+    });
+
+    const { unmount } = renderHook(() => useBodyScrollLock(true));
+
+    expect(document.body.style.height).toBe('2400px');
+
+    unmount();
+    expect(document.body.style.height).toBe('');
+  });
+
   test('inactive hook does not affect body styles', () => {
     renderHook(() => useBodyScrollLock(false));
     expect(document.body.style.position).toBe('');

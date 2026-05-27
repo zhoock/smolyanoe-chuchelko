@@ -16,6 +16,10 @@
  *
  * Compensation: на десктопе при скрытии scrollbar исчезает gutter и layout
  * "прыгает" вправо. Добавляем `padding-right: scrollbarWidth` пока заблокирован.
+ *
+ * Height: при `position:fixed` без явной высоты body схлопывается до viewport и
+ * `overflow:hidden` обрезает контент ниже fold — под auth-модалкой с backdrop-filter
+ * нижняя половина экрана становится чёрной. Сохраняем полную высоту документа до lock.
  */
 
 import { useEffect } from 'react';
@@ -29,6 +33,7 @@ type LockState = {
     left: string;
     right: string;
     width: string;
+    height: string;
     paddingRight: string;
     overflow: string;
   };
@@ -44,6 +49,7 @@ const lockState: LockState = {
     left: '',
     right: '',
     width: '',
+    height: '',
     paddingRight: '',
     overflow: '',
   },
@@ -55,17 +61,24 @@ function getScrollbarWidth(): number {
   return Math.max(0, window.innerWidth - document.documentElement.clientWidth);
 }
 
+function getDocumentScrollHeight(): number {
+  const { body, documentElement: html } = document;
+  return Math.max(body.scrollHeight, html.scrollHeight, html.clientHeight);
+}
+
 function applyLock(): void {
   if (typeof document === 'undefined') return;
   const { body, documentElement: html } = document;
 
   lockState.savedScrollY = window.scrollY;
+  const documentScrollHeight = getDocumentScrollHeight();
   lockState.savedBodyStyles = {
     position: body.style.position,
     top: body.style.top,
     left: body.style.left,
     right: body.style.right,
     width: body.style.width,
+    height: body.style.height,
     paddingRight: body.style.paddingRight,
     overflow: body.style.overflow,
   };
@@ -78,6 +91,7 @@ function applyLock(): void {
   body.style.left = '0';
   body.style.right = '0';
   body.style.width = '100%';
+  body.style.height = `${documentScrollHeight}px`;
   body.style.overflow = 'hidden';
   // Защита от layout shift при исчезновении scrollbar (Windows / некоторые Linux)
   if (scrollbarWidth > 0) {
@@ -97,6 +111,7 @@ function releaseLock(): void {
   body.style.left = lockState.savedBodyStyles.left;
   body.style.right = lockState.savedBodyStyles.right;
   body.style.width = lockState.savedBodyStyles.width;
+  body.style.height = lockState.savedBodyStyles.height;
   body.style.paddingRight = lockState.savedBodyStyles.paddingRight;
   body.style.overflow = lockState.savedBodyStyles.overflow;
   html.style.overflow = lockState.savedHtmlOverflow;
@@ -137,6 +152,7 @@ export function __resetBodyScrollLockForTests(): void {
     body.style.left = '';
     body.style.right = '';
     body.style.width = '';
+    body.style.height = '';
     body.style.paddingRight = '';
     body.style.overflow = '';
     html.style.overflow = '';
