@@ -28,6 +28,7 @@ import {
 } from '@shared/model/uiDictionary';
 import { resolveDashboardModalBackgroundForLoader } from '@shared/lib/dashboardModalBackground';
 import { prefetchPublicProfileForDisplay } from '@shared/lib/profileDisplayName';
+import { isAuthOverlayPathname } from '@shared/lib/publicArtistContext';
 import { prefetchPublicArtists } from '@shared/lib/publicArtistsCache';
 
 /**
@@ -124,7 +125,12 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
   );
   const store = getStore();
   const publicArtistFromUrl = loaderSearchParams.get('artist')?.trim() ?? '';
-  store.dispatch(setPublicArtistSlug(publicArtistFromUrl || null));
+  // На auth-оверлее (/auth*) не трогаем publicArtistSlug: модалка рендерится поверх underlying-страницы,
+  // а её artist-контекст должен сохраниться, иначе кэш альбомов становится stale и при закрытии модалки
+  // underlying-страница мигает skeleton'ом.
+  if (!isAuthOverlayPathname(pathname)) {
+    store.dispatch(setPublicArtistSlug(publicArtistFromUrl || null));
+  }
   const state = store.getState();
   const lang = selectCurrentLang(state);
 

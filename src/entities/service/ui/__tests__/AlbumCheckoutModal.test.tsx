@@ -51,6 +51,9 @@ jest.mock('@entities/service/lib/useAlbumOwnedByViewer', () => ({
 let mockUser: { id: string; email: string; name?: string } | null = null;
 jest.mock('@shared/lib/auth', () => ({
   getUser: () => mockUser,
+  isAuthenticated: () => mockUser !== null,
+  subscribeAuthSession: () => () => {},
+  getAuthSessionIdentityKey: () => (mockUser ? `user:${mockUser.id}` : ''),
 }));
 
 jest.mock('@shared/lib/hooks/useSiteArtistDisplayName', () => ({
@@ -113,6 +116,7 @@ describe('AlbumCheckoutModal', () => {
   });
 
   test('blocks submit and surfaces validation errors when form is empty', async () => {
+    mockUser = { id: 'u1', email: '', name: '' };
     renderWithProviders(<AlbumCheckoutModal isOpen album={testAlbum} onClose={() => {}} />);
 
     const submit = screen.getByRole('button', {
@@ -127,6 +131,7 @@ describe('AlbumCheckoutModal', () => {
   });
 
   test('valid submit calls createPayment with album + customer details', async () => {
+    mockUser = { id: 'u1', email: '', name: '' };
     // Никогда не резолвим — чтобы тест не пытался выполнить редирект на
     // confirmationUrl и не нарваться на jsdom location-восстановление.
     createPaymentMock.mockImplementation(() => new Promise(() => {}));
@@ -153,6 +158,7 @@ describe('AlbumCheckoutModal', () => {
   });
 
   test('surfaces createPayment error and stays on form', async () => {
+    mockUser = { id: 'u1', email: '', name: '' };
     createPaymentMock.mockResolvedValueOnce({
       success: false,
       error: 'YooKassa unavailable',

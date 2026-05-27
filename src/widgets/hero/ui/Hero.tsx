@@ -1,6 +1,6 @@
 // src/widgets/hero/ui/Hero.tsx
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, type Location } from 'react-router-dom';
 import { useLang } from '@app/providers/lang';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
@@ -8,6 +8,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { selectCatalogArtistMissing } from '@entities/album';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
+import { isAuthOverlayPathname } from '@shared/lib/publicArtistContext';
 import {
   Universe3D,
   type SceneArtist,
@@ -75,17 +76,36 @@ export function Hero() {
   const imageSelectedForPathRef = useRef<string>('');
   const { overlayOpen: dashboardOverlayOpen, surfaceLocation } = useDashboardModalShell();
   const isDashboardRoute = location.pathname.startsWith('/dashboard') && !dashboardOverlayOpen;
+  /**
+   * Пока открыт auth-оверлей (/auth*), URL в строке — `/auth?...`, но фактически модалка рендерится
+   * поверх underlying-страницы из `state.backgroundLocation`. Hero должен видеть эту underlying-страницу,
+   * иначе при каждом открытии/закрытии оверлея сбрасывается `headerImages`/`backgroundImage`
+   * и Hero мигает (fetch + re-pick случайного изображения).
+   */
+  const authOverlayBackground = useMemo<Location | null>(() => {
+    if (!isAuthOverlayPathname(location.pathname)) return null;
+    const bg = (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation;
+    return bg ?? null;
+  }, [location.pathname, location.state]);
   const heroPathname =
     dashboardOverlayOpen && surfaceLocation?.pathname
       ? surfaceLocation.pathname
-      : location.pathname;
-  /** Пока открыт оверлей дашборда, URL в строке — /dashboard*; для Hero используем query фоновой страницы. */
+      : (authOverlayBackground?.pathname ?? location.pathname);
+  /** Пока открыт оверлей (dashboard или auth), URL в строке — /dashboard*|/auth*; для Hero используем query фоновой страницы. */
   const heroSearchString = useMemo(() => {
     if (dashboardOverlayOpen && surfaceLocation?.search !== undefined) {
       return surfaceLocation.search;
     }
+    if (authOverlayBackground?.search !== undefined) {
+      return authOverlayBackground.search;
+    }
     return location.search;
-  }, [dashboardOverlayOpen, surfaceLocation?.search, location.search]);
+  }, [
+    dashboardOverlayOpen,
+    surfaceLocation?.search,
+    authOverlayBackground?.search,
+    location.search,
+  ]);
   const heroUrlParams = useMemo(
     () => new URLSearchParams(heroSearchString.replace(/^\?/, '')),
     [heroSearchString]

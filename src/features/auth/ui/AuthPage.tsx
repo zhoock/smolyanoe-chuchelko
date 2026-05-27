@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams, useLocation, type Location } from 'react-router-dom';
 import {
   isAuthenticated,
   isEmailVerified,
@@ -15,6 +15,7 @@ import {
   shouldLeaveDeletedArtistPage,
 } from '@shared/lib/accountDeletedSession';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
+import { useBodyScrollLock } from '@shared/lib/hooks/useBodyScrollLock';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { RoleSelectionScreen } from './RoleSelectionScreen';
@@ -28,12 +29,29 @@ type AuthMode = 'login' | 'register' | 'forgot';
 type RegisterStep = 'role' | 'form';
 
 /**
+ * Auth surface работает в двух режимах:
+ *
+ *  1. **Overlay над текущей страницей** — типичный путь: пользователь
+ *     кликает "Sign in" в Header / на artist page; navigate('/auth', {
+ *     state: { backgroundLocation } }) сохраняет где он был. App.tsx
+ *     рендерит underlying page по `backgroundLocation` и AuthPage поверх —
+ *     artist page ОСТАЁТСЯ смонтированной, без re-fetch / skeleton, без
+ *     потери scroll-позиции.
+ *
+ *  2. **Standalone page** — прямой переход по URL `/auth`. backgroundLocation
+ *     отсутствует, AuthPage рендерится как полноэкранная страница.
+ *
+ * Закрытие модала: Close-button / клик по backdrop / Escape. В overlay-режиме
+ * `navigate(-1)` возвращает на underlying URL; в standalone — `navigate('/')`,
+ * чтобы пользователь не вылетел за пределы сайта (предыдущая запись истории
+ * могла быть внешней).
+ *
+ * Body scroll lock включается пока открыт login/register/forgot, чтобы
+ * underlying страница не прокручивалась пальцем под модалом (важно на iOS).
+ *
  * После успешного login/register пользователь сразу попадает на postAuthPath
  * (album page, checkout resume, /, …). Никакого onboarding-модала "выберите
- * язык" больше нет: язык определяется автоматически из `navigator.language`
- * (см. `@shared/lib/lang/detectBrowserLang`) и сохраняется при первом ручном
- * переключении в Header/Settings. Это убирает разрыв в conversion-flow
- * "купил → залогинился → внезапно language-modal".
+ * язык" больше нет: язык определяется автоматически (`@shared/lib/lang`).
  */
 export function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -96,7 +114,77 @@ export function AuthPage() {
     }
   }, [navigate, showVerifyEmailModal, needsVerification, postAuthPath]);
 
-  if (isAuthenticated() && !showVerifyEmailModal && !needsVerification) {
+  // True, когда AuthPage открыт как overlay поверх другой страницы — тогда
+  // в `location.state.backgroundLocation` лежит URL underlying-страницы.
+  const hasOverlayBackground = Boolean(
+    (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation
+  );
+
+  // Что показано на экране СЕЙЧАС: auth-form vs только VerifyEmailModal.
+  // Для скрытия мы используем auth-логику ниже + early return — но scroll-lock
+  // и Escape должны вешаться ДО early return, иначе нарушим rules-of-hooks.
+  const isHidden = isAuthenticated() && !showVerifyEmailModal && !needsVerification;
+  const showAuthForm = !showVerifyEmailModal && !isHidden;
+
+  const handleCloseAuth = useCallback(() => {
+    if (shouldLeaveDeletedArtistPage()) {
+      clearAccountDeletedSession();
+      navigate({ pathname: '/', search: '' }, { replace: true });
+      return;
+    }
+    if (hasOverlayBackground) {
+      // Overlay-режим: уносим стек назад на underlying-страницу. URL вернётся
+      // на artist page (или другой backgroundLocation), AuthPage размонтируется,
+      // body scroll lock снимется, scroll-позиция восстановится.
+      navigate(-1);
+      return;
+    }
+    // Standalone-режим (прямой /auth): не делаем navigate(-1), потому что
+    // история может вести наружу. Уводим на главную replace'ом.
+    navigate('/', { replace: true });
+  }, [hasOverlayBackground, navigate]);
+
+  // Body scroll lock на всё время, пока виден auth-form. VerifyEmailModal
+  // имеет собственный scroll-lock (через native <dialog>), поэтому здесь
+  // лочим только когда auth-form реально на экране.
+  useBodyScrollLock(showAuthForm);
+
+  // Запоминаем, какой элемент был сфокусирован ДО монтажа модала, чтобы
+  // вернуть туда фокус при закрытии. Без этого после Escape/backdrop click
+  // фокус оказывается на body и пользователь теряет позицию в табе.
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!showAuthForm) return;
+    previouslyFocusedElementRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      const target = previouslyFocusedElementRef.current;
+      // document.contains вместо isConnected — поддерживаем старые браузеры
+      if (target && document.contains(target)) {
+        try {
+          target.focus({ preventScroll: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, [showAuthForm]);
+
+  // Escape закрывает модал — стандартное поведение для всех popup'ов.
+  useEffect(() => {
+    if (!showAuthForm) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleCloseAuth();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showAuthForm, handleCloseAuth]);
+
+  if (isHidden) {
     return null;
   }
 
@@ -127,16 +215,15 @@ export function AuthPage() {
     finishPostAuthNavigation();
   };
 
-  const showAuthForm = !showVerifyEmailModal;
   const showRoleSelection = mode === 'register' && registerStep === 'role';
 
-  const handleCloseAuth = () => {
-    if (shouldLeaveDeletedArtistPage()) {
-      clearAccountDeletedSession();
-      navigate({ pathname: '/', search: '' }, { replace: true });
-      return;
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Защита от случайного закрытия при отпускании клика, начатого внутри
+    // карточки (drag-выделение текста). Закрываем только если и mousedown,
+    // и mouseup произошли на самом backdrop'е.
+    if (e.target === e.currentTarget) {
+      handleCloseAuth();
     }
-    navigate(-1);
   };
 
   return (
@@ -148,11 +235,24 @@ export function AuthPage() {
       />
 
       {showAuthForm && (
-        <div className="auth-page">
-          <div className="auth-page__backdrop" />
+        <div
+          className="auth-page"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-page-title"
+        >
+          <div className="auth-page__backdrop" onClick={handleBackdropClick} aria-hidden="true" />
           <div
             className={`auth-page__container${showRoleSelection ? ' auth-page__container--wide' : ''}`}
+            role="document"
           >
+            <h2 id="auth-page-title" className="visually-hidden">
+              {mode === 'register'
+                ? 'Create account'
+                : mode === 'forgot'
+                  ? 'Reset password'
+                  : 'Sign in'}
+            </h2>
             <button
               type="button"
               className="auth-page__close"

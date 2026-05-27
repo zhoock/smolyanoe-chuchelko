@@ -27,6 +27,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { purgeInvalidAuthSessionFromStorage } from '@shared/lib/auth';
+import { isAuthOverlayPathname } from '@shared/lib/publicArtistContext';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { closePopup, getIsPopupOpen, openPopup } from '@features/popupToggle';
 
@@ -148,10 +149,15 @@ function CurrentArtistSync() {
       : '';
 
   const artist = artistFromUrl || artistFromModalSurface;
+  // Auth-оверлей (/auth*) рендерится поверх underlying-страницы. publicArtistSlug должен сохранять
+  // значение, выставленное на underlying-странице, иначе при закрытии модалки selector кэша
+  // считает данные stale и каталог под backdrop'ом мигает skeleton'ом.
+  const skipSlugSync = isAuthOverlayPathname(location.pathname);
 
   useEffect(() => {
+    if (skipSlugSync) return;
     dispatch(setPublicArtistSlug(artist || null));
-  }, [artist, dispatch]);
+  }, [artist, dispatch, skipSlugSync]);
 
   return null;
 }
