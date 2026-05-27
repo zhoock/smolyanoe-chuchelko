@@ -101,6 +101,18 @@ describe('Header integration tests', () => {
     expect(langList).toHaveClass('is-hidden');
   });
 
+  test('ссылка Sign in открывает auth в режиме login', () => {
+    renderWithProviders(<Header theme="dark" onToggleTheme={() => {}} />, {
+      preloadedState: {
+        lang: { current: 'en' },
+      },
+    });
+
+    const signInLink = screen.getByRole('link', { name: /sign in/i });
+    expect(signInLink).toHaveAttribute('href', expect.stringContaining('mode=login'));
+    expect(signInLink.getAttribute('href')).not.toContain('mode=register');
+  });
+
   test('должен установить aria-expanded при открытии меню', async () => {
     const user = userEvent.setup();
     renderWithProviders(<Header theme="dark" onToggleTheme={() => {}} />, {

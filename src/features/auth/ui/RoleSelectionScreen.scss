@@ -29,7 +29,7 @@
   &__cards {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--ms-0);
+    gap: var(--ms-1);
 
     @media (width <= 640px) {
       grid-template-columns: 1fr;
@@ -41,7 +41,7 @@
     flex-direction: column;
     gap: var(--ms-0);
     min-height: 100%;
-    padding: var(--ms-1);
+    padding: var(--ms-2) var(--ms-1);
     background: rgb(255 255 255 / 2%);
     border: 1px solid rgb(255 255 255 / 8%);
     border-radius: var(--ms-01);
@@ -162,8 +162,4 @@
       color: var(--dark-greenish-yellow);
     }
   }
-}
-
-.auth-page__container--wide {
-  width: min(920px, 94vw);
 }

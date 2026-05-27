@@ -38,7 +38,7 @@ const HeaderComponent = ({
   const location = useLocation();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const isAuthed = isAuthenticated();
-  const authParams = new URLSearchParams({ mode: 'register' });
+  const authParams = new URLSearchParams({ mode: 'login' });
   const leaveDeletedArtistPage = shouldLeaveDeletedArtistPage();
   if (!leaveDeletedArtistPage) {
     appendReturnTo(authParams, location);

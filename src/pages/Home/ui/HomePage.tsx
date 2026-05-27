@@ -339,7 +339,7 @@ export function HomePage() {
             type="button"
             onClick={() => {
               clearPremiumCheckoutAuthIntent();
-              const authParams = new URLSearchParams({ mode: 'register' });
+              const authParams = new URLSearchParams({ mode: 'login' });
               appendReturnTo(authParams, location);
               navigate(
                 { pathname: '/auth', search: `?${authParams.toString()}` },

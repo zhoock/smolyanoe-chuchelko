@@ -29,7 +29,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: L
       submit: loginUi?.submit ?? (en ? 'Sign in' : 'Войти'),
       submitting: loginUi?.submitting ?? (en ? 'Signing in…' : 'Вход…'),
       noAccount: loginUi?.noAccount ?? (en ? 'No account?' : 'Нет аккаунта?'),
-      signUp: loginUi?.signUp ?? (en ? 'Register' : 'Зарегистрироваться'),
+      signUp: loginUi?.signUp ?? (en ? 'Create account' : 'Создать аккаунт'),
       forgotPassword: loginUi?.forgotPassword ?? (en ? 'Forgot password?' : 'Забыли пароль?'),
       requiredEmail: val?.requiredEmail ?? (en ? 'Enter your email' : 'Укажите email'),
       requiredPassword: val?.requiredPassword ?? (en ? 'Enter your password' : 'Укажите пароль'),
