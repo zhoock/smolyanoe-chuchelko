@@ -100,6 +100,12 @@ export const selectPublicAlbumsDataResolvedForSurface = createSelector(
   (albums, stale) => (stale ? [] : albums)
 );
 
+/** Есть ли строки публичного каталога в store (до stale-фильтра surface). */
+export const selectPublicCatalogCachedRowCount = createSelector(
+  [selectPublicAlbumsDataResolved],
+  (albums) => albums.length
+);
+
 /**
  * Список на /albums: при `restrictToPublished === true` — как публичный каталог;
  * при `false` (есть `?artist=`) — полный список владельца.

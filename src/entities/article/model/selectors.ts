@@ -75,6 +75,11 @@ export const selectArticlesDataResolvedForSurface = createSelector(
   (articles, stale) => (stale ? [] : articles)
 );
 
+export const selectArticlesCachedRowCount = createSelector(
+  [selectArticlesDataResolved],
+  (articles) => articles.length
+);
+
 export const selectArticleById = createSelector(
   [selectArticlesData, (_state: RootState, articleId: string) => articleId],
   (articles, articleId) => articles.find((article) => article.articleId === articleId)

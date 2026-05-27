@@ -25,6 +25,7 @@ export {
   selectArticlesDataResolved,
   selectArticlesDataResolvedForSurface,
   selectArticlesCacheIsStale,
+  selectArticlesCachedRowCount,
   selectArticleById,
   selectArticleByIdResolved,
   selectArticlesInFlightFetchContextKey,

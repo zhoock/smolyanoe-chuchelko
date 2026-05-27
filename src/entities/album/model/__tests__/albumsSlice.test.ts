@@ -181,6 +181,37 @@ describe('albumsSlice', () => {
     expect(selectAlbumsFetchContextKey(store.getState())).toBe('public:artist-a');
   });
 
+  test('force refetch с уже загруженным каталогом не переводит status в loading', async () => {
+    const mockAlbums: IAlbums[] = [
+      {
+        albumId: 'album-1',
+        album: 'Test Album',
+        artist: 'Test Artist',
+        fullName: 'Test Artist — Test Album',
+        description: 'Test Description',
+        release: { date: '2024-01-01' },
+        cover: 'cover',
+        tracks: [],
+        buttons: {},
+        details: [],
+      },
+    ];
+
+    mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockAlbums));
+
+    const store = createTestStore();
+    await (store.dispatch as AppDispatch)(fetchAlbums({}));
+
+    expect(selectAlbumsStatus(store.getState())).toBe('succeeded');
+    expect(selectAlbumsData(store.getState())).toHaveLength(1);
+
+    mockFetch.mockImplementation(() => new Promise(() => {}));
+    store.dispatch(fetchAlbums({ force: true }));
+
+    expect(selectAlbumsStatus(store.getState())).toBe('succeeded');
+    expect(selectAlbumsData(store.getState())).toHaveLength(1);
+  });
+
   describe('fetchAlbums thunk', () => {
     const mockAlbums: IAlbums[] = [
       {

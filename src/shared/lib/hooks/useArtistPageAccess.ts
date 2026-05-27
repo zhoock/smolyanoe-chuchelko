@@ -7,6 +7,7 @@ import {
   selectCatalogArtistMissing,
   selectPublicAlbumsDataResolvedForSurface,
   selectPublicAlbumsCacheIsStale,
+  selectPublicCatalogCachedRowCount,
 } from '@entities/album';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { buildApiUrl } from '@shared/lib/artistQuery';
@@ -28,6 +29,7 @@ export function useArtistPageAccess(artistSlug: string) {
   const albumsFetchContextKey = useAppSelector(selectAlbumsFetchContextKey);
   const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
   const publicAlbums = useAppSelector(selectPublicAlbumsDataResolvedForSurface);
+  const cachedPublicRowCount = useAppSelector(selectPublicCatalogCachedRowCount);
   const hasPublicReleases = useMemo(() => hasPublishedPublicReleases(publicAlbums), [publicAlbums]);
 
   const desiredFetchKey = useMemo(() => buildPublicAlbumsFetchContextKey(artistSlug), [artistSlug]);
@@ -93,8 +95,10 @@ export function useArtistPageAccess(artistSlug: string) {
   const albumsPending =
     catalogCacheStale ||
     albumsStatus === 'idle' ||
-    albumsStatus === 'loading' ||
-    (albumsStatus === 'succeeded' && albumsFetchContextKey !== desiredFetchKey);
+    (albumsStatus === 'loading' && cachedPublicRowCount === 0) ||
+    (albumsStatus === 'succeeded' &&
+      albumsFetchContextKey !== desiredFetchKey &&
+      cachedPublicRowCount === 0);
 
   const isLoading = !ownerResolved || albumsPending;
   const showOnboarding = !isLoading && !catalogArtistMissing && !hasPublicReleases && isOwner;

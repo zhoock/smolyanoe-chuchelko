@@ -302,9 +302,13 @@ const articlesSlice = createSlice({
           state.dashboard.error = null;
           state.dashboard.inFlightFetchContextKey = 'dashboard';
         } else {
-          state.status = 'loading';
-          state.error = null;
           state.inFlightFetchContextKey = 'public';
+          state.error = null;
+          const backgroundRefetch =
+            Boolean(action.meta.arg.force) && state.status === 'succeeded' && state.data.length > 0;
+          if (!backgroundRefetch) {
+            state.status = 'loading';
+          }
         }
       })
       .addCase(fetchArticles.fulfilled, (state, action) => {
@@ -331,8 +335,18 @@ const articlesSlice = createSlice({
           const target = action.payload.writeTarget ?? 'catalog';
           if (target === 'dashboard') {
             state.dashboard.inFlightFetchContextKey = null;
+            if (state.dashboard.data.length > 0) {
+              state.dashboard.status = 'succeeded';
+            } else if (state.dashboard.status === 'loading') {
+              state.dashboard.status = 'idle';
+            }
           } else {
             state.inFlightFetchContextKey = null;
+            if (state.data.length > 0) {
+              state.status = 'succeeded';
+            } else if (state.status === 'loading') {
+              state.status = 'idle';
+            }
           }
           return;
         }

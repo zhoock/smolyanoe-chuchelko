@@ -422,10 +422,14 @@ const albumsSlice = createSlice({
           state.dashboard.error = null;
           state.dashboard.inFlightFetchContextKey = 'dashboard';
         } else {
-          state.status = 'loading';
-          state.error = null;
           state.inFlightFetchContextKey = 'public';
+          state.error = null;
           state.catalogArtistMissing = false;
+          const backgroundRefetch =
+            Boolean(action.meta.arg.force) && state.status === 'succeeded' && state.data.length > 0;
+          if (!backgroundRefetch) {
+            state.status = 'loading';
+          }
         }
       })
       .addCase(fetchAlbums.fulfilled, (state, action) => {

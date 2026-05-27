@@ -7,7 +7,7 @@ type AlbumsStatus = 'idle' | 'loading' | 'succeeded' | 'failed';
 /**
  * Показывать ли полноэкранный скелетон/блокировку по статусу альбомов.
  * Пока в store уже есть данные для списка/альбома, не скрываем UI при loading/idle
- * (фоновый refetch из кабинета, закрытие дашборда во время загрузки и т.д.).
+ * (фоновый refetch после auth-change, из кабинета, закрытие дашборда и т.д.).
  */
 export function shouldShowAlbumsLoadingShell(
   albumsStatus: AlbumsStatus,
