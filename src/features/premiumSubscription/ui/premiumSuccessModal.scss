@@ -1,14 +1,5 @@
 .premium-success-modal {
-  margin: auto;
-  padding: 0;
-  background: transparent;
-  border: none;
   max-width: calc(100vw - 1.5rem);
-
-  &::backdrop {
-    background: rgb(0 0 0 / 62%);
-    backdrop-filter: blur(8px);
-  }
 
   &__panel {
     position: relative;

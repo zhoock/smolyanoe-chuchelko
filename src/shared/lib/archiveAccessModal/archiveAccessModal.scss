@@ -1,16 +1,7 @@
 .archive-access-modal {
-  margin: auto;
-  padding: 0;
-  background: transparent;
-  border: none;
   max-width: calc(100vw - 1.5rem);
 
-  /* Центрирование: `dialog.popup[open]` в shared/ui/popup/style.scss (импорт ниже во View). */
-
-  &::backdrop {
-    background: rgb(0 0 0 / 62%);
-    backdrop-filter: blur(6px);
-  }
+  /* Центрирование: `dialog.popup[open]` в shared/ui/popup/style.scss (LocalModal). */
 
   &__panel {
     position: relative;

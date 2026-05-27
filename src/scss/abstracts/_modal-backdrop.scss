@@ -1,0 +1,22 @@
+// Shared public-site modal overlay tokens (Premium Archive, Auth, Reset Password, Premium Success).
+
+:root {
+  --public-modal-backdrop-opacity: 62%;
+  --public-modal-backdrop-blur: 6px;
+  --public-modal-backdrop-color: rgb(0 0 0 / var(--public-modal-backdrop-opacity));
+  --public-modal-backdrop-highlight: radial-gradient(
+    circle at 50% 30%,
+    rgb(255 255 255 / 4%),
+    transparent 55%
+  );
+}
+
+@mixin public-modal-dialog-backdrop {
+  background: var(--public-modal-backdrop-color);
+  backdrop-filter: blur(var(--public-modal-backdrop-blur));
+}
+
+@mixin public-modal-div-backdrop {
+  background: var(--public-modal-backdrop-highlight), var(--public-modal-backdrop-color);
+  backdrop-filter: blur(var(--public-modal-backdrop-blur));
+}

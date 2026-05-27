@@ -35,6 +35,8 @@ export interface PopupProps extends HamburgerProps {
   'aria-labelledby'?: string;
   /** Блокирует закрытие по Escape (событие cancel у нативного dialog). */
   closeBlocked?: boolean;
+  /** Shared public-site modal backdrop (`--public-modal-backdrop-*`). */
+  publicBackdrop?: boolean;
 }
 
 /**

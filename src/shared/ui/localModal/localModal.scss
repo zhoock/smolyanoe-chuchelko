@@ -1,0 +1,16 @@
+@use '../../../scss/abstracts/modal-backdrop' as *;
+
+.local-modal {
+  margin: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+
+  &::backdrop {
+    @include public-modal-dialog-backdrop;
+  }
+}
+
+.modal-backdrop {
+  @include public-modal-div-backdrop;
+}

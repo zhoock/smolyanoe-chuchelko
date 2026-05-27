@@ -20,8 +20,8 @@ import {
   markPremiumSuccessModalShown,
 } from '../lib/premiumSuccessModalStorage';
 import { resolveCheckoutArtistCard, type CheckoutArtistCard } from '../lib/resolveCheckoutArtist';
+import { LocalModal } from '@shared/ui/localModal';
 
-import '@shared/ui/popup/style.scss';
 import './premiumSuccessModal.scss';
 
 function IconPremiumSuccess({ className }: { className?: string }) {
@@ -93,14 +93,6 @@ export function PremiumSuccessModalView({ dialogRef, open, onClose }: Props) {
     };
   }, [lang, open]);
 
-  useEffect(() => {
-    if (open) {
-      dialogRef.current?.showModal();
-    } else {
-      dialogRef.current?.close();
-    }
-  }, [dialogRef, open]);
-
   const handleAdd = useCallback(async () => {
     if (!artist?.artistUserId || adding || artistInArchive) return;
 
@@ -140,13 +132,12 @@ export function PremiumSuccessModalView({ dialogRef, open, onClose }: Props) {
   }, [dismiss, navigate]);
 
   return (
-    <dialog
-      ref={dialogRef as RefObject<HTMLDialogElement>}
-      className="popup premium-success-modal"
+    <LocalModal
+      dialogRef={dialogRef}
+      isOpen={open}
+      className="premium-success-modal"
       aria-labelledby="premium-success-modal-title"
-      onClick={(e) => {
-        if (e.target === dialogRef.current) dismiss();
-      }}
+      onClose={dismiss}
     >
       <div className="premium-success-modal__panel">
         <button
@@ -217,7 +208,7 @@ export function PremiumSuccessModalView({ dialogRef, open, onClose }: Props) {
           </button>
         </div>
       </div>
-    </dialog>
+    </LocalModal>
   );
 }
 

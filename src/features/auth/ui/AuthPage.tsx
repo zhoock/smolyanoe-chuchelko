@@ -16,6 +16,7 @@ import {
 } from '@shared/lib/accountDeletedSession';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { useBodyScrollLock } from '@shared/lib/hooks/useBodyScrollLock';
+import { ModalBackdrop } from '@shared/ui/localModal';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { RoleSelectionScreen } from './RoleSelectionScreen';
@@ -251,7 +252,7 @@ export function AuthPage() {
           aria-modal="true"
           aria-labelledby="auth-page-title"
         >
-          <div className="auth-page__backdrop" onClick={handleBackdropClick} aria-hidden="true" />
+          <ModalBackdrop className="auth-page__backdrop" onClick={handleBackdropClick} />
           <div
             className={`auth-page__container${showRoleSelection ? ' auth-page__container--wide' : ''}`}
             role="document"

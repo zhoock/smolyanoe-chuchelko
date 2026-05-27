@@ -16,10 +16,10 @@ import {
 import { sanitizeReturnPath } from '@shared/lib/authReturnUrl';
 import { getPremiumSubscriptionPriceDisplayAmount } from '@shared/lib/payment/premiumSubscriptionPricing';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
+import { LocalModal } from '@shared/ui/localModal';
 
 import type { CloseArchiveAccessModalOptions } from './archiveAccessModalContext';
 
-import '@shared/ui/popup/style.scss';
 import './archiveAccessModal.scss';
 
 function FeatureIconMusic({ className }: { className?: string }) {
@@ -210,15 +210,11 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
   ];
 
   return (
-    <dialog
-      ref={dialogRef as RefObject<HTMLDialogElement>}
-      className="popup archive-access-modal"
+    <LocalModal
+      dialogRef={dialogRef}
+      className="archive-access-modal"
       aria-labelledby="archive-access-modal-title"
-      onClick={(e) => {
-        if (e.target === dialogRef.current) {
-          onClose();
-        }
-      }}
+      onClose={onClose}
     >
       <div className="archive-access-modal__panel">
         <button
@@ -282,6 +278,6 @@ export function ArchiveAccessModalView({ dialogRef, onClose }: Props) {
         ) : null}
         {footnote ? <p className="archive-access-modal__footnote">{footnote}</p> : null}
       </div>
-    </dialog>
+    </LocalModal>
   );
 }

@@ -6,6 +6,7 @@ import { useLang } from '@app/providers/lang';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { computePasswordStrength } from './passwordStrength';
+import { ModalBackdrop } from '@shared/ui/localModal';
 import '@features/auth/ui/AuthForm.scss';
 import './ResetPassword.scss';
 
@@ -258,7 +259,7 @@ export default function ResetPassword() {
         <Helmet>
           <title>{copy.successTitle}</title>
         </Helmet>
-        <div className="reset-password-page__backdrop" aria-hidden="true" />
+        <ModalBackdrop className="reset-password-page__backdrop" />
         <div className="reset-password-page__container reset-password-page__container--success">
           <div
             className="reset-password-page__icon-ring reset-password-page__icon-ring--success"
@@ -287,7 +288,7 @@ export default function ResetPassword() {
       <Helmet>
         <title>{copy.title}</title>
       </Helmet>
-      <div className="reset-password-page__backdrop" aria-hidden="true" />
+      <ModalBackdrop className="reset-password-page__backdrop" />
       <div className="reset-password-page__container">
         <div className="reset-password-page__icon-ring" aria-hidden="true">
           <LockIcon />

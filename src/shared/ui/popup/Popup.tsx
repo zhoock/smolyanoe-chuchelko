@@ -1,7 +1,9 @@
 // src/shared/ui/popup/Popup.tsx
 import { memo, useEffect, useRef } from 'react';
+import clsx from 'clsx';
 import type { PopupProps } from 'models';
 import './style.scss';
+import '../localModal/localModal.scss';
 
 const PopupComponent = ({
   children,
@@ -9,6 +11,7 @@ const PopupComponent = ({
   bgColor,
   onClose,
   closeBlocked,
+  publicBackdrop,
   'aria-labelledby': ariaLabelledBy,
 }: PopupProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -64,7 +67,7 @@ const PopupComponent = ({
   return (
     <dialog
       ref={dialogRef}
-      className="popup"
+      className={clsx('popup', publicBackdrop && 'local-modal')}
       style={{ background: bgColor }}
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
