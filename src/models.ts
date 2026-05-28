@@ -280,17 +280,17 @@ export interface IInterface {
     notice: string;
   };
   artistOnboarding?: {
-    heroAria: string;
-    heroEmptyHint: string;
-    roleBadge: string;
-    welcomeTitle: string;
-    welcomeDescription: string;
-    cardsHeading: string;
-    cards: {
-      release: { title: string; description: string; button: string };
-      biography: { title: string; description: string; button: string };
-      social: { title: string; description: string; button: string };
-      article: { title: string; description: string; button: string };
+    welcomeGreeting: string;
+    heroHeadline: string;
+    heroHeadlineAccent: string;
+    heroSubtext: string;
+    primaryCta: string;
+    catalogHint: string;
+    secondaryHeading: string;
+    features: {
+      article: { title: string; description: string };
+      mixer: { title: string; description: string };
+      profile: { title: string; description: string };
     };
   };
   /** Кнопка входа/регистрации в шапке; ссылка в кабинет по аватару */

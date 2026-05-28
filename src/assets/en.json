@@ -179,32 +179,25 @@
       "premiumSuccessMaybeLater": "Maybe later"
     },
     "artistOnboarding": {
-      "heroAria": "Artist profile",
-      "heroEmptyHint": "Empty for now",
-      "roleBadge": "Artist",
-      "welcomeTitle": "Welcome to your creative universe",
-      "welcomeDescription": "Your music, stories, articles, and everything you create will live here. Fill out your profile to share your work with the world.",
-      "cardsHeading": "Where to start?",
-      "cards": {
-        "release": {
-          "title": "Upload your first release",
-          "description": "Add an album or single so your music appears in the catalog.",
-          "button": "Upload release"
-        },
-        "biography": {
-          "title": "Write your story",
-          "description": "Tell listeners about yourself, your inspiration, and your path.",
-          "button": "Add biography"
-        },
-        "social": {
-          "title": "Add social links",
-          "description": "Connect your social networks so listeners can follow you.",
-          "button": "Add links"
-        },
+      "welcomeGreeting": "Welcome, {name}",
+      "heroHeadline": "Your creativity starts",
+      "heroHeadlineAccent": "here.",
+      "heroSubtext": "Upload your first release to appear in the catalog and share your music with listeners.",
+      "primaryCta": "Upload your first release",
+      "catalogHint": "You will appear in the catalog after publishing a release",
+      "secondaryHeading": "Also available to you",
+      "features": {
         "article": {
-          "title": "Publish your first article",
-          "description": "Share thoughts, experience, or stories about making music.",
-          "button": "Write article"
+          "title": "Articles",
+          "description": "Tell stories and share thoughts and experience."
+        },
+        "mixer": {
+          "title": "Stem mixer",
+          "description": "Create, mix, and share track stems."
+        },
+        "profile": {
+          "title": "Artist profile",
+          "description": "Customize your profile and show what makes you unique."
         }
       }
     },

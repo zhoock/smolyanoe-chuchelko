@@ -5,6 +5,7 @@ import { useLang } from '@app/providers/lang';
 import { loadHeaderImagesFromDatabase } from '@entities/user/lib';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
+import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { selectCatalogArtistMissing } from '@entities/album';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
@@ -112,6 +113,13 @@ export function Hero() {
   );
   const hasArtistParam = !!heroUrlParams.get('artist');
   const artistParamKey = heroUrlParams.get('artist')?.trim() ?? '';
+  const artistPageAccess = useArtistPageAccess(artistParamKey);
+  const hideHeroForArtistOnboarding =
+    hasArtistParam &&
+    (artistPageAccess.showOnboarding ||
+      (artistPageAccess.isLoading &&
+        artistPageAccess.isOwner &&
+        !artistPageAccess.hasPublicReleases));
   const heroPublicArtistSlug = (artistParamKey || publicArtistSlug || '').trim();
   const { displayName: profileDisplayName, isLoading: isProfileLoading } = useSiteArtistDisplayName(
     lang,
@@ -446,6 +454,10 @@ export function Hero() {
       el.replaceChildren();
     };
   }, [artistParamKey]);
+
+  if (hideHeroForArtistOnboarding) {
+    return null;
+  }
 
   return (
     <section

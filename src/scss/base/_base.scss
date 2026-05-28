@@ -149,8 +149,10 @@ body {
     }
 
     #root main {
+      display: block;
       min-block-size: 0;
       overflow: visible;
+      padding-block-end: clamp($ms-3, 10vw, $ms-4);
     }
   }
 
