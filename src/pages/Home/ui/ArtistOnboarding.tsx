@@ -6,7 +6,7 @@ import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import type { DashboardOpenIntent } from '@shared/lib/dashboardOpenIntent';
 import './ArtistOnboarding.scss';
 
-type SecondaryFeatureId = 'article' | 'mixer' | 'profile';
+type SecondaryFeatureId = 'article' | 'mixer';
 
 function UploadIcon() {
   return (
@@ -53,24 +53,11 @@ function FeatureIcon({ id }: { id: SecondaryFeatureId }) {
         </svg>
       );
     case 'mixer':
+    default:
       return (
         <svg viewBox="0 0 24 24" aria-hidden>
           <path
             d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 12h4M18 16h4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'profile':
-    default:
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden>
-          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <path
-            d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.5"
@@ -142,17 +129,6 @@ export function ArtistOnboarding() {
       description:
         copy?.features?.mixer?.description ?? 'Создавайте, миксуйте и делитесь стемами треков.',
       onClick: () => openDashboard('mixer', {}),
-    },
-    {
-      id: 'profile',
-      title: copy?.features?.profile?.title ?? 'Профиль артиста',
-      description:
-        copy?.features?.profile?.description ?? 'Настройте профиль и покажите свою уникальность.',
-      onClick: () =>
-        openDashboard('profile', {
-          openProfileSettingsModal: true,
-          profileSettingsTab: 'profile',
-        }),
     },
   ];
 

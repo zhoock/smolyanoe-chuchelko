@@ -13,6 +13,10 @@
   font-family: var(--base-font-family);
   font-weight: var(--regular, 400);
 
+  &--loading {
+    min-block-size: clamp(480px, 72vh, 640px);
+  }
+
   h1,
   h2,
   p,

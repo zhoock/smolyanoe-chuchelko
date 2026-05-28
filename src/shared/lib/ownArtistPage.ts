@@ -2,9 +2,15 @@ import type { NavigateFunction } from 'react-router-dom';
 
 import type { IAlbums } from '@models';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
+import { isArtistAccount } from '@shared/lib/accountType';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
-import { getAuthHeader } from '@shared/lib/auth';
+import { getAuthHeader, getUser, isEmailVerified, type AuthUser } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
+import { writeCachedOwnPublicSlug } from '@shared/lib/ownPublicSlugCache';
+import {
+  clearFirstArtistOnboardingPending,
+  hasFirstArtistOnboardingPending,
+} from '@shared/lib/authIntent/artistOnboardingRedirect';
 
 export type OwnArtistPageState = {
   publicSlug: string | null;
@@ -14,6 +20,64 @@ export type OwnArtistPageState = {
 
 export function buildOwnArtistPagePath(publicSlug: string): string {
   return `/?artist=${encodeURIComponent(publicSlug.trim())}`;
+}
+
+export function isDefaultHomePath(pathname: string, search: string): boolean {
+  return pathname === '/' && !new URLSearchParams(search).has('artist');
+}
+
+export function isOnOwnArtistOnboardingPage(
+  pathname: string,
+  search: string,
+  publicSlug: string
+): boolean {
+  if (pathname !== '/') return false;
+  const currentArtist = new URLSearchParams(search).get('artist')?.trim().toLowerCase();
+  return currentArtist === publicSlug.trim().toLowerCase();
+}
+
+/** Post-registration flag or unverified artist landing on home without releases. */
+export function shouldTryArtistOnboardingRedirect(
+  user: AuthUser | null | undefined,
+  options: { pendingRegistration: boolean; onDefaultHome: boolean }
+): boolean {
+  if (!user || !isArtistAccount(user)) return false;
+  if (options.pendingRegistration) return true;
+  return options.onDefaultHome && !isEmailVerified(user);
+}
+
+/**
+ * After auth, send new artists without public releases to owner onboarding instead of universe home.
+ */
+export async function resolveArtistOnboardingDestination(
+  lang: string,
+  options: {
+    user: AuthUser | null | undefined;
+    defaultDestination: string;
+    pendingRegistration: boolean;
+  }
+): Promise<string> {
+  const { user, defaultDestination, pendingRegistration } = options;
+  if (!user || !isArtistAccount(user)) return defaultDestination;
+
+  const onDefaultHome = defaultDestination === '/';
+  if (!shouldTryArtistOnboardingRedirect(user, { pendingRegistration, onDefaultHome })) {
+    return defaultDestination;
+  }
+
+  if (pendingRegistration) clearFirstArtistOnboardingPending();
+
+  const state = await fetchOwnArtistPageState(lang);
+  if (state.needsOnboarding && state.publicSlug) {
+    return buildOwnArtistPagePath(state.publicSlug);
+  }
+
+  return defaultDestination;
+}
+
+export function hasPendingArtistOnboarding(user: AuthUser | null | undefined): boolean {
+  const userId = user?.id?.trim();
+  return Boolean(userId && hasFirstArtistOnboardingPending(userId));
 }
 
 function normalizeAlbums(data: unknown): IAlbums[] {
@@ -50,6 +114,9 @@ export async function fetchOwnArtistPageState(lang: string): Promise<OwnArtistPa
       ? profileResult.data?.publicSlug?.trim() || null
       : null;
     if (!publicSlug) return empty;
+
+    const userId = getUser()?.id?.trim();
+    if (userId) writeCachedOwnPublicSlug(userId, publicSlug);
 
     const albumsResponse = await fetchWithAuthSession(
       buildApiUrl('/api/albums', { lang }, { includeArtist: false }),

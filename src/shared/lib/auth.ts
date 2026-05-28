@@ -6,6 +6,7 @@ import { clearPremiumCheckoutAuthIntent } from '@shared/lib/authIntent';
 import { getLang } from '@shared/lib/lang';
 import { getStore } from '@shared/model/appStore';
 import { resetCatalogAfterAuthEnd } from '@shared/lib/resetCatalogAfterAuthEnd';
+import { clearCachedOwnPublicSlug } from '@shared/lib/ownPublicSlugCache';
 
 const TOKEN_STORAGE_KEY = 'auth_token';
 const USER_STORAGE_KEY = 'auth_user';
@@ -214,6 +215,7 @@ export function clearAuth(): void {
   try {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
+    clearCachedOwnPublicSlug();
     clearPremiumCheckoutAuthIntent();
     try {
       resetCatalogAfterAuthEnd(getStore().dispatch);

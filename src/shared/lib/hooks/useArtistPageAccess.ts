@@ -13,7 +13,8 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { buildPublicAlbumsFetchContextKey } from '@shared/lib/publicCatalogCacheKey';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
-import { getAuthHeader, isAuthenticated } from '@shared/lib/auth';
+import { getAuthHeader, getUser, isAuthenticated } from '@shared/lib/auth';
+import { isCachedOwnArtistSlug, writeCachedOwnPublicSlug } from '@shared/lib/ownPublicSlugCache';
 
 function normalizeSlug(slug: string): string {
   return slug.trim().toLowerCase();
@@ -34,8 +35,17 @@ export function useArtistPageAccess(artistSlug: string) {
 
   const desiredFetchKey = useMemo(() => buildPublicAlbumsFetchContextKey(artistSlug), [artistSlug]);
 
-  const [ownerResolved, setOwnerResolved] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
+  const cachedOwner = useMemo(() => {
+    if (!isAuthenticated()) return false;
+    return isCachedOwnArtistSlug(artistSlug, getUser()?.id);
+  }, [artistSlug]);
+
+  const [ownerResolved, setOwnerResolved] = useState(() => {
+    const normalizedArtist = normalizeSlug(artistSlug);
+    if (!normalizedArtist || !isAuthenticated()) return true;
+    return cachedOwner;
+  });
+  const [isOwner, setIsOwner] = useState(cachedOwner);
 
   useEffect(() => {
     const normalizedArtist = normalizeSlug(artistSlug);
@@ -52,6 +62,15 @@ export function useArtistPageAccess(artistSlug: string) {
     }
 
     let cancelled = false;
+    setIsOwner(cachedOwner);
+    setOwnerResolved(cachedOwner);
+
+    if (cachedOwner) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setOwnerResolved(false);
 
     (async () => {
@@ -79,6 +98,8 @@ export function useArtistPageAccess(artistSlug: string) {
           data?: { publicSlug?: string | null };
         };
         const ownSlug = result.success ? normalizeSlug(result.data?.publicSlug ?? '') : '';
+        const userId = getUser()?.id?.trim();
+        if (ownSlug && userId) writeCachedOwnPublicSlug(userId, ownSlug);
         setIsOwner(Boolean(ownSlug) && ownSlug === normalizedArtist);
       } catch {
         if (!cancelled) setIsOwner(false);
@@ -90,7 +111,7 @@ export function useArtistPageAccess(artistSlug: string) {
     return () => {
       cancelled = true;
     };
-  }, [artistSlug, lang]);
+  }, [artistSlug, cachedOwner, lang]);
 
   const albumsPending =
     catalogCacheStale ||
@@ -104,6 +125,8 @@ export function useArtistPageAccess(artistSlug: string) {
   const showOnboarding = !isLoading && !catalogArtistMissing && !hasPublicReleases && isOwner;
   const showNotFound = !isLoading && (catalogArtistMissing || (!hasPublicReleases && !isOwner));
   const showPublished = !isLoading && !catalogArtistMissing && hasPublicReleases;
+  const suppressPublishedArtistChrome =
+    !hasPublicReleases && (isLoading || showOnboarding || showNotFound);
 
   return {
     isLoading,
@@ -112,5 +135,6 @@ export function useArtistPageAccess(artistSlug: string) {
     showOnboarding,
     showNotFound,
     showPublished,
+    suppressPublishedArtistChrome,
   };
 }

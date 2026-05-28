@@ -5,16 +5,21 @@ import { useLang } from '@app/providers/lang';
 import { isArtistAccount } from '@shared/lib/accountType';
 import { isAuthenticated, AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
-import { buildOwnArtistPagePath, fetchOwnArtistPageState } from '@shared/lib/ownArtistPage';
+import {
+  buildOwnArtistPagePath,
+  fetchOwnArtistPageState,
+  hasPendingArtistOnboarding,
+  isDefaultHomePath,
+  isOnOwnArtistOnboardingPage,
+  shouldTryArtistOnboardingRedirect,
+} from '@shared/lib/ownArtistPage';
 
 import { shouldResumePremiumCheckoutAfterAuth } from './premiumCheckoutIntent';
-import {
-  clearFirstArtistOnboardingPending,
-  hasFirstArtistOnboardingPending,
-} from './artistOnboardingRedirect';
+import { clearFirstArtistOnboardingPending } from './artistOnboardingRedirect';
 
 /**
- * After registration, redirects once to owner onboarding when the artist page has no public releases.
+ * Redirects artists without public releases to owner onboarding after registration
+ * or when an unverified artist lands on universe home after login.
  */
 export function ArtistOnboardingRedirectController() {
   const location = useLocation();
@@ -35,22 +40,23 @@ export function ArtistOnboardingRedirectController() {
     if (location.pathname.startsWith('/pay/')) return;
     if (redirectedForSessionRef.current || redirectInFlightRef.current) return;
     if (shouldResumePremiumCheckoutAfterAuth()) return;
-    if (!hasFirstArtistOnboardingPending(viewerId)) return;
+
+    const pendingRegistration = hasPendingArtistOnboarding(viewer);
+    const onDefaultHome = isDefaultHomePath(location.pathname, location.search);
+    if (!shouldTryArtistOnboardingRedirect(viewer, { pendingRegistration, onDefaultHome })) {
+      return;
+    }
 
     redirectInFlightRef.current = true;
 
     try {
       const state = await fetchOwnArtistPageState(lang);
-      clearFirstArtistOnboardingPending();
+      if (pendingRegistration) clearFirstArtistOnboardingPending();
 
       if (!state.needsOnboarding || !state.publicSlug) return;
 
       const targetPath = buildOwnArtistPagePath(state.publicSlug);
-      const currentArtist = new URLSearchParams(location.search)
-        .get('artist')
-        ?.trim()
-        .toLowerCase();
-      if (location.pathname === '/' && currentArtist === state.publicSlug.trim().toLowerCase()) {
+      if (isOnOwnArtistOnboardingPage(location.pathname, location.search, state.publicSlug)) {
         return;
       }
 

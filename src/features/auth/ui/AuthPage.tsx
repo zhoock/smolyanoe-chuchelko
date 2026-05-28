@@ -10,6 +10,11 @@ import { isArtistAccount } from '@shared/lib/accountType';
 import { markFirstArtistOnboardingPending } from '@shared/lib/authIntent';
 import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
 import {
+  hasPendingArtistOnboarding,
+  resolveArtistOnboardingDestination,
+} from '@shared/lib/ownArtistPage';
+import { useLang } from '@app/providers/lang';
+import {
   clearAccountDeletedSession,
   clearAccountDeletedSkipReturn,
   shouldLeaveDeletedArtistPage,
@@ -57,6 +62,7 @@ type RegisterStep = 'role' | 'form';
 export function AuthPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const { lang } = useLang();
   const user = useAuthSessionUser();
   const [mode, setMode] = useState<AuthMode>(() => {
     const m = searchParams.get('mode');
@@ -90,7 +96,7 @@ export function AuthPage() {
     (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation
   );
 
-  const finishPostAuthNavigation = useCallback(() => {
+  const finishPostAuthNavigation = useCallback(async () => {
     clearAccountDeletedSkipReturn();
     if (hasOverlayBackground) {
       // Overlay: history back вместо replace navigate(postAuthPath) — не перезапускаем
@@ -98,8 +104,15 @@ export function AuthPage() {
       navigate(-1);
       return;
     }
-    navigate(postAuthPath, { replace: true });
-  }, [hasOverlayBackground, navigate, postAuthPath]);
+
+    const currentUser = getUser();
+    const destination = await resolveArtistOnboardingDestination(lang, {
+      user: currentUser,
+      defaultDestination: postAuthPath,
+      pendingRegistration: hasPendingArtistOnboarding(currentUser),
+    });
+    navigate(destination, { replace: true });
+  }, [hasOverlayBackground, lang, navigate, postAuthPath]);
 
   useEffect(() => {
     try {
@@ -127,14 +140,9 @@ export function AuthPage() {
 
   useEffect(() => {
     if (isAuthenticated() && !showVerifyEmailModal && !needsVerification) {
-      clearAccountDeletedSkipReturn();
-      if (hasOverlayBackground) {
-        navigate(-1);
-        return;
-      }
-      navigate(postAuthPath, { replace: true });
+      void finishPostAuthNavigation();
     }
-  }, [navigate, showVerifyEmailModal, needsVerification, postAuthPath, hasOverlayBackground]);
+  }, [finishPostAuthNavigation, showVerifyEmailModal, needsVerification]);
 
   // Что показано на экране СЕЙЧАС: auth-form vs только VerifyEmailModal.
   // Для скрытия мы используем auth-логику ниже + early return — но scroll-lock

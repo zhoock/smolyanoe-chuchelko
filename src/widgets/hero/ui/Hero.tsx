@@ -115,11 +115,7 @@ export function Hero() {
   const artistParamKey = heroUrlParams.get('artist')?.trim() ?? '';
   const artistPageAccess = useArtistPageAccess(artistParamKey);
   const hideHeroForArtistOnboarding =
-    hasArtistParam &&
-    (artistPageAccess.showOnboarding ||
-      (artistPageAccess.isLoading &&
-        artistPageAccess.isOwner &&
-        !artistPageAccess.hasPublicReleases));
+    hasArtistParam && artistPageAccess.suppressPublishedArtistChrome;
   const heroPublicArtistSlug = (artistParamKey || publicArtistSlug || '').trim();
   const { displayName: profileDisplayName, isLoading: isProfileLoading } = useSiteArtistDisplayName(
     lang,
