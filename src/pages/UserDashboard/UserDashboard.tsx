@@ -50,9 +50,13 @@ import { clearAccountDeletedSkipReturn } from '@shared/lib/accountDeletedSession
 import { clearDashboardModalBackground } from '@shared/lib/dashboardModalBackground';
 import { readDashboardOpenIntent, stripDashboardOpenIntent } from '@shared/lib/dashboardOpenIntent';
 import { EmailVerificationOnboarding } from '@shared/lib/emailVerification';
+import { AlbumPublishedToast } from '@shared/ui/albumPublishedToast/AlbumPublishedToast';
+import { AlbumCreatedToast } from '@shared/ui/albumCreatedToast/AlbumCreatedToast';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
+import { isAlbumDraft, isAlbumReadyToPublish } from '@entities/album/lib/isAlbumReadyToPublish';
+import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
 import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
@@ -1088,6 +1092,10 @@ function UserDashboard() {
   const avatarMenuContainerRef = useRef<HTMLDivElement | null>(null);
   const [profilePublicSlug, setProfilePublicSlug] = useState<string | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<string | null>(null);
+  const [scrollToAlbumUploadId, setScrollToAlbumUploadId] = useState<string | null>(null);
+  const [publishingAlbumId, setPublishingAlbumId] = useState<string | null>(null);
+  const [publishedToastTrigger, setPublishedToastTrigger] = useState(0);
+  const trackUploadSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [articleAccessMenuArticleId, setArticleAccessMenuArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
@@ -1349,6 +1357,20 @@ function UserDashboard() {
     editTrackModal?.trackId,
     editTrackModal?.trackTitle,
   ]);
+
+  useLayoutEffect(() => {
+    if (!scrollToAlbumUploadId || expandedAlbumId !== scrollToAlbumUploadId) {
+      return;
+    }
+
+    const uploadSection = trackUploadSectionRefs.current[scrollToAlbumUploadId];
+    if (!uploadSection) {
+      return;
+    }
+
+    uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setScrollToAlbumUploadId(null);
+  }, [scrollToAlbumUploadId, expandedAlbumId, albumsData]);
 
   // Функции для загрузки обложки статьи
   const handleArticleCoverDrag = (articleId: string, e: React.DragEvent) => {
@@ -2176,6 +2198,67 @@ function UserDashboard() {
     });
   };
 
+  const handlePublishAlbum = async (albumId: string) => {
+    const albumFromStore = albumsFromStore.find((a) => a.albumId === albumId);
+    if (!albumFromStore || !isAlbumReadyToPublish(albumFromStore)) {
+      return;
+    }
+
+    setPublishingAlbumId(albumId);
+
+    try {
+      const token = getToken();
+      if (!token) {
+        setAlertModal({
+          isOpen: true,
+          title: ui?.dashboard?.error ?? 'Error',
+          message:
+            ui?.dashboard?.errorNotAuthorized ?? 'Error: you are not authorized. Please log in.',
+          variant: 'error',
+        });
+        return;
+      }
+
+      const response = await fetchWithAuthSession('/api/albums', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          albumId,
+          lang,
+          isPublic: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          (errorData as { error?: string })?.error || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
+
+      queueAlbumPublishedToast();
+      setPublishedToastTrigger((value) => value + 1);
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        title: ui?.dashboard?.error ?? 'Error',
+        message:
+          ui?.dashboard?.publishAlbumFailed ??
+          (lang !== 'ru'
+            ? `Could not publish album: ${error instanceof Error ? error.message : 'Unknown error'}`
+            : `Не удалось опубликовать альбом: ${error instanceof Error ? error.message : 'Unknown error'}`),
+        variant: 'error',
+      });
+    } finally {
+      setPublishingAlbumId(null);
+    }
+  };
+
   const handleDeleteArticle = async (article: IArticles) => {
     // Показываем модальное окно подтверждения
     setConfirmationModal({
@@ -2894,6 +2977,8 @@ function UserDashboard() {
       </Helmet>
 
       <Popup isActive={true} onClose={closeDashboard}>
+        <AlbumPublishedToast triggerKey={publishedToastTrigger} />
+        <AlbumCreatedToast triggerKey={editAlbumModal} />
         <div className="user-dashboard">
           {/* Main card container */}
           <div className="user-dashboard__card">
@@ -3025,6 +3110,16 @@ function UserDashboard() {
                                 <div className="user-dashboard__albums-list">
                                   {albumsData.map((album, index) => {
                                     const isExpanded = expandedAlbumId === album.id;
+                                    const albumFromStore = albumsFromStore.find(
+                                      (a) => a.albumId === album.id || a.albumId === album.albumId
+                                    );
+                                    const isDraftAlbum =
+                                      album.isPublic === false ||
+                                      (albumFromStore ? isAlbumDraft(albumFromStore) : false);
+                                    const canPublishAlbum = albumFromStore
+                                      ? isAlbumReadyToPublish(albumFromStore)
+                                      : false;
+                                    const isPublishingAlbum = publishingAlbumId === album.id;
                                     return (
                                       <React.Fragment key={album.id}>
                                         <div
@@ -3103,8 +3198,29 @@ function UserDashboard() {
                                               {ui?.dashboard?.editAlbum ?? 'Edit Album'}
                                             </button>
 
+                                            {isDraftAlbum ? (
+                                              <div
+                                                className="user-dashboard__album-draft-notice"
+                                                role="note"
+                                              >
+                                                <p className="user-dashboard__album-draft-notice-title">
+                                                  {ui?.dashboard?.albumDraftNoticeTitle ??
+                                                    (lang !== 'ru' ? 'Draft' : 'Черновик')}
+                                                </p>
+                                                <p className="user-dashboard__album-draft-notice-text">
+                                                  {ui?.dashboard?.albumDraftNoticeBody ??
+                                                    (lang !== 'ru'
+                                                      ? 'The album has been created but is not published yet. Upload at least one track to complete publication.'
+                                                      : 'Альбом создан, но ещё не опубликован. Загрузите хотя бы один трек для завершения публикации.')}
+                                                </p>
+                                              </div>
+                                            ) : null}
+
                                             {/* Track upload section */}
                                             <div
+                                              ref={(el) => {
+                                                trackUploadSectionRefs.current[album.id] = el;
+                                              }}
                                               className="user-dashboard__track-upload"
                                               onDrop={(e) => {
                                                 e.preventDefault();
@@ -3290,8 +3406,8 @@ function UserDashboard() {
                                               </div>
                                             </div>
 
-                                            {/* Delete album button - после блока Lyrics, внизу вправо */}
-                                            <div className="user-dashboard__delete-album-container">
+                                            {/* Delete album / Publish album actions */}
+                                            <div className="user-dashboard__album-footer-actions">
                                               <button
                                                 type="button"
                                                 className="user-dashboard__delete-album-button"
@@ -3306,6 +3422,23 @@ function UserDashboard() {
                                               >
                                                 {ui?.dashboard?.deleteAlbum ?? 'Delete album'}
                                               </button>
+                                              {canPublishAlbum ? (
+                                                <button
+                                                  type="button"
+                                                  className="user-dashboard__publish-album-button"
+                                                  disabled={isPublishingAlbum}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    void handlePublishAlbum(album.id);
+                                                  }}
+                                                >
+                                                  {isPublishingAlbum
+                                                    ? (ui?.dashboard?.editAlbumModal?.buttons
+                                                        ?.saving ?? 'Saving...')
+                                                    : (ui?.dashboard?.editAlbumModal?.buttons
+                                                        ?.publishAlbum ?? 'Publish album')}
+                                                </button>
+                                              ) : null}
                                             </div>
                                           </div>
                                         )}
@@ -4126,11 +4259,13 @@ function UserDashboard() {
           isOpen={editAlbumModal.isOpen}
           albumId={editAlbumModal.albumId}
           onClose={() => setEditAlbumModal(null)}
-          onNext={async (formData, updatedAlbum) => {
+          onNext={async (formData, updatedAlbum, meta) => {
             if (!editAlbumModal) {
               setEditAlbumModal(null);
               return;
             }
+
+            const searchAlbumId = updatedAlbum?.albumId || editAlbumModal.albumId;
 
             // Обновляем Redux store из БД
             try {
@@ -4150,7 +4285,6 @@ function UserDashboard() {
 
               // Проверяем, что обновленный альбом действительно пришел с новыми данными
               // Для новых альбомов используем albumId из updatedAlbum, для существующих - из editAlbumModal
-              const searchAlbumId = updatedAlbum?.albumId || editAlbumModal.albumId;
               if (result && result.length > 0 && searchAlbumId) {
                 const foundAlbum = result.find((a: IAlbums) => a.albumId === searchAlbumId);
                 if (foundAlbum) {
@@ -4209,6 +4343,14 @@ function UserDashboard() {
               // Небольшая задержка для гарантии обновления UI
               await new Promise((resolve) => setTimeout(resolve, 200));
               setEditAlbumModal(null);
+
+              if (meta?.createdNewAlbum && searchAlbumId) {
+                if (activeTab !== 'albums') {
+                  goDashboard('/dashboard-new/albums');
+                }
+                setExpandedAlbumId(searchAlbumId);
+                setScrollToAlbumUploadId(searchAlbumId);
+              }
             } catch (error: any) {
               // ConditionError - это нормально, condition отменил запрос
               if (error?.name === 'ConditionError') {

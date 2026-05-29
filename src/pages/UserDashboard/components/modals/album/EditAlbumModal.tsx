@@ -7,6 +7,7 @@ import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { selectDashboardAlbumsData, fetchAlbums } from '@entities/album';
+import { queueAlbumCreatedToast } from '@shared/lib/albumCreatedToast';
 import { useLang } from '@app/providers/lang';
 import { getToken, getUser } from '@shared/lib/auth';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
@@ -108,6 +109,7 @@ export function EditAlbumModal({
 
   // Получаем альбомы для текущего языка сайта
   const albumsFromStore = useAppSelector(selectDashboardAlbumsData);
+  const isNewAlbumWizard = !albumId;
 
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);
@@ -2314,6 +2316,11 @@ export function EditAlbumModal({
     };
 
     const albumTitle = (finalFormData.title || '').trim() || (originalAlbum?.album || '').trim();
+    const resolvedIsPublic = isNewAlbumWizard
+      ? false
+      : originalAlbum?.isPublic === false
+        ? false
+        : finalFormData.visibleOnAlbumPage;
     const fullName =
       effectiveArtistName && albumTitle ? `${effectiveArtistName} — ${albumTitle}` : albumTitle;
 
@@ -2349,7 +2356,7 @@ export function EditAlbumModal({
       // Полный объект кнопок из формы — иначе merge со старым `buttons` не удаляет снятые ссылки.
       buttons,
       lang: normalizedLang,
-      isPublic: finalFormData.visibleOnAlbumPage,
+      isPublic: resolvedIsPublic,
       ...(newCover ? { cover: newCover } : {}),
     };
 
@@ -2485,8 +2492,14 @@ export function EditAlbumModal({
         albumTitleAtOpenRef.current = (updatedAlbum.album ?? formData.title ?? '').trim();
       }
 
+      if (isNewAlbumWizard && method === 'POST') {
+        queueAlbumCreatedToast();
+      }
+
       if (onNext) {
-        await onNext(formData, updatedAlbum);
+        await onNext(formData, updatedAlbum, {
+          createdNewAlbum: isNewAlbumWizard && method === 'POST',
+        });
       }
 
       // Небольшая задержка перед закрытием модалки для гарантии обновления UI
@@ -3287,6 +3300,8 @@ export function EditAlbumModal({
                       ) : albumId &&
                         albumsFromStore?.some((a: IAlbums) => a.albumId === albumId) ? (
                         (ui?.dashboard?.editAlbumModal?.buttons?.saveChanges ?? 'Save changes')
+                      ) : isNewAlbumWizard ? (
+                        (ui?.dashboard?.editAlbumModal?.buttons?.createAlbum ?? 'Create album')
                       ) : (
                         (ui?.dashboard?.editAlbumModal?.buttons?.publishAlbum ?? 'Publish album')
                       )}

@@ -5,7 +5,11 @@ export interface EditAlbumModalProps {
   isOpen: boolean;
   albumId?: string;
   onClose: () => void;
-  onNext?: (data: AlbumFormData, updatedAlbum?: IAlbums) => void;
+  onNext?: (
+    data: AlbumFormData,
+    updatedAlbum?: IAlbums,
+    meta?: { createdNewAlbum?: boolean }
+  ) => void;
 }
 
 export interface BandMember {

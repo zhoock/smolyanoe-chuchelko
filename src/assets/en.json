@@ -371,6 +371,13 @@
       "deleteAccountFailed": "Could not delete account. Please try again.",
       "deleteAccountSuccessToast": "Account deleted",
       "deleteAccountSuccessToastDescription": "Account data is no longer available.",
+      "albumPublishedSuccessToast": "Album published",
+      "albumPublishedSuccessToastDescription": "Your artist page is now available in the catalog.",
+      "albumCreatedSuccessToast": "Album created",
+      "albumCreatedSuccessToastDescription": "Upload tracks to complete publication.",
+      "albumDraftNoticeTitle": "Draft",
+      "albumDraftNoticeBody": "The album has been created but is not published yet. Upload at least one track to complete publication.",
+      "publishAlbumFailed": "Could not publish album. Please try again.",
       "logout": "Logout",
       "profileFields": {
         "name": "Name",
@@ -661,6 +668,7 @@
           "next": "Next",
           "previous": "Previous",
           "saveChanges": "Save changes",
+          "createAlbum": "Create album",
           "publishAlbum": "Publish album",
           "saving": "Saving...",
           "add": "Add"

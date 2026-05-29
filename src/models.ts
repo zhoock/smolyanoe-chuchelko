@@ -521,6 +521,13 @@ export interface IInterface {
     deleteAccountFailed?: string;
     deleteAccountSuccessToast?: string;
     deleteAccountSuccessToastDescription?: string;
+    albumPublishedSuccessToast?: string;
+    albumPublishedSuccessToastDescription?: string;
+    albumCreatedSuccessToast?: string;
+    albumCreatedSuccessToastDescription?: string;
+    albumDraftNoticeTitle?: string;
+    albumDraftNoticeBody?: string;
+    publishAlbumFailed?: string;
     logout: string;
     profileFields: {
       name: string;
@@ -826,6 +833,7 @@ export interface IInterface {
         next: string;
         previous: string;
         saveChanges: string;
+        createAlbum: string;
         publishAlbum: string;
         saving: string;
         add: string;

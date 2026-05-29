@@ -371,6 +371,13 @@
       "deleteAccountFailed": "Не удалось удалить аккаунт. Попробуйте снова.",
       "deleteAccountSuccessToast": "Аккаунт удалён",
       "deleteAccountSuccessToastDescription": "Данные аккаунта больше недоступны.",
+      "albumPublishedSuccessToast": "Альбом опубликован",
+      "albumPublishedSuccessToastDescription": "Ваша страница артиста теперь доступна в каталоге.",
+      "albumCreatedSuccessToast": "Альбом создан",
+      "albumCreatedSuccessToastDescription": "Загрузите треки для завершения публикации.",
+      "albumDraftNoticeTitle": "Черновик",
+      "albumDraftNoticeBody": "Альбом создан, но ещё не опубликован. Загрузите хотя бы один трек для завершения публикации.",
+      "publishAlbumFailed": "Не удалось опубликовать альбом. Попробуйте снова.",
       "logout": "Выйти",
       "profileFields": {
         "name": "Имя",
@@ -661,6 +668,7 @@
           "next": "Далее",
           "previous": "Назад",
           "saveChanges": "Сохранить изменения",
+          "createAlbum": "Создать альбом",
           "publishAlbum": "Опубликовать альбом",
           "saving": "Сохранение...",
           "add": "Добавить"
