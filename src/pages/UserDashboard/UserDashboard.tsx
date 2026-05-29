@@ -55,7 +55,9 @@ import { AlbumCreatedToast } from '@shared/ui/albumCreatedToast/AlbumCreatedToas
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
-import { isAlbumDraft, isAlbumReadyToPublish } from '@entities/album/lib/isAlbumReadyToPublish';
+import { isAlbumReadyToPublish } from '@entities/album/lib/isAlbumReadyToPublish';
+import { getAlbumLifecycleStatus } from '@entities/album/lib/albumLifecycleStatus';
+import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
 import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
@@ -2149,9 +2151,13 @@ function UserDashboard() {
           if (a.albumId !== albumId && a.id !== albumId) {
             return a;
           }
+          const tracks = a.tracks.filter(
+            (t) => String(t.id) !== String(trackId) && t.id !== trackId
+          );
           return {
             ...a,
-            tracks: a.tracks.filter((t) => String(t.id) !== String(trackId) && t.id !== trackId),
+            tracks,
+            ...(tracks.length === 0 ? { isPublic: false } : {}),
           };
         })
       );
@@ -3113,13 +3119,25 @@ function UserDashboard() {
                                     const albumFromStore = albumsFromStore.find(
                                       (a) => a.albumId === album.id || a.albumId === album.albumId
                                     );
-                                    const isDraftAlbum =
-                                      album.isPublic === false ||
-                                      (albumFromStore ? isAlbumDraft(albumFromStore) : false);
-                                    const canPublishAlbum = albumFromStore
-                                      ? isAlbumReadyToPublish(albumFromStore)
-                                      : false;
+                                    const lifecycleStatus = albumFromStore
+                                      ? getAlbumLifecycleStatus({
+                                          ...albumFromStore,
+                                          tracks:
+                                            album.tracks.length === 0
+                                              ? []
+                                              : (albumFromStore.tracks ?? []).slice(
+                                                  0,
+                                                  album.tracks.length
+                                                ),
+                                        })
+                                      : album.isPublic === false || album.tracks.length === 0
+                                        ? 'draft'
+                                        : 'published';
+                                    const canPublishAlbum =
+                                      lifecycleStatus === 'ready-to-publish' &&
+                                      Boolean(albumFromStore);
                                     const isPublishingAlbum = publishingAlbumId === album.id;
+                                    const showPublishControls = lifecycleStatus !== 'published';
                                     return (
                                       <React.Fragment key={album.id}>
                                         <div
@@ -3155,8 +3173,15 @@ function UserDashboard() {
                                             )}
                                           </div>
                                           <div className="user-dashboard__album-info">
-                                            <div className="user-dashboard__album-title">
-                                              {album.title}
+                                            <div className="user-dashboard__album-title-row">
+                                              <div className="user-dashboard__album-title">
+                                                {album.title}
+                                              </div>
+                                              <AlbumLifecycleBadge
+                                                status={lifecycleStatus}
+                                                ui={ui ?? undefined}
+                                                lang={lang}
+                                              />
                                             </div>
                                             {album.releaseDate ? (
                                               <div className="user-dashboard__album-date">
@@ -3198,22 +3223,13 @@ function UserDashboard() {
                                               {ui?.dashboard?.editAlbum ?? 'Edit Album'}
                                             </button>
 
-                                            {isDraftAlbum ? (
-                                              <div
-                                                className="user-dashboard__album-draft-notice"
-                                                role="note"
-                                              >
-                                                <p className="user-dashboard__album-draft-notice-title">
-                                                  {ui?.dashboard?.albumDraftNoticeTitle ??
-                                                    (lang !== 'ru' ? 'Draft' : 'Черновик')}
-                                                </p>
-                                                <p className="user-dashboard__album-draft-notice-text">
-                                                  {ui?.dashboard?.albumDraftNoticeBody ??
-                                                    (lang !== 'ru'
-                                                      ? 'The album has been created but is not published yet. Upload at least one track to complete publication.'
-                                                      : 'Альбом создан, но ещё не опубликован. Загрузите хотя бы один трек для завершения публикации.')}
-                                                </p>
-                                              </div>
+                                            {lifecycleStatus === 'draft' ? (
+                                              <p className="user-dashboard__album-upload-hint">
+                                                {ui?.dashboard?.albumPublishHintNeedsTracks ??
+                                                  (lang !== 'ru'
+                                                    ? 'Upload at least one track to publish this album.'
+                                                    : 'Загрузите хотя бы один трек для публикации альбома.')}
+                                              </p>
                                             ) : null}
 
                                             {/* Track upload section */}
@@ -3406,7 +3422,7 @@ function UserDashboard() {
                                               </div>
                                             </div>
 
-                                            {/* Delete album / Publish album actions */}
+                                            {/* Delete album / Upload / Publish actions */}
                                             <div className="user-dashboard__album-footer-actions">
                                               <button
                                                 type="button"
@@ -3422,23 +3438,55 @@ function UserDashboard() {
                                               >
                                                 {ui?.dashboard?.deleteAlbum ?? 'Delete album'}
                                               </button>
-                                              {canPublishAlbum ? (
+                                              <div className="user-dashboard__album-footer-actions-right">
                                                 <button
                                                   type="button"
-                                                  className="user-dashboard__publish-album-button"
-                                                  disabled={isPublishingAlbum}
+                                                  className="user-dashboard__album-footer-upload-button"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    void handlePublishAlbum(album.id);
+                                                    setEditAlbumModal({ isOpen: true });
                                                   }}
                                                 >
-                                                  {isPublishingAlbum
-                                                    ? (ui?.dashboard?.editAlbumModal?.buttons
-                                                        ?.saving ?? 'Saving...')
-                                                    : (ui?.dashboard?.editAlbumModal?.buttons
-                                                        ?.publishAlbum ?? 'Publish album')}
+                                                  {ui?.dashboard?.uploadNewAlbum ??
+                                                    'Upload New Album'}
                                                 </button>
-                                              ) : null}
+                                                {showPublishControls ? (
+                                                  <div className="user-dashboard__publish-album-wrap">
+                                                    <button
+                                                      type="button"
+                                                      className="user-dashboard__publish-album-button"
+                                                      disabled={
+                                                        !canPublishAlbum || isPublishingAlbum
+                                                      }
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!canPublishAlbum || isPublishingAlbum) {
+                                                          return;
+                                                        }
+                                                        void handlePublishAlbum(album.id);
+                                                      }}
+                                                    >
+                                                      {isPublishingAlbum
+                                                        ? (ui?.dashboard?.editAlbumModal?.buttons
+                                                            ?.saving ?? 'Saving...')
+                                                        : (ui?.dashboard?.editAlbumModal?.buttons
+                                                            ?.publishAlbum ?? 'Publish album')}
+                                                    </button>
+                                                    <p className="user-dashboard__publish-album-hint">
+                                                      {canPublishAlbum
+                                                        ? (ui?.dashboard?.albumPublishHintReady ??
+                                                          (lang !== 'ru'
+                                                            ? 'This album is ready for publication.'
+                                                            : 'Альбом готов к публикации.'))
+                                                        : (ui?.dashboard
+                                                            ?.albumPublishHintNeedsTracks ??
+                                                          (lang !== 'ru'
+                                                            ? 'Upload at least one track to publish this album.'
+                                                            : 'Загрузите хотя бы один трек для публикации альбома.'))}
+                                                    </p>
+                                                  </div>
+                                                ) : null}
+                                              </div>
                                             </div>
                                           </div>
                                         )}

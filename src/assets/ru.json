@@ -375,8 +375,11 @@
       "albumPublishedSuccessToastDescription": "Ваша страница артиста теперь доступна в каталоге.",
       "albumCreatedSuccessToast": "Альбом создан",
       "albumCreatedSuccessToastDescription": "Загрузите треки для завершения публикации.",
-      "albumDraftNoticeTitle": "Черновик",
-      "albumDraftNoticeBody": "Альбом создан, но ещё не опубликован. Загрузите хотя бы один трек для завершения публикации.",
+      "albumStatusDraft": "Черновик",
+      "albumStatusReadyToPublish": "Готов к публикации",
+      "albumStatusPublished": "Опубликован",
+      "albumPublishHintNeedsTracks": "Загрузите хотя бы один трек для публикации альбома.",
+      "albumPublishHintReady": "Альбом готов к публикации.",
       "publishAlbumFailed": "Не удалось опубликовать альбом. Попробуйте снова.",
       "logout": "Выйти",
       "profileFields": {

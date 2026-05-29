@@ -375,8 +375,11 @@
       "albumPublishedSuccessToastDescription": "Your artist page is now available in the catalog.",
       "albumCreatedSuccessToast": "Album created",
       "albumCreatedSuccessToastDescription": "Upload tracks to complete publication.",
-      "albumDraftNoticeTitle": "Draft",
-      "albumDraftNoticeBody": "The album has been created but is not published yet. Upload at least one track to complete publication.",
+      "albumStatusDraft": "Draft",
+      "albumStatusReadyToPublish": "Ready to Publish",
+      "albumStatusPublished": "Published",
+      "albumPublishHintNeedsTracks": "Upload at least one track to publish this album.",
+      "albumPublishHintReady": "This album is ready for publication.",
       "publishAlbumFailed": "Could not publish album. Please try again.",
       "logout": "Logout",
       "profileFields": {

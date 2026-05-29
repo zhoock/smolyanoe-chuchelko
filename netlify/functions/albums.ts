@@ -2013,6 +2013,24 @@ export const handler: Handler = async (
             trackRowLang: trackRow.lang,
           });
 
+          const remainingTracksResult = await query<{ count: string }>(
+            `SELECT COUNT(*)::text AS count
+             FROM tracks t
+             INNER JOIN albums a ON a.id = t.album_id
+             WHERE a.user_id = $1 AND a.album_id = $2`,
+            [userId, albumIdFromQuery]
+          );
+          const remainingTrackCount = Number(remainingTracksResult.rows[0]?.count ?? 0);
+
+          if (remainingTrackCount === 0) {
+            await syncSharedAlbumMetadataAcrossLocales(userId, albumIdFromQuery, {
+              isPublic: false,
+            });
+            console.log('📋 DELETE /api/albums - Album reverted to draft (no tracks left):', {
+              albumId: albumIdFromQuery,
+            });
+          }
+
           return {
             statusCode: 200,
             headers: CORS_HEADERS,

@@ -525,8 +525,11 @@ export interface IInterface {
     albumPublishedSuccessToastDescription?: string;
     albumCreatedSuccessToast?: string;
     albumCreatedSuccessToastDescription?: string;
-    albumDraftNoticeTitle?: string;
-    albumDraftNoticeBody?: string;
+    albumStatusDraft?: string;
+    albumStatusReadyToPublish?: string;
+    albumStatusPublished?: string;
+    albumPublishHintNeedsTracks?: string;
+    albumPublishHintReady?: string;
     publishAlbumFailed?: string;
     logout: string;
     profileFields: {

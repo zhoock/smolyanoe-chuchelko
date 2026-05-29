@@ -396,6 +396,7 @@ dialog {
     }
 
     &__album-title {
+      min-width: 0;
       color: var(--dashboard-text-primary);
     }
 
@@ -430,40 +431,98 @@ dialog {
       padding-top: var(--ms-0);
     }
 
+    &__album-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.5rem;
+    }
+
+    &__album-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.1rem 0.45rem;
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+      line-height: 1.3;
+      white-space: nowrap;
+      border: 1px solid rgb(255 255 255 / 10%);
+      border-radius: 999px;
+    }
+
+    &__album-status-badge-dot {
+      background: currentcolor;
+      border-radius: 50%;
+      inline-size: 0.4rem;
+      block-size: 0.4rem;
+    }
+
+    &__album-status-badge--draft {
+      color: var(--dark-greenish-yellow);
+      border-color: rgb(var(--dark-greenish-yellow-rgb) / 45%);
+    }
+
+    &__album-status-badge--ready {
+      color: #7eb6ff;
+      border-color: rgb(126 182 255 / 45%);
+    }
+
+    &__album-status-badge--published {
+      color: #7dcea0;
+      border-color: rgb(125 206 160 / 45%);
+    }
+
+    &__album-upload-hint {
+      margin: 0 0 var(--ms-01);
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+      line-height: 1.45;
+    }
+
     &__album-footer-actions {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
       gap: var(--ms-0);
       margin-top: var(--ms-0);
       padding-top: var(--ms-0);
     }
 
+    &__album-footer-actions-right {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--ms-0);
+      margin-inline-start: auto;
+    }
+
+    &__album-footer-upload-button {
+      @include dashboard-btn-secondary($margin: 0, $padding: var(--ms-01) var(--ms-1));
+    }
+
+    &__publish-album-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+    }
+
     &__publish-album-button {
       @include dashboard-btn-primary($margin: 0, $padding: var(--ms-01) var(--ms-1));
+
+      &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
     }
 
-    &__album-draft-notice {
-      margin-block-end: var(--ms-0);
-      padding: var(--ms-01) var(--ms-0);
-      background: rgb(var(--dark-greenish-yellow-rgb) / 8%);
-      border: 1px solid rgb(var(--dark-greenish-yellow-rgb) / 45%);
-      border-radius: var(--ms-01);
-    }
-
-    &__album-draft-notice-title {
-      margin: 0 0 0.25rem;
-      color: var(--dashboard-text-primary);
-      font-size: var(--dashboard-font-size);
-      font-weight: var(--semibold);
-      line-height: 1.35;
-    }
-
-    &__album-draft-notice-text {
+    &__publish-album-hint {
       margin: 0;
+      max-width: 14rem;
       color: var(--dashboard-text-secondary);
       font-size: var(--ms-01);
-      line-height: 1.5;
+      line-height: 1.35;
+      text-align: end;
     }
 
     &__delete-album-button {
