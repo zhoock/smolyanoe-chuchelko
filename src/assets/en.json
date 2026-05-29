@@ -181,23 +181,24 @@
     "artistOnboarding": {
       "welcomeGreeting": "Welcome, {name}",
       "heroHeadline": "Your creativity starts",
-      "heroHeadlineAccent": "here.",
-      "heroSubtext": "Upload your first release to appear in the catalog and share your music with listeners.",
-      "primaryCta": "Upload your first release",
-      "catalogHint": "You will appear in the catalog after publishing a release",
-      "secondaryHeading": "Also available to you",
+      "heroHeadlineAccent": "here",
+      "heroSubtext": "Upload your first album to appear in the catalog and share your music with listeners.",
+      "primaryCta": "Upload album",
+      "catalogHint": "You will appear in the catalog after publishing an album",
+      "secondaryHeading": "After publishing your first album, you'll have access to:",
+      "secondarySubtext": "Profile, articles, and the stem mixer will be available to listeners only after you publish your first album.",
       "features": {
+        "profile": {
+          "title": "Profile",
+          "description": "Create your artist page. Add a bio, photo, and social links."
+        },
         "article": {
           "title": "Articles",
-          "description": "Tell stories and share thoughts and experience."
+          "description": "Tell your story. Write articles and notes for future listeners."
         },
         "mixer": {
           "title": "Stem mixer",
-          "description": "Create, mix, and share track stems."
-        },
-        "profile": {
-          "title": "Artist profile",
-          "description": "Customize your profile and show what makes you unique."
+          "description": "Work with stems from your albums. Upload stems and share them with your audience."
         }
       }
     },

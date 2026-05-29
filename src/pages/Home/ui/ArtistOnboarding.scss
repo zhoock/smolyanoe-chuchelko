@@ -7,6 +7,7 @@
   --onboarding-muted: rgb(245 245 244 / 58%);
   --onboarding-surface: rgb(255 255 255 / 4%);
   --onboarding-surface-border: rgb(255 255 255 / 9%);
+  --onboarding-card-bg: rgb(255 255 255 / 3%);
   --onboarding-hero-image: url('/images/onboarding-hero.png');
 
   background: #050505;
@@ -144,6 +145,7 @@
     color: var(--onboarding-muted);
     font-size: clamp(1rem, 2.2vw, 1.125rem);
     line-height: 1.65;
+    text-wrap: pretty;
   }
 
   &__cta {
@@ -180,21 +182,6 @@
     }
   }
 
-  &__catalog-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: $ms-02;
-    margin: 0;
-    color: var(--onboarding-muted);
-    font-size: 0.8125rem;
-    line-height: 1.45;
-
-    svg {
-      flex-shrink: 0;
-      opacity: 0.7;
-    }
-  }
-
   @include breakpoint(desktops) {
     min-block-size: clamp(440px, 54vh, 560px);
 
@@ -209,23 +196,44 @@
 }
 
 .artist-onboarding-secondary {
-  margin-block: clamp($ms-2, 6vw, $ms-3) clamp($ms-3, 12vw, $ms-4);
+  margin-block: clamp($ms-3, 8vw, $ms-4) clamp($ms-3, 12vw, $ms-4);
   padding-block: 0;
 
+  &__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp($ms-01, 2vw, $ms-1);
+    max-inline-size: min(56rem, 100%);
+    margin-inline: auto;
+    margin-block-end: clamp($ms-2, 5vw, $ms-3);
+    text-align: center;
+  }
+
   &__heading {
-    margin: 0 0 clamp($ms-1, 3vw, $ms-2);
+    margin: 0;
     color: var(--onboarding-accent);
-    font-size: clamp(0.6875rem, 1.5vw, 0.75rem);
+    font-size: clamp(1.0625rem, 2.4vw, 1.25rem);
     font-weight: 500;
-    letter-spacing: 0.16em;
-    line-height: 1.4;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    text-transform: none;
+    text-wrap: balance;
+  }
+
+  &__subtext {
+    margin: 0;
+    max-inline-size: min(42rem, 100%);
+    color: var(--onboarding-muted);
+    font-size: clamp(0.875rem, 1.8vw, 0.9375rem);
+    line-height: 1.6;
+    text-wrap: pretty;
   }
 
   &__list {
     display: flex;
     flex-direction: column;
-    gap: $ms-01;
+    gap: $ms-1;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -233,23 +241,24 @@
     @include breakpoint(tablet) {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: $ms-1;
+      gap: clamp($ms-1, 2.5vw, $ms-2);
     }
   }
 }
 
 .artist-onboarding-feature {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
-  gap: $ms-1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $ms-01;
   inline-size: 100%;
+  min-block-size: 100%;
   padding: clamp($ms-1, 3vw, $ms-2);
   color: inherit;
   text-align: start;
-  background: var(--onboarding-surface);
+  background: var(--onboarding-card-bg);
   border: 1px solid var(--onboarding-surface-border);
-  border-radius: $ms-0;
+  border-radius: calc($ms-0 + 2px);
   cursor: pointer;
   appearance: none;
   transition:
@@ -259,13 +268,8 @@
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: rgb(255 255 255 / 6%);
-      border-color: rgb(var(--onboarding-accent-rgb) / 24%);
-
-      .artist-onboarding-feature__chevron {
-        color: var(--onboarding-accent);
-        transform: translateX(3px);
-      }
+      background: rgb(255 255 255 / 5%);
+      border-color: rgb(var(--onboarding-accent-rgb) / 28%);
     }
   }
 
@@ -273,63 +277,38 @@
     transform: scale(0.995);
   }
 
-  @include breakpoint(tablet) {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: $ms-1;
-    min-block-size: 100%;
-    padding: $ms-1 $ms-1 $ms-2;
-  }
-
   &__icon {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    inline-size: var(--ms-2);
-    block-size: var(--ms-2);
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    margin-block-end: $ms-02;
     color: var(--onboarding-accent);
+    background: rgb(var(--onboarding-accent-rgb) / 6%);
+    border: 1px solid rgb(var(--onboarding-accent-rgb) / 28%);
+    border-radius: 50%;
 
     svg {
-      inline-size: var(--ms-1);
-      block-size: var(--ms-1);
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
     }
-  }
-
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: $ms-02;
-    min-inline-size: 0;
   }
 
   &__title {
     color: var(--onboarding-text);
     font-size: 1rem;
     font-weight: 500;
-    line-height: 1.3;
+    line-height: 1.35;
   }
 
   &__description {
+    flex: 1 1 auto;
+    margin: 0;
     color: var(--onboarding-muted);
     font-size: 0.875rem;
-    line-height: 1.55;
-  }
-
-  &__chevron {
-    display: flex;
-    align-items: center;
-    align-self: center;
-    color: var(--onboarding-accent);
-    transition:
-      transform 200ms ease,
-      color 200ms ease;
-
-    @include breakpoint(tablet) {
-      align-self: flex-start;
-      margin-block-start: auto;
-    }
+    line-height: 1.6;
   }
 }
 
@@ -340,6 +319,7 @@ html.theme-light .artist-onboarding {
   --onboarding-muted: rgb(28 25 23 / 62%);
   --onboarding-surface: rgb(0 0 0 / 3%);
   --onboarding-surface-border: rgb(0 0 0 / 8%);
+  --onboarding-card-bg: rgb(0 0 0 / 3%);
   --onboarding-hero-image: url('/images/onboarding-banner-light.png');
 
   background: var(--main-background-color);

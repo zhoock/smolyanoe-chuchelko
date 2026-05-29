@@ -287,6 +287,7 @@ export interface IInterface {
     primaryCta: string;
     catalogHint: string;
     secondaryHeading: string;
+    secondarySubtext: string;
     features: {
       article: { title: string; description: string };
       mixer: { title: string; description: string };

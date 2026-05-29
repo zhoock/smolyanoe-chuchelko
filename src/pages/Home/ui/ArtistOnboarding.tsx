@@ -23,21 +23,6 @@ function UploadIcon() {
   );
 }
 
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden>
-      <path
-        d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function FeatureIcon({ id }: { id: SecondaryFeatureId }) {
   switch (id) {
     case 'article':
@@ -81,21 +66,6 @@ function FeatureIcon({ id }: { id: SecondaryFeatureId }) {
   }
 }
 
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
-      <path
-        d="M9 6l6 6-6 6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function ArtistOnboarding() {
   const { lang } = useLang();
   const location = useLocation();
@@ -123,36 +93,39 @@ export function ArtistOnboarding() {
     artistName || '…'
   );
 
-  const secondaryFeatures: Array<{
+  const preparationFeatures: Array<{
     id: SecondaryFeatureId;
     title: string;
     description: string;
     onClick: () => void;
   }> = [
     {
+      id: 'profile',
+      title: copy?.features?.profile?.title ?? 'Профиль',
+      description:
+        copy?.features?.profile?.description ??
+        'Создайте страницу артиста. Добавьте описание, фото и ссылки на соцсети.',
+      onClick: () =>
+        openDashboard('profile', {
+          openProfileSettingsModal: true,
+          profileSettingsTab: 'profile',
+        }),
+    },
+    {
       id: 'article',
       title: copy?.features?.article?.title ?? 'Статьи',
       description:
-        copy?.features?.article?.description ?? 'Рассказывайте истории, делитесь мыслями и опытом.',
+        copy?.features?.article?.description ??
+        'Расскажите свою историю. Пишите статьи и заметки для будущих слушателей.',
       onClick: () => openDashboard('posts', { openNewArticleModal: true }),
     },
     {
       id: 'mixer',
       title: copy?.features?.mixer?.title ?? 'Миксер стемов',
       description:
-        copy?.features?.mixer?.description ?? 'Создавайте, миксуйте и делитесь стемами треков.',
+        copy?.features?.mixer?.description ??
+        'Работайте со стемами своих альбомов. Загружайте стемы и делитесь ими с аудиторией.',
       onClick: () => openDashboard('mixer', {}),
-    },
-    {
-      id: 'profile',
-      title: copy?.features?.profile?.title ?? 'Профиль артиста',
-      description:
-        copy?.features?.profile?.description ?? 'Настройте профиль и покажите свою уникальность.',
-      onClick: () =>
-        openDashboard('profile', {
-          openProfileSettingsModal: true,
-          profileSettingsTab: 'profile',
-        }),
     },
   ];
 
@@ -168,12 +141,12 @@ export function ArtistOnboarding() {
             <h1 id="artist-onboarding-headline" className="artist-onboarding-hero__headline">
               {copy?.heroHeadline ?? 'Ваше творчество начинается'}{' '}
               <span className="artist-onboarding-hero__headline-accent">
-                {copy?.heroHeadlineAccent ?? 'здесь.'}
+                {copy?.heroHeadlineAccent ?? 'здесь'}
               </span>
             </h1>
             <p className="artist-onboarding-hero__subtext">
               {copy?.heroSubtext ??
-                'Загрузите первый релиз, чтобы появиться в каталоге и поделиться музыкой со слушателями.'}
+                'Загрузите первый альбом, чтобы появиться\u00a0в\u00a0каталоге и\u00a0поделиться музыкой\u00a0со\u00a0слушателями.'}
             </p>
             <button
               type="button"
@@ -181,12 +154,8 @@ export function ArtistOnboarding() {
               onClick={() => openDashboard('albums', { openEditAlbumModal: true })}
             >
               <UploadIcon />
-              <span>{copy?.primaryCta ?? 'Загрузить первый релиз'}</span>
+              <span>{copy?.primaryCta ?? 'Загрузить альбом'}</span>
             </button>
-            <p className="artist-onboarding-hero__catalog-hint">
-              <LockIcon />
-              <span>{copy?.catalogHint ?? 'Появитесь в каталоге после публикации релиза'}</span>
-            </p>
           </div>
         </div>
       </section>
@@ -195,27 +164,28 @@ export function ArtistOnboarding() {
         className="artist-onboarding-secondary wrapper"
         aria-labelledby="artist-onboarding-secondary-heading"
       >
-        <h2
-          id="artist-onboarding-secondary-heading"
-          className="artist-onboarding-secondary__heading"
-        >
-          {copy?.secondaryHeading ?? 'Вам также доступно'}
-        </h2>
+        <div className="artist-onboarding-secondary__intro">
+          <h2
+            id="artist-onboarding-secondary-heading"
+            className="artist-onboarding-secondary__heading"
+          >
+            {copy?.secondaryHeading ?? 'После публикации первого альбома вам станет доступно:'}
+          </h2>
+          <p className="artist-onboarding-secondary__subtext">
+            {copy?.secondarySubtext ??
+              'Профиль, статьи и миксер стемов будут доступны слушателям только после\u00a0публикации\u00a0вашего\u00a0первого\u00a0альбома.'}
+          </p>
+        </div>
         <ul className="artist-onboarding-secondary__list">
-          {secondaryFeatures.map((feature) => (
+          {preparationFeatures.map((feature) => (
             <li key={feature.id}>
               <button type="button" className="artist-onboarding-feature" onClick={feature.onClick}>
                 <span className="artist-onboarding-feature__icon">
                   <FeatureIcon id={feature.id} />
                 </span>
-                <span className="artist-onboarding-feature__body">
-                  <span className="artist-onboarding-feature__title">{feature.title}</span>
-                  <span className="artist-onboarding-feature__description">
-                    {feature.description}
-                  </span>
-                </span>
-                <span className="artist-onboarding-feature__chevron">
-                  <ChevronIcon />
+                <span className="artist-onboarding-feature__title">{feature.title}</span>
+                <span className="artist-onboarding-feature__description">
+                  {feature.description}
                 </span>
               </button>
             </li>
