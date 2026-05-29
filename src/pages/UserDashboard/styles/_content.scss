@@ -496,10 +496,6 @@ dialog {
       margin-inline-start: auto;
     }
 
-    &__album-footer-upload-button {
-      @include dashboard-btn-secondary($margin: 0, $padding: var(--ms-01) var(--ms-1));
-    }
-
     &__publish-album-wrap {
       display: flex;
       flex-direction: column;
@@ -764,14 +760,23 @@ dialog {
       @include dashboard-btn-secondary($margin: 0, $padding: var(--ms-01) var(--ms-1));
     }
 
+    &__upload-action {
+      display: flex;
+      justify-content: center;
+      margin-top: var(--ms-0);
+      margin-bottom: var(--ms-1);
+    }
+
     &__upload-button {
-      width: 100%;
-      text-align: center;
-      justify-content: flex-start;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: auto;
+      max-width: 100%;
       text-transform: none;
       letter-spacing: normal;
 
-      @include dashboard-btn-primary($margin: var(--ms-0) 0 0 0, $padding: var(--ms-0) var(--ms-1));
+      @include dashboard-btn-primary($margin: 0, $padding: var(--ms-01) var(--ms-1));
     }
 
     // После всех менее специфичных `img` в этом файле (stylelint no-descending-specificity)

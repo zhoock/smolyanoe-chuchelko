@@ -11,22 +11,14 @@ export function normalizeTrackVisibility(raw: unknown): TrackVisibility {
 
 export const TRACK_VISIBILITY_OPTIONS: readonly {
   value: TrackVisibility;
-  icon: string;
 }[] = [
   {
     value: 'public',
-    icon: '🌍',
   },
   {
     value: 'subscribers_only',
-    icon: '🔒',
   },
   {
     value: 'hidden',
-    icon: '🚫',
   },
 ] as const;
-
-export function visibilityIcon(v: TrackVisibility): string {
-  return TRACK_VISIBILITY_OPTIONS.find((o) => o.value === v)?.icon ?? '🌍';
-}

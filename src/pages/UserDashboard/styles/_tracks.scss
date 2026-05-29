@@ -6,6 +6,23 @@
 
 dialog {
   .user-dashboard {
+    .track-visibility-icon {
+      display: inline-flex;
+      flex-shrink: 0;
+
+      &--public {
+        color: #7dcea0;
+      }
+
+      &--subscribers_only {
+        color: var(--dark-greenish-yellow);
+      }
+
+      &--hidden {
+        color: var(--error-color);
+      }
+    }
+
     &__track-upload {
       display: flex;
       flex-direction: column;

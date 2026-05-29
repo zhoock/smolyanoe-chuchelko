@@ -138,10 +138,10 @@ import './UserDashboard.style.scss';
 import { createPortal } from 'react-dom';
 import {
   TRACK_VISIBILITY_OPTIONS,
-  visibilityIcon,
   normalizeTrackVisibility,
   type TrackVisibility,
 } from '@shared/lib/tracks/trackVisibility';
+import { TrackVisibilityIcon } from '@shared/ui/icons/TrackVisibilityIcon';
 
 /** Сообщение об успешной загрузке треков: RU — формы 1 трек / 2 трека / 5 треков. */
 function formatUploadedTracksSuccessMessage(
@@ -367,7 +367,6 @@ function SortableTrackItem({
             : fallbacks.subscribersOnly;
       return {
         value: opt.value,
-        icon: opt.icon,
         label: block?.title ?? fb.title,
         description: block?.description ?? fb.description,
       };
@@ -758,7 +757,7 @@ function SortableTrackItem({
                       aria-label={trackAccessAria}
                     >
                       <span className="user-dashboard__track-access-button-icon" aria-hidden>
-                        {visibilityIcon(trackVisibility)}
+                        <TrackVisibilityIcon visibility={trackVisibility} />
                       </span>
                     </button>
                     <div className="user-dashboard__track-actions">
@@ -892,7 +891,7 @@ function SortableTrackItem({
               aria-label={trackAccessAria}
             >
               <span className="user-dashboard__track-access-button-icon" aria-hidden>
-                {visibilityIcon(trackVisibility)}
+                <TrackVisibilityIcon visibility={trackVisibility} />
               </span>
             </button>
             <button
@@ -964,7 +963,7 @@ function SortableTrackItem({
                 onClick={() => void pickVisibility(opt.value)}
               >
                 <span className="user-dashboard__track-access-menu-item-icon" aria-hidden>
-                  {opt.icon}
+                  <TrackVisibilityIcon visibility={opt.value} size={18} />
                 </span>
                 <span className="user-dashboard__track-access-menu-item-text">
                   <span className="user-dashboard__track-access-menu-item-title">{opt.label}</span>
@@ -3439,17 +3438,6 @@ function UserDashboard() {
                                                 {ui?.dashboard?.deleteAlbum ?? 'Delete album'}
                                               </button>
                                               <div className="user-dashboard__album-footer-actions-right">
-                                                <button
-                                                  type="button"
-                                                  className="user-dashboard__album-footer-upload-button"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setEditAlbumModal({ isOpen: true });
-                                                  }}
-                                                >
-                                                  {ui?.dashboard?.uploadNewAlbum ??
-                                                    'Upload New Album'}
-                                                </button>
                                                 {showPublishControls ? (
                                                   <div className="user-dashboard__publish-album-wrap">
                                                     <button
@@ -3499,13 +3487,15 @@ function UserDashboard() {
                                   })}
                                 </div>
 
-                                <button
-                                  type="button"
-                                  className="user-dashboard__upload-button"
-                                  onClick={() => setEditAlbumModal({ isOpen: true })}
-                                >
-                                  {ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}
-                                </button>
+                                <div className="user-dashboard__upload-action">
+                                  <button
+                                    type="button"
+                                    className="user-dashboard__upload-button"
+                                    onClick={() => setEditAlbumModal({ isOpen: true })}
+                                  >
+                                    {ui?.dashboard?.uploadNewAlbum ?? 'Upload New Album'}
+                                  </button>
+                                </div>
                               </>
                             ) : (
                               <div className="user-dashboard__albums-prompt">
@@ -3840,27 +3830,29 @@ function UserDashboard() {
                                   })}
                                 </div>
 
-                                <button
-                                  type="button"
-                                  className="user-dashboard__upload-button"
-                                  onClick={() => {
-                                    const newArticle: IArticles = {
-                                      articleId: `new-${Date.now()}`,
-                                      nameArticle: '',
-                                      img: '',
-                                      date: toLocalYYYYMMDD(),
-                                      details: [],
-                                      description: '',
-                                      isDraft: true,
-                                    };
-                                    setEditArticleModal({
-                                      isOpen: true,
-                                      article: newArticle,
-                                    });
-                                  }}
-                                >
-                                  {ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}
-                                </button>
+                                <div className="user-dashboard__upload-action">
+                                  <button
+                                    type="button"
+                                    className="user-dashboard__upload-button"
+                                    onClick={() => {
+                                      const newArticle: IArticles = {
+                                        articleId: `new-${Date.now()}`,
+                                        nameArticle: '',
+                                        img: '',
+                                        date: toLocalYYYYMMDD(),
+                                        details: [],
+                                        description: '',
+                                        isDraft: true,
+                                      };
+                                      setEditArticleModal({
+                                        isOpen: true,
+                                        article: newArticle,
+                                      });
+                                    }}
+                                  >
+                                    {ui?.dashboard?.uploadNewArticle ?? 'Upload New Article'}
+                                  </button>
+                                </div>
                               </>
                             ) : (
                               <div className="user-dashboard__posts-prompt">

@@ -3,11 +3,8 @@ import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import type { IInterface, DashboardTrackVisibilityLabels } from '@models';
 import type { SupportedLang } from '@shared/model/lang';
-import {
-  TRACK_VISIBILITY_OPTIONS,
-  visibilityIcon,
-  type TrackVisibility,
-} from '@shared/lib/tracks/trackVisibility';
+import { TRACK_VISIBILITY_OPTIONS, type TrackVisibility } from '@shared/lib/tracks/trackVisibility';
+import { TrackVisibilityIcon } from '@shared/ui/icons/TrackVisibilityIcon';
 
 type DashboardUi = NonNullable<IInterface['dashboard']>;
 type DashboardUiWithTrackAccess = DashboardUi & {
@@ -20,7 +17,7 @@ type DashboardUiWithTrackAccess = DashboardUi & {
 function buildVisibilityMenuOptions(
   ui: IInterface | undefined,
   lang: SupportedLang
-): { value: TrackVisibility; icon: string; label: string; description: string }[] {
+): { value: TrackVisibility; label: string; description: string }[] {
   const d = ui?.dashboard as DashboardUiWithTrackAccess | undefined;
   const t = d?.articleVisibility ?? d?.trackVisibility;
   const en = lang === 'en';
@@ -52,7 +49,6 @@ function buildVisibilityMenuOptions(
           : fallbacks.subscribersOnly;
     return {
       value: opt.value,
-      icon: opt.icon,
       label: block?.title ?? fb.title,
       description: block?.description ?? fb.description,
     };
@@ -219,7 +215,7 @@ export function ArticleAccessControl({
         aria-label={trackAccessAria}
       >
         <span className="user-dashboard__article-access-button-icon" aria-hidden>
-          {visibilityIcon(visibility)}
+          <TrackVisibilityIcon visibility={visibility} />
         </span>
       </button>
 
@@ -251,7 +247,7 @@ export function ArticleAccessControl({
                 onClick={() => void pickVisibility(opt.value)}
               >
                 <span className="user-dashboard__track-access-menu-item-icon" aria-hidden>
-                  {opt.icon}
+                  <TrackVisibilityIcon visibility={opt.value} size={18} />
                 </span>
                 <span className="user-dashboard__track-access-menu-item-text">
                   <span className="user-dashboard__track-access-menu-item-title">{opt.label}</span>
