@@ -18,20 +18,20 @@ dialog {
 
       &__error {
         padding: var(--ms-01) var(--ms-0);
-        color: #ff6b6b;
+        color: var(--soft-red);
         font-size: var(--dashboard-font-size);
         line-height: 1.5;
-        background: rgb(255 107 107 / 10%);
-        border: 1px solid rgb(255 107 107 / 30%);
+        background: rgb(var(--soft-red-rgb) / 10%);
+        border: 1px solid rgb(var(--soft-red-rgb) / 30%);
         border-radius: var(--ms-01);
       }
 
       &__success {
         padding: var(--ms-01) var(--ms-0);
-        color: var(--dark-greenish-yellow);
+        color: var(--soft-green);
         font-size: var(--dashboard-font-size);
-        background: rgb(81 207 102 / 10%);
-        border: 1px solid rgb(81 207 102 / 30%);
+        background: rgb(var(--soft-green-rgb) / 10%);
+        border: 1px solid rgb(var(--soft-green-rgb) / 30%);
         border-radius: var(--ms-01);
       }
 

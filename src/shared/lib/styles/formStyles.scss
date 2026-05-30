@@ -67,14 +67,14 @@
       border-color: var(--accent-color-hover, #b8a654);
     }
   } @else if $variant == 'danger' {
-    color: #ef4444;
+    color: var(--soft-red);
     background: transparent;
-    border: 1px solid #ef4444;
+    border: 1px solid var(--soft-red);
 
     &:hover {
       color: var(--text-color, #ffffff);
-      background: #ef4444;
-      border-color: #ef4444;
+      background: var(--soft-red);
+      border-color: var(--soft-red);
     }
   } @else {
     color: var(--text-color, #ffffff);

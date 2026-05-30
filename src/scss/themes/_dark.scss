@@ -89,7 +89,7 @@ html.theme-dark {
   --dashboard-btn-disabled-opacity: 0.45;
   --dashboard-btn-focus-ring: var(--dark-greenish-yellow);
   --dashboard-btn-primary-text: var(--dark-greenish-yellow);
-  --dashboard-btn-primary-border: var(--dark-greenish-yellow);
+  --dashboard-btn-primary-border: rgb(var(--dark-greenish-yellow-rgb) / 45%);
   --dashboard-btn-primary-hover-bg: rgb(var(--dashboard-accent-rgb) / 11%);
   --dashboard-btn-primary-active-text: var(--deep-black);
   --dashboard-btn-primary-active-bg: var(--dark-greenish-yellow);
@@ -100,7 +100,7 @@ html.theme-dark {
   --dashboard-btn-secondary-active-bg: rgb(255 255 255 / 10%);
   --dashboard-btn-secondary-active-border: rgb(255 255 255 / 14%);
   --dashboard-btn-destructive-text: var(--error-color);
-  --dashboard-btn-destructive-border: var(--error-color);
+  --dashboard-btn-destructive-border: rgb(var(--pink-terracotta-rgb) / 45%);
   --dashboard-btn-destructive-hover-bg: rgb(var(--pink-terracotta-rgb) / 12%);
   --dashboard-btn-destructive-active-text: var(--deep-black);
   --dashboard-btn-destructive-active-bg: var(--error-color);

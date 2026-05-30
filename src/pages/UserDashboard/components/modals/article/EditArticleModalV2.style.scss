@@ -249,7 +249,7 @@ dialog {
       }
 
       &--error {
-        color: rgb(220 38 38);
+        color: var(--soft-red);
       }
     }
 
@@ -913,7 +913,7 @@ dialog {
       color: var(--dashboard-text-primary);
       font-size: 18px;
       line-height: 1;
-      background: rgb(220 38 38 / 80%);
+      background: rgb(var(--soft-red-rgb) / 80%);
       border: none;
       border-radius: 50%;
       transition: background 0.2s;
@@ -923,7 +923,7 @@ dialog {
       backdrop-filter: blur(4px);
 
       &:hover {
-        background: rgb(220 38 38 / 100%);
+        background: var(--soft-red);
       }
     }
 

@@ -45,7 +45,7 @@
 
 .error-boundary__pre {
   padding: 0.75rem;
-  color: #ff6b6b;
+  color: var(--soft-red);
   font-size: 0.875rem;
   border-radius: 4px;
   margin-top: 0.5rem;
@@ -57,7 +57,7 @@
 }
 
 .error-boundary__stack {
-  color: #ffa8a8;
+  color: rgb(var(--soft-red-rgb) / 75%);
   font-size: 0.75rem;
   margin-top: 0.5rem;
 }

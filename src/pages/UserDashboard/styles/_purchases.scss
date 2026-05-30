@@ -18,10 +18,10 @@ dialog {
 
     &__my-purchases-error {
       padding: var(--ms-01);
-      color: #f44336;
+      color: var(--soft-red);
       font-size: var(--dashboard-font-size);
-      background: rgb(244 67 54 / 10%);
-      border: 1px solid rgb(244 67 54 / 30%);
+      background: rgb(var(--soft-red-rgb) / 10%);
+      border: 1px solid rgb(var(--soft-red-rgb) / 30%);
       border-radius: var(--ms-01);
     }
 

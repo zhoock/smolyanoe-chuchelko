@@ -361,7 +361,7 @@ dialog {
       width: 32px;
       height: 32px;
       padding: 0;
-      color: rgb(220 38 38);
+      color: var(--soft-red);
       background: transparent;
       border: none;
       border-radius: var(--ms-02);
@@ -369,7 +369,7 @@ dialog {
       transition: background-color 0.2s ease;
 
       &:hover {
-        background: rgb(220 38 38 / 10%);
+        background: rgb(var(--soft-red-rgb) / 10%);
       }
 
       &:active {
@@ -519,7 +519,7 @@ dialog {
       padding: 0;
       color: var(--white);
       font-size: var(--dashboard-font-size);
-      background: rgb(220 38 38);
+      background: var(--soft-red);
       border: none;
       border-radius: var(--ms-01);
       cursor: pointer;
@@ -543,7 +543,7 @@ dialog {
 
       &:hover,
       &:active {
-        background: rgb(185 28 28);
+        background: var(--soft-red-hover);
       }
 
       svg {

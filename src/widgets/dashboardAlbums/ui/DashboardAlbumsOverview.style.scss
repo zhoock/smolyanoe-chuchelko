@@ -208,8 +208,8 @@
     flex: 1;
 
     &--synced {
-      color: #22c55e;
-      background: rgba(34 197 94 / 10%);
+      color: var(--soft-green);
+      background: rgb(var(--soft-green-rgb) / 10%);
     }
 
     &--text-only {

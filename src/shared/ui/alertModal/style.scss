@@ -127,10 +127,10 @@ dialog {
       }
 
       &--success {
-        background: var(--success-color, #28a745);
+        background: var(--success-color);
 
         &:hover {
-          background: var(--success-color-hover, #218838);
+          background: var(--success-color-hover);
         }
       }
 

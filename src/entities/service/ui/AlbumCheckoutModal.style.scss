@@ -304,7 +304,7 @@
 
     &--error,
     &--error:focus {
-      border-color: #ef4444;
+      border-color: var(--soft-red);
     }
 
     &::placeholder {
@@ -314,7 +314,7 @@
 
   &__field-error {
     display: block;
-    color: #ef4444;
+    color: var(--soft-red);
     font-size: 0.75rem;
     font-family: var(--base-font-family, arial, sans-serif);
     margin-block-start: 4px;
@@ -385,11 +385,11 @@
 
   &__error {
     padding: var(--ms-1);
-    color: #ef4444;
+    color: var(--soft-red);
     font-size: 0.875rem;
     font-family: var(--base-font-family, arial, sans-serif);
-    background: rgba(239 68 68 / 10%);
-    border: 1px solid #ef4444;
+    background: rgb(var(--soft-red-rgb) / 10%);
+    border: 1px solid var(--soft-red);
     border-radius: 8px;
   }
 

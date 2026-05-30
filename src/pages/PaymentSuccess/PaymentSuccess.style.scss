@@ -79,7 +79,7 @@ $payment-success-button-padding: var(--ms-01) var(--ms-0);
     &--canceled,
     &--failed {
       // Стили для отменённой/неудачной оплаты (красная рамка)
-      border-color: rgb(220 38 38 / 50%);
+      border-color: rgb(var(--soft-red-rgb) / 50%);
     }
   }
 
@@ -157,7 +157,7 @@ $payment-success-button-padding: var(--ms-01) var(--ms-0);
     // Блок ошибки - стили dashboard
     padding: var(--ms-2);
     background: var(--dashboard-card-bg);
-    border: 1px solid rgb(220 38 38 / 50%);
+    border: 1px solid rgb(var(--soft-red-rgb) / 50%);
     border-radius: var(--ms-0);
 
     h1 {

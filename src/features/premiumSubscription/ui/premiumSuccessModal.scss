@@ -138,14 +138,14 @@
   }
 
   &__artist-added {
-    color: #5cb87a;
+    color: var(--soft-green);
     font-size: var(--ms-0);
     font-weight: 700;
   }
 
   &__error {
     margin: 0 0 var(--ms-01);
-    color: #e8a0a0;
+    color: var(--soft-red);
     font-size: var(--ms-01);
   }
 

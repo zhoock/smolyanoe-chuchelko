@@ -169,7 +169,7 @@ dialog {
     }
 
     &__profile-hero {
-      --profile-hero-status-public: #72d07a;
+      --profile-hero-status-public: var(--soft-green);
       --profile-hero-status-private: var(--dark-greenish-yellow);
 
       display: flex;
@@ -719,7 +719,7 @@ dialog {
       }
 
       &--error {
-        color: rgb(220 38 38);
+        color: var(--soft-red);
       }
     }
 
@@ -959,7 +959,7 @@ dialog {
   &__stem-error {
     margin-top: var(--ms-01);
     padding: var(--ms-01);
-    color: var(--dashboard-error-text, #ff5757);
+    color: var(--soft-red);
     font-size: 12px;
     text-align: center;
     background: rgb(255 87 87 / 10%);
@@ -1089,7 +1089,7 @@ dialog {
 
     @media (hover: hover) and (pointer: fine) {
       &:hover {
-        color: var(--error-color, #ff5757);
+        color: var(--soft-red);
         background: rgb(255 87 87 / 10%);
       }
     }
