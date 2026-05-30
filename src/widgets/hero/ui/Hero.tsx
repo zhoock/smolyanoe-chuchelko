@@ -369,7 +369,7 @@ export function Hero() {
   headerImagesForCanvasRef.current = headerImages;
 
   useEffect(() => {
-    if (!hasArtistParam || !artistParamKey) return;
+    if (!hasArtistParam || !artistParamKey || hideHeroForArtistOnboarding) return;
     const el = heroCanvasRef.current;
     if (!el) return;
     if (el.childElementCount > 0) return;
@@ -449,7 +449,7 @@ export function Hero() {
       universe?.destroy();
       el.replaceChildren();
     };
-  }, [artistParamKey]);
+  }, [artistParamKey, hasArtistParam, hideHeroForArtistOnboarding]);
 
   if (hideHeroForArtistOnboarding) {
     return null;
