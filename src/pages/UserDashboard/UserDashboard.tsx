@@ -2027,7 +2027,9 @@ function UserDashboard() {
     setConfirmationModal({
       isOpen: true,
       title: ui?.dashboard?.confirmAction ?? 'Confirm action',
-      message: `Вы уверены, что хотите удалить трек "${trackTitle}"?`,
+      message: (
+        ui?.dashboard?.confirmDeleteTrack ?? 'Are you sure you want to delete the track "{name}"?'
+      ).replace('{name}', trackTitle),
       variant: 'danger',
       onConfirm: async () => {
         setConfirmationModal(null);
@@ -2273,7 +2275,9 @@ function UserDashboard() {
     setConfirmationModal({
       isOpen: true,
       title: ui?.dashboard?.confirmAction ?? 'Confirm action',
-      message: `Вы уверены, что хотите удалить альбом "${albumTitle}"?`,
+      message: (
+        ui?.dashboard?.confirmDeleteAlbum ?? 'Are you sure you want to delete the album "{name}"?'
+      ).replace('{name}', albumTitle),
       variant: 'danger',
       onConfirm: async () => {
         setConfirmationModal(null);
@@ -4130,12 +4134,6 @@ function UserDashboard() {
 
                               <h2 className="user-dashboard__profile-hero-name">
                                 <span>{user?.name?.trim() || '…'}</span>
-                                {isArtist ? (
-                                  <span className="user-dashboard__profile-hero-badge">
-                                    {ui?.dashboard?.accountTypeBadge?.artist ??
-                                      (lang === 'en' ? 'Artist' : 'Артист')}
-                                  </span>
-                                ) : null}
                               </h2>
 
                               {isArtist ? (

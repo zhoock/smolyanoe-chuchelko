@@ -536,6 +536,8 @@
       "recordedAt": "Recorded At",
       "mixedAt": "Mixed At",
       "confirmDeleteArticle": "Are you sure you want to delete the article \"{name}\"?",
+      "confirmDeleteAlbum": "Are you sure you want to delete the album \"{name}\"?",
+      "confirmDeleteTrack": "Are you sure you want to delete the track \"{name}\"?",
       "errorNotAuthorized": "Error: you are not authorized. Please log in.",
       "errorArticleIdNotFound": "Error: could not find article ID for deletion.",
       "uploadAndPublishAlbums": "Upload and publish albums",
@@ -688,7 +690,8 @@
         },
         "helpText": {
           "controlDownloadSale": "Control whether fans can buy/download this album.",
-          "fansCanBuyNow": "Fans can buy now, download after release date"
+          "fansCanBuyNow": "Fans can buy now, download after release date",
+          "albumVisibility": "When visible, your album will be shown on your artist page."
         },
         "radioOptions": {
           "no": "Don't sell",

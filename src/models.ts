@@ -650,9 +650,6 @@ export interface IInterface {
     /** Listener → artist upgrade (profile / settings). */
     becomeArtistLead?: string;
     becomeArtist?: string;
-    accountTypeBadge?: {
-      artist?: string;
-    };
     upgradeToArtist?: {
       title?: string;
       artistBandNameLabel?: string;
@@ -693,6 +690,8 @@ export interface IInterface {
     recordedAt: string;
     mixedAt: string;
     confirmDeleteArticle: string;
+    confirmDeleteAlbum: string;
+    confirmDeleteTrack: string;
     errorNotAuthorized: string;
     errorArticleIdNotFound: string;
     uploadAndPublishAlbums: string;
@@ -854,6 +853,7 @@ export interface IInterface {
       helpText: {
         controlDownloadSale: string;
         fansCanBuyNow: string;
+        albumVisibility: string;
       };
       radioOptions: {
         no: string;

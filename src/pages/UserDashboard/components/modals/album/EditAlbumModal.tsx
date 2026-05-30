@@ -2880,20 +2880,37 @@ export function EditAlbumModal({
           </div>
 
           <div className="edit-album-modal__field">
-            <label className="edit-album-modal__label">
+            <span className="edit-album-modal__label" id="album-visibility-label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibility ?? 'Album visibility'}
-            </label>
-            <div className="edit-album-modal__checkbox-wrapper">
-              <input
-                type="checkbox"
-                id="visible-on-page"
-                className="edit-album-modal__checkbox"
-                checked={formData.visibleOnAlbumPage}
-                onChange={(e) => handleInputChange('visibleOnAlbumPage', e.target.checked)}
-              />
-              <label htmlFor="visible-on-page" className="edit-album-modal__checkbox-label">
-                {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibleCheckbox ?? 'Visible'}
-              </label>
+            </span>
+            <div className="edit-album-modal__visibility-control">
+              <div className="edit-album-modal__visibility-row">
+                <label className="edit-album-modal__toggle">
+                  <input
+                    type="checkbox"
+                    id="visible-on-page"
+                    className="edit-album-modal__toggle-input"
+                    role="switch"
+                    aria-labelledby="album-visibility-label album-visibility-visible-label"
+                    checked={formData.visibleOnAlbumPage}
+                    onChange={(e) => handleInputChange('visibleOnAlbumPage', e.target.checked)}
+                  />
+                  <span className="edit-album-modal__toggle-track" aria-hidden="true">
+                    <span className="edit-album-modal__toggle-thumb" />
+                  </span>
+                </label>
+                <label
+                  htmlFor="visible-on-page"
+                  className="edit-album-modal__toggle-label"
+                  id="album-visibility-visible-label"
+                >
+                  {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibleCheckbox ?? 'Visible'}
+                </label>
+              </div>
+              <p className="edit-album-modal__help-text edit-album-modal__visibility-hint">
+                {ui?.dashboard?.editAlbumModal?.helpText?.albumVisibility ??
+                  'When visible, your album will be shown on your artist page.'}
+              </p>
             </div>
           </div>
 
