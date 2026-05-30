@@ -1,16 +1,25 @@
 import { describe, expect, test } from '@jest/globals';
 import { hasPublishedPublicReleases } from '../hasPublishedPublicReleases';
-import type { IAlbums } from '@models';
+import type { IAlbums, TracksProps } from '@models';
+
+const mockTrack: TracksProps = {
+  id: '1',
+  title: 'Track',
+  content: '',
+  duration: 180,
+  src: 'track.mp3',
+  order_index: 10,
+};
 
 describe('hasPublishedPublicReleases', () => {
-  test('returns true only for public releases with a title', () => {
+  test('returns true only for public releases with at least one track', () => {
     const album: IAlbums = {
       album: 'My Release',
       artist: 'Band',
       fullName: 'Band — My Release',
       description: '',
       release: { date: '2024-01-01' },
-      tracks: [],
+      tracks: [mockTrack],
       buttons: {},
       details: [],
       isPublic: true,
@@ -18,7 +27,7 @@ describe('hasPublishedPublicReleases', () => {
     expect(hasPublishedPublicReleases([album])).toBe(true);
   });
 
-  test('ignores private or untitled albums', () => {
+  test('ignores private, untitled, or trackless albums', () => {
     expect(
       hasPublishedPublicReleases([
         {
@@ -27,7 +36,7 @@ describe('hasPublishedPublicReleases', () => {
           fullName: 'Band — Draft',
           description: '',
           release: { date: '2024-01-01' },
-          tracks: [],
+          tracks: [mockTrack],
           buttons: {},
           details: [],
           isPublic: false,
@@ -36,6 +45,17 @@ describe('hasPublishedPublicReleases', () => {
           album: '   ',
           artist: 'Band',
           fullName: 'Band',
+          description: '',
+          release: { date: '2024-01-01' },
+          tracks: [mockTrack],
+          buttons: {},
+          details: [],
+          isPublic: true,
+        },
+        {
+          album: 'Empty Release',
+          artist: 'Band',
+          fullName: 'Band — Empty Release',
           description: '',
           release: { date: '2024-01-01' },
           tracks: [],

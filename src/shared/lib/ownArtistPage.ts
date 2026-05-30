@@ -1,8 +1,14 @@
 import type { NavigateFunction } from 'react-router-dom';
 
-import type { IAlbums } from '@models';
+import type { IAlbums, IArticles } from '@models';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
 import { isArtistAccount } from '@shared/lib/accountType';
+import {
+  countUniqueAlbums,
+  countUniqueArticles,
+  isArtistProfileEmpty,
+  needsArtistOnboarding,
+} from '@shared/lib/artistPageContent';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { getAuthHeader, getUser, isEmailVerified, type AuthUser } from '@shared/lib/auth';
 import { buildApiUrl } from '@shared/lib/artistQuery';
@@ -16,6 +22,9 @@ export type OwnArtistPageState = {
   publicSlug: string | null;
   hasPublicReleases: boolean;
   needsOnboarding: boolean;
+  albumsCount: number;
+  articlesCount: number;
+  profileIsEmpty: boolean;
 };
 
 export function buildOwnArtistPagePath(publicSlug: string): string {
@@ -47,7 +56,7 @@ export function shouldTryArtistOnboardingRedirect(
 }
 
 /**
- * After auth, send new artists without public releases to owner onboarding instead of universe home.
+ * After auth, send new artists without any content to owner onboarding instead of universe home.
  */
 export async function resolveArtistOnboardingDestination(
   lang: string,
@@ -85,11 +94,19 @@ function normalizeAlbums(data: unknown): IAlbums[] {
   return data.filter((item): item is IAlbums => typeof item === 'object' && item !== null);
 }
 
+function normalizeArticles(data: unknown): IArticles[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter((item): item is IArticles => typeof item === 'object' && item !== null);
+}
+
 export async function fetchOwnArtistPageState(lang: string): Promise<OwnArtistPageState> {
   const empty: OwnArtistPageState = {
     publicSlug: null,
     hasPublicReleases: false,
     needsOnboarding: false,
+    albumsCount: 0,
+    articlesCount: 0,
+    profileIsEmpty: true,
   };
 
   try {
@@ -108,42 +125,72 @@ export async function fetchOwnArtistPageState(lang: string): Promise<OwnArtistPa
 
     const profileResult = (await profileResponse.json()) as {
       success?: boolean;
-      data?: { publicSlug?: string | null };
+      data?: {
+        publicSlug?: string | null;
+        siteName?: string | null;
+        theBand?: string[];
+        headerImages?: string[];
+        socialLinks?: Record<string, string | undefined>;
+      };
     };
-    const publicSlug = profileResult.success
-      ? profileResult.data?.publicSlug?.trim() || null
-      : null;
+    const profileData = profileResult.success ? profileResult.data : undefined;
+    const publicSlug = profileData?.publicSlug?.trim() || null;
     if (!publicSlug) return empty;
 
     const userId = getUser()?.id?.trim();
     if (userId) writeCachedOwnPublicSlug(userId, publicSlug);
 
-    const albumsResponse = await fetchWithAuthSession(
-      buildApiUrl('/api/albums', { lang }, { includeArtist: false }),
-      {
+    const profileIsEmpty = isArtistProfileEmpty({
+      siteName: profileData?.siteName,
+      theBand: profileData?.theBand,
+      headerImages: profileData?.headerImages,
+      socialLinks: profileData?.socialLinks,
+    });
+
+    const [albumsResponse, articlesResponse] = await Promise.all([
+      fetchWithAuthSession(buildApiUrl('/api/albums', { lang }, { includeArtist: false }), {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
           ...getAuthHeader(),
         },
-      }
-    );
+      }),
+      fetchWithAuthSession(
+        buildApiUrl('/api/articles-api', { includeDrafts: true }, { includeArtist: false }),
+        {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            ...getAuthHeader(),
+          },
+        }
+      ),
+    ]);
 
-    if (!albumsResponse.ok) {
-      return { publicSlug, hasPublicReleases: false, needsOnboarding: true };
-    }
-
-    const albumsResult = (await albumsResponse.json()) as {
-      success?: boolean;
-      data?: unknown;
-    };
-    const albums = albumsResult.success ? normalizeAlbums(albumsResult.data) : [];
+    const albumsResult = albumsResponse.ok
+      ? ((await albumsResponse.json()) as { success?: boolean; data?: unknown })
+      : null;
+    const albums = albumsResult?.success ? normalizeAlbums(albumsResult.data) : [];
+    const albumsCount = countUniqueAlbums(albums);
     const hasPublicReleases = hasPublishedPublicReleases(albums);
+
+    let articles: IArticles[] = [];
+    if (articlesResponse.ok) {
+      const articlesPayload = await articlesResponse.json();
+      const list = Array.isArray(articlesPayload)
+        ? articlesPayload
+        : (articlesPayload.data ?? articlesPayload.articles ?? []);
+      articles = normalizeArticles(list);
+    }
+    const articlesCount = countUniqueArticles(articles);
 
     return {
       publicSlug,
       hasPublicReleases,
-      needsOnboarding: !hasPublicReleases,
+      albumsCount,
+      articlesCount,
+      profileIsEmpty,
+      needsOnboarding: needsArtistOnboarding({ albumsCount, articlesCount, profileIsEmpty }),
     };
   } catch {
     return empty;

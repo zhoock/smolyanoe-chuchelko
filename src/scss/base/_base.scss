@@ -156,6 +156,21 @@ body {
     }
   }
 
+  /* Страница артиста без публичного контента: полноэкранный 404 без hero */
+  &.page--artist-not-found {
+    #root {
+      display: block;
+      block-size: auto;
+      min-block-size: 100dvb;
+    }
+
+    #root main {
+      display: block;
+      min-block-size: calc(100dvb - calc(1.618rem * 2));
+      overflow: visible;
+    }
+  }
+
   /* Главная с 3D-сценой: без Hero, но глобальный main всё ещё задаёт два ряда под hero + лишний ряд #root под header — убираем лишнюю высоту и скролл */
   &.page--home-scene {
     overflow: hidden;

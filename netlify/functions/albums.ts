@@ -1044,6 +1044,15 @@ export const handler: Handler = async (
         if (isPublicCatalogRequest) {
           const hasPremiumAccess = await viewerHasPremiumAccessToArtist(authUserId, targetUserId);
           merged = applyPublicTrackAccessPolicy(merged, { hasPremiumAccess });
+          const isOwnerViewer = Boolean(authUserId && authUserId === targetUserId);
+          if (
+            !isOwnerViewer &&
+            (merged.isPublic === false ||
+              !String(merged.album ?? '').trim() ||
+              merged.tracks.length === 0)
+          ) {
+            continue;
+          }
         } else {
           merged = {
             ...merged,

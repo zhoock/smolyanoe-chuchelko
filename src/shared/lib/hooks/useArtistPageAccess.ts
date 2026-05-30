@@ -9,19 +9,29 @@ import {
   selectPublicAlbumsCacheIsStale,
   selectPublicCatalogCachedRowCount,
 } from '@entities/album';
+import {
+  selectArticlesStatus,
+  selectArticlesDataResolvedForSurface,
+  selectArticlesCacheIsStale,
+} from '@entities/article';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { buildPublicAlbumsFetchContextKey } from '@shared/lib/publicCatalogCacheKey';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { getAuthHeader, getUser, isAuthenticated } from '@shared/lib/auth';
 import { isCachedOwnArtistSlug, writeCachedOwnPublicSlug } from '@shared/lib/ownPublicSlugCache';
+import {
+  hasVisitorVisibleArtistContent,
+  profileHasPublicBodyContent,
+} from '@shared/lib/artistPageContent';
+import { fetchOwnArtistPageState } from '@shared/lib/ownArtistPage';
 
 function normalizeSlug(slug: string): string {
   return slug.trim().toLowerCase();
 }
 
 /**
- * Доступ к странице артиста: опубликованный каталог, onboarding владельца или 404.
+ * Доступ к странице артиста: каталог по опубликованным трекам, onboarding только для новых артистов, 404 без публичного контента.
  */
 export function useArtistPageAccess(artistSlug: string) {
   const { lang } = useLang();
@@ -31,6 +41,9 @@ export function useArtistPageAccess(artistSlug: string) {
   const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
   const publicAlbums = useAppSelector(selectPublicAlbumsDataResolvedForSurface);
   const cachedPublicRowCount = useAppSelector(selectPublicCatalogCachedRowCount);
+  const articlesStatus = useAppSelector(selectArticlesStatus);
+  const articlesCacheStale = useAppSelector(selectArticlesCacheIsStale);
+  const publicArticles = useAppSelector(selectArticlesDataResolvedForSurface);
   const hasPublicReleases = useMemo(() => hasPublishedPublicReleases(publicAlbums), [publicAlbums]);
 
   const desiredFetchKey = useMemo(() => buildPublicAlbumsFetchContextKey(artistSlug), [artistSlug]);
@@ -46,6 +59,11 @@ export function useArtistPageAccess(artistSlug: string) {
     return cachedOwner;
   });
   const [isOwner, setIsOwner] = useState(cachedOwner);
+  const [ownerNeedsOnboarding, setOwnerNeedsOnboarding] = useState(false);
+  const [ownerContentLoaded, setOwnerContentLoaded] = useState(false);
+  const [visitorProfileHasPublicBody, setVisitorProfileHasPublicBody] = useState<boolean | null>(
+    null
+  );
 
   useEffect(() => {
     const normalizedArtist = normalizeSlug(artistSlug);
@@ -113,6 +131,88 @@ export function useArtistPageAccess(artistSlug: string) {
     };
   }, [artistSlug, cachedOwner, lang]);
 
+  useEffect(() => {
+    if (!isOwner || !ownerResolved) {
+      setOwnerContentLoaded(!isOwner);
+      setOwnerNeedsOnboarding(false);
+      return;
+    }
+
+    let cancelled = false;
+    setOwnerContentLoaded(false);
+
+    void fetchOwnArtistPageState(lang).then((state) => {
+      if (cancelled) return;
+      setOwnerNeedsOnboarding(state.needsOnboarding);
+      setOwnerContentLoaded(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwner, ownerResolved, lang]);
+
+  useEffect(() => {
+    const normalizedArtist = normalizeSlug(artistSlug);
+    if (isOwner || !ownerResolved || !normalizedArtist) {
+      setVisitorProfileHasPublicBody(null);
+      return;
+    }
+
+    let cancelled = false;
+    setVisitorProfileHasPublicBody(null);
+
+    void (async () => {
+      try {
+        const response = await fetchWithAuthSession(
+          buildApiUrl(
+            '/api/user-profile',
+            { lang },
+            { includeArtist: true, artistSlugOverride: normalizedArtist }
+          ),
+          {
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache',
+              ...getAuthHeader(),
+            },
+          }
+        );
+        if (cancelled) return;
+
+        if (!response.ok) {
+          setVisitorProfileHasPublicBody(false);
+          return;
+        }
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          data?: {
+            theBand?: string[];
+            headerImages?: string[];
+            socialLinks?: Record<string, string | undefined>;
+          };
+        };
+
+        setVisitorProfileHasPublicBody(
+          result.success
+            ? profileHasPublicBodyContent({
+                theBand: result.data?.theBand,
+                headerImages: result.data?.headerImages,
+                socialLinks: result.data?.socialLinks,
+              })
+            : false
+        );
+      } catch {
+        if (!cancelled) setVisitorProfileHasPublicBody(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [artistSlug, isOwner, lang, ownerResolved]);
+
   const albumsPending =
     catalogCacheStale ||
     albumsStatus === 'idle' ||
@@ -121,12 +221,26 @@ export function useArtistPageAccess(artistSlug: string) {
       albumsFetchContextKey !== desiredFetchKey &&
       cachedPublicRowCount === 0);
 
-  const isLoading = !ownerResolved || albumsPending;
-  const showOnboarding = !isLoading && !catalogArtistMissing && !hasPublicReleases && isOwner;
-  const showNotFound = !isLoading && (catalogArtistMissing || (!hasPublicReleases && !isOwner));
-  const showPublished = !isLoading && !catalogArtistMissing && hasPublicReleases;
-  const suppressPublishedArtistChrome =
-    !hasPublicReleases && (isLoading || showOnboarding || showNotFound);
+  const articlesPending =
+    articlesCacheStale || articlesStatus === 'idle' || articlesStatus === 'loading';
+
+  const visitorAccessPending =
+    !isOwner && (articlesPending || visitorProfileHasPublicBody === null);
+
+  const isLoading =
+    !ownerResolved || albumsPending || visitorAccessPending || (isOwner && !ownerContentLoaded);
+
+  const hasVisitorVisibleContent = hasVisitorVisibleArtistContent({
+    albums: publicAlbums,
+    articlesCount: publicArticles.length,
+    profileHasPublicBody: visitorProfileHasPublicBody === true,
+  });
+
+  const showOnboarding = !isLoading && !catalogArtistMissing && isOwner && ownerNeedsOnboarding;
+  const showNotFound =
+    !isLoading && (catalogArtistMissing || (!isOwner && !hasVisitorVisibleContent));
+  const showPublished = !isLoading && !catalogArtistMissing && !showOnboarding && !showNotFound;
+  const suppressPublishedArtistChrome = isLoading || showOnboarding || showNotFound;
 
   return {
     isLoading,

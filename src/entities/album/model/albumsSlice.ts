@@ -90,6 +90,15 @@ function albumHasDisplayableTitle(album: {
   return Boolean(en || ru);
 }
 
+async function resolveCatalogArtistMissing(response: Response): Promise<boolean> {
+  try {
+    const payload = (await response.json()) as { code?: string };
+    return payload.code !== 'ARTIST_NOT_PUBLISHED';
+  } catch {
+    return true;
+  }
+}
+
 export const fetchAlbums = createAsyncThunk<
   FetchAlbumsFulfilledPayload,
   FetchAlbumsArg,
@@ -320,9 +329,10 @@ export const fetchAlbums = createAsyncThunk<
           throw new Error('Failed to fetch albums. Invalid response format.');
         }
 
-        // Удалённый / приватный артист (?artist=) — завершаем загрузку, без throw.
+        // Неверный slug или страница без публичного контента (?artist=) — завершаем загрузку, без throw.
         if (response.status === 404 && usePublicCatalog) {
-          return wrapAlbumsResult([], requestFetchKey, writeTarget, true);
+          const catalogArtistMissing = await resolveCatalogArtistMissing(response);
+          return wrapAlbumsResult([], requestFetchKey, writeTarget, catalogArtistMissing);
         }
 
         if (response.status >= 500 && usePublicCatalog && publicSlug) {
@@ -333,7 +343,8 @@ export const fetchAlbums = createAsyncThunk<
           if (cachedAlbums.data.length > 0 && cachedAlbums.fetchContextKey === requestFetchKey) {
             throw new Error(`Failed to fetch albums. Status: ${response.status}`);
           }
-          return wrapAlbumsResult([], requestFetchKey, writeTarget, true);
+          const catalogArtistMissing = await resolveCatalogArtistMissing(response);
+          return wrapAlbumsResult([], requestFetchKey, writeTarget, catalogArtistMissing);
         }
 
         throw new Error(`Failed to fetch albums. Status: ${response.status}`);

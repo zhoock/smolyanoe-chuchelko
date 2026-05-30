@@ -2,9 +2,18 @@ import { describe, test, expect } from '@jest/globals';
 import { screen } from '@testing-library/react';
 import { AlbumsSection } from '../AlbumsSection';
 import { renderWithProviders } from '@shared/lib/test-utils';
-import type { IAlbums } from '@models';
+import type { IAlbums, TracksProps } from '@models';
 
 describe('AlbumsSection integration tests', () => {
+  const mockTrack: TracksProps = {
+    id: '1',
+    title: 'Track 1',
+    content: '',
+    duration: 180,
+    src: 'track.mp3',
+    order_index: 10,
+  };
+
   const mockAlbums: IAlbums[] = [
     {
       albumId: 'album-1',
@@ -16,7 +25,7 @@ describe('AlbumsSection integration tests', () => {
         date: '2024-01-01',
       },
       cover: 'cover1',
-      tracks: [],
+      tracks: [mockTrack],
       buttons: {},
       details: [],
     },
@@ -30,7 +39,7 @@ describe('AlbumsSection integration tests', () => {
         date: '2024-02-01',
       },
       cover: 'cover2',
-      tracks: [],
+      tracks: [mockTrack],
       buttons: {},
       details: [],
     },
@@ -131,7 +140,7 @@ describe('AlbumsSection integration tests', () => {
         description: '',
         release: { date: '2024-03-01' },
         cover: 'cover-h',
-        tracks: [],
+        tracks: [mockTrack],
         buttons: {},
         details: [],
         isPublic: false,
@@ -321,6 +330,68 @@ describe('AlbumsSection integration tests', () => {
     });
 
     expect(screen.getByText('…')).toBeInTheDocument();
+  });
+
+  test('не рендерит пустые альбомы для посетителей', () => {
+    renderWithProviders(<AlbumsSection />, {
+      preloadedState: {
+        lang: { current: 'en' },
+        albums: {
+          status: 'succeeded',
+          error: null,
+          data: [
+            {
+              albumId: 'album-empty',
+              album: 'Empty Draft',
+              artist: 'Artist 1',
+              fullName: 'Artist 1 — Empty Draft',
+              description: '',
+              release: { date: '2024-03-01' },
+              cover: 'cover-e',
+              tracks: [],
+              buttons: {},
+              details: [],
+              isPublic: true,
+            },
+          ],
+          lastUpdated: Date.now(),
+          fetchContextKey: null,
+          inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
+          dashboard: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+            inFlightFetchContextKey: null,
+          },
+        },
+        uiDictionary: {
+          en: {
+            status: 'succeeded',
+            error: null,
+            data: [
+              {
+                menu: {},
+                buttons: {},
+                titles: {
+                  albums: 'Albums',
+                },
+              },
+            ],
+            lastUpdated: Date.now(),
+          },
+          ru: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+          },
+        },
+      },
+    });
+
+    expect(screen.queryByRole('region', { name: /albums/i })).not.toBeInTheDocument();
   });
 
   test('не рендерит секцию при успешной загрузке и пустом списке альбомов', () => {

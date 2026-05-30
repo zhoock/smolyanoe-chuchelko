@@ -1,16 +1,17 @@
 export type ArtistPublicationSignals = {
-  hasPublicAlbum: boolean;
+  /** At least one public, non-hidden track on a titled public album. */
+  hasPublishedTracks: boolean;
 };
 
-/** Профиль публичен только после первого опубликованного релиза. */
+/** Catalog and search include the artist only after the first published track. */
 export function isArtistPublishedFromSignals(signals: ArtistPublicationSignals): boolean {
-  return signals.hasPublicAlbum;
+  return signals.hasPublishedTracks;
 }
 
 export function buildPublicationSignalsFromRow(row: {
-  has_public_album: boolean;
+  has_published_tracks: boolean;
 }): ArtistPublicationSignals {
   return {
-    hasPublicAlbum: Boolean(row.has_public_album),
+    hasPublishedTracks: Boolean(row.has_published_tracks),
   };
 }

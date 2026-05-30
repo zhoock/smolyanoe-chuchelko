@@ -1,6 +1,6 @@
 // src/pages/AllAlbums/ui/AllAlbumsPage.tsx
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
@@ -22,6 +22,7 @@ import './style.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 import { useShowSurfaceAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
+import { filterAlbumsForArtistPageSurface } from '@shared/lib/artistPageContent';
 
 // Количество альбомов для подгрузки за раз
 const BATCH_SIZE = 16;
@@ -35,10 +36,16 @@ export function AllAlbumsPage() {
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
-  const allAlbums = useAppSelector((state) => {
-    if (catalogCacheStale) return [];
-    return selectAlbumsResolvedForAllAlbumsPage(state, !artistSlug);
-  });
+  const resolvedAlbums = useAppSelector((state) =>
+    selectAlbumsResolvedForAllAlbumsPage(state, !artistSlug)
+  );
+  const allAlbums = useMemo(
+    () =>
+      catalogCacheStale
+        ? []
+        : filterAlbumsForArtistPageSurface(resolvedAlbums, artistPageAccess.isOwner),
+    [artistPageAccess.isOwner, catalogCacheStale, resolvedAlbums]
+  );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showAlbumsLoadingShell = useShowSurfaceAlbumsLoadingShell(
     albumsStatus,

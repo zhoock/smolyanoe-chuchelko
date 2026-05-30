@@ -12,7 +12,16 @@ describe('getAlbumLifecycleStatus', () => {
     release: { date: '2020-01-01', UPC: '123', genreCodes: ['rock'] },
     buttons: {},
     details: [],
-    tracks: [{ id: '1', title: 'Track 1' }],
+    tracks: [
+      {
+        id: '1',
+        title: 'Track 1',
+        content: '',
+        duration: 180,
+        src: 'track.mp3',
+        order_index: 10,
+      },
+    ],
     isPublic: true,
   };
 

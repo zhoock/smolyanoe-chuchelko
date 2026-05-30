@@ -276,7 +276,35 @@ describe('albumsSlice', () => {
       expect(selectCatalogArtistMissing(state)).toBe(true);
     });
 
-    test('публичный каталог: 500 на странице артиста трактуется как отсутствующий артист', async () => {
+    test('публичный каталог: ARTIST_NOT_PUBLISHED не помечает slug отсутствующим', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          success: false,
+          error: 'Artist not found',
+          code: 'ARTIST_NOT_PUBLISHED',
+        }),
+      } as Response);
+
+      const store = createTestStore();
+      const result = await (store.dispatch as AppDispatch)(fetchAlbums({ force: true }));
+
+      expect(result.type).toBe('albums/fetchMerged/fulfilled');
+      expect(result.payload).toEqual({
+        albums: [],
+        fetchContextKey: 'public:test-artist',
+        writeTarget: 'catalog',
+        catalogArtistMissing: false,
+      });
+
+      const state = store.getState();
+      expect(selectAlbumsStatus(state)).toBe('succeeded');
+      expect(selectAlbumsData(state)).toEqual([]);
+      expect(selectCatalogArtistMissing(state)).toBe(false);
+    });
+
+    test('публичный каталог: 500 с ARTIST_NOT_PUBLISHED не помечает slug отсутствующим', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
@@ -295,10 +323,10 @@ describe('albumsSlice', () => {
         albums: [],
         fetchContextKey: 'public:test-artist',
         writeTarget: 'catalog',
-        catalogArtistMissing: true,
+        catalogArtistMissing: false,
       });
       expect(selectAlbumsStatus(store.getState())).toBe('succeeded');
-      expect(selectCatalogArtistMissing(store.getState())).toBe(true);
+      expect(selectCatalogArtistMissing(store.getState())).toBe(false);
     });
 
     test('при оверлее дашборда обновляет публичный каталог с ?artist=', async () => {

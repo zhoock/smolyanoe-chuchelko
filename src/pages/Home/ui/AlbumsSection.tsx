@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { WrapperAlbumCover, AlbumCover } from '@entities/album';
 import { ErrorI18n } from '@shared/ui/error-message';
@@ -8,7 +8,7 @@ import { useLang } from '@app/providers/lang';
 import {
   selectAlbumsStatus,
   selectAlbumsError,
-  selectPublicAlbumsDataResolvedForSurface,
+  selectAlbumsDataResolved,
   selectPublicAlbumsCacheIsStale,
   selectCatalogArtistMissing,
 } from '@entities/album';
@@ -19,6 +19,7 @@ import './AlbumsSection.scss';
 import { useSiteArtistDisplayName } from '@shared/lib/hooks/useSiteArtistDisplayName';
 import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 import { useShowSurfaceAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
+import { filterAlbumsForArtistPageSurface } from '@shared/lib/artistPageContent';
 
 // Адаптивное количество альбомов для отображения на главной
 const getInitialCount = () => {
@@ -28,7 +29,7 @@ const getInitialCount = () => {
   return 6; // мобильный (но там карусель, так что это не критично)
 };
 
-export function AlbumsSection() {
+export function AlbumsSection({ isOwner = false }: { isOwner?: boolean }) {
   const { lang } = useLang();
   const [searchParams] = useSearchParams();
   const artistSlug = searchParams.get('artist');
@@ -37,9 +38,12 @@ export function AlbumsSection() {
   const { displayName: siteArtistName } = useSiteArtistDisplayName(lang, { artistSlug });
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const albumsError = useAppSelector(selectAlbumsError);
-  /** Публичная витрина артиста: только альбомы с «Visible on page» (`isPublic !== false`). */
   const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
-  const allAlbums = useAppSelector(selectPublicAlbumsDataResolvedForSurface);
+  const resolvedAlbums = useAppSelector(selectAlbumsDataResolved);
+  const allAlbums = useMemo(
+    () => (catalogCacheStale ? [] : filterAlbumsForArtistPageSurface(resolvedAlbums, isOwner)),
+    [catalogCacheStale, isOwner, resolvedAlbums]
+  );
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showAlbumsLoadingShell = useShowSurfaceAlbumsLoadingShell(
     albumsStatus,

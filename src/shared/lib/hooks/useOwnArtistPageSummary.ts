@@ -8,6 +8,9 @@ const EMPTY_STATE: OwnArtistPageState = {
   publicSlug: null,
   hasPublicReleases: false,
   needsOnboarding: false,
+  albumsCount: 0,
+  articlesCount: 0,
+  profileIsEmpty: true,
 };
 
 export function useOwnArtistPageSummary(): OwnArtistPageState & { isLoading: boolean } {

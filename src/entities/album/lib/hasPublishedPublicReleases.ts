@@ -1,9 +1,12 @@
 import type { IAlbums } from '@models';
 
-/** Совпадает с правилом публикации профиля на бэкенде: public + непустое название релиза. */
+/** Public catalog eligibility: public release with at least one visible track. */
 export function hasPublishedPublicReleases(albums: IAlbums[]): boolean {
   return albums.some(
     (album) =>
-      album.isPublic !== false && typeof album.album === 'string' && album.album.trim().length > 0
+      album.isPublic !== false &&
+      typeof album.album === 'string' &&
+      album.album.trim().length > 0 &&
+      (album.tracks?.length ?? 0) > 0
   );
 }

@@ -93,6 +93,12 @@ export function HomePage() {
   ]);
 
   useEffect(() => {
+    const notFoundSurface = hasArtistParam && artistPageAccess.showNotFound;
+    document.body.classList.toggle('page--artist-not-found', notFoundSurface);
+    return () => document.body.classList.remove('page--artist-not-found');
+  }, [artistPageAccess.showNotFound, hasArtistParam]);
+
+  useEffect(() => {
     // Каталог грузит root albumsLoader; force здесь давал повторные loading-циклы
     // (в т.ч. каждые 15s при опросе email verification → AUTH_SESSION_CHANGED).
     if (isDashboardPathname()) return;
@@ -312,7 +318,7 @@ export function HomePage() {
 
     return (
       <>
-        <AlbumsSection />
+        <AlbumsSection isOwner={artistPageAccess.isOwner} />
         <ArticlesSection />
         <AboutSection
           isAboutModalOpen={isAboutModalOpen}
