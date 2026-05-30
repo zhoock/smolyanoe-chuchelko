@@ -11,7 +11,7 @@ dialog {
       flex-shrink: 0;
 
       &--public {
-        color: #7dcea0;
+        color: var(--soft-green);
       }
 
       &--subscribers_only {
@@ -51,13 +51,13 @@ dialog {
       height: 8px;
       border-radius: 4px;
       max-width: 400px;
-      background-color: rgb(var(--graphite-green-rgb) / 10%);
+      background-color: rgb(var(--soft-green-rgb) / 12%);
       overflow: hidden;
     }
 
     &__track-upload-progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #4caf50, #8bc34a);
+      background: linear-gradient(90deg, rgb(var(--soft-green-rgb) / 70%), var(--soft-green));
       border-radius: 4px;
       transition: width 0.3s ease;
     }

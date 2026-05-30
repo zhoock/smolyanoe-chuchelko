@@ -52,6 +52,7 @@ import { readDashboardOpenIntent, stripDashboardOpenIntent } from '@shared/lib/d
 import { EmailVerificationOnboarding } from '@shared/lib/emailVerification';
 import { AlbumPublishedToast } from '@shared/ui/albumPublishedToast/AlbumPublishedToast';
 import { AlbumCreatedToast } from '@shared/ui/albumCreatedToast/AlbumCreatedToast';
+import { TracksUploadedToast } from '@shared/ui/tracksUploadedToast/TracksUploadedToast';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
@@ -59,6 +60,7 @@ import { isAlbumReadyToPublish } from '@entities/album/lib/isAlbumReadyToPublish
 import { getAlbumLifecycleStatus } from '@entities/album/lib/albumLifecycleStatus';
 import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
+import { queueTracksUploadedToast } from '@shared/lib/tracksUploadedToast';
 import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
@@ -1096,6 +1098,7 @@ function UserDashboard() {
   const [scrollToAlbumUploadId, setScrollToAlbumUploadId] = useState<string | null>(null);
   const [publishingAlbumId, setPublishingAlbumId] = useState<string | null>(null);
   const [publishedToastTrigger, setPublishedToastTrigger] = useState(0);
+  const [tracksUploadToastTrigger, setTracksUploadToastTrigger] = useState(0);
   const trackUploadSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [articleAccessMenuArticleId, setArticleAccessMenuArticleId] = useState<string | null>(null);
@@ -2513,12 +2516,8 @@ function UserDashboard() {
           }
         }
 
-        setAlertModal({
-          isOpen: true,
-          title: ui?.dashboard?.success ?? 'Success',
-          message: formatUploadedTracksSuccessMessage(uploadedCount, lang, ui),
-          variant: 'success',
-        });
+        queueTracksUploadedToast(formatUploadedTracksSuccessMessage(uploadedCount, lang, ui));
+        setTracksUploadToastTrigger((n) => n + 1);
       } else {
         throw new Error(result.error || 'Failed to upload tracks');
       }
@@ -2984,6 +2983,7 @@ function UserDashboard() {
       <Popup isActive={true} onClose={closeDashboard}>
         <AlbumPublishedToast triggerKey={publishedToastTrigger} />
         <AlbumCreatedToast triggerKey={editAlbumModal} />
+        <TracksUploadedToast triggerKey={tracksUploadToastTrigger} />
         <div className="user-dashboard">
           {/* Main card container */}
           <div className="user-dashboard__card">
@@ -3222,15 +3222,6 @@ function UserDashboard() {
                                               {ui?.dashboard?.editAlbum ?? 'Edit Album'}
                                             </button>
 
-                                            {lifecycleStatus === 'draft' ? (
-                                              <p className="user-dashboard__album-upload-hint">
-                                                {ui?.dashboard?.albumPublishHintNeedsTracks ??
-                                                  (lang !== 'ru'
-                                                    ? 'Upload at least one track to publish this album.'
-                                                    : 'Загрузите хотя бы один трек для публикации альбома.')}
-                                              </p>
-                                            ) : null}
-
                                             {/* Track upload section */}
                                             <div
                                               ref={(el) => {
@@ -3313,113 +3304,123 @@ function UserDashboard() {
                                               )}
                                             </div>
 
-                                            {/* Tracks list with drag-and-drop */}
-                                            <DndContext
-                                              sensors={sensors}
-                                              collisionDetection={closestCenter}
-                                              onDragEnd={(event) => handleDragEnd(event, album.id)}
-                                            >
-                                              <SortableContext
-                                                items={album.tracks.map((track) => track.id)}
-                                                strategy={verticalListSortingStrategy}
-                                              >
-                                                <div className="user-dashboard__tracks-list">
-                                                  {album.tracks.map((track, trackIndex) => (
-                                                    <SortableTrackItem
-                                                      key={track.id}
-                                                      track={track}
-                                                      displayIndex={trackIndex + 1}
-                                                      albumId={album.albumId}
-                                                      onDelete={handleDeleteTrack}
-                                                      onTitleChange={handleTrackTitleChange}
-                                                      onVisibilityChange={
-                                                        handleTrackVisibilityChange
-                                                      }
-                                                      ui={ui ?? undefined}
-                                                      swipedTrackId={swipedTrackId}
-                                                      onSwipeChange={setSwipedTrackId}
-                                                    />
-                                                  ))}
-                                                </div>
-                                              </SortableContext>
-                                            </DndContext>
-
-                                            {/* Lyrics section */}
-                                            <div className="user-dashboard__lyrics-section">
-                                              <h4 className="user-dashboard__lyrics-title">
-                                                {ui?.dashboard?.lyrics ?? 'Lyrics'}
-                                              </h4>
-                                              <div className="user-dashboard__lyrics-table">
-                                                <div className="user-dashboard__lyrics-header">
-                                                  <div className="user-dashboard__lyrics-header-cell">
-                                                    {ui?.dashboard?.track ?? 'Track'}
-                                                  </div>
-                                                  <div className="user-dashboard__lyrics-header-cell">
-                                                    {ui?.dashboard?.status ?? 'Status'}
-                                                  </div>
-                                                  <div className="user-dashboard__lyrics-header-cell">
-                                                    {ui?.dashboard?.actions ?? 'Actions'}
-                                                  </div>
-                                                </div>
-                                                {album.tracks.map((track) => (
-                                                  <div
-                                                    key={track.id}
-                                                    className="user-dashboard__lyrics-row"
+                                            {album.tracks.length > 0 ? (
+                                              <>
+                                                {/* Tracks list with drag-and-drop */}
+                                                <DndContext
+                                                  sensors={sensors}
+                                                  collisionDetection={closestCenter}
+                                                  onDragEnd={(event) =>
+                                                    handleDragEnd(event, album.id)
+                                                  }
+                                                >
+                                                  <SortableContext
+                                                    items={album.tracks.map((track) => track.id)}
+                                                    strategy={verticalListSortingStrategy}
                                                   >
-                                                    <div
-                                                      className="user-dashboard__lyrics-cell"
-                                                      data-label={ui?.dashboard?.track ?? 'Track'}
-                                                    >
-                                                      {track.title}
+                                                    <div className="user-dashboard__tracks-list">
+                                                      {album.tracks.map((track, trackIndex) => (
+                                                        <SortableTrackItem
+                                                          key={track.id}
+                                                          track={track}
+                                                          displayIndex={trackIndex + 1}
+                                                          albumId={album.albumId}
+                                                          onDelete={handleDeleteTrack}
+                                                          onTitleChange={handleTrackTitleChange}
+                                                          onVisibilityChange={
+                                                            handleTrackVisibilityChange
+                                                          }
+                                                          ui={ui ?? undefined}
+                                                          swipedTrackId={swipedTrackId}
+                                                          onSwipeChange={setSwipedTrackId}
+                                                        />
+                                                      ))}
                                                     </div>
-                                                    <div
-                                                      className="user-dashboard__lyrics-cell"
-                                                      data-label={ui?.dashboard?.status ?? 'Status'}
-                                                    >
-                                                      {getLyricsStatusText(track.lyricsStatus)}
-                                                    </div>
-                                                    <div
-                                                      className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions"
-                                                      data-label={
-                                                        ui?.dashboard?.actions ?? 'Actions'
-                                                      }
-                                                    >
-                                                      <div className="user-dashboard__lyrics-actions-row">
-                                                        {(() => {
-                                                          // Вычисляем hasSyncedLyrics для логирования
-                                                          const hasSyncedLyrics =
-                                                            Array.isArray(track.syncedLyrics) &&
-                                                            track.syncedLyrics.length > 0 &&
-                                                            track.syncedLyrics.some(
-                                                              (line) => line.startTime > 0
-                                                            );
-                                                          return getLyricsActions(
-                                                            track.lyricsStatus,
-                                                            hasSyncedLyrics
-                                                          );
-                                                        })().map((action, idx) => (
-                                                          <button
-                                                            key={idx}
-                                                            type="button"
-                                                            className="user-dashboard__lyrics-action-button"
-                                                            onClick={() =>
-                                                              handleLyricsAction(
-                                                                action.action,
-                                                                album.id,
-                                                                track.id,
-                                                                track.title
-                                                              )
-                                                            }
-                                                          >
-                                                            {action.label}
-                                                          </button>
-                                                        ))}
+                                                  </SortableContext>
+                                                </DndContext>
+
+                                                {/* Lyrics section */}
+                                                <div className="user-dashboard__lyrics-section">
+                                                  <h4 className="user-dashboard__lyrics-title">
+                                                    {ui?.dashboard?.lyrics ?? 'Lyrics'}
+                                                  </h4>
+                                                  <div className="user-dashboard__lyrics-table">
+                                                    <div className="user-dashboard__lyrics-header">
+                                                      <div className="user-dashboard__lyrics-header-cell">
+                                                        {ui?.dashboard?.track ?? 'Track'}
+                                                      </div>
+                                                      <div className="user-dashboard__lyrics-header-cell">
+                                                        {ui?.dashboard?.status ?? 'Status'}
+                                                      </div>
+                                                      <div className="user-dashboard__lyrics-header-cell">
+                                                        {ui?.dashboard?.actions ?? 'Actions'}
                                                       </div>
                                                     </div>
+                                                    {album.tracks.map((track) => (
+                                                      <div
+                                                        key={track.id}
+                                                        className="user-dashboard__lyrics-row"
+                                                      >
+                                                        <div
+                                                          className="user-dashboard__lyrics-cell"
+                                                          data-label={
+                                                            ui?.dashboard?.track ?? 'Track'
+                                                          }
+                                                        >
+                                                          {track.title}
+                                                        </div>
+                                                        <div
+                                                          className="user-dashboard__lyrics-cell"
+                                                          data-label={
+                                                            ui?.dashboard?.status ?? 'Status'
+                                                          }
+                                                        >
+                                                          {getLyricsStatusText(track.lyricsStatus)}
+                                                        </div>
+                                                        <div
+                                                          className="user-dashboard__lyrics-cell user-dashboard__lyrics-cell--actions"
+                                                          data-label={
+                                                            ui?.dashboard?.actions ?? 'Actions'
+                                                          }
+                                                        >
+                                                          <div className="user-dashboard__lyrics-actions-row">
+                                                            {(() => {
+                                                              // Вычисляем hasSyncedLyrics для логирования
+                                                              const hasSyncedLyrics =
+                                                                Array.isArray(track.syncedLyrics) &&
+                                                                track.syncedLyrics.length > 0 &&
+                                                                track.syncedLyrics.some(
+                                                                  (line) => line.startTime > 0
+                                                                );
+                                                              return getLyricsActions(
+                                                                track.lyricsStatus,
+                                                                hasSyncedLyrics
+                                                              );
+                                                            })().map((action, idx) => (
+                                                              <button
+                                                                key={idx}
+                                                                type="button"
+                                                                className="user-dashboard__lyrics-action-button"
+                                                                onClick={() =>
+                                                                  handleLyricsAction(
+                                                                    action.action,
+                                                                    album.id,
+                                                                    track.id,
+                                                                    track.title
+                                                                  )
+                                                                }
+                                                              >
+                                                                {action.label}
+                                                              </button>
+                                                            ))}
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    ))}
                                                   </div>
-                                                ))}
-                                              </div>
-                                            </div>
+                                                </div>
+                                              </>
+                                            ) : null}
 
                                             {/* Delete album / Upload / Publish actions */}
                                             <div className="user-dashboard__album-footer-actions">
@@ -3446,6 +3447,20 @@ function UserDashboard() {
                                                       disabled={
                                                         !canPublishAlbum || isPublishingAlbum
                                                       }
+                                                      title={
+                                                        isPublishingAlbum
+                                                          ? (ui?.dashboard?.editAlbumModal?.buttons
+                                                              ?.saving ?? 'Saving...')
+                                                          : (ui?.dashboard?.editAlbumModal?.buttons
+                                                              ?.publishAlbum ?? 'Publish album')
+                                                      }
+                                                      aria-label={
+                                                        isPublishingAlbum
+                                                          ? (ui?.dashboard?.editAlbumModal?.buttons
+                                                              ?.saving ?? 'Saving...')
+                                                          : (ui?.dashboard?.editAlbumModal?.buttons
+                                                              ?.publishAlbum ?? 'Publish album')
+                                                      }
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         if (!canPublishAlbum || isPublishingAlbum) {
@@ -3454,11 +3469,18 @@ function UserDashboard() {
                                                         void handlePublishAlbum(album.id);
                                                       }}
                                                     >
-                                                      {isPublishingAlbum
-                                                        ? (ui?.dashboard?.editAlbumModal?.buttons
-                                                            ?.saving ?? 'Saving...')
-                                                        : (ui?.dashboard?.editAlbumModal?.buttons
-                                                            ?.publishAlbum ?? 'Publish album')}
+                                                      {isPublishingAlbum ? (
+                                                        (ui?.dashboard?.editAlbumModal?.buttons
+                                                          ?.saving ?? 'Saving...')
+                                                      ) : (
+                                                        <>
+                                                          {!canPublishAlbum ? (
+                                                            <SubscriberContentLockIcon size={18} />
+                                                          ) : null}
+                                                          {ui?.dashboard?.editAlbumModal?.buttons
+                                                            ?.publishAlbum ?? 'Publish album'}
+                                                        </>
+                                                      )}
                                                     </button>
                                                     <p className="user-dashboard__publish-album-hint">
                                                       {canPublishAlbum
@@ -3486,6 +3508,11 @@ function UserDashboard() {
                                     );
                                   })}
                                 </div>
+
+                                <div
+                                  className="user-dashboard__albums-upload-divider"
+                                  aria-hidden
+                                />
 
                                 <div className="user-dashboard__upload-action">
                                   <button
