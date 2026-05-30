@@ -78,19 +78,9 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
-    const onboardingSurface =
-      artistPageAccess.showOnboarding ||
-      (hasArtistParam &&
-        artistPageAccess.suppressPublishedArtistChrome &&
-        artistPageAccess.isLoading);
-    document.body.classList.toggle('page--artist-onboarding', onboardingSurface);
+    document.body.classList.toggle('page--artist-onboarding', artistPageAccess.showOnboarding);
     return () => document.body.classList.remove('page--artist-onboarding');
-  }, [
-    artistPageAccess.isLoading,
-    artistPageAccess.showOnboarding,
-    artistPageAccess.suppressPublishedArtistChrome,
-    hasArtistParam,
-  ]);
+  }, [artistPageAccess.showOnboarding]);
 
   useEffect(() => {
     const notFoundSurface = hasArtistParam && artistPageAccess.showNotFound;
@@ -302,10 +292,6 @@ export function HomePage() {
   if (hasArtistParam) {
     if (hideArtistPageAfterOwnDelete) {
       return null;
-    }
-
-    if (artistPageAccess.isLoading && artistPageAccess.suppressPublishedArtistChrome) {
-      return <div className="artist-onboarding artist-onboarding--loading" aria-busy="true" />;
     }
 
     if (artistPageAccess.showNotFound) {

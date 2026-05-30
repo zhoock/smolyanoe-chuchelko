@@ -153,6 +153,10 @@ dialog {
         border-color: var(--dark-greenish-yellow);
         background: var(--dashboard-hover-bg);
       }
+
+      &--invalid {
+        border-color: var(--pink-terracotta);
+      }
     }
 
     &__dropzone-text {

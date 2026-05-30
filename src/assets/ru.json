@@ -379,6 +379,8 @@
       "albumStatusReadyToPublish": "Готов к публикации",
       "albumStatusPublished": "Опубликован",
       "albumPublishHintNeedsTracks": "Загрузите хотя бы один трек для публикации альбома.",
+      "albumPublishHintNeedsCover": "Загрузите обложку альбома для публикации.",
+      "albumPublishHintNeedsFields": "Заполните все обязательные поля альбома для публикации.",
       "albumPublishHintReady": "Альбом готов к публикации.",
       "publishAlbumFailed": "Не удалось опубликовать альбом. Попробуйте снова.",
       "logout": "Выйти",
@@ -696,6 +698,7 @@
           "requiredReleaseDate": "Укажите дату релиза",
           "requiredUpcEan": "Укажите UPC / EAN",
           "requiredDescription": "Укажите описание",
+          "requiredCover": "Загрузите обложку альбома",
           "requiredRegularPrice": "Укажите обычную цену",
           "requiredPreorderReleaseDate": "Укажите дату релиза предзаказа"
         },

@@ -529,6 +529,8 @@ export interface IInterface {
     albumStatusReadyToPublish?: string;
     albumStatusPublished?: string;
     albumPublishHintNeedsTracks?: string;
+    albumPublishHintNeedsCover?: string;
+    albumPublishHintNeedsFields?: string;
     albumPublishHintReady?: string;
     publishAlbumFailed?: string;
     logout: string;
@@ -861,6 +863,7 @@ export interface IInterface {
         requiredReleaseDate?: string;
         requiredUpcEan?: string;
         requiredDescription?: string;
+        requiredCover?: string;
         requiredRegularPrice?: string;
         requiredPreorderReleaseDate?: string;
       };

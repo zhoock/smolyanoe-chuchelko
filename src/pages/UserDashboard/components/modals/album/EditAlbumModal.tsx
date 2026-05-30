@@ -829,6 +829,7 @@ export function EditAlbumModal({
 
       if (result.success && result.data) {
         setCoverDraftKey(result.data.draftKey);
+        setStep1InvalidFields((prev) => prev.filter((field) => field !== 'cover'));
 
         // освобождаем objectURL
         if (localPreviewUrlRef.current) {
@@ -1782,6 +1783,7 @@ export function EditAlbumModal({
     if (currentStep === 1) {
       const invalid = getAlbumStep1InvalidFields(formData, {
         effectiveAllowDownloadSale: saleModeForValidation,
+        cover: { albumArtPreview, coverDraftKey },
       });
       setStep1InvalidFields(invalid);
       if (invalid.length > 0) return;
@@ -1915,6 +1917,16 @@ export function EditAlbumModal({
         setIsSaving(false);
         return;
       }
+    }
+
+    const step1Invalid = getAlbumStep1InvalidFields(formData, {
+      effectiveAllowDownloadSale: saleModeForValidation,
+      cover: { albumArtPreview, coverDraftKey },
+    });
+    if (step1Invalid.length > 0) {
+      setStep1InvalidFields(step1Invalid);
+      setCurrentStep(1);
+      return;
     }
 
     setIsSaving(true);
@@ -2712,7 +2724,9 @@ export function EditAlbumModal({
             ) : null}
           </div>
 
-          <div className="edit-album-modal__field">
+          <div
+            className={`edit-album-modal__field${step1HasErr('cover') ? ' edit-album-modal__field--invalid' : ''}`}
+          >
             <label className="edit-album-modal__label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumArt ?? 'Album art'}
             </label>
@@ -2789,7 +2803,7 @@ export function EditAlbumModal({
               </div>
             ) : (
               <div
-                className={`edit-album-modal__dropzone ${dragActive ? 'edit-album-modal__dropzone--active' : ''}`}
+                className={`edit-album-modal__dropzone ${dragActive ? 'edit-album-modal__dropzone--active' : ''}${step1HasErr('cover') ? ' edit-album-modal__dropzone--invalid' : ''}`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -2803,6 +2817,12 @@ export function EditAlbumModal({
                 </label>
               </div>
             )}
+            {step1HasErr('cover') ? (
+              <p className="edit-album-modal__field-error" role="alert">
+                {step1ValUi?.requiredCover ??
+                  (lang === 'ru' ? 'Загрузите обложку альбома' : 'Upload album cover art')}
+              </p>
+            ) : null}
           </div>
 
           <div className="edit-album-modal__field">

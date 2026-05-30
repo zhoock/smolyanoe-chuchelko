@@ -11,14 +11,23 @@ function releaseGenreCodes(release: Record<string, unknown>): string[] {
   return raw.map(String).filter(Boolean);
 }
 
+export function resolveAlbumCoverKey(cover: IAlbums['cover']): string {
+  if (typeof cover === 'string') return cover.trim();
+  if (cover && typeof cover === 'object' && 'img' in cover) {
+    return String((cover as { img?: string }).img ?? '').trim();
+  }
+  return '';
+}
+
 export function isAlbumDraft(album: Pick<IAlbums, 'isPublic'>): boolean {
   return album.isPublic === false;
 }
 
-/** Черновик можно опубликовать: обязательные поля из мастера + минимум один трек. */
+/** Черновик можно опубликовать: обязательные поля из мастера + обложка + минимум один трек. */
 export function isAlbumReadyToPublish(album: IAlbums): boolean {
   if (!isAlbumDraft(album)) return false;
   if (!album.album?.trim()) return false;
+  if (!resolveAlbumCoverKey(album.cover)) return false;
   if (!album.description?.trim()) return false;
   if ((album.tracks?.length ?? 0) < 1) return false;
 
@@ -28,4 +37,15 @@ export function isAlbumReadyToPublish(album: IAlbums): boolean {
   if (releaseGenreCodes(release).length === 0) return false;
 
   return true;
+}
+
+export type AlbumPublishHintKey = 'ready' | 'cover' | 'tracks' | 'fields';
+
+/** Какой hint показать у кнопки Publish в дашборде. */
+export function getAlbumPublishHintKey(album: IAlbums): AlbumPublishHintKey {
+  if (!isAlbumDraft(album)) return 'ready';
+  if (!resolveAlbumCoverKey(album.cover)) return 'cover';
+  if ((album.tracks?.length ?? 0) < 1) return 'tracks';
+  if (!isAlbumReadyToPublish(album)) return 'fields';
+  return 'ready';
 }

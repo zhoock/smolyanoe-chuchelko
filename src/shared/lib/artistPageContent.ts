@@ -19,8 +19,8 @@ export function countUniqueArticles(articles: IArticles[]): number {
   return ids.size > 0 ? ids.size : articles.length;
 }
 
+/** Профиль «пуст» для онбординга: bio, hero, соцсети. site_name из регистрации не считается контентом. */
 export function isArtistProfileEmpty(profile: ProfileContentInput): boolean {
-  if (profile.siteName?.trim()) return false;
   if (profile.headerImages?.some((image) => image.trim())) return false;
   if (profile.theBand?.some((line) => line.trim())) return false;
   if (Object.values(profile.socialLinks ?? {}).some((value) => value?.trim())) return false;

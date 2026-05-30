@@ -34,9 +34,9 @@ describe('artistPageContent', () => {
     );
   });
 
-  test('isArtistProfileEmpty checks profile fields', () => {
+  test('isArtistProfileEmpty checks substantive profile fields only', () => {
     expect(isArtistProfileEmpty({})).toBe(true);
-    expect(isArtistProfileEmpty({ siteName: 'Band' })).toBe(false);
+    expect(isArtistProfileEmpty({ siteName: 'Band' })).toBe(true);
     expect(isArtistProfileEmpty({ headerImages: ['hero.jpg'] })).toBe(false);
     expect(isArtistProfileEmpty({ theBand: ['Bio'] })).toBe(false);
   });

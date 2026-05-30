@@ -139,16 +139,25 @@ export function useArtistPageAccess(artistSlug: string) {
     }
 
     let cancelled = false;
-    setOwnerContentLoaded(false);
 
-    void fetchOwnArtistPageState(lang).then((state) => {
-      if (cancelled) return;
-      setOwnerNeedsOnboarding(state.needsOnboarding);
-      setOwnerContentLoaded(true);
-    });
+    const refreshOwnerState = () => {
+      setOwnerContentLoaded(false);
+      void fetchOwnArtistPageState(lang).then((state) => {
+        if (cancelled) return;
+        setOwnerNeedsOnboarding(state.needsOnboarding);
+        setOwnerContentLoaded(true);
+      });
+    };
+
+    refreshOwnerState();
+
+    window.addEventListener('artist:updated', refreshOwnerState);
+    window.addEventListener('profile-name-updated', refreshOwnerState);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('artist:updated', refreshOwnerState);
+      window.removeEventListener('profile-name-updated', refreshOwnerState);
     };
   }, [isOwner, ownerResolved, lang]);
 
@@ -240,7 +249,7 @@ export function useArtistPageAccess(artistSlug: string) {
   const showNotFound =
     !isLoading && (catalogArtistMissing || (!isOwner && !hasVisitorVisibleContent));
   const showPublished = !isLoading && !catalogArtistMissing && !showOnboarding && !showNotFound;
-  const suppressPublishedArtistChrome = isLoading || showOnboarding || showNotFound;
+  const suppressPublishedArtistChrome = showOnboarding || showNotFound;
 
   return {
     isLoading,

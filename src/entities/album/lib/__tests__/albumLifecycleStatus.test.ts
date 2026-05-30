@@ -9,6 +9,7 @@ describe('getAlbumLifecycleStatus', () => {
     album: 'Test Album',
     fullName: 'Test Album',
     description: 'Description',
+    cover: 'album-cover-base',
     release: { date: '2020-01-01', UPC: '123', genreCodes: ['rock'] },
     buttons: {},
     details: [],

@@ -379,6 +379,8 @@
       "albumStatusReadyToPublish": "Ready to Publish",
       "albumStatusPublished": "Published",
       "albumPublishHintNeedsTracks": "Upload at least one track to publish this album.",
+      "albumPublishHintNeedsCover": "Upload album cover art to publish this album.",
+      "albumPublishHintNeedsFields": "Complete all required album fields to publish.",
       "albumPublishHintReady": "This album is ready for publication.",
       "publishAlbumFailed": "Could not publish album. Please try again.",
       "logout": "Logout",
@@ -696,6 +698,7 @@
           "requiredReleaseDate": "Enter the release date",
           "requiredUpcEan": "Enter UPC / EAN",
           "requiredDescription": "Enter a description",
+          "requiredCover": "Upload album cover art",
           "requiredRegularPrice": "Enter the regular price",
           "requiredPreorderReleaseDate": "Enter the pre-order release date"
         },

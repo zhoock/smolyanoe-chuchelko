@@ -755,16 +755,35 @@ export type AlbumStep1InvalidField =
   | 'releaseDate'
   | 'upcEan'
   | 'description'
+  | 'cover'
   | 'regularPrice'
   | 'preorderReleaseDate';
 
 /** Поля шага 4 (кредиты) с обязательной проверкой */
 export type AlbumStep4InvalidField = 'albumCoverDesigner' | 'bandMembers' | 'producer';
 
+export type AlbumCoverStep1State = {
+  albumArtPreview: string | null;
+  coverDraftKey: string | null;
+};
+
+export function hasAlbumCoverForStep1(
+  formData: AlbumFormData,
+  coverState: AlbumCoverStep1State
+): boolean {
+  if (coverState.coverDraftKey) return true;
+  if (coverState.albumArtPreview?.trim()) return true;
+  if (formData.albumArt instanceof File) return true;
+  return false;
+}
+
 /** Список пустых/незаполненных полей шага 1 (без alert — текст под полями в UI). */
 export function getAlbumStep1InvalidFields(
   formData: AlbumFormData,
-  opts?: { effectiveAllowDownloadSale?: 'no' | 'yes' | 'preorder' }
+  opts?: {
+    effectiveAllowDownloadSale?: 'no' | 'yes' | 'preorder';
+    cover?: AlbumCoverStep1State;
+  }
 ): AlbumStep1InvalidField[] {
   const saleMode = opts?.effectiveAllowDownloadSale ?? formData.allowDownloadSale;
   const out: AlbumStep1InvalidField[] = [];
@@ -772,6 +791,7 @@ export function getAlbumStep1InvalidFields(
   if (!formData.releaseDate?.trim()) out.push('releaseDate');
   if (!formData.upcEan?.trim()) out.push('upcEan');
   if (!formData.description?.trim()) out.push('description');
+  if (opts?.cover && !hasAlbumCoverForStep1(formData, opts.cover)) out.push('cover');
   if (saleMode !== 'no' && !formData.regularPrice?.trim()) out.push('regularPrice');
   if (saleMode === 'preorder' && !formData.preorderReleaseDate?.trim())
     out.push('preorderReleaseDate');

@@ -56,7 +56,10 @@ import { TracksUploadedToast } from '@shared/ui/tracksUploadedToast/TracksUpload
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
-import { isAlbumReadyToPublish } from '@entities/album/lib/isAlbumReadyToPublish';
+import {
+  isAlbumReadyToPublish,
+  getAlbumPublishHintKey,
+} from '@entities/album/lib/isAlbumReadyToPublish';
 import { getAlbumLifecycleStatus } from '@entities/album/lib/albumLifecycleStatus';
 import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
@@ -3132,9 +3135,11 @@ function UserDashboard() {
                                       : album.isPublic === false || album.tracks.length === 0
                                         ? 'draft'
                                         : 'published';
+                                    const publishHintKey = albumFromStore
+                                      ? getAlbumPublishHintKey(albumFromStore)
+                                      : 'fields';
                                     const canPublishAlbum =
-                                      lifecycleStatus === 'ready-to-publish' &&
-                                      Boolean(albumFromStore);
+                                      publishHintKey === 'ready' && Boolean(albumFromStore);
                                     const isPublishingAlbum = publishingAlbumId === album.id;
                                     const showPublishControls = lifecycleStatus !== 'published';
                                     return (
@@ -3483,16 +3488,28 @@ function UserDashboard() {
                                                       )}
                                                     </button>
                                                     <p className="user-dashboard__publish-album-hint">
-                                                      {canPublishAlbum
+                                                      {publishHintKey === 'ready'
                                                         ? (ui?.dashboard?.albumPublishHintReady ??
                                                           (lang !== 'ru'
                                                             ? 'This album is ready for publication.'
                                                             : 'Альбом готов к публикации.'))
-                                                        : (ui?.dashboard
-                                                            ?.albumPublishHintNeedsTracks ??
-                                                          (lang !== 'ru'
-                                                            ? 'Upload at least one track to publish this album.'
-                                                            : 'Загрузите хотя бы один трек для публикации альбома.'))}
+                                                        : publishHintKey === 'cover'
+                                                          ? (ui?.dashboard
+                                                              ?.albumPublishHintNeedsCover ??
+                                                            (lang !== 'ru'
+                                                              ? 'Upload album cover art to publish this album.'
+                                                              : 'Загрузите обложку альбома для публикации.'))
+                                                          : publishHintKey === 'tracks'
+                                                            ? (ui?.dashboard
+                                                                ?.albumPublishHintNeedsTracks ??
+                                                              (lang !== 'ru'
+                                                                ? 'Upload at least one track to publish this album.'
+                                                                : 'Загрузите хотя бы один трек для публикации альбома.'))
+                                                            : (ui?.dashboard
+                                                                ?.albumPublishHintNeedsFields ??
+                                                              (lang !== 'ru'
+                                                                ? 'Complete all required album fields to publish.'
+                                                                : 'Заполните все обязательные поля альбома для публикации.'))}
                                                     </p>
                                                   </div>
                                                 ) : null}
