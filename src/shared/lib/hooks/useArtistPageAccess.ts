@@ -3,8 +3,10 @@ import { useLang } from '@app/providers/lang';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
 import {
   selectAlbumsStatus,
+  selectAlbumsData,
   selectAlbumsFetchContextKey,
   selectCatalogArtistMissing,
+  selectDashboardAlbumsData,
   selectPublicAlbumsDataResolvedForSurface,
   selectPublicAlbumsCacheIsStale,
   selectPublicCatalogCachedRowCount,
@@ -21,6 +23,8 @@ import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { getAuthHeader, getUser, isAuthenticated } from '@shared/lib/auth';
 import { isCachedOwnArtistSlug, writeCachedOwnPublicSlug } from '@shared/lib/ownPublicSlugCache';
 import {
+  countUniqueAlbums,
+  countUniqueArticles,
   hasVisitorVisibleArtistContent,
   profileHasPublicBodyContent,
 } from '@shared/lib/artistPageContent';
@@ -40,6 +44,8 @@ export function useArtistPageAccess(artistSlug: string) {
   const albumsFetchContextKey = useAppSelector(selectAlbumsFetchContextKey);
   const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
   const publicAlbums = useAppSelector(selectPublicAlbumsDataResolvedForSurface);
+  const catalogAlbums = useAppSelector(selectAlbumsData);
+  const dashboardAlbums = useAppSelector(selectDashboardAlbumsData);
   const cachedPublicRowCount = useAppSelector(selectPublicCatalogCachedRowCount);
   const articlesStatus = useAppSelector(selectArticlesStatus);
   const articlesCacheStale = useAppSelector(selectArticlesCacheIsStale);
@@ -64,6 +70,20 @@ export function useArtistPageAccess(artistSlug: string) {
   const [visitorProfileHasPublicBody, setVisitorProfileHasPublicBody] = useState<boolean | null>(
     null
   );
+
+  const ownerAlbumCount = useMemo(() => {
+    if (!isOwner) return 0;
+    return Math.max(countUniqueAlbums(dashboardAlbums), countUniqueAlbums(catalogAlbums));
+  }, [isOwner, dashboardAlbums, catalogAlbums]);
+
+  const ownerStillNeedsOnboarding = ownerNeedsOnboarding && ownerAlbumCount === 0;
+
+  const ownerArticleCount = useMemo(() => {
+    if (!isOwner) return 0;
+    return countUniqueArticles(publicArticles);
+  }, [isOwner, publicArticles]);
+
+  const ownerStoreHasNoReleases = isOwner && ownerAlbumCount === 0 && ownerArticleCount === 0;
 
   useEffect(() => {
     const normalizedArtist = normalizeSlug(artistSlug);
@@ -245,17 +265,31 @@ export function useArtistPageAccess(artistSlug: string) {
     profileHasPublicBody: visitorProfileHasPublicBody === true,
   });
 
-  const showOnboarding = !isLoading && !catalogArtistMissing && isOwner && ownerNeedsOnboarding;
+  const showOnboardingSkeleton =
+    !catalogArtistMissing &&
+    isOwner &&
+    ownerStoreHasNoReleases &&
+    (isLoading || !ownerContentLoaded);
+
+  const showOnboarding =
+    !catalogArtistMissing && isOwner && ownerStillNeedsOnboarding && !showOnboardingSkeleton;
+
   const showNotFound =
     !isLoading && (catalogArtistMissing || (!isOwner && !hasVisitorVisibleContent));
-  const showPublished = !isLoading && !catalogArtistMissing && !showOnboarding && !showNotFound;
-  const suppressPublishedArtistChrome = showOnboarding || showNotFound;
+  const showPublished =
+    !isLoading &&
+    !catalogArtistMissing &&
+    !showOnboarding &&
+    !showOnboardingSkeleton &&
+    !showNotFound;
+  const suppressPublishedArtistChrome = showOnboarding || showOnboardingSkeleton || showNotFound;
 
   return {
     isLoading,
     isOwner,
     hasPublicReleases,
     showOnboarding,
+    showOnboardingSkeleton,
     showNotFound,
     showPublished,
     suppressPublishedArtistChrome,

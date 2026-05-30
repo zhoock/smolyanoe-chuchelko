@@ -9,9 +9,11 @@ import {
   selectAlbumsStatus,
   selectAlbumsError,
   selectAlbumsDataResolved,
+  selectDashboardAlbumsDataResolved,
   selectPublicAlbumsCacheIsStale,
   selectCatalogArtistMissing,
 } from '@entities/album';
+import type { IAlbums } from '@models';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -40,10 +42,22 @@ export function AlbumsSection({ isOwner = false }: { isOwner?: boolean }) {
   const albumsError = useAppSelector(selectAlbumsError);
   const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
   const resolvedAlbums = useAppSelector(selectAlbumsDataResolved);
-  const allAlbums = useMemo(
-    () => (catalogCacheStale ? [] : filterAlbumsForArtistPageSurface(resolvedAlbums, isOwner)),
-    [catalogCacheStale, isOwner, resolvedAlbums]
-  );
+  const dashboardAlbums = useAppSelector(selectDashboardAlbumsDataResolved);
+  const allAlbums = useMemo(() => {
+    const fromCatalog = filterAlbumsForArtistPageSurface(
+      catalogCacheStale ? [] : resolvedAlbums,
+      isOwner
+    );
+    if (!isOwner) return fromCatalog;
+
+    const fromDashboard = filterAlbumsForArtistPageSurface(dashboardAlbums, true);
+    // Свежий публичный каталог — единственный источник (после удаления не показываем stale merge).
+    if (!catalogCacheStale) {
+      if (fromCatalog.length > 0) return fromCatalog;
+      return fromDashboard;
+    }
+    return fromDashboard.length > 0 ? fromDashboard : fromCatalog;
+  }, [catalogCacheStale, dashboardAlbums, isOwner, resolvedAlbums]);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const showAlbumsLoadingShell = useShowSurfaceAlbumsLoadingShell(
     albumsStatus,

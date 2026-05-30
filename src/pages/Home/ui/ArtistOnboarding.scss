@@ -16,6 +16,7 @@
 
   &--loading {
     min-block-size: clamp(480px, 72vh, 640px);
+    pointer-events: none;
   }
 
   h1,
@@ -25,6 +26,102 @@
     font-weight: inherit;
     text-transform: none;
     letter-spacing: normal;
+  }
+}
+
+.artist-onboarding-skeleton {
+  &__hero-content {
+    inline-size: 100%;
+  }
+
+  &__eyebrow {
+    inline-size: min(12rem, 55%);
+    block-size: 0.75rem;
+    border-radius: 999px;
+  }
+
+  &__headline {
+    inline-size: min(28rem, 92%);
+    block-size: clamp(2rem, 5.5vw, 3rem);
+    border-radius: $ms-01;
+
+    &--short {
+      inline-size: min(14rem, 48%);
+      block-size: clamp(1.75rem, 4.5vw, 2.5rem);
+      margin-block-start: clamp($ms-01, 2.5vw, $ms-1);
+    }
+  }
+
+  &__subtext {
+    inline-size: min(34ch, 100%);
+    block-size: 1rem;
+    margin-block-start: $ms-02;
+
+    &--short {
+      inline-size: min(26ch, 78%);
+    }
+  }
+
+  &__cta {
+    inline-size: min(11rem, 48%);
+    block-size: 2.75rem;
+    margin-block-start: $ms-01;
+    border-radius: 999px;
+  }
+
+  &__intro {
+    align-items: center;
+  }
+
+  &__section-title {
+    inline-size: min(28rem, 90%);
+    block-size: 1.25rem;
+    border-radius: $ms-01;
+  }
+
+  &__section-subtext {
+    inline-size: min(36rem, 95%);
+    block-size: 0.875rem;
+    border-radius: $ms-01;
+  }
+
+  &__feature {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $ms-01;
+    inline-size: 100%;
+    min-block-size: 100%;
+    padding: clamp($ms-1, 3vw, $ms-2);
+    background: var(--onboarding-card-bg);
+    border: 1px solid var(--onboarding-surface-border);
+    border-radius: calc($ms-0 + 2px);
+  }
+
+  &__feature-icon {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border-radius: 50%;
+  }
+
+  &__feature-title {
+    inline-size: 55%;
+    block-size: 1rem;
+  }
+
+  &__feature-line {
+    inline-size: 100%;
+    block-size: 0.8125rem;
+
+    &--short {
+      inline-size: 82%;
+    }
+  }
+}
+
+html.theme-light .artist-onboarding-skeleton {
+  .skeleton {
+    --skeleton-base-rgb: 0 0 0;
   }
 }
 

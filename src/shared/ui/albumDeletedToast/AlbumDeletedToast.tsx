@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { consumeAlbumDeletedToast } from '@shared/lib/albumDeletedToast';
+import {
+  ALBUM_DELETED_TOAST_DURATION_MS,
+  consumeAlbumDeletedToast,
+} from '@shared/lib/albumDeletedToast';
 import './style.scss';
-
-const TOAST_DURATION_MS = 4000;
 
 function SuccessIcon() {
   return (
@@ -27,8 +27,11 @@ function SuccessIcon() {
   );
 }
 
-export function AlbumDeletedToast() {
-  const location = useLocation();
+type AlbumDeletedToastProps = {
+  triggerKey: unknown;
+};
+
+export function AlbumDeletedToast({ triggerKey }: AlbumDeletedToastProps) {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,12 +39,12 @@ export function AlbumDeletedToast() {
     if (nextMessage) {
       setMessage(nextMessage);
     }
-  }, [location.pathname, location.search]);
+  }, [triggerKey]);
 
   useEffect(() => {
     if (!message) return undefined;
 
-    const timer = window.setTimeout(() => setMessage(null), TOAST_DURATION_MS);
+    const timer = window.setTimeout(() => setMessage(null), ALBUM_DELETED_TOAST_DURATION_MS);
     return () => window.clearTimeout(timer);
   }, [message]);
 
@@ -52,7 +55,11 @@ export function AlbumDeletedToast() {
       className="album-deleted-toast"
       role="status"
       aria-live="polite"
-      style={{ '--album-deleted-toast-duration': `${TOAST_DURATION_MS}ms` } as React.CSSProperties}
+      style={
+        {
+          '--album-deleted-toast-duration': `${ALBUM_DELETED_TOAST_DURATION_MS}ms`,
+        } as React.CSSProperties
+      }
     >
       <div className="album-deleted-toast__icon">
         <SuccessIcon />

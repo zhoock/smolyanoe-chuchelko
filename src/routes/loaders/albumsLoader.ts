@@ -1,5 +1,6 @@
 // src/routes/loaders/albumsLoader.ts
 import type { LoaderFunctionArgs } from 'react-router';
+import { matchPath } from 'react-router-dom';
 import type { IAlbums, IArticles, IInterface } from '@models';
 import { getStore } from '@shared/model/appStore';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
@@ -215,8 +216,18 @@ export async function albumsLoader({ request }: LoaderFunctionArgs): Promise<Alb
 
       const status = selectAlbumsStatus(state);
       const albumsFetchContextKey = selectAlbumsFetchContextKey(state);
+      const routeAlbumId =
+        matchPath(
+          { path: '/albums/:albumId', end: true },
+          loaderPathname
+        )?.params.albumId?.trim() ?? '';
+      const cachedAlbums = selectAlbumsData(state);
+      const albumMissingFromCache =
+        Boolean(routeAlbumId) && !cachedAlbums.some((a) => a.albumId === routeAlbumId);
       const albumsCacheValid =
-        status === 'succeeded' && albumsFetchContextKey === desiredAlbumsFetchKey;
+        status === 'succeeded' &&
+        albumsFetchContextKey === desiredAlbumsFetchKey &&
+        !albumMissingFromCache;
 
       if (albumsCacheValid) {
         templateA = Promise.resolve(selectAlbumsData(state));

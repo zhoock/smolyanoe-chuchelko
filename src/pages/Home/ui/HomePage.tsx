@@ -17,6 +17,7 @@ import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { IAlbums, TracksProps } from '@models';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay';
+import { fetchAlbums } from '@entities/album';
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
 import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
@@ -41,6 +42,7 @@ import { AboutSection } from './AboutSection';
 import { AlbumsSection } from './AlbumsSection';
 import { ArticlesSection } from './ArticlesSection';
 import { ArtistOnboarding } from './ArtistOnboarding';
+import { ArtistOnboardingSkeleton } from './ArtistOnboardingSkeleton';
 import { ScrollToExploreHint } from './ScrollToExploreHint';
 import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import '../../../components/view/Universe3D.style.scss';
@@ -72,15 +74,22 @@ export function HomePage() {
   const artistPageAccess = useArtistPageAccess(artistSlug);
 
   useEffect(() => {
-    const handler = () => setUniverseRefreshToken((n) => n + 1);
+    const handler = () => {
+      setUniverseRefreshToken((n) => n + 1);
+      if (hasArtistParam && !isDashboardPathname()) {
+        void dispatch(fetchAlbums({ force: true }));
+      }
+    };
     window.addEventListener('artist:updated', handler);
     return () => window.removeEventListener('artist:updated', handler);
-  }, []);
+  }, [dispatch, hasArtistParam]);
 
   useEffect(() => {
-    document.body.classList.toggle('page--artist-onboarding', artistPageAccess.showOnboarding);
+    const onboardingSurface =
+      artistPageAccess.showOnboarding || artistPageAccess.showOnboardingSkeleton;
+    document.body.classList.toggle('page--artist-onboarding', onboardingSurface);
     return () => document.body.classList.remove('page--artist-onboarding');
-  }, [artistPageAccess.showOnboarding]);
+  }, [artistPageAccess.showOnboarding, artistPageAccess.showOnboardingSkeleton]);
 
   useEffect(() => {
     const notFoundSurface = hasArtistParam && artistPageAccess.showNotFound;
@@ -296,6 +305,10 @@ export function HomePage() {
 
     if (artistPageAccess.showNotFound) {
       return <ArtistNotFound />;
+    }
+
+    if (artistPageAccess.showOnboardingSkeleton) {
+      return <ArtistOnboardingSkeleton />;
     }
 
     if (artistPageAccess.showOnboarding) {

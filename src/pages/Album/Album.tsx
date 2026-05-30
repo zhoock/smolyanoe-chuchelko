@@ -16,8 +16,14 @@ import {
 import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
 import { useLang } from '@app/providers/lang';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useAppSelector } from '@shared/lib/hooks/useAppSelector';
-import { selectAlbumsStatus, selectAlbumByIdResolved } from '@entities/album';
+import {
+  fetchAlbums,
+  selectAlbumsStatus,
+  selectAlbumByIdResolved,
+  selectDashboardAlbumByIdResolved,
+} from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
 import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
@@ -30,6 +36,7 @@ import { formatAlbumDisplayFullName } from '@shared/lib/profileDisplayName';
 import { useShowSurfaceAlbumsLoadingShell } from '@shared/lib/hooks/useShowAlbumsLoadingShell';
 
 export default function Album() {
+  const dispatch = useAppDispatch();
   const { lang } = useLang();
   const location = useLocation();
   const artistParam = useMemo(() => {
@@ -46,11 +53,21 @@ export default function Album() {
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistParam);
   const hideDeletedAlbumPage = useRedirectAfterDeletedAlbum(albumId, artistSlug);
-  const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
+  const catalogAlbum = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
+  const dashboardAlbum = useAppSelector((state) =>
+    selectDashboardAlbumByIdResolved(state, albumId)
+  );
+  const album = catalogAlbum ?? (artistPageAccess.isOwner ? dashboardAlbum : undefined);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const viewer = useAuthSessionUser();
   const showPurchaseSection = useShowAlbumPurchaseSection(album);
   const showAlbumLoadingShell = useShowSurfaceAlbumsLoadingShell(albumsStatus, Boolean(album));
+
+  useEffect(() => {
+    if (!artistParam || catalogAlbum || albumsStatus === 'loading') return;
+    if (!artistPageAccess.isOwner) return;
+    void dispatch(fetchAlbums({ force: true }));
+  }, [artistParam, catalogAlbum, albumsStatus, artistPageAccess.isOwner, albumId, dispatch]);
 
   // 🔍 DEBUG: Логируем данные альбома для диагностики
   useEffect(() => {

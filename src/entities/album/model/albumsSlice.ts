@@ -492,7 +492,10 @@ const albumsSlice = createSlice({
         const incoming = action.payload.albums;
         const hadCatalogData = state.data.length > 0;
         const keepPreviousOnEmptyRefetch =
-          incoming.length === 0 && hadCatalogData && !action.payload.catalogArtistMissing;
+          !action.meta.arg.force &&
+          incoming.length === 0 &&
+          hadCatalogData &&
+          !action.payload.catalogArtistMissing;
 
         if (!keepPreviousOnEmptyRefetch) {
           state.data = [...incoming];

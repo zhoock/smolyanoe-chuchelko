@@ -53,6 +53,7 @@ import { EmailVerificationOnboarding } from '@shared/lib/emailVerification';
 import { AlbumPublishedToast } from '@shared/ui/albumPublishedToast/AlbumPublishedToast';
 import { AlbumCreatedToast } from '@shared/ui/albumCreatedToast/AlbumCreatedToast';
 import { TracksUploadedToast } from '@shared/ui/tracksUploadedToast/TracksUploadedToast';
+import { AlbumDeletedToast } from '@shared/ui/albumDeletedToast/AlbumDeletedToast';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { buildApiUrl } from '@shared/lib/artistQuery';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
@@ -65,15 +66,18 @@ import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
 import { queueTracksUploadedToast } from '@shared/lib/tracksUploadedToast';
 import { queueAlbumDeletedToast } from '@shared/lib/albumDeletedToast';
-import { buildOwnArtistPagePath, openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import {
-  markAlbumDeletedLeavePage,
-  clearAlbumDeletedLeavePage,
-} from '@shared/lib/albumDeletedSession';
-import { resolveDeletedAlbumRedirectTarget } from '@shared/lib/albumDeletedRedirect';
+  getArtistSlugFromLocation,
+  getOpenAlbumIdFromPathname,
+} from '@shared/lib/albumDeletedRedirect';
+import { countUniqueAlbums } from '@shared/lib/artistPageContent';
+import { buildOwnArtistPagePath, openOwnArtistPage } from '@shared/lib/ownArtistPage';
+import { getStore } from '@shared/model/appStore';
+import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
+  selectAlbumsData,
   selectDashboardAlbumsStatus,
   selectDashboardAlbumsData,
   selectDashboardAlbumsError,
@@ -1059,21 +1063,6 @@ function UserDashboard() {
     dashboardSurfaceFromLayout ??
     undefined;
   const dashboardNavState = backgroundLocation ? { backgroundLocation } : undefined;
-  const closeDashboard = useCallback(() => {
-    if (backgroundLocation) {
-      clearDashboardModalBackground();
-      navigate(
-        {
-          pathname: backgroundLocation.pathname,
-          search: backgroundLocation.search,
-          hash: backgroundLocation.hash ?? '',
-        },
-        { replace: true }
-      );
-      return;
-    }
-    navigate('/');
-  }, [backgroundLocation, navigate]);
   const goDashboard = useCallback(
     (path: string) => {
       navigate(path, {
@@ -1125,10 +1114,71 @@ function UserDashboard() {
   const [publishingAlbumId, setPublishingAlbumId] = useState<string | null>(null);
   const [publishedToastTrigger, setPublishedToastTrigger] = useState(0);
   const [tracksUploadToastTrigger, setTracksUploadToastTrigger] = useState(0);
+  const [albumDeletedToastTrigger, setAlbumDeletedToastTrigger] = useState(0);
   const trackUploadSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [articleAccessMenuArticleId, setArticleAccessMenuArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
+  const closeDashboard = useCallback(() => {
+    if (!backgroundLocation) {
+      navigate('/');
+      return;
+    }
+
+    clearDashboardModalBackground();
+
+    const artistSlug =
+      profilePublicSlug?.trim() ?? getArtistSlugFromLocation(backgroundLocation) ?? null;
+
+    void (async () => {
+      const noAlbumsInDashboardUi = albumsData.length === 0;
+
+      if (artistSlug) {
+        dispatch(setPublicArtistSlug(artistSlug));
+        try {
+          await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
+          await dispatch(fetchAlbums({ force: true })).unwrap();
+        } catch {
+          /* каталог под ?artist= */
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('artist:updated'));
+        }
+      }
+
+      const state = getStore().getState();
+      const ownerAlbumCount = Math.max(
+        countUniqueAlbums(selectDashboardAlbumsData(state)),
+        countUniqueAlbums(selectAlbumsData(state))
+      );
+      const noAlbumsLeft = noAlbumsInDashboardUi || ownerAlbumCount === 0;
+
+      if (artistSlug && noAlbumsLeft) {
+        navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
+        return;
+      }
+
+      const backgroundAlbumId = getOpenAlbumIdFromPathname(backgroundLocation.pathname);
+      if (artistSlug && backgroundAlbumId) {
+        const stillExists =
+          selectDashboardAlbumsData(state).some((a) => a.albumId === backgroundAlbumId) ||
+          selectAlbumsData(state).some((a) => a.albumId === backgroundAlbumId);
+        if (!stillExists) {
+          navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
+          return;
+        }
+      }
+
+      navigate(
+        {
+          pathname: backgroundLocation.pathname,
+          search: backgroundLocation.search,
+          hash: backgroundLocation.hash ?? '',
+        },
+        { replace: true }
+      );
+    })();
+  }, [albumsData.length, backgroundLocation, dispatch, navigate, profilePublicSlug]);
   const [editArticleModal, setEditArticleModal] = useState<{
     isOpen: boolean;
     article: IArticles | null;
@@ -2376,12 +2426,10 @@ function UserDashboard() {
 
   const performDeleteAlbum = async (albumId: string) => {
     const deletedAlbumTitle = albumsData.find((a) => a.id === albumId)?.title;
-    const deletedAlbumRedirectTarget = resolveDeletedAlbumRedirectTarget(
-      albumId,
-      location,
-      backgroundLocation,
-      profilePublicSlug
-    );
+    const artistSlugForCatalog =
+      (backgroundLocation ? getArtistSlugFromLocation(backgroundLocation) : null) ??
+      profilePublicSlug?.trim() ??
+      null;
 
     try {
       const token = getToken();
@@ -2414,10 +2462,6 @@ function UserDashboard() {
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
-      if (deletedAlbumRedirectTarget) {
-        markAlbumDeletedLeavePage(deletedAlbumRedirectTarget);
-      }
-
       // Обновляем Redux store
       await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
 
@@ -2429,15 +2473,21 @@ function UserDashboard() {
         setExpandedAlbumId(null);
       }
 
-      queueAlbumDeletedToast(formatAlbumDeletedSuccessMessage(deletedAlbumTitle, lang, ui));
-
-      if (deletedAlbumRedirectTarget) {
-        clearDashboardModalBackground();
-        navigate(buildOwnArtistPagePath(deletedAlbumRedirectTarget.artistSlug), {
-          replace: true,
-        });
-        clearAlbumDeletedLeavePage();
+      if (artistSlugForCatalog) {
+        dispatch(setPublicArtistSlug(artistSlugForCatalog));
+        try {
+          await dispatch(fetchAlbums({ force: true })).unwrap();
+        } catch {
+          /* публичный каталог под ?artist= — best-effort */
+        }
       }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('artist:updated'));
+      }
+
+      queueAlbumDeletedToast(formatAlbumDeletedSuccessMessage(deletedAlbumTitle, lang, ui));
+      setAlbumDeletedToastTrigger((n) => n + 1);
 
       console.log('✅ Album deleted successfully:', albumId);
     } catch (error) {
@@ -3032,6 +3082,7 @@ function UserDashboard() {
         <AlbumPublishedToast triggerKey={publishedToastTrigger} />
         <AlbumCreatedToast triggerKey={editAlbumModal} />
         <TracksUploadedToast triggerKey={tracksUploadToastTrigger} />
+        <AlbumDeletedToast triggerKey={albumDeletedToastTrigger} />
         <div className="user-dashboard">
           {/* Main card container */}
           <div className="user-dashboard__card">

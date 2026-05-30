@@ -2489,7 +2489,15 @@ export function EditAlbumModal({
       console.log('🔄 [EditAlbumModal] Forcing fetchAlbums for lang:', lang);
       try {
         await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
+        try {
+          await dispatch(fetchAlbums({ force: true })).unwrap();
+        } catch {
+          /* публичный каталог ?artist= — best-effort */
+        }
         console.log('✅ [EditAlbumModal] Redux store updated for', lang);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('artist:updated'));
+        }
       } catch (fetchError) {
         console.error('❌ [EditAlbumModal] Failed to update Redux store:', fetchError);
         // Продолжаем выполнение даже если fetchAlbums не удался
