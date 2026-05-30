@@ -13,7 +13,7 @@ jest.mock('@shared/lib/profileDisplayName', () => ({
   prefetchPublicProfileForDisplay: jest.fn(),
 }));
 
-import { albumsLoader } from '../albumsLoader';
+import { albumsLoader, shouldDeferPublicArtistCatalogToSurface } from '../albumsLoader';
 import { albumsReducer } from '@entities/album';
 import { articlesReducer } from '@entities/article';
 import { helpArticlesReducer } from '@entities/helpArticle';
@@ -47,6 +47,17 @@ function makeRequest(url: string): { request: { url: string; signal: AbortSignal
     request: { url: `http://localhost${url}`, signal: controller.signal },
   };
 }
+
+describe('shouldDeferPublicArtistCatalogToSurface', () => {
+  test('true для главной с ?artist=', () => {
+    expect(shouldDeferPublicArtistCatalogToSurface('/', 'foo')).toBe(true);
+  });
+
+  test('false для /albums и без slug', () => {
+    expect(shouldDeferPublicArtistCatalogToSurface('/albums', 'foo')).toBe(false);
+    expect(shouldDeferPublicArtistCatalogToSurface('/', '')).toBe(false);
+  });
+});
 
 describe('albumsLoader — auth overlay', () => {
   let store: ReturnType<typeof createTestStore>;

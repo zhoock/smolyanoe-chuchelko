@@ -24,7 +24,6 @@ import { getAuthHeader, getUser, isAuthenticated } from '@shared/lib/auth';
 import { isCachedOwnArtistSlug, writeCachedOwnPublicSlug } from '@shared/lib/ownPublicSlugCache';
 import {
   countUniqueAlbums,
-  countUniqueArticles,
   hasVisitorVisibleArtistContent,
   profileHasPublicBodyContent,
 } from '@shared/lib/artistPageContent';
@@ -77,13 +76,6 @@ export function useArtistPageAccess(artistSlug: string) {
   }, [isOwner, dashboardAlbums, catalogAlbums]);
 
   const ownerStillNeedsOnboarding = ownerNeedsOnboarding && ownerAlbumCount === 0;
-
-  const ownerArticleCount = useMemo(() => {
-    if (!isOwner) return 0;
-    return countUniqueArticles(publicArticles);
-  }, [isOwner, publicArticles]);
-
-  const ownerStoreHasNoReleases = isOwner && ownerAlbumCount === 0 && ownerArticleCount === 0;
 
   useEffect(() => {
     const normalizedArtist = normalizeSlug(artistSlug);
@@ -265,14 +257,14 @@ export function useArtistPageAccess(artistSlug: string) {
     profileHasPublicBody: visitorProfileHasPublicBody === true,
   });
 
-  const showOnboardingSkeleton =
-    !catalogArtistMissing &&
-    isOwner &&
-    ownerStoreHasNoReleases &&
-    (isLoading || !ownerContentLoaded);
-
+  /**
+   * Онбординг только после fetchOwnArtistPageState — иначе при переходе «My Artist Page»
+   * пустой каталог + !ownerContentLoaded кратко показывают onboarding/скелетон онбординга.
+   */
   const showOnboarding =
-    !catalogArtistMissing && isOwner && ownerStillNeedsOnboarding && !showOnboardingSkeleton;
+    !catalogArtistMissing && isOwner && ownerContentLoaded && ownerStillNeedsOnboarding;
+
+  const showOnboardingSkeleton = false;
 
   const showNotFound =
     !isLoading && (catalogArtistMissing || (!isOwner && !hasVisitorVisibleContent));

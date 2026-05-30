@@ -90,7 +90,7 @@ function ProfileAvatarMenuComponent({
     const slug = ownArtistPage.publicSlug;
     if (!slug) return;
     updateOpen(false);
-    openOwnArtistPage(slug, ownArtistPage.hasPublicReleases, navigate);
+    openOwnArtistPage(slug, ownArtistPage.hasPublicReleases, navigate, { sameTab: true });
   }, [navigate, ownArtistPage.hasPublicReleases, ownArtistPage.publicSlug, updateOpen]);
 
   const avatarLabels = ui?.header?.avatarMenu;

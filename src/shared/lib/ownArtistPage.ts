@@ -197,13 +197,19 @@ export async function fetchOwnArtistPageState(lang: string): Promise<OwnArtistPa
   }
 }
 
+export type OpenOwnArtistPageOptions = {
+  /** Меню шапки и in-app переходы — всегда в этой вкладке (без мигания онбординга в новой). */
+  sameTab?: boolean;
+};
+
 export function openOwnArtistPage(
   publicSlug: string,
   hasPublicReleases: boolean,
-  navigate: NavigateFunction
+  navigate: NavigateFunction,
+  options?: OpenOwnArtistPageOptions
 ): void {
   const path = buildOwnArtistPagePath(publicSlug);
-  if (!hasPublicReleases) {
+  if (options?.sameTab || !hasPublicReleases) {
     navigate(path);
     return;
   }

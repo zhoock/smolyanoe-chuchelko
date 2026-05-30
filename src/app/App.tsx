@@ -23,6 +23,7 @@ import {
 } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { albumsLoader } from '@routes/loaders/albumsLoader';
+import { ArtistPublishedPageFallback } from '@pages/Home/ui/ArtistPublishedPageFallback';
 import { useLang } from '@app/providers/lang';
 import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
@@ -81,6 +82,15 @@ const ResetPassword = lazy(() => import('@pages/ResetPassword/ResetPassword'));
 
 // Компонент для отображения загрузки
 const PageLoader = () => <p>Загрузка...</p>;
+
+/** Suspense для lazy Home: на `/?artist=` — скелетон секций, иначе текстовый loader. */
+function HomeRouteSuspenseFallback() {
+  const [searchParams] = useSearchParams();
+  if (searchParams.get('artist')?.trim()) {
+    return <ArtistPublishedPageFallback />;
+  }
+  return <PageLoader />;
+}
 
 /** Старые пути `/dashboard/:tab` → `/dashboard-new/:tab` (сохраняем location.state) */
 function LegacyDashboardTabRedirect() {
@@ -369,7 +379,7 @@ function Layout() {
       <Route
         path="/"
         element={
-          <Suspense fallback={<PageLoader />}>
+          <Suspense fallback={<HomeRouteSuspenseFallback />}>
             <Home />
           </Suspense>
         }

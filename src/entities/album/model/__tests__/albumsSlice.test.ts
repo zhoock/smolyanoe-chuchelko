@@ -11,6 +11,7 @@ import {
   selectDashboardAlbumsError,
   selectCatalogArtistMissing,
   selectAlbumsFetchContextKey,
+  selectPublicAlbumsCacheIsStale,
 } from '../selectors';
 import { initialPlayerState } from '@features/player/model/types/playerSchema';
 import type { IAlbums } from '@models';
@@ -963,6 +964,46 @@ describe('albumsSlice', () => {
 
       const album = selectAlbumById(emptyState as any, 'any-id');
       expect(album).toBeUndefined();
+    });
+
+    test('selectPublicAlbumsCacheIsStale: null fetchContextKey при ?artist= — stale', () => {
+      const state = {
+        ...mockState,
+        currentArtist: { publicSlug: 'my-artist' },
+        albums: {
+          ...mockState.albums,
+          status: 'idle' as const,
+          data: [],
+          fetchContextKey: null,
+        },
+      };
+      expect(selectPublicAlbumsCacheIsStale(state as any)).toBe(true);
+    });
+
+    test('selectPublicAlbumsCacheIsStale: null fetchContextKey без ?artist= — не stale', () => {
+      const state = {
+        ...mockState,
+        currentArtist: { publicSlug: null },
+        albums: {
+          ...mockState.albums,
+          status: 'succeeded' as const,
+          data: [],
+          fetchContextKey: null,
+        },
+      };
+      expect(selectPublicAlbumsCacheIsStale(state as any)).toBe(false);
+    });
+
+    test('selectPublicAlbumsCacheIsStale: ключ совпадает с URL — не stale', () => {
+      const state = {
+        ...mockState,
+        currentArtist: { publicSlug: 'test-artist' },
+        albums: {
+          ...mockState.albums,
+          fetchContextKey: 'public:test-artist',
+        },
+      };
+      expect(selectPublicAlbumsCacheIsStale(state as any)).toBe(false);
     });
   });
 });

@@ -132,7 +132,7 @@ export function EditAlbumModalStep4({
     <>
       <div className="edit-album-modal__divider" />
 
-      <div className="edit-album-modal__field">
+      <div className="edit-album-modal__field" data-step4-field="albumCoverDesigner">
         <label className="edit-album-modal__label">
           {ui?.dashboard?.editAlbumModal?.step4?.albumCover ?? 'Album Cover'}
         </label>
@@ -176,6 +176,7 @@ export function EditAlbumModalStep4({
               }
               value={formData.albumCoverDesigner}
               onChange={(e) => onFormDataChange('albumCoverDesigner', e.target.value)}
+              autoFocus
             />
             <input
               name="album-cover-designer-url"
@@ -197,7 +198,7 @@ export function EditAlbumModalStep4({
         ) : null}
       </div>
 
-      <div className="edit-album-modal__field">
+      <div className="edit-album-modal__field" data-step4-field="bandMembers">
         <label className="edit-album-modal__label">
           {ui?.dashboard?.editAlbumModal?.step4?.bandMembers ?? 'Band Members'}
         </label>
@@ -274,6 +275,9 @@ export function EditAlbumModalStep4({
                   addBandMemberURL
                 )}
                 canSave={Boolean(addBandMemberName.trim() && addBandMemberRole.trim())}
+                autoFocusTitle={
+                  formData.bandMembers.length > 0 && formData.showAddBandMemberInputs === true
+                }
                 ui={ui}
               />
             </div>
@@ -375,6 +379,7 @@ export function EditAlbumModalStep4({
                   addSessionMusicianURL
                 )}
                 canSave={Boolean(addSessionMusicianName.trim() && addSessionMusicianRole.trim())}
+                autoFocusTitle={false}
                 ui={ui}
               />
             </div>
@@ -396,7 +401,7 @@ export function EditAlbumModalStep4({
           )}
       </div>
 
-      <div className="edit-album-modal__field">
+      <div className="edit-album-modal__field" data-step4-field="producer">
         <label className="edit-album-modal__label">
           {ui?.dashboard?.editAlbumModal?.step4?.producer ?? 'Producer'}
         </label>
@@ -473,6 +478,9 @@ export function EditAlbumModalStep4({
                   addProducerURL
                 )}
                 canSave={Boolean(addProducerName.trim() && addProducerRole.trim())}
+                autoFocusTitle={
+                  formData.producer.length > 0 && formData.showAddProducerInputs === true
+                }
                 ui={ui}
               />
             </div>

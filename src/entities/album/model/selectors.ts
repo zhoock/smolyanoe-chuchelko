@@ -72,10 +72,18 @@ export const selectDesiredPublicAlbumsFetchContextKey = createSelector(
   (slug) => buildPublicAlbumsFetchContextKey(slug)
 );
 
-/** Кэш альбомов относится к другому ?artist= — не показываем устаревшие обложки. */
+/**
+ * Кэш альбомов относится к другому ?artist= — не показываем устаревшие обложки.
+ * `null` после setPublicArtistSlug — stale для страницы артиста (иначе dashboard гасит скелетон).
+ * На `/` без ?artist= `desiredKey` = `public:no-slug` — null не считаем stale.
+ */
 export const selectPublicAlbumsCacheIsStale = createSelector(
   [selectAlbumsFetchContextKey, selectDesiredPublicAlbumsFetchContextKey],
-  (cachedKey, desiredKey) => cachedKey != null && cachedKey !== desiredKey
+  (cachedKey, desiredKey) => {
+    if (cachedKey === desiredKey) return false;
+    if (cachedKey === null && desiredKey === 'public:no-slug') return false;
+    return true;
+  }
 );
 
 export const selectAlbumById = createSelector(

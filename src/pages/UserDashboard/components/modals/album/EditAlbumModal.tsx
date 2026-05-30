@@ -48,6 +48,9 @@ import {
   makeEmptyForm,
   getAlbumStep1InvalidFields,
   getAlbumStep4InvalidFields,
+  scrollToFirstAlbumStep1InvalidField,
+  scrollToFirstAlbumStep4InvalidField,
+  scrollToAlbumStep2GenreField,
   isAlbumStep2GenreValid,
   transformFormDataToAlbumFormat,
   formatDateFromISO,
@@ -117,6 +120,7 @@ export function EditAlbumModal({
   const albumTitleAtOpenRef = useRef('');
   /** Актуальный album_id из загруженного альбома (после переименования slug важнее пропа). */
   const canonicalAlbumIdRef = useRef('');
+  const editAlbumModalCardRef = useRef<HTMLDivElement>(null);
 
   const [currentStep, setCurrentStep] = useState(1);
   /** Ошибки шага 1 — показ подполями вместо alert */
@@ -1786,17 +1790,24 @@ export function EditAlbumModal({
         cover: { albumArtPreview, coverDraftKey },
       });
       setStep1InvalidFields(invalid);
-      if (invalid.length > 0) return;
+      if (invalid.length > 0) {
+        scrollToFirstAlbumStep1InvalidField(invalid, editAlbumModalCardRef.current);
+        return;
+      }
     } else if (currentStep === 2) {
       if (!isAlbumStep2GenreValid(formData)) {
         setStep2GenreRequired(true);
+        scrollToAlbumStep2GenreField(editAlbumModalCardRef.current);
         return;
       }
       setStep2GenreRequired(false);
     } else if (currentStep === 4) {
       const invalid = getAlbumStep4InvalidFields(formData);
       setStep4InvalidFields(invalid);
-      if (invalid.length > 0) return;
+      if (invalid.length > 0) {
+        scrollToFirstAlbumStep4InvalidField(invalid, editAlbumModalCardRef.current);
+        return;
+      }
     }
 
     if (currentStep < 5) {
@@ -1926,6 +1937,9 @@ export function EditAlbumModal({
     if (step1Invalid.length > 0) {
       setStep1InvalidFields(step1Invalid);
       setCurrentStep(1);
+      scrollToFirstAlbumStep1InvalidField(step1Invalid, editAlbumModalCardRef.current, {
+        waitForStepRender: true,
+      });
       return;
     }
 
@@ -2617,7 +2631,7 @@ export function EditAlbumModal({
         <>
           <div className="edit-album-modal__divider" />
 
-          <div className="edit-album-modal__field">
+          <div className="edit-album-modal__field" data-step1-field="title">
             <label htmlFor="album-title" className="edit-album-modal__label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumTitle ?? 'Album title'}
             </label>
@@ -2645,7 +2659,7 @@ export function EditAlbumModal({
             ) : null}
           </div>
 
-          <div className="edit-album-modal__field">
+          <div className="edit-album-modal__field" data-step1-field="releaseDate">
             <label htmlFor="release-date" className="edit-album-modal__label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.releaseDate ?? 'Release date'}
             </label>
@@ -2703,7 +2717,7 @@ export function EditAlbumModal({
             ) : null}
           </div>
 
-          <div className="edit-album-modal__field">
+          <div className="edit-album-modal__field" data-step1-field="upcEan">
             <label htmlFor="upc-ean" className="edit-album-modal__label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.upcEan ?? 'UPC / EAN'}
             </label>
@@ -2734,6 +2748,7 @@ export function EditAlbumModal({
 
           <div
             className={`edit-album-modal__field${step1HasErr('cover') ? ' edit-album-modal__field--invalid' : ''}`}
+            data-step1-field="cover"
           >
             <label className="edit-album-modal__label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumArt ?? 'Album art'}
@@ -2833,7 +2848,7 @@ export function EditAlbumModal({
             ) : null}
           </div>
 
-          <div className="edit-album-modal__field">
+          <div className="edit-album-modal__field" data-step1-field="description">
             <label htmlFor="description" className="edit-album-modal__label">
               {ui?.dashboard?.editAlbumModal?.fieldLabels?.description ?? 'Description'}
             </label>
@@ -2983,7 +2998,7 @@ export function EditAlbumModal({
           </div>
 
           {showPriceFields && (
-            <div className="edit-album-modal__field">
+            <div className="edit-album-modal__field" data-step1-field="regularPrice">
               <label className="edit-album-modal__label">
                 {ui?.dashboard?.editAlbumModal?.fieldLabels?.regularPrice ?? 'Regular price'}
               </label>
@@ -3025,7 +3040,7 @@ export function EditAlbumModal({
           )}
 
           {showPreorderDate && (
-            <div className="edit-album-modal__field">
+            <div className="edit-album-modal__field" data-step1-field="preorderReleaseDate">
               <label htmlFor="preorder-date" className="edit-album-modal__label">
                 {ui?.dashboard?.editAlbumModal?.fieldLabels?.preorderReleaseDate ??
                   'Pre-order release date'}
@@ -3263,6 +3278,7 @@ export function EditAlbumModal({
       >
         <div className="edit-album-modal">
           <div
+            ref={editAlbumModalCardRef}
             className={`edit-album-modal__card${isSaving ? ' edit-album-modal__card--saving' : ''}`}
             aria-busy={isSaving}
           >

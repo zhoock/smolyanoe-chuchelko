@@ -53,7 +53,7 @@ export function EditAlbumModalStep2({
     <>
       <div className="edit-album-modal__divider" />
 
-      <div className="edit-album-modal__field">
+      <div className="edit-album-modal__field" data-step2-field="genre">
         <label className="edit-album-modal__label">{step2Ui?.genre ?? 'Genre'}</label>
 
         <div className="edit-album-modal__multiselect" ref={genreDropdownRef}>

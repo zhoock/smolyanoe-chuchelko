@@ -442,4 +442,47 @@ describe('AlbumsSection integration tests', () => {
     expect(screen.queryByRole('region', { name: /albums/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Albums')).not.toBeInTheDocument();
   });
+
+  test('на ?artist= при сброшенном fetchContextKey показывает скелетон, а не dashboard-кэш', () => {
+    renderWithProviders(<AlbumsSection isOwner />, {
+      initialEntries: ['/?artist=test-artist'],
+      preloadedState: {
+        lang: { current: 'en' },
+        currentArtist: { publicSlug: 'test-artist' },
+        albums: {
+          status: 'idle',
+          error: null,
+          data: [],
+          lastUpdated: null,
+          fetchContextKey: null,
+          inFlightFetchContextKey: null,
+          catalogArtistMissing: false,
+          dashboard: {
+            status: 'succeeded',
+            error: null,
+            data: mockAlbums,
+            lastUpdated: Date.now(),
+            inFlightFetchContextKey: null,
+          },
+        },
+        uiDictionary: {
+          en: {
+            status: 'succeeded',
+            error: null,
+            data: [{ menu: {}, buttons: {}, titles: { albums: 'Albums' } }],
+            lastUpdated: Date.now(),
+          },
+          ru: {
+            status: 'idle',
+            error: null,
+            data: [],
+            lastUpdated: null,
+          },
+        },
+      },
+    });
+
+    expect(document.querySelectorAll('.skeleton--album-cover').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Album 1')).not.toBeInTheDocument();
+  });
 });

@@ -116,6 +116,8 @@ export interface EditableCardFieldProps {
   hasUnsavedChanges?: boolean;
   /** Если задано, Save активен только при hasUnsavedChanges && canSave (например, новая строка: есть ввод, но ещё не валидна). */
   canSave?: boolean;
+  /** Фокус в поле Name при входе в режим редактирования (по умолчанию true). */
+  autoFocusTitle?: boolean;
   ui?: IInterface;
 }
 
@@ -138,6 +140,7 @@ export function EditableCardField({
   showCancel = true,
   hasUnsavedChanges,
   canSave,
+  autoFocusTitle = true,
   ui,
 }: EditableCardFieldProps) {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
@@ -195,7 +198,7 @@ export function EditableCardField({
               placeholder={titlePlaceholder}
               value={editTitle}
               onChange={(e) => onTitleChange(e.target.value)}
-              autoFocus
+              autoFocus={autoFocusTitle}
               onKeyDown={keyHandlers}
             />
             {descriptionPlaceholder && descriptionPlaceholder.trim() !== '' && (

@@ -55,11 +55,11 @@ export const selectArticlesLastPublicArtistSlug = createSelector(
   (s) => s.lastPublicArtistSlug ?? ''
 );
 
+/** Кэш статей для другого ?artist= (в т.ч. после сброса data при смене slug). */
 export const selectArticlesCacheIsStale = createSelector(
-  [selectArticlesLastPublicArtistSlug, selectPublicArtistSlug, selectArticlesState],
-  (cachedSlug, desiredSlug, articlesState) => {
+  [selectArticlesLastPublicArtistSlug, selectPublicArtistSlug],
+  (cachedSlug, desiredSlug) => {
     const desired = desiredSlug?.trim() ?? '';
-    if (articlesState.status === 'idle' && articlesState.data.length === 0) return false;
     return cachedSlug !== desired;
   }
 );

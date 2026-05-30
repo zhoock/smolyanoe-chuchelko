@@ -810,6 +810,56 @@ export function getAlbumStep4InvalidFields(formData: AlbumFormData): AlbumStep4I
   return out;
 }
 
+/** Прокрутка прокручиваемой карточки модалки к элементу внутри формы. */
+export function scrollEditAlbumModalToField(
+  scrollRoot: HTMLElement | null | undefined,
+  selector: string
+): void {
+  const root = scrollRoot ?? document.querySelector<HTMLElement>('.edit-album-modal__card');
+  const target = root?.querySelector<HTMLElement>(selector);
+  target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Скролл после показа ошибок валидации.
+ * `waitForStepRender` — двойной rAF, когда сменился шаг и контент ещё монтируется.
+ */
+export function scheduleScrollEditAlbumModalToField(
+  scrollRoot: HTMLElement | null | undefined,
+  selector: string,
+  opts?: { waitForStepRender?: boolean }
+): void {
+  const run = () => scrollEditAlbumModalToField(scrollRoot, selector);
+  if (opts?.waitForStepRender) {
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  } else {
+    requestAnimationFrame(run);
+  }
+}
+
+export function scrollToFirstAlbumStep1InvalidField(
+  invalid: AlbumStep1InvalidField[],
+  scrollRoot?: HTMLElement | null,
+  opts?: { waitForStepRender?: boolean }
+): void {
+  const first = invalid[0];
+  if (!first) return;
+  scheduleScrollEditAlbumModalToField(scrollRoot, `[data-step1-field="${first}"]`, opts);
+}
+
+export function scrollToAlbumStep2GenreField(scrollRoot?: HTMLElement | null): void {
+  scheduleScrollEditAlbumModalToField(scrollRoot, '[data-step2-field="genre"]');
+}
+
+export function scrollToFirstAlbumStep4InvalidField(
+  invalid: AlbumStep4InvalidField[],
+  scrollRoot?: HTMLElement | null
+): void {
+  const first = invalid[0];
+  if (!first) return;
+  scheduleScrollEditAlbumModalToField(scrollRoot, `[data-step4-field="${first}"]`);
+}
+
 export const transformFormDataToAlbumFormat = (
   formData: AlbumFormData,
   lang: SupportedLang,
