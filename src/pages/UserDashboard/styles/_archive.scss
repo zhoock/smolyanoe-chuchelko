@@ -44,15 +44,6 @@ dialog {
       min-width: 0;
     }
 
-    &__archive-title {
-      margin: 0 0 var(--ms-02);
-      color: var(--dark-greenish-yellow);
-      font-family: var(--base-font-family);
-      font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.75rem);
-      font-weight: var(--semibold, 600);
-      line-height: 1.2;
-    }
-
     &__archive-subtitle {
       margin: 0;
       max-width: 42rem;

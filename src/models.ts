@@ -556,6 +556,7 @@ export interface IInterface {
     uploadingTracks: string;
     lyrics: string;
     track: string;
+    duration: string;
     status: string;
     actions: string;
     addedSynced: string;

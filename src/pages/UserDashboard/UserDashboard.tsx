@@ -226,8 +226,6 @@ interface SortableTrackItemProps {
     visibility: TrackVisibility
   ) => Promise<void>;
   ui?: IInterface;
-  swipedTrackId: string | null;
-  onSwipeChange: (trackId: string | null) => void;
 }
 
 type DashboardUi = NonNullable<IInterface['dashboard']>;
@@ -335,8 +333,6 @@ function SortableTrackItem({
   onTitleChange,
   onVisibilityChange,
   ui,
-  swipedTrackId,
-  onSwipeChange,
 }: SortableTrackItemProps) {
   const { lang } = useLang();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -348,13 +344,7 @@ function SortableTrackItem({
   const [editedTitle, setEditedTitle] = useState(track.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Swipe state
-  const [swipeX, setSwipeX] = useState(0);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const startXRef = useRef<number>(0);
-  const startYRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const [accessMenuOpen, setAccessMenuOpen] = useState(false);
   const accessBtnRef = useRef<HTMLButtonElement>(null);
   const accessMenuRef = useRef<HTMLDivElement>(null);
@@ -409,17 +399,6 @@ function SortableTrackItem({
     (ui?.dashboard as DashboardUiWithTrackAccess | undefined)?.trackAccessAriaLabel ??
     (lang === 'en' ? 'Track access' : 'Доступ к треку');
 
-  const EDIT_BUTTON_WIDTH = 80;
-  const ACCESS_BUTTON_WIDTH = 80;
-  const DELETE_BUTTON_WIDTH = 80;
-  const BUTTON_GAP = 8; // Gap между кнопками
-  const DURATION_WIDTH = 50; // Примерная ширина длительности трека (например, "3:19")
-  const SWIPE_MENU_WIDTH =
-    EDIT_BUTTON_WIDTH + ACCESS_BUTTON_WIDTH + DELETE_BUTTON_WIDTH + 2 * BUTTON_GAP + DURATION_WIDTH;
-
-  const isSwiped = swipedTrackId === track.id;
-  const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-
   // Синхронизируем editedTitle с track.title при изменении track
   useEffect(() => {
     if (!isEditing) {
@@ -427,130 +406,14 @@ function SortableTrackItem({
     }
   }, [track.title, isEditing]);
 
-  // Закрываем swipe при изменении swipedTrackId (если открыта другая строка)
-  useEffect(() => {
-    if (!isSwiped && swipeX !== 0) {
-      setSwipeX(0);
-    }
-  }, [isSwiped, swipeX]);
-
-  useEffect(() => {
-    if (!isSwiped) {
-      setAccessMenuOpen(false);
-      setMenuPos(null);
-    }
-  }, [isSwiped]);
-
-  // Обработчики swipe (только на мобильных)
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      // Игнорируем, если не мобильное устройство или если клик по drag handle
-      if (!isMobile || (e.target as HTMLElement).closest('.user-dashboard__track-drag-handle')) {
-        return;
-      }
-
-      // Игнорируем, если клик по input или кнопке
-      if (
-        (e.target as HTMLElement).tagName === 'INPUT' ||
-        (e.target as HTMLElement).tagName === 'BUTTON' ||
-        (e.target as HTMLElement).closest('button')
-      ) {
-        return;
-      }
-
-      // Если уже открыта другая строка, закрываем её
-      if (swipedTrackId && swipedTrackId !== track.id) {
-        onSwipeChange(null);
-      }
-
-      startXRef.current = e.clientX;
-      startYRef.current = e.clientY;
-      setIsSwiping(true);
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      e.preventDefault();
-    },
-    [isMobile, swipedTrackId, track.id, onSwipeChange]
-  );
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isSwiping || !isMobile) return;
-
-      const dx = e.clientX - startXRef.current;
-      const dy = e.clientY - startYRef.current;
-
-      // Если вертикальное движение больше горизонтального, это скролл, не swipe
-      if (Math.abs(dy) > Math.abs(dx)) {
-        return;
-      }
-
-      // Если движение вправо, не обрабатываем
-      if (dx > 0) {
-        return;
-      }
-
-      // Ограничиваем движение влево
-      const maxSwipe = -SWIPE_MENU_WIDTH;
-      const newSwipeX = Math.max(maxSwipe, Math.min(0, dx));
-      setSwipeX(newSwipeX);
-      e.preventDefault();
-    },
-    [isSwiping, isMobile]
-  );
-
-  const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isSwiping || !isMobile) return;
-
-      const dx = e.clientX - startXRef.current;
-      const threshold = 40;
-
-      if (dx < -threshold) {
-        // Открываем
-        setSwipeX(-SWIPE_MENU_WIDTH);
-        onSwipeChange(track.id);
-      } else {
-        // Закрываем
-        setSwipeX(0);
-        onSwipeChange(null);
-      }
-
-      setIsSwiping(false);
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    },
-    [isSwiping, isMobile, onSwipeChange, track.id]
-  );
-
-  // Закрытие при клике вне
-  useEffect(() => {
-    if (!isSwiped) return;
-
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setSwipeX(0);
-        onSwipeChange(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [isSwiped, onSwipeChange]);
-
   const handleEdit = useCallback(
     (e: React.MouseEvent | React.PointerEvent) => {
       e.stopPropagation();
       e.preventDefault();
       setEditedTitle(track.title);
       setIsEditing(true);
-      // Закрываем swipe после установки редактирования
-      setSwipeX(0);
-      onSwipeChange(null);
     },
-    [track.title, onSwipeChange]
+    [track.title]
   );
 
   // Фокус на input при открытии редактирования
@@ -591,11 +454,9 @@ function SortableTrackItem({
   const handleDelete = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      setSwipeX(0);
-      onSwipeChange(null);
       onDelete(albumId, track.id, track.title);
     },
-    [albumId, track.id, track.title, onDelete, onSwipeChange]
+    [albumId, track.id, track.title, onDelete]
   );
 
   const updateAccessMenuPosition = useCallback(() => {
@@ -707,11 +568,6 @@ function SortableTrackItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const contentStyle: React.CSSProperties = {
-    transform: `translateX(${swipeX}px)`,
-    transition: isSwiping ? 'none' : 'transform 0.2s ease',
-  };
-
   // Объединяем refs для setNodeRef и containerRef
   const combinedRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -738,234 +594,146 @@ function SortableTrackItem({
         className={clsx('user-dashboard__track-item-wrapper', {
           'user-dashboard__track-item-wrapper--dragging': isDragging,
         })}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
       >
-        <div ref={contentRef} style={contentStyle} className="user-dashboard__track-item-content">
+        <div className="user-dashboard__track-item-content">
           <div
             className={clsx('user-dashboard__track-item', {
               'user-dashboard__track-item--dragging': isDragging,
               'user-dashboard__track-item--access-menu-open': accessMenuOpen,
             })}
           >
-            <div
-              {...attributes}
-              {...listeners}
-              className="user-dashboard__track-drag-handle"
-              title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
-              aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
-            >
-              <span className="user-dashboard__track-drag-icon">⋮⋮</span>
-            </div>
-            <div className="user-dashboard__track-number" aria-hidden>
-              {displayIndex}.
-            </div>
-            {isEditing ? (
-              <input
-                key={`edit-${track.id}-${isEditing}`}
-                ref={inputRef}
-                type="text"
-                className="user-dashboard__track-title-input"
-                value={editedTitle}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                onBlur={handleTitleBlur}
-                onKeyDown={handleTitleKeyDown}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <div className="user-dashboard__track-title">
-                <span className="user-dashboard__track-title-text">{track.title}</span>
-                {!isMobile && (
-                  <>
-                    <button
-                      ref={accessBtnRef}
-                      type="button"
-                      className="user-dashboard__track-access-button"
-                      onClick={toggleAccessMenu}
-                      aria-expanded={accessMenuOpen}
-                      aria-haspopup="menu"
-                      aria-label={trackAccessAria}
-                    >
-                      <span className="user-dashboard__track-access-button-icon" aria-hidden>
-                        <TrackVisibilityIcon visibility={trackVisibility} />
-                      </span>
-                    </button>
-                    <div className="user-dashboard__track-actions">
-                      <button
-                        type="button"
-                        className="user-dashboard__track-edit-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(e);
-                        }}
-                        aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
-                      >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M14.5 1.5L18.5 5.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="user-dashboard__track-delete-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(albumId, track.id, track.title);
-                        }}
-                        aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-                      >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M8.5 9.5V14.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M11.5 9.5V14.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </>
-                )}
+            <div className="user-dashboard__track-cell user-dashboard__track-cell--track">
+              <div
+                {...attributes}
+                {...listeners}
+                className="user-dashboard__track-drag-handle"
+                title={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+                aria-label={ui?.dashboard?.dragToReorder ?? 'Drag to reorder'}
+              >
+                <span className="user-dashboard__track-drag-icon">⋮⋮</span>
               </div>
+              <div className="user-dashboard__track-number" aria-hidden>
+                {displayIndex}.
+              </div>
+              {isEditing ? (
+                <input
+                  key={`edit-${track.id}-${isEditing}`}
+                  ref={inputRef}
+                  type="text"
+                  className="user-dashboard__track-title-input"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={handleTitleKeyDown}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span className="user-dashboard__track-title-text">{track.title}</span>
+              )}
+            </div>
+
+            {!isEditing ? (
+              <div className="user-dashboard__track-cell user-dashboard__track-cell--actions">
+                <button
+                  ref={accessBtnRef}
+                  type="button"
+                  className="user-dashboard__track-access-button"
+                  onClick={toggleAccessMenu}
+                  aria-expanded={accessMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label={trackAccessAria}
+                >
+                  <span className="user-dashboard__track-access-button-icon" aria-hidden>
+                    <TrackVisibilityIcon visibility={trackVisibility} size={18} />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="user-dashboard__track-edit-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(e);
+                  }}
+                  aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden
+                  >
+                    <path
+                      d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M14.5 1.5L18.5 5.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="user-dashboard__track-delete-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(e);
+                  }}
+                  aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden
+                  >
+                    <path
+                      d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M8.5 9.5V14.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M11.5 9.5V14.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div
+                className="user-dashboard__track-cell user-dashboard__track-cell--actions"
+                aria-hidden
+              />
             )}
-            <div className="user-dashboard__track-duration-container">
-              <div className="user-dashboard__track-duration">{track.duration}</div>
+
+            <div className="user-dashboard__track-cell user-dashboard__track-cell--duration">
+              <span className="user-dashboard__track-duration">{track.duration}</span>
             </div>
           </div>
         </div>
-        {isMobile && (
-          <>
-            <button
-              type="button"
-              className={clsx('user-dashboard__track-edit-button-swipe', {
-                'user-dashboard__track-edit-button-swipe--visible': isSwiped,
-              })}
-              onPointerDown={handleEdit}
-              onClick={handleEdit}
-              aria-label={ui?.dashboard?.editTrack ?? 'Edit track'}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M11.5 3.5L16.5 8.5L6.5 18.5H1.5V13.5L11.5 3.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M14.5 1.5L18.5 5.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <button
-              ref={accessBtnRef}
-              type="button"
-              className={clsx('user-dashboard__track-access-button-swipe', {
-                'user-dashboard__track-access-button-swipe--visible': isSwiped,
-              })}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleAccessMenu(e);
-              }}
-              aria-expanded={accessMenuOpen}
-              aria-haspopup="menu"
-              aria-label={trackAccessAria}
-            >
-              <span className="user-dashboard__track-access-button-icon" aria-hidden>
-                <TrackVisibilityIcon visibility={trackVisibility} />
-              </span>
-            </button>
-            <button
-              type="button"
-              className={clsx('user-dashboard__track-delete-button-swipe', {
-                'user-dashboard__track-delete-button-swipe--visible': isSwiped,
-              })}
-              onClick={handleDelete}
-              aria-label={ui?.dashboard?.deleteTrack ?? 'Delete track'}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2.5 5.5H17.5M7.5 5.5V3.5C7.5 2.94772 7.94772 2.5 8.5 2.5H11.5C12.0523 2.5 12.5 2.94772 12.5 3.5V5.5M15.5 5.5V16.5C15.5 17.0523 15.0523 17.5 14.5 17.5H5.5C4.94772 17.5 4.5 17.0523 4.5 16.5V5.5H15.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M8.5 9.5V14.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M11.5 9.5V14.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </>
-        )}
       </div>
       {accessMenuOpen &&
         typeof document !== 'undefined' &&
@@ -1193,7 +961,6 @@ function UserDashboard() {
     trackId: string;
     trackTitle: string;
   } | null>(null);
-  const [swipedTrackId, setSwipedTrackId] = useState<string | null>(null);
   const [editTrackModal, setEditTrackModal] = useState<{
     isOpen: boolean;
     albumId: string;
@@ -3423,23 +3190,37 @@ function UserDashboard() {
                                                     items={album.tracks.map((track) => track.id)}
                                                     strategy={verticalListSortingStrategy}
                                                   >
-                                                    <div className="user-dashboard__tracks-list">
-                                                      {album.tracks.map((track, trackIndex) => (
-                                                        <SortableTrackItem
-                                                          key={track.id}
-                                                          track={track}
-                                                          displayIndex={trackIndex + 1}
-                                                          albumId={album.albumId}
-                                                          onDelete={handleDeleteTrack}
-                                                          onTitleChange={handleTrackTitleChange}
-                                                          onVisibilityChange={
-                                                            handleTrackVisibilityChange
-                                                          }
-                                                          ui={ui ?? undefined}
-                                                          swipedTrackId={swipedTrackId}
-                                                          onSwipeChange={setSwipedTrackId}
-                                                        />
-                                                      ))}
+                                                    <div className="user-dashboard__tracks-table">
+                                                      <div
+                                                        className="user-dashboard__tracks-header"
+                                                        aria-hidden
+                                                      >
+                                                        <div className="user-dashboard__tracks-header-cell user-dashboard__tracks-header-cell--track">
+                                                          {ui?.dashboard?.track ?? 'Track'}
+                                                        </div>
+                                                        <div className="user-dashboard__tracks-header-cell user-dashboard__tracks-header-cell--actions">
+                                                          {ui?.dashboard?.actions ?? 'Actions'}
+                                                        </div>
+                                                        <div className="user-dashboard__tracks-header-cell user-dashboard__tracks-header-cell--duration">
+                                                          {ui?.dashboard?.duration ?? 'Duration'}
+                                                        </div>
+                                                      </div>
+                                                      <div className="user-dashboard__tracks-list">
+                                                        {album.tracks.map((track, trackIndex) => (
+                                                          <SortableTrackItem
+                                                            key={track.id}
+                                                            track={track}
+                                                            displayIndex={trackIndex + 1}
+                                                            albumId={album.albumId}
+                                                            onDelete={handleDeleteTrack}
+                                                            onTitleChange={handleTrackTitleChange}
+                                                            onVisibilityChange={
+                                                              handleTrackVisibilityChange
+                                                            }
+                                                            ui={ui ?? undefined}
+                                                          />
+                                                        ))}
+                                                      </div>
                                                     </div>
                                                   </SortableContext>
                                                 </DndContext>

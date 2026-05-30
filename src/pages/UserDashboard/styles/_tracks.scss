@@ -72,17 +72,45 @@ dialog {
       @include dashboard-btn-secondary;
     }
 
+    &__tracks-table {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: var(--ms-0);
+    }
+
+    &__tracks-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 132px 52px;
+      gap: var(--ms-0);
+      align-items: center;
+      padding: 0 var(--ms-01) var(--ms-01);
+      border-bottom: 1px solid var(--dashboard-divider);
+    }
+
+    &__tracks-header-cell {
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+      font-weight: 500;
+      text-transform: uppercase;
+
+      &--actions {
+        text-align: center;
+      }
+
+      &--duration {
+        text-align: right;
+      }
+    }
+
     &__tracks-list {
       display: flex;
       flex-direction: column;
-      gap: var(--ms-01);
-      margin-bottom: var(--ms-0);
     }
 
     &__track-item-wrapper {
       position: relative;
-      overflow: hidden;
       width: 100%;
+      border-bottom: 1px solid var(--dashboard-divider);
 
       &--dragging {
         opacity: 0.5;
@@ -95,41 +123,19 @@ dialog {
       background: var(--dashboard-card-bg);
     }
 
-    &__track-actions {
-      position: absolute;
-      top: 50%;
-      right: var(--ms-01);
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
-      padding: var(--ms-01);
-      background: var(--dashboard-card-bg);
-      border: 1px solid var(--dashboard-card-border);
-      border-radius: var(--ms-01);
-      box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transform: translateY(-50%);
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s ease;
-
-      @include breakpoint(tablet) {
-        display: flex;
-      }
-    }
-
     &__track-item {
-      display: flex;
-      padding: var(--ms-01);
-      height: 56px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 132px 52px;
+      gap: var(--ms-0);
       align-items: center;
-      cursor: pointer;
-      transition:
-        opacity 0.2s ease,
-        background-color 0.2s ease;
+      min-height: 56px;
+      padding: var(--ms-01);
+      transition: background-color 0.2s ease;
+
+      &:not(:has(.user-dashboard__track-cell)) {
+        display: flex;
+        gap: var(--ms-01);
+      }
 
       &--dragging {
         opacity: 0.5;
@@ -137,12 +143,27 @@ dialog {
 
       &--access-menu-open {
         background: var(--dashboard-hover-bg);
+      }
+    }
 
-        .user-dashboard__track-actions {
-          opacity: 1;
-          visibility: visible;
-          pointer-events: auto;
-        }
+    &__track-cell {
+      min-width: 0;
+
+      &--track {
+        display: flex;
+        align-items: center;
+        gap: var(--ms-01);
+      }
+
+      &--actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      &--duration {
+        text-align: right;
       }
     }
 
@@ -173,54 +194,73 @@ dialog {
     }
 
     &__track-number {
+      flex-shrink: 0;
       color: var(--dashboard-text-secondary);
     }
 
-    &__track-title {
-      position: relative;
-      display: flex;
-      align-items: center;
-      min-width: 0;
-      padding: var(--ms-01);
-      padding-right: calc(var(--ms-01) + 32px + var(--ms-01) + 64px + var(--ms-01) * 3);
-      font-size: var(--dashboard-font-size);
-      border-radius: var(--ms-02);
-      flex: 1;
-
-      @include breakpoint(tablet) {
-        &:hover {
-          .user-dashboard__track-actions {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-          }
-        }
-      }
-    }
-
     &__track-title-text {
-      flex: 1;
       min-width: 0;
       overflow: hidden;
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    &__track-edit-button {
-      display: flex;
+    &__track-title {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      color: var(--dashboard-text-primary);
+      font-size: var(--dashboard-font-size);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__track-duration-container {
+      flex-shrink: 0;
+    }
+
+    &__track-access-button,
+    &__track-edit-button,
+    &__track-delete-button {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       padding: 0;
-      color: var(--dashboard-text-primary);
       background: transparent;
       border: none;
       border-radius: var(--ms-02);
       cursor: pointer;
-      transition: background-color 0.2s ease;
+      transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        opacity 150ms ease;
+    }
+
+    &__track-access-button {
+      color: inherit;
+
+      &-icon {
+        display: inline-flex;
+      }
 
       &:hover {
+        background: var(--dashboard-hover-bg);
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+    }
+
+    &__track-edit-button {
+      color: #b3b3b3;
+
+      &:hover {
+        color: #ffffff;
         background: var(--dashboard-hover-bg);
       }
 
@@ -229,47 +269,10 @@ dialog {
       }
 
       svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         fill: none;
         stroke: currentcolor;
-      }
-    }
-
-    &__track-access-button {
-      position: absolute;
-      top: 50%;
-      right: calc(64px + var(--ms-01) * 4);
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      font-size: 1.05rem;
-      line-height: 1;
-      background: transparent;
-      border: none;
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-      transform: translateY(-50%);
-      transition: background-color 0.2s ease;
-
-      &-icon {
-        display: inline-flex;
-        translate: 0 0.06em;
-      }
-
-      &:hover {
-        background: var(--dashboard-hover-bg);
-      }
-
-      &:active {
-        opacity: 0.7;
       }
     }
 
@@ -355,20 +358,10 @@ dialog {
     }
 
     &__track-delete-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      color: var(--soft-red);
-      background: transparent;
-      border: none;
-      border-radius: var(--ms-02);
-      cursor: pointer;
-      transition: background-color 0.2s ease;
+      color: #ff6b6b;
 
       &:hover {
+        color: #ff6b6b;
         background: rgb(var(--soft-red-rgb) / 10%);
       }
 
@@ -377,14 +370,15 @@ dialog {
       }
 
       svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         fill: none;
         stroke: currentcolor;
       }
     }
 
     &__track-title-input {
+      min-width: 0;
       padding: var(--ms-01);
       color: var(--dashboard-text-primary);
       font-size: var(--dashboard-font-size);
@@ -401,155 +395,10 @@ dialog {
       }
     }
 
-    &__track-duration-container {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: var(--ms-01);
-    }
-
     &__track-duration {
       color: var(--dashboard-text-secondary);
+      font-size: var(--dashboard-font-size);
       font-variant-numeric: tabular-nums;
-    }
-
-    &__track-edit-button-swipe {
-      position: absolute;
-      top: var(--ms-01);
-      right: calc(176px + var(--ms-01));
-      bottom: var(--ms-01);
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      padding: 0;
-      color: var(--white);
-      font-size: var(--dashboard-font-size);
-      background: rgb(59 130 246);
-      border: none;
-      border-radius: var(--ms-01);
-      cursor: pointer;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s ease,
-        background-color 0.2s;
-
-      @include breakpoint(tablet) {
-        display: none;
-      }
-
-      &--visible {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-
-      &:hover,
-      &:active {
-        background: rgb(37 99 235);
-      }
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-    }
-
-    &__track-access-button-swipe {
-      position: absolute;
-      top: var(--ms-01);
-      right: calc(88px + var(--ms-01));
-      bottom: var(--ms-01);
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      padding: 0;
-      font-size: 1.35rem;
-      line-height: 1;
-      color: var(--white);
-      background: rgb(113 113 122);
-      border: none;
-      border-radius: var(--ms-01);
-      cursor: pointer;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s ease,
-        background-color 0.2s;
-
-      @include breakpoint(tablet) {
-        display: none;
-      }
-
-      &--visible {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-
-      &:hover,
-      &:active {
-        background: rgb(82 82 91);
-      }
-
-      .user-dashboard__track-access-button-icon {
-        display: inline-flex;
-        translate: 0 0.04em;
-      }
-    }
-
-    &__track-delete-button-swipe {
-      position: absolute;
-      top: var(--ms-01);
-      right: var(--ms-01);
-      bottom: var(--ms-01);
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      padding: 0;
-      color: var(--white);
-      font-size: var(--dashboard-font-size);
-      background: var(--soft-red);
-      border: none;
-      border-radius: var(--ms-01);
-      cursor: pointer;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition:
-        opacity 0.2s ease,
-        visibility 0.2s ease,
-        background-color 0.2s;
-
-      @include breakpoint(tablet) {
-        display: none;
-      }
-
-      &--visible {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-      }
-
-      &:hover,
-      &:active {
-        background: var(--soft-red-hover);
-      }
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
     }
 
     &__album-divider {
@@ -560,7 +409,6 @@ dialog {
     &__lyrics-section {
       margin-top: var(--ms-1);
       padding-top: var(--ms-0);
-      border-top: 1px solid var(--dashboard-divider);
     }
 
     &__lyrics-title {

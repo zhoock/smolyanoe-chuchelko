@@ -139,7 +139,6 @@ export function MyArchiveContent({ active }: Props) {
     }
   };
 
-  const title = t?.title ?? (lang === 'en' ? 'Your Archive' : 'Ваш архив');
   const subtitle =
     t?.subtitle ??
     (lang === 'en'
@@ -181,12 +180,9 @@ export function MyArchiveContent({ active }: Props) {
       : slotsAvailablePlural.replace('{count}', String(slotsRemaining));
 
   return (
-    <section className="user-dashboard__archive-tab" aria-labelledby="dashboard-archive-title">
+    <section className="user-dashboard__archive-tab">
       <header className="user-dashboard__archive-header">
         <div className="user-dashboard__archive-header-text">
-          <h2 id="dashboard-archive-title" className="user-dashboard__archive-title">
-            {title}
-          </h2>
           <p className="user-dashboard__archive-subtitle">{subtitle}</p>
         </div>
 
