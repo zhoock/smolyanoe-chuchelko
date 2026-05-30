@@ -626,6 +626,8 @@ export interface IInterface {
     /** Подписи меню видимости статьи (если нет — используются trackVisibility). */
     articleVisibility?: DashboardTrackVisibilityLabels;
     deleteAlbum?: string;
+    albumDeletedSuccessToast?: string;
+    albumDeletedSuccessToastWithTitle?: string;
     errorLoading?: string;
     failedToLoadAlbums?: string;
     selectLanguage?: string;

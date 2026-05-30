@@ -21,6 +21,7 @@ import { selectAlbumsStatus, selectAlbumByIdResolved } from '@entities/album';
 import { ArtistNotFound } from '@shared/ui/artistNotFound';
 import { useArtistPageAccess } from '@shared/lib/hooks/useArtistPageAccess';
 import { useRedirectHomeAfterOwnAccountDeleted } from '@shared/lib/hooks/useRedirectHomeAfterOwnAccountDeleted';
+import { useRedirectAfterDeletedAlbum } from '@shared/lib/hooks/useRedirectAfterDeletedAlbum';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import { fetchWithAuthSession } from '@shared/lib/authFetch';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
@@ -44,6 +45,7 @@ export default function Album() {
   const { albumId = '' } = useParams<{ albumId: string }>();
   const albumsStatus = useAppSelector(selectAlbumsStatus);
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(!!artistParam);
+  const hideDeletedAlbumPage = useRedirectAfterDeletedAlbum(albumId, artistSlug);
   const album = useAppSelector((state) => selectAlbumByIdResolved(state, albumId));
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
   const viewer = useAuthSessionUser();
@@ -133,7 +135,7 @@ export default function Album() {
 
   // Данные загружаются через loader
 
-  if (hideArtistPageAfterOwnDelete) {
+  if (hideArtistPageAfterOwnDelete || hideDeletedAlbumPage) {
     return null;
   }
 

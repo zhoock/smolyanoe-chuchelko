@@ -57,6 +57,7 @@ import {
   EmailVerificationRefreshController,
 } from '@shared/lib/emailVerification';
 import { AccountDeletedToast } from '@shared/ui/accountDeletedToast/AccountDeletedToast';
+import { AlbumDeletedToast } from '@shared/ui/albumDeletedToast/AlbumDeletedToast';
 
 // Lazy loading для страниц - загружаются только при необходимости
 const Album = lazy(() => import('@pages/Album/Album'));
@@ -609,6 +610,7 @@ function Layout() {
             <ErrorBoundary>
               {!isEmailVerifiedRoute && <EmailVerificationBanner />}
               <AccountDeletedToast />
+              <AlbumDeletedToast />
               <main>
                 <ErrorBoundary>{standardRoutes}</ErrorBoundary>
               </main>
@@ -626,6 +628,7 @@ function Layout() {
                 }}
               />
               <AccountDeletedToast />
+              <AlbumDeletedToast />
               <main>
                 {!isEmailVerifiedRoute && <EmailVerificationBanner />}
                 {!isHomeSceneRoute && !isEmailVerifiedRoute && <Hero />}

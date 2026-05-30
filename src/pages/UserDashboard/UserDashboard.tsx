@@ -64,7 +64,13 @@ import { getAlbumLifecycleStatus } from '@entities/album/lib/albumLifecycleStatu
 import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
 import { queueTracksUploadedToast } from '@shared/lib/tracksUploadedToast';
-import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
+import { queueAlbumDeletedToast } from '@shared/lib/albumDeletedToast';
+import { buildOwnArtistPagePath, openOwnArtistPage } from '@shared/lib/ownArtistPage';
+import {
+  markAlbumDeletedLeavePage,
+  clearAlbumDeletedLeavePage,
+} from '@shared/lib/albumDeletedSession';
+import { resolveDeletedAlbumRedirectTarget } from '@shared/lib/albumDeletedRedirect';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
@@ -168,6 +174,23 @@ function formatUploadedTracksSuccessMessage(
   const prefix = ui?.dashboard?.uploadedTracksSuccessPrefix ?? 'Successfully uploaded';
   const unit = count === 1 ? 'track' : 'tracks';
   return `${prefix} ${count} ${unit}`;
+}
+
+function formatAlbumDeletedSuccessMessage(
+  albumTitle: string | undefined,
+  lang: SupportedLang,
+  ui: IInterface | null | undefined
+): string {
+  const title = albumTitle?.trim();
+  if (title) {
+    const template =
+      ui?.dashboard?.albumDeletedSuccessToastWithTitle ??
+      (lang === 'ru' ? 'Альбом "{name}" удалён' : 'Album "{name}" deleted');
+    return template.replace('{name}', title);
+  }
+  return (
+    ui?.dashboard?.albumDeletedSuccessToast ?? (lang === 'ru' ? 'Альбом удалён' : 'Album deleted')
+  );
 }
 
 /** В кабинете список альбомов всегда принадлежит сессии; бэкенд иногда не присылает `userId`. */
@@ -2352,6 +2375,14 @@ function UserDashboard() {
   };
 
   const performDeleteAlbum = async (albumId: string) => {
+    const deletedAlbumTitle = albumsData.find((a) => a.id === albumId)?.title;
+    const deletedAlbumRedirectTarget = resolveDeletedAlbumRedirectTarget(
+      albumId,
+      location,
+      backgroundLocation,
+      profilePublicSlug
+    );
+
     try {
       const token = getToken();
       if (!token) {
@@ -2383,6 +2414,10 @@ function UserDashboard() {
         throw new Error((errorData as any)?.error || `HTTP error! status: ${response.status}`);
       }
 
+      if (deletedAlbumRedirectTarget) {
+        markAlbumDeletedLeavePage(deletedAlbumRedirectTarget);
+      }
+
       // Обновляем Redux store
       await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
 
@@ -2392,6 +2427,16 @@ function UserDashboard() {
       // Закрываем расширенный вид, если удаленный альбом был открыт
       if (expandedAlbumId === albumId) {
         setExpandedAlbumId(null);
+      }
+
+      queueAlbumDeletedToast(formatAlbumDeletedSuccessMessage(deletedAlbumTitle, lang, ui));
+
+      if (deletedAlbumRedirectTarget) {
+        clearDashboardModalBackground();
+        navigate(buildOwnArtistPagePath(deletedAlbumRedirectTarget.artistSlug), {
+          replace: true,
+        });
+        clearAlbumDeletedLeavePage();
       }
 
       console.log('✅ Album deleted successfully:', albumId);
