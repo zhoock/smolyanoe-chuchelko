@@ -46,7 +46,6 @@ import { ArchiveAccessModalProvider } from '@shared/lib/archiveAccessModal';
 import {
   AlbumCheckoutIntentResumeController,
   ArtistOnboardingRedirectController,
-  ListenerArtistPageGuard,
   PremiumCheckoutIntentResumeController,
 } from '@shared/lib/authIntent';
 import { ListenerWelcomeController } from '@features/listenerWelcome';
@@ -665,7 +664,6 @@ function Layout() {
           <PremiumCheckoutIntentResumeController />
           <AlbumCheckoutIntentResumeController />
           <ArtistOnboardingRedirectController />
-          <ListenerArtistPageGuard />
           <ListenerWelcomeController />
           <PremiumSuccessModalController />
         </DashboardModalShellContext.Provider>

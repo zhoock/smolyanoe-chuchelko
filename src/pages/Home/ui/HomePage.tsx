@@ -17,7 +17,7 @@ import { emptyStringMediaSrc } from '@shared/lib/media/optionalMediaUrl';
 import type { IAlbums, TracksProps } from '@models';
 import { isDashboardPathname } from '@shared/lib/publicArtistContext';
 import { resolveAlbumForDisplay } from '@entities/album/lib/resolveAlbumDisplay';
-import { fetchAlbums } from '@entities/album';
+import { fetchAlbums, selectAlbumsStatus, selectPublicAlbumsCacheIsStale } from '@entities/album';
 import { fetchArticles } from '@entities/article';
 import { generateMockArtists } from '@shared/lib/generateMockArtists';
 import { prepareUniverseData } from '@features/universe/model/prepareUniverseData';
@@ -70,12 +70,16 @@ export function HomePage() {
   const [sceneArtists, setSceneArtists] = useState<SceneArtist[]>([]);
   const hasArtistParam = !!searchParams.get('artist');
   const artistSlug = searchParams.get('artist') || '';
+  const albumsStatus = useAppSelector(selectAlbumsStatus);
+  const catalogCacheStale = useAppSelector(selectPublicAlbumsCacheIsStale);
   const hideArtistPageAfterOwnDelete = useRedirectHomeAfterOwnAccountDeleted(hasArtistParam);
   const artistPageAccess = useArtistPageAccess(artistSlug);
 
   useEffect(() => {
     const handler = () => {
-      setUniverseRefreshToken((n) => n + 1);
+      if (!hasArtistParam) {
+        setUniverseRefreshToken((n) => n + 1);
+      }
       if (hasArtistParam && !isDashboardPathname()) {
         void dispatch(fetchAlbums({ force: true }));
       }
@@ -83,6 +87,13 @@ export function HomePage() {
     window.addEventListener('artist:updated', handler);
     return () => window.removeEventListener('artist:updated', handler);
   }, [dispatch, hasArtistParam]);
+
+  useEffect(() => {
+    if (isDashboardPathname()) return;
+    if (!hasArtistParam) return;
+    if (!catalogCacheStale && albumsStatus !== 'idle') return;
+    void dispatch(fetchAlbums({ force: true }));
+  }, [albumsStatus, artistSlug, catalogCacheStale, dispatch, hasArtistParam]);
 
   useEffect(() => {
     const onboardingSurface =

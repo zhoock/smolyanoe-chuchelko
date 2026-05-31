@@ -4,7 +4,6 @@ export {
   markFirstArtistOnboardingPending,
 } from './artistOnboardingRedirect';
 export { ArtistOnboardingRedirectController } from './ArtistOnboardingRedirectController';
-export { ListenerArtistPageGuard } from './ListenerArtistPageGuard';
 export {
   beginPremiumCheckoutAuthIntent,
   buildPremiumCheckoutIntentContext,
