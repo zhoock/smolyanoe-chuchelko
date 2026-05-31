@@ -71,14 +71,11 @@ import {
   getArtistSlugFromLocation,
   getOpenAlbumIdFromPathname,
 } from '@shared/lib/albumDeletedRedirect';
-import { countUniqueAlbums } from '@shared/lib/artistPageContent';
 import { buildOwnArtistPagePath, openOwnArtistPage } from '@shared/lib/ownArtistPage';
-import { getStore } from '@shared/model/appStore';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
   fetchAlbums,
-  selectAlbumsData,
   selectDashboardAlbumsStatus,
   selectDashboardAlbumsData,
   selectDashboardAlbumsError,
@@ -888,6 +885,44 @@ function UserDashboard() {
   const [expandedArticleId, setExpandedArticleId] = useState<string | null>(null);
   const [articleAccessMenuArticleId, setArticleAccessMenuArticleId] = useState<string | null>(null);
   const [albumsData, setAlbumsData] = useState<AlbumData[]>([]);
+  const catalogNeedsRefreshRef = useRef(false);
+  const articlesNeedsRefreshRef = useRef(false);
+
+  const markPublicCatalogDirty = useCallback(() => {
+    catalogNeedsRefreshRef.current = true;
+  }, []);
+
+  const markPublicArticlesDirty = useCallback(() => {
+    articlesNeedsRefreshRef.current = true;
+  }, []);
+
+  const syncPublicSurfaceAfterDashboardClose = useCallback(
+    (artistSlug: string | null) => {
+      if (!artistSlug) return;
+
+      const catalogDirty = catalogNeedsRefreshRef.current;
+      const articlesDirty = articlesNeedsRefreshRef.current;
+      if (!catalogDirty && !articlesDirty) return;
+
+      catalogNeedsRefreshRef.current = false;
+      articlesNeedsRefreshRef.current = false;
+
+      // Не вызываем setPublicArtistSlug: при совпадении slug он no-op, при рассинхроне
+      // сбрасывает catalog в idle/stale без loader re-run (surface уже смонтирована под модалкой).
+      // Slug синхронизирует CurrentArtistSync из URL после navigate.
+      if (catalogDirty) {
+        void dispatch(fetchAlbums({ force: true }));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('artist:updated'));
+        }
+      }
+      if (articlesDirty) {
+        void dispatch(fetchArticles({ force: true, publicArtistSlug: artistSlug }));
+      }
+    },
+    [dispatch]
+  );
+
   const closeDashboard = useCallback(() => {
     if (!backgroundLocation) {
       navigate('/');
@@ -898,46 +933,10 @@ function UserDashboard() {
 
     const artistSlug =
       profilePublicSlug?.trim() ?? getArtistSlugFromLocation(backgroundLocation) ?? null;
+    const backgroundAlbumId = getOpenAlbumIdFromPathname(backgroundLocation.pathname);
+    const noAlbumsInDashboardUi = albumsData.length === 0;
 
-    void (async () => {
-      const noAlbumsInDashboardUi = albumsData.length === 0;
-
-      if (artistSlug) {
-        dispatch(setPublicArtistSlug(artistSlug));
-        try {
-          await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
-          await dispatch(fetchAlbums({ force: true })).unwrap();
-        } catch {
-          /* каталог под ?artist= */
-        }
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('artist:updated'));
-        }
-      }
-
-      const state = getStore().getState();
-      const ownerAlbumCount = Math.max(
-        countUniqueAlbums(selectDashboardAlbumsData(state)),
-        countUniqueAlbums(selectAlbumsData(state))
-      );
-      const noAlbumsLeft = noAlbumsInDashboardUi || ownerAlbumCount === 0;
-
-      if (artistSlug && noAlbumsLeft) {
-        navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
-        return;
-      }
-
-      const backgroundAlbumId = getOpenAlbumIdFromPathname(backgroundLocation.pathname);
-      if (artistSlug && backgroundAlbumId) {
-        const stillExists =
-          selectDashboardAlbumsData(state).some((a) => a.albumId === backgroundAlbumId) ||
-          selectAlbumsData(state).some((a) => a.albumId === backgroundAlbumId);
-        if (!stillExists) {
-          navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
-          return;
-        }
-      }
-
+    const navigateToBackground = () => {
       navigate(
         {
           pathname: backgroundLocation.pathname,
@@ -946,8 +945,29 @@ function UserDashboard() {
         },
         { replace: true }
       );
-    })();
-  }, [albumsData.length, backgroundLocation, dispatch, navigate, profilePublicSlug]);
+    };
+
+    // Закрываем сразу по локальному состоянию; refetch каталога — в фоне после unmount.
+    if (artistSlug && noAlbumsInDashboardUi) {
+      navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
+    } else if (
+      artistSlug &&
+      backgroundAlbumId &&
+      !albumsData.some((a) => a.id === backgroundAlbumId)
+    ) {
+      navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
+    } else {
+      navigateToBackground();
+    }
+
+    syncPublicSurfaceAfterDashboardClose(artistSlug);
+  }, [
+    albumsData,
+    backgroundLocation,
+    navigate,
+    profilePublicSlug,
+    syncPublicSurfaceAfterDashboardClose,
+  ]);
   const [editArticleModal, setEditArticleModal] = useState<{
     isOpen: boolean;
     article: IArticles | null;
@@ -1909,6 +1929,7 @@ function UserDashboard() {
             : album
         )
       );
+      markPublicCatalogDirty();
     } catch (error) {
       console.error('❌ Error updating track visibility:', error);
       setAlertModal({
@@ -1950,6 +1971,7 @@ function UserDashboard() {
       }
 
       dispatch(patchDashboardArticleVisibility({ articleId, visibility }));
+      markPublicArticlesDirty();
     } catch (error) {
       console.error('Error updating article visibility:', error);
       setAlertModal({
@@ -2097,6 +2119,7 @@ function UserDashboard() {
 
       await dispatch(fetchAlbums({ force: true, ownerDashboard: true })).unwrap();
 
+      markPublicCatalogDirty();
       queueAlbumPublishedToast();
       setPublishedToastTrigger((value) => value + 1);
     } catch (error) {
@@ -2257,6 +2280,8 @@ function UserDashboard() {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('artist:updated'));
       }
+
+      catalogNeedsRefreshRef.current = false;
 
       queueAlbumDeletedToast(formatAlbumDeletedSuccessMessage(deletedAlbumTitle, lang, ui));
       setAlbumDeletedToastTrigger((n) => n + 1);
