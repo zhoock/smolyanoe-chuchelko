@@ -23,8 +23,28 @@ describe('hasPublishedPublicReleases', () => {
       buttons: {},
       details: [],
       isPublic: true,
+      isPublished: true,
     };
     expect(hasPublishedPublicReleases([album])).toBe(true);
+  });
+
+  test('ignores published but hidden albums', () => {
+    expect(
+      hasPublishedPublicReleases([
+        {
+          album: 'Hidden Release',
+          artist: 'Band',
+          fullName: 'Band — Hidden Release',
+          description: '',
+          release: { date: '2024-01-01' },
+          tracks: [mockTrack],
+          buttons: {},
+          details: [],
+          isPublic: false,
+          isPublished: true,
+        },
+      ])
+    ).toBe(false);
   });
 
   test('ignores private, untitled, or trackless albums', () => {

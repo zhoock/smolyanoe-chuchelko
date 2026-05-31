@@ -61,6 +61,7 @@ import {
   isAlbumReadyToPublish,
   getAlbumPublishHintKey,
 } from '@entities/album/lib/isAlbumReadyToPublish';
+import { isAlbumPublished } from '@entities/album/lib/albumPublication';
 import { getAlbumLifecycleStatus } from '@entities/album/lib/albumLifecycleStatus';
 import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
@@ -2004,7 +2005,7 @@ function UserDashboard() {
           return {
             ...a,
             tracks,
-            ...(tracks.length === 0 ? { isPublic: false } : {}),
+            ...(tracks.length === 0 ? { isPublic: false, isPublished: false } : {}),
           };
         })
       );
@@ -2083,7 +2084,7 @@ function UserDashboard() {
         body: JSON.stringify({
           albumId,
           lang,
-          isPublic: true,
+          publish: true,
         }),
       });
 
@@ -2999,16 +3000,26 @@ function UserDashboard() {
                                                   album.tracks.length
                                                 ),
                                         })
-                                      : album.isPublic === false || album.tracks.length === 0
-                                        ? 'draft'
-                                        : 'published';
+                                      : isAlbumPublished({
+                                            isPublished: album.isPublished,
+                                            isPublic: album.isPublic,
+                                          })
+                                        ? album.isPublic === false
+                                          ? 'hidden'
+                                          : 'published'
+                                        : 'draft';
                                     const publishHintKey = albumFromStore
                                       ? getAlbumPublishHintKey(albumFromStore)
                                       : 'fields';
                                     const canPublishAlbum =
                                       publishHintKey === 'ready' && Boolean(albumFromStore);
                                     const isPublishingAlbum = publishingAlbumId === album.id;
-                                    const showPublishControls = lifecycleStatus !== 'published';
+                                    const showPublishControls = albumFromStore
+                                      ? !isAlbumPublished(albumFromStore)
+                                      : !isAlbumPublished({
+                                          isPublished: album.isPublished,
+                                          isPublic: album.isPublic,
+                                        });
                                     return (
                                       <React.Fragment key={album.id}>
                                         <div
@@ -3054,6 +3065,14 @@ function UserDashboard() {
                                                 lang={lang}
                                               />
                                             </div>
+                                            {lifecycleStatus === 'hidden' ? (
+                                              <p className="user-dashboard__album-status-hint">
+                                                {ui?.dashboard?.albumStatusHiddenHint ??
+                                                  (lang !== 'ru'
+                                                    ? 'The album is published but hidden from visitors.'
+                                                    : 'Альбом опубликован, но скрыт от посетителей.')}
+                                              </p>
+                                            ) : null}
                                             {album.releaseDate ? (
                                               <div className="user-dashboard__album-date">
                                                 {album.releaseDate}

@@ -16,6 +16,7 @@ import { getAlbumStorageBaseName } from '@shared/lib/albumCoverUrl';
 import { uploadCoverDraft, commitCover } from '@shared/api/albums/cover';
 import type { IAlbums, detailsProps } from '@models';
 import { mergeSemanticSourceIntoLocaleDetails } from '@entities/album/lib/albumDetailSemanticKind';
+import { isAlbumPublished } from '@entities/album/lib/albumPublication';
 import { generateAlbumIdFromTitle } from '@shared/lib/album/generateAlbumIdFromTitle';
 import type { SupportedLang } from '@shared/model/lang';
 import {
@@ -113,6 +114,8 @@ export function EditAlbumModal({
   // Получаем альбомы для текущего языка сайта
   const albumsFromStore = useAppSelector(selectDashboardAlbumsData);
   const isNewAlbumWizard = !albumId;
+  const editingAlbum = albumId ? albumsFromStore.find((a) => a.albumId === albumId) : undefined;
+  const showAlbumVisibilityControl = editingAlbum ? isAlbumPublished(editingAlbum) : false;
 
   // Контроль инициализации - чтобы не перетирать ввод пользователя
   const didInitRef = useRef(false);
@@ -635,10 +638,11 @@ export function EditAlbumModal({
         purchaseLinks,
         streamingLinks,
         tags: tagsFromRelease.length > 0 ? tagsFromRelease : prevForm.tags || [],
-        visibleOnAlbumPage:
-          typeof album.isPublic === 'boolean'
+        visibleOnAlbumPage: isAlbumPublished(album)
+          ? typeof album.isPublic === 'boolean'
             ? album.isPublic
-            : (prevForm.visibleOnAlbumPage ?? true),
+            : (prevForm.visibleOnAlbumPage ?? true)
+          : (prevForm.visibleOnAlbumPage ?? true),
       };
 
       mergedDiscardBaselineForm = next;
@@ -2342,11 +2346,8 @@ export function EditAlbumModal({
     };
 
     const albumTitle = (finalFormData.title || '').trim() || (originalAlbum?.album || '').trim();
-    const resolvedIsPublic = isNewAlbumWizard
-      ? false
-      : originalAlbum?.isPublic === false
-        ? false
-        : finalFormData.visibleOnAlbumPage;
+    const albumIsPublished = originalAlbum ? isAlbumPublished(originalAlbum) : false;
+    const resolvedIsPublic = albumIsPublished ? finalFormData.visibleOnAlbumPage : false;
     const fullName =
       effectiveArtistName && albumTitle ? `${effectiveArtistName} — ${albumTitle}` : albumTitle;
 
@@ -2382,7 +2383,7 @@ export function EditAlbumModal({
       // Полный объект кнопок из формы — иначе merge со старым `buttons` не удаляет снятые ссылки.
       buttons,
       lang: normalizedLang,
-      isPublic: resolvedIsPublic,
+      ...(albumIsPublished ? { isPublic: resolvedIsPublic } : {}),
       ...(newCover ? { cover: newCover } : {}),
     };
 
@@ -2879,40 +2880,51 @@ export function EditAlbumModal({
             ) : null}
           </div>
 
-          <div className="edit-album-modal__field">
-            <span className="edit-album-modal__label" id="album-visibility-label">
-              {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibility ?? 'Album visibility'}
-            </span>
-            <div className="edit-album-modal__visibility-control">
-              <div className="edit-album-modal__visibility-row">
-                <label className="edit-album-modal__toggle">
-                  <input
-                    type="checkbox"
-                    id="visible-on-page"
-                    className="edit-album-modal__toggle-input"
-                    role="switch"
-                    aria-labelledby="album-visibility-label album-visibility-visible-label"
-                    checked={formData.visibleOnAlbumPage}
-                    onChange={(e) => handleInputChange('visibleOnAlbumPage', e.target.checked)}
-                  />
-                  <span className="edit-album-modal__toggle-track" aria-hidden="true">
-                    <span className="edit-album-modal__toggle-thumb" />
-                  </span>
-                </label>
-                <label
-                  htmlFor="visible-on-page"
-                  className="edit-album-modal__toggle-label"
-                  id="album-visibility-visible-label"
-                >
-                  {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibleCheckbox ?? 'Visible'}
-                </label>
+          {showAlbumVisibilityControl ? (
+            <div className="edit-album-modal__field">
+              <span className="edit-album-modal__label" id="album-visibility-label">
+                {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibility ?? 'Album visibility'}
+              </span>
+              <div className="edit-album-modal__visibility-control">
+                <div className="edit-album-modal__visibility-row">
+                  <label className="edit-album-modal__toggle">
+                    <input
+                      type="checkbox"
+                      id="visible-on-page"
+                      className="edit-album-modal__toggle-input"
+                      role="switch"
+                      aria-labelledby="album-visibility-label album-visibility-visible-label"
+                      checked={formData.visibleOnAlbumPage}
+                      onChange={(e) => handleInputChange('visibleOnAlbumPage', e.target.checked)}
+                    />
+                    <span className="edit-album-modal__toggle-track" aria-hidden="true">
+                      <span className="edit-album-modal__toggle-thumb" />
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="visible-on-page"
+                    className="edit-album-modal__toggle-label"
+                    id="album-visibility-visible-label"
+                  >
+                    {ui?.dashboard?.editAlbumModal?.fieldLabels?.albumVisibleCheckbox ?? 'Visible'}
+                  </label>
+                </div>
+                <p className="edit-album-modal__help-text edit-album-modal__visibility-hint">
+                  {ui?.dashboard?.editAlbumModal?.helpText?.albumVisibility ??
+                    'When visible, your album will be shown on your artist page.'}
+                </p>
               </div>
+            </div>
+          ) : !isNewAlbumWizard ? (
+            <div className="edit-album-modal__field">
               <p className="edit-album-modal__help-text edit-album-modal__visibility-hint">
-                {ui?.dashboard?.editAlbumModal?.helpText?.albumVisibility ??
-                  'When visible, your album will be shown on your artist page.'}
+                {ui?.dashboard?.editAlbumModal?.helpText?.albumVisibilityDraft ??
+                  (lang !== 'ru'
+                    ? 'Publish the album from your dashboard to control visibility on your artist page.'
+                    : 'Опубликуйте альбом в дашборде, чтобы управлять видимостью на странице артиста.')}
               </p>
             </div>
-          </div>
+          ) : null}
 
           <div className="edit-album-modal__field edit-album-modal__field--album-sale">
             {yookassaLoading ? (

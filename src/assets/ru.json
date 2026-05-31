@@ -378,6 +378,8 @@
       "albumStatusDraft": "Черновик",
       "albumStatusReadyToPublish": "Готов к публикации",
       "albumStatusPublished": "Опубликован",
+      "albumStatusHidden": "Скрыт",
+      "albumStatusHiddenHint": "Альбом опубликован, но скрыт от посетителей.",
       "albumPublishHintNeedsTracks": "Загрузите хотя бы один трек для публикации альбома.",
       "albumPublishHintNeedsCover": "Загрузите обложку альбома для публикации.",
       "albumPublishHintNeedsFields": "Заполните все обязательные поля альбома для публикации.",
@@ -692,7 +694,8 @@
         "helpText": {
           "controlDownloadSale": "Контролируйте, могут ли фанаты купить/скачать этот альбом.",
           "fansCanBuyNow": "Фанаты могут купить сейчас, скачать после даты релиза",
-          "albumVisibility": "Когда включено, альбом будет отображаться на вашей странице артиста."
+          "albumVisibility": "Когда включено, альбом будет отображаться на вашей странице артиста.",
+          "albumVisibilityDraft": "Опубликуйте альбом в дашборде, чтобы управлять видимостью на странице артиста."
         },
         "radioOptions": {
           "no": "Не продавать",

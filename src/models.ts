@@ -81,7 +81,10 @@ export interface IAlbums {
   /** Обложка альбома (имя файла без расширения и суффикса размера) */
   cover?: string;
 
-  /** Видимость страницы альбома (одно значение на альбом; синхронизируется по всем lang в БД). */
+  /** Альбом опубликован (одноразовое действие; синхронизируется по всем lang в БД). */
+  isPublished?: boolean;
+
+  /** Видимость на странице артиста после публикации (синхронизируется по всем lang в БД). */
   isPublic?: boolean;
 
   /** Релиз альбома (единый JSON на альбом: дата, UPC, продажи, `genreCodes`, `tags` и т.д.) */
@@ -528,6 +531,8 @@ export interface IInterface {
     albumStatusDraft?: string;
     albumStatusReadyToPublish?: string;
     albumStatusPublished?: string;
+    albumStatusHidden?: string;
+    albumStatusHiddenHint?: string;
     albumPublishHintNeedsTracks?: string;
     albumPublishHintNeedsCover?: string;
     albumPublishHintNeedsFields?: string;
@@ -855,6 +860,7 @@ export interface IInterface {
         controlDownloadSale: string;
         fansCanBuyNow: string;
         albumVisibility: string;
+        albumVisibilityDraft: string;
       };
       radioOptions: {
         no: string;

@@ -23,6 +23,7 @@ const readyDraft: IAlbums = {
   details: [],
   tracks: [mockTrack],
   isPublic: false,
+  isPublished: false,
 };
 
 describe('isAlbumReadyToPublish', () => {

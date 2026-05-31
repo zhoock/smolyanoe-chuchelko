@@ -1,5 +1,7 @@
 import type { IAlbums } from '@models';
 
+import { isAlbumDraft } from './albumPublication';
+
 function releaseString(release: Record<string, unknown>, key: string): string {
   const value = release?.[key];
   return typeof value === 'string' ? value.trim() : '';
@@ -19,9 +21,7 @@ export function resolveAlbumCoverKey(cover: IAlbums['cover']): string {
   return '';
 }
 
-export function isAlbumDraft(album: Pick<IAlbums, 'isPublic'>): boolean {
-  return album.isPublic === false;
-}
+export { isAlbumDraft } from './albumPublication';
 
 /** Черновик можно опубликовать: обязательные поля из мастера + обложка + минимум один трек. */
 export function isAlbumReadyToPublish(album: IAlbums): boolean {

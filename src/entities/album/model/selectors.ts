@@ -5,6 +5,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@shared/model/appStore/types';
 import type { IAlbums } from '@models';
+import { isAlbumVisibleOnArtistPage } from '@entities/album/lib/albumPublication';
 
 import { selectCurrentLang } from '@shared/model/lang/selectors';
 import { selectPublicArtistSlug } from '@shared/model/currentArtist';
@@ -97,10 +98,10 @@ export const selectAlbumsDataResolved = createSelector(
   (albums, lang): IAlbums[] => albums.map((a) => resolveAlbumForDisplay(a, lang))
 );
 
-/** Публичный каталог: только альбомы с `isPublic !== false` (undefined — как раньше, видимы). */
+/** Публичный каталог: опубликованные и видимые альбомы. */
 export const selectPublicAlbumsDataResolved = createSelector(
   [selectAlbumsDataResolved],
-  (albums): IAlbums[] => albums.filter((a) => a.isPublic !== false)
+  (albums): IAlbums[] => albums.filter((a) => isAlbumVisibleOnArtistPage(a))
 );
 
 export const selectPublicAlbumsDataResolvedForSurface = createSelector(
@@ -124,7 +125,7 @@ export const selectAlbumsResolvedForAllAlbumsPage = createSelector(
     (_state: RootState, restrictToPublished: boolean) => restrictToPublished,
   ],
   (albums, restrictToPublished): IAlbums[] =>
-    restrictToPublished ? albums.filter((a) => a.isPublic !== false) : albums
+    restrictToPublished ? albums.filter((a) => isAlbumVisibleOnArtistPage(a)) : albums
 );
 
 export const selectAlbumByIdResolved = createSelector(

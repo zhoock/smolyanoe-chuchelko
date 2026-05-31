@@ -860,6 +860,17 @@ COMMENT ON COLUMN users.password_reset_expires_at IS 'When the active password r
 COMMENT ON COLUMN users.password_reset_requested_at IS 'When the active password reset token was issued (NULL when none).';
 `;
 
+const MIGRATION_050 = `
+ALTER TABLE albums
+  ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_albums_is_published ON albums(is_published);
+
+COMMENT ON COLUMN albums.is_published IS 'Альбом опубликован (одноразовое действие). is_public — только видимость после публикации.';
+
+UPDATE albums SET is_published = true WHERE is_public = true;
+`;
+
 type MigrationSql = string | (() => string);
 
 const MIGRATIONS: Record<string, MigrationSql> = {
@@ -894,6 +905,7 @@ const MIGRATIONS: Record<string, MigrationSql> = {
   '044_normalize_purchase_album_id_to_slug.sql': MIGRATION_044,
   '048_create_auth_login_rate_limits.sql': MIGRATION_048,
   '049_add_password_reset_to_users.sql': MIGRATION_049,
+  '050_add_is_published_to_albums.sql': MIGRATION_050,
 };
 
 async function applyMigration(migrationName: string, sql: string): Promise<MigrationResult> {
@@ -1048,6 +1060,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       '040_create_auth_ip_rate_limits.sql',
       '048_create_auth_login_rate_limits.sql',
       '049_add_password_reset_to_users.sql',
+      '050_add_is_published_to_albums.sql',
     ];
 
     const results: MigrationResult[] = [];

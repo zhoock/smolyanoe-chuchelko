@@ -28,6 +28,7 @@ import { classifyAuthorizationHeader } from './lib/jwt';
 import type { ApiResponse, SupportedLang } from './lib/types';
 import { updateAlbumsJson } from './lib/github-api';
 import { assertArtistVisibleToViewer } from './lib/artist-publication';
+import { isAlbumRowReadyToPublish } from './lib/album-publish';
 import { PublicArtistResolverError, resolvePublicArtistUserId } from './lib/public-artist-resolver';
 import { resolveTrackSrcToSupabasePublicUrl } from './lib/storage-public-url';
 import { migrateUserAlbumAudioFolderAfterRename } from './lib/migrate-storage-album-folder';
@@ -52,6 +53,7 @@ interface AlbumRow {
   details: unknown[];
   lang: string;
   is_public: boolean;
+  is_published: boolean;
   created_at: Date;
   updated_at: Date;
   /** Кредиты обложки — на строку локали (миграция 029). */
@@ -103,6 +105,7 @@ interface AlbumData {
   designer?: string;
   designerURL?: string;
   isPublic?: boolean;
+  isPublished?: boolean;
   /** Внутренняя метка для merge по свежести строки (не язык). */
   updatedAt?: string;
   /** Присутствует у одноязычного ответа (POST и т.д.); у сливного GET отсутствует. */
@@ -212,6 +215,8 @@ interface UpdateAlbumRequest {
   buttons?: Record<string, unknown>;
   lang: SupportedLang;
   isPublic?: boolean;
+  /** Одноразовая публикация черновика: is_published=true, is_public=true. */
+  publish?: boolean;
   /** Старый album_id при смене slug (вместе с albumId = новый). */
   previousAlbumId?: string;
 }
@@ -443,6 +448,7 @@ function mapAlbumToApiFormat(album: AlbumRow, tracks: TrackRow[]): AlbumData {
       };
     }),
     isPublic: album.is_public,
+    isPublished: album.is_published,
     updatedAt:
       album.updated_at != null ? new Date(album.updated_at as Date).toISOString() : undefined,
   };
@@ -456,6 +462,7 @@ async function syncSharedAlbumMetadataAcrossLocales(
     album?: string;
     releaseJson?: string;
     isPublic?: boolean;
+    isPublished?: boolean;
     cover?: string;
     buttonsJson?: string;
   }
@@ -479,6 +486,10 @@ async function syncSharedAlbumMetadataAcrossLocales(
   if (patch.isPublic !== undefined) {
     sets.push(`is_public = $${i++}`);
     values.push(patch.isPublic);
+  }
+  if (patch.isPublished !== undefined) {
+    sets.push(`is_published = $${i++}`);
+    values.push(patch.isPublished);
   }
   if (patch.cover !== undefined) {
     sets.push(`cover = $${i++}::text`);
@@ -737,6 +748,7 @@ function mergeAlbumDataPayloads(payloads: AlbumData[]): AlbumData {
     buttons: shared.buttons,
     details: textRoot.details,
     isPublic: shared.isPublic,
+    isPublished: shared.isPublished,
     tracks,
     translations,
   };
@@ -1006,6 +1018,7 @@ export const handler: Handler = async (
              a.details,
              a.lang,
              a.is_public,
+             a.is_published,
              a.created_at,
              a.updated_at,
              a.photographer,
@@ -1047,7 +1060,8 @@ export const handler: Handler = async (
           const isOwnerViewer = Boolean(authUserId && authUserId === targetUserId);
           if (
             !isOwnerViewer &&
-            (merged.isPublic === false ||
+            (merged.isPublished === false ||
+              merged.isPublic === false ||
               !String(merged.album ?? '').trim() ||
               merged.tracks.length === 0)
           ) {
@@ -1137,9 +1151,9 @@ export const handler: Handler = async (
       const albumResult = await query<AlbumRow>(
         `INSERT INTO albums (
           user_id, album_id, artist, album, full_name, description,
-          cover, release, buttons, details, lang, is_public,
+          cover, release, buttons, details, lang, is_public, is_published,
           photographer, photographer_url, designer, designer_url
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         ON CONFLICT (user_id, album_id, lang)
         DO UPDATE SET
           album = EXCLUDED.album,
@@ -1150,6 +1164,7 @@ export const handler: Handler = async (
           buttons = EXCLUDED.buttons,
           details = EXCLUDED.details,
           is_public = EXCLUDED.is_public,
+          is_published = EXCLUDED.is_published,
           photographer = EXCLUDED.photographer,
           photographer_url = EXCLUDED.photographer_url,
           designer = EXCLUDED.designer,
@@ -1169,6 +1184,7 @@ export const handler: Handler = async (
           JSON.stringify(locale?.details ?? []),
           data.lang,
           data.isPublic !== undefined ? data.isPublic : false,
+          false,
           locale?.photographer ?? null,
           locale?.photographerURL ?? null,
           locale?.designer ?? null,
@@ -1347,7 +1363,11 @@ export const handler: Handler = async (
                 localePatch?.description !== undefined
                   ? localePatch.description
                   : sibling.description;
-              const isPublicVal = data.isPublic !== undefined ? data.isPublic : sibling.is_public;
+              const isPublicVal =
+                data.isPublic !== undefined && sibling.is_published
+                  ? data.isPublic
+                  : sibling.is_public;
+              const isPublishedVal = sibling.is_published;
 
               const photoVal =
                 localePatch?.photographer !== undefined
@@ -1367,9 +1387,9 @@ export const handler: Handler = async (
               const insertRes = await client.query<AlbumRow>(
                 `INSERT INTO albums (
                   user_id, album_id, artist, album, full_name, description,
-                  cover, release, buttons, details, lang, is_public,
+                  cover, release, buttons, details, lang, is_public, is_published,
                   photographer, photographer_url, designer, designer_url
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16, $17)
                 RETURNING *`,
                 [
                   userId,
@@ -1388,6 +1408,7 @@ export const handler: Handler = async (
                   JSON.stringify(Array.isArray(detailsPayload) ? detailsPayload : []),
                   data.lang,
                   isPublicVal,
+                  isPublishedVal,
                   photoVal ?? null,
                   photoUrlVal ?? null,
                   designVal ?? null,
@@ -1446,6 +1467,61 @@ export const handler: Handler = async (
           });
           return createErrorResponse(404, 'Album not found or access denied.');
         }
+
+        if (data.publish === true) {
+          if (existingAlbum.is_published) {
+            return createErrorResponse(400, 'Album is already published.');
+          }
+
+          const trackCountResult = await query<{ count: string }>(
+            `SELECT COUNT(*)::text AS count
+             FROM tracks t
+             INNER JOIN albums a ON a.id = t.album_id
+             WHERE a.user_id = $1 AND a.album_id = $2`,
+            [userId, data.albumId]
+          );
+          const trackCount = Number(trackCountResult.rows[0]?.count ?? 0);
+
+          const canonicalRowResult = await query<AlbumRow>(
+            `SELECT * FROM albums
+             WHERE user_id = $1 AND album_id = $2
+             ORDER BY updated_at DESC NULLS LAST, created_at DESC
+             LIMIT 1`,
+            [userId, data.albumId]
+          );
+          const rowForCheck = canonicalRowResult.rows[0] ?? existingAlbum;
+
+          if (!isAlbumRowReadyToPublish(rowForCheck, trackCount)) {
+            return createErrorResponse(400, 'Album is not ready to publish.');
+          }
+
+          await syncSharedAlbumMetadataAcrossLocales(userId, data.albumId, {
+            isPublished: true,
+            isPublic: true,
+          });
+
+          const reloadedAfterPublish = await query<AlbumRow>(
+            `SELECT * FROM albums WHERE id = $1 LIMIT 1`,
+            [existingAlbum.id]
+          );
+          if (reloadedAfterPublish.rows[0]) {
+            existingAlbum = reloadedAfterPublish.rows[0];
+          }
+
+          const tracksAfterPublish = { rows: await fetchTracksRowsForAlbumPk(existingAlbum.id) };
+          const publishedAlbum = mapAlbumToApiFormat(existingAlbum, tracksAfterPublish.rows);
+
+          return {
+            statusCode: 200,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({
+              success: true,
+              message: 'Album published successfully',
+              data: [publishedAlbum],
+            }),
+          };
+        }
+
         console.log('[albums.ts PUT] Found existing album:', {
           id: existingAlbum.id,
           albumId: existingAlbum.album_id,
@@ -1523,8 +1599,14 @@ export const handler: Handler = async (
           updateValues.push(JSON.stringify(data.buttons));
         }
         if (data.isPublic !== undefined) {
-          updateFields.push(`is_public = $${paramIndex++}`);
-          updateValues.push(data.isPublic);
+          if (!existingAlbum.is_published) {
+            console.log(
+              '[albums.ts PUT] Ignoring isPublic on draft album (use publish: true to publish)'
+            );
+          } else {
+            updateFields.push(`is_public = $${paramIndex++}`);
+            updateValues.push(data.isPublic);
+          }
         }
 
         if (updateFields.length === 0 && !albumIdRenameApplied) {
@@ -1603,7 +1685,8 @@ export const handler: Handler = async (
           data.release !== undefined
             ? JSON.stringify(stripReleaseCoverCredits(data.release))
             : undefined;
-        const syncPub = data.isPublic !== undefined ? data.isPublic : undefined;
+        const syncPub =
+          data.isPublic !== undefined && existingAlbum.is_published ? data.isPublic : undefined;
         const syncCover =
           data.cover !== undefined && data.cover !== null && data.cover !== ''
             ? String(data.cover)
@@ -2034,6 +2117,7 @@ export const handler: Handler = async (
           if (remainingTrackCount === 0) {
             await syncSharedAlbumMetadataAcrossLocales(userId, albumIdFromQuery, {
               isPublic: false,
+              isPublished: false,
             });
             console.log('📋 DELETE /api/albums - Album reverted to draft (no tracks left):', {
               albumId: albumIdFromQuery,

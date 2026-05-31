@@ -460,6 +460,18 @@ dialog {
       border-color: rgb(var(--soft-green-rgb) / 45%);
     }
 
+    &__album-status-badge--hidden {
+      color: var(--error-color);
+      border-color: rgb(var(--pink-terracotta-rgb) / 45%);
+    }
+
+    &__album-status-hint {
+      color: var(--dashboard-text-secondary);
+      font-size: var(--ms-01);
+      line-height: 1.35;
+      margin-top: 0.15rem;
+    }
+
     &__album-footer-actions {
       display: flex;
       justify-content: space-between;

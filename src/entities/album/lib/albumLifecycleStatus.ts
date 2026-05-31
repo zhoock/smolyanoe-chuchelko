@@ -1,14 +1,13 @@
 import type { IAlbums } from '@models';
 
+import { isAlbumPublished } from './albumPublication';
 import { isAlbumReadyToPublish } from './isAlbumReadyToPublish';
 
-export type AlbumLifecycleStatus = 'draft' | 'ready-to-publish' | 'published';
+export type AlbumLifecycleStatus = 'draft' | 'ready-to-publish' | 'published' | 'hidden';
 
 export function getAlbumLifecycleStatus(album: IAlbums): AlbumLifecycleStatus {
-  const trackCount = album.tracks?.length ?? 0;
-
-  if (album.isPublic !== false && trackCount > 0) {
-    return 'published';
+  if (isAlbumPublished(album)) {
+    return album.isPublic === false ? 'hidden' : 'published';
   }
 
   if (isAlbumReadyToPublish(album)) {

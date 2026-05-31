@@ -13,6 +13,7 @@ import {
   isAlbumViewerOwner,
   useShowAlbumPurchaseSection,
 } from '@entities/service';
+import { isAlbumPublished } from '@entities/album/lib/albumPublication';
 import { ErrorI18n } from '@shared/ui/error-message';
 import { AlbumSkeleton } from '@shared/ui/skeleton';
 import { useLang } from '@app/providers/lang';
@@ -190,6 +191,15 @@ export default function Album() {
 
   const isAlbumOwner = isAlbumViewerOwner(album, viewer?.id);
   const inArtistPublicContext = Boolean(artistParam?.trim());
+  if (!isAlbumPublished(album) && !isAlbumOwner) {
+    return (
+      <section className="album main-background" aria-label="Блок c альбомом">
+        <div className="wrapper album__wrapper">
+          <ErrorI18n code="albumNotFound" />
+        </div>
+      </section>
+    );
+  }
   if (album.isPublic === false && !isAlbumOwner && !inArtistPublicContext) {
     return (
       <section className="album main-background" aria-label="Блок c альбомом">

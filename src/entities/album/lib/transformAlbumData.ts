@@ -22,6 +22,7 @@ export interface AlbumData {
   cover?: string;
   releaseDate?: string;
   isPublic?: boolean;
+  isPublished?: boolean;
   tracks: TrackData[];
 }
 
@@ -134,6 +135,7 @@ export function transformAlbumToAlbumData(
     year: releaseDate ? releaseDate.getFullYear().toString() : '',
     cover: source.cover,
     isPublic: source.isPublic,
+    isPublished: source.isPublished,
     releaseDate: releaseDate
       ? releaseDate.toLocaleDateString('en-US', {
           year: 'numeric',

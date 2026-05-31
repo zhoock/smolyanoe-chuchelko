@@ -24,17 +24,32 @@ describe('getAlbumLifecycleStatus', () => {
       },
     ],
     isPublic: true,
+    isPublished: true,
   };
 
-  test('returns published when public and has tracks', () => {
+  test('returns published when published', () => {
     expect(getAlbumLifecycleStatus(baseAlbum)).toBe('published');
   });
 
-  test('returns draft when public but has no tracks', () => {
-    expect(getAlbumLifecycleStatus({ ...baseAlbum, tracks: [] })).toBe('draft');
+  test('returns hidden when published but not visible', () => {
+    expect(getAlbumLifecycleStatus({ ...baseAlbum, isPublic: false, isPublished: true })).toBe(
+      'hidden'
+    );
   });
 
-  test('returns draft when private and has no tracks', () => {
-    expect(getAlbumLifecycleStatus({ ...baseAlbum, isPublic: false, tracks: [] })).toBe('draft');
+  test('returns draft when public but not published (legacy)', () => {
+    expect(
+      getAlbumLifecycleStatus({ ...baseAlbum, isPublic: true, isPublished: false, tracks: [] })
+    ).toBe('draft');
+  });
+
+  test('returns published even without tracks when already published', () => {
+    expect(getAlbumLifecycleStatus({ ...baseAlbum, tracks: [] })).toBe('published');
+  });
+
+  test('returns draft when unpublished and has no tracks', () => {
+    expect(
+      getAlbumLifecycleStatus({ ...baseAlbum, isPublic: false, isPublished: false, tracks: [] })
+    ).toBe('draft');
   });
 });

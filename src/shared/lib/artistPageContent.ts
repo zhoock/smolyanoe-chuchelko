@@ -1,5 +1,6 @@
 import type { IAlbums, IArticles } from '@models';
 
+import { isAlbumVisibleOnArtistPage } from '@entities/album/lib/albumPublication';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
 
 type ProfileContentInput = {
@@ -39,7 +40,7 @@ export function filterAlbumsForArtistPageSurface(albums: IAlbums[], isOwner: boo
   if (isOwner) return albums;
   return albums.filter(
     (album) =>
-      album.isPublic !== false &&
+      isAlbumVisibleOnArtistPage(album) &&
       typeof album.album === 'string' &&
       album.album.trim().length > 0 &&
       (album.tracks?.length ?? 0) > 0

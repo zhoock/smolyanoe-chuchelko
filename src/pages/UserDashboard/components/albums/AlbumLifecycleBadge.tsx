@@ -21,6 +21,8 @@ function statusLabel(
       return d?.albumStatusReadyToPublish ?? (en ? 'Ready to Publish' : 'Готов к публикации');
     case 'published':
       return d?.albumStatusPublished ?? (en ? 'Published' : 'Опубликован');
+    case 'hidden':
+      return d?.albumStatusHidden ?? (en ? 'Hidden' : 'Скрыт');
     default:
       return d?.albumStatusDraft ?? (en ? 'Draft' : 'Черновик');
   }
@@ -33,6 +35,7 @@ export function AlbumLifecycleBadge({ status, ui, lang }: AlbumLifecycleBadgePro
         'user-dashboard__album-status-badge--draft': status === 'draft',
         'user-dashboard__album-status-badge--ready': status === 'ready-to-publish',
         'user-dashboard__album-status-badge--published': status === 'published',
+        'user-dashboard__album-status-badge--hidden': status === 'hidden',
       })}
     >
       <span className="user-dashboard__album-status-badge-dot" aria-hidden="true" />
