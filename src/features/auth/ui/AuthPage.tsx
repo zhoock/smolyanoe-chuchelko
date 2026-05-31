@@ -6,9 +6,10 @@ import {
   getUser,
   AUTH_EXPIRED_BANNER_SESSION_KEY,
 } from '@shared/lib/auth';
-import { isArtistAccount } from '@shared/lib/accountType';
+import { isArtistAccount, isListenerAccount } from '@shared/lib/accountType';
 import { markFirstArtistOnboardingPending } from '@shared/lib/authIntent';
-import { resolvePostAuthDestination } from '@shared/lib/authReturnUrl';
+import { markListenerWelcomePending } from '@features/listenerWelcome';
+import { resolvePostAuthDestinationForUser } from '@shared/lib/authReturnUrl';
 import {
   hasPendingArtistOnboarding,
   resolveArtistOnboardingDestination,
@@ -81,15 +82,6 @@ export function AuthPage() {
 
   const needsVerification = Boolean(user && !isEmailVerified(user));
 
-  const postAuthPath = useMemo(
-    () =>
-      resolvePostAuthDestination({
-        returnToSearchParam: searchParams.get('returnTo'),
-        routerState: location.state,
-      }),
-    [searchParams, location.state]
-  );
-
   // True, когда AuthPage открыт как overlay поверх другой страницы — тогда
   // в `location.state.backgroundLocation` лежит URL underlying-страницы.
   const hasOverlayBackground = Boolean(
@@ -98,21 +90,38 @@ export function AuthPage() {
 
   const finishPostAuthNavigation = useCallback(async () => {
     clearAccountDeletedSkipReturn();
+    const currentUser = getUser();
+
     if (hasOverlayBackground) {
-      // Overlay: history back вместо replace navigate(postAuthPath) — не перезапускаем
-      // root loader и не теряем уже загруженный каталог/hero underlying-страницы.
-      navigate(-1);
+      const bg = (location.state as { backgroundLocation?: Location } | null)?.backgroundLocation;
+      const destination = resolvePostAuthDestinationForUser(currentUser, {
+        returnToSearchParam: searchParams.get('returnTo'),
+        routerState: { backgroundLocation: bg ?? undefined },
+      });
+      if (isListenerAccount(currentUser)) {
+        navigate(destination, { replace: true });
+        return;
+      }
+      const bgPath = bg ? `${bg.pathname}${bg.search}${bg.hash ?? ''}` : '/';
+      if (destination !== bgPath) {
+        navigate(destination, { replace: true });
+      } else {
+        navigate(-1);
+      }
       return;
     }
 
-    const currentUser = getUser();
+    const roleAwareDefault = resolvePostAuthDestinationForUser(currentUser, {
+      returnToSearchParam: searchParams.get('returnTo'),
+      routerState: location.state,
+    });
     const destination = await resolveArtistOnboardingDestination(lang, {
       user: currentUser,
-      defaultDestination: postAuthPath,
+      defaultDestination: roleAwareDefault,
       pendingRegistration: hasPendingArtistOnboarding(currentUser),
     });
     navigate(destination, { replace: true });
-  }, [hasOverlayBackground, lang, navigate, postAuthPath]);
+  }, [hasOverlayBackground, lang, location.state, navigate, searchParams]);
 
   useEffect(() => {
     try {
@@ -216,6 +225,9 @@ export function AuthPage() {
     const registeredUser = getUser();
     if (registeredUser?.id && isArtistAccount(registeredUser)) {
       markFirstArtistOnboardingPending(registeredUser.id);
+    }
+    if (registeredUser?.id && isListenerAccount(registeredUser)) {
+      markListenerWelcomePending(registeredUser.id);
     }
     setShowVerifyEmailModal(true);
   };

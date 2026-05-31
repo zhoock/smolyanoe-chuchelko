@@ -178,6 +178,17 @@
       "premiumSuccessGoToArchive": "Go to Archive",
       "premiumSuccessMaybeLater": "Maybe later"
     },
+    "listenerWelcome": {
+      "welcomePrefix": "Welcome to",
+      "siteName": "Smolyanoe Chuchelko",
+      "subtitle": "Discover music, albums and articles from independent artists.",
+      "featureFollow": "Follow your favorite artists",
+      "featurePurchase": "Purchase albums and support artists",
+      "featureRead": "Read articles and interviews",
+      "featureArchive": "Build your personal archive",
+      "startExploring": "Start exploring",
+      "close": "Close"
+    },
     "artistOnboarding": {
       "welcomeGreeting": "Welcome, {name}",
       "heroHeadline": "Your creativity starts",

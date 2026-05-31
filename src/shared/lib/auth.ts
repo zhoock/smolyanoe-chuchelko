@@ -25,8 +25,13 @@ function dispatchAuthSessionChanged() {
   window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
 }
 
-/** Декодирует payload JWT без проверки подписи (только чтение exp). */
-function decodeJwtPayloadUnsafe(token: string): { exp?: number } | null {
+type JwtPayloadUnsafe = {
+  exp?: number;
+  accountType?: string;
+};
+
+/** Декодирует payload JWT без проверки подписи (exp, accountType). */
+function decodeJwtPayloadUnsafe(token: string): JwtPayloadUnsafe | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -40,10 +45,31 @@ function decodeJwtPayloadUnsafe(token: string): { exp?: number } | null {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-    return JSON.parse(json) as { exp?: number };
+    return JSON.parse(json) as JwtPayloadUnsafe;
   } catch {
     return null;
   }
+}
+
+function normalizeAccountTypeFromJwt(raw: unknown): AuthUser['accountType'] | null {
+  if (raw === 'listener') return 'listener';
+  if (raw === 'artist') return 'artist';
+  return null;
+}
+
+/** accountType из JWT в localStorage (если auth_user без поля). */
+export function readAccountTypeFromStoredToken(): AuthUser['accountType'] | null {
+  const token = readRawTokenFromStorage();
+  if (!token) return null;
+  return normalizeAccountTypeFromJwt(decodeJwtPayloadUnsafe(token)?.accountType);
+}
+
+function enrichAuthUserFromToken(user: AuthUser, token: string): AuthUser {
+  if (user.accountType === 'listener' || user.accountType === 'artist') {
+    return user;
+  }
+  const accountType = normalizeAccountTypeFromJwt(decodeJwtPayloadUnsafe(token)?.accountType);
+  return accountType ? { ...user, accountType } : user;
 }
 
 function readRawTokenFromStorage(): string | null {
@@ -136,8 +162,9 @@ export interface AuthResponse {
  */
 export function saveAuth(token: string, user: AuthUser): void {
   try {
+    const enrichedUser = enrichAuthUserFromToken(user, token);
     localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(enrichedUser));
     dispatchAuthSessionChanged();
   } catch (error) {
     console.error('❌ Failed to save auth data:', error);

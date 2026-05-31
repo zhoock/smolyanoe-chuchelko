@@ -1,4 +1,4 @@
-import type { AuthUser } from '@shared/lib/auth';
+import { readAccountTypeFromStoredToken, type AuthUser } from '@shared/lib/auth';
 
 export type AccountType = 'listener' | 'artist';
 
@@ -34,8 +34,13 @@ export function isDashboardTabSlug(value: string): value is DashboardTab {
 
 /** Legacy sessions without accountType are treated as artist (existing CMS users). */
 export function getAccountType(user: AuthUser | null | undefined): AccountType {
-  if (!user) return 'artist';
-  return user.accountType === 'listener' ? 'listener' : 'artist';
+  if (user?.accountType === 'listener') return 'listener';
+  if (user?.accountType === 'artist') return 'artist';
+  if (user) {
+    const fromToken = readAccountTypeFromStoredToken();
+    if (fromToken) return fromToken;
+  }
+  return 'artist';
 }
 
 export function isArtistAccount(user: AuthUser | null | undefined): boolean {

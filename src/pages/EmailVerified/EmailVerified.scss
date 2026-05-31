@@ -116,23 +116,15 @@
 
   &__cta {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: 0.45rem;
     min-width: min(16rem, 100%);
     margin-top: var(--ms-01);
-    font-weight: var(--semibold, 600);
-    letter-spacing: 0.02em;
+    text-transform: none;
+    letter-spacing: normal;
 
-    @include button-variant(
-      $color: var(--deep-black, #0a0a0a),
-      $background: var(--dark-greenish-yellow, #c9b458),
-      $hover-color: var(--deep-black, #0a0a0a),
-      $hover-background: var(--honeydew-melon, #d4c76a),
+    @include dashboard-btn-primary(
       $margin: 0,
       $padding: var(--ms-01) var(--ms-1),
-      $border: none,
-      $border-radius: var(--ms-01),
       $font-size: var(--ms-0)
     );
   }

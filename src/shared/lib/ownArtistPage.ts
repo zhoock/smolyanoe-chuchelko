@@ -2,7 +2,7 @@ import type { NavigateFunction } from 'react-router-dom';
 
 import type { IAlbums, IArticles } from '@models';
 import { hasPublishedPublicReleases } from '@entities/album/lib/hasPublishedPublicReleases';
-import { isArtistAccount } from '@shared/lib/accountType';
+import { isArtistAccount, isListenerAccount } from '@shared/lib/accountType';
 import {
   countUniqueAlbums,
   countUniqueArticles,
@@ -17,6 +17,7 @@ import {
   clearFirstArtistOnboardingPending,
   hasFirstArtistOnboardingPending,
 } from '@shared/lib/authIntent/artistOnboardingRedirect';
+import { sanitizeListenerPostAuthDestination } from '@shared/lib/authReturnUrl';
 
 export type OwnArtistPageState = {
   publicSlug: string | null;
@@ -67,7 +68,9 @@ export async function resolveArtistOnboardingDestination(
   }
 ): Promise<string> {
   const { user, defaultDestination, pendingRegistration } = options;
-  if (!user || !isArtistAccount(user)) return defaultDestination;
+  if (!user || isListenerAccount(user)) {
+    return sanitizeListenerPostAuthDestination(defaultDestination);
+  }
 
   const onDefaultHome = defaultDestination === '/';
   if (!shouldTryArtistOnboardingRedirect(user, { pendingRegistration, onDefaultHome })) {

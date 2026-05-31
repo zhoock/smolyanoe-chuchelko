@@ -114,23 +114,22 @@
   &__cta {
     margin-top: auto;
     width: 100%;
-    padding: var(--ms-01) var(--ms-0);
-    color: var(--cta-text, var(--white));
-    font-size: 0.9375rem;
-    text-align: center;
-    background: transparent;
-    border: 1px solid var(--cta-border, rgb(255 255 255 / 14%));
-    border-radius: var(--ms-01);
-    cursor: pointer;
-    transition:
-      border-color 0.2s ease,
-      color 0.2s ease,
-      background 0.2s ease;
+    text-transform: none;
+    letter-spacing: normal;
 
-    &:hover {
-      background: rgb(255 255 255 / 4%);
-      border-color: var(--cta-border-hover, rgb(255 255 255 / 22%));
-    }
+    @include dashboard-btn-primary(
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $font-size: 0.9375rem
+    );
+  }
+
+  &__card--listener &__cta {
+    @include dashboard-btn-secondary(
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-0),
+      $font-size: 0.9375rem
+    );
   }
 
   &__footer {

@@ -1,3 +1,5 @@
+@use '../../../scss/abstracts/mixins' as *;
+
 .archive-access-modal {
   max-width: calc(100vw - 1.5rem);
 
@@ -140,31 +142,19 @@
   }
 
   &__cta {
-    display: block;
     width: 100%;
-    padding: var(--ms-01) var(--ms-1);
-    color: #ffffff;
-    font-size: var(--ms-0);
-    text-align: center;
-    background: var(--button-background-color-hover, #998238);
-    border: none;
-    border-radius: var(--ms-01);
-    cursor: pointer;
-    transition: filter 0.15s ease;
+    text-transform: none;
+    letter-spacing: normal;
     text-decoration: none;
+
+    @include dashboard-btn-primary(
+      $margin: 0,
+      $padding: var(--ms-01) var(--ms-1),
+      $font-size: var(--ms-0)
+    );
 
     &:disabled {
       cursor: wait;
-      opacity: 0.75;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--outline-color, #f3d69f);
-      outline-offset: 2px;
-    }
-
-    &:hover:not(:disabled) {
-      filter: brightness(1.06);
     }
   }
 

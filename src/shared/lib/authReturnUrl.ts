@@ -1,5 +1,7 @@
 import type { Location } from 'react-router-dom';
+import { isListenerAccount } from '@shared/lib/accountType';
 import { shouldForcePostAuthHome } from '@shared/lib/accountDeletedSession';
+import type { AuthUser } from '@shared/lib/auth';
 
 const DEFAULT_AFTER_AUTH = '/';
 
@@ -71,6 +73,41 @@ export function resolvePostAuthDestination(options: {
   return DEFAULT_AFTER_AUTH;
 }
 
+export function isHomeArtistPagePath(pathWithQuery: string): boolean {
+  try {
+    const url = new URL(pathWithQuery, 'http://local.invalid');
+    const isHome = url.pathname === '/' || url.pathname === '/en';
+    return isHome && new URLSearchParams(url.search).has('artist');
+  } catch {
+    return false;
+  }
+}
+
+/** Listeners have no artist page — strip `?artist=` from home after auth. */
+export function sanitizeListenerPostAuthDestination(path: string): string {
+  const safe = sanitizeReturnPath(path) ?? DEFAULT_AFTER_AUTH;
+  if (!isHomeArtistPagePath(safe)) return safe;
+
+  try {
+    const url = new URL(safe, 'http://local.invalid');
+    return url.pathname || DEFAULT_AFTER_AUTH;
+  } catch {
+    return DEFAULT_AFTER_AUTH;
+  }
+}
+
+export function resolvePostAuthDestinationForUser(
+  user: AuthUser | null | undefined,
+  options: {
+    returnToSearchParam: string | null;
+    routerState?: BackgroundState | null;
+  }
+): string {
+  const destination = resolvePostAuthDestination(options);
+  if (!isListenerAccount(user)) return destination;
+  return sanitizeListenerPostAuthDestination(destination);
+}
+
 /** Location для `backgroundLocation` дашборда из безопасного return path. */
 export function locationFromReturnPath(path: string): Location {
   const safe = sanitizeReturnPath(path) ?? DEFAULT_AFTER_AUTH;
@@ -85,7 +122,14 @@ export function locationFromReturnPath(path: string): Location {
 }
 
 export function resolveReturnPathFromSearchParam(
-  returnToSearchParam: string | null | undefined
+  returnToSearchParam: string | null | undefined,
+  user?: AuthUser | null
 ): string {
+  if (user && isListenerAccount(user)) {
+    return resolvePostAuthDestinationForUser(user, {
+      returnToSearchParam: returnToSearchParam ?? null,
+      routerState: null,
+    });
+  }
   return sanitizeReturnPath(returnToSearchParam ?? null) ?? DEFAULT_AFTER_AUTH;
 }

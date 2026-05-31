@@ -106,41 +106,30 @@
   &__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: var(--ms-01);
     margin-top: var(--ms-01);
   }
 
   &__button {
-    padding: 0.55rem 0.9rem;
-    font: inherit;
-    font-size: var(--dashboard-font-size);
-    background: none;
-    border-radius: 6px;
-    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 2.75rem;
+    margin: 0 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
 
     &:disabled {
-      opacity: 0.6;
       cursor: not-allowed;
     }
+  }
 
-    &--ghost {
-      color: var(--dashboard-text-secondary);
-      border: 1px solid var(--dashboard-card-border);
+  &__button--ghost {
+    @include dashboard-btn-secondary($margin: 0);
+  }
 
-      &:hover:not(:disabled) {
-        color: var(--dashboard-text-primary);
-        border-color: rgb(255 255 255 / 18%);
-      }
-    }
-
-    &--primary {
-      color: var(--black, #111111);
-      background: var(--dark-greenish-yellow);
-      border: 1px solid transparent;
-
-      &:hover:not(:disabled) {
-        filter: brightness(1.05);
-      }
-    }
+  &__button--primary {
+    @include dashboard-btn-primary($margin: 0);
   }
 }

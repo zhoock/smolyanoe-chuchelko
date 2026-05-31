@@ -2,6 +2,7 @@ import type { AuthUser } from '@shared/lib/auth';
 import {
   isDefaultHomePath,
   isOnOwnArtistOnboardingPage,
+  resolveArtistOnboardingDestination,
   shouldTryArtistOnboardingRedirect,
 } from '../ownArtistPage';
 
@@ -60,5 +61,15 @@ describe('ownArtistPage helpers', () => {
         { pendingRegistration: false, onDefaultHome: true }
       )
     ).toBe(false);
+  });
+
+  test('resolveArtistOnboardingDestination never sends listeners to artist home', async () => {
+    await expect(
+      resolveArtistOnboardingDestination('en', {
+        user: { ...artistUser, accountType: 'listener' },
+        defaultDestination: '/?artist=ghost',
+        pendingRegistration: true,
+      })
+    ).resolves.toBe('/');
   });
 });

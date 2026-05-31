@@ -178,6 +178,17 @@
       "premiumSuccessGoToArchive": "Перейти в архив",
       "premiumSuccessMaybeLater": "Позже"
     },
+    "listenerWelcome": {
+      "welcomePrefix": "Добро пожаловать на",
+      "siteName": "Смоляное Чучелко",
+      "subtitle": "Открывайте музыку, альбомы и статьи независимых артистов.",
+      "featureFollow": "Подписывайтесь на любимых артистов",
+      "featurePurchase": "Покупайте альбомы и поддерживайте музыкантов",
+      "featureRead": "Читайте статьи и интервью",
+      "featureArchive": "Собирайте личный архив",
+      "startExploring": "Начать знакомство",
+      "close": "Закрыть"
+    },
     "artistOnboarding": {
       "welcomeGreeting": "Добро пожаловать, {name}",
       "heroHeadline": "Ваше творчество начинается",

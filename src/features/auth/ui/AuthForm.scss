@@ -79,17 +79,13 @@
 
   &__submit {
     width: 100%;
-    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: normal;
 
-    @include button-variant(
-      $color: var(--white),
-      $background: var(--iron-slate),
-      $hover-color: var(--white),
-      $hover-background: var(--graphite-green),
+    @include dashboard-btn-primary(
       $margin: var(--ms-1) 0 0,
       $padding: var(--ms-01) var(--ms-0),
-      $border: 1px solid var(--iron-slate),
-      $border-radius: var(--ms-01)
+      $font-size: 1rem
     );
   }
 

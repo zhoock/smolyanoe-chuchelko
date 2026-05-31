@@ -1,0 +1,127 @@
+@use '../../../scss/abstracts/mixins' as *;
+
+.listener-welcome-modal {
+  max-width: calc(100vw - 1.5rem);
+
+  &__panel {
+    position: relative;
+    width: min(26rem, calc(100vw - 1.5rem));
+    padding: var(--ms-1) var(--ms-1) var(--ms-0);
+    color: var(--text-color, #e6e6e4);
+    background: var(--main-background-color, #141413);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: var(--ms-01);
+    box-shadow: 0 16px 48px rgb(0 0 0 / 55%);
+  }
+
+  &__close {
+    position: absolute;
+    top: var(--ms-01);
+    right: var(--ms-01);
+    display: flex;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    color: rgb(255 255 255 / 72%);
+    font-size: 1.35rem;
+    line-height: 1;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      color: #ffffff;
+      background: rgb(255 255 255 / 8%);
+    }
+  }
+
+  &__title {
+    margin: 0 0 var(--ms-01);
+    padding-inline-end: 2rem;
+    color: rgb(255 255 255 / 88%);
+    font-size: var(--ms-0);
+    font-weight: 400;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  &__site-name {
+    display: block;
+    margin-block-start: 0.15em;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-family: var(--base-accent-font, inherit);
+    font-size: clamp(1.35rem, 4vw, 1.65rem);
+    font-weight: 700;
+  }
+
+  &__divider {
+    width: 2.5rem;
+    height: 2px;
+    margin: 0 auto var(--ms-01);
+    background: var(--dark-greenish-yellow, #c8b06d);
+    border-radius: 1px;
+  }
+
+  &__subtitle {
+    margin: 0 0 var(--ms-1);
+    color: rgb(255 255 255 / 62%);
+    font-size: var(--ms-01);
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  &__features {
+    display: grid;
+    gap: var(--ms-01);
+    margin: 0 0 var(--ms-1);
+    padding: 0;
+    list-style: none;
+  }
+
+  &__feature {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--ms-01);
+    align-items: center;
+    color: rgb(255 255 255 / 88%);
+    font-size: var(--ms-01);
+    line-height: 1.4;
+  }
+
+  &__feature-icon {
+    display: flex;
+    width: 1.35rem;
+    height: 1.35rem;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__cta {
+    width: 100%;
+    text-transform: none;
+    letter-spacing: normal;
+
+    @include dashboard-btn-primary(
+      $margin: 0,
+      $padding: 0.75rem var(--ms-01),
+      $font-size: var(--ms-01)
+    );
+  }
+
+  &__cta-arrow {
+    font-size: 1.1em;
+    line-height: 1;
+  }
+}

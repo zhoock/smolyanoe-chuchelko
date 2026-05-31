@@ -29,9 +29,13 @@
   }
 
   &__cta {
+    width: 100%;
+    max-width: 18rem;
+    text-transform: none;
+    letter-spacing: normal;
     text-decoration: none;
 
-    @include button-variant($margin: var(--ms-1) 0 0);
+    @include dashboard-btn-primary($margin: var(--ms-1) 0 0);
   }
 }
 

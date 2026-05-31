@@ -21,6 +21,22 @@ describe('accountType dashboard helpers', () => {
     expect(getDefaultDashboardTab(makeUser(undefined))).toBe('albums');
   });
 
+  it('reads listener accountType from JWT when auth_user lacks the field', () => {
+    const tokenPayload = btoa(JSON.stringify({ accountType: 'listener' }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    const token = `header.${tokenPayload}.signature`;
+
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', JSON.stringify({ id: 'u1', email: 'listener@example.com' }));
+
+    expect(getAccountType(makeUser(undefined))).toBe('listener');
+
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+  });
+
   it('listener sees profile, purchases, and archive only', () => {
     const user = makeUser('listener');
     expect(getVisibleDashboardTabs(user)).toEqual(['profile', 'my-purchases', 'archive']);

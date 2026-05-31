@@ -282,6 +282,17 @@ export interface IInterface {
     pageTitle: string;
     notice: string;
   };
+  listenerWelcome?: {
+    welcomePrefix: string;
+    siteName: string;
+    subtitle: string;
+    featureFollow: string;
+    featurePurchase: string;
+    featureRead: string;
+    featureArchive: string;
+    startExploring: string;
+    close: string;
+  };
   artistOnboarding?: {
     welcomeGreeting: string;
     heroHeadline: string;
