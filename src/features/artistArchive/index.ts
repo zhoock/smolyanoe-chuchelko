@@ -3,6 +3,7 @@ export { useArtistArchiveStatus } from './lib/useArtistArchiveStatus';
 export {
   refreshPremiumContentForArchiveChange,
   refreshPremiumContentAfterArchiveUnlock,
+  awaitPremiumContentRefresh,
   dispatchArchiveArtistAdded,
   dispatchArchiveArtistRemoved,
   ARCHIVE_ARTIST_ADDED_EVENT,

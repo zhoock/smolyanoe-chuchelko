@@ -231,6 +231,8 @@
       "allArticlesPageDesc": "Browse all articles and posts",
       "articleLockedOverlayTitle": "Subscribers only",
       "articleLockedOverlayHint": "Purchase an album to read this content.",
+      "articleArchiveLockedOverlayTitle": "Artist not in your Archive",
+      "articleArchiveLockedOverlayHint": "Add this artist to your Archive to continue reading.",
       "archiveAccessTitle": "Premium Archive",
       "archiveAccessDescription": "Unlock exclusive content from any **3 artists** every month.",
       "archiveAccessFeatureTracks": "Locked tracks",

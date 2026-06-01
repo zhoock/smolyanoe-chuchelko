@@ -67,11 +67,8 @@ import { AlbumLifecycleBadge } from './components/albums/AlbumLifecycleBadge';
 import { queueAlbumPublishedToast } from '@shared/lib/albumPublishedToast';
 import { queueTracksUploadedToast } from '@shared/lib/tracksUploadedToast';
 import { queueAlbumDeletedToast } from '@shared/lib/albumDeletedToast';
-import {
-  getArtistSlugFromLocation,
-  getOpenAlbumIdFromPathname,
-} from '@shared/lib/albumDeletedRedirect';
-import { buildOwnArtistPagePath, openOwnArtistPage } from '@shared/lib/ownArtistPage';
+import { getArtistSlugFromLocation } from '@shared/lib/albumDeletedRedirect';
+import { openOwnArtistPage } from '@shared/lib/ownArtistPage';
 import { setPublicArtistSlug } from '@shared/model/currentArtist';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
 import {
@@ -931,43 +928,20 @@ function UserDashboard() {
 
     clearDashboardModalBackground();
 
-    const artistSlug =
-      profilePublicSlug?.trim() ?? getArtistSlugFromLocation(backgroundLocation) ?? null;
-    const backgroundAlbumId = getOpenAlbumIdFromPathname(backgroundLocation.pathname);
-    const noAlbumsInDashboardUi = albumsData.length === 0;
+    const backgroundArtistSlug = getArtistSlugFromLocation(backgroundLocation);
+    const artistSlugForRefresh = backgroundArtistSlug ?? profilePublicSlug?.trim() ?? null;
 
-    const navigateToBackground = () => {
-      navigate(
-        {
-          pathname: backgroundLocation.pathname,
-          search: backgroundLocation.search,
-          hash: backgroundLocation.hash ?? '',
-        },
-        { replace: true }
-      );
-    };
+    navigate(
+      {
+        pathname: backgroundLocation.pathname,
+        search: backgroundLocation.search,
+        hash: backgroundLocation.hash ?? '',
+      },
+      { replace: true }
+    );
 
-    // Закрываем сразу по локальному состоянию; refetch каталога — в фоне после unmount.
-    if (artistSlug && noAlbumsInDashboardUi) {
-      navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
-    } else if (
-      artistSlug &&
-      backgroundAlbumId &&
-      !albumsData.some((a) => a.id === backgroundAlbumId)
-    ) {
-      navigate(buildOwnArtistPagePath(artistSlug), { replace: true });
-    } else {
-      navigateToBackground();
-    }
-
-    syncPublicSurfaceAfterDashboardClose(artistSlug);
-  }, [
-    albumsData,
-    backgroundLocation,
-    navigate,
-    profilePublicSlug,
-    syncPublicSurfaceAfterDashboardClose,
-  ]);
+    syncPublicSurfaceAfterDashboardClose(artistSlugForRefresh);
+  }, [backgroundLocation, navigate, profilePublicSlug, syncPublicSurfaceAfterDashboardClose]);
   const [editArticleModal, setEditArticleModal] = useState<{
     isOpen: boolean;
     article: IArticles | null;

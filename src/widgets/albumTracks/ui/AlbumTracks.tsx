@@ -85,7 +85,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
     artistSlug: artistSlugFromUrl,
   });
 
-  const { open: openArchiveAccessModal } = useArchiveAccessModal();
+  const { requestAccess } = useArchiveAccessModal();
 
   const resolvedSiteArtist = useMemo(
     () => siteArtistName.trim() || readStoredProfileDisplayName().trim(),
@@ -328,9 +328,12 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
       isPlayingNow: boolean;
     }) => {
       if (isTrackPlaybackBlocked(track)) {
-        openArchiveAccessModal({
+        void requestAccess({
           artistUserId: album.userId,
           artistSlug: artistSlugFromUrl,
+          onAccessGranted: () => {
+            void openPlayer(index, { openFullScreen: false });
+          },
         });
         return;
       }
@@ -354,7 +357,7 @@ const AlbumTracksComponent = ({ album }: { album: IAlbums }) => {
 
       void openPlayer(index, { openFullScreen: false });
     },
-    [album, album.userId, artistSlugFromUrl, lang, openArchiveAccessModal, openPlayer, store]
+    [album, album.userId, artistSlugFromUrl, lang, openPlayer, requestAccess, store]
   );
 
   const renderBlock = useCallback(

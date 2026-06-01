@@ -1,6 +1,6 @@
 /**
- * Temporary auth intent: resume Premium paywall after guest login/register.
- * Only set when user explicitly opened paywall or clicked Start Premium while logged out.
+ * Temporary auth intent: re-evaluate protected content access after guest login/register.
+ * Only set when user explicitly opened paywall or clicked locked content while logged out.
  */
 
 import { sanitizeReturnPath } from '@shared/lib/authReturnUrl';
@@ -119,6 +119,29 @@ export function clearPremiumCheckoutResumeAfterAuthFlag(): void {
   } catch {
     /* ignore */
   }
+}
+
+export function readArtistSlugFromPremiumCheckoutReturnTo(returnTo: string): string {
+  const trimmed = returnTo?.trim();
+  if (!trimmed) return '';
+  try {
+    const query = trimmed.includes('?') ? trimmed.slice(trimmed.indexOf('?') + 1) : '';
+    return new URLSearchParams(query).get('artist')?.trim() ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function resolvePremiumCheckoutArtistContext(intent: PremiumCheckoutAuthIntent): {
+  artistSlug: string;
+  artistUserId: string;
+} {
+  const artistSlug =
+    intent.artistSlug.trim() || readArtistSlugFromPremiumCheckoutReturnTo(intent.returnTo);
+  return {
+    artistSlug,
+    artistUserId: intent.artistUserId.trim(),
+  };
 }
 
 export function clearPremiumCheckoutAuthIntent(): void {

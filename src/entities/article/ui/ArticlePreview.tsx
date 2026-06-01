@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { ArticleProps } from '@/models';
 import { useLang } from '@app/providers/lang';
 import { formatDateInWords, LocaleKey } from '@entities/article/lib/formatDate';
@@ -26,11 +26,13 @@ export function ArticlePreview({
   const artistSlug = searchParams.get('artist');
   const articlePath = withPublicArtistQuery(`/articles/${articleId}`, artistSlug);
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const { open: openArchiveAccessModal } = useArchiveAccessModal();
-  const openPremiumPaywall = () => {
-    openArchiveAccessModal({
+  const navigate = useNavigate();
+  const { requestAccess } = useArchiveAccessModal();
+  const handleLockedClick = () => {
+    void requestAccess({
       artistUserId: userId,
       artistSlug,
+      onAccessGranted: () => navigate(articlePath),
     });
   };
 
@@ -78,7 +80,7 @@ export function ArticlePreview({
       className="articles__card articles__card--subscriber-locked"
       aria-label={`${overlayTitle}. ${nameArticle}`}
     >
-      <button type="button" className="articles__card-hit" onClick={openPremiumPaywall}>
+      <button type="button" className="articles__card-hit" onClick={handleLockedClick}>
         <div className="articles__picture">
           <ArticleCoverImage
             img={img}

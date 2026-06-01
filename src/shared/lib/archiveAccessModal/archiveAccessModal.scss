@@ -52,6 +52,31 @@
     gap: 0.5rem;
     padding-right: 2.25rem;
     margin-block-end: var(--ms-01);
+
+    &--add-artist {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--ms-01);
+    }
+  }
+
+  &__header-cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--dark-greenish-yellow, #c8b06d);
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  &__header-cluster-icon {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(200 176 109 / 35%);
+    border-radius: 0.35rem;
   }
 
   &__header-icon {

@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { refreshPremiumContentForArchiveChange } from '@features/artistArchive';
 import { isAuthenticated, AUTH_SESSION_CHANGED_EVENT } from '@shared/lib/auth';
 import { useAuthSessionUser } from '@shared/lib/hooks/useAuthSessionUser';
+import { useAppDispatch } from '@shared/lib/hooks/useAppDispatch';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 
 import {
   clearPremiumCheckoutAuthIntent,
   clearPremiumCheckoutResumeAfterAuthFlag,
   readPremiumCheckoutAuthIntent,
+  resolvePremiumCheckoutArtistContext,
   shouldResumePremiumCheckoutAfterAuth,
 } from './premiumCheckoutIntent';
 import { resolveArtistUserIdByPublicSlug } from './resolveArtistUserIdBySlug';
 
 /**
- * After login/register, reopens ArchiveAccessModal when guest started Premium before auth.
+ * After login/register, re-evaluates premium/archive access for the protected
+ * content the guest tried to open — never blindly restores the guest paywall.
  */
 export function PremiumCheckoutIntentResumeController() {
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const viewer = useAuthSessionUser();
-  const { openFromIntentResume } = useArchiveAccessModal();
+  const { requestAccess, close } = useArchiveAccessModal();
   const resumeInFlightRef = useRef(false);
   const resumedForSessionRef = useRef(false);
 
@@ -42,13 +47,16 @@ export function PremiumCheckoutIntentResumeController() {
 
     try {
       const viewerId = viewer?.id?.trim();
+      const { artistSlug: intentArtistSlug, artistUserId: intentArtistUserId } =
+        resolvePremiumCheckoutArtistContext(intent);
+
       if (viewerId) {
-        if (intent.artistUserId && intent.artistUserId === viewerId) {
+        if (intentArtistUserId && intentArtistUserId === viewerId) {
           clearPremiumCheckoutAuthIntent();
           return;
         }
-        if (intent.artistSlug) {
-          const ownerId = await resolveArtistUserIdByPublicSlug(intent.artistSlug);
+        if (intentArtistSlug) {
+          const ownerId = await resolveArtistUserIdByPublicSlug(intentArtistSlug);
           if (ownerId && ownerId === viewerId) {
             clearPremiumCheckoutAuthIntent();
             return;
@@ -56,15 +64,28 @@ export function PremiumCheckoutIntentResumeController() {
         }
       }
 
+      close({ preserveCheckoutIntent: true });
+
+      let artistUserId = intentArtistUserId;
+      const artistSlug = intentArtistSlug || undefined;
+      if (!artistUserId && artistSlug) {
+        artistUserId = (await resolveArtistUserIdByPublicSlug(artistSlug)) ?? '';
+      }
+
       resumedForSessionRef.current = true;
-      openFromIntentResume({
-        artistSlug: intent.artistSlug || undefined,
-        artistUserId: intent.artistUserId || undefined,
+
+      await requestAccess({
+        artistUserId: artistUserId || undefined,
+        artistSlug,
+        onAccessGranted: async () => {
+          refreshPremiumContentForArchiveChange(dispatch, artistSlug, { immediate: true });
+        },
       });
     } finally {
+      clearPremiumCheckoutAuthIntent();
       resumeInFlightRef.current = false;
     }
-  }, [location.pathname, openFromIntentResume, viewer?.id]);
+  }, [close, dispatch, location.pathname, requestAccess, viewer?.id]);
 
   useEffect(() => {
     void tryResume();

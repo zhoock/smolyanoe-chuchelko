@@ -162,6 +162,16 @@ function schedulePremiumEntitlementsRefresh(
   refreshTimer = setTimeout(run, REFRESH_DEBOUNCE_MS);
 }
 
+export async function awaitPremiumContentRefresh(
+  dispatch: AppDispatch,
+  publicArtistSlug?: string | null
+): Promise<void> {
+  await executePremiumEntitlementsRefresh(
+    dispatch,
+    resolveRefreshArtistSlug(publicArtistSlug?.trim() || undefined)
+  );
+}
+
 export function refreshPremiumContentForArchiveChange(
   dispatch: AppDispatch,
   publicArtistSlug?: string | null,

@@ -20,8 +20,7 @@ import {
 } from '@entities/article';
 import { selectUiDictionaryFirst } from '@shared/model/uiDictionary';
 import { withPublicArtistQuery } from '@shared/lib/artistQuery';
-import { SubscriberContentLockIcon } from '@shared/ui/icons/SubscriberContentLockIcon';
-import { ArticleCoverImage } from '@entities/article/ui/ArticleCoverImage';
+import { ArtistArchiveLockIcon } from '@shared/ui/icons/ArtistArchiveLockIcon';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 import { refreshPremiumContentForArchiveChange } from '@features/artistArchive';
 import '@entities/article/ui/style.scss';
@@ -210,23 +209,29 @@ function ArticleContent({
   artistSlug,
   renderBlock,
 }: ArticleContentProps) {
+  const dispatch = useAppDispatch();
   const ui = useAppSelector((state) => selectUiDictionaryFirst(state, lang));
-  const { open: openArchiveAccessModal } = useArchiveAccessModal();
-  const openPremiumPaywall = () => {
-    openArchiveAccessModal({
+  const { requestAccess } = useArchiveAccessModal();
+  const handleLockedContentAccess = () => {
+    void requestAccess({
       artistUserId: article?.userId,
       artistSlug,
+      onAccessGranted: () => {
+        refreshPremiumContentForArchiveChange(dispatch, artistSlug, { immediate: true });
+      },
     });
   };
 
   const overlayTitle =
-    ui?.titles?.articleLockedOverlayTitle ??
-    (lang === 'en' ? 'Subscribers only' : 'Только для подписчиков');
+    ui?.titles?.articleArchiveLockedOverlayTitle ??
+    (lang === 'en' ? 'Artist not in your Archive' : 'Артист не в вашем архиве');
   const overlayHint =
-    ui?.titles?.articleLockedOverlayHint ??
-    (lang === 'en' ? 'Purchase an album to read this content.' : 'Оформите подписку, чтобы читать');
+    ui?.titles?.articleArchiveLockedOverlayHint ??
+    (lang === 'en'
+      ? 'Add this artist to your Archive to continue reading.'
+      : 'Добавьте артиста в архив, чтобы продолжить чтение.');
   const ctaLabel =
-    ui?.buttons?.archiveAccessSubscribe ?? (lang === 'en' ? 'Start Premium' : 'Стать Premium');
+    ui?.buttons?.artistArchiveAdd ?? (lang === 'en' ? 'Add to Archive' : 'Добавить в архив');
   if (!article) {
     if (status === 'loading' || status === 'idle') {
       return <ArticleSkeleton />;
@@ -269,28 +274,27 @@ function ArticleContent({
               {formatDate(article.date)} {lang === 'en' ? '' : 'г.'}
             </small>
           </time>
-          <div className="article__locked-cover-wrap">
-            <div className="article__locked-cover">
-              <ArticleCoverImage
-                img={article.img}
-                userId={article.userId}
-                role="public"
-                alt=""
-                loading="eager"
-                decoding="async"
-                debugLabel={`ArticlePage:locked:${article.articleId}`}
-              />
-              <div className="article__locked-overlay" aria-hidden="true">
-                <SubscriberContentLockIcon className="article__locked-icon" size={40} />
-                <p className="article__locked-overlay-title">{overlayTitle}</p>
-                <p className="article__locked-overlay-hint">{overlayHint}</p>
-              </div>
-            </div>
+
+          <div
+            className="article__archive-gate"
+            role="region"
+            aria-labelledby="article-archive-gate-title"
+          >
+            <ArtistArchiveLockIcon className="article__archive-gate-icon" size={52} />
+            <h2 id="article-archive-gate-title" className="article__archive-gate-title">
+              {overlayTitle}
+            </h2>
+            <p className="article__archive-gate-hint">{overlayHint}</p>
+            <button
+              type="button"
+              className="article__archive-gate-cta"
+              onClick={handleLockedContentAccess}
+            >
+              {ctaLabel}
+            </button>
           </div>
+
           <h2 className="article__locked-heading">{article.nameArticle}</h2>
-          <button type="button" className="article__locked-cta" onClick={openPremiumPaywall}>
-            {ctaLabel}
-          </button>
         </div>
       </>
     );

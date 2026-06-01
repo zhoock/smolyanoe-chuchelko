@@ -231,6 +231,8 @@
       "allArticlesPageDesc": "Просмотр всех статей и публикаций",
       "articleLockedOverlayTitle": "Только для подписчиков",
       "articleLockedOverlayHint": "Оформите подписку, чтобы читать",
+      "articleArchiveLockedOverlayTitle": "Артист не в вашем архиве",
+      "articleArchiveLockedOverlayHint": "Добавьте артиста в архив, чтобы продолжить чтение.",
       "archiveAccessTitle": "Премиум-архив",
       "archiveAccessDescription": "Откройте эксклюзивный контент **у любых 3 артистов** каждый месяц.",
       "archiveAccessFeatureTracks": "Закрытые треки",
