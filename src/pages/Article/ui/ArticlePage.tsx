@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
@@ -23,6 +23,11 @@ import { withPublicArtistQuery } from '@shared/lib/artistQuery';
 import { ArtistArchiveLockIcon } from '@shared/ui/icons/ArtistArchiveLockIcon';
 import { useArchiveAccessModal } from '@shared/lib/archiveAccessModal';
 import { refreshPremiumContentForArchiveChange } from '@features/artistArchive';
+import {
+  resolveArticleLockedBodySize,
+  resolveLockedArticleBodyBlocks,
+  splitArticleDetailsForArchiveGate,
+} from '@entities/article/lib/splitArticleDetailsForArchiveGate';
 import '@entities/article/ui/style.scss';
 
 export function ArticlePage() {
@@ -232,6 +237,44 @@ function ArticleContent({
       : 'Добавьте артиста в архив, чтобы продолжить чтение.');
   const ctaLabel =
     ui?.buttons?.artistArchiveAdd ?? (lang === 'en' ? 'Add to Archive' : 'Добавить в архив');
+
+  const isArchiveLocked = article?.articleLocked === true;
+  const articleDetailsSplit = useMemo(
+    () =>
+      article && isArchiveLocked
+        ? splitArticleDetailsForArchiveGate(article.details)
+        : { previewDetails: [], lockedDetails: [] },
+    [article, isArchiveLocked]
+  );
+  const { previewDetails } = articleDetailsSplit;
+  const lockedBodyBlocks = useMemo(
+    () =>
+      article && isArchiveLocked
+        ? resolveLockedArticleBodyBlocks(article.details, articleDetailsSplit)
+        : [],
+    [article, articleDetailsSplit, isArchiveLocked]
+  );
+  const lockedBodySize = useMemo(
+    () => resolveArticleLockedBodySize(lockedBodyBlocks, article?.description?.length ?? 0),
+    [lockedBodyBlocks, article?.description]
+  );
+
+  const paywallTeaserCount = useMemo(() => {
+    if (lockedBodyBlocks.length > 2) return 2;
+    if (lockedBodyBlocks.length > 0) return 1;
+    return 0;
+  }, [lockedBodyBlocks.length]);
+
+  const paywallTeaserBlocks = useMemo(
+    () => lockedBodyBlocks.slice(0, paywallTeaserCount),
+    [lockedBodyBlocks, paywallTeaserCount]
+  );
+
+  const paywallTailBlocks = useMemo(
+    () => lockedBodyBlocks.slice(paywallTeaserCount),
+    [lockedBodyBlocks, paywallTeaserCount]
+  );
+
   if (!article) {
     if (status === 'loading' || status === 'idle') {
       return <ArticleSkeleton />;
@@ -250,62 +293,74 @@ function ArticleContent({
     return <ErrorMessage error={lang === 'en' ? 'Article not found' : 'Статья не найдена'} />;
   }
 
-  if (article.articleLocked) {
-    const seoTitle = article.nameArticle;
-    const canonical =
-      lang === 'en'
-        ? `https://smolyanoechuchelko.ru/en/articles/${article.articleId}`
-        : `https://smolyanoechuchelko.ru/articles/${article.articleId}`;
-
-    return (
-      <>
-        <Helmet>
-          <title>{seoTitle}</title>
-          <meta name="description" content={overlayHint} />
-          <meta property="og:title" content={seoTitle} />
-          <meta property="og:description" content={overlayHint} />
-          <meta property="og:type" content="article" />
-          <link rel="canonical" href={canonical} />
-        </Helmet>
-
-        <div className="article__locked-shell">
-          <time dateTime={article.date}>
-            <small>
-              {formatDate(article.date)} {lang === 'en' ? '' : 'г.'}
-            </small>
-          </time>
-
-          <div
-            className="article__archive-gate"
-            role="region"
-            aria-labelledby="article-archive-gate-title"
-          >
-            <ArtistArchiveLockIcon className="article__archive-gate-icon" size={52} />
-            <h2 id="article-archive-gate-title" className="article__archive-gate-title">
-              {overlayTitle}
-            </h2>
-            <p className="article__archive-gate-hint">{overlayHint}</p>
-            <button
-              type="button"
-              className="article__archive-gate-cta"
-              onClick={handleLockedContentAccess}
-            >
-              {ctaLabel}
-            </button>
-          </div>
-
-          <h2 className="article__locked-heading">{article.nameArticle}</h2>
-        </div>
-      </>
-    );
-  }
-
   const seoTitle = article.nameArticle;
-  const seoDesc = article.description;
+  const seoDesc = isArchiveLocked ? overlayHint : article.description;
   const canonical =
     lang === 'en'
       ? `https://smolyanoechuchelko.ru/en/articles/${article.articleId}`
       : `https://smolyanoechuchelko.ru/articles/${article.articleId}`;
+
+  const renderDetailBlocks = (blocks: typeof article.details, keyPrefix: string) =>
+    blocks.map((d, index) => (
+      <Fragment key={`${keyPrefix}-${d.blockId ?? d.id ?? index}`}>
+        {renderBlock({ ...d, userId: article.userId })}
+      </Fragment>
+    ));
+
+  const archiveGate = (
+    <div
+      className="article__archive-gate article__archive-gate--inline"
+      role="region"
+      aria-labelledby="article-archive-gate-title"
+    >
+      <div className="article__archive-gate-rule" aria-hidden="true" />
+      <ArtistArchiveLockIcon className="article__archive-gate-icon" size={28} />
+      <h3 id="article-archive-gate-title" className="article__archive-gate-title">
+        {overlayTitle}
+      </h3>
+      <p className="article__archive-gate-hint">{overlayHint}</p>
+      <button
+        type="button"
+        className="article__archive-gate-cta"
+        onClick={handleLockedContentAccess}
+      >
+        {ctaLabel}
+      </button>
+      <div className="article__archive-gate-rule" aria-hidden="true" />
+    </div>
+  );
+
+  let articleBody: ReactNode;
+  if (isArchiveLocked) {
+    articleBody = (
+      <>
+        {renderDetailBlocks(previewDetails, 'preview')}
+        <div className="article__paywall">
+          {paywallTeaserBlocks.length > 0 && (
+            <div className="article__paywall-teaser" aria-hidden="true">
+              {renderDetailBlocks(paywallTeaserBlocks, 'teaser')}
+            </div>
+          )}
+          {archiveGate}
+          <div
+            className={`article__paywall-tail article__paywall-tail--${lockedBodySize}`}
+            aria-hidden="true"
+          >
+            {paywallTailBlocks.length > 0 ? (
+              renderDetailBlocks(paywallTailBlocks, 'locked')
+            ) : article.description ? (
+              <p className="article__paywall-tail-fallback">{article.description}</p>
+            ) : (
+              <div className="article__paywall-tail-placeholder" />
+            )}
+            <div className="article__paywall-fade-bottom" aria-hidden="true" />
+          </div>
+        </div>
+      </>
+    );
+  } else {
+    articleBody = renderDetailBlocks(article.details, 'detail');
+  }
 
   return (
     <>
@@ -325,11 +380,7 @@ function ArticleContent({
       </time>
       <h2>{article.nameArticle}</h2>
 
-      {article.details.map((d, index) => (
-        <Fragment key={d.blockId ?? d.id ?? `detail-${index}`}>
-          {renderBlock({ ...d, userId: article.userId })}
-        </Fragment>
-      ))}
+      {articleBody}
     </>
   );
 }

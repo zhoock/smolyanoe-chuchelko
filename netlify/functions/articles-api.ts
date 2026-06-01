@@ -224,32 +224,16 @@ async function buildPublicArticlePremiumContext(
   };
 }
 
-function stripArticleBodyForPublicLock(data: ArticleData): ArticleData {
-  const stripLocale = (loc: ArticleLocalePayload | undefined): ArticleLocalePayload => ({
-    nameArticle: loc?.nameArticle ?? '',
-    description: '',
-    details: [],
-  });
-  const translations = data.translations
-    ? (Object.fromEntries(
-        Object.entries(data.translations).map(([lang, loc]) => [
-          lang,
-          stripLocale(loc as ArticleLocalePayload),
-        ])
-      ) as Partial<Record<SupportedLang, ArticleLocalePayload>>)
-    : undefined;
+function markArticleLockedForPublic(data: ArticleData): ArticleData {
   return {
     ...data,
-    description: '',
-    details: [],
-    translations,
     articleLocked: true,
   };
 }
 
 /**
  * Публичный каталог: скрытые статьи не отдаём; subscribers_only без подписки —
- * превью с articleLocked и без тела (аналог playbackLocked и пустого src у треков).
+ * articleLocked + полное тело для partial paywall на клиенте (blur под gate).
  */
 function applyPublicArticleAccessPolicy(
   articles: ArticleData[],
@@ -261,7 +245,7 @@ function applyPublicArticleAccessPolicy(
     const visibility = normalizeTrackVisibility(a.visibility);
     const needLock = visibility === 'subscribers_only' && !ctx.hasPremiumAccess;
     if (needLock) {
-      return stripArticleBodyForPublicLock({ ...a, visibility });
+      return markArticleLockedForPublic({ ...a, visibility });
     }
     return { ...a, visibility, articleLocked: false };
   });

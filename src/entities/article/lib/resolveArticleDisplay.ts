@@ -45,15 +45,6 @@ export function resolveArticleForDisplay(article: IArticles, lang: SupportedLang
     '';
   const details = resolveArticleDetailsForDisplay(article, lang);
 
-  if (article.articleLocked) {
-    return {
-      ...article,
-      nameArticle,
-      description: '',
-      details: [],
-    };
-  }
-
   return {
     ...article,
     nameArticle,
