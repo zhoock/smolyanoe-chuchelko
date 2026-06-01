@@ -152,26 +152,51 @@
     }
   }
 
-  /* Partial paywall: teaser → inline gate → tail (Substack / Medium). */
+  /* Partial paywall: approach fade → inline gate → tail (Substack / Medium). */
   .article__paywall {
+    position: relative;
     margin-block: 0.1rem clamp(var(--ms-2), 8vh, 5rem);
   }
 
+  /* Vertical-only readability ramp (~300–500px before gate). No backdrop overlay. */
+  .article__paywall-approach {
+    --paywall-ramp-depth: clamp(18.75rem, 45vh, 31.25rem);
+
+    position: relative;
+    mask-image: linear-gradient(
+      to bottom,
+      #000000 0%,
+      #000000 calc(100% - var(--paywall-ramp-depth)),
+      rgb(0 0 0 / 96%) calc(100% - var(--paywall-ramp-depth) * 0.82),
+      rgb(0 0 0 / 88%) calc(100% - var(--paywall-ramp-depth) * 0.64),
+      rgb(0 0 0 / 74%) calc(100% - var(--paywall-ramp-depth) * 0.46),
+      rgb(0 0 0 / 56%) calc(100% - var(--paywall-ramp-depth) * 0.3),
+      rgb(0 0 0 / 36%) calc(100% - var(--paywall-ramp-depth) * 0.16),
+      rgb(0 0 0 / 18%) 100%
+    );
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+  }
+
+  .article__paywall-approach-preview {
+    position: relative;
+    filter: blur(0.35px);
+  }
+
   .article__paywall-teaser {
-    filter: blur(0.6px);
-    opacity: 0.9;
+    position: relative;
+    filter: blur(1.1px);
+    opacity: 0.92;
     user-select: none;
     pointer-events: none;
-    mask-image: linear-gradient(to bottom, #000000 0%, #000000 72%, rgb(0 0 0 / 35%) 100%);
-    mask-image: linear-gradient(to bottom, #000000 0%, #000000 72%, rgb(0 0 0 / 35%) 100%);
 
     h3,
     h4 {
-      opacity: 1;
+      opacity: 0.94;
     }
 
     img {
-      opacity: 0.95;
+      opacity: 0.88;
     }
   }
 
@@ -179,26 +204,20 @@
     position: relative;
     overflow: hidden;
     inline-size: 100%;
-    filter: blur(1.5px);
-    opacity: 0.74;
+    filter: blur(2.75px);
+    opacity: 0.66;
     user-select: none;
     pointer-events: none;
     mask-image: linear-gradient(
       to bottom,
       #000000 0%,
-      #000000 42%,
-      rgb(0 0 0 / 88%) 62%,
-      rgb(0 0 0 / 72%) 82%,
-      rgb(0 0 0 / 58%) 100%
+      #000000 32%,
+      rgb(0 0 0 / 82%) 52%,
+      rgb(0 0 0 / 62%) 72%,
+      rgb(0 0 0 / 42%) 100%
     );
-    mask-image: linear-gradient(
-      to bottom,
-      #000000 0%,
-      #000000 42%,
-      rgb(0 0 0 / 88%) 62%,
-      rgb(0 0 0 / 72%) 82%,
-      rgb(0 0 0 / 58%) 100%
-    );
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
 
     &--compact {
       min-block-size: 22rem;
@@ -260,17 +279,19 @@
   }
 
   .article__archive-gate {
+    position: relative;
+    z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0;
     color: var(--text-color, #e6e6e4);
     text-align: center;
 
     &--inline {
-      margin-block: var(--ms-01);
+      margin-block: var(--ms-1);
       margin-inline: auto;
-      padding: 0.2rem 0;
+      padding-block: var(--ms-1);
       inline-size: min(32rem, 100%);
       max-inline-size: 34rem;
       background: transparent;
@@ -317,7 +338,7 @@
   .article__archive-gate-cta {
     inline-size: auto;
     min-inline-size: 10.5rem;
-    margin-block-start: 0.15rem;
+    margin-block-start: 0;
     text-transform: none;
     letter-spacing: normal;
 
@@ -327,5 +348,25 @@
       $margin: 0,
       $padding: 0.38rem 1rem
     );
+  }
+
+  .article__archive-gate-rule + .article__archive-gate-icon {
+    margin-block-start: var(--ms-0);
+  }
+
+  .article__archive-gate-icon + .article__archive-gate-title {
+    margin-block-start: var(--ms-0);
+  }
+
+  .article__archive-gate-title + .article__archive-gate-hint {
+    margin-block-start: var(--ms-0);
+  }
+
+  .article__archive-gate-hint + .article__archive-gate-cta {
+    margin-block-start: var(--ms-1);
+  }
+
+  .article__archive-gate-cta + .article__archive-gate-rule {
+    margin-block-start: var(--ms-0);
   }
 }

@@ -334,13 +334,19 @@ function ArticleContent({
   if (isArchiveLocked) {
     articleBody = (
       <>
-        {renderDetailBlocks(previewDetails, 'preview')}
         <div className="article__paywall">
-          {paywallTeaserBlocks.length > 0 && (
-            <div className="article__paywall-teaser" aria-hidden="true">
-              {renderDetailBlocks(paywallTeaserBlocks, 'teaser')}
-            </div>
-          )}
+          <div className="article__paywall-approach">
+            {previewDetails.length > 0 && (
+              <div className="article__paywall-approach-preview">
+                {renderDetailBlocks(previewDetails, 'preview')}
+              </div>
+            )}
+            {paywallTeaserBlocks.length > 0 && (
+              <div className="article__paywall-teaser" aria-hidden="true">
+                {renderDetailBlocks(paywallTeaserBlocks, 'teaser')}
+              </div>
+            )}
+          </div>
           {archiveGate}
           <div
             className={`article__paywall-tail article__paywall-tail--${lockedBodySize}`}
